@@ -54,7 +54,7 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'zillion_exchange_app' do
+target 'CTEX' do
   config = use_native_modules!
 
   # Flags change depending on the env values.
@@ -73,7 +73,7 @@ target 'zillion_exchange_app' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  target 'zillion_exchange_appTests' do
+  target 'CTEXTests' do
     inherit! :complete
     # Pods for testing
   end
