@@ -1,0 +1,598 @@
+import {AppOperation} from './../../index';
+import {CUSTOMER_TYPE} from '../../types';
+import {
+  AddToFavoriteProps,
+  AlertsProps,
+  CancelOrderProps,
+  ChangePasswordProps,
+  CurrencyPreferenceProps,
+  DeleteAccountProps,
+  DownloadTradeReportProps,
+  GenerateAddressProps,
+  GetFeeDetailProps,
+  OpenOrdersProps,
+  PastOrdersProps,
+  PlaceOrderProps,
+  RatingProps,
+  WithdrawCurrencyProps,
+  WithdrawInrProps,
+} from '../../../helper/types';
+
+export default (appOperation: AppOperation) => ({
+  qbs_historyy: () =>
+    appOperation.get('qbs/history', undefined, undefined, CUSTOMER_TYPE),
+  user_eligibility: () =>
+    appOperation.get('user/launchpad/user_eligibility', undefined, undefined, CUSTOMER_TYPE),
+    get_user_commits: () =>
+    appOperation.get('admin/launchpad/get_user_commits', undefined, undefined, CUSTOMER_TYPE),
+    all_project: (data: any) =>
+    appOperation.post('user/launchpad/get_all_project',  data, CUSTOMER_TYPE),
+    get_past_all_projects: (data: any) =>
+    appOperation.post('user/launchpad/get_all_project',  data, CUSTOMER_TYPE),
+    check_commit_existense: (data: any) =>
+    appOperation.get(`user/launchpad/check_commit_existence/${data}`, undefined, undefined, CUSTOMER_TYPE),
+    get_single_project: (data: any) =>
+    appOperation.get(`admin/launchpad/get_single_project/${data}`, undefined, undefined, CUSTOMER_TYPE),
+    /** Same as web /account-verification: GET verify-registration-token (uses stored token in header) */
+    verify_token: () =>
+      appOperation.get('user/verify-registration-token', undefined, undefined, CUSTOMER_TYPE),
+    project_total_commit: (data: any) =>
+    appOperation.get(`user/launchpad/user_project_total_commits/${data}`, undefined, undefined, CUSTOMER_TYPE),
+  banner_list: () =>
+    appOperation.get('admin/banner_list', undefined, undefined, CUSTOMER_TYPE),
+  get_profile: () =>
+    appOperation.get(`user/profile`, undefined, undefined, CUSTOMER_TYPE),
+  edit_email: (data: any) =>
+    appOperation.put('user/edit-email', data, CUSTOMER_TYPE),
+  edit_phone: (data: any) =>
+    appOperation.put('user/edit-phone', data, CUSTOMER_TYPE),
+  edit_name: (data: any) =>
+    appOperation.put('user/edit-name', data, CUSTOMER_TYPE),
+  edit_nominee: (data: any) =>
+    appOperation.put('user/edit-nominee', data, CUSTOMER_TYPE),
+  edit_avatar: (data: FormData) =>
+    appOperation.put('user/edit-avatar', data, CUSTOMER_TYPE),
+  edit_profile: (data: FormData) =>
+    appOperation.put('user/edit_profile', data, CUSTOMER_TYPE),
+  change_password: (data: ChangePasswordProps) =>
+    appOperation.post('user/change_password', data, CUSTOMER_TYPE),
+  change_currency: (data: CurrencyPreferenceProps) =>
+    appOperation.put('user/currency-preference', data, CUSTOMER_TYPE),
+  user_portfolio: (id: any) =>
+    appOperation.get(
+      `wallet/estimated-portfolio?walletType=${id}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    deposit_active_coins: () =>
+      appOperation.get('user/deposit-active-coins', undefined, undefined, CUSTOMER_TYPE),
+    widthraw_active_coins: () =>
+      appOperation.get('user/withdraw-active-coins', undefined, undefined, CUSTOMER_TYPE),
+    deposit_fiat_coins: () =>
+      appOperation.get('user/deposit-active-coins-fiat', undefined, undefined, CUSTOMER_TYPE),
+  user_wallet: () =>
+    appOperation.get('wallet/user-wallet', undefined, undefined, CUSTOMER_TYPE),
+  user_main_wallet: (id: any) =>
+    appOperation.get(`wallet/user-wallet?wallet_type=${id}`, undefined, undefined, CUSTOMER_TYPE),
+  generate_address: (data: GenerateAddressProps) =>
+    appOperation.put('wallet/generate-address', data, CUSTOMER_TYPE),
+  withdraw_currency: (data: any) =>
+    appOperation.post('wallet/withdrawal', data, CUSTOMER_TYPE),
+  withdraw_fiat_currency: (data: any) =>
+    appOperation.post('wallet/withdrawal_fiat', data, CUSTOMER_TYPE),
+  particular_coin_balance: (data: { fromWallet: any; toWallet: any; currencyId: any; }) =>
+    appOperation.get(`wallet/get-perticular-wallet-balance?fromWallet=${data?.fromWallet}&toWallet=${data?.toWallet}&currencyId=${data?.currencyId}`, undefined, undefined, CUSTOMER_TYPE),
+  admin_bank_details: () =>
+    appOperation.get(
+      'admin/admin_bank_details',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    deposit_verify: (data :any) =>
+      appOperation.post('wallet/verify-deposit', data, CUSTOMER_TYPE),
+  deposit_inr: (data: FormData) =>
+    appOperation.post('wallet/deposit_inr', data, CUSTOMER_TYPE),
+  tranfer_coin: (data: any) =>
+    appOperation.post('wallet/wallet-transfer', data, CUSTOMER_TYPE),
+    user_commit_project: (data: FormData) =>
+    appOperation.post('user/launchpad/commit_project', data, CUSTOMER_TYPE),
+    transfer_funds: (data: any) =>
+      appOperation.post('wallet/transfer-funds', data, CUSTOMER_TYPE),
+    user_update_commit_project: (data: FormData, id:any) =>
+    appOperation.put(`user/launchpad/update_commit/${id}`, data, CUSTOMER_TYPE),
+    wallet_history: (skip: any, limit: any) =>
+    appOperation.get(
+      `transaction/wallet-history?skip=${skip}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    interal_wallet_history: (skip: any, limit: any) =>
+      appOperation.get(
+        `wallet/wallet-transfer-history?skip=${skip}&limit=${limit}`,
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
+  trade_history: (data: any) =>
+    appOperation.post(
+      'transaction/trade-history',
+      data, CUSTOMER_TYPE
+    ),
+  verify_deposit: (data: any) =>
+    appOperation.post(
+      'transaction/wallet-deposit-history',
+      data, 
+      CUSTOMER_TYPE
+    ),
+    verify_withdraw: (data: any) =>
+    appOperation.post(
+      'transaction/wallet-withdrawal-history',
+      data, 
+      CUSTOMER_TYPE
+    ),
+  withdraw_inr: (data: WithdrawInrProps) =>
+    appOperation.post('wallet/withdraw_inr', data, CUSTOMER_TYPE),
+  kyc_verification: (data: any) =>
+    appOperation.post('user/submit-kyc', data, CUSTOMER_TYPE),
+  /** Same as web: GET kyc-status - returns id_document_status, tax_document_status, selfie_status, needs_resubmission, documents_needing_resubmission, kyc_data */
+  get_kyc_status: () =>
+    appOperation.get('user/kyc-status', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: GET api/meta/countries - list of { code, name, flag } (no v1 prefix) */
+  get_countries: () =>
+    appOperation.get('api/meta/countries', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: GET api/kyc/config/:countryCode - returns id_documents, tax_documents (no v1 prefix) */
+  get_kyc_config: (countryCode: string) =>
+    appOperation.get(`api/kyc/config/${countryCode}`, undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: POST user/send-otp for KYC verification - body { email_or_phone, type: 1|3, resend: true } */
+  send_kyc_otp: (emailOrPhone: string, type: number) =>
+    appOperation.post('user/send-otp', { email_or_phone: emailOrPhone.trim(), type, resend: true }, CUSTOMER_TYPE),
+  price_alert: (data: AlertsProps) =>
+    appOperation.put('notification/price-alert', data, CUSTOMER_TYPE),
+  commission_alert: (data: AlertsProps) =>
+    appOperation.put('notification/commission-alert', data, CUSTOMER_TYPE),
+  trade_setting: (data: AlertsProps) =>
+    appOperation.put(
+      'exchange/skip-buy-sell-confirmation',
+      data,
+      CUSTOMER_TYPE,
+    ),
+  fee_setting: (data: AlertsProps) =>
+    appOperation.put('exchange/fee-setting', data, CUSTOMER_TYPE),
+  favorite_list: () =>
+    appOperation.get(
+      'user/favorite-list?type=mobile',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    meme_list: () =>
+      appOperation.get(
+        'user/get-meme-pairs',
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
+  user_bank_detail: () =>
+    appOperation.get(
+      'user/get-user-bank-details',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  add_new_bank: (data: FormData) =>
+    appOperation.post('user/add-bank-details', data, CUSTOMER_TYPE),
+  buy_bot_package: (data: any) =>
+    appOperation.post('bot/buy-arbitrage-bot', data, CUSTOMER_TYPE),
+  edit_bank: (data: FormData) =>
+    appOperation.post('user/update-bank', data, CUSTOMER_TYPE),
+  delete_bank: (data: any) =>
+    appOperation.post('user/delete-user-bank', data, CUSTOMER_TYPE),
+  submit_ticket: (data: FormData) =>
+    appOperation.post('support/submit-ticket', data, CUSTOMER_TYPE),
+  ticket_messages: (data: any) =>
+    appOperation.post('support/user-reply-ticket', data, CUSTOMER_TYPE),
+  add_rating: (data: RatingProps) =>
+    appOperation.post('user/rating', data, CUSTOMER_TYPE),
+  notification_list: () =>
+    appOperation.get(
+      'notifications/user-notifications',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    mark_as_read: (data: any) =>
+      appOperation.post('notifications/mark-as-read', data, CUSTOMER_TYPE),
+  send_kgin_otp: (data: any) =>
+    appOperation.post('user/send-kgin-otp', data, CUSTOMER_TYPE),
+  update_kgin: (data: any) =>
+    appOperation.post('user/verify-kgin-otp', data, CUSTOMER_TYPE),
+  package_list: () =>
+    appOperation.get(
+      `earning/package-list`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    bot_package_list: () =>
+      appOperation.get(
+        `bot/bot-package-listing`,
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
+    user_payout_list: () =>
+      appOperation.get(
+        `earning/user-payout-list`,
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
+      earning_portfolio: () =>
+        appOperation.get(
+          `earning/earning-portfolio`,
+          undefined,
+          undefined,
+          CUSTOMER_TYPE,
+        ),
+      earning_portfolio_summary: () =>
+        appOperation.get(
+          `earning/earning-portfolio-summary`,
+          undefined,
+          undefined,
+          CUSTOMER_TYPE,
+        ),
+      subscribed_packageList: () =>
+        appOperation.get(
+          `earning/subscribed-package-list`,
+          undefined,
+          undefined,
+          CUSTOMER_TYPE,
+        ),
+      get_wallet_balance: (fromWallet: any,currencyId: any) =>
+        appOperation.get(
+          `wallet/get-wallet-balance/?fromWallet=${fromWallet}&currencyId=${currencyId}`,
+          undefined,
+          undefined,
+          CUSTOMER_TYPE,
+        ),
+    get_wallet_type: () =>
+      appOperation.get(
+        `wallet/available-wallet-types`,
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
+      get_bot_active_packages: () =>
+        appOperation.get(
+          `bot/get-active-package`,
+          undefined,
+          undefined,
+          CUSTOMER_TYPE,
+        ),
+        get_bot_trade: () =>
+          appOperation.get(
+            `bot/bot-trades`,
+            undefined,
+            undefined,
+            CUSTOMER_TYPE,
+          ),
+  user_refer_code: () =>
+    appOperation.get(
+      'user/user_refer_code',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    payout_history: () =>
+      appOperation.get(
+        'affiliate/payout-history',
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
+      get_downline: (sponsorId: any, level: any) =>
+        appOperation.get(
+          `user/get_downline?sponsorId=${sponsorId}&level=${level}`,
+          undefined,
+          undefined,
+          CUSTOMER_TYPE,
+        ),
+  user_refer_count: () =>
+    appOperation.get(
+      'user/total_refer_count',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  favorite_array: () =>
+    appOperation.get('user/favorite-list', undefined, undefined, CUSTOMER_TYPE),
+  add_to_favorite: (data: AddToFavoriteProps) =>
+    appOperation.post('user/favorite-coin', data, CUSTOMER_TYPE),
+
+  // ============================================================================
+  // AirDrop (same as web AirDrop page)
+  // ============================================================================
+  /** Same as web: GET /v1/user/getOtherSettings */
+  get_other_settings: () =>
+    appOperation.get('user/getOtherSettings', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: GET /v1/user/referral-reward-status */
+  get_referral_reward_status: () =>
+    appOperation.get('user/referral-reward-status', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: POST /v1/user/complete-referral-social-task body { taskNumber } */
+  complete_referral_social_task: (taskNumber: number) =>
+    appOperation.post(
+      'user/complete-referral-social-task',
+      { taskNumber: Number(taskNumber) },
+      CUSTOMER_TYPE,
+    ),
+  past_orders: (data: PastOrdersProps) =>
+    appOperation.post('exchange/past-order', data, CUSTOMER_TYPE),
+  open_orders: (data: OpenOrdersProps) =>
+    appOperation.post('exchange/historical-data', data, CUSTOMER_TYPE),
+  cancel_order: (data: CancelOrderProps) =>
+    appOperation.post('exchange/cancel-order', data, CUSTOMER_TYPE),
+  close_option_order: (data: CancelOrderProps) =>
+    appOperation.post('options/cancelOrder', data, CUSTOMER_TYPE),
+  place_order: (data: PlaceOrderProps) =>
+    appOperation.post('exchange/place-order', data, CUSTOMER_TYPE),
+  place_reverse_order: (data: any) =>
+    appOperation.post('futures/order', data, CUSTOMER_TYPE),
+  close_position: (data: any) =>
+    appOperation.post('futures/close-position', data, CUSTOMER_TYPE),
+  getOptionsPairs: (data: any) =>
+  appOperation.get('options/optionPairs', undefined, undefined, CUSTOMER_TYPE),
+  placeOptionOrder: (data: any) =>
+    appOperation.post('options/placeOrder', data, CUSTOMER_TYPE),
+  getExpiryDates: (data: any) =>
+    appOperation.get(`options/contractDates?underlying=${data}`, undefined, undefined, CUSTOMER_TYPE),
+  cancelFutureOrder: (data: any) =>
+    appOperation.post('futures/cancel', data, CUSTOMER_TYPE),
+  transaction_history: (id: string) =>
+    appOperation.get(
+      `mobile/wallet-history?short_name=${id}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    coin_details: (data: any) =>
+    appOperation.post(
+      `exchange/coin-details`,
+      data, CUSTOMER_TYPE
+    ),
+  fee_detail: (data: GetFeeDetailProps) =>
+    appOperation.post('exchange/coin-details', data, CUSTOMER_TYPE),
+  delete_account: (data: DeleteAccountProps) =>
+    appOperation.post('user/delete-account', data, CUSTOMER_TYPE),
+  download_trade_report: (data: DownloadTradeReportProps) =>
+    appOperation.post('user/download-trade-report', data, CUSTOMER_TYPE),
+  two_factor_auth_qr: () =>
+    appOperation.get(
+      'user/generate-google-qr',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  /** Same as web: POST security/2fa/setup - returns { success, data: { qr_code, secret: { base32 } } } */
+  security2faSetup: () =>
+    appOperation.post('security/2fa/setup', {}, CUSTOMER_TYPE),
+  /** Same as web: POST security/2fa/confirm - body { code } (6-digit TOTP), activates 2FA */
+  security2faConfirm: (code: string) =>
+    appOperation.post('security/2fa/confirm', { code }, CUSTOMER_TYPE),
+  /** Same as web: POST security/2fa/disable - body { code?, otpCode?, verifyMethod?, passkeyUserId? } */
+  security2faDisable: (authenticatorCode?: string | null, otpCode?: string | null, verifyMethod?: string | null, passkeyUserId?: string | null) => {
+    const data: any = {};
+    if (authenticatorCode) data.code = authenticatorCode;
+    if (otpCode) data.otpCode = otpCode;
+    if (verifyMethod) data.verifyMethod = verifyMethod;
+    if (passkeyUserId) data.passkeyUserId = passkeyUserId;
+    return appOperation.post('security/2fa/disable', data, CUSTOMER_TYPE);
+  },
+  /** Same as web: POST security/send-otp - body { target, purpose, value? } */
+  securitySendOtp: (target: string, purpose: string, value?: string | null) => {
+    const params: any = { target, purpose };
+    if (value) params.value = value;
+    return appOperation.post('security/send-otp', params, CUSTOMER_TYPE);
+  },
+  /** Same as web: POST security/verify-otp - body { target, otp, purpose, identifier? } */
+  securityVerifyOtp: (target: string, otp: string, purpose: string, identifier?: string | null) => {
+    const params: any = { target, otp, purpose };
+    if (identifier) params.identifier = identifier;
+    return appOperation.post('security/verify-otp', params, CUSTOMER_TYPE);
+  },
+  /** Same as web: POST security/verify-totp - body { code, purpose } for add_passkey etc. */
+  securityVerifyTotp: (code: string, purpose: string) =>
+    appOperation.post('security/verify-totp', { code: String(code), purpose }, CUSTOMER_TYPE),
+  /** Same as web: GET security/passkeys - returns { success, data: { passkeys: [], count } } */
+  passkeyGetList: () =>
+    appOperation.get('security/passkeys', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: POST security/passkey/register/options - returns WebAuthn registration options */
+  passkeyGetRegistrationOptions: () =>
+    appOperation.post('security/passkey/register/options', {}, CUSTOMER_TYPE),
+  /** Same as web: POST security/passkey/register/verify - body { credential, name } */
+  passkeyVerifyRegistration: (credential: object, name: string) =>
+    appOperation.post('security/passkey/register/verify', { credential, name }, CUSTOMER_TYPE),
+  /** Same as web: POST security/passkey/auth/options - for change email/mobile, disable 2FA, etc. */
+  passkeyGetAuthOptions: (signId: string) =>
+    appOperation.post('security/passkey/auth/options', { signId }, CUSTOMER_TYPE),
+  /** Same as web: POST security/passkey/auth/verify - returns { success, data: { userId } } */
+  passkeyVerifyAuth: (signId: string, credential: object) =>
+    appOperation.post('security/passkey/auth/verify', { signId, credential }, CUSTOMER_TYPE),
+  /** Same as web: POST security/mobile/add - body { mobileNumber, countryCode, mobileOtp } */
+  securityMobileAdd: (data: { mobileNumber: string; countryCode: string; mobileOtp: string }) =>
+    appOperation.post('security/mobile/add', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/email/add - body { email, tofaCode?, mobileOtp?, emailOtp } */
+  securityEmailAdd: (data: { email: string; tofaCode?: string; mobileOtp?: string; emailOtp: string }) =>
+    appOperation.post('security/email/add', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/email/change/initiate - body { newEmail, tofaCode?, currentEmailOtp?, currentMobileOtp?, passkeyUserId? } */
+  securityEmailChangeInitiate: (data: { newEmail: string; tofaCode?: string; currentEmailOtp?: string; currentMobileOtp?: string; passkeyUserId?: string }) =>
+    appOperation.post('security/email/change/initiate', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/email/change/complete - body { newEmailOtp } */
+  securityEmailChangeComplete: (data: { newEmailOtp: string }) =>
+    appOperation.post('security/email/change/complete', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/mobile/change/initiate - body { newMobileNumber, newCountryCode, tofaCode?, currentEmailOtp?, currentMobileOtp?, passkeyUserId? } */
+  securityMobileChangeInitiate: (data: { newMobileNumber: string; newCountryCode: string; tofaCode?: string; currentEmailOtp?: string; currentMobileOtp?: string; passkeyUserId?: string }) =>
+    appOperation.post('security/mobile/change/initiate', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/mobile/change/complete - body { newMobileOtp } */
+  securityMobileChangeComplete: (data: { newMobileOtp: string }) =>
+    appOperation.post('security/mobile/change/complete', data, CUSTOMER_TYPE),
+  enable_two_fa: (data: any) =>
+    appOperation.put('user/enable-2fa', data, CUSTOMER_TYPE),
+  convert_history: () =>
+    appOperation.get('swap/history', undefined, undefined, CUSTOMER_TYPE),
+  conversion_rate: (data: any) =>
+    appOperation.post('swap/convert-token', data, CUSTOMER_TYPE),
+  swap_token: (data: any) =>
+    appOperation.post('swap/swap-token', data, CUSTOMER_TYPE),
+
+  coin_list: () =>
+    appOperation.get('coin/get-coin', undefined, undefined, CUSTOMER_TYPE),
+
+  qs_BuySell: (data: any) =>
+    appOperation.post('qbs/quick_buy_sell', data, CUSTOMER_TYPE),
+
+  qs_Hisory: (skip: number, limit: number) =>
+    appOperation.get(
+      `qbs/history?skip=${skip}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    get_Activity_logs: (skip: number, limit: number) =>
+    appOperation.get(
+      `user/activity-logs?skip=${skip}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    // Referral
+    // - `referral_user_list` is the legacy list (often masked)
+    // - `my-referral-tree` matches web "Referral History" (includes user object)
+    get_referral_list: () =>
+    appOperation.get(
+      `user/referral_user_list`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    get_my_referral_tree: () =>
+    appOperation.get(
+      `user/my-referral-tree`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    get_my_referral_earnings: () =>
+    appOperation.get(
+      `user/my-referral-earnings`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    get_referral_children: (parentId: string) =>
+    appOperation.get(
+      `user/referral-children?parentId=${encodeURIComponent(String(parentId ?? ""))}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+
+    // Airdrop / Referral release history (Airdrop History page)
+    get_referral_release_history: (page: number, limit: number) =>
+    appOperation.get(
+      `user/referral-release-history?page=${Number(page) || 1}&limit=${Number(limit) || 20}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+    get_referral_vesting_status: () =>
+    appOperation.get(
+      `user/referral-vesting-status`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  Staking_Home: () =>
+    appOperation.get(
+      'staking/availabe_staking',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  place_staking: (data: any) =>
+    appOperation.post('staking/place_staking', data, CUSTOMER_TYPE),
+
+  Laked_Staking_History: () =>
+    appOperation.get(
+      'staking/staking_income',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+   
+    Staking_History: (data: any) =>
+      appOperation.get(
+        'staking/staking_history',
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
+      get_commit_details: (id: any) =>
+      appOperation.get(
+        `user/launchpad/user_project_commit_history/${id}`,
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
+      admin_trades: (skip: any, limit: any) =>
+        appOperation.get(
+          `wallet/bonus-history?skip=${skip}&limit=${limit}`,
+          undefined,
+          undefined,
+          CUSTOMER_TYPE,
+        ),
+        qbs_history: (skip: any, limit: any) =>
+          appOperation.get(
+            `qbs/history?skip=${skip}&limit=${limit}`,
+            undefined,
+            undefined,
+            CUSTOMER_TYPE,
+          ),
+          all_open_orders: (skip: any, limit: any) =>
+            appOperation.get(
+              `exchange/all-open-orders?skip=${skip}&limit=${limit}`,
+              undefined,
+              undefined,
+              CUSTOMER_TYPE,
+            ),
+      break_staking: (data: any) =>
+        appOperation.post('staking/break_staking', data, CUSTOMER_TYPE),
+        get_trade_history: (skip: any, limit: any) =>
+        appOperation.get(`transaction/trade-history?skip=${skip}&limit=${limit}`,  undefined,
+          undefined, CUSTOMER_TYPE),
+        subscribe_earning_package: (data: any) =>
+          appOperation.post('earning/subscribe-earning-package', data, CUSTOMER_TYPE),
+        swap_currency_list: () =>
+          appOperation.get('qbs/base_currency_list', undefined, undefined, CUSTOMER_TYPE),
+        get_conversion_rate: (from: any, to: any) =>
+          appOperation.get(`qbs/get_conversion_rate?from=${from}&receive=${to}`, undefined, undefined, CUSTOMER_TYPE),
+        get_user_tickets: () =>
+          appOperation.get(`support/get-user-tickets`, undefined, undefined, CUSTOMER_TYPE),
+        get_ticket_categories: () =>
+          appOperation.get(`support/get-categories`, undefined, undefined, CUSTOMER_TYPE),
+        /** Same as web: GET security/anti-phishing/status - returns { success, data: { hasAntiPhishingCode, antiPhishingCode, methods } } */
+        get_anti_phishing_status: () =>
+          appOperation.get('security/anti-phishing/status', undefined, undefined, CUSTOMER_TYPE),
+        /** Same as web: POST security/anti-phishing/send-otp - body { target } */
+        send_anti_phishing_otp: (target: string) =>
+          appOperation.post('security/anti-phishing/send-otp', { target }, CUSTOMER_TYPE),
+        /** Same as web: POST security/anti-phishing/add - body { antiPhishingCode, verifyMethod, code?, passkeyUserId? } */
+        add_anti_phishing_code: (data: { antiPhishingCode: string; verifyMethod: string; code?: string; passkeyUserId?: string }) =>
+          appOperation.post('security/anti-phishing/add', data, CUSTOMER_TYPE),
+        /** Same as web: POST security/anti-phishing/remove - body { verifyMethod, code?, passkeyUserId? } */
+        remove_anti_phishing_code: (data: { verifyMethod: string; code?: string; passkeyUserId?: string }) =>
+          appOperation.post('security/anti-phishing/remove', data, CUSTOMER_TYPE),
+        
+  });
