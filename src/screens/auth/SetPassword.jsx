@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Linking, StyleSheet, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useRoute } from "@react-navigation/native";
-import { AppSafeAreaView, AppText, BOLD, Button, Input, THIRTEEN, TWENTY_SIX } from "../../shared";
+import { AppSafeAreaView, AppText, BOLD, Button, ELEVEN, FOURTEEN, Input, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, TWENTY_SIX } from "../../shared";
 import { AuthHeader } from "../../shared/components";
 import NavigationService from "../../navigation/NavigationService";
 import { showError } from "../../helper/logger";
@@ -179,12 +179,11 @@ const SetPassword = () => {
         <AppText weight={BOLD} type={TWENTY_SIX} style={{ color: themeColors.text, marginTop: 8 }}>
           Set Your Password
         </AppText>
-        <AppText type={THIRTEEN} style={{ color: "#9AA3AF", marginTop: 8 }}>
+        <AppText type={THIRTEEN} style={{ color: "#9AA3AF", marginTop: 6 }}>
           Set the password to complete the signup
         </AppText>
-
+  <AppText color={themeColors.text } type={FOURTEEN} weight={SEMI_BOLD} style={{marginTop:10}}>Password</AppText>
         <Input
-          title={languages?.title_password || "Password"}
           placeholder={"Enter a password"}
           value={password}
           onChangeText={setPassword}
@@ -224,7 +223,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   passwordInput: {
-    marginTop: 18,
+    marginTop: 8,
   },
   rulesBox: {
     marginTop: 6,
