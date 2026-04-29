@@ -12,9 +12,7 @@ import {
   AppText,
   MEDIUM,
   Button,
-  FOURTEEN,
   Input,
-  SEMI_BOLD,
   TWENTY,
   TWENTY_SIX,
   Toolbar,
@@ -65,52 +63,14 @@ import {
   GoogleSignin,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
-import { CountrySelector } from "../../shared/components/CountrySelector";
 import { useTheme } from "../../hooks/useTheme";
 import { colors } from "../../theme/colors";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { setLoading } from "../../slices/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SpinnerSecond } from "../../shared/components/SpinnerSecond";
+import { AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/components";
 import { Passkey } from "react-native-passkey";
-
-const RenderTabBarAuth = (props: any) => {
-  const { colors: themeColors, isDark } = useTheme();
-  const languages = useAppSelector((state) => {
-    return state.account.languages;
-  });
-  const routes = [
-    { key: "first", title: checkValue(languages?.email) },
-    { key: "second", title: checkValue(languages?.mobile) },
-  ];
-  return (
-    <View style={authStyles.tabBarMain}>
-      {routes.map((route, i) => {
-        return (
-          <TouchableOpacityView
-            key={i}
-            onPress={() => {
-              props?.setIndex(i), props?.setShowPassField(false);
-            }}
-            style={[
-              i === props?.index
-                ? [authStyles.tabBarActive, { borderBottomColor: themeColors.button, borderBottomWidth: 2 }]
-                : authStyles.tabBarInActive
-            ]}
-          >
-            <AppText
-              type={FOURTEEN}
-              weight={SEMI_BOLD}
-              style={{ color: i === props?.index ? (isDark ? colors.white : themeColors.button) : themeColors.secondaryText }}
-            >
-              {route.title}
-            </AppText>
-          </TouchableOpacityView>
-        );
-      })}
-    </View>
-  );
-};
 
 const Login = (): JSX.Element => {
   const dispatch = useAppDispatch();
@@ -118,6 +78,10 @@ const Login = (): JSX.Element => {
   const isLoading = useAppSelector((state) => state.auth.isLoading);
   const showButtonLoading = useAppSelector((state) => state.auth.isLoading && state.auth.loadingFor !== 'otp');
   const languages = useAppSelector((state) => state.account.languages);
+  const tabTitle = (value: string | undefined, fallback: string) =>
+    value != null && value !== "" ? checkValue(value) : fallback;
+  const loc = languages as typeof languages & { phone?: string };
+  const authTabs = [tabTitle(loc?.email, "Email"), tabTitle(loc?.phone, "Phone")];
   const passwordInput = useRef(null);
   const [signUpId, setSignUpId] = useState("");
   const [password, setPassword] = useState<string>("");
@@ -331,39 +295,48 @@ const Login = (): JSX.Element => {
           Login
         </AppText>
         <View style={{ marginTop: 20 }}>
-          <RenderTabBarAuth
+          <AuthEmailPhoneTabBar
+            tabs={authTabs}
             index={index}
-            setIndex={setIndex}
-            setShowPassField={setShowPassField}
+            onChange={(i: number) => {
+              setIndex(i);
+              setShowPassField(false);
+            }}
           />
 
-          <View style={authStyles.mobileContainer}>
-            {index === 1 && (
-              <CountrySelector
-                onSelectCountry={setCountryCode}
-                onCountry={setCountry}
-                country={country}
-              />
-            )}
-            <Input
-              placeholder={
-                index === 0
-                  ? checkValue(languages?.place_login_userName)
-                  : checkValue(languages?.place_userName)
-              }
+          {index === 1 ? (
+            <AuthPhoneInput
               value={signUpId}
-              onChangeText={(text) => changeInput(text)}
-              keyboardType={index === 1 ? "numeric" : "email-address"}
-              autoCapitalize="none"
-              returnKeyType="next"
-              onfocus={() => setShowPassField(false)}
+              onChangeText={(text: string) => changeInput(text)}
+              placeholder={checkValue(languages?.place_userName) || "Enter phone number"}
+              onSelectCountry={setCountryCode}
+              onCountry={setCountry}
+              country={country}
+              countryCode={countryCode}
+              maxLength={15}
+              onFocus={() => setShowPassField(true)}
+              onBlur={() => {}}
               onSubmitEditing={() => passwordInput?.current?.focus()}
               onEndEditing={() => passwordInput?.current?.focus()}
-              onFocus={() => setShowPassField(true)}
-              mainContainer={authStyles.mobileInput}
-              maxLength={100}
             />
-          </View>
+          ) : (
+            <View style={authStyles.mobileContainer}>
+              <Input
+                placeholder={checkValue(languages?.place_login_userName)}
+                value={signUpId}
+                onChangeText={(text) => changeInput(text)}
+                keyboardType={"email-address"}
+                autoCapitalize="none"
+                returnKeyType="next"
+                onfocus={() => setShowPassField(false)}
+                onSubmitEditing={() => passwordInput?.current?.focus()}
+                onEndEditing={() => passwordInput?.current?.focus()}
+                onFocus={() => setShowPassField(true)}
+                mainContainer={authStyles.mobileInput}
+                maxLength={100}
+              />
+            </View>
+          )}
           {!showPassField && (
             <Button
               children={"Next"}
@@ -481,13 +454,13 @@ const Login = (): JSX.Element => {
             )}
           </View>
           <AppText type={TEN} style={{ color: themeColors.secondaryText, textAlign: 'center', paddingHorizontal: 20 }}>
-            By signing in, I agree to Zillion Exchange user{" "}
+            By signing in, I agree to AGCE Exchange user{" "}
             <AppText
               style={{ color: themeColors.button, textDecorationLine: "underline" }}
               type={TEN}
               onPress={() => {
                 NavigationService.navigate(CMS_SCREEN, {
-                  id: "https://zillion.wrathcode.com/TermsofUse",
+                  id: "https://agce.wrathcode.com/terms_conditions",
                 });
               }}
             >

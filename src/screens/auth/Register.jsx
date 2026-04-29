@@ -1,50 +1,40 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   AppSafeAreaView,
   AppText,
-  BLACK,
-  BOLD,
   Button,
   FOURTEEN,
   Input,
-  LIGHTGREY,
-  MEDIUM,
-  NORMAL,
-  SEMI_BOLD,
   TEN,
   THIRTEEN,
-  TWENTY_SIX,
-  YELLOW,
+  TWELVE,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
-import { Keyboard, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, StyleSheet, View } from "react-native";
+import { AuthHeader, AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/components";
 import { authStyles } from "./authStyles";
 import { BASE_URL } from "../../helper/Constants";
 import { showError } from "../../helper/logger";
+import { appOperation } from "../../appOperation";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { googleRegister, register, registerWithPhone } from "../../actions/authActions";
+import { googleRegister } from "../../actions/authActions";
 import {
-  appBg,
-  loginDarkBg,
-  captchaIcon,
-  MAINHOME_BG,
-  back_ic,
   downIcon,
   upIcon,
   googleIcon,
+  apple,
 } from "../../helper/ImageAssets";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   checkValue,
   validateEmail,
-  validatePasswordStrict,
 } from "../../helper/utility";
 import NavigationService from "../../navigation/NavigationService";
-import { CMS_SCREEN, LOGIN_SCREEN } from "../../navigation/routes";
+import { CMS_SCREEN, SET_PASSWORD_SCREEN } from "../../navigation/routes";
 import Checkbox from "../../shared/components/Checkbox";
 import FastImage from "react-native-fast-image";
 import { useRoute } from "@react-navigation/native";
 import { colors } from "../../theme/colors";
-import { CountrySelector } from "../../shared/components/CountrySelector";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { setLoading } from "../../slices/authSlice";
@@ -77,49 +67,46 @@ const logRegisterPayload = (label, path, data) => {
 
 };
 
-const RenderTabBarAuth = (props) => {
-  const { colors: themeColors, isDark } = useTheme();
-  const languages = useAppSelector((state) => {
-    return state.account.languages;
-  });
-  // Web order: Email first, Mobile second
-  const routes = [
-    { key: "email", title: checkValue(languages?.email) || "Email" },
-    { key: "mobile", title: checkValue(languages?.mobile) || "Mobile" },
-  ];
-  return (
-    <View style={authStyles.tabBarMain}>
-      {routes.map((route, i) => {
-        return (
-          <TouchableOpacityView
-            key={i}
-            onPress={() => {
-              props?.setIndex(i);
-            }}
-            style={[
-              i === props?.index
-                ? [authStyles.tabBarActive, { borderBottomColor: themeColors.button, borderBottomWidth: 2 }]
-                : authStyles.tabBarInActive
-            ]}
-          >
-            <AppText
-              type={FOURTEEN}
-              weight={SEMI_BOLD}
-              style={{ color: i === props?.index ? (isDark ? colors.white : themeColors.button) : themeColors.secondaryText }}
-            >
-              {route.title}
-            </AppText>
-          </TouchableOpacityView>
-        );
-      })}
-    </View>
-  );
+const parseSignupEmailCheckResponse = (res) => {
+  if (res == null) return { ok: false, message: "" };
+  if (res.success === false) {
+    return { ok: false, message: res.message || res?.data?.message || "" };
+  }
+  const d = res.data != null && typeof res.data === "object" ? res.data : res;
+  if (typeof d === "object" && d) {
+    if (d.exists === true || d.emailExists === true || d.isRegistered === true || d.alreadyExists === true) {
+      return { ok: false, message: res.message || d.message || "" };
+    }
+    if (d.available === false || d.canRegister === false) {
+      return { ok: false, message: res.message || d.message || "" };
+    }
+    if (d.available === true || d.exists === false || d.canRegister === true) {
+      return { ok: true };
+    }
+  }
+  return { ok: true };
+};
+
+const parseSignupReferralResponse = (res) => {
+  if (res == null) return { ok: false, message: "" };
+  if (res.success === false) {
+    return { ok: false, message: res.message || res?.data?.message || "" };
+  }
+  const d = res.data != null && typeof res.data === "object" ? res.data : res;
+  if (typeof d === "object" && d) {
+    if (d.valid === false || d.isValid === false || d.is_valid === false) {
+      return { ok: false, message: res.message || d.message || "" };
+    }
+    if (d.exhausted === true || d.fullyUsed === true || d.noUsesLeft === true) {
+      return { ok: false, message: res.message || d.message || "" };
+    }
+  }
+  return { ok: true };
 };
 
 const Register = () => {
   const route = useRoute();
   const dispatch = useAppDispatch();
-  const passwordInput = useRef(null);
   const theme = useAppSelector((state) => state.auth.theme);
   const languages = useAppSelector((state) => {
     return state.account.languages;
@@ -127,23 +114,27 @@ const Register = () => {
   const isLoading = useAppSelector((state) => state.auth.isLoading);
   const showButtonLoading = useAppSelector((state) => state.auth.isLoading && state.auth.loadingFor !== 'otp');
   const [signUpId, setSignUpId] = useState("");
-  const [password, setPassword] = useState("");
   const [showRefer, setShowRefer] = useState(false);
   const refFromParams = route?.params?.reffcode || route?.params?.referCode || route?.params?.emailId || "";
   const [referCode, setReferCode] = useState(refFromParams);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(true);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const [countryCode, setCountryCode] = useState(["91"]);
   const [country, setCountry] = useState("IN");
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
+  const [isAppleSignInInProgress, setIsAppleSignInInProgress] = useState(false);
+  const [step1Submitting, setStep1Submitting] = useState(false);
   const [checkTermsEmail, setCheckTermsEmail] = useState(false);
   const [checkTermsPhone, setCheckTermsPhone] = useState(false);
   const { colors: themeColors, isDark } = useTheme();
+  const tabTitle = (value, fallback) =>
+    value != null && value !== "" ? checkValue(value) : fallback;
+  const authTabs = [
+    tabTitle(languages?.email, "Email"),
+    tabTitle(languages?.phone, "Phone"),
+  ];
 
   useEffect(() => {
     setSignUpId("");
-    setPassword("");
     setReferCode(refFromParams || "");
   }, [index]);
 
@@ -168,27 +159,7 @@ const Register = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      (e) => {
-        setKeyboardVisible(true); // or some other action
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => {
-        setKeyboardVisible(false); // or some other action
-      }
-    );
-
-    return () => {
-      keyboardDidHideListener.remove();
-      keyboardDidShowListener.remove();
-    };
-  }, []);
-
-  const onSubmit = (token) => {
+  const onSubmit = async () => {
     if (index === 0) {
       if (!signUpId) {
         showError("Please enter your email");
@@ -205,23 +176,57 @@ const Register = () => {
         return;
       }
     }
-    if (!password) {
-      showError("Please enter your password");
-      return;
-    }
-    if (!validatePasswordStrict(password)) {
-      showError("Password must be at least 8 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.");
-      return;
-    }
     if (index === 0 && !checkTermsEmail) {
-      showError("Please agree to Zillion Terms and Use");
+      showError("Please agree to AGCE Terms and Use");
       return;
     }
     if (index === 1 && !checkTermsPhone) {
-      showError("Please agree to Zillion Terms and Use");
+      showError("Please agree to AGCE Terms and Use");
       return;
     }
-    onRegister(token);
+
+    if (index === 0) {
+      try {
+        setStep1Submitting(true);
+        const emailRes = await appOperation.guest.check_signup_email(signUpId.trim());
+        const emailCheck = parseSignupEmailCheckResponse(emailRes);
+        if (!emailCheck.ok) {
+          showError(emailCheck.message || "Request failed");
+          return;
+        }
+      } catch (e) {
+        showError(e?.message || e?.response?.data?.message || "Request failed");
+        return;
+      } finally {
+        setStep1Submitting(false);
+      }
+    }
+
+    const ref = String(referCode || "").trim();
+    const shouldValidateReferral = ref.length > 0 && (showRefer || Boolean(refFromParams));
+    if (shouldValidateReferral) {
+      try {
+        setStep1Submitting(true);
+        const refRes = await appOperation.guest.validate_signup_referral(ref);
+        const refCheck = parseSignupReferralResponse(refRes);
+        if (!refCheck.ok) {
+          showError(refCheck.message || "Request failed");
+          return;
+        }
+      } catch (e) {
+        showError(e?.message || e?.response?.data?.message || "Request failed");
+        return;
+      } finally {
+        setStep1Submitting(false);
+      }
+    }
+
+    NavigationService.navigate(SET_PASSWORD_SCREEN, {
+      signupType: index === 0 ? "email" : "phone",
+      signUpId,
+      countryCode,
+      referCode,
+    });
   };
 
   const signupWithGoogle = async () => {
@@ -301,111 +306,72 @@ const Register = () => {
     }
   };
 
-  const onRegister = (token) => {
-    let data;
-    if (index === 0) {
-      data = {
-        email: signUpId.trim(),
-        password: password,
-        referral_code: referCode || "",
-        token: token || "",
-      };
-      logRegisterPayload("Email register", "user/register-email", data);
-      dispatch(register(data, () => { }, () => { }, handleClearCaptcha));
-    } else {
-      data = {
-        country_code: countryCode[0] ? `+${countryCode[0]}` : "+91",
-        phone: +signUpId,
-        password: password,
-        referral_code: referCode || "",
-        token: token || "",
-      };
-      logRegisterPayload("Phone register", "user/register-phone", data);
-      dispatch(registerWithPhone(data, () => { }, () => { }, handleClearCaptcha));
+  const signupWithApple = async () => {
+    setIsAppleSignInInProgress(true);
+    try {
+      showError("Apple sign-in is not available yet. Please use email or Google.");
+    } finally {
+      setTimeout(() => setIsAppleSignInInProgress(false), 300);
     }
   };
-  // Captcha commented out – flow matches web: Create Account → register (OTP sent by backend) → verify OTP
-  // const onVerify = (token) => {
-  //   if (!verifyToken && token) {
-  //     setCaptchaToken(token);
-  //     onSubmit(token);
-  //   } else if (verifyToken && token) {
-  //     setCaptchaToken(token);
-  //     handleVerifyOtp(token);
-  //   } else {
-  //     showError("something went wrong please try again!");
-  //   }
-  // };
 
-  const send = () => {
-    onSubmit("");
+  const openSupport = () => {
+    Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { });
   };
 
+  // Captcha commented out – flow matches web.
+
+  const send = async () => {
+    await onSubmit();
+  };
+
+
+  const socialPillBorder = themeColors.border;
+  const socialPillBg = isDark ? themeColors.card : "#FFFFFF";
 
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
-      {/* <Toolbar /> */}
       <KeyBoardAware style={{ paddingHorizontal: 20 }}>
-        <View style={{ marginVertical: 20 }}>
-          <TouchableOpacityView onPress={() => NavigationService.goBack()}>
-            <FastImage
-              source={back_ic}
-              resizeMode="contain"
-              style={{ width: 15, height: 15 }}
-              tintColor={themeColors.text}
-            />
-          </TouchableOpacityView>
-        </View>
-        <AppText
-          style={{ marginHorizontal: 10, color: themeColors.text }}
-          weight={BOLD}
-          type={TWENTY_SIX}
-        >
-          Sign Up
-        </AppText>
+        <AuthHeader
+          onSupportPress={openSupport}
+          onClosePress={() => NavigationService.goBack()}
+          title="Create Account"
+        />
 
         <View
           style={theme !== "Dark" ? authStyles.card : authStyles.cardDark}
         >
-          <RenderTabBarAuth index={index} setIndex={setIndex} />
+          <AuthEmailPhoneTabBar tabs={authTabs} index={index} onChange={setIndex} />
 
-          <View style={authStyles.mobileContainer}>
-            {index === 1 && (
-              <CountrySelector
-                onSelectCountry={setCountryCode}
-                onCountry={setCountry}
-                country={country}
-              />
-            )}
-            <Input
-              placeholder={
-                index === 0
-                  ? checkValue(languages?.place_login_userName) || "Please enter your email"
-                  : checkValue(languages?.place_userName) || "Enter mobile number"
-              }
+          {index === 1 ? (
+            <AuthPhoneInput
               value={signUpId}
               onChangeText={(text) => setSignUpId(text)}
-              keyboardType={index === 0 ? "email-address" : "numeric"}
-              autoCapitalize="none"
-              returnKeyType="next"
-              mainContainer={authStyles.mobileInput}
-              maxLength={index === 1 ? 15 : 100}
+              placeholder={checkValue(languages?.place_userName) || "Enter phone number"}
+              onSelectCountry={setCountryCode}
+              onCountry={setCountry}
+              country={country}
+              countryCode={countryCode}
+              maxLength={15}
+              onFocus={() => {}}
+              onBlur={() => {}}
+              onSubmitEditing={() => {}}
+              onEndEditing={() => {}}
             />
-          </View>
-
-          <Input
-            placeholder={checkValue(languages?.place_signUpPassword)}
-            value={password}
-            onChangeText={(text) => setPassword(text)}
-            autoCapitalize="none"
-            secureTextEntry={isPasswordVisible}
-            assignRef={(input) => {
-              passwordInput.current = input;
-            }}
-            returnKeyType="next"
-            isSecure
-            onPressVisible={() => setIsPasswordVisible(!isPasswordVisible)}
-          />
+          ) : (
+            <View style={authStyles.mobileContainer}>
+              <Input
+                placeholder={"Enter email address"}
+                value={signUpId}
+                onChangeText={(text) => setSignUpId(text)}
+                keyboardType={"email-address"}
+                autoCapitalize="none"
+                returnKeyType="next"
+                mainContainer={authStyles.mobileInput}
+                maxLength={100}
+              />
+            </View>
+          )}
 
           <TouchableOpacityView
             style={{
@@ -416,7 +382,7 @@ const Register = () => {
             }}
             onPress={() => setShowRefer(!showRefer)}
           >
-            <AppText style={{ color: themeColors.text }}>Invitation Code (Optional)</AppText>
+            <AppText style={{ color: themeColors.text }}>Referral code</AppText>
             <FastImage
               source={!showRefer ? downIcon : upIcon}
               resizeMode="contain"
@@ -427,7 +393,7 @@ const Register = () => {
 
           {showRefer && (
             <Input
-              placeholder={"Invite Code (Optional)"}
+              placeholder={"Referral code (Optional)"}
               value={referCode}
               onChangeText={(text) => setReferCode(text)}
               autoCapitalize="none"
@@ -455,14 +421,14 @@ const Register = () => {
                 else setCheckTermsPhone((c) => !c);
               }}
             />
-            <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
-              I agree to Zillion{" "}
+            <AppText type={TWELVE} style={{ color: themeColors.text }}>
+              I agree to AGCE{" "}
               <AppText
-                type={THIRTEEN}
-                style={{ color: colors.buttonBg }}
+                type={TWELVE}
+                style={{ color: colors.buttonBg ,textDecorationLine:"underline"}}
                 onPress={() =>
                   NavigationService.navigate(CMS_SCREEN, {
-                    id: "https://zillion.wrathcode.com/TermsofUse",
+                    id: "https://agce.wrathcode.com/terms_conditions",
                   })
                 }
               >
@@ -473,77 +439,113 @@ const Register = () => {
 
 
           <Button
-            children={"Register"}
+            children={"Next"}
             disabled={
               !signUpId ||
-              !password ||
-              !validatePasswordStrict(password) ||
-              (index === 0 ? !checkTermsEmail : !checkTermsPhone)
+              (index === 0 ? !checkTermsEmail : !checkTermsPhone) ||
+              step1Submitting
             }
             onPress={() => send()}
-            loading={showButtonLoading}
-            containerStyle={{ marginTop: 20 }}
+            loading={(showButtonLoading && !isGoogleSignInInProgress && !isAppleSignInInProgress) || step1Submitting}
+            containerStyle={[styles.primaryCTA, { marginTop: 20 }]}
           />
         </View>
-      </KeyBoardAware>
-      <View
-        style={{
-          alignSelf: "center",
-          alignItems: "center",
-          gap: 10,
-          marginBottom: 20,
-        }}
-      >
-        <View
-          style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-        >
-          <View
-            style={{
-              backgroundColor: colors.lightGrey,
-              width: 100,
-              height: StyleSheet.hairlineWidth,
-            }}
-          ></View>
-          <AppText color={LIGHTGREY} type={TEN}>
-            Or sign up with
+        <View style={styles.socialSection}>
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
+          <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+            Or log in with
           </AppText>
-          <View
-            style={{
-              backgroundColor: colors.lightGrey,
-              width: 100,
-              height: StyleSheet.hairlineWidth,
-            }}
-          ></View>
+          <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
         </View>
+
         <TouchableOpacityView
-          style={{
-            borderWidth: 1,
-            borderColor: themeColors.border,
-            borderRadius: 40,
-            padding: 3,
-          }}
+          style={[styles.socialPill, { borderColor: socialPillBorder, backgroundColor: socialPillBg }]}
           onPress={signupWithGoogle}
+          disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
         >
-          <FastImage
-            source={googleIcon}
-            resizeMode="contain"
-            style={{ width: 25, height: 25 }}
-          />
+          {isGoogleSignInInProgress ? (
+            <ActivityIndicator size={"small"} color={themeColors.text} />
+          ) : (
+            <FastImage source={googleIcon} resizeMode="contain" style={styles.socialBrandIcon} />
+          )}
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+            Continue with Google
+          </AppText>
         </TouchableOpacityView>
-        <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-          By signing up, I agree to Zillion Exchange user{" "}
-          <AppText style={{ color: colors.buttonBg, textDecorationLine: 'underline' }} type={TEN} onPress={() => {
-            NavigationService.navigate(CMS_SCREEN, {
-              id: 'https://zillion.wrathcode.com/TermsofUse',
-            });
-          }}>
+
+        <TouchableOpacityView
+          style={[styles.socialPill, { borderColor: socialPillBorder, backgroundColor: socialPillBg }]}
+          onPress={signupWithApple}
+          disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
+        >
+          {isAppleSignInInProgress ? (
+            <ActivityIndicator size={"small"} color={themeColors.text} />
+          ) : (
+            <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
+          )}
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+            Continue with Apple
+          </AppText>
+        </TouchableOpacityView>
+
+        <AppText type={TEN} style={{ color: themeColors.secondaryText, textAlign: "center", marginTop: 4 }}>
+          By signing up, I agree to AGCE Exchange user{" "}
+          <AppText
+            style={{ color: colors.buttonBg, textDecorationLine: "underline" }}
+            type={TEN}
+            onPress={() => {
+              NavigationService.navigate(CMS_SCREEN, {
+                id: "https://agce.wrathcode.com/terms_conditions",
+              });
+            }}
+          >
             Terms and Conditions
           </AppText>
         </AppText>
       </View>
-
+      </KeyBoardAware>
+    
     </AppSafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  primaryCTA: {
+    alignSelf: "stretch",
+  },
+  socialSection: {
+    paddingBottom: 24,
+    gap: 12,
+    marginTop:20
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  socialPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    gap: 10,
+  },
+  socialBrandIcon: {
+    width: 22,
+    height: 22,
+  },
+  appleIcon: {
+    marginRight: 0,
+  },
+});
 
 export default Register;

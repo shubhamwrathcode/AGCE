@@ -2,7 +2,7 @@ export const colors = {
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
-  buttonBg: '#1e56f5',
+  buttonBg: '#303237',
   buttonDarkBg: '#F3BB2B',
   yellow: 'yellow',
   secondaryText: '#FFFFFF50',
@@ -76,17 +76,20 @@ export const colors = {
   starColor:"#ffc108"
 };
 
+/** Light canvas: not pure #fff so the app reads distinct from the cloned template. */
+export const lightScreenBackground = '#F5F6F8';
+
 export const lightTheme = {
-  background: '#FFFFFF',
+  background: lightScreenBackground,
   text: '#000000',
   secondaryText: '#6E6E6E',
-  button: '#1e56f5',
+  button: '#303237',
   buttonText: '#FFFFFF',
   card: '#F8F9FA',
   border: '#DDDDDD',
-  input: '#F1F1F1',
+  input: '#EAEDF0',
   inputBorder: '#DDDDDD',
-  tabBar: '#FFFFFF',
+  tabBar: lightScreenBackground,
   inactiveTab: '#999999',
   themeSelection: '#F0F0F0',
   themeElevationColor: '#F8F9FA',

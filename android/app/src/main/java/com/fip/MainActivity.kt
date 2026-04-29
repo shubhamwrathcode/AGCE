@@ -1,4 +1,4 @@
-package com.zillionexchange
+package com.agce.exchange
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

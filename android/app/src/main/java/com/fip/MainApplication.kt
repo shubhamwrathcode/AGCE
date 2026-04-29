@@ -1,4 +1,4 @@
-package com.zillionexchange
+package com.agce.exchange
 
 import android.app.Application
 import com.facebook.react.PackageList

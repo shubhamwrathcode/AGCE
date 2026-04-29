@@ -7,17 +7,18 @@ import { colors } from '../theme/colors';
 
 interface SpinnerSecondProps {
   loading?: boolean;
+  localOnly?: boolean;
 }
 
 const { width: WINDOW_WIDTH, height: WINDOW_HEIGHT } = Dimensions.get('window');
 
-const SpinnerSecond = ({ loading }: SpinnerSecondProps) => {
+const SpinnerSecond = ({ loading, localOnly = false }: SpinnerSecondProps) => {
   const isLoading = useAppSelector(state => state.auth.isLoading);
   const loadingFor = useAppSelector(state => state.auth.loadingFor);
   const scaleValue = useRef(new Animated.Value(1)).current;
 
   // Ensure it shows even for OTP if needed, or based on overall isLoading
-  const shouldShow = isLoading || loading;
+  const shouldShow = localOnly ? !!loading : (isLoading || !!loading);
 
   useEffect(() => {
     if (!shouldShow) {

@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
 });
 
 const OtpInput6Digit = forwardRef(function OtpInput6Digit(
-  { value = '', onChangeText, label, labelStyle, containerStyle },
+  { value = '', onChangeText, label, labelStyle, containerStyle, hasError = false },
   ref
 ) {
   const { colors: themeColors, isDark } = useTheme();
@@ -84,6 +84,7 @@ const OtpInput6Digit = forwardRef(function OtpInput6Digit(
                   borderColor: themeColors.border, 
                   backgroundColor: themeColors.input 
                 },
+                hasError && { borderColor: colors.red },
                 normalized.length === i && [styles.boxHighlight, { borderColor: themeColors.button }],
               ]}
             >

@@ -47,8 +47,8 @@ export default Checkbox;
 
 const styles = StyleSheet.create({
   selectedUIFilter: () => ({
-    height: 16,
-    width: 16,
+    height: 15,
+    width: 15,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',

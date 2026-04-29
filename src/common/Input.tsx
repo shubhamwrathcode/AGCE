@@ -72,6 +72,7 @@ const Input = ({
   ...props
 }: InputProps) => {
   const { colors: themeColors, isDark } = useTheme();
+  const resolvedInputBg = themeColors.input;
   
   return (
     <View style={[styles.inputWrapper, mainContainer]}>
@@ -79,10 +80,11 @@ const Input = ({
       <View
         style={[
           styles.container,
-          { 
-            backgroundColor: themeColors.input, 
-            borderColor: themeColors.border,
-            ...(title ? { marginTop: 0 } : {})
+          {
+            backgroundColor: resolvedInputBg,
+            borderColor: isDark ? themeColors.border : "transparent",
+            borderWidth: isDark ? 1 : 0,
+            ...(title ? { marginTop: 0 } : {}),
           },
           containerStyle && typeof containerStyle === "object" ? containerStyle : undefined,
         ]}

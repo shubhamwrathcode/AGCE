@@ -52,7 +52,7 @@ export const searchIcon = require('../../assets/images/search_ic.png');
 export const HomeBg = require('../../assets/images/BlackBg.png');
 export const appDarkBg = require('../../assets/images/appDarkBg.png');
 export const splashTwo = require('../../assets/images/updatedSplash.png');
-export const updatedSplashDark = require('../../assets/images/updatedSplashDark.png');
+export const updatedSplashDark = require('../../assets/images/updatedSplash.png');
 export const splasDark = updatedSplashDark;
 export const loginDarkBg = require('../../assets/images/loginDarkBg.png');
 export const BANNER_IMG = require('../../assets/images/bannerImg.png');
@@ -381,6 +381,15 @@ export const airdrop_stats_icon4 = require('../../assets/images/airdrop_stats_ic
 export const airdropLight = require('../../assets/images/airdropLight.png');
 export const airdropDark= require('../../assets/images/airdropDark.png');
 export const earngift_vector1= require('../../assets/images/earngift_vector1.png');
+
+
+// agce
+export const logobg = require('../../assets/images/logobg.png')
+export const pasteImg = require('../../assets/images/pasteImg.png')
+export const apple = require('../../assets/images/apple.png')
+
+
+
 
 
 

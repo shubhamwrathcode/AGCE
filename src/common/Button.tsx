@@ -47,7 +47,7 @@ const Button = ({
       }
       {...rest}>
       {loading ? (
-        <ActivityIndicator size={'small'} color={colors.buttonBg} />
+        <ActivityIndicator size={'small'} color={colors.white} />
       ) : (
         typeof children === 'string' ? (
           <AppText
@@ -69,8 +69,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     height: buttonHeight,
-    borderRadius: 12,
-    backgroundColor: colors.blueThemeColor,
+    borderRadius: 50,
+    backgroundColor: colors.buttonBg,
   },
 });
 

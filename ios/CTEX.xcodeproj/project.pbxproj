@@ -424,7 +424,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zillionexchange;
+				PRODUCT_BUNDLE_IDENTIFIER = com.agce.exchange;
 				PRODUCT_NAME = AGCE;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -455,7 +455,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zillionexchange;
+				PRODUCT_BUNDLE_IDENTIFIER = com.agce.exchange;
 				PRODUCT_NAME = CTEX;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

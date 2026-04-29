@@ -8,6 +8,7 @@ export interface OtpInput6DigitProps {
   isDark?: boolean;
   labelStyle?: StyleProp<TextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
+  hasError?: boolean;
 }
 
 declare const OtpInput6Digit: React.ForwardRefExoticComponent<

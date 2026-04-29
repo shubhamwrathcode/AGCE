@@ -113,8 +113,20 @@ export class AppOperation {
             return response
               .text()
               .then(responseData => {
-                let jsonData: any = JSON.parse(responseData);
-                resolve({ ...jsonData, code: status });
+                try {
+                  const jsonData: any = JSON.parse(responseData);
+                  resolve({ ...jsonData, code: status });
+                } catch {
+                  // Some proxies/backends return HTML even on 200; surface a readable error.
+                  const preview = String(responseData || '').trim().slice(0, 120);
+                  reject(
+                    new ApiError(
+                      preview.startsWith('<')
+                        ? 'Server returned HTML instead of JSON. Please try again later.'
+                        : 'Server returned an invalid response format.'
+                    )
+                  );
+                }
               })
               .catch(errorResponse =>
                 Promise.reject({ code: status, data: errorResponse }),
@@ -124,7 +136,17 @@ export class AppOperation {
           return response
             .text()
             .then(errorResponse => {
-              const errData = { code: status, ...JSON.parse(errorResponse || '{}') };
+              let parsed: any = {};
+              try {
+                parsed = JSON.parse(errorResponse || '{}');
+              } catch {
+                parsed = {
+                  message: String(errorResponse || '').trim().startsWith('<')
+                    ? 'Server returned HTML error page.'
+                    : String(errorResponse || '').trim() || 'Unexpected server error.',
+                };
+              }
+              const errData = { code: status, ...parsed };
               console.warn('[API] Error response:', status, JSON.stringify(errData));
               reject(errData);
             });

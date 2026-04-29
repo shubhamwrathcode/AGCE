@@ -28,7 +28,12 @@ import {PASSKEY_RP_ID} from '../helper/Constants';
 import {socketService} from '../services/socket/SocketService';
 
 export const sendOtp =
-  (data: SendOtpRegistrationProps, setDisbaleBtn = (p0: boolean) => {}, setTimer = (p0: number) => {}) =>
+  (
+    data: SendOtpRegistrationProps,
+    setDisbaleBtn = (p0: boolean) => {},
+    setTimer = (p0: number) => {},
+    setAttemptLeft = (_: string | number) => {}
+  ) =>
   async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
@@ -37,10 +42,13 @@ export const sendOtp =
         showError(response.message);
         setDisbaleBtn(true);
         setTimer(60);
+        setAttemptLeft(response?.attemptsLeft ?? "");
       }
+      return response;
     } catch (e: any) {
       logger(e);
       showError(e?.message);
+      return { success: false, message: e?.message };
     } finally {
       dispatch(setLoading(false));
     }
@@ -317,16 +325,25 @@ export const sendLoginOtp =
   };
 
 /** Same as web RegistrationVerification handleLogin: verify-registration-otp API, success → Login (account activated) */
-export const verifyOtp = (data: any, setOtp = (p0: string) => {}) => async (dispatch: AppDispatch) => {
+export const verifyOtp = (
+  data: any,
+  setOtp = (p0: string) => {},
+  setOtpError = (_: boolean) => {},
+  onBlocked = () => {}
+) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoadingOtp(true));
     const response: any = await appOperation.guest.verify_otp(data);
 
     if (!response.success) {
       showError(response?.message ?? 'Verification failed.');
-      setOtp('');
+      setOtpError(true);
+      if (String(response?.message || '').toLowerCase().includes('no otp attempt left')) {
+        onBlocked();
+      }
     } else {
       showSuccess(response?.message ?? 'Account verified successfully.');
+      setOtpError(false);
       setOtp('');
       NavigationService.navigate(NAVIGATION_AUTH_STACK, {
         screen: ACCOUNT_ACTIVATED_SCREEN,
@@ -339,10 +356,12 @@ export const verifyOtp = (data: any, setOtp = (p0: string) => {}) => async (disp
       e?.message ??
       (e?.request ? 'Network error. Please check your internet connection.' : null);
     showError(errorMessage ?? 'An error occurred. Please try again later.');
-    setOtp('');
+    setOtpError(true);
+    if (String(errorMessage || '').toLowerCase().includes('no otp attempt left')) {
+      onBlocked();
+    }
   } finally {
     dispatch(setLoadingOtp(false));
-    setOtp('');
   }
 };
 

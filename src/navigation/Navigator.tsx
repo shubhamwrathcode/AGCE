@@ -12,6 +12,7 @@ import Welcome from "../screens/auth/Welcome";
 import Login from "../screens/auth/Login";
 import ForgotPassword from "../screens/auth/ForgotPassword";
 import Register from "../screens/auth/Register";
+import SetPassword from "../screens/auth/SetPassword";
 import VerifyAccount from "../screens/auth/VerifyAccount";
 import AccountActivated from "../screens/auth/AccountActivated";
 import OtpVerify from "../screens/auth/OtpVerify";
@@ -448,6 +449,7 @@ const AuthStack = () => (
       component={ForgotPassword}
     />
     <Stack.Screen name={routes.REGISTER_SCREEN} component={Register} />
+    <Stack.Screen name={routes.SET_PASSWORD_SCREEN} component={SetPassword} />
     <Stack.Screen name={routes.VERIFY_ACCOUNT_SCREEN} component={VerifyAccount} />
     <Stack.Screen name={routes.ACCOUNT_ACTIVATED_SCREEN} component={AccountActivated} />
     <Stack.Screen name={routes.OTP_VERIFY_SCREEN} component={OtpVerify} />

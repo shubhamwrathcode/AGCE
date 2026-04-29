@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.zillionexchange",
+  "applicationId": "com.agce.exchange",
   "variantName": "release",
   "elements": [
     {

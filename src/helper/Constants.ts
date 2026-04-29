@@ -3,8 +3,8 @@ export const FCM_TOKEN_KEY = 'FCM_TOKEN_KEY';
 export const APP_THEME = 'APP_THEME';
 export const SELECTED_LANGUAGE = 'SELECTED_LANGUAGE';
 /** API origin (no `/api` segment). Paths are built as `${BASE_URL}v1/...` in AppOperation — same as web. */
-export const BASE_URL = 'https://backend.zillion.wrathcode.com/';
-export const IMAGE_BASE_URL = 'https://backend.zillion.wrathcode.com/';
+export const BASE_URL = 'https://agcebackend.wrathcode.com/';
+export const IMAGE_BASE_URL = 'https://agcebackend.wrathcode.com/';
 // export const BASE_URL = 'http://3.110.173.10:3008/';
 
 // For passkey testing with backend on localhost:5001 use one of:
