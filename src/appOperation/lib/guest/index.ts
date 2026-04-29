@@ -19,11 +19,11 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('user/register-phone', data, GUEST_TYPE),
   /** Web parity: step-1 email availability check */
   check_signup_email: (email: string) =>
-    appOperation.post('user/check-signup-email', { email: String(email || '').trim() }, GUEST_TYPE),
+    appOperation.post('check-signup-email', { email: String(email || '').trim() }, GUEST_TYPE),
   /** Web parity: referral validity check */
   validate_signup_referral: (referralCode: string) =>
     appOperation.post(
-      'user/validate-signup-referral',
+      'validate-signup-referral',
       { referral_code: String(referralCode || '').trim() },
       GUEST_TYPE
     ),

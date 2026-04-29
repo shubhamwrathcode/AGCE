@@ -104,6 +104,12 @@ const parseSignupReferralResponse = (res) => {
   return { ok: true };
 };
 
+const isSkippablePrecheckError = (err) => {
+  const code = Number(err?.code ?? err?.status ?? 0);
+  const message = String(err?.message || "").toLowerCase();
+  return code === 404 || message.includes("html error page") || message.includes("html instead of json");
+};
+
 const Register = () => {
   const route = useRoute();
   const dispatch = useAppDispatch();
@@ -195,8 +201,12 @@ const Register = () => {
           return;
         }
       } catch (e) {
+        if (isSkippablePrecheckError(e)) {
+          console.warn("[Register] check-signup-email unavailable, skipping pre-check", e?.code || e?.message);
+        } else {
         showError(e?.message || e?.response?.data?.message || "Request failed");
         return;
+        }
       } finally {
         setStep1Submitting(false);
       }
@@ -214,8 +224,12 @@ const Register = () => {
           return;
         }
       } catch (e) {
+        if (isSkippablePrecheckError(e)) {
+          console.warn("[Register] validate-signup-referral unavailable, skipping pre-check", e?.code || e?.message);
+        } else {
         showError(e?.message || e?.response?.data?.message || "Request failed");
         return;
+        }
       } finally {
         setStep1Submitting(false);
       }

@@ -1,88 +1,32 @@
 import React, { useEffect, useRef, useState } from "react";
-import NavigationService from "../../navigation/NavigationService";
 import FastImage from "react-native-fast-image";
-import {
-  CMS_SCREEN,
-  FORGOT_PASSWORD_SCREEN,
-  REGISTER_SCREEN,
-  WELCOME_SCREEN,
-} from "../../navigation/routes";
-import {
-  AppSafeAreaView,
-  AppText,
-  MEDIUM,
-  Button,
-  Input,
-  TWENTY,
-  TWENTY_SIX,
-  Toolbar,
-  WHITE,
-  YELLOW,
-  BLACK,
-  BOLD,
-  LIGHTGREY,
-  TEN,
-  THIRTEEN,
-  EIGHTEEN,
-  ELEVEN,
-  TWELVE,
-} from "../../shared";
-import {
-  welcomeBg,
-  welcomeBg2,
-  Logo,
-  back_ic,
-  googleIcon,
-  closeIcon,
-  PASSKEY_VERIFY,
-  passkey_login,
-} from "../../helper/ImageAssets";
-import {
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal as RNModal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { authStyles } from "./authStyles";
+import { ActivityIndicator, Keyboard, Linking, StyleSheet, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { isValidPhoneNumber } from "libphonenumber-js";
+import { Passkey } from "react-native-passkey";
+import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
+import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../navigation/routes";
+import { AppSafeAreaView, AppText, BOLD, Button, FOURTEEN, Input, TEN, TWENTY_SIX } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
+import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { googleLogin, login, passkeyDiscoverableLogin } from "../../actions/authActions";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
-import {
-  checkValue,
-  validateEmail,
-  validatePasswordStrict,
-} from "../../helper/utility";
-import {
-  GoogleSignin,
-  statusCodes,
-} from "@react-native-google-signin/google-signin";
+import { checkValue, validateEmail, validatePasswordStrict } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
-import { colors } from "../../theme/colors";
-import { isValidPhoneNumber } from "libphonenumber-js";
 import { setLoading } from "../../slices/authSlice";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SpinnerSecond } from "../../shared/components/SpinnerSecond";
-import { AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/components";
-import { Passkey } from "react-native-passkey";
+import { googleIcon, passkey_login } from "../../helper/ImageAssets";
+import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/components";
+import NavigationService from "../../navigation/NavigationService";
 
 const Login = (): JSX.Element => {
   const dispatch = useAppDispatch();
-  const { colors: themeColors, isDark } = useTheme();
+  const { colors: themeColors } = useTheme();
   const isLoading = useAppSelector((state) => state.auth.isLoading);
   const showButtonLoading = useAppSelector((state) => state.auth.isLoading && state.auth.loadingFor !== 'otp');
   const languages = useAppSelector((state) => state.account.languages);
-  const tabTitle = (value: string | undefined, fallback: string) =>
-    value != null && value !== "" ? checkValue(value) : fallback;
-  const loc = languages as typeof languages & { phone?: string };
-  const authTabs = [tabTitle(loc?.email, "Email"), tabTitle(loc?.phone, "Phone")];
-  const passwordInput = useRef(null);
+  const passwordInput = useRef<any>(null);
   const [signUpId, setSignUpId] = useState("");
   const [password, setPassword] = useState<string>("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(true);
@@ -94,6 +38,7 @@ const Login = (): JSX.Element => {
   const [isValid, setIsValid] = useState(false);
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] =
     useState(false);
+  const [isPasskeySignInInProgress, setIsPasskeySignInInProgress] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [hasPasskey, setHasPasskey] = useState(false);
 
@@ -213,7 +158,10 @@ const Login = (): JSX.Element => {
   };
 
   const signInWithPasskey = () => {
-    dispatch(passkeyDiscoverableLogin() as any);
+    setIsPasskeySignInInProgress(true);
+    Promise.resolve(dispatch(passkeyDiscoverableLogin() as any)).finally(() => {
+      setIsPasskeySignInInProgress(false);
+    });
   };
 
   useEffect(() => {
@@ -266,37 +214,27 @@ const Login = (): JSX.Element => {
       setIsValid(validateEmail(val));
     } else if (index === 1) {
       // Mobile tab (second)
-      const phone = Number(val);
-      const valid = isValidPhoneNumber(`+${countryCode}${phone}`);
+      const fullPhone = `${countryCode?.[0] ? `+${countryCode[0]}` : "+91"}${String(val || "")}`;
+      const valid = isValidPhoneNumber(fullPhone);
       setIsValid(valid);
     }
+  };
+
+  const openSupport = () => {
+    Linking.openURL("https://zillion.wrathcode.com/").catch(() => {});
   };
 
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware style={{ paddingHorizontal: 20 }}>
-        <View style={{ marginVertical: 20 }}>
-          <TouchableOpacityView
-            onPress={() => NavigationService.navigate(WELCOME_SCREEN)}
-          >
-            <FastImage
-              source={back_ic}
-              resizeMode="contain"
-              style={{ width: 15, height: 15 }}
-              tintColor={themeColors.text}
-            />
-          </TouchableOpacityView>
-        </View>
-        <AppText
-          weight={BOLD}
-          type={TWENTY_SIX}
-          style={{ marginHorizontal: 10, color: themeColors.text }}
-        >
-          Login
-        </AppText>
-        <View style={{ marginTop: 20 }}>
+        <AuthHeader
+          onSupportPress={openSupport}
+          onClosePress={() => NavigationService.navigate(WELCOME_SCREEN)}
+          title="Log In"
+        />
+        <View style={{ marginTop: 16 }}>
           <AuthEmailPhoneTabBar
-            tabs={authTabs}
+            tabs={["Email/Username", "Phone"]}
             index={index}
             onChange={(i: number) => {
               setIndex(i);
@@ -322,7 +260,7 @@ const Login = (): JSX.Element => {
           ) : (
             <View style={authStyles.mobileContainer}>
               <Input
-                placeholder={checkValue(languages?.place_login_userName)}
+                placeholder={"Enter email address"}
                 value={signUpId}
                 onChangeText={(text) => changeInput(text)}
                 keyboardType={"email-address"}
@@ -342,15 +280,15 @@ const Login = (): JSX.Element => {
               children={"Next"}
               disabled={!isValid}
               onPress={() => setShowPassField(true)}
-              containerStyle={{ marginTop: 30, backgroundColor: themeColors.button }}
-              titleStyle={{ color: themeColors.buttonText }}
+              loading={showButtonLoading && !isGoogleSignInInProgress && !isPasskeySignInInProgress}
+              containerStyle={{ marginTop: 18, backgroundColor: themeColors.button }}
             />
           )}
 
           {showPassField && (
             <>
               <Input
-                placeholder={checkValue(languages?.place_signUpPassword)}
+                placeholder={"Enter password"}
                 value={password}
                 onChangeText={(text) => setPassword(text)}
                 autoCapitalize="none"
@@ -376,102 +314,109 @@ const Login = (): JSX.Element => {
                 children={"Login"}
                 disabled={!password}
                 onPress={onSubmit}
-                loading={showButtonLoading}
+                loading={showButtonLoading && !isGoogleSignInInProgress && !isPasskeySignInInProgress}
                 containerStyle={{ marginTop: 30, backgroundColor: themeColors.button }}
                 titleStyle={{ color: themeColors.buttonText }}
               />
             </>
           )}
         </View>
-      </KeyBoardAware>
-      {!isKeyboardVisible && (
-        <View
-          style={{
-            alignSelf: "center",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 20,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View
-              style={{
-                backgroundColor: themeColors.border,
-                width: 100,
-                height: StyleSheet.hairlineWidth,
-              }}
-            ></View>
-            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-              Or login with
-            </AppText>
-            <View
-              style={{
-                backgroundColor: themeColors.border,
-                width: 100,
-                height: StyleSheet.hairlineWidth,
-              }}
-            ></View>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <TouchableOpacityView
-              style={{
-                borderWidth: 1,
-                borderColor: themeColors.border,
-                borderRadius: 40,
-                width: 35, height: 35,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              onPress={signInWithGoogle}
-              disabled={isLoading}
-            >
-              <FastImage
-                source={googleIcon}
-                resizeMode="contain"
-                style={{ width: 22, height: 22 }}
-              />
-            </TouchableOpacityView>
-            {passkeySupported && hasPasskey && (
-              <TouchableOpacityView
-                style={{
-                  borderWidth: 1,
-                  borderColor: themeColors.border,
-                  borderRadius: 40,
-                  width: 35, height: 35,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                onPress={signInWithPasskey}
-                disabled={isLoading}
-              >
-                <FastImage
-                  source={passkey_login}
-                  resizeMode="contain"
-                  style={{ width: 20, height: 20 }}
-                  tintColor={themeColors.text}
-                />
-              </TouchableOpacityView>
-            )}
-          </View>
-          <AppText type={TEN} style={{ color: themeColors.secondaryText, textAlign: 'center', paddingHorizontal: 20 }}>
-            By signing in, I agree to AGCE Exchange user{" "}
-            <AppText
-              style={{ color: themeColors.button, textDecorationLine: "underline" }}
-              type={TEN}
-              onPress={() => {
-                NavigationService.navigate(CMS_SCREEN, {
-                  id: "https://agce.wrathcode.com/terms_conditions",
-                });
-              }}
-            >
-              Terms and Conditions
-            </AppText>
-          </AppText>
-        </View>
-      )}
+        {!isKeyboardVisible && (
+          <View style={styles.socialSection}>
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
+              <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
+                Or
+              </AppText>
+              <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
+            </View>
 
+            <TouchableOpacityView
+              style={[styles.socialPill, { borderColor: themeColors.border }]}
+              onPress={signInWithGoogle}
+              disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isLoading}
+            >
+              {isGoogleSignInInProgress ? (
+                <ActivityIndicator size={"small"} color={themeColors.text} />
+              ) : (
+                <FastImage source={googleIcon} resizeMode="contain" style={styles.socialBrandIcon} />
+              )}
+              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+                Continue with Google
+              </AppText>
+            </TouchableOpacityView>
+
+            {passkeySupported && hasPasskey ? (
+              <TouchableOpacityView
+                style={[styles.socialPill, { borderColor: themeColors.border }]}
+                onPress={signInWithPasskey}
+                disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isLoading}
+              >
+                {isPasskeySignInInProgress ? (
+                  <ActivityIndicator size={"small"} color={themeColors.text} />
+                ) : (
+                  <FastImage
+                    source={passkey_login}
+                    resizeMode="contain"
+                    style={styles.socialBrandIcon}
+                    tintColor={themeColors.text}
+                  />
+                )}
+                <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+                  Continue with Passkey
+                </AppText>
+              </TouchableOpacityView>
+            ) : null}
+
+            <TouchableOpacityView
+              style={styles.createAccountWrap}
+              onPress={() => NavigationService.navigate(REGISTER_SCREEN)}
+            >
+              <AppText type={FOURTEEN} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
+                Create a AGCE Account
+              </AppText>
+            </TouchableOpacityView>
+          </View>
+        )}
+      </KeyBoardAware>
     </AppSafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  socialSection: {
+    marginTop: 18,
+    paddingBottom: 24,
+    gap: 14,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  socialPill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    minHeight: 50,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  socialBrandIcon: {
+    width: 24,
+    height: 24,
+  },
+  createAccountWrap: {
+    marginTop: 2,
+    alignItems: "center",
+  },
+});
 
 export default Login;
