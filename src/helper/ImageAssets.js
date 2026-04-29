@@ -387,6 +387,8 @@ export const earngift_vector1= require('../../assets/images/earngift_vector1.png
 export const logobg = require('../../assets/images/logobg.png')
 export const pasteImg = require('../../assets/images/pasteImg.png')
 export const apple = require('../../assets/images/apple.png')
+export const qrcode_img = require('../../assets/images/qrcode_img.png')
+
 
 
 

@@ -8,6 +8,7 @@ import {
   ScrollView,
   Keyboard,
   useWindowDimensions,
+  Linking,
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
@@ -15,10 +16,10 @@ import { clearPending2FA } from "../../slices/authSlice";
 import { sendLoginOtp, verifyUser, verifyPasskeyLogin } from "../../actions/authActions";
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN } from "../../navigation/routes";
-import { AppText, AppSafeAreaView, Button, BOLD, FOURTEEN as FOURTEEN_CONST, SEMI_BOLD, THIRTEEN, EIGHTEEN, SIXTEEN } from "../../shared";
+import { AppText, AppSafeAreaView, Button, BOLD, FOURTEEN as FOURTEEN_CONST, SEMI_BOLD, THIRTEEN, EIGHTEEN, SIXTEEN, TWENTY_SIX, MEDIUM } from "../../shared";
 import { colors } from "../../theme/colors";
 import FastImage from "react-native-fast-image";
-import { back_ic, closeIcon, EMAIL, FINGERPRINT, PHONE, KEY_ICON, SHARE_NEW_ICON } from "../../helper/ImageAssets";
+import { closeIcon, EMAIL, FINGERPRINT, PHONE, KEY_ICON, pasteImg, SHARE_NEW_ICON } from "../../helper/ImageAssets";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { OtpInput6Digit } from "../../shared";
 import { showError } from "../../helper/logger";
@@ -26,6 +27,8 @@ import QRCode from "react-native-qrcode-svg";
 import { BASE_URL } from "../../helper/Constants";
 import { SpinnerSecond } from "../../shared/components/SpinnerSecond";
 import { useTheme } from "../../hooks/useTheme";
+import Clipboard from "@react-native-community/clipboard";
+import { AuthHeader } from "../../shared/components";
 
 const getMethodIcon = (type: number) => {
   switch (type) {
@@ -72,6 +75,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const initialMethod = getFirstMethod();
   const [selectedAuthMethod, setSelectedAuthMethod] = useState(initialMethod);
   const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState(false);
   const [resendTimer, setResendTimer] = useState((initialMethod === 1 || initialMethod === 3) ? 60 : 0);
   const [passkeyCancelledOrFailed, setPasskeyCancelledOrFailed] = useState(false);
   const [passkeyVerifying, setPasskeyVerifying] = useState(false);
@@ -99,6 +103,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
       setSelectedAuthMethod(firstMethod);
       setOtpCode("");
+      setOtpError(false);
       if (firstMethod !== 1 && firstMethod !== 3) {
         setResendTimer(0);
       }
@@ -174,13 +179,33 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     dispatch(sendLoginOtp(getVerifySignId(), sendTo, setResendTimer));
   };
 
-  const handleSubmit = () => {
+  const handlePasteOtp = async () => {
+    try {
+      const text = await Clipboard.getString();
+      const digits = String(text || "").replace(/\D/g, "").slice(0, 6);
+      if (digits.length) {
+        setOtpError(false);
+        setOtpCode(digits);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSubmit = async () => {
     if (otpCode.length < 6) {
+      setOtpError(true);
       showError("Please enter a valid 6-digit code");
       return;
     }
+    setOtpError(false);
     Keyboard.dismiss();
-    dispatch(verifyUser({ email_or_phone: getVerifySignId(), otp: otpCode, type: selectedAuthMethod }));
+    const res: any = await dispatch(
+      verifyUser({ email_or_phone: getVerifySignId(), otp: otpCode, type: selectedAuthMethod }) as any
+    );
+    if (res && res.success === false) {
+      setOtpError(true);
+    }
   };
 
   const getMaskedEmail = (): string => {
@@ -244,19 +269,21 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.navRow}>
-            <TouchableOpacity onPress={onClose} style={styles.navBtn}>
-              <FastImage source={back_ic} resizeMode="contain" style={styles.navIcon} tintColor={themeColors.text} />
-            </TouchableOpacity>
-          </View>
+          <AuthHeader
+            onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => {})}
+            onClosePress={onClose}
+            title={""}
+          />
 
           {selectedAuthMethod !== 4 && (
             <>
               <AppText weight={BOLD} type={EIGHTEEN} style={[styles.title, { color: themeColors.text }]}>
-                {getVerificationTitle()}
+                {selectedAuthMethod === 1 ? "Verify Your Email" : selectedAuthMethod === 3 ? "Verify Your Phone" : getVerificationTitle()}
               </AppText>
               <AppText type={THIRTEEN} style={[styles.description, { color: themeColors.secondaryText }]}>
-                {getVerificationDescription()}
+                {selectedAuthMethod === 1 || selectedAuthMethod === 3
+                  ? `The verification code has been sent to your ${selectedAuthMethod === 1 ? "email" : "phone"} ${getMaskedEmail()}, valid for 10 minutes.`
+                  : getVerificationDescription()}
               </AppText>
             </>
           )}
@@ -265,27 +292,33 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             <View style={styles.passkeyPageWrap}>
               {passkeyCancelledOrFailed ? (
                 <>
-                  <AppText weight={BOLD} type={EIGHTEEN} style={[styles.passkeyPageTitle, { color: themeColors.text }]}>
-                    Verify with passkey
+                  <AppText weight={BOLD} type={EIGHTEEN} style={[styles.passkeyTitle, { color: themeColors.text }]}>
+                    Passkey Authentication
                   </AppText>
-                  {getMaskedEmail() ? (
-                    <AppText type={THIRTEEN} style={[styles.passkeyPageEmail, { color: themeColors.secondaryText }]}>
-                      {getMaskedEmail()}
-                    </AppText>
-                  ) : null}
-                  <View style={styles.passkeyPageIconWrap}>
-                    <FastImage
-                      source={FINGERPRINT}
-                      resizeMode="contain"
-                      style={styles.passkeyPageIcon}
-                      tintColor={themeColors.button}
-                    />
+                  <AppText type={THIRTEEN} style={[styles.passkeySubtitle, { color: themeColors.secondaryText }]}>
+                    Click the button below to authenticate with your passkey.
+                  </AppText>
+
+                  <View style={styles.passkeyHeroWrap}>
+                    <View style={styles.passkeyHeroCircle}>
+                      <FastImage
+                        source={FINGERPRINT}
+                        resizeMode="contain"
+                        style={styles.passkeyHeroIcon}
+                        tintColor={"#FFFFFF"}
+                      />
+                    </View>
                   </View>
-                  <AppText type={THIRTEEN} style={[styles.passkeyPageMessage, { color: themeColors.secondaryText }]}>
-                    Verification cancelled. Please try again or switch to another verification method.
+
+                  <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.passkeyHeroTitle, { color: themeColors.secondaryText }]}>
+                    Use your registered passkey to verify
                   </AppText>
+                  <AppText type={THIRTEEN} style={[styles.passkeyHeroHint, { color: themeColors.secondaryText }]}>
+                    This will prompt Face ID, Touch ID, or Windows Hello
+                  </AppText>
+
                   <Button
-                    children="Verify Again"
+                    children="Authenticate with Passkey"
                     loading={passkeyVerifying}
                     disabled={passkeyVerifying}
                     onPress={async () => {
@@ -295,40 +328,54 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                       setPasskeyVerifying(false);
                       if (!ok) setPasskeyCancelledOrFailed(true);
                     }}
-                    containerStyle={StyleSheet.flatten([styles.passkeyBtn, { backgroundColor: themeColors.button }])}
+                    containerStyle={StyleSheet.flatten([styles.passkeyBtn, { backgroundColor: themeColors.button, }])}
                   />
                   {hasAlternative && (
-                    <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.passkeyPageSwitchRow}>
-                      <AppText type={FOURTEEN_CONST} style={{ color: themeColors.button }}>
-                        Switch to Another Verification Method{'  '}
+                    <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.switchRow}>
+                      <AppText
+                        type={FOURTEEN_CONST}
+                        weight={SEMI_BOLD}
+                        style={[styles.underlineText, { color: themeColors.text }]}
+                      >
+                        Switch verification method{' '}
                       </AppText>
-                      <FastImage source={SHARE_NEW_ICON} style={{ width: 15, height: 15 }} tintColor={themeColors.button} resizeMode="contain" />
+                      <FastImage
+                        source={SHARE_NEW_ICON}
+                        style={{ width: 15, height: 15 }}
+                        tintColor={themeColors.text}
+                        resizeMode="contain"
+                      />
                     </TouchableOpacityView>
                   )}
                 </>
               ) : (
                 <>
-                  <AppText weight={BOLD} type={EIGHTEEN} style={[styles.passkeyPageTitle, { color: themeColors.text }]}>
-                    Verify with passkey
+                  <AppText weight={BOLD} type={EIGHTEEN} style={[styles.passkeyTitle, { color: themeColors.text }]}>
+                    Passkey Authentication
                   </AppText>
-                  {getMaskedEmail() ? (
-                    <AppText type={THIRTEEN} style={[styles.passkeyPageEmail, { color: themeColors.secondaryText }]}>
-                      {getMaskedEmail()}
-                    </AppText>
-                  ) : null}
-                  <View style={styles.passkeyPageIconWrap}>
-                    <FastImage
-                      source={FINGERPRINT}
-                      resizeMode="contain"
-                      style={styles.passkeyPageIcon}
-                      tintColor={themeColors.button}
-                    />
+                  <AppText type={THIRTEEN} style={[styles.passkeySubtitle, { color: themeColors.secondaryText }]}>
+                    Click the button below to authenticate with your passkey.
+                  </AppText>
+
+                  <View style={styles.passkeyHeroWrap}>
+                    <View style={styles.passkeyHeroCircle}>
+                      <FastImage
+                        source={FINGERPRINT}
+                        resizeMode="contain"
+                        style={styles.passkeyHeroIcon}
+                        tintColor={"#FFFFFF"}
+                      />
+                    </View>
                   </View>
-                  <AppText type={THIRTEEN} style={[styles.passkeyPageMessage, { color: themeColors.secondaryText }]}>
-                    Use your fingerprint or face to sign in on this device.
+
+                  <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.passkeyHeroTitle, { color: themeColors.secondaryText }]}>
+                    Use your registered passkey to verify
+                  </AppText>
+                  <AppText type={THIRTEEN} style={[styles.passkeyHeroHint, { color: themeColors.secondaryText }]}>
+                    This will prompt Face ID, Touch ID, or Windows Hello
                   </AppText>
                   <Button
-                    children="Use fingerprint / Face"
+                    children="Authenticate with Passkey"
                     loading={passkeyVerifying}
                     disabled={passkeyVerifying}
                     onPress={async () => {
@@ -340,11 +387,20 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                     containerStyle={StyleSheet.flatten([styles.passkeyBtn, { backgroundColor: themeColors.button }])}
                   />
                   {hasAlternative && (
-                    <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.passkeyPageSwitchRow}>
-                      <AppText type={FOURTEEN_CONST} style={{ color: themeColors.button }}>
-                        Switch to Another Verification Method{'  '}
+                    <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.switchRow}>
+                      <AppText
+                        type={FOURTEEN_CONST}
+                        weight={SEMI_BOLD}
+                        style={[styles.underlineText, { color: themeColors.text }]}
+                      >
+                        Switch verification method{' '}
                       </AppText>
-                      <FastImage source={SHARE_NEW_ICON} style={{ width: 15, height: 15 }} tintColor={themeColors.button} resizeMode="contain" />
+                      <FastImage
+                        source={SHARE_NEW_ICON}
+                        style={{ width: 15, height: 15 }}
+                        tintColor={themeColors.text}
+                        resizeMode="contain"
+                      />
                     </TouchableOpacityView>
                   )}
                 </>
@@ -353,48 +409,82 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
           ) : (
             <>
               <OtpInput6Digit
-                label={getInputLabel()}
                 value={otpCode}
-                onChangeText={setOtpCode}
+                onChangeText={(v: string) => {
+                  if (otpError) setOtpError(false);
+                  setOtpCode(v);
+                }}
                 isDark={isDark}
+                hasError={otpError}
               />
-              {selectedAuthMethod !== 2 && (
-                <View style={styles.resendRow}>
-                  {resendTimer > 0 ? (
-                    <View style={{ alignItems: "flex-end", width: "100%" }}>
-                      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>
-                        Resend ({resendTimer}s)
-                      </AppText>
-                    </View>
-                  ) : (
-                    <TouchableOpacityView onPress={handleGetOtp} style={{ alignItems: "flex-end", width: "100%" }}>
-                      <AppText type={FOURTEEN_CONST} weight={SEMI_BOLD} style={{
-                        color: themeColors.text,
-                      }}>
-                        Get OTP
-                      </AppText>
-                    </TouchableOpacityView>
-                  )}
+              {selectedAuthMethod !== 2 ? (
+                <View style={styles.otpLinksRow}>
+                  <TouchableOpacityView
+                    onPress={resendTimer > 0 ? undefined : handleGetOtp}
+                    disabled={resendTimer > 0}
+                  >
+                    <AppText
+                      type={FOURTEEN_CONST}
+                      weight={MEDIUM}
+                      style={[
+                        styles.underlineText,
+                        { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
+                      ]}
+                    >
+                      {resendTimer > 0 ? `Resend (${resendTimer}s)` : "Resend"}
+                    </AppText>
+                  </TouchableOpacityView>
+
+                  <TouchableOpacityView onPress={handlePasteOtp} style={styles.pasteBtn}>
+                    <AppText type={FOURTEEN_CONST} weight={MEDIUM} style={{ color: themeColors.text }}>
+                      Paste
+                    </AppText>
+                    <FastImage
+                      source={pasteImg}
+                      resizeMode="contain"
+                      style={{ width: 16, height: 16 }}
+                      tintColor={themeColors.text}
+                    />
+                  </TouchableOpacityView>
                 </View>
-              )}
+              ) : null}
               <Button
-                children="Submit"
-                disabled={otpCode.length < 6}
+                children="Next"
+                disabled={false}
                 onPress={handleSubmit}
                 loading={showButtonLoading}
                 containerStyle={styles.submitBtn}
               />
+
+              {selectedAuthMethod !== 2 ? (
+                <TouchableOpacityView
+                  style={styles.didntReceiveWrap}
+                  onPress={resendTimer > 0 ? undefined : handleGetOtp}
+                  disabled={resendTimer > 0}
+                >
+                  <AppText
+                    type={FOURTEEN_CONST}
+                    weight={SEMI_BOLD}
+                    style={[
+                      styles.underlineText,
+                      { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
+                    ]}
+                  >
+                    Didn't receive the code?
+                  </AppText>
+                </TouchableOpacityView>
+              ) : null}
             </>
           )}
 
-          {hasAlternative && selectedAuthMethod !== 4 && (
-            <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.linkRow}>
-              <AppText type={FOURTEEN_CONST} style={{ color: themeColors.button }}>
-                Switch to Another Verification Method{'  '}
+          {hasAlternative && selectedAuthMethod !== 4 ? (
+            <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.switchRow}>
+              <AppText type={FOURTEEN_CONST} weight={SEMI_BOLD} style={[styles.underlineText, { color: themeColors.text }]}>
+                Switch verification method{' '}
               </AppText>
-              <FastImage source={SHARE_NEW_ICON} style={{ width: 15, height: 15 }} tintColor={themeColors.button} resizeMode="contain" />
+              <FastImage source={SHARE_NEW_ICON} style={{ width: 15, height: 15 }} tintColor={themeColors.text} resizeMode="contain" />
             </TouchableOpacityView>
-          )}
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -527,78 +617,85 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 40,
-  },
-  navRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  navBtn: {
-    padding: 5,
-  },
-  navIcon: {
-    width: 20,
-    height: 20,
   },
   title: {
     marginBottom: 8,
-    marginLeft: 5
+    marginTop: 10,
   },
   description: {
     marginBottom: 24,
-    marginLeft: 5
-  },
-  resendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    marginBottom: 4,
   },
   submitBtn: {
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: 26,
+    marginBottom: 0,
+    width: "100%",
   },
-  linkRow: {
-    marginBottom: 12,
-    alignSelf: "flex-start",
+  otpLinksRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  underlineText: {
+    textDecorationLine: "underline",
+  },
+  pasteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  didntReceiveWrap: {
+    alignSelf: "center",
+    marginTop: 22,
+  },
+  switchRow: {
+    marginTop: 26,
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
   },
   passkeyPageWrap: {
     marginVertical: 24,
   },
-  passkeyPageTitle: {
-    marginBottom: 6,
-    marginLeft: 5,
+  passkeyTitle: {
+    marginTop: 6,
+    marginBottom: 10,
   },
-  passkeyPageEmail: {
-    marginBottom: 24,
-    marginLeft: 5,
+  passkeySubtitle: {
+    marginBottom: 22,
   },
-  passkeyPageIconWrap: {
+  passkeyHeroWrap: {
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 28,
+    marginVertical: 18,
   },
-  passkeyPageIcon: {
-    width: 72,
-    height: 72,
-  },
-  passkeyPageMessage: {
-    textAlign: "center",
-    marginBottom: 24,
-    paddingHorizontal: 8,
-  },
-  passkeyPageSwitchRow: {
-    marginTop: 20,
+  passkeyHeroCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#16A34A",
     alignItems: "center",
-    flexDirection: "row",
+    justifyContent: "center",
+  },
+  passkeyHeroIcon: {
+    width: 44,
+    height: 44,
+  },
+  passkeyHeroTitle: {
+    textAlign: "center",
+    marginTop: 8,
+  },
+  passkeyHeroHint: {
+    textAlign: "center",
+    marginTop: 10,
+    opacity: 0.7,
   },
   passkeyBtn: {
     width: "100%",
+    marginTop:30
+    
   },
   passkeyQRSheetContent: {
     paddingBottom: 44,

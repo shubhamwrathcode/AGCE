@@ -10,7 +10,7 @@ import {
   TWELVE,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
-import { ActivityIndicator, Linking, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, StyleSheet, View } from "react-native";
 import { AuthHeader, AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/components";
 import { authStyles } from "./authStyles";
 import { BASE_URL } from "../../helper/Constants";
@@ -488,20 +488,22 @@ const Register = () => {
           </AppText>
         </TouchableOpacityView>
 
-        <TouchableOpacityView
-          style={[styles.socialPill, { borderColor: socialPillBorder, backgroundColor: socialPillBg }]}
-          onPress={signupWithApple}
-          disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
-        >
-          {isAppleSignInInProgress ? (
-            <ActivityIndicator size={"small"} color={themeColors.text} />
-          ) : (
-            <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
-          )}
-          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
-            Continue with Apple
-          </AppText>
-        </TouchableOpacityView>
+        {Platform.OS === "ios" ? (
+          <TouchableOpacityView
+            style={[styles.socialPill, { borderColor: socialPillBorder, backgroundColor: socialPillBg }]}
+            onPress={signupWithApple}
+            disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
+          >
+            {isAppleSignInInProgress ? (
+              <ActivityIndicator size={"small"} color={themeColors.text} />
+            ) : (
+              <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
+            )}
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+              Continue with Apple
+            </AppText>
+          </TouchableOpacityView>
+        ) : null}
 
         <AppText type={TEN} style={{ color: themeColors.secondaryText, textAlign: "center", marginTop: 4 }}>
           By signing up, I agree to AGCE Exchange user{" "}

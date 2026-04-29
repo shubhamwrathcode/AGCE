@@ -27,6 +27,7 @@ interface InputProps extends TextInputProps {
   value?: string;
   containerStyle?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
+  hasError?: boolean;
   isSecure?: boolean;
   onPressVisible?: () => void;
   isOtp?: boolean;
@@ -55,6 +56,7 @@ const Input = ({
   multiline,
   containerStyle,
   inputStyle,
+  hasError = false,
   onPressVisible,
   secureTextEntry,
   isSecure,
@@ -82,8 +84,8 @@ const Input = ({
           styles.container,
           {
             backgroundColor: resolvedInputBg,
-            borderColor: isDark ? themeColors.border : "transparent",
-            borderWidth: isDark ? 1 : 0,
+            borderColor: hasError ? colors.red : isDark ? themeColors.border : "transparent",
+            borderWidth: hasError ? 1 : isDark ? 1 : 0,
             ...(title ? { marginTop: 0 } : {}),
           },
           containerStyle && typeof containerStyle === "object" ? containerStyle : undefined,

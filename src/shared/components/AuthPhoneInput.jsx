@@ -17,6 +17,7 @@ const AuthPhoneInput = ({
   onCountry,
   country,
   countryCode,
+  hasError = false,
   maxLength = 15,
   onFocus = () => {},
   onBlur = () => {},
@@ -32,8 +33,8 @@ const AuthPhoneInput = ({
         styles.container,
         {
           backgroundColor: themeColors.input,
-          borderColor: isDark ? themeColors.border : "transparent",
-          borderWidth: isDark ? borderWidth : 0,
+          borderColor: hasError ? colors.red : isDark ? themeColors.border : "transparent",
+          borderWidth: hasError ? 1 : isDark ? borderWidth : 0,
         },
       ]}
     >

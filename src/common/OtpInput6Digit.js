@@ -84,8 +84,9 @@ const OtpInput6Digit = forwardRef(function OtpInput6Digit(
                   borderColor: themeColors.border, 
                   backgroundColor: themeColors.input 
                 },
-                hasError && { borderColor: colors.red },
                 normalized.length === i && [styles.boxHighlight, { borderColor: themeColors.button }],
+                // Error state must win over focus highlight.
+                hasError && { borderColor: colors.red },
               ]}
             >
               <AppText style={{ fontSize: 14, fontWeight: '600', color: textColor }}>

@@ -1,28 +1,30 @@
 import React, { useEffect, useRef, useState } from "react";
 import FastImage from "react-native-fast-image";
-import { ActivityIndicator, Keyboard, Linking, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Keyboard, Linking, Platform, StyleSheet, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { Passkey } from "react-native-passkey";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../navigation/routes";
-import { AppSafeAreaView, AppText, BOLD, Button, FOURTEEN, Input, TEN, TWENTY_SIX } from "../../shared";
+import { AppSafeAreaView, AppText, BOLD, Button, ELEVEN, FOURTEEN, Input, MEDIUM, TEN, TWELVE, TWENTY_SIX } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { googleLogin, login, passkeyDiscoverableLogin } from "../../actions/authActions";
+import { googleLogin, login, passkeyDiscoverableLogin, verifyPasskeyLogin } from "../../actions/authActions";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
-import { checkValue, validateEmail, validatePasswordStrict } from "../../helper/utility";
+import { checkValue, validateEmail } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
 import { setLoading } from "../../slices/authSlice";
-import { googleIcon, passkey_login } from "../../helper/ImageAssets";
+import { apple, googleIcon, passkey_login, qrcode_img } from "../../helper/ImageAssets";
+import QrCodeSvg from "../../../assets/images/qrcode_img.svg";
 import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/components";
 import NavigationService from "../../navigation/NavigationService";
+import Checkbox from "../../shared/components/Checkbox";
 
 const Login = (): JSX.Element => {
   const dispatch = useAppDispatch();
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   const isLoading = useAppSelector((state) => state.auth.isLoading);
   const showButtonLoading = useAppSelector((state) => state.auth.isLoading && state.auth.loadingFor !== 'otp');
   const languages = useAppSelector((state) => state.account.languages);
@@ -30,21 +32,26 @@ const Login = (): JSX.Element => {
   const [signUpId, setSignUpId] = useState("");
   const [password, setPassword] = useState<string>("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(true);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const [showPassField, setShowPassField] = useState(false);
+  const [bindIp, setBindIp] = useState(false);
   const [countryCode, setCountryCode] = useState(["91"]);
   const [country, setCountry] = useState("IN");
   const [isValid, setIsValid] = useState(false);
+  const [identifierError, setIdentifierError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] =
     useState(false);
   const [isPasskeySignInInProgress, setIsPasskeySignInInProgress] = useState(false);
+  const [isAppleSignInInProgress, setIsAppleSignInInProgress] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [hasPasskey, setHasPasskey] = useState(false);
 
   useEffect(() => {
     setSignUpId("");
     setPassword("");
+    setIdentifierError(false);
+    setPasswordError(false);
   }, [index]);
 
   useEffect(() => {
@@ -164,60 +171,142 @@ const Login = (): JSX.Element => {
     });
   };
 
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      (e) => {
-        setKeyboardVisible(true); // or some other action
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => {
-        setKeyboardVisible(false); // or some other action
-      }
-    );
-
-    return () => {
-      keyboardDidHideListener.remove();
-      keyboardDidShowListener.remove();
-    };
-  }, []);
+  const signInWithApple = async () => {
+    setIsAppleSignInInProgress(true);
+    try {
+      showError("Apple sign-in is not available yet. Please use email, Google, or Passkey.");
+    } finally {
+      setTimeout(() => setIsAppleSignInInProgress(false), 300);
+    }
+  };
 
   const onSubmit = () => {
     if (!password) {
+      setPasswordError(true);
       showError(checkValue("Please Enter Password"));
       return;
     }
-    if (!validatePasswordStrict(password)) {
-      showError(checkValue(languages?.error_passwordRegex));
-      return;
-    }
+    setPasswordError(false);
     Keyboard.dismiss();
     onLogin();
   };
 
+  const getNormalizedLoginId = () => {
+    if (index === 0) {
+      return String(signUpId || "").trim();
+    }
+    return String(signUpId || "").replace(/\D/g, "").replace(/^0+/, "") || "";
+  };
+
   const onLogin = () => {
+    const normalizedId = getNormalizedLoginId();
     dispatch(
       login({
-        email_or_phone: signUpId,
+        email_or_phone: normalizedId,
         password,
         token: "",
       })
     );
   };
 
+  const validateEmailOrUsername = (raw: string) => {
+    const id = String(raw || "").trim();
+    if (!id) {
+      setIdentifierError(true);
+      showError("Please enter your email or username");
+      return false;
+    }
+    setIdentifierError(false);
+    if (id.includes("@")) {
+      if (!validateEmail(id)) {
+        setIdentifierError(true);
+        showError("Please enter a valid email address");
+        return false;
+      }
+      return true;
+    }
+    if (id.length < 3) {
+      setIdentifierError(true);
+      showError("Username must be at least 3 characters");
+      return false;
+    }
+    if (!/^[a-zA-Z0-9._-]+$/.test(id)) {
+      setIdentifierError(true);
+      showError("Username contains invalid characters");
+      return false;
+    }
+    return true;
+  };
+
   const changeInput = (val: any) => {
     setSignUpId(val);
+    if (identifierError) setIdentifierError(false);
     if (index === 0) {
-      // Email tab (first)
-      setIsValid(validateEmail(val));
+      const raw = String(val || "").trim();
+      if (!raw) {
+        setIsValid(false);
+        return;
+      }
+      if (raw.includes("@")) {
+        setIsValid(validateEmail(raw));
+      } else {
+        setIsValid(raw.length >= 3 && /^[a-zA-Z0-9._-]+$/.test(raw));
+      }
     } else if (index === 1) {
       // Mobile tab (second)
-      const fullPhone = `${countryCode?.[0] ? `+${countryCode[0]}` : "+91"}${String(val || "")}`;
+      const digits = String(val || "").replace(/\D/g, "").replace(/^0+/, "");
+      const fullPhone = `${countryCode?.[0] ? `+${countryCode[0]}` : "+91"}${digits}`;
       const valid = isValidPhoneNumber(fullPhone);
       setIsValid(valid);
     }
+  };
+
+  const onNext = async () => {
+    if (index === 2) {
+      showError("QR code login is coming soon.");
+      return;
+    }
+    if (index === 0) {
+      if (!validateEmailOrUsername(signUpId)) return;
+    } else {
+      const digits = String(signUpId || "").replace(/\D/g, "").replace(/^0+/, "");
+      if (!digits) {
+        setIdentifierError(true);
+        showError("Please enter your phone number");
+        return;
+      }
+      setIdentifierError(false);
+      const fullPhone = `${countryCode?.[0] ? `+${countryCode[0]}` : "+91"}${digits}`;
+      if (!isValidPhoneNumber(fullPhone)) {
+        setIdentifierError(true);
+        showError("Please enter a valid phone number for the selected country");
+        return;
+      }
+      if (digits !== signUpId) {
+        setSignUpId(digits);
+      }
+    }
+
+    const normalizedId = getNormalizedLoginId();
+    if (passkeySupported && hasPasskey && normalizedId) {
+      setIsPasskeySignInInProgress(true);
+      try {
+        console.log("[Passkey][Login] attempting passkey login", { normalizedId });
+        const didLogin = await dispatch(verifyPasskeyLogin(normalizedId) as any);
+        console.log("[Passkey][Login] passkey login result", { didLogin });
+        if (didLogin) return;
+      } catch (e: any) {
+        console.error("[Passkey][Login] passkey login threw", {
+          message: e?.message,
+          code: e?.code,
+          name: e?.name,
+          raw: e,
+        });
+      } finally {
+        setIsPasskeySignInInProgress(false);
+      }
+    }
+    setShowPassField(true);
   };
 
   const openSupport = () => {
@@ -234,7 +323,7 @@ const Login = (): JSX.Element => {
         />
         <View style={{ marginTop: 16 }}>
           <AuthEmailPhoneTabBar
-            tabs={["Email/Username", "Phone"]}
+            tabs={["Email/Username", "Phone", "QR Code"]}
             index={index}
             onChange={(i: number) => {
               setIndex(i);
@@ -242,55 +331,126 @@ const Login = (): JSX.Element => {
             }}
           />
 
-          {index === 1 ? (
+          {index === 2 ? (
+            <View style={styles.qrWrap}>
+                {/* <QrCodeSvg width={190} height={190} /> */}
+                <FastImage source={qrcode_img} style={{width:250,height:200}} resizeMode="contain"/>
+              <AppText type={FOURTEEN} style={{ color: themeColors.text, marginTop: 8 }}>
+                Log in with QR code
+              </AppText>
+              <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 10, textAlign: "center", fontSize: 13 }}>
+                Scan this code with your{" "}
+                <AppText type={TEN} style={{ color: themeColors.text, fontWeight: "700", fontSize: 13 }}>
+                  AGCE App
+                </AppText>
+              </AppText>
+
+              <TouchableOpacityView
+                style={[styles.bindLeft, { marginTop: 12, justifyContent: "center" }]}
+                onPress={() => setBindIp((v) => !v)}
+              >
+                <Checkbox
+                  value={bindIp}
+                  onPress={() => setBindIp((v) => !v)}
+                  disabled={false}
+                  type={1}
+                  style={undefined}
+                  innerStyle={undefined}
+                  theme={undefined}
+                  containerStyle={undefined}
+                />
+                <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
+                  Bind IP(Security option)
+                </AppText>
+              </TouchableOpacityView>
+            </View>
+          ) : index === 1 ? (
             <AuthPhoneInput
               value={signUpId}
               onChangeText={(text: string) => changeInput(text)}
               placeholder={checkValue(languages?.place_userName) || "Enter phone number"}
+              hasError={identifierError}
               onSelectCountry={setCountryCode}
               onCountry={setCountry}
               country={country}
               countryCode={countryCode}
               maxLength={15}
-              onFocus={() => setShowPassField(true)}
+              onFocus={() => {}}
               onBlur={() => {}}
-              onSubmitEditing={() => passwordInput?.current?.focus()}
-              onEndEditing={() => passwordInput?.current?.focus()}
+              onSubmitEditing={() => {}}
+              onEndEditing={() => {}}
             />
           ) : (
             <View style={authStyles.mobileContainer}>
               <Input
-                placeholder={"Enter email address"}
+                placeholder={"Enter email or username"}
                 value={signUpId}
                 onChangeText={(text) => changeInput(text)}
-                keyboardType={"email-address"}
+                keyboardType={"default"}
                 autoCapitalize="none"
                 returnKeyType="next"
                 onfocus={() => setShowPassField(false)}
-                onSubmitEditing={() => passwordInput?.current?.focus()}
-                onEndEditing={() => passwordInput?.current?.focus()}
-                onFocus={() => setShowPassField(true)}
+                onSubmitEditing={() => {}}
+                onEndEditing={() => {}}
+                onFocus={() => {}}
+                hasError={identifierError}
                 mainContainer={authStyles.mobileInput}
                 maxLength={100}
               />
             </View>
           )}
-          {!showPassField && (
+
+          {/* Web parity: Bind IP + Forgot Password row (identifier step). */}
+          {index !== 2 && !showPassField ? (
+            <View style={styles.bindRow}>
+              <TouchableOpacityView
+                style={styles.bindLeft}
+                onPress={() => setBindIp((v) => !v)}
+              >
+                <Checkbox
+                  value={bindIp}
+                  onPress={() => setBindIp((v) => !v)}
+                  disabled={false}
+                  type={1}
+                  style={undefined}
+                  innerStyle={undefined}
+                  theme={undefined}
+                  containerStyle={undefined}
+                />
+                <AppText type={ELEVEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+                  Bind IP (Security option)
+                </AppText>
+              </TouchableOpacityView>
+
+              <AppText
+                type={ELEVEN} weight={MEDIUM}
+                style={{ color: themeColors.text, textDecorationLine: "underline" }}
+                onPress={() => NavigationService.navigate(FORGOT_PASSWORD_SCREEN)}
+              >
+                Forgot Password?
+              </AppText>
+            </View>
+          ) : null}
+
+          {!showPassField && index !== 2 && (
             <Button
               children={"Next"}
-              disabled={!isValid}
-              onPress={() => setShowPassField(true)}
+              disabled={false}
+              onPress={onNext}
               loading={showButtonLoading && !isGoogleSignInInProgress && !isPasskeySignInInProgress}
               containerStyle={{ marginTop: 18, backgroundColor: themeColors.button }}
             />
           )}
 
-          {showPassField && (
+          {showPassField && index !== 2 && (
             <>
               <Input
                 placeholder={"Enter password"}
                 value={password}
-                onChangeText={(text) => setPassword(text)}
+                onChangeText={(text) => {
+                  if (passwordError) setPasswordError(false);
+                  setPassword(text);
+                }}
                 autoCapitalize="none"
                 secureTextEntry={isPasswordVisible}
                 assignRef={(input: any) => {
@@ -298,21 +458,45 @@ const Login = (): JSX.Element => {
                 }}
                 returnKeyType="next"
                 isSecure
+                hasError={passwordError}
                 // onSubmitEditing={() => confirmPasswordInput?.current?.focus()}
                 onPressVisible={() => setIsPasswordVisible(!isPasswordVisible)}
               />
-              <AppText
-                style={{ alignSelf: "flex-end", marginTop: 5, color: themeColors.text }}
-                onPress={() =>
-                  NavigationService.navigate(FORGOT_PASSWORD_SCREEN)
-                }
-              >
-                Forgot Password?
-              </AppText>
+
+              {/* Web parity: Bind IP + Forgot Password row (password step). */}
+              <View style={styles.bindRow}>
+                <TouchableOpacityView
+                  style={styles.bindLeft}
+                  onPress={() => setBindIp((v) => !v)}
+                >
+                  <Checkbox
+                    value={bindIp}
+                    onPress={() => setBindIp((v) => !v)}
+                    disabled={false}
+                    type={1}
+                    style={undefined}
+                    innerStyle={undefined}
+                    theme={undefined}
+                    containerStyle={undefined}
+                  />
+                  <AppText type={ELEVEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+                    Bind IP (Security option)
+                  </AppText>
+                </TouchableOpacityView>
+
+                <AppText
+                  type={ELEVEN}
+                  weight={MEDIUM}
+                  style={{ color: themeColors.text, textDecorationLine: "underline" }}
+                  onPress={() => NavigationService.navigate(FORGOT_PASSWORD_SCREEN)}
+                >
+                  Forgot Password?
+                </AppText>
+              </View>
 
               <Button
                 children={"Login"}
-                disabled={!password}
+                disabled={false}
                 onPress={onSubmit}
                 loading={showButtonLoading && !isGoogleSignInInProgress && !isPasskeySignInInProgress}
                 containerStyle={{ marginTop: 30, backgroundColor: themeColors.button }}
@@ -321,12 +505,12 @@ const Login = (): JSX.Element => {
             </>
           )}
         </View>
-        {!isKeyboardVisible && (
+        {index !== 2 && (
           <View style={styles.socialSection}>
             <View style={styles.dividerRow}>
               <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
               <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                Or
+                Or login with
               </AppText>
               <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
             </View>
@@ -334,7 +518,7 @@ const Login = (): JSX.Element => {
             <TouchableOpacityView
               style={[styles.socialPill, { borderColor: themeColors.border }]}
               onPress={signInWithGoogle}
-              disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isLoading}
+              disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isAppleSignInInProgress || isLoading}
             >
               {isGoogleSignInInProgress ? (
                 <ActivityIndicator size={"small"} color={themeColors.text} />
@@ -346,24 +530,39 @@ const Login = (): JSX.Element => {
               </AppText>
             </TouchableOpacityView>
 
-            {passkeySupported && hasPasskey ? (
+            <TouchableOpacityView
+              style={[styles.socialPill, { borderColor: themeColors.border }]}
+              onPress={signInWithPasskey}
+              disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isAppleSignInInProgress || isLoading}
+            >
+              {isPasskeySignInInProgress ? (
+                <ActivityIndicator size={"small"} color={themeColors.text} />
+              ) : (
+                <FastImage
+                  source={passkey_login}
+                  resizeMode="contain"
+                  style={styles.socialBrandIcon}
+                  tintColor={themeColors.text}
+                />
+              )}
+              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+                Continue with Passkey
+              </AppText>
+            </TouchableOpacityView>
+
+            {Platform.OS === "ios" ? (
               <TouchableOpacityView
                 style={[styles.socialPill, { borderColor: themeColors.border }]}
-                onPress={signInWithPasskey}
-                disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isLoading}
+                onPress={signInWithApple}
+                disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isAppleSignInInProgress || isLoading}
               >
-                {isPasskeySignInInProgress ? (
+                {isAppleSignInInProgress ? (
                   <ActivityIndicator size={"small"} color={themeColors.text} />
                 ) : (
-                  <FastImage
-                    source={passkey_login}
-                    resizeMode="contain"
-                    style={styles.socialBrandIcon}
-                    tintColor={themeColors.text}
-                  />
+                  <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
                 )}
                 <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
-                  Continue with Passkey
+                  Continue with Apple
                 </AppText>
               </TouchableOpacityView>
             ) : null}
@@ -388,6 +587,36 @@ const styles = StyleSheet.create({
     marginTop: 18,
     paddingBottom: 24,
     gap: 14,
+  },
+  bindRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bindLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  qrWrap: {
+    marginTop: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 6,
+    alignItems: "center",
+  },
+  qrPlate: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  qrImg: {
+    width: 190,
+    height: 190,
   },
   dividerRow: {
     flexDirection: "row",

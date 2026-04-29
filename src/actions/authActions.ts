@@ -26,6 +26,7 @@ import {getUserProfile} from './accountActions';
 import {Passkey} from 'react-native-passkey';
 import {PASSKEY_RP_ID} from '../helper/Constants';
 import {socketService} from '../services/socket/SocketService';
+import {Platform} from 'react-native';
 
 export const sendOtp =
   (
@@ -389,22 +390,45 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
     } else {
       showError(response?.message ?? 'Verification failed');
     }
+    return response;
   } catch (e: any) {
     logger(e);
     showError(e?.message);
     if (e?.code == 403) {
       appOperation.setCustomerToken(e?.token);
       NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
-      return;
+      return { success: false, code: 403, message: e?.message, token: e?.token };
     }
+    return { success: false, message: e?.message };
   } finally {
     dispatch(setLoadingOtp(false));
   }
 };
 
-/** Normalize assertion challenge to base64url for native Passkey.get */
-const toBase64URL = (str: string) =>
-  str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+/**
+ * Web parity: challenge/ids are bytes. Some backends (incorrectly) compare the *string form*
+ * of `challenge` they issued with what comes back. So we must avoid mutating the string
+ * (e.g. stripping "=" padding or converting url/base64 variants) unless absolutely necessary.
+ *
+ * Only convert when it looks like classic base64 (`+` or `/`). Otherwise keep as-is.
+ */
+const maybeBase64ToBase64Url = (s: string) => {
+  const raw = String(s || '').trim();
+  if (!raw) return raw;
+  if (raw.includes('+') || raw.includes('/')) {
+    // base64 -> base64url (keep padding to preserve bytes + server quirks)
+    return raw.replace(/\+/g, '-').replace(/\//g, '_');
+  }
+  return raw; // already base64url-ish
+};
+
+const isRpIdMismatchForAndroid = (rpIdFromServer: string) => {
+  if (Platform.OS !== 'android') return false;
+  const server = String(rpIdFromServer || '').trim();
+  const configured = String(PASSKEY_RP_ID || '').trim();
+  if (!server || !configured) return false;
+  return server !== configured;
+};
 
 /** Passkey login using device biometrics (fingerprint/face). Same flow as web: get options → authenticate → verify → complete. */
 export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispatch) => {
@@ -420,16 +444,24 @@ export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispat
       return false;
     }
     const opts = optionsRes.data;
-    const challenge =
-      typeof opts.challenge === 'string'
-        ? toBase64URL(opts.challenge.replace(/-/g, '+').replace(/_/g, '/'))
-        : opts.challenge;
+    const rawChallenge = typeof opts.challenge === 'string' ? opts.challenge : '';
+    const challengeForNative = maybeBase64ToBase64Url(rawChallenge);
+    // Web parity: prefer server-provided rpId. Only fall back to configured RP ID if missing.
+    const rpIdFromServer = String(opts.rpId || opts.rp?.id || '').trim();
+    if (isRpIdMismatchForAndroid(rpIdFromServer)) {
+      console.warn('[Passkey][verifyPasskeyLogin] rpId mismatch - skipping native prompt', {
+        server: rpIdFromServer,
+        configured: PASSKEY_RP_ID,
+      });
+      showError('Passkey is not configured for this app. Please sign in with password.');
+      return false;
+    }
     const rpId =
-      PASSKEY_RP_ID && PASSKEY_RP_ID.trim()
-        ? PASSKEY_RP_ID.trim()
-        : (opts.rpId || opts.rp?.id || '');
+      rpIdFromServer ||
+      (PASSKEY_RP_ID && PASSKEY_RP_ID.trim() ? PASSKEY_RP_ID.trim() : '') ||
+      '';
     const request: any = {
-      challenge: challenge || opts.challenge,
+      challenge: challengeForNative || rawChallenge || opts.challenge,
       rpId: rpId || 'localhost',
       timeout: opts.timeout,
       userVerification: opts.userVerification || 'required',
@@ -437,17 +469,57 @@ export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispat
     if (opts.allowCredentials?.length) {
       request.allowCredentials = opts.allowCredentials.map((c: any) => ({
         type: c.type || 'public-key',
-        id: typeof c.id === 'string' ? toBase64URL(c.id.replace(/-/g, '+').replace(/_/g, '/')) : c.id,
+        id: typeof c.id === 'string' ? maybeBase64ToBase64Url(c.id) : c.id,
         transports: c.transports,
       }));
     }
-    const credential = await Passkey.get(request);
+    console.log('[Passkey][verifyPasskeyLogin] options', {
+      signId,
+      rpId: request.rpId,
+      hasAllowCredentials: !!request.allowCredentials?.length,
+      challengeLen: typeof request.challenge === 'string' ? request.challenge.length : null,
+      challengePreview:
+        typeof request.challenge === 'string'
+          ? `${request.challenge.slice(0, 6)}…${request.challenge.slice(-6)}`
+          : null,
+    });
+    console.log('[Passkey][verifyPasskeyLogin] calling Passkey.get', {
+      rpId: request.rpId,
+      userVerification: request.userVerification,
+      allowCredentials: request.allowCredentials?.length ?? 0,
+    });
+    let credential: any;
+    try {
+      credential = await Passkey.get(request);
+    } catch (e: any) {
+      const msg = String(e?.message ?? e?.error ?? '');
+      console.error('[Passkey][verifyPasskeyLogin] Passkey.get threw', {
+        name: e?.name,
+        code: e?.code,
+        message: e?.message,
+        raw: e,
+      });
+      // Common native error when RP ID / associated domain doesn't match device/app configuration.
+      if (/incoming request cannot be validated/i.test(msg)) {
+        showError(
+          'Passkey is not available for this environment. Please sign in with password (or ask backend to use the correct RP ID).'
+        );
+      } else {
+        showError(e?.message || 'Passkey prompt failed');
+      }
+      return false;
+    }
     if (!credential) {
       showError('Authentication was cancelled');
       return false;
     }
+    console.log('[Passkey][verifyPasskeyLogin] credential acquired', {
+      type: (credential as any)?.type,
+      id: (credential as any)?.id,
+    });
     const verifyRes: any = await appOperation.guest.passkeyVerifyAuth(signId, credential);
     if (!verifyRes?.success) {
+      console.warn('[Passkey][verifyPasskeyLogin] verify failed', verifyRes);
       showError(verifyRes?.message || 'Passkey verification failed');
       return false;
     }
@@ -498,16 +570,23 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
     }
     const opts = optionsRes.data;
     const challengeFromApi = optionsRes.challenge ?? opts.challenge;
-    const challenge =
-      typeof challengeFromApi === 'string'
-        ? toBase64URL(challengeFromApi.replace(/-/g, '+').replace(/_/g, '/'))
-        : challengeFromApi;
+    const rawChallenge = typeof challengeFromApi === 'string' ? challengeFromApi : '';
+    const challengeForNative = maybeBase64ToBase64Url(rawChallenge);
+    const rpIdFromServer = String(opts.rpId || opts.rp?.id || '').trim();
+    if (isRpIdMismatchForAndroid(rpIdFromServer)) {
+      console.warn('[Passkey][discoverable] rpId mismatch - skipping native prompt', {
+        server: rpIdFromServer,
+        configured: PASSKEY_RP_ID,
+      });
+      showError('Passkey is not configured for this app. Please sign in with password.');
+      return false;
+    }
     const rpId =
-      PASSKEY_RP_ID && PASSKEY_RP_ID.trim()
-        ? PASSKEY_RP_ID.trim()
-        : (opts.rpId || opts.rp?.id || '');
+      rpIdFromServer ||
+      (PASSKEY_RP_ID && PASSKEY_RP_ID.trim() ? PASSKEY_RP_ID.trim() : '') ||
+      '';
     const request: any = {
-      challenge: challenge || challengeFromApi,
+      challenge: challengeForNative || rawChallenge || challengeFromApi,
       rpId: rpId || 'localhost',
       timeout: opts.timeout,
       userVerification: opts.userVerification || 'preferred',
@@ -515,16 +594,28 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
     if (opts.allowCredentials?.length) {
       request.allowCredentials = opts.allowCredentials.map((c: any) => ({
         type: c.type || 'public-key',
-        id: typeof c.id === 'string' ? toBase64URL(c.id.replace(/-/g, '+').replace(/_/g, '/')) : c.id,
+        id: typeof c.id === 'string' ? maybeBase64ToBase64Url(c.id) : c.id,
         transports: c.transports,
       }));
     }
+    console.log('[Passkey][discoverable] options', {
+      rpId: request.rpId,
+      hasAllowCredentials: !!request.allowCredentials?.length,
+      challengeLen: typeof request.challenge === 'string' ? request.challenge.length : null,
+      challengePreview:
+        typeof request.challenge === 'string'
+          ? `${request.challenge.slice(0, 6)}…${request.challenge.slice(-6)}`
+          : null,
+    });
     const credential = await Passkey.get(request);
     if (!credential) {
       showError('Authentication was cancelled');
       return false;
     }
-    const verifyRes: any = await appOperation.guest.passkeyDiscoverableVerify(credential, challengeFromApi ?? challenge);
+    const verifyRes: any = await appOperation.guest.passkeyDiscoverableVerify(
+      credential,
+      challengeFromApi ?? rawChallenge ?? request.challenge
+    );
     if (!verifyRes?.success || !verifyRes?.data?.token) {
       showError(verifyRes?.message || 'Passkey verification failed');
       return false;
