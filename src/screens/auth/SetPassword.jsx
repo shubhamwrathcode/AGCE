@@ -50,6 +50,7 @@ const SetPassword = () => {
   const showButtonLoading = useAppSelector((state) => state.auth.isLoading && state.auth.loadingFor !== "otp");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(true);
+  const [passwordError, setPasswordError] = useState(false);
 
   const params = route?.params || {};
   const {
@@ -125,15 +126,18 @@ const SetPassword = () => {
 
   const onSubmit = () => {
     if (!password) {
+      setPasswordError(true);
       showError("Please enter your password");
       return;
     }
     for (let i = 0; i < signupPasswordRules.length; i += 1) {
       if (!signupPasswordRules[i].passes(String(password || ""))) {
+        setPasswordError(true);
         showError(signupPasswordRules[i].error);
         return;
       }
     }
+    setPasswordError(false);
 
     if (signupType === "email") {
       dispatch(
@@ -186,12 +190,16 @@ const SetPassword = () => {
         <Input
           placeholder={"Enter a password"}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(v) => {
+            if (passwordError) setPasswordError(false);
+            setPassword(v);
+          }}
           secureTextEntry={isPasswordVisible}
           isSecure
           onPressVisible={() => setIsPasswordVisible(!isPasswordVisible)}
           autoCapitalize="none"
           containerStyle={styles.passwordInput}
+          hasError={passwordError}
         />
 
         <View style={styles.rulesBox}>
@@ -208,7 +216,7 @@ const SetPassword = () => {
         <Button
           children={"Confirm"}
           onPress={onSubmit}
-          disabled={!isReady}
+          disabled={false}
           loading={showButtonLoading}
           containerStyle={{ marginTop: 28 }}
         />

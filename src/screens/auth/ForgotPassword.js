@@ -11,28 +11,25 @@ import {
   TWENTY_SIX,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
-import { Keyboard, View } from "react-native";
+import { Keyboard, Linking, View } from "react-native";
 import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { forgotOtp, forgotPassword } from "../../actions/authActions";
 import { SpinnerSecond } from "../../shared/components/SpinnerSecond";
 import {
-  back_ic,
-} from "../../helper/ImageAssets";
-import {
   checkValue,
   validateEmail,
   validatePassword,
 } from "../../helper/utility";
-import FastImage from "react-native-fast-image";
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN } from "../../navigation/routes";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
-import { CountrySelector } from "../../shared/components/CountrySelector";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
+import { AuthHeader } from "../../shared/components";
+import { AuthPhoneInput } from "../../shared/components";
 
 const RenderTabBarAuth = (props) => {
   const { colors: themeColors, isDark } = useTheme();
@@ -40,8 +37,9 @@ const RenderTabBarAuth = (props) => {
     return state.account.languages;
   });
   const routes = [
-    { key: "first", title: checkValue(languages?.mobile) },
-    { key: "second", title: checkValue(languages?.email) },
+    // Requirement: Email first, then Mobile
+    { key: "first", title: checkValue(languages?.email) },
+    { key: "second", title: checkValue(languages?.mobile) },
   ];
   return (
     <View style={authStyles.tabBarMain}>
@@ -87,14 +85,24 @@ const ForgotPassword = () => {
   const [otpText, setOtpText] = useState(checkValue(languages?.register_nine));
   const [countryCode, setCountryCode] = useState(["91"]);
   const [country, setCountry] = useState("IN");
+  const [userNameError, setUserNameError] = useState(false);
+  const [otpError, setOtpError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+
+  const safeText = (value, fallback) =>
+    value != null && value !== "" ? checkValue(value) : fallback;
 
   useEffect(() => {
     setUserName("");
+    setUserNameError(false);
+    setOtpError(false);
+    setPasswordError(false);
   }, [index]);
 
   const onGetOtp = () => {
     let data;
-    if (index === 0) {
+    // index: 0 = Email, 1 = Mobile
+    if (index === 1) {
       data = {
         email_or_phone: `+${countryCode} ${userName}`,
         resend: true,
@@ -117,34 +125,61 @@ const ForgotPassword = () => {
   };
 
   const onSubmit = () => {
-    if (index === 1) {
-      if (!validateEmail(userName)) {
+    const rawUser = String(userName || "").trim();
+    const rawOtp = String(otp || "").trim();
+    const rawPass = String(password || "").trim();
+
+    // Required fields
+    if (!rawUser) {
+      setUserNameError(true);
+      showError(index === 0 ? checkValue(languages?.error_email) : checkValue(languages?.error_userName));
+      return;
+    }
+    if (!rawOtp) {
+      setOtpError(true);
+      showError(safeText(languages?.error_otp, "Please enter verification code"));
+      return;
+    }
+    if (!rawPass) {
+      setPasswordError(true);
+      showError(safeText(languages?.error_password, "Please enter password"));
+      return;
+    }
+
+    // index: 0 = Email, 1 = Mobile
+    if (index === 0) {
+      if (!validateEmail(rawUser)) {
         showError(checkValue(languages?.error_email));
+        setUserNameError(true);
         return;
       }
-    } else if (index === 0) {
-      let phone = Number(userName);
-      if (!isValidPhoneNumber(`+${countryCode}${phone}`)) {
+    } else if (index === 1) {
+      const digits = rawUser.replace(/\D/g, "").replace(/^0+/, "") || "";
+      const fullPhone = `${countryCode?.[0] ? `+${countryCode[0]}` : "+91"}${digits}`;
+      if (!isValidPhoneNumber(fullPhone)) {
         showError(checkValue(languages?.error_userName));
+        setUserNameError(true);
         return;
       }
     }
     if (!validatePassword(password)) {
       showError(checkValue(languages?.error_passwordRegex));
+      setPasswordError(true);
       return;
     }
     let data;
-    if (index === 0) {
+    if (index === 1) {
+      const digits = rawUser.replace(/\D/g, "").replace(/^0+/, "") || "";
       data = {
-        email_or_phone: `+${countryCode} ${userName}`,
-        new_password: password,
-        verification_code: +otp,
+        email_or_phone: `+${countryCode} ${digits}`,
+        new_password: rawPass,
+        verification_code: +rawOtp,
       };
     } else {
       data = {
-        email_or_phone: userName,
-        new_password: password,
-        verification_code: +otp,
+        email_or_phone: rawUser,
+        new_password: rawPass,
+        verification_code: +rawOtp,
       };
     }
     dispatch(forgotPassword(data));
@@ -152,19 +187,16 @@ const ForgotPassword = () => {
 
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
-      <View style={{ marginVertical: 20, marginHorizontal: 20 }}>
-        <TouchableOpacityView
-          onPress={() => NavigationService.navigate(LOGIN_SCREEN)}
-        >
-          <FastImage
-            source={back_ic}
-            resizeMode="contain"
-            style={{ width: 15, height: 15 }}
-            tintColor={themeColors.text}
-          />
-        </TouchableOpacityView>
-      </View>
       <KeyBoardAware>
+        <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
+          <AuthHeader
+            onSupportPress={() =>
+              Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })
+            }
+            onClosePress={() => NavigationService.navigate(LOGIN_SCREEN)}
+            title={""}
+          />
+        </View>
         <AppText
           weight={BOLD}
           type={TWENTY_SIX}
@@ -176,54 +208,76 @@ const ForgotPassword = () => {
           <View style={[authStyles.card, { marginTop: "10%" }]}>
             <RenderTabBarAuth index={index} setIndex={setIndex} />
             <View style={authStyles.mobileContainer}>
-              {index === 0 && (
-                <CountrySelector
+              {index === 1 ? (
+                <AuthPhoneInput
+                  value={userName}
+                  onChangeText={(text) => {
+                    if (userNameError) setUserNameError(false);
+                    setUserName(text);
+                  }}
+                  placeholder={checkValue(languages?.place_userName) || "Enter phone number"}
+                  hasError={userNameError}
                   onSelectCountry={setCountryCode}
                   onCountry={setCountry}
                   country={country}
+                  countryCode={countryCode}
+                  maxLength={15}
+                  onFocus={() => {}}
+                  onBlur={() => {}}
+                  onSubmitEditing={() => onGetOtp()}
+                  onEndEditing={() => {}}
+                />
+              ) : (
+                <Input
+                  placeholder={checkValue(languages?.place_email)}
+                  value={userName}
+                  onChangeText={(text) => {
+                    if (userNameError) setUserNameError(false);
+                    setUserName(text);
+                  }}
+                  keyboardType={"email-address"}
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={() => onGetOtp()}
+                  hasError={userNameError}
+                  mainContainer={authStyles.mobileInput}
                 />
               )}
-              <Input
-                placeholder={
-                  index === 0
-                    ? checkValue(languages?.place_userName)
-                    : checkValue(languages?.place_email)
-                }
-                value={userName}
-                onChangeText={(text) => setUserName(text)}
-                keyboardType={index === 0 ? "numeric" : "email-address"}
-                autoCapitalize="none"
-                returnKeyType="done"
-                onSubmitEditing={() => onGetOtp()}
-                mainContainer={authStyles.mobileInput}
-                isOtp
-                onSendOtp={() => onGetOtp(userName)}
-                otpText={otpText}
-              />
             </View>
             <Input
               placeholder={checkValue(languages?.place_otp)}
               value={otp}
-              onChangeText={(text) => setOtp(text)}
+              onChangeText={(text) => {
+                if (otpError) setOtpError(false);
+                setOtp(text);
+              }}
               keyboardType="numeric"
               autoCapitalize="none"
               returnKeyType="next"
+              isOtp
+              onSendOtp={onGetOtp}
+              otpText={"Get OTP"}
+              hasError={otpError}
             />
             <Input
               placeholder={checkValue(languages?.place_signUpPassword)}
               value={password}
-              onChangeText={(text) => setPassword(text)}
+              onChangeText={(text) => {
+                if (passwordError) setPasswordError(false);
+                setPassword(text);
+              }}
               autoCapitalize="none"
               secureTextEntry={isPasswordVisible}
               returnKeyType="next"
               isSecure
               onPressVisible={() => setIsPasswordVisible(!isPasswordVisible)}
+              hasError={passwordError}
             />
 
             <Button
               children={"Forgot Password"}
               onPress={() => onSubmit()}
-              disabled={!otp || !userName || !password}
+              disabled={false}
               containerStyle={authStyles.marginTop}
             />
             <AppText

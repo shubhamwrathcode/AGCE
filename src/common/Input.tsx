@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   TextInput,
@@ -75,6 +75,7 @@ const Input = ({
 }: InputProps) => {
   const { colors: themeColors, isDark } = useTheme();
   const resolvedInputBg = themeColors.input;
+  const [isFocused, setIsFocused] = useState(false);
   
   return (
     <View style={[styles.inputWrapper, mainContainer]}>
@@ -84,8 +85,14 @@ const Input = ({
           styles.container,
           {
             backgroundColor: resolvedInputBg,
-            borderColor: hasError ? colors.red : isDark ? themeColors.border : "transparent",
-            borderWidth: hasError ? 1 : isDark ? 1 : 0,
+            borderColor: hasError
+              ? colors.red
+              : isFocused
+                ? themeColors.button
+                : isDark
+                  ? themeColors.border
+                  : "transparent",
+            borderWidth: hasError ? 1 : isFocused ? 1 : isDark ? 1 : 0,
             ...(title ? { marginTop: 0 } : {}),
           },
           containerStyle && typeof containerStyle === "object" ? containerStyle : undefined,
@@ -107,8 +114,14 @@ const Input = ({
           }}
           multiline={multiline}
           secureTextEntry={secureTextEntry}
-          onFocus={onfocus}
-          onBlur={onBlur}
+          onFocus={(e) => {
+            setIsFocused(true);
+            onfocus?.(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            onBlur?.(e);
+          }}
         />
         {isSecure && (
           <TouchableOpacityView

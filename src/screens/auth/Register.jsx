@@ -131,6 +131,7 @@ const Register = () => {
   const [step1Submitting, setStep1Submitting] = useState(false);
   const [checkTermsEmail, setCheckTermsEmail] = useState(false);
   const [checkTermsPhone, setCheckTermsPhone] = useState(false);
+  const [signUpIdError, setSignUpIdError] = useState(false);
   const { colors: themeColors, isDark } = useTheme();
   const tabTitle = (value, fallback) =>
     value != null && value !== "" ? checkValue(value) : fallback;
@@ -142,6 +143,7 @@ const Register = () => {
   useEffect(() => {
     setSignUpId("");
     setReferCode(refFromParams || "");
+    setSignUpIdError(false);
   }, [index]);
 
   const handleClearCaptcha = () => { };
@@ -168,19 +170,24 @@ const Register = () => {
   const onSubmit = async () => {
     if (index === 0) {
       if (!signUpId) {
+        setSignUpIdError(true);
         showError("Please enter your email");
         return;
       }
       if (!validateEmail(signUpId)) {
+        setSignUpIdError(true);
         showError(checkValue(languages?.error_email) || "Please enter a valid email address");
         return;
       }
+      setSignUpIdError(false);
     } else if (index === 1) {
       const fullPhone = `${countryCode[0] ? `+${countryCode[0]}` : "+91"}${signUpId}`;
       if (!isValidPhoneNumber(fullPhone)) {
+        setSignUpIdError(true);
         showError(checkValue(languages?.error_userName) || "Please enter a valid phone number for the selected country");
         return;
       }
+      setSignUpIdError(false);
     }
     if (index === 0 && !checkTermsEmail) {
       showError("Please agree to AGCE Terms and Use");
@@ -360,8 +367,12 @@ const Register = () => {
           {index === 1 ? (
             <AuthPhoneInput
               value={signUpId}
-              onChangeText={(text) => setSignUpId(text)}
+              onChangeText={(text) => {
+                if (signUpIdError) setSignUpIdError(false);
+                setSignUpId(text);
+              }}
               placeholder={checkValue(languages?.place_userName) || "Enter phone number"}
+              hasError={signUpIdError}
               onSelectCountry={setCountryCode}
               onCountry={setCountry}
               country={country}
@@ -377,12 +388,16 @@ const Register = () => {
               <Input
                 placeholder={"Enter email address"}
                 value={signUpId}
-                onChangeText={(text) => setSignUpId(text)}
+                onChangeText={(text) => {
+                  if (signUpIdError) setSignUpIdError(false);
+                  setSignUpId(text);
+                }}
                 keyboardType={"email-address"}
                 autoCapitalize="none"
                 returnKeyType="next"
                 mainContainer={authStyles.mobileInput}
                 maxLength={100}
+                hasError={signUpIdError}
               />
             </View>
           )}
@@ -455,8 +470,6 @@ const Register = () => {
           <Button
             children={"Next"}
             disabled={
-              !signUpId ||
-              (index === 0 ? !checkTermsEmail : !checkTermsPhone) ||
               step1Submitting
             }
             onPress={() => send()}
