@@ -299,7 +299,12 @@ export const getInteralWalletHistory = (skip: any, limit: any) => async (dispatc
 export const getUserWallet = (id: string | undefined) => async (dispatch: AppDispatch) => {
   try {
     // dispatch(setLoading(true));
-    const response: any = await appOperation.customer.user_main_wallet(id);
+    /** `wallet/user-wallet?wallet_type=` with empty type returns 400 — use unscoped list. */
+    const walletType = String(id ?? '').trim();
+    const response: any =
+      walletType === ''
+        ? await appOperation.customer.user_wallet()
+        : await appOperation.customer.user_main_wallet(id);
     if (response.success) {
       const wallets = response?.data || [];
 

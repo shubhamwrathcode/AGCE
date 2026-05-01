@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AppSafeAreaView,
   AppText,
@@ -10,7 +10,7 @@ import {
   TWELVE,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
-import { ActivityIndicator, Linking, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { AuthHeader, AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/components";
 import { authStyles } from "./authStyles";
 import { BASE_URL } from "../../helper/Constants";
@@ -29,6 +29,7 @@ import {
   checkValue,
   validateEmail,
 } from "../../helper/utility";
+import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import NavigationService from "../../navigation/NavigationService";
 import { CMS_SCREEN, SET_PASSWORD_SCREEN } from "../../navigation/routes";
 import Checkbox from "../../shared/components/Checkbox";
@@ -132,7 +133,21 @@ const Register = () => {
   const [checkTermsEmail, setCheckTermsEmail] = useState(false);
   const [checkTermsPhone, setCheckTermsPhone] = useState(false);
   const [signUpIdError, setSignUpIdError] = useState(false);
+  const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
+  const emailSuggestBlurTimer = useRef(null);
   const { colors: themeColors, isDark } = useTheme();
+
+  const clearEmailSuggestBlurTimer = () => {
+    if (emailSuggestBlurTimer.current) {
+      clearTimeout(emailSuggestBlurTimer.current);
+      emailSuggestBlurTimer.current = null;
+    }
+  };
+
+  const emailDomainSuggestions = useMemo(
+    () => (index === 0 ? getEmailDomainSuggestions(signUpId) : []),
+    [index, signUpId]
+  );
   const tabTitle = (value, fallback) =>
     value != null && value !== "" ? checkValue(value) : fallback;
   const authTabs = [
@@ -144,7 +159,12 @@ const Register = () => {
     setSignUpId("");
     setReferCode(refFromParams || "");
     setSignUpIdError(false);
+    setEmailSuggestListVisible(false);
   }, [index]);
+
+  useEffect(() => {
+    return () => clearEmailSuggestBlurTimer();
+  }, []);
 
   const handleClearCaptcha = () => { };
 
@@ -346,6 +366,19 @@ const Register = () => {
     await onSubmit();
   };
 
+  const changeEmailInput = (text) => {
+    if (signUpIdError) setSignUpIdError(false);
+    setSignUpId(text);
+  };
+
+  const applyEmailDomain = (domain) => {
+    clearEmailSuggestBlurTimer();
+    const s = String(signUpId || "");
+    const at = s.indexOf("@");
+    if (at < 0) return;
+    changeEmailInput(`${s.slice(0, at)}@${domain}`);
+    setEmailSuggestListVisible(false);
+  };
 
   const socialPillBorder = themeColors.border;
   const socialPillBg = isDark ? themeColors.card : "#FFFFFF";
@@ -384,21 +417,58 @@ const Register = () => {
               onEndEditing={() => {}}
             />
           ) : (
-            <View style={authStyles.mobileContainer}>
+            <View style={[authStyles.mobileContainer, styles.emailSuggestWrap]}>
               <Input
                 placeholder={"Enter email address"}
                 value={signUpId}
-                onChangeText={(text) => {
-                  if (signUpIdError) setSignUpIdError(false);
-                  setSignUpId(text);
-                }}
+                onChangeText={(text) => changeEmailInput(text)}
                 keyboardType={"email-address"}
                 autoCapitalize="none"
                 returnKeyType="next"
-                mainContainer={authStyles.mobileInput}
+                onfocus={() => {
+                  clearEmailSuggestBlurTimer();
+                  setEmailSuggestListVisible(true);
+                }}
+                onBlur={() => {
+                  clearEmailSuggestBlurTimer();
+                  emailSuggestBlurTimer.current = setTimeout(() => {
+                    setEmailSuggestListVisible(false);
+                    emailSuggestBlurTimer.current = null;
+                  }, 200);
+                }}
+                mainContainer={[authStyles.mobileInput, styles.emailFieldMain]}
                 maxLength={100}
                 hasError={signUpIdError}
               />
+              {emailSuggestListVisible && emailDomainSuggestions.length > 0 ? (
+                <View
+                  style={[
+                    styles.emailSuggestList,
+                    {
+                      backgroundColor: themeColors.input,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
+                >
+                  <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled
+                    style={styles.emailSuggestScroll}
+                  >
+                    {emailDomainSuggestions.map((domain) => (
+                      <TouchableOpacityView
+                        key={domain}
+                        style={styles.emailSuggestRow}
+                        onPress={() => applyEmailDomain(domain)}
+                      >
+                        <AppText type={FOURTEEN} style={{ color: themeColors.text }}>
+                          @{domain}
+                        </AppText>
+                      </TouchableOpacityView>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
             </View>
           )}
 
@@ -540,6 +610,35 @@ const Register = () => {
 };
 
 const styles = StyleSheet.create({
+  emailFieldMain: {
+    flex: 0,
+    alignSelf: "stretch",
+    width: "100%",
+    marginBottom: 0,
+  },
+  emailSuggestWrap: {
+    zIndex: 10,
+    flexDirection: "column",
+    alignItems: "stretch",
+    alignSelf: "stretch",
+    width: "100%",
+    justifyContent: "flex-start",
+    marginBottom: 12,
+  },
+  emailSuggestList: {
+    marginTop: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 8,
+    maxHeight: 220,
+    overflow: "hidden",
+  },
+  emailSuggestScroll: {
+    maxHeight: 220,
+  },
+  emailSuggestRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
   primaryCTA: {
     alignSelf: "stretch",
   },

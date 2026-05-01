@@ -85,7 +85,7 @@ import {
 } from "../shared";
 import { Platform, StyleSheet, View } from "react-native";
 import StakingSuccess from "../screens/Staking/StakingSuccess";
-import qsTransaction from "../screens/QuickBuySell/qsTransaction";
+import QsTransaction from "../screens/QuickBuySell/qsTransaction";
 import LackedStakes from "../screens/Staking/LackedStakes";
 import StakingHistory from "../screens/Staking/StakingHistory";
 import BtcCoinDetails from "../screens/trades/BtcCoinDetails";
@@ -342,7 +342,7 @@ const MyAuthLoadingStack = () => {
         component={LanguagePreference}
       />
 
-      <Stack.Screen name={routes.QS_TRANSACTION} component={qsTransaction} />
+      <Stack.Screen name={routes.QS_TRANSACTION} component={QsTransaction} />
 
 
       <Stack.Screen name={routes.STAKING_SUCCESS} component={StakingSuccess} />

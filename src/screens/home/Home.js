@@ -21,13 +21,15 @@ import {
   TouchableOpacity,
   RefreshControl,
   StyleSheet,
+  ScrollView,
+  Platform,
 } from "react-native";
 import HomeSlider from "./HomeSlider";
 import HomeSliderSkeleton from "./HomeSliderSkeleton";
 import CoinSlider from "./CoinSlider";
 import HomeMenuBar from "./HomeMenuBar";
-import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { commonStyles } from "../../theme/commonStyles";
+import { authStyles } from "../auth/authStyles";
 import CoinList from "./CoinList";
 import CoinSliderSkeleton from "./CoinSliderSkeleton";
 import CoinListSkeleton from "./CoinListSkeleton";
@@ -150,7 +152,19 @@ const Home = () => {
 
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
-      <KeyBoardAware style={commonStyles.zeroPadding} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
+      <ScrollView
+        style={[authStyles.mainContainer, commonStyles.zeroPadding]}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: Platform.OS === "ios" ? 24 : 36,
+        }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />
+        }
+      >
         <View>
           <HeaderTop />
           <TouchableOpacity
@@ -240,7 +254,7 @@ const Home = () => {
         <View>
           {showCoinSkeleton ? <CoinListSkeleton /> : <CoinList />}
         </View>
-      </KeyBoardAware>
+      </ScrollView>
     </AppSafeAreaView>
   );
 };

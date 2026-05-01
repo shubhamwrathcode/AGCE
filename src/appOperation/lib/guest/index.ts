@@ -40,6 +40,7 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('user/send-otp', data, GUEST_TYPE),
   verify_fac_otp: (data: SendOtpRegistrationProps) =>
     appOperation.post('user/verify-otp', data, GUEST_TYPE),
+  
   app_version: () =>
     appOperation.get('admin/getApk', undefined, undefined, GUEST_TYPE),
   /** Web getOtp for login: Send OTP to email or mobile (type 'login') */

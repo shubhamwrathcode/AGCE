@@ -42,7 +42,6 @@ export const SocketProvider = ({ children }) => {
     pendingSubscriptions.current.market = true;
     if (isMarketSubscribed.current) return;
     if (socketService.getSocket()?.connected) {
-      console.log("sockwt mwssgw. Market subscribe");
       isMarketSubscribed.current = true;
       socketService.emit("market:subscribe");
     }
@@ -53,7 +52,6 @@ export const SocketProvider = ({ children }) => {
     if (!isMarketSubscribed.current) return;
     isMarketSubscribed.current = false;
     if (socketService.getSocket()?.connected) {
-      console.log("sockwt mwssgw. Market unsubscribe");
       socketService.emit("market:unsubscribe");
     }
   }, []);
@@ -61,8 +59,6 @@ export const SocketProvider = ({ children }) => {
   const subscribeToExchange = useCallback((baseCurrencyId, quoteCurrencyId) => {
     if (!baseCurrencyId || !quoteCurrencyId) {
       if (socketService.getSocket()?.connected) {
-        console.log("sockwt mwssgw. Exchange subscribe");
-
         socketService.emit("exchange:subscribe", {});
       }
       return;
@@ -77,8 +73,6 @@ export const SocketProvider = ({ children }) => {
       quote_currency_id: quoteCurrencyId,
     };
     if (socketService.getSocket()?.connected) {
-      console.log("sockwt mwssgw. Exchange subscribe");
-
       socketService.emit("exchange:subscribe", {
         base_currency_id: baseCurrencyId,
         quote_currency_id: quoteCurrencyId,
@@ -90,8 +84,6 @@ export const SocketProvider = ({ children }) => {
     currentExchangeSubscription.current = null;
     pendingSubscriptions.current.exchange = null;
     if (socketService.getSocket()?.connected && baseCurrencyId != null && quoteCurrencyId != null) {
-      console.log("sockwt mwssgw. Exchange unsubscribe");
-
       socketService.emit("exchange:unsubscribe", {
         base_currency_id: baseCurrencyId,
         quote_currency_id: quoteCurrencyId,
@@ -113,8 +105,6 @@ export const SocketProvider = ({ children }) => {
     currentFuturesSubscription.current = subKey;
     pendingSubscriptions.current.futures = { base_currency_id: baseCurrencyId, quote_currency_id: quoteCurrencyId };
     if (socketService.getSocket()?.connected) {
-      console.log("sockwt mwssgw. Futures subscribe");
-
       socketService.emit('futures:subscribe', {
         base_currency_id: baseCurrencyId,
         quote_currency_id: quoteCurrencyId
@@ -126,8 +116,6 @@ export const SocketProvider = ({ children }) => {
     currentFuturesSubscription.current = null;
     pendingSubscriptions.current.futures = null;
     if (socketService.getSocket()?.connected) {
-      console.log("sockwt mwssgw. Futures unsubscribe");
-
       socketService.emit('futures:unsubscribe', {
         base_currency_id: baseCurrencyId,
         quote_currency_id: quoteCurrencyId
@@ -185,8 +173,6 @@ export const SocketProvider = ({ children }) => {
       const MARKET_THROTTLE_MS = 1000;
 
       const flushMarketData = () => {
-        console.log("sockwt mwssgw. flushMarketData");
-
         if (!pendingMarketData) return;
         const data = pendingMarketData;
         pendingMarketData = null;
@@ -212,8 +198,6 @@ export const SocketProvider = ({ children }) => {
 
       const handleMarketUpdate = (data) => {
         if (!isMarketSubscribed.current) return;
-        console.log("sockwt mwssgw. Market data");
-
         pendingMarketData = data;
         const now = Date.now();
         const elapsed = now - lastMarketFlush;
@@ -234,8 +218,6 @@ export const SocketProvider = ({ children }) => {
 
       const handleExchangeUpdate = (data) => {
         if (currentExchangeSubscription.current == null) return;
-        console.log("sockwt mwssgw. Exchange data");
-
         if (data) {
           dispatch(setCoinData(data));
         }

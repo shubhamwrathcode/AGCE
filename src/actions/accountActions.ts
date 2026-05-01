@@ -92,6 +92,29 @@ export const getUserProfile =
     }
   };
 
+/**
+ * After signup OTP verification: load profile and enter main app without sending user to Login.
+ * On failure navigates to Login only (no full auth-stack reset).
+ */
+export const enterMainAppAfterSignup =
+  () => async (dispatch: AppDispatch) => {
+    try {
+      const response: any = await appOperation.customer.get_profile();
+      if (response?.success) {
+        dispatch(setUserData(response?.data));
+        dispatch(setCurrency(response?.data?.currency_prefrence));
+        NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
+        return { ok: true as const };
+      }
+      NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+      return { ok: false as const };
+    } catch (e) {
+      logger(e);
+      NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+      return { ok: false as const };
+    }
+  };
+
   
   export const editUserAvatar =
   (data: FormData) => async (dispatch: AppDispatch) => {
@@ -953,16 +976,45 @@ export const verifyPasskeyRegistration = (credential: object, name: string) => a
   }
 };
 
-/** Same as web: POST security/mobile/add - add mobile number to account. Button loader only, no SpinnerSecond. */
-export const addMobileToAccount = (mobileNumber: string, countryCode: string, mobileOtp: string) => async (dispatch: AppDispatch) => {
+/** Same as web: POST security/mobile/add — identity proof via emailOtp / tofaCode / passkey on same request (web TwofactorPage does not pre-call verify-otp for add-mobile). */
+export const addMobileToAccount = (
+  mobileNumber: string,
+  countryCode: string,
+  mobileOtp: string,
+  identity?: {
+    emailOtp?: string;
+    tofaCode?: string;
+    currentMobileOtp?: string;
+    passkeyVerified?: boolean;
+    passkeyUserId?: string;
+    /** Exact `value` used with send-otp target `new_mobile` — links SMS OTP on mobile/add. */
+    newMobileIdentifier?: string;
+  }
+) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoadingOtp(true));
-    const payload = {
+    const payload: Record<string, string | boolean> = {
       mobileNumber: String(mobileNumber ?? '').trim(),
       countryCode: String(countryCode ?? '').trim(),
       mobileOtp: String(mobileOtp ?? '').trim(),
     };
-    const response: any = await appOperation.customer.securityMobileAdd(payload);
+    if (identity?.emailOtp) payload.emailOtp = String(identity.emailOtp).trim();
+    if (identity?.tofaCode) payload.tofaCode = String(identity.tofaCode).trim();
+    if (identity?.currentMobileOtp) payload.currentMobileOtp = String(identity.currentMobileOtp).trim();
+    if (identity?.passkeyVerified === true) payload.passkeyVerified = true;
+    if (identity?.passkeyUserId) payload.passkeyUserId = String(identity.passkeyUserId).trim();
+    if (identity?.newMobileIdentifier) {
+      const id = String(identity.newMobileIdentifier).trim();
+      payload.identifier = id;
+      payload.value = id;
+    }
+
+    if (__DEV__) {
+      console.log('[addMobileToAccount] POST security/mobile/add body keys:', Object.keys(payload));
+    }
+
+    /** Same shape as web `AuthService.securityMobileAdd` — camelCase only; extra snake_case keys can break strict validators. */
+    const response: any = await appOperation.customer.securityMobileAdd(payload as any);
     if (response?.success) {
       dispatch(getUserProfile());
       showSuccess(response?.message || 'Mobile number added successfully!');

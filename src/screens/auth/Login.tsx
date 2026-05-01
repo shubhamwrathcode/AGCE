@@ -11,7 +11,13 @@ import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { googleLogin, login, passkeyDiscoverableLogin, verifyPasskeyLogin } from "../../actions/authActions";
+import {
+  googleLogin,
+  login,
+  passkeyDiscoverableLogin,
+  verifyPasskeyLogin,
+  type LoginThunkResult,
+} from "../../actions/authActions";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import { checkValue, validateEmail } from "../../helper/utility";
@@ -217,15 +223,21 @@ const Login = (): JSX.Element => {
     return String(signUpId || "").replace(/\D/g, "").replace(/^0+/, "") || "";
   };
 
-  const onLogin = () => {
+  const onLogin = async () => {
     const normalizedId = getNormalizedLoginId();
-    dispatch(
+    const result = (await dispatch(
       login({
         email_or_phone: normalizedId,
         password,
         token: "",
       })
-    );
+    )) as LoginThunkResult;
+    setPasswordError(false);
+    setIdentifierError(false);
+    if (!result?.success) {
+      if (result.highlightPasswordField) setPasswordError(true);
+      if (result.highlightIdentifierField) setIdentifierError(true);
+    }
   };
 
   const validateEmailOrUsername = (raw: string) => {

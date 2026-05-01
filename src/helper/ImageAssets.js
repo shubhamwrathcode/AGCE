@@ -389,6 +389,11 @@ export const pasteImg = require('../../assets/images/pasteImg.png')
 export const apple = require('../../assets/images/apple.png')
 export const margin = require('../../assets/images/margin.png')
 export const tradeImg = require('../../assets/images/tradeImg.png')
+export const checkarrow = require('../../assets/images/checkarrow.png')
+export const secure_icon = require('../../assets/images/secure_icon.png')
+export const register_sucessfull_img = require('../../assets/images/register_sucessfull_img.png')
+
+
 
 
 

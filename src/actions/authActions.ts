@@ -28,6 +28,27 @@ import {PASSKEY_RP_ID} from '../helper/Constants';
 import {socketService} from '../services/socket/SocketService';
 import {Platform} from 'react-native';
 
+/** Persist signup/login JWT so customer APIs + socket work after register / verify-otp. */
+async function persistSignupSessionToken(token: unknown) {
+  const t = typeof token === 'string' && token.trim() ? token.trim() : '';
+  if (!t) return;
+  appOperation.setCustomerToken(t);
+  await AsyncStorage.setItem(USER_TOKEN_KEY, t);
+  socketService.reconnectWithToken(t);
+}
+
+function extractTokenFromAuthResponse(res: any): string | null {
+  if (!res || typeof res !== 'object') return null;
+  if (typeof res.token === 'string' && res.token.trim()) return res.token.trim();
+  const d = res.data;
+  if (typeof d === 'string' && d.trim().length > 10) return d.trim();
+  if (d && typeof d === 'object') {
+    if (typeof d.token === 'string' && d.token.trim()) return d.token.trim();
+    if (typeof d.access_token === 'string' && d.access_token.trim()) return d.access_token.trim();
+  }
+  return null;
+}
+
 export const sendOtp =
   (
     data: SendOtpRegistrationProps,
@@ -98,14 +119,18 @@ export const register =
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.guest.register_email(data);
-      console.log('[register_email] API response:', JSON.stringify(response, null, 2));
+      if (__DEV__) {
+        console.log('[register_email] API response:', JSON.stringify(response, null, 2));
+      }
       if (!response.success) {
         showError(response.message);
         // handleClearCaptcha();
       } else {
-        // showSuccess(response?.message);
-        appOperation.setCustomerToken(response?.token);
-        // handleClearCaptcha();
+        const tok = extractTokenFromAuthResponse(response);
+        if (__DEV__) {
+          console.log('[register_email] extracted token (preview):', tok ? `${tok.slice(0, 12)}…` : '(none)');
+        }
+        await persistSignupSessionToken(tok ?? response?.token);
         NavigationService.navigate(NAVIGATION_AUTH_STACK, {
           screen: VERIFY_ACCOUNT_SCREEN,
         });
@@ -126,13 +151,19 @@ export const register =
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.guest.register_phone(data);
-      console.log('[register_phone] API response:', JSON.stringify(response, null, 2));
+      if (__DEV__) {
+        console.log('[register_phone] API response:', JSON.stringify(response, null, 2));
+      }
       if (!response.success) {
         showError(response.message);
         handleClearCaptcha();
       } else {
         showSuccess(response?.message);
-        appOperation.setCustomerToken(response?.token);
+        const tok = extractTokenFromAuthResponse(response);
+        if (__DEV__) {
+          console.log('[register_phone] extracted token (preview):', tok ? `${tok.slice(0, 12)}…` : '(none)');
+        }
+        await persistSignupSessionToken(tok ?? response?.token);
         handleClearCaptcha();
         NavigationService.navigate(NAVIGATION_AUTH_STACK, {
           screen: VERIFY_ACCOUNT_SCREEN,
@@ -176,7 +207,81 @@ export const register =
     }
   };
 
-export const login = (data: LoginProps & { token?: string }) => async (dispatch: AppDispatch) => {
+/** Parity with web `LoginPage` classifyLoginFailureMessage — which field to outline on failure. */
+export type LoginFailureKind =
+  | 'activation'
+  | 'user_not_found'
+  | 'wrong_password'
+  | 'auth_failed';
+
+/**
+ * Same rules as web `LoginPage`: generic “invalid email or password” → password field
+ * (API cannot distinguish wrong email vs wrong password). Only explicit “not registered”
+ * style copy highlights the identifier.
+ */
+export function classifyLoginFailureMessage(message: unknown): LoginFailureKind {
+  const m = String(message || '').toLowerCase();
+  if (!m) return 'auth_failed';
+  if (m.includes('not been activated') || m.includes('not activated') || m.includes('verify your account')) {
+    return 'activation';
+  }
+  if (
+    m.includes('user not found') ||
+    m.includes('no user found') ||
+    m.includes('does not exist') ||
+    m.includes('not registered') ||
+    m.includes('no account with') ||
+    m.includes('email is not registered') ||
+    m.includes('username is not found') ||
+    m.includes('username not found') ||
+    m.includes('email not registered') ||
+    m.includes('email address not found') ||
+    m.includes('account not found') ||
+    m.includes('no such user') ||
+    m.includes('unknown email') ||
+    m.includes('user does not exist') ||
+    m.includes('email does not exist') ||
+    m.includes('unregistered')
+  ) {
+    return 'user_not_found';
+  }
+  if (m.includes('invalid email or password') || m.includes('invalid credentials') || m.includes('wrong password')) {
+    return 'wrong_password';
+  }
+  if (m.includes('password') && (m.includes('wrong') || m.includes('incorrect') || m.includes('invalid') || m.includes('mismatch'))) {
+    return 'wrong_password';
+  }
+  return 'auth_failed';
+}
+
+function loginFailureHighlights(kind: LoginFailureKind): {
+  highlightPasswordField: boolean;
+  highlightIdentifierField: boolean;
+} {
+  switch (kind) {
+    case 'activation':
+    case 'user_not_found':
+      return { highlightPasswordField: false, highlightIdentifierField: true };
+    case 'wrong_password':
+    case 'auth_failed':
+    default:
+      return { highlightPasswordField: true, highlightIdentifierField: false };
+  }
+}
+
+function loginFailMessage(response: any): string {
+  return String(response?.message ?? response?.data?.message ?? '').trim() || 'Login failed';
+}
+
+export type LoginThunkResult = {
+  success: boolean;
+  highlightPasswordField?: boolean;
+  highlightIdentifierField?: boolean;
+};
+
+export const login = (data: LoginProps & { token?: string }) => async (
+  dispatch: AppDispatch
+): Promise<LoginThunkResult> => {
   try {
     dispatch(setLoading(true));
     const response: any = await appOperation.guest.login(data);
@@ -185,52 +290,67 @@ export const login = (data: LoginProps & { token?: string }) => async (dispatch:
       if (response?.code == 403) {
         appOperation.setCustomerToken(response?.data);
         NavigationService.navigate(REGISTER_SCREEN, {myToken: true, userData: data});
-        return;
+        return {
+          success: false,
+          highlightPasswordField: false,
+          highlightIdentifierField: false,
+        };
       }
-      showError(response.message);
-    } else {
-      const d = response?.data;
-      const no2Fa = d?.['2fa'] === 0;
-      const webShape = d?.requiresVerification === true;
-
-      if (no2Fa && !webShape) {
-        appOperation.setCustomerToken(d?.token);
-        await AsyncStorage.setItem(USER_TOKEN_KEY, d?.token);
-        socketService.reconnectWithToken(d?.token ?? null);
-        await dispatch(getUserProfile());
-        NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
-      } else if (webShape) {
-        dispatch(setUserData(d));
-        const methods = d?.availableMethods ?? [];
-        const hasPasskey = methods.some((m: any) => m?.type === 4) || !!d?.hasPasskey;
-        dispatch(setPending2FA({
-          loginSignId: d?.signId ?? data?.email_or_phone,
-          availableMethods: methods,
-          defaultMethod: hasPasskey ? 4 : (d?.defaultMethod ?? 1),
-          data: d,
-        }));
-        NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
-      } else {
-        dispatch(setUserData(d));
-        const methods = d?.availableMethods ?? [];
-        const hasPasskey = methods.some((m: any) => m?.type === 4) || !!d?.hasPasskey;
-        dispatch(setPending2FA({
-          loginSignId: data?.email_or_phone,
-          availableMethods: methods,
-          defaultMethod: hasPasskey ? 4 : (d?.['2fa'] ?? 1),
-          data: d?.['2fa'] === 2 ? data : d,
-        }));
-        NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
-      }
+      const failMsg = loginFailMessage(response);
+      showError(failMsg);
+      const hi = loginFailureHighlights(classifyLoginFailureMessage(failMsg));
+      return { success: false, ...hi };
     }
+
+    const d = response?.data;
+    const no2Fa = d?.['2fa'] === 0;
+    const webShape = d?.requiresVerification === true;
+
+    if (no2Fa && !webShape) {
+      appOperation.setCustomerToken(d?.token);
+      await AsyncStorage.setItem(USER_TOKEN_KEY, d?.token);
+      socketService.reconnectWithToken(d?.token ?? null);
+      await dispatch(getUserProfile());
+      NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
+    } else if (webShape) {
+      dispatch(setUserData(d));
+      const methods = d?.availableMethods ?? [];
+      const hasPasskey = methods.some((m: any) => m?.type === 4) || !!d?.hasPasskey;
+      dispatch(setPending2FA({
+        loginSignId: d?.signId ?? data?.email_or_phone,
+        availableMethods: methods,
+        defaultMethod: hasPasskey ? 4 : (d?.defaultMethod ?? 1),
+        data: d,
+      }));
+      NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
+    } else {
+      dispatch(setUserData(d));
+      const methods = d?.availableMethods ?? [];
+      const hasPasskey = methods.some((m: any) => m?.type === 4) || !!d?.hasPasskey;
+      dispatch(setPending2FA({
+        loginSignId: data?.email_or_phone,
+        availableMethods: methods,
+        defaultMethod: hasPasskey ? 4 : (d?.['2fa'] ?? 1),
+        data: d?.['2fa'] === 2 ? data : d,
+      }));
+      NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
+    }
+    return { success: true };
   } catch (e: any) {
     logger(e);
-    showError(e?.message);
+    const errMsg = e?.response?.data?.message ?? e?.message ?? 'An error occurred. Please try again later.';
+    showError(errMsg);
     if (e?.code == 403) {
       appOperation.setCustomerToken(e?.data);
       NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
-      return;
+      return {
+        success: false,
+        highlightPasswordField: false,
+        highlightIdentifierField: false,
+      };
     }
+    const hi = loginFailureHighlights(classifyLoginFailureMessage(errMsg));
+    return { success: false, ...hi };
   } finally {
     dispatch(setLoading(false));
   }
@@ -335,6 +455,9 @@ export const verifyOtp = (
   try {
     dispatch(setLoadingOtp(true));
     const response: any = await appOperation.guest.verify_otp(data);
+    if (__DEV__) {
+      console.log('[verify-registration-otp] API response:', JSON.stringify(response, null, 2));
+    }
 
     if (!response.success) {
       showError(response?.message ?? 'Verification failed.');
@@ -346,6 +469,13 @@ export const verifyOtp = (
       showSuccess(response?.message ?? 'Account verified successfully.');
       setOtpError(false);
       setOtp('');
+      const tok = extractTokenFromAuthResponse(response);
+      if (__DEV__) {
+        console.log('[verify-registration-otp] extracted token (preview):', tok ? `${tok.slice(0, 12)}…` : '(unchanged — using token from register)');
+      }
+      if (tok) {
+        await persistSignupSessionToken(tok);
+      }
       NavigationService.navigate(NAVIGATION_AUTH_STACK, {
         screen: ACCOUNT_ACTIVATED_SCREEN,
       });

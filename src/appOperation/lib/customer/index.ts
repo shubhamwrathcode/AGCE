@@ -420,9 +420,19 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/passkey/auth/verify - returns { success, data: { userId } } */
   passkeyVerifyAuth: (signId: string, credential: object) =>
     appOperation.post('security/passkey/auth/verify', { signId, credential }, CUSTOMER_TYPE),
-  /** Same as web: POST security/mobile/add - body { mobileNumber, countryCode, mobileOtp } */
-  securityMobileAdd: (data: { mobileNumber: string; countryCode: string; mobileOtp: string }) =>
-    appOperation.post('security/mobile/add', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/mobile/add — base fields + optional identity (emailOtp | tofaCode | passkey…) */
+  securityMobileAdd: (data: {
+    mobileNumber: string;
+    countryCode: string;
+    mobileOtp: string;
+    emailOtp?: string;
+    tofaCode?: string;
+    currentMobileOtp?: string;
+    passkeyVerified?: boolean;
+    passkeyUserId?: string;
+    identifier?: string;
+    value?: string;
+  }) => appOperation.post('security/mobile/add', data, CUSTOMER_TYPE),
   /** Same as web: POST security/email/add - body { email, tofaCode?, mobileOtp?, emailOtp } */
   securityEmailAdd: (data: { email: string; tofaCode?: string; mobileOtp?: string; emailOtp: string }) =>
     appOperation.post('security/email/add', data, CUSTOMER_TYPE),

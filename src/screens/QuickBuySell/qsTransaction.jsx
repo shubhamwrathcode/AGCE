@@ -7,7 +7,7 @@ import { colors } from '../../theme/colors';
 import { dateFormatter, twoFixedTwo } from '../../helper/utility';
 import KeyBoardAware from '../../shared/components/KeyboardAware';
 
-const qsTransaction = () => {
+const QsTransaction = () => {
   const dispatch = useAppDispatch();
   const [skip, setSkip] = useState(0);
   const [limit, setLimit] = useState(10);
@@ -52,7 +52,7 @@ const qsTransaction = () => {
   //   }
   // };
 
-  const handleListStakingHistory = (type: any) => {
+  const handleListStakingHistory = (type) => {
     setSkip(prevSkip => prevSkip + (type === "Next" ? 10 : -10));
   };
   console.log(skip, limit, 'handleListStakingHistory');
@@ -147,4 +147,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default qsTransaction;
+export default QsTransaction;
