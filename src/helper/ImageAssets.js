@@ -6,7 +6,7 @@ export const earnAsset2 = require('../../assets/images/earnAsset2.png');
 export const search_Img = require('../../assets/images/searchImg.png');
 export const back_ic = require('../../assets/images/back_ic.png');
 export const home_ic = require('../../assets/images/home_ic.png');
-export const wallet_ic = require('../../assets/images/wallet.png');
+export const wallet_ic = require('../../assets/images/wallet_ic.png');
 export const account_ic = require('../../assets/images/account.png');
 export const trade_ic = require('../../assets/images/trade_ic.png');
 export const bell_ic = require('../../assets/images/bell_ic.png');
@@ -170,8 +170,8 @@ export const memexDarkIcon = require('../../assets/images/memexDark.png');
 export const earningMenuIcon = require('../../assets/images/earningMenuIcon.png');
 export const earningMenuDarkIcon = require('../../assets/images/earningMenuDarkIcon.png');
 export const arbitary = require('../../assets/images/arbitary.png');
-export const swap = require('../../assets/images/swap.png');
-export const swapLight = require('../../assets/images/swapLight.png');
+export const swap = require('../../assets/images/swapLight.png');
+export const swapLight = require('../../assets/images/swap.png');
 export const rewardHubIcon = require('../../assets/images/rewardHubIcon.png');
 export const rewardHubDarkIcon = require('../../assets/images/rewardHubIconDark.png');
 export const rectangleIcon = require('../../assets/images/rectangleIcon.png');
@@ -387,7 +387,11 @@ export const earngift_vector1= require('../../assets/images/earngift_vector1.png
 export const logobg = require('../../assets/images/logobg.png')
 export const pasteImg = require('../../assets/images/pasteImg.png')
 export const apple = require('../../assets/images/apple.png')
-export const qrcode_img = require('../../assets/images/qrcode_img.png')
+export const margin = require('../../assets/images/margin.png')
+export const tradeImg = require('../../assets/images/tradeImg.png')
+
+
+
 
 
 

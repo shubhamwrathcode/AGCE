@@ -6,7 +6,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import NavigationService from "./NavigationService";
 import * as routes from "./routes";
 import * as React from "react";
-import { TransitionPresets } from "@react-navigation/stack";
 import AuthLoading from "../screens/other/AuthLoading";
 import Welcome from "../screens/auth/Welcome";
 import Login from "../screens/auth/Login";
@@ -26,16 +25,7 @@ import {
   futuresActiveIcon,
   futuresIcon,
   homeIcon,
-  marketIcon,
-  spotActiveIcon,
-  spotBottomDark,
-  spotBottomLight,
-  spotdarkfinalbottomtab,
-  spotfinalbottomTab,
-  spotIcon,
-  spotIconLight,
-  spotlightfinalbottomtab,
-  trade_ic,
+  tradeImg,
   wallet_ic,
 } from "../helper/ImageAssets";
 import Home from "../features/home/screens/HomeDashboardScreen";
@@ -88,11 +78,12 @@ import SwapNEXBCoin from "../screens/trades/SwapNEXBCoin";
 import {
   AppText,
   BLACK,
+  BOLD,
   MEDIUM,
   TEN,
   YELLOW,
 } from "../shared";
-import { View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import StakingSuccess from "../screens/Staking/StakingSuccess";
 import qsTransaction from "../screens/QuickBuySell/qsTransaction";
 import LackedStakes from "../screens/Staking/LackedStakes";
@@ -205,6 +196,7 @@ const MyAuthLoadingStack = () => {
         component={Notification}
       />
       <Stack.Screen name={routes.SEARCH_SCREEN} component={Search} />
+      <Stack.Screen name={routes.MARKET_SCREEN} component={Market} />
       <Stack.Screen name={routes.AIRDROP_HISTORY_SCREEN} component={AirdropHistoryScreen} />
 
       <Stack.Screen
@@ -298,7 +290,7 @@ const MyAuthLoadingStack = () => {
         name={routes.TWO_FACTOR_AUTHENTICATION}
         component={TwoFactor}
       />
-      <Stack.Screen name={routes.TRADE} component={BtcCoinDetails} />
+      <Stack.Screen name={routes.TRADE} component={BtcCoinDetails as any} />
       <Stack.Screen
         name={routes.TWO_FACTOR_QR_SCREEN}
         component={TwoFactorQr}
@@ -368,7 +360,7 @@ const MyAuthLoadingStack = () => {
         name={routes.WALLET_HISTORY_SCREEN}
         component={WalletHistory}
       />
-      <Stack.Screen name={routes.SPOT_MARKET_SCREEN} component={SpotMarket} />
+      <Stack.Screen name={routes.SPOT_MARKET_SCREEN} component={SpotMarket as any} />
       <Stack.Screen name={routes.MORE_MENU_SCREEN} component={MoreMenu} />
       <Stack.Screen name={routes.TRANSFER_SCREEN} component={Transfer} />
       <Stack.Screen
@@ -477,6 +469,13 @@ const AuthStack = () => (
 
 function BottomNavigation() {
   const { colors: themeColors, isDark } = useTheme();
+  const tabBarBg = isDark ? themeColors.tabBar : "#FFFFFF";
+  const tabBorder = isDark ? themeColors.border : "#E5E7EB";
+  const activeIcon = isDark ? themeColors.button : colors.black;
+  const inactive = themeColors.inactiveTab;
+
+  const tabBarHeight = Platform.OS === "ios" ? 68 : 56;
+
   return (
     <ChartPreloaderProvider>
       <Tab.Navigator
@@ -486,37 +485,52 @@ function BottomNavigation() {
         screenOptions={{
           headerShown: false,
           tabBarHideOnKeyboard: true,
+          tabBarShowLabel: false,
+          tabBarActiveTintColor: activeIcon,
+          tabBarInactiveTintColor: inactive,
           tabBarStyle: {
-            backgroundColor: themeColors.tabBar,
-            height: 60,
-            borderTopWidth: 1.5,
-            borderTopColor: themeColors.border,
+            backgroundColor: tabBarBg,
+            height: tabBarHeight,
+            paddingTop: 0,
+            paddingBottom: Platform.OS === "ios" ? 16 : 8,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: tabBorder,
+            elevation: 12,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 6,
           },
-          tabBarIconStyle: {},
-          tabBarAllowFontScaling: false,
-          tabBarShowLabel: true,
-          tabBarActiveTintColor: themeColors.button,
-          tabBarInactiveTintColor: themeColors.inactiveTab,
+          tabBarItemStyle: {
+            paddingTop: 2,
+          },
         }}
       >
         <Tab.Screen
           name={routes.HOME_SCREEN}
           options={{
-            tabBarLabel: "",
             tabBarIcon: ({ focused }) => (
-              <View style={{ alignItems: "center", marginTop: 10 }}>
+              <View style={bottomTabStyles.tabColumn}>
+                {focused ? (
+                  <View
+                    style={[
+                      bottomTabStyles.activeIndicator,
+                      { backgroundColor: activeIcon },
+                    ]}
+                  />
+                ) : (
+                  <View style={bottomTabStyles.activeIndicatorPlaceholder} />
+                )}
                 <FastImage
                   source={homeIcon}
-                  style={{ width: 20, height: 20 }}
+                  style={bottomTabStyles.tabIcon}
                   resizeMode="contain"
-                  tintColor={focused ? themeColors.button : themeColors.inactiveTab}
+                  tintColor={focused ? activeIcon : inactive}
                 />
                 <AppText
-                  style={[
-                    { top: 5, color: focused ? themeColors.button : themeColors.inactiveTab }
-                  ]}
-                  weight={MEDIUM}
+                  weight={focused ? BOLD : MEDIUM}
                   type={TEN}
+                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
                 >
                   Home
                 </AppText>
@@ -526,83 +540,23 @@ function BottomNavigation() {
           component={Home}
         />
         <Tab.Screen
-          name={routes.MARKET_SCREEN}
-          options={{
-            tabBarLabel: "",
-            tabBarIcon: ({ focused }) => (
-              <View style={{ alignItems: "center", marginTop: 10 }}>
-                <FastImage
-                  source={marketIcon}
-                  style={{ width: 20, height: 20 }}
-                  resizeMode="contain"
-                  tintColor={focused ? themeColors.button : themeColors.inactiveTab}
-                />
-                <AppText
-                  weight={MEDIUM}
-                  type={TEN}
-                  style={{ top: 5, color: focused ? themeColors.button : themeColors.inactiveTab }}
-                >
-                  Market
-                </AppText>
-              </View>
-            ),
-          }}
-          component={Market}
-        />
-
-        <Tab.Screen
-          name={routes.WALLET_SCREEN}
-          options={{
-            tabBarLabel: "",
-            freezeOnBlur: true,
-            unmountOnBlur: false,
-            tabBarIcon: ({ focused }) => (
-              <View style={{ alignItems: "center", marginTop: 10 }}>
-                <FastImage
-                  source={
-                    focused ? isDark ? spotdarkfinalbottomtab : spotlightfinalbottomtab : spotfinalbottomTab
-
-                  }
-                  style={{ width: 22, height: 22, transform: [{ scale: isDark ? 0.78 : 1 }] }}
-                  resizeMode="contain"
-                />
-                <AppText
-                  weight={MEDIUM}
-                  type={TEN}
-                  style={{ top: 5, color: focused ? themeColors.button : themeColors.inactiveTab }}
-                >
-                  Spot
-                </AppText>
-              </View>
-            ),
-          }}
-          component={Spot}
-        />
-
-        <Tab.Screen
           name={routes.FUTURES_SCREEN}
           options={{
-            tabBarLabel: "",
             freezeOnBlur: true,
             unmountOnBlur: false,
             tabBarIcon: ({ focused }) => (
-              <View style={{ alignItems: "center", marginTop: 10 }}>
+              <View style={bottomTabStyles.tabColumn}>
+                <View style={bottomTabStyles.activeIndicatorPlaceholder} />
                 <FastImage
-                  source={
-                    focused
-                      ? !isDark
-                        ? futuresActiveIcon
-                        : futuresActiveIcon
-                      : futuresIcon
-                  }
-                  style={{ width: 22, height: 22 }}
+                  source={focused ? futuresActiveIcon : futuresActiveIcon}
+                  style={bottomTabStyles.tabIconMd}
                   resizeMode="contain"
-                  tintColor={focused ? themeColors.button : themeColors.inactiveTab}
+                  tintColor={focused ? activeIcon : inactive}
                 />
                 <AppText
-                  weight={MEDIUM}
+                  weight={focused ? BOLD : MEDIUM}
                   type={TEN}
-                  style={{ top: 5, color: focused ? themeColors.button : themeColors.inactiveTab }}
+                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
                 >
                   Futures
                 </AppText>
@@ -612,23 +566,48 @@ function BottomNavigation() {
           component={Futures}
         />
         <Tab.Screen
-          name={routes.ACCOUNT_SCREEN}
+          name={routes.WALLET_SCREEN}
           options={{
-            tabBarLabel: "",
+            tabBarLabel: "Trade",
+            freezeOnBlur: true,
+            unmountOnBlur: false,
             tabBarIcon: ({ focused }) => (
-              <View style={{ alignItems: "center", marginTop: 10 }}>
+              <View style={bottomTabStyles.tradeColumn}>
                 <FastImage
-                  source={earningIcon}
-                  style={{ width: 20, height: 20 }}
+                  source={tradeImg}
+                  style={bottomTabStyles.tradeAssetImg}
                   resizeMode="contain"
-                  tintColor={focused ? themeColors.button : themeColors.inactiveTab}
                 />
                 <AppText
-                  weight={MEDIUM}
-                  style={{ top: 5, color: focused ? themeColors.button : themeColors.inactiveTab }}
+                  weight={focused ? BOLD : MEDIUM}
                   type={TEN}
+                  style={[bottomTabStyles.tradeLabel, { color: focused ? activeIcon : inactive }]}
                 >
-                  Staking
+                  Trade
+                </AppText>
+              </View>
+            ),
+          }}
+          component={Spot}
+        />
+        <Tab.Screen
+          name={routes.ACCOUNT_SCREEN}
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <View style={bottomTabStyles.tabColumn}>
+                <View style={bottomTabStyles.activeIndicatorPlaceholder} />
+                <FastImage
+                  source={earningIcon}
+                  style={bottomTabStyles.tabIcon}
+                  resizeMode="contain"
+                  tintColor={focused ? activeIcon : inactive}
+                />
+                <AppText
+                  weight={focused ? BOLD : MEDIUM}
+                  type={TEN}
+                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
+                >
+                  Earn
                 </AppText>
               </View>
             ),
@@ -638,19 +617,19 @@ function BottomNavigation() {
         <Tab.Screen
           name={routes.EARING_SCREEN}
           options={{
-            tabBarLabel: "",
             tabBarIcon: ({ focused }) => (
-              <View style={{ alignItems: "center", marginTop: 10 }}>
+              <View style={bottomTabStyles.tabColumn}>
+                <View style={bottomTabStyles.activeIndicatorPlaceholder} />
                 <FastImage
                   source={wallet_ic}
-                  style={{ width: 20, height: 20 }}
+                  style={bottomTabStyles.tabIcon}
                   resizeMode="contain"
-                  tintColor={focused ? themeColors.button : themeColors.inactiveTab}
+                  tintColor={focused ? activeIcon : inactive}
                 />
                 <AppText
-                  weight={MEDIUM}
-                  style={{ top: 5, color: focused ? themeColors.button : themeColors.inactiveTab }}
+                  weight={focused ? BOLD : MEDIUM}
                   type={TEN}
+                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
                 >
                   Wallet
                 </AppText>
@@ -663,6 +642,54 @@ function BottomNavigation() {
     </ChartPreloaderProvider>
   );
 }
+
+const bottomTabStyles = StyleSheet.create({
+  tabColumn: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+    minHeight: 46,
+    paddingBottom: 0,
+  },
+  activeIndicator: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 6,
+  },
+  activeIndicatorPlaceholder: {
+    height: 3,
+    marginBottom: 6,
+    width: 28,
+    opacity: 0,
+  },
+  tabIcon: {
+    width: 22,
+    height: 22,
+  },
+  tabIconMd: {
+    width: 22,
+    height: 22,
+  },
+  tabLabel: {
+    marginTop: 4,
+  },
+  tradeColumn: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+    minHeight: 46,
+    paddingBottom: 0,
+  },
+  /** Full-bleed trade asset (circle + arrows in PNG); no extra colored wrapper. */
+  tradeAssetImg: {
+    width: 52,
+    height: 52,
+    marginTop: -26,
+    marginBottom: 0,
+  },
+  tradeLabel: {
+    marginTop: 2,
+  },
+});
 
 const RootStackScreen = () => (
   <Stack.Navigator

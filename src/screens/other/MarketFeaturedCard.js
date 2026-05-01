@@ -4,7 +4,7 @@ import FastImage from "react-native-fast-image";
 import { AppText, SEMI_BOLD, TEN, FOURTEEN, FIFTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
-import { BASE_URL } from "../../helper/Constants";
+import { BASE_URL, IMAGE_BASE_URL } from "../../helper/Constants";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import MiniSparkline from "../../shared/components/MiniSparkline";
 import { useTheme } from "../../hooks/useTheme";
@@ -61,7 +61,7 @@ const MarketFeaturedCard = ({ data, chartData, chartId, onPress }) => {
           <FastImage
             resizeMode="contain"
             style={styles.coinLogo}
-            source={{ uri: data?.icon_path ? BASE_URL + data.icon_path : null }}
+            source={{ uri: data?.icon_path ? IMAGE_BASE_URL + data.icon_path : null }}
           />
         </View>
       </View>

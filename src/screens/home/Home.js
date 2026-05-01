@@ -20,6 +20,7 @@ import {
   StatusBar,
   TouchableOpacity,
   RefreshControl,
+  StyleSheet,
 } from "react-native";
 import HomeSlider from "./HomeSlider";
 import HomeSliderSkeleton from "./HomeSliderSkeleton";
@@ -36,6 +37,7 @@ import {
   HomeBg,
   verificationImage,
   trade_btn,
+  searchIcon,
 } from "../../helper/ImageAssets";
 import {
   getBannerList,
@@ -63,9 +65,9 @@ import { getVersion } from "react-native-device-info";
 import { setLoading } from "../../slices/authSlice";
 import HeaderTop from "../../shared/components/HeaderTop";
 import FastImage from "react-native-fast-image";
-import { KYC_STATUS_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
+import { KYC_STATUS_SCREEN, SEARCH_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
-import { colors } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import { SocketContext } from "../../SocketProvider";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -151,50 +153,76 @@ const Home = () => {
       <KeyBoardAware style={commonStyles.zeroPadding} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
         <View>
           <HeaderTop />
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => NavigationService.navigate(SEARCH_SCREEN)}
+            style={[
+              styles.homeSearchBar,
+              {
+                backgroundColor: isDark ? themeColors.input : lightTheme.input,
+                borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
+            <FastImage
+              source={searchIcon}
+              style={styles.homeSearchIcon}
+              resizeMode="contain"
+              tintColor={themeColors.secondaryText}
+            />
+            <AppText
+              numberOfLines={1}
+              style={[styles.homeSearchPlaceholder, { color: themeColors.secondaryText }]}
+            >
+              🔥 Trade Smart. Grow Faster.
+            </AppText>
+          </TouchableOpacity>
         </View>
 
         {(kycVerified === 0 || kycVerified === 3) && (
+        <View
+          style={{
+            backgroundColor: themeColors.card,
+            marginHorizontal: 12,
+            height: 160,
+            padding: 10,
+            borderRadius: 6,
+            marginVertical: 10,
+            borderWidth: 1,
+            borderColor: themeColors.border,
+          }}
+        >
           <View
             style={{
-              backgroundColor: themeColors.card,
-              marginHorizontal: 12,
-              height: 160,
-              padding: 10,
-              borderRadius: 6,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
               marginVertical: 10,
-              borderWidth: 1,
-              borderColor: themeColors.border,
             }}
           >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginVertical: 10,
-              }}
-            >
-              <FastImage
-                source={verificationImage}
-                style={{ width: 70, height: 70 }}
-                resizeMode="contain"
-              />
-              <View style={{ width: "70%" }}>
-                <AppText style={{ color: themeColors.button }} type={EIGHTEEN}>
-                  Verification
-                </AppText>
-                <AppText style={{ color: themeColors.secondaryText }} type={ELEVEN}>
-                  Verify your identity to secure your account and unlock
-                  trading access.
-                </AppText>
-              </View>
-            </View>
-            <Button
-              onPress={() => NavigationService.navigate(KYC_STATUS_SCREEN)}
-              children="Verify Now"
-              containerStyle={{ width: "90%", height: 40, alignSelf: "center", backgroundColor: themeColors.button }}
+            <FastImage
+              source={verificationImage}
+              style={{ width: 70, height: 70 }}
+              resizeMode="contain"
             />
+            <View style={{ width: "70%" }}>
+              <AppText style={{ color: themeColors.button }} type={EIGHTEEN}>
+                Verification
+              </AppText>
+              <AppText style={{ color: themeColors.secondaryText }} type={ELEVEN}>
+                Verify your identity to secure your
+                account and unlock deposit/trading
+                access.
+              </AppText>
+            </View>
           </View>
+          <Button
+            onPress={() => NavigationService.navigate(KYC_STATUS_SCREEN)}
+            children="Verify Now"
+            containerStyle={{ width: "90%", height: 40, alignSelf: "center", backgroundColor: themeColors.button }}
+          />
+        </View>
         )}
 
         <View>
@@ -216,5 +244,27 @@ const Home = () => {
     </AppSafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  homeSearchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  homeSearchIcon: {
+    width: 18,
+    height: 18,
+    marginRight: 10,
+  },
+  homeSearchPlaceholder: {
+    flex: 1,
+    fontSize: 14,
+  },
+});
 
 export default Home;

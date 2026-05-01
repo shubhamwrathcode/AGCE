@@ -1,23 +1,23 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import FastImage from "react-native-fast-image";
-import { ActivityIndicator, Keyboard, Linking, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Keyboard, Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { Passkey } from "react-native-passkey";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../navigation/routes";
-import { AppSafeAreaView, AppText, BOLD, Button, ELEVEN, FOURTEEN, Input, MEDIUM, TEN, TWELVE, TWENTY_SIX } from "../../shared";
+import { AppSafeAreaView, AppText, Button, ELEVEN, FOURTEEN, Input, MEDIUM, TEN } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { googleLogin, login, passkeyDiscoverableLogin, verifyPasskeyLogin } from "../../actions/authActions";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
+import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import { checkValue, validateEmail } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
 import { setLoading } from "../../slices/authSlice";
-import { apple, googleIcon, passkey_login, qrcode_img } from "../../helper/ImageAssets";
-import QrCodeSvg from "../../../assets/images/qrcode_img.svg";
+import { apple, googleIcon, passkey_login } from "../../helper/ImageAssets";
 import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/components";
 import NavigationService from "../../navigation/NavigationService";
 import Checkbox from "../../shared/components/Checkbox";
@@ -46,12 +46,31 @@ const Login = (): JSX.Element => {
   const [isAppleSignInInProgress, setIsAppleSignInInProgress] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [hasPasskey, setHasPasskey] = useState(false);
+  const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
+  const emailSuggestBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearEmailSuggestBlurTimer = () => {
+    if (emailSuggestBlurTimer.current) {
+      clearTimeout(emailSuggestBlurTimer.current);
+      emailSuggestBlurTimer.current = null;
+    }
+  };
+
+  const emailDomainSuggestions = useMemo(
+    () => (index === 0 ? getEmailDomainSuggestions(signUpId) : []),
+    [index, signUpId]
+  );
+
+  useEffect(() => {
+    return () => clearEmailSuggestBlurTimer();
+  }, []);
 
   useEffect(() => {
     setSignUpId("");
     setPassword("");
     setIdentifierError(false);
     setPasswordError(false);
+    setEmailSuggestListVisible(false);
   }, [index]);
 
   useEffect(() => {
@@ -261,11 +280,16 @@ const Login = (): JSX.Element => {
     }
   };
 
+  const applyEmailDomain = (domain: string) => {
+    clearEmailSuggestBlurTimer();
+    const s = String(signUpId || "");
+    const at = s.indexOf("@");
+    if (at < 0) return;
+    changeInput(`${s.slice(0, at)}@${domain}`);
+    setEmailSuggestListVisible(false);
+  };
+
   const onNext = async () => {
-    if (index === 2) {
-      showError("QR code login is coming soon.");
-      return;
-    }
     if (index === 0) {
       if (!validateEmailOrUsername(signUpId)) return;
     } else {
@@ -323,7 +347,7 @@ const Login = (): JSX.Element => {
         />
         <View style={{ marginTop: 16 }}>
           <AuthEmailPhoneTabBar
-            tabs={["Email/Username", "Phone", "QR Code"]}
+            tabs={["Email/Username", "Phone"]}
             index={index}
             onChange={(i: number) => {
               setIndex(i);
@@ -331,40 +355,7 @@ const Login = (): JSX.Element => {
             }}
           />
 
-          {index === 2 ? (
-            <View style={styles.qrWrap}>
-                {/* <QrCodeSvg width={190} height={190} /> */}
-                <FastImage source={qrcode_img} style={{width:250,height:200}} resizeMode="contain"/>
-              <AppText type={FOURTEEN} style={{ color: themeColors.text, marginTop: 8 }}>
-                Log in with QR code
-              </AppText>
-              <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 10, textAlign: "center", fontSize: 13 }}>
-                Scan this code with your{" "}
-                <AppText type={TEN} style={{ color: themeColors.text, fontWeight: "700", fontSize: 13 }}>
-                  AGCE App
-                </AppText>
-              </AppText>
-
-              <TouchableOpacityView
-                style={[styles.bindLeft, { marginTop: 12, justifyContent: "center" }]}
-                onPress={() => setBindIp((v) => !v)}
-              >
-                <Checkbox
-                  value={bindIp}
-                  onPress={() => setBindIp((v) => !v)}
-                  disabled={false}
-                  type={1}
-                  style={undefined}
-                  innerStyle={undefined}
-                  theme={undefined}
-                  containerStyle={undefined}
-                />
-                <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
-                  Bind IP(Security option)
-                </AppText>
-              </TouchableOpacityView>
-            </View>
-          ) : index === 1 ? (
+          {index === 1 ? (
             <AuthPhoneInput
               value={signUpId}
               onChangeText={(text: string) => changeInput(text)}
@@ -381,7 +372,7 @@ const Login = (): JSX.Element => {
               onEndEditing={() => {}}
             />
           ) : (
-            <View style={authStyles.mobileContainer}>
+            <View style={[authStyles.mobileContainer, styles.emailSuggestWrap]}>
               <Input
                 placeholder={"Enter email or username"}
                 value={signUpId}
@@ -389,19 +380,58 @@ const Login = (): JSX.Element => {
                 keyboardType={"default"}
                 autoCapitalize="none"
                 returnKeyType="next"
-                onfocus={() => setShowPassField(false)}
+                onfocus={() => {
+                  clearEmailSuggestBlurTimer();
+                  setShowPassField(false);
+                  setEmailSuggestListVisible(true);
+                }}
+                onBlur={() => {
+                  clearEmailSuggestBlurTimer();
+                  emailSuggestBlurTimer.current = setTimeout(() => {
+                    setEmailSuggestListVisible(false);
+                    emailSuggestBlurTimer.current = null;
+                  }, 200);
+                }}
                 onSubmitEditing={() => {}}
                 onEndEditing={() => {}}
-                onFocus={() => {}}
                 hasError={identifierError}
-                mainContainer={authStyles.mobileInput}
+                mainContainer={[authStyles.mobileInput, styles.emailFieldMain]}
                 maxLength={100}
               />
+              {emailSuggestListVisible && emailDomainSuggestions.length > 0 ? (
+                <View
+                  style={[
+                    styles.emailSuggestList,
+                    {
+                      backgroundColor: themeColors.input,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
+                >
+                  <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled
+                    style={styles.emailSuggestScroll}
+                  >
+                    {emailDomainSuggestions.map((domain) => (
+                      <TouchableOpacityView
+                        key={domain}
+                        style={styles.emailSuggestRow}
+                        onPress={() => applyEmailDomain(domain)}
+                      >
+                        <AppText type={FOURTEEN} style={{ color: themeColors.text }}>
+                          @{domain}
+                        </AppText>
+                      </TouchableOpacityView>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
             </View>
           )}
 
           {/* Web parity: Bind IP + Forgot Password row (identifier step). */}
-          {index !== 2 && !showPassField ? (
+          {!showPassField ? (
             <View style={styles.bindRow}>
               <TouchableOpacityView
                 style={styles.bindLeft}
@@ -432,7 +462,7 @@ const Login = (): JSX.Element => {
             </View>
           ) : null}
 
-          {!showPassField && index !== 2 && (
+          {!showPassField && (
             <Button
               children={"Next"}
               disabled={false}
@@ -442,7 +472,7 @@ const Login = (): JSX.Element => {
             />
           )}
 
-          {showPassField && index !== 2 && (
+          {showPassField && (
             <>
               <Input
                 placeholder={"Enter password"}
@@ -505,8 +535,7 @@ const Login = (): JSX.Element => {
             </>
           )}
         </View>
-        {index !== 2 && (
-          <View style={styles.socialSection}>
+        <View style={styles.socialSection}>
             <View style={styles.dividerRow}>
               <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
               <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
@@ -576,7 +605,6 @@ const Login = (): JSX.Element => {
               </AppText>
             </TouchableOpacityView>
           </View>
-        )}
       </KeyBoardAware>
     </AppSafeAreaView>
   );
@@ -597,26 +625,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-  },
-  qrWrap: {
-    marginTop: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 6,
-    alignItems: "center",
-  },
-  qrPlate: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-  },
-  qrImg: {
-    width: 190,
-    height: 190,
   },
   dividerRow: {
     flexDirection: "row",
@@ -645,6 +653,35 @@ const styles = StyleSheet.create({
   createAccountWrap: {
     marginTop: 2,
     alignItems: "center",
+  },
+  emailFieldMain: {
+    flex: 0,
+    alignSelf: "stretch",
+    width: "100%",
+    marginBottom: 0,
+  },
+  emailSuggestWrap: {
+    zIndex: 10,
+    flexDirection: "column",
+    alignItems: "stretch",
+    alignSelf: "stretch",
+    width: "100%",
+    justifyContent: "flex-start",
+    marginBottom: 12,
+  },
+  emailSuggestList: {
+    marginTop: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 8,
+    maxHeight: 220,
+    overflow: "hidden",
+  },
+  emailSuggestScroll: {
+    maxHeight: 220,
+  },
+  emailSuggestRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
 });
 

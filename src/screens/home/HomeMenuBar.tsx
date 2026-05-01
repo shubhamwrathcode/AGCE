@@ -1,5 +1,5 @@
 import React from "react";
-import { Dimensions, FlatList, StyleSheet, View } from "react-native";
+import { Dimensions, StyleSheet, View } from "react-native";
 import FastImage from "react-native-fast-image";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import Animated, {
@@ -11,28 +11,29 @@ import { AppText, ELEVEN } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
 const Width = Dimensions.get("window").width;
 import {
-  memeXProfile,
-  memeXProfileDark,
-  giftIc,
   moreOption,
   newHubIcon,
   newHubIconLight,
   swap,
   swapLight,
-  airdropLight,
-  airdropDark,
+  margin,
+  spotdarkfinalbottomtab,
+  spotfinalbottomTab,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import {
-  ACCOUNT_SCREEN,
   AIRDROP_SCREEN,
   CONVERT_SCREEN,
   INVITE_AND_EARN_SCREEN,
-  MARKET_SCREEN,
   MORE_MENU_SCREEN,
+  WALLET_SCREEN,
 } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { checkValue } from "../../helper/utility";
+
+/** Grey tile behind each menu icon (square behind icon only). */
+const ICON_TILE_GREY_LIGHT = "#EAEDF0";
+const ICON_TILE_GREY_DARK = "#EAEDF0";
 
 // ✅ Separate component for menu item to use hooks properly
 const MenuItem = React.memo(({ item, index }: any) => {
@@ -69,9 +70,7 @@ const MenuItem = React.memo(({ item, index }: any) => {
           style={[
             item?.id === "6" ? styles.iconWrapMore : styles.iconWrap,
             {
-              backgroundColor: isDark
-                ? themeColors.themeSelection
-                : "#F6F6F6",
+              backgroundColor: isDark ? ICON_TILE_GREY_DARK : ICON_TILE_GREY_LIGHT,
             },
           ]}
         >
@@ -98,18 +97,14 @@ const HomeMenuBar = () => {
   const Data = [
     {
       id: "1",
-      title: checkValue(languages?.memex),
-      icon: theme == "Dark" ? memeXProfileDark : memeXProfile,
-      onPress: () =>
-        NavigationService.navigate(MARKET_SCREEN, {
-          from: "home",
-          tab: "MemeX",
-        }),
+      title: checkValue(languages?.spot),
+      icon: theme == "Dark" ? spotdarkfinalbottomtab : spotdarkfinalbottomtab,
+      onPress: () => NavigationService.navigate(WALLET_SCREEN),
     },
     {
       id: "2",
-      title: "Airdrop",
-      icon: theme == "Dark" ? airdropLight : airdropDark,
+      title: "Margin",
+      icon: margin,
       onPress: () =>
         NavigationService.navigate(AIRDROP_SCREEN, { from: "home" }),
     },
@@ -140,23 +135,31 @@ const HomeMenuBar = () => {
   };
 
   return (
-    <View style={[styles.container, { justifyContent: "space-around", paddingHorizontal: 10 }]}>
-      {Data.map((item, index) => (
-        <React.Fragment key={item.id}>
-          {renderItem({ item, index })}
-        </React.Fragment>
-      ))}
-
+    <View style={styles.menuBarBackground}>
+      <View style={[styles.container, { justifyContent: "space-around",  }]}>
+        {Data?.map((item, index) => (
+          <React.Fragment key={item.id}>
+            {renderItem({ item, index })}
+          </React.Fragment>
+        ))}
+      </View>
     </View>
   );
 };
+
+
 const styles = StyleSheet.create({
+  menuBarBackground: {
+    width: "100%",
+    // backgroundColor: MENU_BAR_BG,
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
   container: {
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    marginBottom: 10,
   },
   icon: {
     height: 18,
@@ -174,6 +177,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    
   },
   iconWrapMore: {
     height: 36,
@@ -183,10 +187,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    
   },
   singleItem: {
     alignItems: "center",
-    width: (Width - 40) / 5, // Split screen width among 5 items evenly
+    width: (Width - 40) / 4,
+
   },
   itemSeparator: {
     width: 8,

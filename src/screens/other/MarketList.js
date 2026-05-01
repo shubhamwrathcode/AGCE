@@ -8,7 +8,7 @@ import { toFixedFive, toFixedThree } from "../../helper/utility";
 import { colors } from "../../theme/colors";
 import { addToFavorites } from "../../actions/homeActions";
 import { useDispatch } from "react-redux";
-import { BASE_URL } from "../../helper/Constants";
+import { BASE_URL, IMAGE_BASE_URL } from "../../helper/Constants";
 import { useTheme } from "../../hooks/useTheme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -44,7 +44,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite }
   const inrStr = formatInrPrice(item?.buy_price);
   const ticker = item?.base_currency || "—";
   const fullName = item?.base_currency_fullname || item?.base_currency || ticker;
-  const iconUri = item?.icon_path ? BASE_URL + item.icon_path : null;
+  const iconUri = item?.icon_path ? IMAGE_BASE_URL + item.icon_path : null;
 
   return (
     <TouchableOpacity

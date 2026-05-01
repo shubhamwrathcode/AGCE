@@ -2,9 +2,17 @@ export const USER_TOKEN_KEY = 'USER_TOKEN_KEY';
 export const FCM_TOKEN_KEY = 'FCM_TOKEN_KEY';
 export const APP_THEME = 'APP_THEME';
 export const SELECTED_LANGUAGE = 'SELECTED_LANGUAGE';
-/** API origin (no `/api` segment). Paths are built as `${BASE_URL}v1/...` in AppOperation — same as web. */
+/**
+ * Primary API host — same role as web `appUrl` in `apiConfig.js`
+ * (`https://agcebackend.wrathcode.com`). Used by AppOperation for `v1/...` calls.
+ */
 export const BASE_URL = 'https://agcebackend.wrathcode.com/';
-export const IMAGE_BASE_URL = 'https://agcebackend.wrathcode.com/';
+/**
+ * Static / uploaded assets (coin icons, profile images, banners) — same as web
+ * `baseImage` / `appUrl2` (`https://backend.demoexchange.wrathcode.com`).
+ * Build URLs as `${IMAGE_BASE_URL}${icon_path}` (path from API, e.g. `icons/...`).
+ */
+export const IMAGE_BASE_URL = 'https://backend.demoexchange.wrathcode.com/';
 // export const BASE_URL = 'http://3.110.173.10:3008/';
 
 // For passkey testing with backend on localhost:5001 use one of:
