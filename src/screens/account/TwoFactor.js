@@ -25,6 +25,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import FastImage from 'react-native-fast-image';
 import {
   back_ic,
+  checkIc,
   EMAIL,
   FINGERPRINT,
   LOCK_ICON,
@@ -91,134 +92,68 @@ const headerIconSurface = (isDark) => ({
   backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
 });
 
-const TwoFaToggleCard = ({
+const TwoFaSimpleRow = ({
   themeColors,
   isDark,
   iconSource,
   title,
   badge,
   description,
-  value,
-  onValueChange,
-  highlighted,
+  hasValue,
+  statusText,
+  isBooleanStatus,
+  actionLabel,
+  onAction,
   disabled,
 }) => (
-  <View
-    style={[
-      styles.optionCard,
-      {
-        backgroundColor: isDark ? themeColors.card : '#FFFFFF',
-        borderColor: highlighted ? themeColors.text : themeColors.border,
-        borderWidth: highlighted ? 1.5 : StyleSheet.hairlineWidth,
-      },
-      Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: isDark ? 0.25 : 0.07,
-          shadowRadius: 10,
-        },
-        android: { elevation: 2 },
-      }),
-    ]}
-  >
-    <View style={styles.optionTopRow}>
-      <View style={[styles.methodIconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}>
+  <View style={[styles.simpleRow, { borderBottomColor: themeColors.border }]}>
+    <View style={styles.simpleRowLeftWrapper}>
+      <View style={[styles.methodIconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F5F5F5' }]}>
         <FastImage source={iconSource} style={styles.methodIconImg} tintColor={themeColors.text} resizeMode="contain" />
       </View>
-      <View style={styles.optionBody}>
-        <View style={styles.tfHeadingLine}>
-          <AppText type={THIRTEEN} weight={BOLD} style={{ color: themeColors.text }}>
+      <View style={styles.simpleRowLeft}>
+        <View style={styles.simpleRowTitleWrap}>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
             {title}
           </AppText>
           {badge}
         </View>
-        <AppText type={TEN} style={[styles.tfRowDescription, { color: themeColors.secondaryText }]}>
+        <AppText type={ELEVEN} style={{ color: themeColors.secondaryText, marginTop: 4, lineHeight: 16 }}>
           {description}
         </AppText>
       </View>
-      <Switch
-        value={value}
-        disabled={disabled}
-        onValueChange={onValueChange}
-        trackColor={{
-          false: isDark ? 'rgba(255,255,255,0.2)' : '#E8E8E8',
-          true: themeColors.text,
-        }}
-        thumbColor="#FFFFFF"
-        ios_backgroundColor={isDark ? 'rgba(255,255,255,0.2)' : '#E8E8E8'}
-      />
     </View>
-  </View>
-);
 
-const TwoFaIdentityCard = ({
-  themeColors,
-  isDark,
-  iconSource,
-  title,
-  description,
-  hasValue,
-  maskedValue,
-  actionLabel,
-  onAction,
-}) => (
-  <View
-    style={[
-      styles.optionCard,
-      {
-        backgroundColor: isDark ? themeColors.card : '#FFFFFF',
-        borderColor: themeColors.border,
-        borderWidth: StyleSheet.hairlineWidth,
-      },
-      Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: isDark ? 0.25 : 0.07,
-          shadowRadius: 10,
-        },
-        android: { elevation: 2 },
-      }),
-    ]}
-  >
-    <View style={styles.optionTopRow}>
-      <View style={[styles.methodIconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}>
-        <FastImage source={iconSource} style={styles.methodIconImg} tintColor={themeColors.text} resizeMode="contain" />
-      </View>
-      <View style={[styles.optionBody, { paddingRight: 8 }]}>
-        <AppText type={THIRTEEN} weight={BOLD} style={{ color: themeColors.text, marginBottom: 6 }}>
-          {title}
-        </AppText>
-        <AppText type={TEN} style={[styles.tfRowDescription, { color: themeColors.secondaryText }]}>
-          {description}
-        </AppText>
-      </View>
-      <View style={styles.identityRightCol}>
-        {hasValue ? (
-          <>
-            <AppText type={FOURTEEN} numberOfLines={1} style={{ color: themeColors.secondaryText, textAlign: 'right', maxWidth: 140 }}>
-              {maskedValue}
-            </AppText>
-            <TouchableOpacityView activeOpacity={0.85} onPress={onAction} style={[styles.changeBtn, { backgroundColor: themeColors.text }]}>
-              <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: themeColors.background }}>
-                {actionLabel}
-              </AppText>
-            </TouchableOpacityView>
-          </>
-        ) : (
-          <>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, textAlign: 'right' }}>
-              Off
-            </AppText>
-            <TouchableOpacityView activeOpacity={0.85} onPress={onAction} style={[styles.changeBtn, { backgroundColor: themeColors.text }]}>
-              <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: themeColors.background }}>
-                {actionLabel}
-              </AppText>
-            </TouchableOpacityView>
-          </>
+    <View style={styles.simpleRowRight}>
+      <View style={styles.simpleRowStatusWrap}>
+        {isBooleanStatus && (
+          <FastImage 
+            source={checkIc} 
+            style={{ width: 14, height: 14, marginRight: 4 }} 
+            tintColor={hasValue ? themeColors.text : themeColors.secondaryText} 
+            resizeMode="contain" 
+          />
         )}
+        <AppText 
+          type={THIRTEEN} 
+          style={{ color: hasValue && isBooleanStatus ? themeColors.text : themeColors.secondaryText }}
+        >
+          {hasValue ? statusText : 'off'}
+        </AppText>
       </View>
+      <TouchableOpacityView 
+        activeOpacity={0.85} 
+        onPress={onAction} 
+        disabled={disabled}
+        style={[
+          styles.simpleActionBtn, 
+          { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F0F2F5', opacity: disabled ? 0.5 : 1 }
+        ]}
+      >
+        <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+          {actionLabel}
+        </AppText>
+      </TouchableOpacityView>
     </View>
   </View>
 );
@@ -255,30 +190,23 @@ const ShimmerCell = ({ width: w, height, borderRadius = 6, style }) => {
 const TwoFaCardsSkeleton = () => {
   const { colors: themeColors, isDark } = useTheme();
   return (
-    <>
+    <View style={styles.cardsStack}>
       {[1, 2, 3, 4].map((i) => (
-        <View
-          key={i}
-          style={[
-            styles.optionCard,
-            {
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: themeColors.border,
-              backgroundColor: isDark ? themeColors.card : '#FFFFFF',
-            },
-          ]}
-        >
-          <View style={styles.optionTopRow}>
+        <View key={i} style={[styles.simpleRow, { borderBottomColor: themeColors.border }]}>
+          <View style={styles.simpleRowLeftWrapper}>
             <ShimmerCell width={44} height={44} borderRadius={12} />
             <View style={{ marginLeft: 12, flex: 1, gap: 8 }}>
-              <ShimmerCell width={CARD_W * 0.35} height={14} borderRadius={4} />
-              <ShimmerCell width={Math.min(CARD_W - 100, 260)} height={32} borderRadius={4} />
+              <ShimmerCell width={120} height={16} borderRadius={4} />
+              <ShimmerCell width={SCREEN_WIDTH * 0.4} height={12} borderRadius={4} />
             </View>
-            <ShimmerCell width={52} height={32} borderRadius={16} />
+          </View>
+          <View style={styles.simpleRowRight}>
+            <ShimmerCell width={40} height={16} borderRadius={4} style={{ marginRight: 16 }} />
+            <ShimmerCell width={70} height={36} borderRadius={20} />
           </View>
         </View>
       ))}
-    </>
+    </View>
   );
 };
 
@@ -459,44 +387,47 @@ const TwoFactor = () => {
           <TwoFaCardsSkeleton />
         ) : (
           <View style={styles.cardsStack}>
-            <TwoFaToggleCard
+            <TwoFaSimpleRow
               themeColors={themeColors}
               isDark={isDark}
               iconSource={FINGERPRINT}
               title={TWO_FA_COPY.passkeys.title}
               badge={
-                <View style={[styles.recommendedBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : '#EBEBEB' }]}>
-                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
+                <View style={[styles.recommendedBadge, { backgroundColor: '#FEF6E5' }]}>
+                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: '#E09B36' }}>
                     {TWO_FA_COPY.passkeys.recommended}
                   </AppText>
                 </View>
               }
               description={TWO_FA_COPY.passkeys.desc}
-              value={hasPasskey}
-              onValueChange={onPasskeySwitch}
-              highlighted={false}
+              hasValue={hasPasskey}
+              isBooleanStatus={true}
+              statusText="on"
+              actionLabel={hasPasskey ? "Change" : "Turn on"}
+              onAction={() => onPasskeySwitch(!hasPasskey)}
               disabled={!passkeySupported && !hasPasskey}
             />
-            <TwoFaToggleCard
+            <TwoFaSimpleRow
               themeColors={themeColors}
               isDark={isDark}
               iconSource={LOCK_ICON}
               title={TWO_FA_COPY.google.title}
-              badge={null}
               description={TWO_FA_COPY.google.desc}
-              value={hasGoogleAuth}
-              onValueChange={onGoogleSwitch}
-              highlighted={hasGoogleAuth}
-              disabled={false}
+              hasValue={hasGoogleAuth}
+              isBooleanStatus={true}
+              statusText="on"
+              actionLabel={hasGoogleAuth ? "Disable" : "Turn on"}
+              onAction={() => onGoogleSwitch(!hasGoogleAuth)}
             />
-            <TwoFaIdentityCard
+            <TwoFaSimpleRow
               themeColors={themeColors}
               isDark={isDark}
               iconSource={EMAIL}
               title={TWO_FA_COPY.email.title}
               description={TWO_FA_COPY.email.desc}
               hasValue={hasEmail}
-              maskedValue={maskTwoFaEmail(emailId)}
+              isBooleanStatus={false}
+              statusText={maskTwoFaEmail(emailId)}
               actionLabel={hasEmail ? 'Change' : 'Turn on'}
               onAction={
                 !hasEmail
@@ -510,14 +441,15 @@ const TwoFactor = () => {
                   : handleChangeEmailStart
               }
             />
-            <TwoFaIdentityCard
+            <TwoFaSimpleRow
               themeColors={themeColors}
               isDark={isDark}
               iconSource={PHONE}
               title={TWO_FA_COPY.phone.title}
               description={TWO_FA_COPY.phone.desc}
               hasValue={hasMobile}
-              maskedValue={maskTwoFaPhone(profileMobile)}
+              isBooleanStatus={true}
+              statusText="on"
               actionLabel={hasMobile ? 'Change' : 'Turn on'}
               onAction={!hasMobile ? handleAddMobileStart : handleChangeMobileStart}
             />
@@ -593,58 +525,57 @@ const styles = StyleSheet.create({
   cardsStack: {
     marginBottom: 8,
   },
-  optionCard: {
-    borderRadius: 16,
-    paddingHorizontal: 14,
+  simpleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 16,
-    marginBottom: 12,
   },
-  optionTopRow: {
+  simpleRowLeftWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-  },
-  optionBody: {
     flex: 1,
-    marginLeft: 12,
-    minWidth: 0,
-  },
-  identityRightCol: {
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    paddingLeft: 4,
-    maxWidth: 148,
-  },
-  changeBtn: {
-    marginTop: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 76,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tfHeadingLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 6,
-  },
-  tfRowDescription: {
-    lineHeight: 18,
+    paddingRight: 16,
   },
   methodIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  methodIconImg: { width: 22, height: 22 },
+  simpleRowLeft: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  simpleRowTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  simpleRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  simpleRowStatusWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  simpleActionBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    minWidth: 80,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  methodIconImg: { width: 22, height: 22 },
   recommendedBadge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
     justifyContent: 'center',
+    marginLeft: 8,
   },
 });

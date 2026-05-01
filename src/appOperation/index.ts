@@ -84,7 +84,11 @@ export class AppOperation {
       headers['Content-Type'] = 'application/json';
     }
     if (this.customerToken && type === CUSTOMER_TYPE) {
-      headers['Authorization'] = `${this.customerToken}`;
+      if (url.includes('api/v1/kyc/') && !this.customerToken.startsWith('Bearer ')) {
+        headers['Authorization'] = `Bearer ${this.customerToken}`;
+      } else {
+        headers['Authorization'] = `${this.customerToken}`;
+      }
     }
 
     return new Promise((resolve, reject) => {

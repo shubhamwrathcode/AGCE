@@ -343,6 +343,36 @@ export const getKycConfig = (countryCode: string) => async () => {
   }
 };
 
+export const createKycSession = (userDetails: any) => async (dispatch: AppDispatch) => {
+  try {
+    dispatch(setLoading(true));
+    const cc = userDetails?.country_code || userDetails?.countryCode;
+    const mobile = userDetails?.mobileNumber || userDetails?.phoneNumber || userDetails?.phone;
+    const phone = mobile ? `${cc ? String(cc).replace(/\s/g, "") : ""}${String(mobile).replace(/\s/g, "")}` : undefined;
+    const body = {
+      jurisdiction: "GLOBAL",
+      ...(userDetails?.email ? { email: String(userDetails.email) } : {}),
+      ...(phone && phone.length > 4 ? { phone } : {}),
+      ...(userDetails?.firstName ? { firstName: String(userDetails.firstName) } : {}),
+      ...(userDetails?.lastName ? { lastName: String(userDetails.lastName) } : {}),
+    };
+
+    const response: any = await appOperation.customer.create_kyc_session(body);
+    if (response?.success) {
+      return response?.data;
+    } else {
+      showError(response?.message || 'Failed to start verification');
+      return null;
+    }
+  } catch (e: any) {
+    logger(e);
+    showError(e?.message || 'Something went wrong');
+    return null;
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
 export const kycVerification = (data: any) => async (dispatch: AppDispatch) => {
   const isResubmission = !!(data && typeof (data as any).get === 'function' && (data as any).get('is_resubmission') === 'true');
   try {

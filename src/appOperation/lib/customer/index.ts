@@ -137,6 +137,8 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('wallet/withdraw_inr', data, CUSTOMER_TYPE),
   kyc_verification: (data: any) =>
     appOperation.post('user/submit-kyc', data, CUSTOMER_TYPE),
+  create_kyc_session: (data: any) =>
+    appOperation.post('api/v1/kyc/session', data, CUSTOMER_TYPE),
   /** Same as web: GET kyc-status - returns id_document_status, tax_document_status, selfie_status, needs_resubmission, documents_needing_resubmission, kyc_data */
   get_kyc_status: () =>
     appOperation.get('user/kyc-status', undefined, undefined, CUSTOMER_TYPE),

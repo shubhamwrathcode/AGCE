@@ -1,7 +1,7 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppText, FIFTEEN, SEMI_BOLD } from "../../shared";
+import { AppText, FIFTEEN, SEMI_BOLD, SIXTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import { back_ic } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
@@ -24,7 +24,7 @@ const KycStepHeader = ({ title, theme = "Dark", onBackPress }) => {
         />
       </TouchableOpacity>
       <AppText
-        type={FIFTEEN}
+        type={SIXTEEN}
         weight={SEMI_BOLD}
         style={[styles.headerTitle, { color: textColor }]}
         numberOfLines={2}

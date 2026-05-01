@@ -24,7 +24,7 @@ const RuleItem = ({ state, label, doneColor }) => {
         style={[
           styles.ruleDot,
           {
-            borderColor:isOk?null: "#B8BDC7",
+            borderColor: isOk ? null : "#B8BDC7",
             backgroundColor: isOk ? doneColor : "transparent",
           },
         ]}
@@ -33,7 +33,7 @@ const RuleItem = ({ state, label, doneColor }) => {
           <FastImage source={checkIc} style={{ width: 8, height: 8 }} tintColor="#FFFFFF" resizeMode="contain" />
         ) : null}
         {isBad ? <FastImage source={closeIcon} style={{ width: 7, height: 7 }} tintColor={colors.red} resizeMode="contain" /> : null}
-        {isPending ? <FastImage source={minus} style={{ width: 12, height: 12 }}  resizeMode="contain" />: null}
+        {isPending ? <FastImage source={minus} style={{ width: 12, height: 12 }} resizeMode="contain" /> : null}
       </View>
       <AppText type={THIRTEEN} style={{ color: "#9AA3AF" }}>
         {label}
@@ -125,18 +125,10 @@ const SetPassword = () => {
   }, [password, signupPasswordRules]);
 
   const onSubmit = () => {
-    if (!password) {
-      setPasswordError(true);
-      showError("Please enter your password");
+    if (!isReady) {
       return;
     }
-    for (let i = 0; i < signupPasswordRules.length; i += 1) {
-      if (!signupPasswordRules[i].passes(String(password || ""))) {
-        setPasswordError(true);
-        showError(signupPasswordRules[i].error);
-        return;
-      }
-    }
+
     setPasswordError(false);
 
     if (signupType === "email") {
@@ -148,9 +140,9 @@ const SetPassword = () => {
             referral_code: referCode || "",
             token: "",
           },
-          () => {},
-          () => {},
-          () => {}
+          () => { },
+          () => { },
+          () => { }
         )
       );
       return;
@@ -165,9 +157,9 @@ const SetPassword = () => {
           referral_code: referCode || "",
           token: "",
         },
-        () => {},
-        () => {},
-        () => {}
+        () => { },
+        () => { },
+        () => { }
       )
     );
   };
@@ -176,7 +168,7 @@ const SetPassword = () => {
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <View style={styles.wrap}>
         <AuthHeader
-          onSupportPress={() => Linking.openURL("https://zillion.wrathcode.com/").catch(() => {})}
+          onSupportPress={() => Linking.openURL("https://zillion.wrathcode.com/").catch(() => { })}
           onClosePress={() => NavigationService.goBack()}
         />
 
@@ -186,7 +178,7 @@ const SetPassword = () => {
         <AppText type={THIRTEEN} style={{ color: "#9AA3AF", marginTop: 6 }}>
           Set the password to complete the signup
         </AppText>
-  <AppText color={themeColors.text } type={FOURTEEN} weight={SEMI_BOLD} style={{marginTop:10}}>Password</AppText>
+        <AppText color={themeColors.text} type={FOURTEEN} weight={SEMI_BOLD} style={{ marginTop: 10 }}>Password</AppText>
         <Input
           placeholder={"Enter a password"}
           value={password}
@@ -215,7 +207,8 @@ const SetPassword = () => {
 
         <Button
           children={"Confirm"}
-          onPress={onSubmit}
+          onPress={isReady ? onSubmit : undefined}
+          activeOpacity={isReady ? 0.2 : 1}
           disabled={false}
           loading={showButtonLoading}
           containerStyle={{ marginTop: 28 }}

@@ -8,7 +8,6 @@ export const back_ic = require('../../assets/images/back_ic.png');
 export const home_ic = require('../../assets/images/home_ic.png');
 export const wallet_ic = require('../../assets/images/wallet_ic.png');
 export const account_ic = require('../../assets/images/account.png');
-export const trade_ic = require('../../assets/images/trade_ic.png');
 export const bell_ic = require('../../assets/images/bell_ic.png');
 export const profile_bg = require('../../assets/images/profile_bg.png');
 export const right_ic = require('../../assets/images/right_ic.png');
@@ -379,8 +378,8 @@ export const airdrop_stats_icon2 = require('../../assets/images/airdrop_stats_ic
 export const airdrop_stats_icon3 = require('../../assets/images/airdrop_stats_icon3.png');
 export const airdrop_stats_icon4 = require('../../assets/images/airdrop_stats_icon4.png');
 export const airdropLight = require('../../assets/images/airdropLight.png');
-export const airdropDark= require('../../assets/images/airdropDark.png');
-export const earngift_vector1= require('../../assets/images/earngift_vector1.png');
+export const airdropDark = require('../../assets/images/airdropDark.png');
+export const earngift_vector1 = require('../../assets/images/earngift_vector1.png');
 
 
 // agce
@@ -392,6 +391,22 @@ export const tradeImg = require('../../assets/images/tradeImg.png')
 export const checkarrow = require('../../assets/images/checkarrow.png')
 export const secure_icon = require('../../assets/images/secure_icon.png')
 export const register_sucessfull_img = require('../../assets/images/register_sucessfull_img.png')
+export const verification_kyc = require('../../assets/images/verification_kyc.png')
+export const withdrawal_icon2 = require('../../assets/images/withdrawal_icon2.png')
+export const deposit_icon2 = require('../../assets/images/deposit_icon2.png')
+export const tradeIcon = require('../../assets/images/tradeIcon.png');
+export const p2pIcon2 = require('../../assets/images/p2pIcon2.png');
+
+
+
+
+
+
+
+
+
+
+
 
 
 

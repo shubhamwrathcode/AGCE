@@ -58,142 +58,143 @@ const AccountActivated = () => {
             </AppText>
           ) : null}
           {isBlocked ? (
-          <>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.bodyText, { color: "#8A8464" }]}>
-              Your account has been blocked due to suspicious activity.
-            </AppText>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.bodyText, { color: "#9E4E5F" }]}>
-              For security reasons, we have temporarily restricted access.
-            </AppText>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.bodyText, { color: "#C2A04A" }]}>
-              If you believe this was done by mistake, please contact us at{" "}
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: "#2C6CB4" }}>
-                support@wrathcode.com
+            <>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.bodyText, { color: "#8A8464" }]}>
+                Your account has been blocked due to suspicious activity.
               </AppText>
-              .
-            </AppText>
-          </>
-        ) : (
-          <>
-            <AppText  weight={BOLD} style={[styles.welcomeTitle, { color: themeColors.text }]}>
-              Welcome to AGCE Verify your identity to claim{" "}
-              <AppText type={TWENTY} weight={BOLD} style={{ color: '#d1aa67'}}>
-                exciting bonus
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.bodyText, { color: "#9E4E5F" }]}>
+                For security reasons, we have temporarily restricted access.
               </AppText>
-              .
-            </AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.bodyText, { color: "#C2A04A" }]}>
+                If you believe this was done by mistake, please contact us at{" "}
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: "#2C6CB4" }}>
+                  support@wrathcode.com
+                </AppText>
+                .
+              </AppText>
+            </>
+          ) : (
+            <>
+              <AppText weight={BOLD} style={[styles.welcomeTitle, { color: themeColors.text }]}>
+                Welcome to AGCE Verify your identity to claim{" "}
+                <AppText type={TWENTY} weight={BOLD} style={{ color: '#d1aa67' }}>
+                  exciting bonus
+                </AppText>
+                .
+              </AppText>
 
-            <View style={[styles.privTable, { borderColor: themeColors.border }]}>
-              <View style={[styles.privHeadRow, { borderBottomColor: themeColors.border }]}>
-                <View style={styles.privColFeature}>
-                  <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                    Privileges
-                  </AppText>
+              <View style={[styles.privTable, { borderColor: themeColors.border }]}>
+                <View style={[styles.privHeadRow, { borderBottomColor: themeColors.border }]}>
+                  <View style={styles.privColFeature}>
+                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                      Privileges
+                    </AppText>
+                  </View>
+                  <View style={styles.privColNv}>
+                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.privCellTextCenter, { color: themeColors.text }]}>
+                      Not Verified
+                    </AppText>
+                  </View>
+                  <View style={styles.privColV}>
+                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.privCellTextCenter, { color: themeColors.text }]}>
+                      Verified
+                    </AppText>
+                  </View>
                 </View>
-                <View style={styles.privColNv}>
-                  <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.privCellTextCenter, { color: themeColors.text }]}>
-                    Not Verified
-                  </AppText>
+                <View style={[styles.privRow, { borderBottomColor: themeColors.border }]}>
+                  <View style={styles.privColFeature}>
+                    <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
+                      Withdrawal
+                    </AppText>
+                  </View>
+                  <View style={styles.privColNv}>
+                    <AppText type={THIRTEEN} style={[styles.privCellTextCenter, { color: themeColors.secondaryText }]}>
+                      ----
+                    </AppText>
+                  </View>
+                  <View style={styles.privColV}>
+                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.privCellTextCenter, { color: themeColors.text }]}>
+                      3M USDT
+                    </AppText>
+                  </View>
                 </View>
-                <View style={styles.privColV}>
-                  <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.privCellTextCenter, { color: themeColors.text }]}>
-                    Verified
-                  </AppText>
+                <View style={[styles.privRow, { borderBottomColor: themeColors.border }]}>
+                  <View style={styles.privColFeature}>
+                    <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
+                      Deposit
+                    </AppText>
+                  </View>
+                  <View style={styles.privColNv}>
+                    <AppText type={THIRTEEN} style={[styles.privCellTextCenter, { color: themeColors.secondaryText }]}>
+                      ----
+                    </AppText>
+                  </View>
+                  <View style={styles.privColV}>
+                    <FastImage source={checkarrow} style={styles.checkIcon} resizeMode="contain" />
+                  </View>
+                </View>
+                <View style={[styles.privRow, { borderBottomColor: themeColors.border }]}>
+                  <View style={styles.privColFeature}>
+                    <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
+                      Trading
+                    </AppText>
+                  </View>
+                  <View style={styles.privColNv}>
+                    <AppText type={THIRTEEN} style={[styles.privCellTextCenter, { color: themeColors.secondaryText }]}>
+                      ----
+                    </AppText>
+                  </View>
+                  <View style={styles.privColV}>
+                    <FastImage source={checkarrow} style={styles.checkIcon} resizeMode="contain" />
+                  </View>
+                </View>
+                <View style={[styles.privRow, styles.privRowLast]}>
+                  <View style={styles.privColFeature}>
+                    <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
+                      P2P
+                    </AppText>
+                  </View>
+                  <View style={styles.privColNv}>
+                    <AppText type={THIRTEEN} style={[styles.privCellTextCenter, { color: themeColors.secondaryText }]}>
+                      ----
+                    </AppText>
+                  </View>
+                  <View style={styles.privColV}>
+                    <FastImage source={checkarrow} style={styles.checkIcon} resizeMode="contain" />
+                  </View>
                 </View>
               </View>
-              <View style={[styles.privRow, { borderBottomColor: themeColors.border }]}>
-                <View style={styles.privColFeature}>
-                  <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
-                    Withdrawal
-                  </AppText>
-                </View>
-                <View style={styles.privColNv}>
-                  <AppText type={THIRTEEN} style={[styles.privCellTextCenter, { color: themeColors.secondaryText }]}>
-                    ----
-                  </AppText>
-                </View>
-                <View style={styles.privColV}>
-                  <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.privCellTextCenter, { color: themeColors.text }]}>
-                    3M USDT
-                  </AppText>
-                </View>
+              {isBlocked ? (
+                <Button
+                  children="Back to Login"
+                  onPress={() =>
+                    NavigationService.navigate(NAVIGATION_AUTH_STACK, {
+                      screen: LOGIN_SCREEN,
+                    })
+                  }
+                  containerStyle={[styles.loginButton, { backgroundColor: themeColors.button }]}
+                  titleStyle={{ color: themeColors.buttonText }}
+                />
+              ) : (
+                <Button
+                  children="Verify Now"
+                  onPress={handleVerifyNow}
+                  loading={verifyBusy}
+                  disabled={verifyBusy}
+                  containerStyle={[styles.loginButton, { backgroundColor: themeColors.button }]}
+                  titleStyle={{ color: themeColors.buttonText }}
+                />
+              )}
+              <View style={styles.secureFooter}>
+                <FastImage source={secure_icon} style={styles.secureIcon} resizeMode="contain" />
+                <AppText type={THIRTEEN} style={[styles.secureText, { color: themeColors.secondaryText }]}>
+                  Your information is securely encrypted on AGCE.
+                </AppText>
               </View>
-              <View style={[styles.privRow, { borderBottomColor: themeColors.border }]}>
-                <View style={styles.privColFeature}>
-                  <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
-                    Deposit
-                  </AppText>
-                </View>
-                <View style={styles.privColNv}>
-                  <AppText type={THIRTEEN} style={[styles.privCellTextCenter, { color: themeColors.secondaryText }]}>
-                    ----
-                  </AppText>
-                </View>
-                <View style={styles.privColV}>
-                  <FastImage source={checkarrow} style={styles.checkIcon} resizeMode="contain" />
-                </View>
-              </View>
-              <View style={[styles.privRow, { borderBottomColor: themeColors.border }]}>
-                <View style={styles.privColFeature}>
-                  <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
-                    Trading
-                  </AppText>
-                </View>
-                <View style={styles.privColNv}>
-                  <AppText type={THIRTEEN} style={[styles.privCellTextCenter, { color: themeColors.secondaryText }]}>
-                    ----
-                  </AppText>
-                </View>
-                <View style={styles.privColV}>
-                  <FastImage source={checkarrow} style={styles.checkIcon} resizeMode="contain" />
-                </View>
-              </View>
-              <View style={[styles.privRow, styles.privRowLast]}>
-                <View style={styles.privColFeature}>
-                  <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
-                    P2P
-                  </AppText>
-                </View>
-                <View style={styles.privColNv}>
-                  <AppText type={THIRTEEN} style={[styles.privCellTextCenter, { color: themeColors.secondaryText }]}>
-                    ----
-                  </AppText>
-                </View>
-                <View style={styles.privColV}>
-                  <FastImage source={checkarrow} style={styles.checkIcon} resizeMode="contain" />
-                </View>
-              </View>
-            </View>
-            <View style={styles.secureFooter}>
-              <FastImage source={secure_icon} style={styles.secureIcon} resizeMode="contain" />
-              <AppText type={THIRTEEN} style={[styles.secureText, { color: themeColors.secondaryText }]}>
-                Your information is securely encrypted on AGCE.
-              </AppText>
-            </View>
-          </>
-        )}
+            </>
+          )}
         </ScrollView>
-        {isBlocked ? (
-          <Button
-            children="Back to Login"
-            onPress={() =>
-              NavigationService.navigate(NAVIGATION_AUTH_STACK, {
-                screen: LOGIN_SCREEN,
-              })
-            }
-            containerStyle={[styles.loginButton, { backgroundColor: themeColors.button }]}
-            titleStyle={{ color: themeColors.buttonText }}
-          />
-        ) : (
-          <Button
-            children="Verify Now"
-            onPress={handleVerifyNow}
-            loading={verifyBusy}
-            disabled={verifyBusy}
-            containerStyle={[styles.loginButton, { backgroundColor: themeColors.button }]}
-            titleStyle={{ color: themeColors.buttonText }}
-          />
-        )}
+
       </View>
     </AppSafeAreaView>
   );
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   loginButton: {
-    width: "90%",
+    width: "95%",
     marginTop: 8,
     marginHorizontal: 25,
     marginBottom: 24,

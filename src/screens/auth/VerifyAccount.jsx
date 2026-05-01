@@ -66,12 +66,13 @@ const VerifyAccount = () => {
   }, [timer]);
 
   const handleVerifyOtp = async () => {
-    const raw = otp||'';
+    const raw = otp || '';
     const codeStr = String(raw ?? "").replace(/\D/g, "").slice(0, 6);
     const verificationCode = parseInt(codeStr, 10);
 
     if (codeStr.length !== 6) {
       setOtpError(true);
+      showError("Please Enter The 6-Digit Verification Code.");
       return;
     }
 
@@ -158,7 +159,7 @@ const VerifyAccount = () => {
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <View style={styles.wrap}>
         <AuthHeader
-          onSupportPress={() => Linking.openURL("https://zillion.wrathcode.com/").catch(() => {})}
+          onSupportPress={() => Linking.openURL("https://zillion.wrathcode.com/").catch(() => { })}
           onClosePress={() => NavigationService.goBack()}
         />
 
@@ -208,13 +209,12 @@ const VerifyAccount = () => {
             <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
               Paste
             </AppText>
-            <FastImage source={pasteImg} style={{width:15,height:15}} resizeMode="contain"/>
+            <FastImage source={pasteImg} style={{ width: 15, height: 15 }} resizeMode="contain" />
           </TouchableOpacityView>
         </View>
 
         <Button
           children={"Next"}
-          disabled={!(otp?.toString()?.length === 6)}
           onPress={handleVerifyOtp}
           loading={showButtonLoading || otpSubmitting}
           containerStyle={{ marginTop: 28, width: "100%" }}
@@ -237,7 +237,7 @@ const VerifyAccount = () => {
           </AppText>
         </TouchableOpacityView>
 
-     
+
       </View>
 
       <SpinnerSecond loading={resendLoading} localOnly />

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Animated, Dimensions, StyleSheet, TouchableOpacity, View, ScrollView, FlatList, useWindowDimensions } from "react-native";
+import { Animated, Dimensions, StyleSheet, TouchableOpacity, View, ScrollView, FlatList, useWindowDimensions, Linking } from "react-native";
 import {
   AppSafeAreaView,
   AppText,
@@ -8,37 +8,37 @@ import {
   SEMI_BOLD,
   FOURTEEN,
   FIFTEEN,
-  THIRD,
-  NORMAL,
+  SIXTEEN,
   TWELVE,
   THIRTEEN,
 } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
-  appBg,
-  kyc_completed,
   kyc_pending,
-  kyc_rejected,
-  kyc_success_vector,
-  NEW_STAR,
-  KYC_THEME,
   closeIcon,
   checkIc,
   downIcon,
   upIcon,
-  kyc_ic,
   kyc_verification_vector,
+  lock_ic,
+  withdrawIcon,
+  depositIcon,
+  p2p_Icon,
+  verification_kyc,
+  withdrawal_icon2,
+  deposit_icon2,
+  Trade_ic,
+  p2pIcon2,
+  tradeIcon,
 } from "../../helper/ImageAssets";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { borderWidth, universalPaddingHorizontal, universalPaddingHorizontalHigh } from "../../theme/dimens";
-import { colors } from "../../theme/colors";
-import { commonStyles } from "../../theme/commonStyles";
 import NavigationService from "../../navigation/NavigationService";
 import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, TRADE_SCREEN, NAVIGATION_BOTTOM_TAB_STACK, NAVIGATION_TRADE_STACK } from "../../navigation/routes";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLoading } from "../../slices/authSlice";
-import { getUserProfile, getKycStatus } from "../../actions/accountActions";
+import { getUserProfile, getKycStatus, createKycSession } from "../../actions/accountActions";
 import KycStepHeader from "./KycStepHeader";
 import { useTheme } from "../../hooks/useTheme";
 
@@ -114,170 +114,229 @@ const getDocTypeName = (code) => {
   return names[code] || code || "ID Document";
 };
 
-const KycPending = ({ idDocStatus, taxDocStatus, selfieStatus, submittedIdDocType, submittedTaxDocType, showResubmitButton, onResubmitPress }) => {
+const LockedFeatures = () => {
   const { colors: themeColors } = useTheme();
-  const idD = getDocStatusDisplay(idDocStatus);
-  const taxD = getDocStatusDisplay(taxDocStatus);
-  const selfD = getDocStatusDisplay(selfieStatus);
-
-  const docItems = [
-    { label: submittedIdDocType ? getDocTypeName(submittedIdDocType) : "Identity Document", status: idD.text, icon: idD.icon },
-    { label: submittedTaxDocType ? getDocTypeName(submittedTaxDocType) : "Tax Document", status: taxD.text, icon: taxD.icon },
-    { label: "Live Selfie", status: selfD.text, icon: selfD.icon },
-  ];
-
   return (
-    <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
-      <AppText type={FIFTEEN} weight={SEMI_BOLD} style={[styles.kycSectionCardTitle, { color: themeColors.text }]}>
-        KYC Pending
-      </AppText>
-      <AppText type={FOURTEEN} weight={NORMAL} style={[styles.kycPendingDesc, { color: themeColors.secondaryText }]}>
-        Your KYC application has been submitted and is currently under review. You will be notified once the verification is complete.
-      </AppText>
-      <View style={styles.kycPendingDocsHeaderRow}>
-        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.kycPendingDocsTitle, { color: themeColors.text }]}>
-          Documents Submitted
+    <View style={{ marginTop: 16 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+        <FastImage source={lock_ic} style={{ width: 18, height: 18, marginRight: 10 }} tintColor={themeColors.text} />
+        <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+          Locked Features - Verify to Unlock
         </AppText>
       </View>
-      <View style={styles.kycPendingDocList}>
-        <View style={styles.kycPendingDocListContent}>
-          {docItems.map((item, index) => (
-            <View key={index} style={styles.kycPendingDocRow}>
-              <AppText type={FOURTEEN} style={styles.kycPendingDocIconText}>{item.icon}</AppText>
-              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, flex: 1 }}>
-                {item.label} - {item.status}
-              </AppText>
-            </View>
-          ))}
+
+      {[
+        { title: "Withdrawal", desc: "Locked to prevent fraud until identity is verified.", icon: withdrawal_icon2 },
+        { title: "Deposit", desc: "Locked to prevent fraud until identity is verified.", icon: deposit_icon2 },
+        { title: "Trading", desc: "Verification ensures safe and legitimate transactions.", icon: tradeIcon },
+        { title: "P2P", desc: "Requires verification for secure transactions.", icon: p2pIcon2 }
+      ].map((item, index) => (
+        <View key={index} style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingVertical: 18, paddingHorizontal: 16 }]}>
+          <FastImage source={item.icon} style={{ width: 24, height: 24, marginRight: 16 }} tintColor={themeColors.text} />
+          <View style={{ flex: 1 }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>{item.title}</AppText>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{item.desc}</AppText>
+          </View>
+          <FastImage source={lock_ic} style={{ width: 16, height: 16 }} tintColor={themeColors.secondaryText} />
         </View>
-        <FastImage source={kyc_verification_vector} resizeMode="contain" style={styles.kycPendingIllustrationSide} />
+      ))}
+    </View>
+  );
+};
+
+const UnlockedFeatures = () => {
+  const { colors: themeColors } = useTheme();
+  return (
+    <View style={{ marginTop: 16 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+        <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+          Unlocked Features
+        </AppText>
       </View>
-      {showResubmitButton && onResubmitPress ? (
-        <Button children="Resubmit Documents" onPress={onResubmitPress} containerStyle={styles.kycPendingResubmitButton} />
-      ) : null}
+
+      {[
+        { title: "Withdrawal", desc: "Locked to prevent fraud until identity is verified.", icon: withdrawIcon },
+        { title: "Deposit", desc: "Locked to prevent fraud until identity is verified.", icon: depositIcon },
+        { title: "Trading", desc: "Verification ensures safe and legitimate transactions.", icon: tradeIcon },
+        { title: "P2P", desc: "Requires verification for secure transactions.", icon: p2p_Icon }
+      ].map((item, index) => (
+        <View key={index} style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingVertical: 18, paddingHorizontal: 16 }]}>
+          <FastImage source={item.icon} style={{ width: 24, height: 24, marginRight: 16 }} tintColor={themeColors.text} />
+          <View style={{ flex: 1 }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>{item.title}</AppText>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{item.desc}</AppText>
+          </View>
+          <FastImage source={checkIc} style={{ width: 16, height: 16 }} tintColor={themeColors.green} />
+        </View>
+      ))}
+    </View>
+  );
+};
+
+const KycPending = ({ showResubmitButton, onResubmitPress }) => {
+  const { colors: themeColors } = useTheme();
+
+  return (
+    <View style={{ flex: 1, marginTop: 8 }}>
+      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 20 }}>
+        Manage your identity verification and unlock platform features
+      </AppText>
+      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 20 }]}>
+        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+          Standard Identity Verification
+        </AppText>
+
+        <View style={{ backgroundColor: themeColors.themeElevationColor, padding: 16, borderRadius: 12, marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+            <FastImage source={kyc_pending} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
+            <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Verification In Review</AppText>
+          </View>
+          <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+            Your verification is being processed and is currently under review. This may take a few moments. We’ll notify you once it’s approved or if any additional information is required.
+          </AppText>
+        </View>
+
+        <FastImage source={kyc_verification_vector} resizeMode="contain" style={{ width: 180, height: 180, alignSelf: "center" }} />
+      </View>
+      <LockedFeatures />
     </View>
   );
 };
 
 const KycRejected = ({ onVerifyPress }) => {
-  const dispatch = useAppDispatch();
-  const userData = useAppSelector((state) => state.auth.userData);
   const { colors: themeColors } = useTheme();
-  useEffect(() => {
-    dispatch(getUserProfile());
-  }, [dispatch]);
+  const userData = useAppSelector((state) => state.auth.userData);
   const kyc_reject_reason = userData?.kyc_reject_reason;
+
   return (
-    <View>
-      <FastImage
-        source={kyc_rejected}
-        resizeMode="contain"
-        style={styles.icon}
-      />
-      <AppText
-        weight={SEMI_BOLD}
-        style={[styles.title, { color: themeColors.text }]}
-      >
-        Your Account KYC is rejected. Please complete your KYC again.
+    <View style={{ flex: 1, marginTop: 8 }}>
+      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 20 }}>
+        Manage your identity verification and unlock platform features
       </AppText>
-      {kyc_reject_reason ? (
-        <View style={[styles.reasonContainer, { borderColor: themeColors.red, backgroundColor: `${themeColors.red}10` }]}>
-          <AppText style={commonStyles.centerText} color={themeColors.red}>
-            Reason: {kyc_reject_reason}
+      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 20 }]}>
+        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+          Standard Identity Verification
+        </AppText>
+
+        <View style={{ backgroundColor: themeColors.themeElevationColor, padding: 16, borderRadius: 12, marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+            <FastImage source={closeIcon} tintColor={themeColors.red} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
+            <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.red }}>Verification Incomplete</AppText>
+          </View>
+          <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+            {kyc_reject_reason || "Your identity verification is currently incomplete. To complete the process, please submit the required information and finish facial recognition."}
           </AppText>
         </View>
-      ) : null}
-      <Button
-        children="Verify Again"
-        onPress={onVerifyPress}
-        containerStyle={styles.button}
-      />
-    </View>
-  );
-};
 
-
-
-const KycDue = ({ onVerifyPress, screenWidth }) => {
-  const { colors: themeColors } = useTheme();
-  const isSmallScreen = screenWidth < 380;
-  return (
-    <View style={[styles.kycCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
-      <AppText type={FIFTEEN} weight={SEMI_BOLD} style={[styles.kycCardTitle, { color: themeColors.text }]}>KYC</AppText>
-      <AppText type={TWELVE} weight={NORMAL} style={[styles.kycCardDesc, { color: themeColors.secondaryText }]}>
-        Finish your KYC in just a few minutes and enjoy a seamless experience. Submit your basic details once and get instant access to withdrawals, rewards, and every feature without any delays or limitations.
-      </AppText>
-      <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.kycRequirementsSubtitle, { color: themeColors.text }]}>KYC Verification Requirements</AppText>
-      <View style={[styles.kycRequirementsRow, isSmallScreen && styles.kycRequirementsRowColumn]}>
-        <View style={styles.kycRequirementsList}>
-          <View style={styles.requirementItem}>
-            <FastImage source={NEW_STAR} resizeMode="contain" style={styles.starIcon} tintColor={colors.starColor} />
-            <AppText type={THIRTEEN} weight={NORMAL} style={[styles.requirementText, { color: themeColors.secondaryText }]}>ID Document</AppText>
-          </View>
-          <View style={styles.requirementItem}>
-            <FastImage source={NEW_STAR} resizeMode="contain" style={styles.starIcon} tintColor={colors.starColor} />
-            <AppText type={THIRTEEN} weight={NORMAL} style={[styles.requirementText, { color: themeColors.secondaryText }]}>Tax Document</AppText>
-          </View>
-          <View style={styles.requirementItem}>
-            <FastImage source={NEW_STAR} resizeMode="contain" style={styles.starIcon} tintColor={colors.starColor} />
-            <AppText type={THIRTEEN} weight={NORMAL} style={[styles.requirementText, { color: themeColors.secondaryText }]}>Live Selfie (Camera Required)</AppText>
-          </View>
+        <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
+          <Button
+            children="Try Again"
+            onPress={onVerifyPress}
+            containerStyle={{ flex: 1, height: 42, backgroundColor: themeColors.button, borderRadius: 24 }}
+            titleStyle={{ fontSize: 13, color: themeColors.buttonText }}
+          />
         </View>
-        {!isSmallScreen && (
-          <FastImage source={KYC_THEME} resizeMode="contain" style={styles.kycThemeIcon} />
-        )}
+
+        <FastImage source={kyc_verification_vector} resizeMode="contain" style={{ width: 180, height: 180, alignSelf: "center" }} />
       </View>
-      <Button children="Verify" onPress={onVerifyPress} containerStyle={styles.verifyButton} />
-      {isSmallScreen && (
-        <FastImage source={KYC_THEME} resizeMode="contain" style={styles.kycThemeIconSmall} />
-      )}
+      <LockedFeatures />
     </View>
   );
 };
 
-const YOUR_BENEFITS = [
-  "Deposit & Withdraw Without Limit",
-  "Spot & Futures Trading Unlock",
-  "100% Secure Trading with Verified KYC",
-];
+const KycDue = ({ onVerifyPress }) => {
+  const { colors: themeColors } = useTheme();
+
+  return (
+    <View style={{ flex: 1, marginTop: 8 }}>
+      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 20 }}>
+        Manage your identity verification and unlock platform features
+      </AppText>
+
+      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 20 }]}>
+
+        <FastImage
+          source={verification_kyc}
+          resizeMode="contain"
+          style={{ width: 150, height: 140, alignSelf: "center" }}
+        />
+        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 10 }}>
+          Standard Identity Verification
+        </AppText>
+        <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 5, }}>
+          It takes only 2-5 minutes to verify your account.
+        </AppText>
+
+        <Button
+          children="Verify Now"
+          onPress={onVerifyPress}
+          containerStyle={{ width: '100%', padding: 10, alignSelf: "center", backgroundColor: themeColors.button, borderRadius: 24, marginTop: 10 }}
+          titleStyle={{ fontSize: 13, color: themeColors.buttonText }}
+        />
+      </View>
+
+      <LockedFeatures />
+    </View>
+  );
+};
 
 const KycCompleted = () => {
   const { colors: themeColors } = useTheme();
+  const userData = useAppSelector((state) => state.auth.userData);
+  const displayName = userData?.email ? `User-${userData.email.split('@')[0].slice(0, 8)}` : "AGCE User";
+  const initials = displayName.slice(0, 2).toUpperCase();
+
   return (
-    <View style={[styles.kycSectionCard, styles.kycCompletedCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
-      <AppText type={FOURTEEN} style={[styles.kycCompletedCongrats, { color: themeColors.secondaryText }]}>
-        Congratulations! Your KYC verification has been approved. You now have full access to all platform features.
+    <View style={{ flex: 1, marginTop: 8 }}>
+      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 20 }}>
+        Manage your identity verification and unlock platform features
       </AppText>
-      <AppText type={FIFTEEN} weight={SEMI_BOLD} style={[styles.kycCompletedBenefitsTitle, { color: themeColors.text }]}>
-        Your Benefits
-      </AppText>
-      <View style={styles.kycCompletedBenefitsRow}>
-        <View style={styles.kycCompletedBenefitsList}>
-          {YOUR_BENEFITS.map((text, i) => (
-            <View key={i} style={styles.kycCompletedBenefitRow}>
-              <FastImage source={checkIc} resizeMode="contain" style={styles.kycCompletedCheck} tintColor={themeColors.green} />
-              <AppText type={FOURTEEN} style={[styles.kycCompletedBenefitText, { color: themeColors.text }]} numberOfLines={2}>{text}</AppText>
-            </View>
-          ))}
+
+      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 20 }]}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: themeColors.button, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.buttonText }}>{initials}</AppText>
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{displayName}</AppText>
+            <AppText type={TWELVE} style={{ color: themeColors.green, marginTop: 2 }}>Verified</AppText>
+          </View>
+          <FastImage source={giftIc} style={{ width: 40, height: 40 }} resizeMode="contain" />
         </View>
-        <FastImage
-          source={kyc_success_vector}
-          resizeMode="contain"
-          style={styles.kycSuccessVector}
+
+        <View style={{ backgroundColor: themeColors.themeElevationColor, padding: 16, borderRadius: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+            <FastImage source={checkIc} tintColor={themeColors.green} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
+            <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Verification Successful</AppText>
+          </View>
+          <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+            Congratulations! Your identity has been successfully verified. You now have full access to all platform features and services.
+          </AppText>
+        </View>
+      </View>
+
+      <UnlockedFeatures />
+
+      <View style={{ alignItems: "center", marginTop: 24, marginBottom: 10 }}>
+        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 6 }}>Ready to Start Trading?</AppText>
+        <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 20 }}>Access all markets and start trading with the best rates</AppText>
+        <Button
+          children="Start Trading Now"
+          onPress={() => NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, { screen: TRADE_SCREEN })}
+          containerStyle={{ width: "100%", height: 42, backgroundColor: themeColors.button, borderRadius: 24, marginBottom: 16 }}
+          titleStyle={{ fontSize: 13, color: themeColors.buttonText }}
         />
+        <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>🛡️ Bank-level encryption • Fully secured</AppText>
       </View>
     </View>
   );
 };
 
 const faqData = [
-  { q: "How long does KYC take?", a: "KYC verification usually takes 24-48 hours after submission." },
-  { q: "What documents do I need for KYC?", a: "A valid government-issued ID and tax document are required." },
-  { q: "Can I use the app without completing KYC?", a: "Limited features are available, but full access requires KYC." },
-  { q: "Is my personal information secure in the KYC process?", a: "Your data is encrypted and handled according to strict security standards." },
-  { q: "Can I resubmit my KYC if it gets rejected?", a: "Yes, if your KYC is rejected or partially rejected, you can reupload the requested documents and resubmit." },
-  { q: "Do I need to upload both front and back of my ID?", a: "Some ID documents require both front and back images. The upload fields will appear based on the selected document type." },
-  { q: "Is live selfie mandatory for KYC?", a: "Yes, a live selfie captured through your device camera is required to complete KYC verification." },
+  { q: "How to complete individual KYC?", a: "Upload a valid government-issued ID, complete the liveness check when prompted, and submit your details in the Verification Center. This usually takes 2–5 minutes." },
+  { q: "How to complete business KYC?", a: "Provide business registration documents, beneficial owner information, and any extra forms requested. Our team may review submissions as part of compliance checks." },
+  { q: "Why is KYC verification required?", a: "To protect your assets and promote a secure, compliant crypto environment, AGCE requires all users to complete KYC (Know Your Customer) verification. This helps prevent fraud, money laundering, and other illicit activities. Once your KYC is verified, you'll gain access to key platform features including crypto deposits and withdrawals, P2P trading, and participation in events like Launchpool." },
+  { q: "Why is an advanced verification necessary?", a: "Advanced verification unlocks higher limits. Rewards Hub with exclusive beginner rewards, and gain access to more platform features, including deposits, buy crypto, trade, and more." },
 ];
 
 const KycStatus = () => {
@@ -342,63 +401,43 @@ const KycStatus = () => {
     return doc?.reason || "";
   };
 
-  const openVerifyModal = () => {
-    NavigationService.navigate(KYC_STEP_ONE_SCREEN, { resetForm: true });
+  const openVerifyModal = async () => {
+    const sessionResponse = await dispatch(createKycSession(userData));
+    if (sessionResponse?.diditUrl) {
+      Linking.openURL(sessionResponse.diditUrl).catch(() => {
+        NavigationService.navigate(KYC_STEP_ONE_SCREEN, { resetForm: true });
+      });
+    } else {
+      NavigationService.navigate(KYC_STEP_ONE_SCREEN, { resetForm: true });
+    }
   };
 
-  const openResubmitModal = () => {
-    NavigationService.navigate(KYC_RESUBMIT_SCREEN, {
-      documentsToResubmit: documentsToResubmit || [],
-      existingCountryCode: existingCountryCode || "",
-      submittedIdDocType: submittedIdDocType || null,
-      submittedTaxDocType: submittedTaxDocType || null,
-      resubmitIdNumber: existingIdDocNumber || "",
-      resubmitTaxNumber: existingTaxDocNumber || "",
-    });
+  const openResubmitModal = async () => {
+    const sessionResponse = await dispatch(createKycSession(userData));
+    if (sessionResponse?.diditUrl) {
+      Linking.openURL(sessionResponse.diditUrl).catch(() => {
+        NavigationService.navigate(KYC_RESUBMIT_SCREEN, {
+          documentsToResubmit: documentsToResubmit || [],
+          existingCountryCode: existingCountryCode || "",
+          submittedIdDocType: submittedIdDocType || null,
+          submittedTaxDocType: submittedTaxDocType || null,
+          resubmitIdNumber: existingIdDocNumber || "",
+          resubmitTaxNumber: existingTaxDocNumber || "",
+        });
+      });
+    } else {
+      NavigationService.navigate(KYC_RESUBMIT_SCREEN, {
+        documentsToResubmit: documentsToResubmit || [],
+        existingCountryCode: existingCountryCode || "",
+        submittedIdDocType: submittedIdDocType || null,
+        submittedTaxDocType: submittedTaxDocType || null,
+        resubmitIdNumber: existingIdDocNumber || "",
+        resubmitTaxNumber: existingTaxDocNumber || "",
+      });
+    }
   };
 
-  const benefitsTableRows = [
-    { level: "KYC Level", unverified: "Unlimited", advanced: "Unlimited" },
-    { level: "Crypto Deposit", unverified: "1 BTC per day", advanced: "100 BTC per day*" },
-    { level: "Crypto Withdrawal", unverified: null, unverifiedAvailable: false, advanced: "30,000 USD per day*" },
-    { level: "Crypto Swap", unverified: null, unverifiedAvailable: false, advanced: null, advancedAvailable: true },
-    { level: "Spot/Futures", unverified: null, unverifiedAvailable: false, advanced: null, advancedAvailable: true },
-    { level: "Platform Events", unverified: null, unverifiedAvailable: true, advanced: null, advancedAvailable: true },
-  ];
 
-  const renderBenefitsTable = () => (
-    <View style={styles.benefitsTableWrap}>
-      <View style={[styles.benefitsTableHeader, { borderBottomColor: themeColors.border }]}>
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.benefitsTableHeaderCell, styles.benefitsColLevel, { color: themeColors.text }]}>Level</AppText>
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.benefitsTableHeaderCell, { color: themeColors.text }]}>Unverified</AppText>
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.benefitsTableHeaderCell, { color: themeColors.text }]}>Advanced KYC</AppText>
-      </View>
-      {benefitsTableRows.map((row, i) => (
-        <View key={i} style={[styles.benefitsTableRow, { borderBottomColor: themeColors.border }]}>
-          <View style={styles.benefitsTableLevelCell}>
-            <FastImage source={NEW_STAR} resizeMode="contain" style={styles.benefitsStar} tintColor={colors.starColor} />
-            <AppText type={TWELVE} weight={NORMAL} style={{ color: themeColors.secondaryText, flex: 1 }} numberOfLines={1}>{row.level}</AppText>
-          </View>
-          <View style={styles.benefitsTableDataCell}>
-            {row.unverified != null ? (
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{row.unverified}</AppText>
-            ) : row.unverifiedAvailable ? (
-              <FastImage source={checkIc} resizeMode="contain" style={styles.benefitsIconSmall} tintColor={themeColors.green} />
-            ) : (
-              <FastImage source={closeIcon} resizeMode="contain" style={styles.benefitsIconSmall} tintColor={themeColors.red} />
-            )}
-          </View>
-          <View style={styles.benefitsTableDataCell}>
-            {row.advanced != null ? (
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{row.advanced}</AppText>
-            ) : row.advancedAvailable ? (
-              <FastImage source={checkIc} resizeMode="contain" style={styles.benefitsIconSmall} tintColor={themeColors.green} />
-            ) : null}
-          </View>
-        </View>
-      ))}
-    </View>
-  );
 
   const kycStatusView = () => {
     switch (kycVerified) {
@@ -415,15 +454,11 @@ const KycStatus = () => {
     <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <KeyBoardAware style={{ flex: 1 }}>
         <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-          <KycStepHeader title={kycVerified === 2 ? "KYC Verified" : "KYC Verification"} theme={isDark ? "Dark" : "Light"} />
+          <KycStepHeader title={"Verification Center"} theme={isDark ? "Dark" : "Light"} />
           <View style={styles.sectionWrapper}>
             {contentLoading ? <KycStatusSkeleton /> : kycStatusView()}
-            <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
-              <AppText type={FIFTEEN} weight={SEMI_BOLD} style={[styles.kycSectionCardTitle, { color: themeColors.text }]}>Account Benefits</AppText>
-              {renderBenefitsTable()}
-            </View>
-            <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
-              <AppText type={FIFTEEN} weight={SEMI_BOLD} style={[styles.kycSectionCardTitle, { color: themeColors.text }]}>FAQ</AppText>
+            <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, marginTop: 10 }]}>
+              <AppText type={FIFTEEN} weight={SEMI_BOLD} style={[styles.kycSectionCardTitle, { color: themeColors.text }]}>Frequently Asked Questions</AppText>
               <FlatList
                 data={faqData}
                 keyExtractor={(_, index) => String(index)}
