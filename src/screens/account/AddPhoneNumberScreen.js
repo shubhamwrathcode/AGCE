@@ -21,18 +21,26 @@ import {
   TWELVE,
   SIXTEEN,
   SEMI_BOLD,
+  EIGHTEEN,
+  FIFTEEN,
 } from '../../shared';
 import FastImage from 'react-native-fast-image';
-import { back_ic, PHONE_VERIFY } from '../../helper/ImageAssets';
+import { back_ic, pasteImg, PHONE_VERIFY, SHARE_NEW_ICON } from '../../helper/ImageAssets';
+import AuthPhoneInput from '../../shared/components/AuthPhoneInput';
+import { TextInput } from 'react-native';
+import * as routes from '../../navigation/routes';
 import {
   sendSecurityOtp,
   addMobileToAccount,
   getUserProfile,
+  initiateMobileChange,
+  completeMobileChange,
 } from '../../actions/accountActions';
 import { showError } from '../../helper/logger';
 import PickerSelect from '../../shared/components/PickerSelect';
 import { countriesList } from '../../helper/CountriesList';
 import { SpinnerSecond } from '../../shared/components/SpinnerSecond';
+import { VerificationOptionsSheet } from '../../shared/components/VerificationOptionsSheet';
 import { useTheme } from "../../hooks/useTheme";
 import TouchableOpacityView from '../../common/TouchableOpacityView';
 
@@ -75,7 +83,8 @@ const AddPhoneNumberScreen = () => {
   const hasMobile = !!profileMobile;
   const hasGoogleAuth = (userData?.['2fa'] ?? 0) === 2;
 
-  const [step, setStep] = useState(0);
+  const firstStep = hasGoogleAuth ? 1 : 2;
+  const [step, setStep] = useState(firstStep);
   const [verifyMethod, setVerifyMethod] = useState('email');
   const [googleCode, setGoogleCode] = useState('');
   const [emailOtp, setEmailOtp] = useState('');
@@ -84,6 +93,7 @@ const AddPhoneNumberScreen = () => {
   const [newMobileOtp, setNewMobileOtp] = useState('');
   const [resendTimerAddMobile, setResendTimerAddMobile] = useState(0);
   const [resendTimerNewMobile, setResendTimerNewMobile] = useState(0);
+  const [countryName, setCountryName] = useState('IN');
 
   /** Keep identity OTP/TOTP when steps unmount (matches web: values sent on final mobile/add only). */
   const identityProofRef = useRef({
@@ -92,8 +102,19 @@ const AddPhoneNumberScreen = () => {
     googleCode: '',
   });
 
+  const [availableMethods, setAvailableMethods] = useState([]);
+  const verifyOptionsSheetRef = useRef(null);
+
   /** Exact string passed to `security/send-otp` with target `new_mobile` — backend often validates SMS OTP against this key. */
   const lastNewMobileSendIdentifierRef = useRef('');
+
+  useEffect(() => {
+    const methods = [];
+    if (hasGoogleAuth) methods.push({ value: 'totp', label: 'Google Authenticator', description: 'Use your authenticator app' });
+    if (hasEmail) methods.push({ value: 'email', label: 'Email OTP', description: `Send code to ${maskEmail(emailId)}` });
+    if (hasMobile) methods.push({ value: 'mobile', label: 'Mobile OTP', description: `Send code to ${maskPhone(profileMobile)}` });
+    setAvailableMethods(methods);
+  }, [hasEmail, hasMobile, hasGoogleAuth]);
 
   useEffect(() => {
     if (resendTimerAddMobile <= 0) return;
@@ -106,9 +127,18 @@ const AddPhoneNumberScreen = () => {
     return () => clearTimeout(t);
   }, [resendTimerNewMobile]);
 
-  const firstStep = hasGoogleAuth ? 1 : 2;
+  const handleSendOtpIdentity = async (methodOverride) => {
+    const targetMethod = typeof methodOverride === 'string' ? methodOverride : verifyMethod;
+    const ok = await dispatch(sendSecurityOtp(targetMethod, 'add_mobile'));
+    if (ok) setResendTimerAddMobile(60);
+  };
 
-  /** Web parity (TwofactorPage / smsVerification): identity OTP/TOTP is validated on `security/mobile/add`, not via separate verify-otp beforehand. */
+  useEffect(() => {
+    if (firstStep === 2) {
+      handleSendOtpIdentity(verifyMethod);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const handleVerifyIdentity = () => {
     if (step === 1 && hasGoogleAuth) {
       const totp = String(googleCode || '').replace(/\D/g, '').slice(0, CODE_LENGTH);
@@ -119,6 +149,7 @@ const AddPhoneNumberScreen = () => {
       identityProofRef.current.googleCode = totp;
       identityProofRef.current.verifyMethod = 'totp';
       setStep(2);
+      handleSendOtpIdentity(verifyMethod);
       return;
     }
     if (step === 2) {
@@ -133,29 +164,36 @@ const AddPhoneNumberScreen = () => {
     }
   };
 
-  const handleSendOtpIdentity = async () => {
-    const ok = await dispatch(sendSecurityOtp(verifyMethod, 'add_mobile'));
-    if (ok) setResendTimerAddMobile(60);
-  };
-
-  const handleNextToOtp = () => {
-    if (!newMobileNumber || newMobileNumber.length < 6) {
-      showError('Please enter a valid mobile number');
-      return;
-    }
-    setStep(4);
-  };
-
-  const handleSendOtpNewMobile = async () => {
+  const handleSendOtpNewMobile = async (overrideFullNumber) => {
     const countryCodeStr = typeof newCountryCode === 'string' ? newCountryCode : (newCountryCode?.value ?? '+91');
     const cc = normalizeCountryCode(countryCodeStr);
     const digits = String(newMobileNumber ?? '').replace(/\D/g, '');
-    /** Web `smsVerification`: `${country.code}${newMobile}` — no space; country includes leading `+`. */
-    const fullNumber = `${cc}${digits}`;
-    const ok = await dispatch(sendSecurityOtp('new_mobile', 'add_mobile', fullNumber));
-    if (ok) {
-      lastNewMobileSendIdentifierRef.current = fullNumber;
-      setResendTimerNewMobile(60);
+    const fullNumber = typeof overrideFullNumber === 'string' ? overrideFullNumber : `${cc}${digits}`;
+
+    if (hasMobile) {
+      /** CHANGE MODE: Calls security/mobile/change/initiate — include identity proof here. */
+      const proof = identityProofRef.current;
+      const vm = proof.verifyMethod || verifyMethod;
+      const identity = {
+        newMobileNumber: digits,
+        newCountryCode: cc,
+      };
+      if (vm === 'email') identity.currentEmailOtp = proof.emailOtp || emailOtp;
+      else if (vm === 'mobile') identity.currentMobileOtp = proof.emailOtp || emailOtp;
+      else if (vm === 'totp') identity.tofaCode = proof.googleCode || googleCode;
+
+      const ok = await dispatch(initiateMobileChange(identity));
+      if (ok) {
+        lastNewMobileSendIdentifierRef.current = fullNumber;
+        setResendTimerNewMobile(60);
+      }
+    } else {
+      /** ADD MODE: Just send security OTP as usual. */
+      const ok = await dispatch(sendSecurityOtp('new_mobile', 'add_mobile', fullNumber));
+      if (ok) {
+        lastNewMobileSendIdentifierRef.current = fullNumber;
+        setResendTimerNewMobile(60);
+      }
     }
   };
 
@@ -195,32 +233,36 @@ const AddPhoneNumberScreen = () => {
     const rebuildSendKey = `${ccNorm}${mobileNumberDigits}`;
     const newMobileIdentifier =
       lastNewMobileSendIdentifierRef.current &&
-      lastNewMobileSendIdentifierRef.current === rebuildSendKey
+        lastNewMobileSendIdentifierRef.current === rebuildSendKey
         ? lastNewMobileSendIdentifierRef.current
         : rebuildSendKey;
 
     /** Same as web `TwofactorPage` → `handleAddMobileComplete`: one POST; include `identifier` = phone key used for `new_mobile` send-otp so SMS OTP validates. */
-    const success = await dispatch(
-      addMobileToAccount(mobileNumberDigits, ccNorm, smsOtp, {
-        ...identity,
-        newMobileIdentifier,
-      })
-    );
-    if (success) {
-      await dispatch(getUserProfile());
-      navigation.goBack();
+    if (hasMobile) {
+      /** CHANGE MODE: Calls security/mobile/change/complete. */
+      const success = await dispatch(completeMobileChange(smsOtp));
+      if (success) {
+        await dispatch(getUserProfile());
+        navigation.navigate(routes.TWO_FACTOR_AUTHENTICATION);
+      }
+    } else {
+      /** ADD MODE: Calls security/mobile/add. */
+      const success = await dispatch(
+        addMobileToAccount(mobileNumberDigits, ccNorm, smsOtp, {
+          ...identity,
+          newMobileIdentifier,
+        })
+      );
+      if (success) {
+        await dispatch(getUserProfile());
+        navigation.navigate(routes.TWO_FACTOR_AUTHENTICATION);
+      }
     }
   };
 
   const flowTotal = hasGoogleAuth ? 4 : 3;
-  const flowIndex =
-    step === 0
-      ? 0
-      : hasGoogleAuth
-        ? step
-        : step - 1;
-  const progressPct =
-    step === 0 ? 0 : Math.min(100, (flowIndex / flowTotal) * 100);
+  const flowIndex = hasGoogleAuth ? step : step - 1;
+  const progressPct = Math.min(100, (flowIndex / flowTotal) * 100);
 
   const stepBadge = (n) => (
     <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.stepBadge, { color: themeColors.button }]}>
@@ -231,11 +273,11 @@ const AddPhoneNumberScreen = () => {
   const cardShadow =
     Platform.OS === 'ios'
       ? {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDark ? 0.35 : 0.08,
-          shadowRadius: 12,
-        }
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: isDark ? 0.35 : 0.08,
+        shadowRadius: 12,
+      }
       : { elevation: 3 };
 
   return (
@@ -247,305 +289,214 @@ const AddPhoneNumberScreen = () => {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => {
-              if (step === 0) navigation.goBack();
-              else if (step > firstStep) setStep(step - 1);
-              else setStep(0);
+              if (step === firstStep) navigation.goBack();
+              else setStep(step - 1);
             }}
             style={styles.backBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
-          <AppText
-            type={FOURTEEN}
-            weight={SEMI_BOLD}
-            numberOfLines={1}
-            style={[styles.headerTitle, { color: themeColors.text }]}
-          >
-            Phone verification
+          <AppText weight={BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
+            {hasMobile ? 'Change Mobile Number' : 'Add Mobile Number'}
           </AppText>
           <View style={styles.headerSide} />
         </View>
 
-        {step > 0 ? (
-          <View style={[styles.progressTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${progressPct}%`, backgroundColor: themeColors.button },
-              ]}
-            />
-          </View>
-        ) : null}
+        <View style={[styles.progressTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${progressPct}%`, backgroundColor: themeColors.button },
+            ]}
+          />
+        </View>
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={step === 0 ? styles.scrollContentStep0 : styles.scrollContent}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {step === 0 && (
-            <View style={styles.hero}>
-              <AppText type={SIXTEEN} weight={BOLD} style={[styles.heroTitle, { color: themeColors.text }]}>
-                Secure your account
-              </AppText>
-              <AppText type={TWELVE} style={[styles.heroSubtitle, { color: themeColors.secondaryText }]}>
-                Add a phone number for withdrawals and important security alerts. It only takes a minute.
-              </AppText>
-              <View style={[styles.heroImageRing, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-                <FastImage source={PHONE_VERIFY} style={styles.phoneVerifyImage} resizeMode="contain" />
-              </View>
-            </View>
-          )}
-
           {step === 1 && hasGoogleAuth && (
-            <View style={[styles.card, { borderColor: themeColors.border, backgroundColor: themeColors.card }, cardShadow]}>
-              {stepBadge(1)}
-              <AppText type={FOURTEEN} weight={BOLD} style={[styles.cardTitle, { color: themeColors.text }]}>
-                Authenticator
+            <View style={{ paddingTop: 10 }}>
+              <AppText type={EIGHTEEN} weight={BOLD} style={{ color: themeColors.text, marginBottom: 12 }}>
+                Verify Authenticator
               </AppText>
-              <AppText type={THIRTEEN} style={[styles.cardDesc, { color: themeColors.secondaryText }]}>
-                Enter the 6-digit code from your Google Authenticator app.
-              </AppText>
-              <View style={styles.fieldBlock}>
-                <OtpInput6Digit label="Authenticator code" value={googleCode} onChangeText={setGoogleCode} isDark={isDark} />
+
+              <View style={{ marginBottom: 16 }}>
+                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+                  Enter the 6-digit code from your Google Authenticator app.
+                </AppText>
               </View>
+
+              <View style={{ marginBottom: 12 }}>
+                <OtpInput6Digit value={googleCode} onChangeText={setGoogleCode} isDark={isDark} />
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 24 }}>
+                <TouchableOpacity onPress={async () => {
+                  try {
+                    const Clipboard = require('@react-native-clipboard/clipboard').default;
+                    const text = await Clipboard.getString();
+                    if (text) setGoogleCode(text.replace(/\D/g, '').slice(0, CODE_LENGTH));
+                  } catch (e) { }
+                }} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Paste</AppText>
+                  <FastImage source={pasteImg} style={{ width: 14, height: 14, marginLeft: 6 }} resizeMode="contain" tintColor={themeColors.text} />
+                </TouchableOpacity>
+              </View>
+
               <Button
-                children="Continue"
+                children="Confirm"
                 onPress={handleVerifyIdentity}
                 loading={showButtonLoading}
-                containerStyle={[styles.btnPrimary, { backgroundColor: themeColors.button }]}
-                titleStyle={{ color: themeColors.buttonText }}
+                containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: themeColors.button }}
+                titleStyle={{ color: themeColors.buttonText, fontSize: 16 }}
                 disabled={isLoading || googleCode.length !== CODE_LENGTH}
               />
             </View>
           )}
 
           {step === 2 && (
-            <View style={[styles.card, { borderColor: themeColors.border, backgroundColor: themeColors.card }, cardShadow]}>
-              {stepBadge(hasGoogleAuth ? 2 : 1)}
-              <AppText type={FOURTEEN} weight={BOLD} style={[styles.cardTitle, { color: themeColors.text }]}>
-                Verify identity
-              </AppText>
-              <AppText type={THIRTEEN} style={[styles.cardDesc, { color: themeColors.secondaryText }]}>
-                {hasEmail && hasMobile
-                  ? 'Choose email or SMS, send a one-time code, then enter it below.'
-                  : hasEmail
-                    ? 'We will send a one-time code to your email.'
-                    : 'We will send a one-time code to your mobile.'}
+            <View style={{ paddingTop: 10 }}>
+              <AppText type={EIGHTEEN} weight={BOLD} style={{ color: themeColors.text, marginBottom: 12 }}>
+                Verify Your Email
               </AppText>
 
-              {hasEmail && hasMobile && (
-                <View style={styles.methodGroup}>
-                  <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.sectionLabel, { color: themeColors.secondaryText }]}>
-                    VERIFY WITH
-                  </AppText>
-                  <View style={styles.methodRow}>
-                    <TouchableOpacityView
-                      onPress={() => {
-                        setVerifyMethod('email');
-                        setEmailOtp('');
-                        setResendTimerAddMobile(0);
-                      }}
-                      style={[
-                        styles.methodChip,
-                        { borderColor: themeColors.border },
-                        verifyMethod === 'email' && {
-                          borderColor: themeColors.button,
-                          backgroundColor: `${themeColors.button}14`,
-                        },
-                      ]}
-                    >
-                      <AppText
-                        weight={SEMI_BOLD}
-                        type={THIRTEEN}
-                        style={{ color: verifyMethod === 'email' ? themeColors.button : themeColors.text }}
-                      >
-                        Email
-                      </AppText>
-                    </TouchableOpacityView>
-                    <TouchableOpacityView
-                      onPress={() => {
-                        setVerifyMethod('mobile');
-                        setEmailOtp('');
-                        setResendTimerAddMobile(0);
-                      }}
-                      style={[
-                        styles.methodChip,
-                        { borderColor: themeColors.border },
-                        verifyMethod === 'mobile' && {
-                          borderColor: themeColors.button,
-                          backgroundColor: `${themeColors.button}14`,
-                        },
-                      ]}
-                    >
-                      <AppText
-                        weight={SEMI_BOLD}
-                        type={THIRTEEN}
-                        style={{ color: verifyMethod === 'mobile' ? themeColors.button : themeColors.text }}
-                      >
-                        SMS
-                      </AppText>
-                    </TouchableOpacityView>
-                  </View>
-                </View>
-              )}
-
-              <AppText type={THIRTEEN} style={[styles.hintText, { color: themeColors.text }]}>
-                Tap <AppText weight={SEMI_BOLD}>Send code</AppText> to message{' '}
-                <AppText weight={SEMI_BOLD}>
-                  {verifyMethod === 'email' ? maskEmail(emailId) : maskPhone(mobileNumber)}
+              <View style={{ marginBottom: 16 }}>
+                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+                  The verification code has been sent to your {verifyMethod === 'email' ? 'email' : 'mobile'} {verifyMethod === 'email' ? maskEmail(emailId) : maskPhone(mobileNumber)}, valid for 10 minutes.
                 </AppText>
-              </AppText>
+              </View>
 
-              <View style={styles.fieldBlock}>
+              <View style={{ marginBottom: 12 }}>
                 <OtpInput6Digit
-                  label={verifyMethod === 'email' ? 'Email code' : 'SMS code'}
                   value={emailOtp}
                   onChangeText={setEmailOtp}
                   isDark={isDark}
                 />
               </View>
 
-              <View style={[styles.resendBlock, { borderTopColor: themeColors.border }]}>
-                {resendTimerAddMobile > 0 ? (
-                  <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>
-                    Resend in {resendTimerAddMobile}s
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <TouchableOpacity onPress={() => handleSendOtpIdentity()} disabled={resendTimerAddMobile > 0 || isLoading}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ textDecorationLine: 'underline', color: resendTimerAddMobile > 0 ? themeColors.secondaryText : themeColors.text }}>
+                    {resendTimerAddMobile > 0 ? `Resend (${resendTimerAddMobile}s)` : 'Resend'}
                   </AppText>
-                ) : (
-                  <TouchableOpacity onPress={handleSendOtpIdentity} disabled={isLoading}>
-                    <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.button }}>
-                      Send code
-                    </AppText>
-                  </TouchableOpacity>
-                )}
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={async () => {
+                  try {
+                    const Clipboard = require('@react-native-clipboard/clipboard').default;
+                    const text = await Clipboard.getString();
+                    if (text) setEmailOtp(text.replace(/\D/g, '').slice(0, CODE_LENGTH));
+                  } catch (e) { }
+                }} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Paste</AppText>
+                  <FastImage source={pasteImg} style={{ width: 14, height: 14, marginLeft: 6 }} resizeMode="contain" tintColor={themeColors.text} />
+                </TouchableOpacity>
               </View>
 
               <Button
-                children="Continue"
+                children="Confirm"
                 onPress={handleVerifyIdentity}
                 loading={showButtonLoading}
-                containerStyle={styles.btnPrimary}
-                titleStyle={{ color: themeColors.buttonText }}
-                disabled={isLoading || emailOtp.length !== CODE_LENGTH}
+                containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: themeColors.button }}
+                titleStyle={{ color: themeColors.buttonText, fontSize: 16 }}
+                disabled={isLoading || (verifyMethod === 'totp' ? googleCode.length !== CODE_LENGTH : emailOtp.length !== CODE_LENGTH)}
               />
+
+              {hasEmail && hasMobile && (
+                <TouchableOpacity onPress={() => verifyOptionsSheetRef.current?.open()} style={{ marginTop: 24 }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ textDecorationLine: 'underline', color: themeColors.text }}>
+                    Choose other verification method
+                  </AppText>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
           {step === 3 && (
-            <View style={[styles.card, { borderColor: themeColors.border, backgroundColor: themeColors.card }, cardShadow]}>
-              {stepBadge(hasGoogleAuth ? 3 : 2)}
-              <AppText type={FOURTEEN} weight={BOLD} style={[styles.cardTitle, { color: themeColors.text }]}>
-                Your number
-              </AppText>
-              <AppText type={THIRTEEN} style={[styles.cardDesc, { color: themeColors.secondaryText }]}>
-                Enter the mobile number you want to link. You will confirm it with SMS next.
+            <View style={{ paddingTop: 10 }}>
+              <AppText type={EIGHTEEN} weight={BOLD} style={{ color: themeColors.text, marginBottom: 20 }}>
+                {hasMobile ? 'Change Mobile Number' : 'Link & Verify Mobile Number'}
               </AppText>
 
-              <View style={styles.fieldBlock}>
-                <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
-                  Country
+              <View style={{}}>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                  Phone
                 </AppText>
-                <PickerSelect
-                  data={countryCodePickerData}
-                  selected={newCountryCode}
-                  onSelect={(item) => setNewCountryCode(item?.value ?? item ?? '+91')}
-                  placeholder="Country code"
-                  theme={isDark ? 'Dark' : 'Light'}
-                  style={[
-                    styles.picker,
-                    {
-                      borderColor: themeColors.border,
-                      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                    },
-                  ]}
-                  flag={true}
+                <AuthPhoneInput
+                  value={newMobileNumber}
+                  onChangeText={(t) => setNewMobileNumber((t || '').replace(/\D/g, ''))}
+                  placeholder="Enter phone number"
+                  onSelectCountry={(cc) => {
+                    const code = Array.isArray(cc) ? cc[0] : cc;
+                    setNewCountryCode(`+${code}`);
+                  }}
+                  onCountry={(c) => setCountryName(c)}
+                  country={countryName}
+                  countryCode={[newCountryCode.replace('+', '')]}
                 />
               </View>
 
-              <Input
-                title="Mobile number"
-                value={newMobileNumber}
-                onChangeText={(t) => setNewMobileNumber((t || '').replace(/\D/g, ''))}
-                placeholder="Enter number"
-                mainContainer={{ marginTop: 4 }}
-                keyboardType="phone-pad"
-              />
-
-              <Button
-                children="Continue"
-                onPress={handleNextToOtp}
-                containerStyle={[styles.btnPrimary, { backgroundColor: themeColors.button }]}
-                titleStyle={{ color: themeColors.buttonText }}
-                disabled={!newMobileNumber || newMobileNumber.length < 6}
-              />
-            </View>
-          )}
-
-          {step === 4 && (
-            <View style={[styles.card, { borderColor: themeColors.border, backgroundColor: themeColors.card }, cardShadow]}>
-              {stepBadge(hasGoogleAuth ? 4 : 3)}
-              <AppText type={FOURTEEN} weight={BOLD} style={[styles.cardTitle, { color: themeColors.text }]}>
-                SMS verification
-              </AppText>
-              <AppText type={THIRTEEN} style={[styles.cardDesc, { color: themeColors.secondaryText }]}>
-                We sent a code to your new number. Enter it below to finish.
-              </AppText>
-
-              <AppText type={THIRTEEN} style={[styles.hintText, { color: themeColors.text }]}>
-                Number:{' '}
-                <AppText weight={SEMI_BOLD}>
-                  {normalizeCountryCode(typeof newCountryCode === 'string' ? newCountryCode : newCountryCode?.value ?? '+91')}
-                  {newMobileNumber}
+              <View style={{ marginBottom: 32 }}>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                  SMS Code
                 </AppText>
-              </AppText>
-
-              <View style={styles.fieldBlock}>
-                <OtpInput6Digit
-                  label="SMS code"
-                  value={newMobileOtp}
-                  onChangeText={setNewMobileOtp}
-                  isDark={isDark}
-                />
-              </View>
-
-              <View style={[styles.resendBlock, { borderTopColor: themeColors.border }]}>
-                {resendTimerNewMobile > 0 ? (
-                  <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>
-                    Resend in {resendTimerNewMobile}s
-                  </AppText>
-                ) : (
-                  <TouchableOpacity onPress={handleSendOtpNewMobile} disabled={isLoading}>
-                    <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.button }}>
-                      Send code again
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: themeColors.input,
+                  borderRadius: 8,
+                  height: 52,
+                  paddingHorizontal: 16,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: isDark ? themeColors.border : 'transparent'
+                }}>
+                  <TextInput
+                    style={{ flex: 1, color: themeColors.text, fontSize: 14 }}
+                    placeholder="Enter the code Sent to your phone"
+                    placeholderTextColor={themeColors.secondaryText}
+                    value={newMobileOtp}
+                    onChangeText={setNewMobileOtp}
+                    keyboardType="number-pad"
+                  />
+                  <TouchableOpacity onPress={() => handleSendOtpNewMobile()} disabled={resendTimerNewMobile > 0 || isLoading}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: resendTimerNewMobile > 0 ? themeColors.secondaryText : themeColors.button }}>
+                      {resendTimerNewMobile > 0 ? `Resend (${resendTimerNewMobile}s)` : 'Send'}
                     </AppText>
                   </TouchableOpacity>
-                )}
+                </View>
+                {resendTimerNewMobile > 0 ? (
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 8 }}>
+                    Valid for 10 minutes
+                  </AppText>
+                ) : <View />}
               </View>
 
               <Button
-                children="Add phone number"
+                children="Confirm"
                 onPress={handleComplete}
                 loading={showButtonLoading}
-                containerStyle={[styles.btnPrimary, { backgroundColor: themeColors.button }]}
-                titleStyle={{ color: themeColors.buttonText }}
-                disabled={isLoading || newMobileOtp.length !== CODE_LENGTH}
+                containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: themeColors.button }}
+                titleStyle={{ color: themeColors.buttonText, fontSize: 16 }}
+                disabled={isLoading || newMobileOtp.length !== CODE_LENGTH || !newMobileNumber || newMobileNumber.length < 6}
               />
             </View>
           )}
         </ScrollView>
-
-        {step === 0 && (
-          <View style={styles.bottomBtnWrap}>
-            <Button
-              children="Add phone number"
-              onPress={() => setStep(firstStep)}
-              containerStyle={[styles.bottomBtn, { backgroundColor: themeColors.button }]}
-              titleStyle={{ color: themeColors.buttonText }}
-            />
-          </View>
-        )}
       </KeyboardAvoidingView>
+      <VerificationOptionsSheet
+        sheetRef={verifyOptionsSheetRef}
+        options={availableMethods}
+        onSelect={(val) => {
+          setVerifyMethod(val);
+          setEmailOtp('');
+          setResendTimerAddMobile(0);
+          handleSendOtpIdentity(val);
+        }}
+      />
       <SpinnerSecond />
     </AppSafeAreaView>
   );
@@ -583,7 +534,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 },
+  scrollContent: { padding: 24, paddingBottom: 40 },
   scrollContentStep0: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 120 },
   hero: { alignItems: 'center' },
   heroTitle: { textAlign: 'center', letterSpacing: -0.3 },

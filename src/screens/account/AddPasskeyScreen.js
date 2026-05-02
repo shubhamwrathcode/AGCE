@@ -12,29 +12,45 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   AppSafeAreaView,
   AppText,
-  Button,
-  Input,
   OtpInput6Digit,
   BOLD,
   FOURTEEN,
   THIRTEEN,
   SEMI_BOLD,
   EIGHTEEN,
+  Button,
+  Input,
+  SIXTEEN,
+  TWELVE,
 } from '../../shared';
 import FastImage from 'react-native-fast-image';
-import { back_ic, FINGERPRINT, PASSKEY_VERIFY, SHARE_NEW_ICON } from '../../helper/ImageAssets';
+import {
+  back_ic,
+  SECURITY_SHEIELD,
+  FINGERPRINT,
+  homeIcon,
+  passkey_login,
+  security_risk_vector,
+  right_ic,
+  ADD_EMAIL_SCREEN,
+  ADD_PHONE_NUMBER_SCREEN,
+  SETUP_TWO_FACTOR_SCREEN,
+  EMAIL_VERIFY,
+  PHONE_VERIFY,
+  GOOGLE_VERIFY,
+  PASSKEY_VERIFY,
+  pasteImg,
+} from '../../helper/ImageAssets';
 import {
   sendSecurityOtp,
   verifySecurityOtp,
   verifySecurityTotp,
   getPasskeyRegistrationOptions,
   verifyPasskeyRegistration,
-  getPasskeyList,
+  getUserProfile,
 } from '../../actions/accountActions';
 import { showSuccess, showError } from '../../helper/logger';
 import { Passkey } from 'react-native-passkey';
-import DeviceInfo from 'react-native-device-info';
-import { BASE_URL, PASSKEY_RP_ID } from '../../helper/Constants';
 import { SpinnerSecond } from '../../shared/components/SpinnerSecond';
 import { VerificationOptionsSheet } from '../../shared/components/VerificationOptionsSheet';
 import { useTheme } from "../../hooks/useTheme";
@@ -72,13 +88,23 @@ const AddPasskeyScreen = () => {
   const hasGoogleAuth = (userData?.['2fa'] ?? 0) === 2;
 
   const [passkeySupported, setPasskeySupported] = useState(false);
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(0); // 0: Intro/Risk, 1: Verification, 2: OTP
   const [verifyMethod, setVerifyMethod] = useState('email');
   const [availableMethods, setAvailableMethods] = useState([]);
-  const [otpCode, setOtpCode] = useState('');
   const [passkeyName, setPasskeyName] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
   const verifyOptionsSheetRef = useRef(null);
+
+  const getActiveMethodsCount = () => {
+    let count = 0;
+    if (hasEmail) count++;
+    if (hasMobile) count++;
+    if (hasGoogleAuth) count++;
+    return count;
+  };
+
+  const isSecuritySatisfied = getActiveMethodsCount() >= 2;
 
   useEffect(() => {
     try {
@@ -86,224 +112,230 @@ const AddPasskeyScreen = () => {
     } catch {
       setPasskeySupported(false);
     }
-  }, []);
 
-  // Web priority: Google Auth > Email > Phone (all options like web)
+    // Set dynamic passkey name like web
+    const name = emailId ? `Exchange - ${emailId.split('@')[0]}` : 'Exchange Passkey';
+    setPasskeyName(name);
+  }, [emailId]);
+
   useEffect(() => {
     const methods = [];
-    if (hasGoogleAuth) methods.push({ value: 'totp', label: 'Google Authenticator', description: 'Use your authenticator app' });
-    if (hasEmail) methods.push({ value: 'email', label: 'Email OTP', description: `Send code to ${maskEmail(emailId)}` });
-    if (hasMobile) methods.push({ value: 'mobile', label: 'Mobile OTP', description: `Send code to ${maskPhone(mobileNumber)}` });
+    if (hasGoogleAuth) methods.push({ value: 'totp', label: 'Google Authenticator', description: 'Use your authenticator app', icon: GOOGLE_VERIFY });
+    if (hasEmail) methods.push({ value: 'email', label: 'Email OTP', description: `Send code to ${maskEmail(emailId)}`, icon: EMAIL_VERIFY });
+    if (hasMobile) methods.push({ value: 'mobile', label: 'Mobile OTP', description: `Send code to ${maskPhone(mobileNumber)}`, icon: PHONE_VERIFY });
     setAvailableMethods(methods);
-    if (hasGoogleAuth) setVerifyMethod('totp');
-    else if (hasEmail) setVerifyMethod('email');
-    else if (hasMobile) setVerifyMethod('mobile');
+    const def = hasGoogleAuth ? 'totp' : (hasEmail ? 'email' : 'mobile');
+    setVerifyMethod(def);
   }, [hasEmail, hasMobile, hasGoogleAuth]);
 
-  useEffect(() => {
-    if (resendTimer <= 0) return;
-    const t = setTimeout(() => setResendTimer((r) => r - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendTimer]);
-
-  const getVerificationTitle = () => {
-    if (verifyMethod === 'email') return 'Email verification';
-    if (verifyMethod === 'mobile') return 'Mobile verification';
-    if (verifyMethod === 'totp') return 'Google Authenticator';
-    return 'Verification';
-  };
-
-  const getVerificationDescription = () => {
-    if (verifyMethod === 'email') return `Enter verification code sent to ${maskEmail(emailId)}`;
-    if (verifyMethod === 'mobile') return `Enter verification code sent to ${maskPhone(mobileNumber)}`;
-    if (verifyMethod === 'totp') return 'Enter the 6-digit code from your authenticator app';
-    return 'Enter your verification code';
-  };
-
-  const handleSendOtp = async () => {
-    if (verifyMethod === 'totp') return;
-    const target = verifyMethod === 'email' ? 'email' : 'mobile';
-    const ok = await dispatch(sendSecurityOtp(target, 'add_passkey'));
-    if (ok) setResendTimer(60);
-  };
-
-  const handleVerify = async () => {
-    if (!otpCode || otpCode.length !== CODE_LENGTH) {
-      showError(verifyMethod === 'totp' ? 'Please enter a valid 6-digit code' : 'Please enter a valid 6-digit OTP');
-      return;
-    }
-    if (verifyMethod === 'totp') {
-      const verified = await dispatch(verifySecurityTotp(otpCode, 'add_passkey'));
-      if (verified) {
-        showSuccess('Verified!');
-        setOtpCode('');
-        setStep(2);
-      }
-    } else {
-      const target = verifyMethod === 'email' ? 'email' : 'mobile';
-      const verified = await dispatch(verifySecurityOtp(target, otpCode, 'add_passkey'));
-      if (verified) {
-        showSuccess('Verified!');
-        setOtpCode('');
-        setStep(2);
-      }
-    }
-  };
-
   const handleRegisterPasskey = async () => {
-    const effectiveName = (passkeyName || defaultName).trim();
-    if (!effectiveName) {
-      showError('Please enter a name for your passkey');
+    if (!passkeySupported) {
+      showError('Passkeys are not supported on this device');
       return;
     }
-    // ... logic for passkey registration remains same ...
+
+    const registrationOptions = await dispatch(getPasskeyRegistrationOptions());
+    if (!registrationOptions) return;
+
+    try {
+      const passkeyResponse = await Passkey.create(registrationOptions);
+      if (passkeyResponse) {
+        const verified = await dispatch(verifyPasskeyRegistration(passkeyResponse, passkeyName || 'Mobile Passkey'));
+        if (verified) {
+          showSuccess('Passkey added successfully');
+          await dispatch(getUserProfile());
+          navigation.goBack();
+        }
+      }
+    } catch (error) {
+      if (error.message !== 'User cancelled the operation') {
+        showError('Passkey registration failed');
+      }
+    }
   };
 
-  const defaultName = (() => {
-    const projectName = 'Exchange';
-    const masked = emailId ? maskEmail(emailId) : (mobileNumber ? maskPhone(mobileNumber) : '');
-    return masked ? `${projectName} - ${masked}` : `${projectName} Passkey`;
-  })();
+  const renderRiskStep = () => {
+    const missingMethods = [];
+    if (!hasEmail) missingMethods.push({ id: 'email', label: 'Email', icon: EMAIL_VERIFY, route: ADD_EMAIL_SCREEN });
+    if (!hasMobile) missingMethods.push({ id: 'mobile', label: 'Phone Number', icon: PHONE_VERIFY, route: ADD_PHONE_NUMBER_SCREEN });
+    if (!hasGoogleAuth) missingMethods.push({ id: 'totp', label: 'Google Authenticator', icon: GOOGLE_VERIFY, route: SETUP_TWO_FACTOR_SCREEN });
 
-  if (!passkeySupported && step === 0) {
     return (
-      <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
+      <View style={styles.introContainer}>
+        <View style={styles.illustrationWrap}>
+          <FastImage source={security_risk_vector} style={styles.mainIllustration} resizeMode="contain" />
+        </View>
+
+        <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, textAlign: 'center', marginBottom: 12 }}>
+          Security Risk Warning
+        </AppText>
+        <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, textAlign: 'center', marginBottom: 32, lineHeight: 20 }}>
+          To enhance your account security, please activate at least one additional verification method.
+        </AppText>
+
+        <View style={styles.riskList}>
+          {missingMethods.map((method) => (
+            <TouchableOpacity
+              key={method.id}
+              style={[styles.riskItem, { borderColor: themeColors.border }]}
+              onPress={() => navigation.navigate(method.route)}
+            >
+              <View style={styles.riskItemLeft}>
+                <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#262626' : '#F5F5F5' }]}>
+                  <FastImage source={method.icon} style={styles.featureIcon} resizeMode="contain" />
+                </View>
+                <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{method.label}</AppText>
+              </View>
+              <FastImage source={right_ic} style={{ width: 14, height: 14 }} tintColor={themeColors.secondaryText} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderIntroStep = () => {
+    if (!isSecuritySatisfied) return renderRiskStep();
+
+    return (
+      <View style={styles.introContainer}>
+        <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, fontSize: 24, marginBottom: 12 }}>
+          Passkey
+        </AppText>
+        <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20, marginBottom: 20 }}>
+          Passkey keeps your account safe by protecting it from threats like phishing attacks. It also provides a more secure and convenient way to log in. <AppText type={FOURTEEN} style={{ color: '#007AFF' }}>Learn More {'>'}</AppText>
+        </AppText>
+
+        <View style={styles.illustrationWrap}>
+          <FastImage source={PASSKEY_VERIFY} style={styles.mainIllustration} resizeMode="contain" />
+        </View>
+
+        <View style={styles.featureList}>
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#262626' : '#F5F5F5' }]}>
+              <FastImage source={SECURITY_SHEIELD} style={styles.featureIcon} tintColor={themeColors.text} />
+            </View>
+            <View style={styles.featureText}>
+              <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>High Security</AppText>
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Protect accounts from traditional password theft risks</AppText>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#262626' : '#F5F5F5' }]}>
+              <FastImage source={FINGERPRINT} style={styles.featureIcon} tintColor={themeColors.text} />
+            </View>
+            <View style={styles.featureText}>
+              <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Easy Verification</AppText>
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Verify in one tap, free from remembering complex passwords</AppText>
+            </View>
+          </View>
+
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#262626' : '#F5F5F5' }]}>
+              <FastImage source={homeIcon} style={styles.featureIcon} tintColor={themeColors.text} />
+            </View>
+            <View style={styles.featureText}>
+              <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Multi-Device</AppText>
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Use passkey across devices seamlessly</AppText>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.bottomBtnWrap}>
+          <Button
+            children="Add a Passkey"
+            onPress={handleRegisterPasskey}
+            containerStyle={{ backgroundColor: '#2B2E33', borderRadius: 25, height: 50 }}
+            textStyle={{ fontSize: 16 }}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
-        </View>
-        <View style={styles.centered}>
-          <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>Passkeys Not Supported</AppText>
-          <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 8 }}>Passkeys are not supported on this device.</AppText>
-        </View>
-      </AppSafeAreaView>
-    );
-  }
-
-  return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => {
-              if (step === 0) navigation.goBack();
-              else setStep(step - 1);
-            }}
-            style={styles.backBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
-          </TouchableOpacity>
+          <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>Add Passkey</AppText>
         </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={step === 0 ? styles.scrollContentStep0 : styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.content}>
-            {step === 0 && (
-              <>
-                <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text }}>Add Passkey</AppText>
-                <View style={styles.imageWrap}>
-                  <FastImage source={PASSKEY_VERIFY} style={styles.emailImage} resizeMode="contain" />
-                </View>
-                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, textAlign: 'center' }}>
-                  Passkeys provide secure, passwordless authentication using your device's built-in security (Face ID, Touch ID, etc.).
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {step === 0 ? renderIntroStep() : (
+            <View style={{ paddingTop: 10 }}>
+              <View style={{ marginBottom: 24 }}>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                  Passkey Name
                 </AppText>
-              </>
-            )}
-
-            {step === 1 && (
-              <>
-                <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text, marginHorizontal: 5 }}>{getVerificationTitle()}</AppText>
-                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 4, marginHorizontal: 5 }}>{getVerificationDescription()}</AppText>
-
-                <View style={{ marginTop: 24 }}>
-                  <OtpInput6Digit
-                    label={verifyMethod === 'totp' ? 'Authenticator Code' : 'Verification Code'}
-                    value={otpCode}
-                    onChangeText={setOtpCode}
-                    isDark={isDark}
-                  />
-                </View>
-
-                {verifyMethod !== 'totp' && (
-                  <View style={styles.resendRow}>
-                    {resendTimer > 0 ? (
-                      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>Resend ({resendTimer}s)</AppText>
-                    ) : (
-                      <TouchableOpacity onPress={handleSendOtp} disabled={isLoading}>
-                        <AppText weight={SEMI_BOLD} style={{ color: themeColors.button, fontSize: 13 }}>Get OTP</AppText>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-                <Button
-                  children="Verify & Continue"
-                  onPress={handleVerify}
-                  loading={showButtonLoading}
-                  containerStyle={styles.btn}
-                  disabled={isLoading || otpCode.length !== CODE_LENGTH}
-                />
-
-                {availableMethods.length > 1 && (
-                  <TouchableOpacity
-                    onPress={() => verifyOptionsSheetRef.current?.open()}
-                    style={styles.switchOptionWrap}
-                    activeOpacity={0.7}
-                  >
-                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.button }}>
-                      Switch to Another Verification Option
-                    </AppText>
-                    <FastImage source={SHARE_NEW_ICON}
-                      style={{ width: 14, height: 14, marginLeft: 8 }}
-                      resizeMode="contain" tintColor={themeColors.button} />
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                <View style={[styles.passkeyIconWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]}>
-                  <FastImage source={FINGERPRINT} style={styles.iconImg} resizeMode="contain" tintColor={themeColors.button} />
-                </View>
-                <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text, textAlign: 'center' }}>Create Passkey</AppText>
-                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 4, textAlign: 'center' }}>Give your passkey a name to identify this device</AppText>
-
                 <Input
-                  title="Passkey Name"
-                  value={passkeyName || defaultName}
-                  onChangeText={(t) => setPasskeyName((t || '').slice(0, 50))}
-                  placeholder="e.g., My iPhone"
-                  mainContainer={{ marginTop: 24 }}
+                  value={passkeyName}
+                  onChangeText={setPasskeyName}
+                  placeholder="e.g. My Phone Passkey"
+                  containerStyle={{ backgroundColor: themeColors.input, borderRadius: 12, height: 52 }}
                 />
-                <Button
-                  children="Create Passkey"
-                  onPress={handleRegisterPasskey}
-                  loading={showButtonLoading}
-                  containerStyle={styles.btn}
-                  disabled={isLoading || !(passkeyName || defaultName).trim()}
+              </View>
+
+              <AppText type={SIXTEEN} weight={BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                {getVerifyTitle()}
+              </AppText>
+              <View style={{ marginBottom: 16 }}>
+                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+                  {getVerifyDesc()}
+                </AppText>
+              </View>
+
+              <View style={{ marginBottom: 12 }}>
+                <OtpInput6Digit
+                  value={otpCode}
+                  onChangeText={setOtpCode}
+                  isDark={isDark}
                 />
-              </>
-            )}
-          </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                {verifyMethod !== 'totp' ? (
+                  <TouchableOpacity onPress={() => handleSendOtp()} disabled={resendTimer > 0 || isLoading}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ textDecorationLine: 'underline', color: resendTimer > 0 ? themeColors.secondaryText : '#C5A365' }}>
+                      {resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Resend'}
+                    </AppText>
+                  </TouchableOpacity>
+                ) : <View />}
+
+                <TouchableOpacity onPress={async () => {
+                  try {
+                    const Clipboard = require('@react-native-clipboard/clipboard').default;
+                    const text = await Clipboard.getString();
+                    if (text) setOtpCode(text.replace(/\D/g, '').slice(0, CODE_LENGTH));
+                  } catch (e) { }
+                }} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Paste</AppText>
+                  <FastImage source={pasteImg} style={{ width: 14, height: 14, marginLeft: 6 }} resizeMode="contain" tintColor={themeColors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <Button
+                children="Confirm"
+                onPress={handleVerifyIdentity}
+                loading={showButtonLoading}
+                containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: themeColors.button }}
+                titleStyle={{ color: themeColors.buttonText, fontSize: 16 }}
+                disabled={isLoading || otpCode.length !== CODE_LENGTH}
+              />
+
+              {availableMethods.length > 1 && (
+                <TouchableOpacity onPress={() => verifyOptionsSheetRef.current?.open()} style={{ marginTop: 24, alignSelf: 'flex-start' }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ textDecorationLine: 'underline', color: themeColors.text }}>
+                    Choose other verification method
+                  </AppText>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </ScrollView>
-        {step === 0 && (
-          <View style={styles.bottomBtnWrap}>
-            <Button
-              children="Add Passkey"
-              onPress={() => setStep(1)}
-              containerStyle={styles.bottomBtn}
-            />
-          </View>
-        )}
       </KeyboardAvoidingView>
 
       <VerificationOptionsSheet
@@ -315,7 +347,6 @@ const AddPasskeyScreen = () => {
           setResendTimer(0);
         }}
       />
-
       <SpinnerSecond />
     </AppSafeAreaView>
   );
@@ -324,39 +355,64 @@ const AddPasskeyScreen = () => {
 export default AddPasskeyScreen;
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { padding: 4 },
   backIcon: { width: 22, height: 22 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  scrollContentStep0: { padding: 20, paddingTop: 12 },
-  bottomBtnWrap: {
-    paddingHorizontal: 24,
-    paddingBottom: 34,
-    paddingTop: 16,
+  scrollContent: { padding: 24, paddingBottom: 40 },
+  introContainer: {
+    paddingTop: 10,
+    flex: 1,
   },
-  bottomBtn: {},
-  content: { borderRadius: 16, overflow: 'hidden' },
-  imageWrap: { alignItems: 'center', justifyContent: 'center', marginVertical: 30 },
-  emailImage: { width: 180, height: 180 },
-  passkeyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  illustrationWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 16,
   },
-  iconImg: { width: 32, height: 32 },
-  btn: { marginTop: 30 },
-  switchOptionWrap: { marginTop: 24, flexDirection: "row", alignItems: "center", justifyContent: 'center' },
-  resendRow: { marginTop: 12, alignItems: 'flex-end' },
+  mainIllustration: {
+    width: 200,
+    height: 200,
+  },
+  featureList: {
+    marginTop: 10,
+    gap: 20,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  featureIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  featureIcon: {
+    width: 22,
+    height: 22,
+  },
+  featureText: {
+    flex: 1,
+    gap: 2,
+  },
+  bottomBtnWrap: {
+    marginTop: 50,
+    paddingBottom: 20,
+  },
+  riskList: {
+    gap: 12,
+  },
+  riskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+  },
+  riskItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  }
 });

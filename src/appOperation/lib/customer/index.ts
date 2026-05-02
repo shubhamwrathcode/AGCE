@@ -380,9 +380,9 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/2fa/setup - returns { success, data: { qr_code, secret: { base32 } } } */
   security2faSetup: () =>
     appOperation.post('security/2fa/setup', {}, CUSTOMER_TYPE),
-  /** Same as web: POST security/2fa/confirm - body { code } (6-digit TOTP), activates 2FA */
-  security2faConfirm: (code: string) =>
-    appOperation.post('security/2fa/confirm', { code }, CUSTOMER_TYPE),
+  /** Same as web: POST security/2fa/confirm - body { code, otpCode?, verifyMethod? } (6-digit TOTP), activates 2FA */
+  security2faConfirm: (data: { code: string; otpCode?: string; verifyMethod?: string }) =>
+    appOperation.post('security/2fa/confirm', data, CUSTOMER_TYPE),
   /** Same as web: POST security/2fa/disable - body { code?, otpCode?, verifyMethod?, passkeyUserId? } */
   security2faDisable: (authenticatorCode?: string | null, otpCode?: string | null, verifyMethod?: string | null, passkeyUserId?: string | null) => {
     const data: any = {};

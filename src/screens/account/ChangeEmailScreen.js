@@ -23,7 +23,8 @@ import {
 } from '../../shared';
 import FastImage from 'react-native-fast-image';
 import TouchableOpacityView from '../../shared/components/TouchableOpacityView';
-import { back_ic, EMAIL, FINGERPRINT, SHARE_NEW_ICON } from '../../helper/ImageAssets';
+import { back_ic, FINGERPRINT, pasteImg } from '../../helper/ImageAssets';
+import { TextInput } from 'react-native';
 import {
   sendSecurityOtp,
   initiateEmailChange,
@@ -67,7 +68,7 @@ const ChangeEmailScreen = () => {
   const hasGoogleAuth = (userData?.['2fa'] ?? 0) === 2;
   const [hasPasskey, setHasPasskey] = useState(!!userData?.hasPasskey);
 
-  const [step, setStep] = useState(0); // 0 = security notice, 1 = verify, 2 = new email, 3 = verify new
+  const [step, setStep] = useState(1); // 1 = verify identity, 2 = change email (combined)
   const [verifyMethod, setVerifyMethod] = useState('email');
   const [availableMethods, setAvailableMethods] = useState([]);
   const [passkeyUserId, setPasskeyUserId] = useState(null);
@@ -118,9 +119,12 @@ const ChangeEmailScreen = () => {
     else optionsSheetRef.current?.close();
   }, [optionsSheetVisible]);
 
-  const handleProceedFromNotice = () => {
-    setStep(1);
-  };
+  useEffect(() => {
+    if (step === 1 && verifyMethod !== 'passkey' && verifyMethod !== 'totp') {
+      handleSendOtp();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, verifyMethod]);
 
   const getVerifyTitle = () => {
     if (verifyMethod === 'passkey') return 'Passkey verification';
@@ -164,7 +168,7 @@ const ChangeEmailScreen = () => {
     setStep(2);
   };
 
-  const handleStep2Continue = async () => {
+  const handleSendAction = async () => {
     if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
       showError('Please enter a valid email address');
       return;
@@ -174,14 +178,12 @@ const ChangeEmailScreen = () => {
     else if (verifyMethod === 'totp') requestData.tofaCode = currentCode;
     else if (verifyMethod === 'email') requestData.currentEmailOtp = currentCode;
     else if (verifyMethod === 'mobile') requestData.currentMobileOtp = currentCode;
-    const success = await dispatch(initiateEmailChange(requestData));
-    if (success) setStep(3);
-  };
 
-  const handleSendNewEmailOtp = async () => {
-    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) return;
-    const ok = await dispatch(sendSecurityOtp('new_email', 'change_email', newEmail.trim()));
-    if (ok) setResendTimerNew(60);
+    const success = await dispatch(initiateEmailChange(requestData));
+    if (success) {
+      const ok = await dispatch(sendSecurityOtp('new_email', 'change_email', newEmail.trim()));
+      if (ok) setResendTimerNew(60);
+    }
   };
 
   const handleStep3Complete = async () => {
@@ -213,7 +215,7 @@ const ChangeEmailScreen = () => {
             <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
           <AppText weight={BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
-            {step === 0 ? 'Security Notice' : step === 1 ? getVerifyTitle() : 'Change Email'}
+            Change Email
           </AppText>
         </View>
 
@@ -223,32 +225,14 @@ const ChangeEmailScreen = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {step === 0 && (
-            <View style={styles.noticeContent}>
-              <View style={styles.noticeIconWrap}>
-                <FastImage source={EMAIL} style={styles.noticeIcon} tintColor="#FFF" resizeMode="contain" />
-              </View>
-              <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text, textAlign: 'center' }}>Security Notice</AppText>
-              <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, textAlign: 'center', marginTop: 4 }}>Please read carefully before proceeding</AppText>
-              
-              <View style={[styles.infoBox, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)", borderColor: themeColors.border }]}>
-                 <AppText type={THIRTEEN} style={{ color: themeColors.text, lineHeight: 21 }}>
-                    Withdrawals and P2P transactions might be disabled for 24 hours after changing your email verification to ensure the safety of your assets.
-                </AppText>
-                <AppText type={THIRTEEN} style={{ color: themeColors.text, lineHeight: 21, marginTop: 12 }}>
-                    The old email address cannot be used to re-register for 30 days after updating it.
-                </AppText>
-              </View>
-
-              <Button children="I Understand, Continue" onPress={handleProceedFromNotice} containerStyle={styles.btn} />
-            </View>
-          )}
-
           {step === 1 && (
-            <View style={styles.formContent}>
-              <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24 }}>Choose how you want to verify your identity</AppText>
-              <AppText type={THIRTEEN} style={{ color: themeColors.text }}>{getVerifyDesc()}</AppText>
-              
+            <View style={{ paddingTop: 24 }}>
+              <View style={{ marginBottom: 24 }}>
+                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+                  {getVerifyDesc()}
+                </AppText>
+              </View>
+
               {verifyMethod === 'passkey' ? (
                 <>
                   <View style={{ alignItems: 'center', marginVertical: 30 }}>
@@ -260,96 +244,134 @@ const ChangeEmailScreen = () => {
                     children={passkeyUserId ? 'Verified - Continue' : 'Verify with Passkey'}
                     onPress={passkeyUserId ? handleStep1Continue : handleVerifyPasskey}
                     loading={showButtonLoading}
-                    containerStyle={styles.btn}
+                    containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: '#C5A365' }}
+                    titleStyle={{ color: themeColors.buttonText, fontSize: 16 }}
                   />
                 </>
               ) : (
                 <>
-                  <View style={{ marginTop: 24 }}>
+                  <View style={{ marginBottom: 12 }}>
                     <OtpInput6Digit
-                        label={verifyMethod === 'totp' ? 'Authenticator Code' : (verifyMethod === 'email' ? 'Email Verification Code' : 'Mobile Verification Code')}
-                        value={currentCode}
-                        onChangeText={setCurrentCode}
-                        isDark={isDark}
+                      value={currentCode}
+                      onChangeText={setCurrentCode}
+                      isDark={isDark}
                     />
                   </View>
-                  {verifyMethod !== 'totp' && (
-                    <View style={styles.resendRow}>
-                      {resendTimer > 0 ? (
-                        <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>Resend ({resendTimer}s)</AppText>
-                      ) : (
-                        <TouchableOpacityView onPress={handleSendOtp} disabled={isLoading}>
-                          <AppText weight={SEMI_BOLD} style={{ color: themeColors.button, fontSize: 13 }}>Get OTP</AppText>
-                        </TouchableOpacityView>
-                      )}
-                    </View>
-                  )}
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    {verifyMethod !== 'totp' ? (
+                      <TouchableOpacity onPress={handleSendOtp} disabled={resendTimer > 0 || isLoading}>
+                        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ textDecorationLine: 'underline', color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text }}>
+                          {resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Resend'}
+                        </AppText>
+                      </TouchableOpacity>
+                    ) : <View />}
+
+                    <TouchableOpacity onPress={async () => {
+                      try {
+                        const Clipboard = require('@react-native-clipboard/clipboard').default;
+                        const text = await Clipboard.getString();
+                        if (text) setCurrentCode(text.replace(/\D/g, '').slice(0, CODE_LENGTH));
+                      } catch (e) { }
+                    }} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Paste</AppText>
+                      <FastImage source={pasteImg} style={{ width: 14, height: 14, marginLeft: 6 }} resizeMode="contain" tintColor={themeColors.text} />
+                    </TouchableOpacity>
+                  </View>
+
                   <Button
-                    children="Continue"
+                    children="Confirm"
                     onPress={handleStep1Continue}
                     loading={showButtonLoading}
-                    containerStyle={styles.btn}
+                    containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: themeColors.button }}
+                    titleStyle={{ color: themeColors.buttonText, fontSize: 16 }}
                     disabled={isLoading || currentCode.length !== CODE_LENGTH}
                   />
                 </>
               )}
+
               {availableMethods.length > 1 && (
-                <TouchableOpacityView onPress={() => setOptionsSheetVisible(true)} style={styles.switchWrap}>
-                  <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.button }}>Switch to Another Verification Option</AppText>
-                  <FastImage source={SHARE_NEW_ICON} 
-                     style={{ width: 14, height: 14, marginLeft: 8 }}
-                    resizeMode="contain" tintColor={themeColors.button} />
+                <TouchableOpacityView onPress={() => setOptionsSheetVisible(true)} style={{ marginTop: 24, alignSelf: 'flex-start' }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ textDecorationLine: 'underline', color: themeColors.text }}>
+                    Choose other verification method
+                  </AppText>
                 </TouchableOpacityView>
               )}
             </View>
           )}
 
           {step === 2 && (
-            <View style={styles.formContent}>
-              <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24 }}>Step 2: Enter new email address</AppText>
-              <Input
-                title="New Email Address"
-                value={newEmail}
-                onChangeText={setNewEmail}
-                placeholder="Enter new email address"
-                mainContainer={{ marginTop: 8 }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <Button
-                children="Continue"
-                onPress={handleStep2Continue}
-                loading={showButtonLoading}
-                containerStyle={styles.btn}
-                disabled={isLoading || !newEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())}
-              />
-            </View>
-          )}
-
-          {step === 3 && (
-            <View style={styles.formContent}>
-              <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24 }}>Step 3: Verify new email</AppText>
-              <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
-                Click "Send OTP" to receive a code on <AppText weight={SEMI_BOLD}>{newEmail}</AppText>
+            <View style={{ paddingTop: 10 }}>
+              <AppText type={EIGHTEEN} weight={BOLD} style={{ color: themeColors.text, marginBottom: 24 }}>
+                Change email address verification
               </AppText>
-              <View style={{ marginTop: 24 }}>
-                <OtpInput6Digit label="New Email Verification Code" value={newEmailOtp} onChangeText={setNewEmailOtp} isDark={isDark} />
+
+              <View style={{ marginBottom: 24 }}>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                  New Email
+                </AppText>
+                <View style={{ 
+                  backgroundColor: themeColors.input, 
+                  borderRadius: 8, 
+                  height: 52, 
+                  paddingHorizontal: 16,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: isDark ? themeColors.border : 'transparent'
+                }}>
+                  <TextInput
+                    style={{ flex: 1, color: themeColors.text, fontSize: 14 }}
+                    placeholder="Enter new email address"
+                    placeholderTextColor={themeColors.secondaryText}
+                    value={newEmail}
+                    onChangeText={setNewEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
               </View>
-              <View style={styles.resendRow}>
-                {resendTimerNew > 0 ? (
-                  <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>Resend ({resendTimerNew}s)</AppText>
-                ) : (
-                  <TouchableOpacityView onPress={handleSendNewEmailOtp} disabled={isLoading}>
-                    <AppText weight={SEMI_BOLD} style={{ color: themeColors.button, fontSize: 13 }}>Send OTP</AppText>
-                  </TouchableOpacityView>
+
+              <View style={{ marginBottom: 32 }}>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                  Email OTP
+                </AppText>
+                <View style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  backgroundColor: themeColors.input, 
+                  borderRadius: 8, 
+                  height: 52, 
+                  paddingHorizontal: 16,
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: isDark ? themeColors.border : 'transparent'
+                }}>
+                  <TextInput
+                    style={{ flex: 1, color: themeColors.text, fontSize: 14 }}
+                    placeholder="Enter the code sent to your email"
+                    placeholderTextColor={themeColors.secondaryText}
+                    value={newEmailOtp}
+                    onChangeText={setNewEmailOtp}
+                    keyboardType="number-pad"
+                  />
+                  <TouchableOpacity onPress={handleSendAction} disabled={resendTimerNew > 0 || isLoading}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: resendTimerNew > 0 ? themeColors.secondaryText : themeColors.button }}>
+                      {resendTimerNew > 0 ? `Resend (${resendTimerNew}s)` : 'Send'}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+                {resendTimerNew > 0 && (
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 8 }}>
+                    Valid for 10 minutes
+                  </AppText>
                 )}
               </View>
+
               <Button
-                children="Change Email"
+                children="Confirm"
                 onPress={handleStep3Complete}
                 loading={showButtonLoading}
-                containerStyle={styles.btn}
-                disabled={isLoading || newEmailOtp.length !== CODE_LENGTH}
+                containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: '#C5A365' }}
+                titleStyle={{ color: '#FFF', fontSize: 16 }}
+                disabled={isLoading || newEmailOtp.length !== CODE_LENGTH || !newEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())}
               />
             </View>
           )}
@@ -380,29 +402,7 @@ const styles = StyleSheet.create({
   backIcon: { width: 22, height: 22 },
   headerTitle: { fontSize: 18, marginLeft: 12 },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  noticeContent: { paddingTop: 10 },
-  noticeIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FF9800',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  noticeIcon: { width: 32, height: 32 },
-  infoBox: {
-    marginTop: 24,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  formContent: { paddingTop: 8 },
-  btn: { marginTop: 30 },
-  resendRow: { marginTop: 12, alignItems: 'flex-end' },
-  switchWrap: { marginTop: 24, flexDirection: "row", alignItems: "center", justifyContent: 'center' },
+  scrollContent: { padding: 24, paddingBottom: 40 },
   passkeyIconWrap: {
     width: 80,
     height: 80,

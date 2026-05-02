@@ -69,7 +69,7 @@ import AddPasskeyScreen from "../screens/account/AddPasskeyScreen";
 import ChangeEmailScreen from "../screens/account/ChangeEmailScreen";
 import ChangeMobileScreen from "../screens/account/ChangeMobileScreen";
 import ViewPasskeysScreen from "../screens/account/ViewPasskeysScreen";
-import Disable2FAScreen from "../screens/account/Disable2FAScreen";
+import DisableTwoFactorScreen from "../screens/account/DisableTwoFactorScreen";
 import EnterOtp from "../screens/account/EnterOtp";
 import ConvertHistory from "../screens/home/ConvertHistory";
 import LanguagePreference from "../screens/account/LanguagePreference";
@@ -329,7 +329,7 @@ const MyAuthLoadingStack = () => {
       />
       <Stack.Screen
         name={routes.DISABLE_2FA_SCREEN}
-        component={Disable2FAScreen}
+        component={DisableTwoFactorScreen}
       />
       <Stack.Screen name={routes.ENTER_OTP_SCREEN} component={EnterOtp} />
 

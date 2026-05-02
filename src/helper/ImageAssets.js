@@ -398,6 +398,12 @@ export const tradeIcon = require('../../assets/images/tradeIcon.png');
 export const p2pIcon2 = require('../../assets/images/p2pIcon2.png');
 export const progress_icon_pending = require('../../assets/images/progress_icon_pending.png');
 export const verification_reject = require('../../assets/images/verification_reject.png');
+export const googleAuthenticator = require('../../assets/images/googleAuthenticator.png');
+export const fundpass = require('../../assets/images/fundpass.png');
+export const security_risk_vector = require('../../assets/images/security_risk_vector.png');
+export const change_email_vector = require('../../assets/images/change_email_vector.png');
+export const playstore = require('../../assets/images/playstore.png');
+
 
 
 

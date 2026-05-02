@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   AppSafeAreaView,
@@ -18,88 +19,58 @@ import {
   FOURTEEN,
   THIRTEEN,
   SEMI_BOLD,
+  EIGHTEEN,
+  SIXTEEN,
+  TWELVE,
 } from '../../shared';
 import FastImage from 'react-native-fast-image';
-import { back_ic, copyIcon, GOOGLE_VERIFY } from '../../helper/ImageAssets';
+import { back_ic, copyIcon, GOOGLE_VERIFY, EMAIL_VERIFY, qrCodeIcon, apple, playstore } from '../../helper/ImageAssets';
 import TouchableOpacityView from '../../shared/components/TouchableOpacityView';
 import {
-  sendSecurityOtp,
-  verifySecurityOtp,
   generateTwoFactorQr,
+  confirm2fa,
 } from '../../actions/accountActions';
 import { setTwoFaData } from '../../slices/homeSlice';
 import { showSuccess, showError } from '../../helper/logger';
-import { VERIFY_AUTHENTICATOR_CODE_SCREEN } from '../../navigation/routes';
 import Clipboard from '@react-native-community/clipboard';
 import { SpinnerSecond } from '../../shared/components/SpinnerSecond';
 import { useTheme } from "../../hooks/useTheme";
 
 const CODE_LENGTH = 6;
 
-const maskEmail = (email) => {
-  if (!email) return '';
-  const [username, domain] = email.split('@');
-  if (!domain) return email;
-  return `${(username || '').substring(0, 2)}***${(username || '').slice(-1)}@${domain}`;
-};
-const maskPhone = (phone) => {
-  if (!phone) return '';
-  const cleaned = String(phone).replace(/\s/g, '');
-  if (cleaned.length < 4) return phone;
-  return '****' + cleaned.slice(-4);
-};
-
 const SetupTwoFactorScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
   const isLoading = useAppSelector((state) => state.auth.isLoading);
-  const showButtonLoading = useAppSelector((state) => state.auth.isLoading && state.auth.loadingFor !== 'otp');
   const twoFaQrData = useAppSelector((state) => state.home.twoFaQrData);
 
-  const emailId = userData?.emailId ?? userData?.email_id ?? '';
-  const profileMobile = userData?.mobileNumber ?? userData?.mobile_number ?? '';
-  const profileCountryCode = userData?.country_code ?? userData?.countryCode ?? '';
-  const mobileNumber = profileCountryCode && profileMobile ? `${profileCountryCode} ${profileMobile}`.trim() : profileMobile || '';
-  const hasEmail = !!emailId;
+  const identityProof = route?.params?.identityProof;
 
-  const [step, setStep] = useState(0);
-  const [otpCode, setOtpCode] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
+  const [step, setStep] = useState(0); // 0: Install, 1: Setup, 2: Verify
+  const [gaCode, setGaCode] = useState('');
+  const [serverTime, setServerTime] = useState(new Date().toISOString().replace('T', ' ').split('.')[0]);
 
   useEffect(() => {
-    if (resendTimer <= 0) return;
-    const t = setTimeout(() => setResendTimer((r) => r - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendTimer]);
+    const timer = setInterval(() => {
+      setServerTime(new Date().toISOString().replace('T', ' ').split('.')[0]);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (step === 1 && !twoFaQrData) {
+      dispatch(generateTwoFactorQr());
+    }
+  }, [step, twoFaQrData, dispatch]);
 
   useEffect(() => {
     return () => {
       dispatch(setTwoFaData(undefined));
     };
   }, [dispatch]);
-
-  const handleSendOtp = async () => {
-    const target = hasEmail ? 'email' : 'mobile';
-    const ok = await dispatch(sendSecurityOtp(target, '2fa_setup'));
-    if (ok) setResendTimer(60);
-  };
-
-  const handleVerifyAndContinue = async () => {
-    if (!otpCode || otpCode.length !== CODE_LENGTH) {
-      showError('Please enter a valid 6-digit OTP');
-      return;
-    }
-    const target = hasEmail ? 'email' : 'mobile';
-    const verified = await dispatch(verifySecurityOtp(target, otpCode, '2fa_setup'));
-    if (verified) {
-      showSuccess('Verified! Generating QR code...');
-      setOtpCode('');
-      const ok = await dispatch(generateTwoFactorQr());
-      if (ok) setStep(2);
-    }
-  };
 
   const copyQrSecretCode = () => {
     const code = twoFaQrData?.secret?.base32;
@@ -109,9 +80,25 @@ const SetupTwoFactorScreen = () => {
     }
   };
 
-  const handleContinueToVerify = () => {
-    navigation.navigate(VERIFY_AUTHENTICATOR_CODE_SCREEN);
+  const handleFinalSubmit = async () => {
+    if (gaCode.length !== CODE_LENGTH) {
+      showError('Please enter a valid 6-digit code');
+      return;
+    }
+    const ok = await dispatch(confirm2fa(gaCode, identityProof));
+    if (ok) {
+      navigation.popToTop();
+    }
   };
+
+  const renderStepHeader = (num, title) => (
+    <View style={styles.stepHeaderRow}>
+      <View style={[styles.stepCircle, { backgroundColor: isDark ? '#262626' : '#F0F0F0' }]}>
+        <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{num}</AppText>
+      </View>
+      <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, flex: 1, marginLeft: 12 }}>{title}</AppText>
+    </View>
+  );
 
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
@@ -122,121 +109,152 @@ const SetupTwoFactorScreen = () => {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => {
-              if (step === 0) navigation.goBack();
-              else if (step === 2) {
-                dispatch(setTwoFaData(undefined));
-                setStep(0);
-              } else setStep(0);
+              if (step > 0) setStep(step - 1);
+              else navigation.goBack();
             }}
             style={styles.backBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
+          <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>
+            Bind Google Authenticator
+          </AppText>
         </View>
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={step === 0 ? styles.scrollContentStep0 : styles.scrollContent}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
             {step === 0 && (
-              <>
-                <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text, marginHorizontal: 5 }}>Enable Google Authenticator</AppText>
-                <View style={styles.imageWrap}>
-                  <FastImage source={GOOGLE_VERIFY} style={styles.emailImage} resizeMode="contain" />
-                </View>
-                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, textAlign: 'center' }}>
-                  Add an extra layer of security by linking your account with Google Authenticator.
-                </AppText>
-              </>
-            )}
+              <View>
+                {renderStepHeader(1, 'Install Google Authenticator on your smartphone')}
 
-            {step === 1 && (
-              <>
-                <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text, marginHorizontal: 5 }}>Enable Google Authenticator</AppText>
-                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 4, marginHorizontal: 5 }}>
-                  Step 1: Verify your {hasEmail ? 'email' : 'mobile'} first for security
-                </AppText>
-                <AppText type={THIRTEEN} style={{ color: themeColors.text, marginTop: 16, marginHorizontal: 5 }}>
-                  Click "Send OTP" to receive a verification code on{' '}
-                  <AppText weight={SEMI_BOLD}>{hasEmail ? maskEmail(emailId) : maskPhone(mobileNumber)}</AppText>
-                </AppText>
-                <View style={{ marginTop: 24, marginHorizontal: 5 }}>
-                  <OtpInput6Digit
-                    label="Enter verification code"
-                    value={otpCode}
-                    onChangeText={setOtpCode}
-                    isDark={isDark}
-                  />
-                </View>
-                <View style={styles.resendRow}>
-                  {resendTimer > 0 ? (
-                    <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>Resend ({resendTimer}s)</AppText>
-                  ) : (
-                    <TouchableOpacity onPress={handleSendOtp} disabled={isLoading}>
-                      <AppText weight={SEMI_BOLD} style={{ color: themeColors.button, fontSize: 13 }}>Get OTP</AppText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <Button
-                  children="Verify & Continue"
-                  onPress={handleVerifyAndContinue}
-                  loading={showButtonLoading}
-                  containerStyle={styles.btn}
-                  disabled={isLoading || otpCode.length !== CODE_LENGTH}
-                />
-              </>
-            )}
+                <View style={styles.storeRow}>
+                  <TouchableOpacityView
+                    onPress={() => Linking.openURL('https://apps.apple.com/app/google-authenticator/id388497605')}
+                    style={[styles.storeBtn, { borderColor: themeColors.border, }]}
+                  >
+                    <View style={styles.storeBtnTop}>
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <FastImage source={apple} style={{ width: 18, height: 18, marginRight: 8 }} />
+                        <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>App Store</AppText>
+                      </View>
+                      <FastImage source={qrCodeIcon} style={{ width: 18, height: 18 }} />
+                    </View>
 
-            {step === 2 && (
-              <>
-                <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text, marginHorizontal: 5 }}>Scan QR Code</AppText>
-                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 4, marginHorizontal: 5 }}>
-                  Step 2: Scan with Google Authenticator app
-                </AppText>
-                {twoFaQrData?.qr_code ? (
-                  <View style={styles.qrCodeContainer}>
-                    <FastImage source={{ uri: twoFaQrData.qr_code }} resizeMode="contain" style={styles.qrImage} />
-                  </View>
-                ) : null}
-                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 12 }}>
-                  Scan this QR code with Google Authenticator
-                </AppText>
+                    <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Download from</AppText>
+                  </TouchableOpacityView>
 
-                <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 24 }}>Or enter this code manually:</AppText>
-                <View style={[styles.qrAddressRow, { borderColor: themeColors.border, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)" }]}>
-                  <AppText ellipsizeMode="middle" numberOfLines={1} style={[styles.qrAddressText, { color: themeColors.text }]}>
-                    {twoFaQrData?.secret?.base32 || 'Loading...'}
-                  </AppText>
-                  <TouchableOpacityView onPress={copyQrSecretCode} style={styles.qrCopyWrap} disabled={!twoFaQrData?.secret?.base32}>
-                    <FastImage source={copyIcon} resizeMode="contain" tintColor={themeColors.text} style={styles.qrCopyIcon} />
+                  <TouchableOpacityView
+                    onPress={() => Linking.openURL('https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2')}
+                    style={[styles.storeBtn, { borderColor: themeColors.border, marginLeft: 12 }]}
+                  >
+                    <View style={styles.storeBtnTop}>
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <FastImage source={playstore} style={{ width: 18, height: 18, marginRight: 8 }} />
+                        <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Play Store</AppText>
+                      </View>
+                      <FastImage source={qrCodeIcon} style={{ width: 18, height: 18 }} />
+                    </View>
+                    <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Download from</AppText>
                   </TouchableOpacityView>
                 </View>
 
-                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 16 }}>
-                  After scanning, tap Continue to enter the 6-digit code on the next screen.
-                </AppText>
                 <Button
-                  children="Continue"
-                  onPress={handleContinueToVerify}
-                  containerStyle={styles.btn}
+                  children="Next"
+                  onPress={() => setStep(1)}
+                  containerStyle={{ marginTop: 40, backgroundColor: themeColors.button }}
                 />
-              </>
+              </View>
             )}
+
+            {step === 1 && (
+              <View>
+                {renderStepHeader(2, 'Setup Google Authenticator')}
+                <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, marginLeft: 44, lineHeight: 20 }}>
+                  Note: Please properly keep the Google verification key.
+                </AppText>
+
+                <View style={[styles.qrBox, { borderColor: themeColors.border }]}>
+                  <View style={styles.qrInner}>
+                    {!twoFaQrData ? (
+                      <View style={[styles.qrPlaceholder, { backgroundColor: isDark ? '#262626' : '#EEE' }]} />
+                    ) : (
+                      <FastImage source={{ uri: twoFaQrData?.qr_code }} style={styles.qrImage} resizeMode="contain" />
+                    )}
+                  </View>
+                  <View style={styles.keyContent}>
+                    <AppText type={TWELVE} weight={BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                      Key: {!twoFaQrData ? (
+                        <View style={[styles.skeletonText, { backgroundColor: isDark ? '#262626' : '#EEE' }]} />
+                      ) : (
+                        <AppText type={TWELVE} style={{ color: themeColors.text }}>{twoFaQrData?.secret?.base32}</AppText>
+                      )}
+                    </AppText>
+                    <TouchableOpacity onPress={copyQrSecretCode} style={styles.copyBtn} disabled={!twoFaQrData}>
+                      <FastImage source={copyIcon} style={{ width: 18, height: 18 }} tintColor={twoFaQrData ? themeColors.text : themeColors.secondaryText} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <Button
+                  children="Next"
+                  onPress={() => setStep(2)}
+                  containerStyle={{ marginTop: 40, backgroundColor: themeColors.button }}
+                  disabled={!twoFaQrData}
+                />
+              </View>
+            )}
+
+            {step === 2 && (
+              <View>
+                {renderStepHeader(3, 'Input the 6-digits dynamic code from your Google Authenticator')}
+                <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 32, marginLeft: 44, lineHeight: 20 }}>
+                  In the Google Authenticator, Click + to add new account. You may scan the QR code or enter provided key to add your account on Google Authenticator.
+                </AppText>
+
+                <View style={{ marginLeft: 44 }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 12 }}>
+                    Google Authenticator Code
+                  </AppText>
+                  <OtpInput6Digit
+                    placeholder="Please Enter"
+                    value={gaCode}
+                    onChangeText={setGaCode}
+                    isDark={isDark}
+                  />
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 12 }}>
+                    6 digits code on your Google Authenticator
+                  </AppText>
+                </View>
+
+                <Button
+                  children="Confirm"
+                  onPress={handleFinalSubmit}
+                  loading={isLoading}
+                  containerStyle={{ marginTop: 40, backgroundColor: themeColors.button }}
+                  disabled={gaCode.length !== CODE_LENGTH || isLoading}
+                />
+              </View>
+            )}
+
+            <View style={[styles.notesContainer, { borderTopColor: themeColors.border }]}>
+              <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>Notes:</AppText>
+              <AppText type={TWELVE} style={styles.noteItem}>
+                1. Do not delete the Google verification code account in the Google Authenticator app, otherwise you will be restricted from account operations. If you are unable to enter the Google verification code due to phone loss, software uninstallation, etc., please contact the customer support via Email: <AppText type={TWELVE} style={{ color: '#AC8A51' }}>support@agce.com</AppText>
+              </AppText>
+              <AppText type={TWELVE} style={styles.noteItem}>
+                2. If it keeps prompting wrong Google verification code, please check and calibrate the phone time. The current time: <AppText weight={BOLD} type={TWELVE} style={{ color: themeColors.text }}>{serverTime}</AppText>
+              </AppText>
+              <AppText type={TWELVE} style={styles.noteItem}>
+                3. Google authentication adds a second layer of protection to your fund's safety. After enabling this feature, you will be required to enter the Google verification code every time you log in, or withdraw assets. This feature is currently available for iOS and Android devices.
+              </AppText>
+            </View>
           </View>
         </ScrollView>
-        {step === 0 && (
-          <View style={styles.bottomBtnWrap}>
-            <Button
-              children="Enable Google Authenticator"
-              onPress={() => setStep(1)}
-              containerStyle={styles.bottomBtn}
-            />
-          </View>
-        )}
       </KeyboardAvoidingView>
       <SpinnerSecond />
     </AppSafeAreaView>
@@ -256,31 +274,33 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   backIcon: { width: 22, height: 22 },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  scrollContentStep0: { padding: 20, paddingTop: 12 },
-  bottomBtnWrap: {
-    paddingHorizontal: 24,
-    paddingBottom: 34,
-    paddingTop: 16,
+  scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40 },
+  stepHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  stepCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  content: { flex: 1 },
+  storeRow: { flexDirection: 'row', marginTop: 10, marginLeft: 44 },
+  storeBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  bottomBtn: {},
-  content: { borderRadius: 16, overflow: 'hidden' },
-  imageWrap: { alignItems: 'center', justifyContent: 'center', marginVertical: 30 },
-  emailImage: { width: 180, height: 180 },
-  btn: { marginTop: 30 },
-  resendRow: { marginTop: 12, alignItems: 'flex-end' },
-  qrCodeContainer: { marginVertical: 20, alignItems: 'center' },
-  qrImage: { height: 200, width: 200 },
-  qrAddressRow: {
+  storeBtnTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  qrIconMini: { width: 14, height: 14, backgroundColor: '#888', borderRadius: 2, opacity: 0.3 },
+  qrBox: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: 8,
+    marginLeft: 44,
   },
-  qrAddressText: { flex: 1, fontSize: 13 },
-  qrCopyWrap: { padding: 8, marginLeft: 8 },
-  qrCopyIcon: { width: 18, height: 18 },
+  qrInner: { padding: 8, backgroundColor: '#fff', borderRadius: 8 },
+  qrImage: { width: 100, height: 100 },
+  qrPlaceholder: { width: 100, height: 100, borderRadius: 4 },
+  skeletonText: { width: 120, height: 14, borderRadius: 4, marginTop: 4 },
+  keyContent: { flex: 1, marginLeft: 16 },
+  copyBtn: { marginTop: 8 },
+  notesContainer: { marginTop: 48, paddingTop: 24, borderTopWidth: 1 },
+  noteItem: { color: '#888', marginBottom: 16, lineHeight: 18 }
 });

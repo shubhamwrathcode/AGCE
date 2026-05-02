@@ -759,10 +759,14 @@ export const generateTwoFactorQr = () => async (dispatch: AppDispatch) => {
 };
 
 /** Same as web: calls security/2fa/confirm with 6-digit code, refreshes profile. Caller closes sheet or goes back. */
-export const confirm2fa = (code: string) => async (dispatch: AppDispatch) => {
+export const confirm2fa = (code: string, identityProof?: any) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
-    const response: any = await appOperation.customer.security2faConfirm(code);
+    const params: any = { code };
+    if (identityProof?.otpCode) params.otpCode = identityProof.otpCode;
+    if (identityProof?.verifyMethod) params.verifyMethod = identityProof.verifyMethod;
+
+    const response: any = await appOperation.customer.security2faConfirm(params);
     if (response?.success) {
       dispatch(setTwoFaData(undefined));
       dispatch(getUserProfile());
@@ -797,8 +801,8 @@ export const disable2fa = (
       passkeyUserId ?? undefined
     );
     if (response?.success) {
-      dispatch(getUserProfile());
       showSuccess(response?.message || 'Google Authenticator disabled successfully');
+      dispatch(getUserProfile());
       return true;
     } else {
       showError(response?.message || 'Failed to disable Google Authenticator');

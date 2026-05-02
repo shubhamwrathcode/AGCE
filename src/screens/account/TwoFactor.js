@@ -28,11 +28,24 @@ import {
   checkIc,
   EMAIL,
   FINGERPRINT,
+  fundpass,
+  googleAuthenticator,
+  lock_ic,
   LOCK_ICON,
   PHONE,
   SECURITY_SHEIELD,
 } from '../../helper/ImageAssets';
-import { ADD_PHONE_NUMBER_SCREEN, ADD_EMAIL_SCREEN, SETUP_TWO_FACTOR_SCREEN, ADD_PASSKEY_SCREEN, CHANGE_EMAIL_SCREEN, CHANGE_MOBILE_SCREEN, VIEW_PASSKEYS_SCREEN, DISABLE_2FA_SCREEN } from '../../navigation/routes';
+import {
+  ADD_PHONE_NUMBER_SCREEN,
+  ADD_EMAIL_SCREEN,
+  SETUP_TWO_FACTOR_SCREEN,
+  ADD_PASSKEY_SCREEN,
+  CHANGE_EMAIL_SCREEN,
+  CHANGE_MOBILE_SCREEN,
+  VIEW_PASSKEYS_SCREEN,
+  DISABLE_2FA_SCREEN,
+  ANTI_PHISHING_CODE_SCREEN
+} from '../../navigation/routes';
 import {
   getUserProfile,
   getPasskeyList,
@@ -41,6 +54,7 @@ import { showError } from '../../helper/logger';
 import { Passkey } from 'react-native-passkey';
 import { useTheme } from "../../hooks/useTheme";
 import TouchableOpacityView from '../../common/TouchableOpacityView';
+import { lightTheme } from '../../theme/colors';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SHIMMER_STRIP = 180;
@@ -59,8 +73,7 @@ const TWO_FA_COPY = {
   },
   google: {
     title: 'Google Authenticator',
-    desc:
-      'Generates time-based one-time codes for secure login verification. Adds an extra layer of protection beyond passwords to prevent unauthorized access.',
+    desc: 'Generates time-based one-time codes for secure login verification. Adds an extra layer of protection beyond passwords to prevent unauthorized access.',
   },
   email: {
     title: 'Email Verification',
@@ -68,9 +81,40 @@ const TWO_FA_COPY = {
   },
   phone: {
     title: 'Phone Verification',
-    desc:
-      'Securely verifies user identity using SMS-based OTP. Ensures safe logins and protects sensitive actions with an added layer of security.',
+    desc: 'Securely verifies user identity using SMS-based OTP. Ensures safe logins and protects sensitive actions with an added layer of security.',
   },
+};
+
+const ADVANCED_SEC_COPY = {
+  title: 'Advanced Security',
+  subtitle: 'Add extra layers of protection to your account operations',
+  login2step: {
+    title: 'Login 2-Step Verification',
+    desc: 'Require 2FA verification when logging into your account',
+  },
+  antiPhishing: {
+    title: 'Anti-Phishing Code',
+    desc: 'Protects your account from phishing attempts by adding a unique code to all official emails. Ensures emails are genuinely from us.',
+  },
+  fundPassword: {
+    title: 'Fund Password',
+    desc: 'Adds an extra password layer for transactions and withdrawals. Ensures stronger protection for funds against unauthorized actions.',
+  },
+  withdrawalSettings: {
+    title: 'Withdrawal Settings',
+    desc: 'Manage addresses and withdrawal preferences. Adds extra security to fund transfers by requiring 2FA for unsaved addresses.',
+  }
+};
+
+const ACCOUNT_MGMT_COPY = {
+  disableAccount: {
+    title: 'Disable Account',
+    desc: 'Allows users to temporarily deactivate their account for added security. Prevents access and protects data until the account is re-enabled.'
+  },
+  closeAccount: {
+    title: 'Close Account',
+    desc: 'Permanently deletes the user account and associated data. Ensures complete removal of access and disables all related services.'
+  }
 };
 
 const maskTwoFaEmail = (email) => {
@@ -105,11 +149,12 @@ const TwoFaSimpleRow = ({
   actionLabel,
   onAction,
   disabled,
+  isLast,
 }) => (
-  <View style={[styles.simpleRow, { borderBottomColor: themeColors.border }]}>
+  <View style={[styles.simpleRow, !isLast && { borderBottomColor: themeColors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
     <View style={styles.simpleRowLeftWrapper}>
-      <View style={[styles.methodIconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F5F5F5' }]}>
-        <FastImage source={iconSource} style={styles.methodIconImg} tintColor={themeColors.text} resizeMode="contain" />
+      <View style={[styles.methodIconWrap, { backgroundColor: lightTheme.input }]}>
+        <FastImage source={iconSource} style={styles.methodIconImg} resizeMode="contain" />
       </View>
       <View style={styles.simpleRowLeft}>
         <View style={styles.simpleRowTitleWrap}>
@@ -127,26 +172,26 @@ const TwoFaSimpleRow = ({
     <View style={styles.simpleRowRight}>
       <View style={styles.simpleRowStatusWrap}>
         {isBooleanStatus && (
-          <FastImage 
-            source={checkIc} 
-            style={{ width: 14, height: 14, marginRight: 4 }} 
-            tintColor={hasValue ? themeColors.text : themeColors.secondaryText} 
-            resizeMode="contain" 
+          <FastImage
+            source={checkIc}
+            style={{ width: 14, height: 14, marginRight: 4 }}
+            tintColor={hasValue ? themeColors.text : themeColors.secondaryText}
+            resizeMode="contain"
           />
         )}
-        <AppText 
-          type={THIRTEEN} 
+        <AppText
+          type={THIRTEEN}
           style={{ color: hasValue && isBooleanStatus ? themeColors.text : themeColors.secondaryText }}
         >
           {hasValue ? statusText : 'off'}
         </AppText>
       </View>
-      <TouchableOpacityView 
-        activeOpacity={0.85} 
-        onPress={onAction} 
+      <TouchableOpacityView
+        activeOpacity={0.85}
+        onPress={onAction}
         disabled={disabled}
         style={[
-          styles.simpleActionBtn, 
+          styles.simpleActionBtn,
           { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F0F2F5', opacity: disabled ? 0.5 : 1 }
         ]}
       >
@@ -186,6 +231,20 @@ const ShimmerCell = ({ width: w, height, borderRadius = 6, style }) => {
     </View>
   );
 };
+
+const SecurityCard = ({ title, subtitle, children, themeColors, isDark, style }) => (
+  <View style={[styles.cardContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'transparent', borderColor: themeColors.border }, style]}>
+    {(title || subtitle) && (
+      <View style={[styles.cardHeader, { borderBottomColor: themeColors.border }]}>
+        {title && <AppText type={SIXTEEN} weight={BOLD} style={{ color: themeColors.text, marginBottom: subtitle ? 4 : 0 }}>{title}</AppText>}
+        {subtitle && <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>{subtitle}</AppText>}
+      </View>
+    )}
+    <View style={styles.cardBody}>
+      {children}
+    </View>
+  </View>
+);
 
 const TwoFaCardsSkeleton = () => {
   const { colors: themeColors, isDark } = useTheme();
@@ -299,6 +358,10 @@ const TwoFactor = () => {
     navigation.navigate(ADD_PASSKEY_SCREEN);
   };
 
+  const handleAntiPhishingStart = () => {
+    navigation.navigate(ANTI_PHISHING_CODE_SCREEN);
+  };
+
   const handleAddMobileStart = () => {
     if (!hasEmail && !hasMobile) {
       showError('You need email or mobile verification to add a mobile number');
@@ -312,7 +375,7 @@ const TwoFactor = () => {
       showError('Add another method first to change mobile');
       return;
     }
-    navigation.navigate(CHANGE_MOBILE_SCREEN);
+    navigation.navigate(ADD_PHONE_NUMBER_SCREEN);
   };
 
   const handleChangeEmailStart = () => {
@@ -320,7 +383,7 @@ const TwoFactor = () => {
       showError('Add another method first to change email');
       return;
     }
-    navigation.navigate(CHANGE_EMAIL_SCREEN);
+    navigation.navigate(ADD_EMAIL_SCREEN);
   };
 
   const onPasskeySwitch = (v) => {
@@ -338,7 +401,7 @@ const TwoFactor = () => {
           showError('You need an email or mobile number to set up Google Authenticator');
           return;
         }
-        navigation.navigate(SETUP_TWO_FACTOR_SCREEN);
+        navigation.navigate(ADD_EMAIL_SCREEN, { mode: 'verify_for_ga' });
       }
       return;
     }
@@ -350,7 +413,7 @@ const TwoFactor = () => {
       <View style={[styles.securityHeader, { borderBottomColor: themeColors.border }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={[styles.headerIconBtn, headerIconSurface(isDark)]}
+          style={[styles.headerIconBtn,]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <FastImage source={back_ic} style={styles.headerIconImg} tintColor={themeColors.text} resizeMode="contain" />
@@ -360,8 +423,7 @@ const TwoFactor = () => {
             Security
           </AppText>
         </View>
-        <View style={[styles.headerIconBtn, headerIconSurface(isDark)]}>
-          <FastImage source={SECURITY_SHEIELD} style={styles.headerShieldImg} resizeMode="contain" />
+        <View>
         </View>
       </View>
       <ScrollView
@@ -372,10 +434,10 @@ const TwoFactor = () => {
         <View style={styles.heroRow}>
           <View style={styles.heroTextBlock}>
             <AppText type={SIXTEEN} weight={BOLD} style={[styles.heroTitle, { color: themeColors.text }]}>
-              Two-Factor Authentication (2FA)
+              Security Settings
             </AppText>
             <AppText type={FOURTEEN} style={[styles.heroSubtitle, { color: themeColors.secondaryText }]}>
-              {TWO_FA_COPY.subtitle}
+              Take full control of your account security with advanced verification options like passkeys, email OTP, and mobile authentication for a safer experience.
             </AppText>
           </View>
           <View style={styles.heroImgWrap}>
@@ -387,74 +449,281 @@ const TwoFactor = () => {
           <TwoFaCardsSkeleton />
         ) : (
           <View style={styles.cardsStack}>
-            <TwoFaSimpleRow
+            <SecurityCard
+              title="Two-Factor Authentication (2FA)"
+              subtitle={TWO_FA_COPY.subtitle}
               themeColors={themeColors}
               isDark={isDark}
-              iconSource={FINGERPRINT}
-              title={TWO_FA_COPY.passkeys.title}
-              badge={
-                <View style={[styles.recommendedBadge, { backgroundColor: '#FEF6E5' }]}>
-                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: '#E09B36' }}>
-                    {TWO_FA_COPY.passkeys.recommended}
-                  </AppText>
-                </View>
-              }
-              description={TWO_FA_COPY.passkeys.desc}
-              hasValue={hasPasskey}
-              isBooleanStatus={true}
-              statusText="on"
-              actionLabel={hasPasskey ? "Change" : "Turn on"}
-              onAction={() => onPasskeySwitch(!hasPasskey)}
-              disabled={!passkeySupported && !hasPasskey}
-            />
-            <TwoFaSimpleRow
-              themeColors={themeColors}
-              isDark={isDark}
-              iconSource={LOCK_ICON}
-              title={TWO_FA_COPY.google.title}
-              description={TWO_FA_COPY.google.desc}
-              hasValue={hasGoogleAuth}
-              isBooleanStatus={true}
-              statusText="on"
-              actionLabel={hasGoogleAuth ? "Disable" : "Turn on"}
-              onAction={() => onGoogleSwitch(!hasGoogleAuth)}
-            />
-            <TwoFaSimpleRow
-              themeColors={themeColors}
-              isDark={isDark}
-              iconSource={EMAIL}
-              title={TWO_FA_COPY.email.title}
-              description={TWO_FA_COPY.email.desc}
-              hasValue={hasEmail}
-              isBooleanStatus={false}
-              statusText={maskTwoFaEmail(emailId)}
-              actionLabel={hasEmail ? 'Change' : 'Turn on'}
-              onAction={
-                !hasEmail
-                  ? () => {
+            >
+              <TwoFaSimpleRow
+                themeColors={themeColors}
+                isDark={isDark}
+                iconSource={FINGERPRINT}
+                title={TWO_FA_COPY.passkeys.title}
+                badge={
+                  <View style={[styles.recommendedBadge, { backgroundColor: '#FEF6E5' }]}>
+                    <AppText type={TEN} weight={SEMI_BOLD} style={{ color: '#E09B36' }}>
+                      {TWO_FA_COPY.passkeys.recommended}
+                    </AppText>
+                  </View>
+                }
+                description={TWO_FA_COPY.passkeys.desc}
+                hasValue={hasPasskey}
+                isBooleanStatus={true}
+                statusText="on"
+                actionLabel={hasPasskey ? "Change" : "Turn on"}
+                onAction={() => onPasskeySwitch(!hasPasskey)}
+                disabled={!passkeySupported && !hasPasskey}
+              />
+              <TwoFaSimpleRow
+                themeColors={themeColors}
+                isDark={isDark}
+                iconSource={googleAuthenticator}
+                title={TWO_FA_COPY.google.title}
+                description={TWO_FA_COPY.google.desc}
+                hasValue={hasGoogleAuth}
+                isBooleanStatus={true}
+                statusText="on"
+                actionLabel={hasGoogleAuth ? "Disable" : "Turn on"}
+                onAction={() => onGoogleSwitch(!hasGoogleAuth)}
+              />
+              <TwoFaSimpleRow
+                themeColors={themeColors}
+                isDark={isDark}
+                iconSource={EMAIL}
+                title={TWO_FA_COPY.email.title}
+                description={TWO_FA_COPY.email.desc}
+                hasValue={hasEmail}
+                isBooleanStatus={false}
+                statusText={maskTwoFaEmail(emailId)}
+                actionLabel={hasEmail ? 'Change' : 'Turn on'}
+                onAction={
+                  !hasEmail
+                    ? () => {
                       if (!hasMobile && !hasGoogleAuth) {
                         showError('No verification method available to add email');
                         return;
                       }
                       navigation.navigate(ADD_EMAIL_SCREEN);
                     }
-                  : handleChangeEmailStart
-              }
+                    : handleChangeEmailStart
+                }
+              />
+              <TwoFaSimpleRow
+                themeColors={themeColors}
+                isDark={isDark}
+                iconSource={PHONE}
+                title={TWO_FA_COPY.phone.title}
+                description={TWO_FA_COPY.phone.desc}
+                hasValue={hasMobile}
+                isBooleanStatus={true}
+                statusText="on"
+                actionLabel={hasMobile ? 'Change' : 'Turn on'}
+                onAction={!hasMobile ? handleAddMobileStart : handleChangeMobileStart}
+                isLast
+              />
+            </SecurityCard>
+          </View>
+        )}
+
+        <View style={styles.cardsStack}>
+          <SecurityCard
+            title="Password Management"
+            themeColors={themeColors}
+            isDark={isDark}
+            style={{ marginTop: 24 }}
+          >
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={lock_ic}
+              title="Password"
+              description="Protects account access with secure authentication. Helps prevent unauthorized logins."
+              hasValue={true}
+              isBooleanStatus={true}
+              statusText="on"
+              actionLabel="Change"
+              onAction={() => { showError("Password change pending"); }}
             />
             <TwoFaSimpleRow
               themeColors={themeColors}
               isDark={isDark}
-              iconSource={PHONE}
-              title={TWO_FA_COPY.phone.title}
-              description={TWO_FA_COPY.phone.desc}
-              hasValue={hasMobile}
+              iconSource={fundpass}
+              title={ADVANCED_SEC_COPY.fundPassword.title}
+              description={ADVANCED_SEC_COPY.fundPassword.desc}
+              hasValue={false} /* TODO: hook up to state */
               isBooleanStatus={true}
               statusText="on"
-              actionLabel={hasMobile ? 'Change' : 'Turn on'}
-              onAction={!hasMobile ? handleAddMobileStart : handleChangeMobileStart}
+              actionLabel="Setup"
+              onAction={() => { showError("Fund Password implementation pending"); }}
+              isLast
             />
-          </View>
-        )}
+          </SecurityCard>
+        </View>
+
+        <View style={styles.cardsStack}>
+          <SecurityCard
+            title={ADVANCED_SEC_COPY.title}
+            themeColors={themeColors}
+            isDark={isDark}
+            style={{ marginTop: 24 }}
+          >
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title={ADVANCED_SEC_COPY.login2step.title}
+              description={ADVANCED_SEC_COPY.login2step.desc}
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="on"
+              actionLabel="Change"
+              onAction={() => { showError("Login 2-Step Verification pending"); }}
+            />
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={SECURITY_SHEIELD}
+              title={ADVANCED_SEC_COPY.antiPhishing.title}
+              description={ADVANCED_SEC_COPY.antiPhishing.desc}
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="off"
+              actionLabel="Turn on"
+              onAction={handleAntiPhishingStart}
+            />
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title={ADVANCED_SEC_COPY.withdrawalSettings.title}
+              description={ADVANCED_SEC_COPY.withdrawalSettings.desc}
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="off"
+              actionLabel="Change"
+              onAction={() => { showError("Withdrawal settings pending"); }}
+            />
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title="Emergency Contact"
+              description="Adds a trusted contact for account recovery. Helps in case of emergencies."
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="off"
+              actionLabel="Turn on"
+              onAction={() => { showError("Emergency contact pending"); }}
+            />
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title="Account Connections"
+              description="Manages linked accounts and services. Helps control access and maintain security."
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="off"
+              actionLabel="Turn on"
+              onAction={() => { showError("Account connections pending"); }}
+              isLast
+            />
+          </SecurityCard>
+        </View>
+
+        <View style={styles.cardsStack}>
+          <SecurityCard
+            title="Devices & activity"
+            themeColors={themeColors}
+            isDark={isDark}
+            style={{ marginTop: 24 }}
+          >
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title="Authorized Devices"
+              description="Manages and recognizes trusted devices for secure account access. Helps prevent unauthorized logins by allowing access only from approved devices."
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="off"
+              actionLabel="Change"
+              onAction={() => { showError("Authorized devices pending"); }}
+            />
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title="Security Logs"
+              description="Tracks and records account activity, including logins and security actions. Helps monitor suspicious behavior and maintain account safety."
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="off"
+              actionLabel="View"
+              onAction={() => { showError("Security logs pending"); }}
+              isLast
+            />
+          </SecurityCard>
+        </View>
+
+        <View style={styles.cardsStack}>
+          <SecurityCard
+            title="Account Management"
+            themeColors={themeColors}
+            isDark={isDark}
+            style={{ marginTop: 24 }}
+          >
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title={ACCOUNT_MGMT_COPY.disableAccount.title}
+              description={ACCOUNT_MGMT_COPY.disableAccount.desc}
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="off"
+              actionLabel="Disable"
+              onAction={() => { showError("Disable account implementation pending"); }}
+            />
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title={ACCOUNT_MGMT_COPY.closeAccount.title}
+              description={ACCOUNT_MGMT_COPY.closeAccount.desc}
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="off"
+              actionLabel="Close"
+              onAction={() => { showError("Close account implementation pending"); }}
+              isLast
+            />
+          </SecurityCard>
+        </View>
+
+        <View style={styles.cardsStack}>
+          <SecurityCard
+            title="Other Settings"
+            themeColors={themeColors}
+            isDark={isDark}
+            style={{ marginTop: 24 }}
+          >
+            <TwoFaSimpleRow
+              themeColors={themeColors}
+              isDark={isDark}
+              iconSource={LOCK_ICON}
+              title="Third Party Account Access Management"
+              description="Controls and manages access granted to external apps and services. Helps protect account data by allowing users to review and revoke permissions anytime."
+              hasValue={false}
+              isBooleanStatus={true}
+              statusText="G"
+              actionLabel="Change"
+              onAction={() => { showError("Third party settings pending"); }}
+              isLast
+            />
+          </SecurityCard>
+        </View>
 
       </ScrollView>
     </AppSafeAreaView>
@@ -485,13 +754,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIconImg: { width: 22, height: 22 },
+  headerIconImg: { width: 20, height: 20 },
   headerShieldImg: { width: 24, height: 24 },
   securityHeaderTitleWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
+    right: 20
   },
   heroRow: {
     flexDirection: 'row',
@@ -577,5 +847,27 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     justifyContent: 'center',
     marginLeft: 8,
+  },
+  sectionHeader: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    lineHeight: 20,
+  },
+  cardContainer: {
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  cardBody: {
+    paddingHorizontal: 16,
   },
 });
