@@ -15,7 +15,6 @@ import SetPassword from "../screens/auth/SetPassword";
 import VerifyAccount from "../screens/auth/VerifyAccount";
 import AccountActivated from "../screens/auth/AccountActivated";
 import OtpVerify from "../screens/auth/OtpVerify";
-import ResetPassword from "../screens/auth/ResetPassword";
 import AuthVerificationScreen from "../screens/auth/AuthVerificationScreen";
 import FastImage from "react-native-fast-image";
 import { commonStyles } from "../theme/commonStyles";
@@ -40,6 +39,7 @@ import CmsPages from "../screens/account/CmsPages";
 import BankingSettings from "../screens/account/BankingSettings";
 import ChangePassword from "../screens/settings/ChangePassword";
 import AntiPhishingCode from "../screens/settings/AntiPhishingCode";
+import ResetPassword from "../screens/settings/ResetPassword";
 import CurrencyPreference from "../screens/account/CurrencyPreference";
 import CoinDetails from "../screens/trades/CoinDetails";
 import Withdraw from "../screens/other/Withdraw";
@@ -428,6 +428,14 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.ANTI_PHISHING_CODE_SCREEN}
         component={AntiPhishingCode}
+      />
+      <Stack.Screen
+        name={routes.FORGOT_PASSWORD_SCREEN}
+        component={ForgotPassword}
+      />
+      <Stack.Screen
+        name={routes.RESET_PASSWORD_FROM_CHANGE}
+        component={ResetPassword}
       />
     </Stack.Navigator>
   );

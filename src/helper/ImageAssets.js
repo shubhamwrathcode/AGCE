@@ -403,6 +403,8 @@ export const fundpass = require('../../assets/images/fundpass.png');
 export const security_risk_vector = require('../../assets/images/security_risk_vector.png');
 export const change_email_vector = require('../../assets/images/change_email_vector.png');
 export const playstore = require('../../assets/images/playstore.png');
+export const account_restrictions = require('../../assets/images/account_restrictions.png');
+
 
 
 

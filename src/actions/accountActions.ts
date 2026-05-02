@@ -1,6 +1,6 @@
-import {ACCOUNT_SCREEN, KYC_STATUS_SCREEN, LOGIN_SCREEN} from './../navigation/routes';
-import {appOperation} from '../appOperation';
-import {logger, showError, showSuccess} from '../helper/logger';
+import { ACCOUNT_SCREEN, KYC_STATUS_SCREEN, LOGIN_SCREEN } from './../navigation/routes';
+import { appOperation } from '../appOperation';
+import { logger, showError, showSuccess } from '../helper/logger';
 import {
   AlertsProps,
   ChangePasswordProps,
@@ -14,8 +14,8 @@ import {
   NAVIGATION_BOTTOM_TAB_STACK,
   TWO_FACTOR_QR_SCREEN,
 } from '../navigation/routes';
-import {setKycData, setUserBankData} from '../slices/accountSlice';
-import {setLoading, setLoadingOtp, setUserData} from '../slices/authSlice';
+import { setKycData, setUserBankData } from '../slices/accountSlice';
+import { setLoading, setLoadingOtp, setUserData } from '../slices/authSlice';
 import {
   setCurrency,
   setFlatInvestments,
@@ -26,9 +26,9 @@ import {
   setTwoFaData,
   setUserTickets,
 } from '../slices/homeSlice';
-import {AppDispatch} from '../store/store';
-import {logoutAction} from './authActions';
-import {getUserPortfolio, getUserPortfolioArbitrage, getUserPortfolioEarning, getUserPortfolioMain, getUserPortfolioSpot, getUserPortfolioSwap} from './walletActions';
+import { AppDispatch } from '../store/store';
+import { logoutAction } from './authActions';
+import { getUserPortfolio, getUserPortfolioArbitrage, getUserPortfolioEarning, getUserPortfolioMain, getUserPortfolioSpot, getUserPortfolioSwap } from './walletActions';
 import { Alert } from 'react-native';
 import { getReferralList } from './homeActions';
 import { Passkey } from 'react-native-passkey';
@@ -40,7 +40,7 @@ const toBase64URL = (str: string) =>
 
 /** Same as web /account-verification: calls verify-registration-token to get signId, registeredBy for OTP step */
 export const registerVerifyToken =
-  (setData = (data: any) => {}) => async (dispatch: AppDispatch) => {
+  (setData = (data: any) => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.verify_token();
@@ -62,35 +62,35 @@ export const registerVerifyToken =
 
 export const getUserProfile =
   (isNavigate = false, isHome = false, skipGlobalLoading = false) =>
-  async (dispatch: AppDispatch) => {
-    try {
-      if (!skipGlobalLoading) {
-        dispatch(setLoading(true));
-      }
-      const response: any = await appOperation.customer.get_profile();
-      if (response?.success) {
-        dispatch(setUserData(response?.data));
-        dispatch(setCurrency(response?.data?.currency_prefrence));
-        isNavigate ? NavigationService.goBack() : null;
-        isHome ? NavigationService.reset(NAVIGATION_BOTTOM_TAB_STACK) : null;
-      } else if (!response?.success || response?.code === 401) {
+    async (dispatch: AppDispatch) => {
+      try {
+        if (!skipGlobalLoading) {
+          dispatch(setLoading(true));
+        }
+        const response: any = await appOperation.customer.get_profile();
+        if (response?.success) {
+          dispatch(setUserData(response?.data));
+          dispatch(setCurrency(response?.data?.currency_prefrence));
+          isNavigate ? NavigationService.goBack() : null;
+          isHome ? NavigationService.reset(NAVIGATION_BOTTOM_TAB_STACK) : null;
+        } else if (!response?.success || response?.code === 401) {
+          NavigationService.reset(NAVIGATION_AUTH_STACK);
+        }
+        //  else {
+        //   NavigationService.reset(NAVIGATION_AUTH_STACK);
+        // }
+      } catch (e) {
+        logger(e);
+        // if (e?.code === 401 || e?.code === 403) {
         NavigationService.reset(NAVIGATION_AUTH_STACK);
+
+        // }
+      } finally {
+        if (!skipGlobalLoading) {
+          dispatch(setLoading(false));
+        }
       }
-      //  else {
-      //   NavigationService.reset(NAVIGATION_AUTH_STACK);
-      // }
-    } catch (e) {
-      logger(e);
-      // if (e?.code === 401 || e?.code === 403) {
-      NavigationService.reset(NAVIGATION_AUTH_STACK);
-      
-      // }
-    } finally {
-      if (!skipGlobalLoading) {
-        dispatch(setLoading(false));
-      }
-    }
-  };
+    };
 
 /**
  * After signup OTP verification: load profile and enter main app without sending user to Login.
@@ -115,8 +115,8 @@ export const enterMainAppAfterSignup =
     }
   };
 
-  
-  export const editUserAvatar =
+
+export const editUserAvatar =
   (data: FormData) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
@@ -129,7 +129,7 @@ export const enterMainAppAfterSignup =
         showError(response?.message || "Failed to update profile picture");
       }
     } catch (e) {
-      
+
       showError(e?.message);
 
       logger(e);
@@ -138,8 +138,8 @@ export const enterMainAppAfterSignup =
     }
   };
 
-  export const editEmail =
-  (data: any, onCloseEmail =()=>{}) => async (dispatch: AppDispatch) => {
+export const editEmail =
+  (data: any, onCloseEmail = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.edit_email(data);
@@ -152,7 +152,7 @@ export const enterMainAppAfterSignup =
         showError(response?.message || "Failed to update");
       }
     } catch (e) {
-      
+
       showError(e?.message);
 
       logger(e);
@@ -160,10 +160,10 @@ export const enterMainAppAfterSignup =
       dispatch(setLoading(false));
     }
   };
-  
 
-  export const editPhone =
-  (data: any, onCloseEmail =()=>{}) => async (dispatch: AppDispatch) => {
+
+export const editPhone =
+  (data: any, onCloseEmail = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.edit_phone(data);
@@ -176,7 +176,7 @@ export const enterMainAppAfterSignup =
         showError(response?.message || "Failed to update");
       }
     } catch (e) {
-      
+
       showError(e?.message);
 
       logger(e);
@@ -184,10 +184,10 @@ export const enterMainAppAfterSignup =
       dispatch(setLoading(false));
     }
   };
-  
 
-  export const editName =
-  (data: any, onCloseEmail =()=>{}) => async (dispatch: AppDispatch) => {
+
+export const editName =
+  (data: any, onCloseEmail = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.edit_name(data);
@@ -200,7 +200,7 @@ export const enterMainAppAfterSignup =
         showError(response?.message || "Failed to update");
       }
     } catch (e) {
-      
+
       showError(e?.message);
 
       logger(e);
@@ -209,10 +209,10 @@ export const enterMainAppAfterSignup =
     }
   };
 
-  
 
-  export const editNominee =
-  (data: any, onCloseEmail =()=>{}) => async (dispatch: AppDispatch) => {
+
+export const editNominee =
+  (data: any, onCloseEmail = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.edit_nominee(data);
@@ -225,7 +225,7 @@ export const enterMainAppAfterSignup =
         showError(response?.message || "Failed to update");
       }
     } catch (e) {
-      
+
       showError(e?.message);
 
       logger(e);
@@ -247,7 +247,7 @@ export const editUserProfile =
         showError(response?.message);
       }
     } catch (e) {
-      
+
       showError(e?.message);
 
       logger(e);
@@ -260,6 +260,28 @@ export const changePassword =
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.change_password(data);
+
+      if (response?.success) {
+        showSuccess(response?.message || 'Password changed successfully.');
+        return true;
+      } else {
+        showError(response?.message || 'Failed to change password');
+        return false;
+      }
+    } catch (e: any) {
+      logger(e);
+      showError(e?.message || 'Something went wrong');
+      return false;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
+export const securityChangePasswordAction =
+  (data: any) => async (dispatch: AppDispatch) => {
+    try {
+      dispatch(setLoading(true));
+      const response: any = await appOperation.customer.security_change_password(data);
 
       if (response?.success) {
         showSuccess(response?.message || 'Password changed successfully.');
@@ -511,8 +533,8 @@ export const updateBankAccount =
     }
   };
 
-  export const submitTicket =
-  (data: FormData,handleResetInput =() => {}) => async (dispatch: AppDispatch) => {
+export const submitTicket =
+  (data: FormData, handleResetInput = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.submit_ticket(data);
@@ -532,8 +554,8 @@ export const updateBankAccount =
     }
   };
 
-  export const ticketMessages =
-  (data: any, setMessage = () => {}) => async (dispatch: AppDispatch) => {
+export const ticketMessages =
+  (data: any, setMessage = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.ticket_messages(data);
@@ -554,7 +576,7 @@ export const updateBankAccount =
     }
   };
 
-  
+
 export const deleteBankAccount = (id: any) => async (dispatch: AppDispatch) => {
   try {
     let data = {
@@ -623,8 +645,8 @@ export const getDownline = (sponsorId: any, level: any) => async (dispatch: AppD
     if (response.success) {
       dispatch(setTreeRoot(response?.data));
       const flat = flattenTreeInvestments(response?.data);
-                    flat.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
-                    dispatch(setFlatInvestments(flat));
+      flat.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
+      dispatch(setFlatInvestments(flat));
     }
   } catch (e) {
     logger(e);
@@ -638,28 +660,28 @@ const flattenTreeInvestments = (node: { total_invested_amount: any[]; name: any;
 
   // Add self investments
   if (node?.total_invested_amount?.length > 0) {
-      node.total_invested_amount.forEach((inv) => {
-          investments.push({
-              userName: node.name,
-              email: node.emailId,
-              level: node.level || 0,
-              amount: inv.amount?.$numberDecimal || inv.amount,
-              currency: inv.currency,
-              investmentId: inv.investmentId,
-              status: inv.status,
-              self_roi_percent: inv.self_roi_percent,
-              your_upline_percent: inv.your_upline_percent,
-              date: inv.createdAt,
-              type: inv.type || (node.level === 0 ? 'self' : 'downline')
-          });
+    node.total_invested_amount.forEach((inv) => {
+      investments.push({
+        userName: node.name,
+        email: node.emailId,
+        level: node.level || 0,
+        amount: inv.amount?.$numberDecimal || inv.amount,
+        currency: inv.currency,
+        investmentId: inv.investmentId,
+        status: inv.status,
+        self_roi_percent: inv.self_roi_percent,
+        your_upline_percent: inv.your_upline_percent,
+        date: inv.createdAt,
+        type: inv.type || (node.level === 0 ? 'self' : 'downline')
       });
+    });
   }
 
   // Recursively handle referrals
   if (node?.referrals?.length > 0) {
-      node.referrals.forEach((child) => {
-          investments = [...investments, ...flattenTreeInvestments(child)];
-      });
+    node.referrals.forEach((child) => {
+      investments = [...investments, ...flattenTreeInvestments(child)];
+    });
   }
 
   return investments;
@@ -704,7 +726,7 @@ export const getTicketCategories = (setCategories: any, setPriorities: any) => a
 
 export const deleteAccount = () => async (dispatch: AppDispatch) => {
   try {
-    let data = {status: 'Inactive'};
+    let data = { status: 'Inactive' };
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.delete_account(data);
     if (response.success) {
@@ -1276,3 +1298,4 @@ export const removeAntiPhishingCode = (data: { verifyMethod: string; code?: stri
     dispatch(setLoading(false));
   }
 };
+

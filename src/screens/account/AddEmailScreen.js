@@ -85,11 +85,13 @@ const AddEmailScreen = () => {
   const hasMobile = !!profileMobile;
   const hasGoogleAuth = (userData?.['2fa'] ?? 0) === 2;
 
-  const firstStep = navigationMode === 'verify_for_ga' ? 1 : (hasEmail ? -1 : 1);
+  const firstStep = (navigationMode === 'verify_for_ga' || navigationMode === 'verify_for_password_change') ? 1 : (hasEmail ? -1 : 1);
   const [step, setStep] = useState(firstStep);
   const [warnA, setWarnA] = useState(false);
   const [warnB, setWarnB] = useState(false);
-  const [verifyMethod, setVerifyMethod] = useState(hasEmail ? 'email' : (hasGoogleAuth ? 'totp' : 'mobile'));
+
+  const initialMethod = route?.params?.preferredMethod;
+  const [verifyMethod, setVerifyMethod] = useState(initialMethod || (hasEmail ? 'email' : (hasGoogleAuth ? 'totp' : 'mobile')));
   const [googleCode, setGoogleCode] = useState('');
   const [mobileOtp, setMobileOtp] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -141,6 +143,12 @@ const AddEmailScreen = () => {
     identityProofRef.current = { verifyMethod, otpCode: code };
     if (navigationMode === 'verify_for_ga') {
       navigation.navigate(SETUP_TWO_FACTOR_SCREEN, { identityProof: identityProofRef.current });
+    } else if (navigationMode === 'verify_for_password_change') {
+      navigation.navigate(routes.CHANGE_PASSWORD_SCREEN, {
+        verifyMethod: identityProofRef.current.verifyMethod,
+        otpCode: identityProofRef.current.otpCode,
+        verified: true,
+      });
     } else {
       setStep(2);
     }
@@ -148,7 +156,8 @@ const AddEmailScreen = () => {
 
   const handleSendOtpIdentity = async (method = verifyMethod) => {
     if (method === 'totp') return;
-    const ok = await dispatch(sendSecurityOtp(method, hasEmail ? 'change_email' : 'add_email'));
+    const purpose = (navigationMode === 'verify_for_password_change') ? 'change_password' : (hasEmail ? 'change_email' : 'add_email');
+    const ok = await dispatch(sendSecurityOtp(method, purpose));
     if (ok) {
       setResendTimerAddEmail(60);
       otpSentForRef.current = [...new Set([...otpSentForRef.current, method])];
@@ -238,7 +247,7 @@ const AddEmailScreen = () => {
             <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
           <AppText weight={BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text, marginLeft: 12 }]}>
-            {navigationMode === 'verify_for_ga' ? 'Email Verification' : (hasEmail ? 'Change Email' : 'Add Email')}
+            {navigationMode === 'verify_for_ga' || navigationMode === 'verify_for_password_change' ? 'Security Verification' : (hasEmail ? 'Change Email' : 'Add Email')}
           </AppText>
         </View>
 

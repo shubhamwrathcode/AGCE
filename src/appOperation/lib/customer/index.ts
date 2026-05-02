@@ -58,6 +58,8 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('user/change_password', data, CUSTOMER_TYPE),
   change_currency: (data: CurrencyPreferenceProps) =>
     appOperation.put('user/currency-preference', data, CUSTOMER_TYPE),
+  security_change_password: (data: any) =>
+    appOperation.post('security/change-password', data, CUSTOMER_TYPE),
   user_portfolio: (id: any) =>
     appOperation.get(
       `wallet/estimated-portfolio?walletType=${id}`,
