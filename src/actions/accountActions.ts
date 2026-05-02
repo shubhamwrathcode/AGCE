@@ -355,6 +355,7 @@ export const createKycSession = (userDetails: any) => async (dispatch: AppDispat
       ...(phone && phone.length > 4 ? { phone } : {}),
       ...(userDetails?.firstName ? { firstName: String(userDetails.firstName) } : {}),
       ...(userDetails?.lastName ? { lastName: String(userDetails.lastName) } : {}),
+      returnUrl: "agce://kyc_return",
     };
 
     const response: any = await appOperation.customer.create_kyc_session(body);

@@ -30,11 +30,13 @@ import {
   Trade_ic,
   p2pIcon2,
   tradeIcon,
+  progress_icon_pending,
+  verification_reject,
 } from "../../helper/ImageAssets";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { borderWidth, universalPaddingHorizontal, universalPaddingHorizontalHigh } from "../../theme/dimens";
 import NavigationService from "../../navigation/NavigationService";
-import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, TRADE_SCREEN, NAVIGATION_BOTTOM_TAB_STACK, NAVIGATION_TRADE_STACK } from "../../navigation/routes";
+import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, TRADE_SCREEN, NAVIGATION_BOTTOM_TAB_STACK, NAVIGATION_TRADE_STACK, CONTACT_US_SCREEN } from "../../navigation/routes";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLoading } from "../../slices/authSlice";
@@ -181,22 +183,21 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
       <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 20 }}>
         Manage your identity verification and unlock platform features
       </AppText>
-      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 20 }]}>
-        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 16 }]}>
+        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 12 }}>
           Standard Identity Verification
         </AppText>
 
-        <View style={{ backgroundColor: themeColors.themeElevationColor, padding: 16, borderRadius: 12, marginBottom: 20 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-            <FastImage source={kyc_pending} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
-            <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Verification In Review</AppText>
-          </View>
-          <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+        <View style={{
+          backgroundColor: themeColors.themeElevationColor,
+          borderRadius: 8,
+        }}>
+          <FastImage source={progress_icon_pending} style={{ width: 40, height: 40, marginBottom: 12 }} resizeMode="contain" />
+          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Verification In Review</AppText>
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
             Your verification is being processed and is currently under review. This may take a few moments. We’ll notify you once it’s approved or if any additional information is required.
           </AppText>
         </View>
-
-        <FastImage source={kyc_verification_vector} resizeMode="contain" style={{ width: 180, height: 180, alignSelf: "center" }} />
       </View>
       <LockedFeatures />
     </View>
@@ -204,40 +205,67 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
 };
 
 const KycRejected = ({ onVerifyPress }) => {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
+  const isLoading = useAppSelector((state) => state.auth.isLoading);
   const kyc_reject_reason = userData?.kyc_reject_reason;
+
+  const displayName = userData?.email ? `User-${userData.email.split('@')[0].slice(0, 8)}` : "AGCE User";
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <View style={{ flex: 1, marginTop: 8 }}>
-      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 20 }}>
+      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 16 }}>
         Manage your identity verification and unlock platform features
       </AppText>
-      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 20 }]}>
-        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
-          Standard Identity Verification
-        </AppText>
 
-        <View style={{ backgroundColor: themeColors.themeElevationColor, padding: 16, borderRadius: 12, marginBottom: 20 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-            <FastImage source={closeIcon} tintColor={themeColors.red} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
-            <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.red }}>Verification Incomplete</AppText>
+      <View style={{ marginBottom: 24, paddingHorizontal: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
+          <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#8B5CF6', alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>{initials}</AppText>
           </View>
-          <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
-            {kyc_reject_reason || "Your identity verification is currently incomplete. To complete the process, please submit the required information and finish facial recognition."}
-          </AppText>
+          <View style={{ flex: 1 }}>
+            <AppText type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>{displayName}</AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: themeColors.red, marginRight: 6 }} />
+              <AppText type={TWELVE} style={{ color: themeColors.red }}>Verification Failed</AppText>
+            </View>
+          </View>
         </View>
 
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
+        <View style={{
+          backgroundColor: themeColors.themeElevationColor,
+          padding: 16,
+          borderRadius: 8,
+          borderLeftWidth: 4,
+          borderLeftColor: themeColors.red,
+          flexDirection: "row",
+          marginBottom: 24
+        }}>
+          <FastImage source={verification_reject} style={{ width: 22, height: 22, marginRight: 12, marginTop: 2 }} resizeMode="contain" />
+          <View style={{ flex: 1 }}>
+            <AppText type={FIFTEEN} style={{ color: themeColors.text, marginBottom: 8 }}>Verification Incomplete</AppText>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 22 }}>
+              {kyc_reject_reason || "Your identity verification is currently incomplete. To complete the process, please submit the required information and finish facial recognition."}
+            </AppText>
+          </View>
+        </View>
+
+        <View style={{ gap: 12 }}>
           <Button
             children="Try Again"
             onPress={onVerifyPress}
-            containerStyle={{ flex: 1, height: 42, backgroundColor: themeColors.button, borderRadius: 24 }}
-            titleStyle={{ fontSize: 13, color: themeColors.buttonText }}
+            loading={isLoading}
+            containerStyle={{ width: '100%', height: 48, backgroundColor: isDark ? themeColors.text : '#28282D', borderRadius: 24 }}
+            titleStyle={{ fontSize: 14, color: isDark ? themeColors.background : '#FFFFFF' }}
           />
+          <TouchableOpacity
+            style={{ width: '100%', height: 48, borderRadius: 24, borderWidth: 1, borderColor: themeColors.border, alignItems: 'center', justifyContent: 'center' }}
+            onPress={() => NavigationService.navigate(CONTACT_US_SCREEN)}
+          >
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Need Help?</AppText>
+          </TouchableOpacity>
         </View>
-
-        <FastImage source={kyc_verification_vector} resizeMode="contain" style={{ width: 180, height: 180, alignSelf: "center" }} />
       </View>
       <LockedFeatures />
     </View>
@@ -246,6 +274,7 @@ const KycRejected = ({ onVerifyPress }) => {
 
 const KycDue = ({ onVerifyPress }) => {
   const { colors: themeColors } = useTheme();
+  const isLoading = useAppSelector((state) => state.auth.isLoading);
 
   return (
     <View style={{ flex: 1, marginTop: 8 }}>
@@ -270,6 +299,7 @@ const KycDue = ({ onVerifyPress }) => {
         <Button
           children="Verify Now"
           onPress={onVerifyPress}
+          loading={isLoading}
           containerStyle={{ width: '100%', padding: 10, alignSelf: "center", backgroundColor: themeColors.button, borderRadius: 24, marginTop: 10 }}
           titleStyle={{ fontSize: 13, color: themeColors.buttonText }}
         />
@@ -371,13 +401,17 @@ const KycStatus = () => {
     dispatch(getUserProfile());
   }, [dispatch]);
 
+  // Initial Fetch & Polling
   useEffect(() => {
     let mounted = true;
-    (async () => {
+
+    const fetchStatus = async () => {
       const data = await dispatch(getKycStatus());
       if (!mounted) return;
-      dispatch(setLoading(false));
+      
       setContentLoading(false);
+      dispatch(setLoading(false));
+
       if (!data) return;
       setIdDocStatus(data.id_document_status ?? null);
       setTaxDocStatus(data.tax_document_status ?? null);
@@ -392,9 +426,24 @@ const KycStatus = () => {
       if (data.needs_resubmission) {
         setDocumentsToResubmit(data.documents_needing_resubmission || []);
       }
-    })();
-    return () => { mounted = false; };
-  }, [dispatch, userData?.kycVerified]);
+    };
+
+    fetchStatus(); // initial fetch
+
+    // Poll every 3 seconds if not Approved (2) or Rejected (3)
+    let intervalId = null;
+    if (kycVerified !== 2 && kycVerified !== 3) {
+      intervalId = setInterval(() => {
+        dispatch(getUserProfile(false, false, true)); // Skip global loading
+        fetchStatus();
+      }, 3000);
+    }
+
+    return () => {
+      mounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [dispatch, kycVerified]);
 
   const getRejectReason = (docType) => {
     const doc = documentsToResubmit.find((d) => d.type === docType);

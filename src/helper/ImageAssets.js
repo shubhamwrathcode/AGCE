@@ -396,6 +396,11 @@ export const withdrawal_icon2 = require('../../assets/images/withdrawal_icon2.pn
 export const deposit_icon2 = require('../../assets/images/deposit_icon2.png')
 export const tradeIcon = require('../../assets/images/tradeIcon.png');
 export const p2pIcon2 = require('../../assets/images/p2pIcon2.png');
+export const progress_icon_pending = require('../../assets/images/progress_icon_pending.png');
+export const verification_reject = require('../../assets/images/verification_reject.png');
+
+
+
 
 
 
