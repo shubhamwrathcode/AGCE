@@ -32,15 +32,17 @@ import {
   passkey_login,
   security_risk_vector,
   right_ic,
-  ADD_EMAIL_SCREEN,
-  ADD_PHONE_NUMBER_SCREEN,
-  SETUP_TWO_FACTOR_SCREEN,
   EMAIL_VERIFY,
   PHONE_VERIFY,
   GOOGLE_VERIFY,
   PASSKEY_VERIFY,
   pasteImg,
 } from '../../helper/ImageAssets';
+import {
+  ADD_EMAIL_SCREEN,
+  ADD_PHONE_NUMBER_SCREEN,
+  SETUP_TWO_FACTOR_SCREEN,
+} from '../../navigation/routes';
 import {
   sendSecurityOtp,
   verifySecurityOtp,
@@ -106,6 +108,56 @@ const AddPasskeyScreen = () => {
 
   const isSecuritySatisfied = getActiveMethodsCount() >= 2;
 
+  const getVerifyTitle = () => {
+    switch (verifyMethod) {
+      case 'totp': return 'Google Authenticator';
+      case 'email': return 'Email Verification';
+      case 'mobile': return 'Phone Verification';
+      default: return 'Identity Verification';
+    }
+  };
+
+  const getVerifyDesc = () => {
+    switch (verifyMethod) {
+      case 'totp': return 'Enter the 6-digit code from your authenticator app';
+      case 'email': return `Please enter the 6-digit code sent to ${maskEmail(emailId)}`;
+      case 'mobile': return `Please enter the 6-digit code sent to ${maskPhone(mobileNumber)}`;
+      default: return 'Please verify your identity to continue';
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (verifyMethod === 'totp') return;
+    const ok = await dispatch(sendSecurityOtp(verifyMethod, 'add_passkey'));
+    if (ok) {
+      setResendTimer(60);
+    }
+  };
+
+  const switchToVerification = () => {
+    if (!isSecuritySatisfied) {
+      setStep(2);
+      return;
+    }
+    setStep(1);
+    if (verifyMethod !== 'totp') {
+      handleSendOtp();
+    }
+  };
+
+  const handleVerifyIdentity = async () => {
+    let ok = false;
+    if (verifyMethod === 'totp') {
+      ok = await dispatch(verifySecurityTotp(otpCode, 'add_passkey'));
+    } else {
+      ok = await dispatch(verifySecurityOtp(verifyMethod, otpCode, 'add_passkey'));
+    }
+
+    if (ok) {
+      handleRegisterPasskey();
+    }
+  };
+
   useEffect(() => {
     try {
       setPasskeySupported(!!Passkey.isSupported());
@@ -113,10 +165,16 @@ const AddPasskeyScreen = () => {
       setPasskeySupported(false);
     }
 
-    // Set dynamic passkey name like web
     const name = emailId ? `Exchange - ${emailId.split('@')[0]}` : 'Exchange Passkey';
     setPasskeyName(name);
   }, [emailId]);
+
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const t = setInterval(() => setResendTimer(p => p - 1), 1000);
+      return () => clearInterval(t);
+    }
+  }, [resendTimer]);
 
   useEffect(() => {
     const methods = [];
@@ -195,8 +253,6 @@ const AddPasskeyScreen = () => {
   };
 
   const renderIntroStep = () => {
-    if (!isSecuritySatisfied) return renderRiskStep();
-
     return (
       <View style={styles.introContainer}>
         <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, fontSize: 24, marginBottom: 12 }}>
@@ -245,7 +301,7 @@ const AddPasskeyScreen = () => {
         <View style={styles.bottomBtnWrap}>
           <Button
             children="Add a Passkey"
-            onPress={handleRegisterPasskey}
+            onPress={switchToVerification}
             containerStyle={{ backgroundColor: '#2B2E33', borderRadius: 25, height: 50 }}
             textStyle={{ fontSize: 16 }}
           />
@@ -265,7 +321,7 @@ const AddPasskeyScreen = () => {
         </View>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {step === 0 ? renderIntroStep() : (
+          {step === 0 ? renderIntroStep() : step === 2 ? renderRiskStep() : (
             <View style={{ paddingTop: 10 }}>
               <View style={{ marginBottom: 24 }}>
                 <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>

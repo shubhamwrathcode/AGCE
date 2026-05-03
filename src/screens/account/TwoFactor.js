@@ -8,6 +8,7 @@ import {
   Platform,
   TouchableOpacity,
   Switch,
+  Modal,
 } from 'react-native';
 import {
   AppSafeAreaView,
@@ -20,6 +21,7 @@ import {
   THIRTEEN,
   ELEVEN,
   EIGHTEEN,
+  Button,
 } from '../../shared';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -53,6 +55,7 @@ import {
   getUserProfile,
   getPasskeyList,
   sendSecurityOtp,
+  getFundPasswordStatusAction,
 } from '../../actions/accountActions';
 import { showError } from '../../helper/logger';
 import { Passkey } from 'react-native-passkey';
@@ -131,9 +134,9 @@ const maskTwoFaEmail = (email) => {
 
 const maskTwoFaPhone = (phone) => {
   if (!phone) return '';
-  const cleaned = String(phone).replace(/\s/g, '');
-  if (cleaned.length < 4) return phone;
-  return '****' + cleaned.slice(-4);
+  const str = String(phone).replace(/\s/g, '');
+  if (str.length < 7) return str;
+  return str.substring(0, 3) + '****' + str.slice(-4);
 };
 
 const headerIconSurface = (isDark) => ({
@@ -157,7 +160,7 @@ const TwoFaSimpleRow = ({
 }) => (
   <View style={[styles.simpleRow, !isLast && { borderBottomColor: themeColors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
     <View style={styles.simpleRowLeftWrapper}>
-      <View style={[styles.methodIconWrap, { backgroundColor: lightTheme.input }]}>
+      <View style={[styles.methodIconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#EAEDF0' }]}>
         <FastImage source={iconSource} style={styles.methodIconImg} resizeMode="contain" />
       </View>
       <View style={styles.simpleRowLeft}>
@@ -280,23 +283,28 @@ const TwoFactor = () => {
   const userData = useAppSelector((state) => state.auth.userData);
   const current2fa = userData?.['2fa'] ?? 0;
   const profileMobile = userData?.mobileNumber ?? userData?.mobile_number ?? '';
+  const profileCountryCode = userData?.country_code ?? userData?.countryCode ?? '';
+  const mobileNumber = profileCountryCode && profileMobile ? `${profileCountryCode} ${profileMobile}`.trim() : profileMobile || '';
   const emailId = userData?.emailId ?? userData?.email_id ?? '';
   const hasEmail = !!emailId;
   const hasMobile = !!profileMobile;
   const hasGoogleAuth = current2fa === 2;
+  
+  const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
   const effectiveHasFundPassword =
-    userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet;
+    fundPasswordStatus ?? (userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
 
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [passkeys, setPasskeys] = useState([]);
   const hasPasskey = passkeys.length > 0;
   const [contentLoading, setContentLoading] = useState(true);
 
-  // Modals
-  const [isPasswordChangeModalOpen, setPasswordChangeModalOpen] = useState(false);
-  const [isFundPasswordModalOpen, setFundPasswordModalOpen] = useState(false);
+  const [isRestrictModalOpen, setRestrictModalOpen] = useState(false);
+  const [pendingChangeType, setPendingChangeType] = useState('login'); // 'login' or 'fund'
+  const isFund = pendingChangeType === 'fund';
   const profileDone = useRef(false);
   const passkeysDone = useRef(false);
+  const fundDone = useRef(false);
 
   const checkPasskeySupport = () => {
     try {
@@ -316,7 +324,18 @@ const TwoFactor = () => {
     } catch (_) {
     } finally {
       passkeysDone.current = true;
-      if (profileDone.current) setContentLoading(false);
+      if (profileDone.current && fundDone.current) setContentLoading(false);
+    }
+  };
+
+  const fetchFundStatus = async () => {
+    try {
+      const res = await dispatch(getFundPasswordStatusAction());
+      setFundPasswordStatus(!!res);
+    } catch (_) {
+    } finally {
+      fundDone.current = true;
+      if (profileDone.current && passkeysDone.current) setContentLoading(false);
     }
   };
 
@@ -328,12 +347,14 @@ const TwoFactor = () => {
     React.useCallback(() => {
       profileDone.current = false;
       passkeysDone.current = false;
+      fundDone.current = false;
       setContentLoading(true);
       dispatch(getUserProfile()).then(() => {
         profileDone.current = true;
-        if (passkeysDone.current) setContentLoading(false);
+        if (passkeysDone.current && fundDone.current) setContentLoading(false);
       });
       fetchPasskeys();
+      fetchFundStatus();
     }, [])
   );
 
@@ -373,8 +394,8 @@ const TwoFactor = () => {
   };
 
   const handleAddMobileStart = () => {
-    if (!hasEmail && !hasMobile) {
-      showError('You need email or mobile verification to add a mobile number');
+    if (!hasEmail && !hasGoogleAuth && !hasPasskey) {
+      showError('You need email, Google Authenticator, or a Passkey to add a mobile number');
       return;
     }
     navigation.navigate(ADD_PHONE_NUMBER_SCREEN);
@@ -407,11 +428,21 @@ const TwoFactor = () => {
   const onGoogleSwitch = (v) => {
     if (v) {
       if (!hasGoogleAuth) {
-        if (!hasEmail && !hasMobile) {
-          showError('You need an email or mobile number to set up Google Authenticator');
+        if (!hasEmail && !hasMobile && !hasPasskey) {
+          showError('You need an email, mobile number, or Passkey to set up Google Authenticator');
           return;
         }
-        navigation.navigate(SETUP_TWO_FACTOR_SCREEN);
+        
+        // Pick preferred method: Passkey > Email > Mobile
+        let preferred = 'email';
+        if (hasPasskey) preferred = 'passkey';
+        else if (hasEmail) preferred = 'email';
+        else if (hasMobile) preferred = 'mobile';
+
+        navigation.navigate(ADD_EMAIL_SCREEN, { 
+          mode: 'verify_for_ga',
+          preferredMethod: preferred
+        });
       }
       return;
     }
@@ -419,31 +450,18 @@ const TwoFactor = () => {
   };
 
   const handlePasswordChangePress = () => {
-    setPasswordChangeModalOpen(true);
-  };
-
-  const proceedToPasswordChange = async () => {
-    // Pick preferred method: Passkey > TOTP > Email > Mobile
-    let preferred = null;
-    if (hasPasskey && passkeySupported) preferred = 'passkey';
-    else if (hasGoogleAuth) preferred = 'totp';
-    else if (hasEmail) preferred = 'email';
-    else if (hasMobile) preferred = 'mobile';
-
-    if (!preferred) {
-      showError('No verification method available. Please enable Email, Mobile or Google Authenticator.');
-      return;
-    }
-
-    setPasswordChangeModalOpen(false);
-    navigation.navigate(ADD_EMAIL_SCREEN, { 
-      mode: 'verify_for_password_change',
-      preferredMethod: preferred
-    });
+    setPendingChangeType('login');
+    setRestrictModalOpen(true);
   };
 
   const handleFundPasswordPress = () => {
-    setFundPasswordModalOpen(true);
+    setPendingChangeType('fund');
+    setRestrictModalOpen(true);
+  };
+
+  const handleRestrictConfirm = () => {
+    setRestrictModalOpen(false);
+    navigation.navigate(CHANGE_PASSWORD_SCREEN, { type: pendingChangeType });
   };
 
   return (
@@ -509,7 +527,7 @@ const TwoFactor = () => {
                 hasValue={hasPasskey}
                 isBooleanStatus={true}
                 statusText="on"
-                actionLabel={hasPasskey ? "Change" : "Turn on"}
+                actionLabel={hasPasskey ? "Manage" : "Turn on"}
                 onAction={() => onPasskeySwitch(!hasPasskey)}
                 disabled={!passkeySupported && !hasPasskey}
               />
@@ -538,7 +556,7 @@ const TwoFactor = () => {
                 onAction={
                   !hasEmail
                     ? () => {
-                      if (!hasMobile && !hasGoogleAuth) {
+                      if (!hasMobile && !hasGoogleAuth && !hasPasskey) {
                         showError('No verification method available to add email');
                         return;
                       }
@@ -554,8 +572,8 @@ const TwoFactor = () => {
                 title={TWO_FA_COPY.phone.title}
                 description={TWO_FA_COPY.phone.desc}
                 hasValue={hasMobile}
-                isBooleanStatus={true}
-                statusText="on"
+                isBooleanStatus={false}
+                statusText={maskTwoFaPhone(mobileNumber)}
                 actionLabel={hasMobile ? 'Change' : 'Turn on'}
                 onAction={!hasMobile ? handleAddMobileStart : handleChangeMobileStart}
                 isLast
@@ -765,99 +783,50 @@ const TwoFactor = () => {
 
       </ScrollView>
 
-      {/* Fund Password Confirmation Modal */}
-      {isFundPasswordModalOpen && (
-        <View style={StyleSheet.absoluteFill}>
-          <TouchableOpacity
-            activeOpacity={1}
-            style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}
-            onPress={() => setFundPasswordModalOpen(false)}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              style={[styles.confirmModal, { backgroundColor: themeColors.card }]}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View style={styles.confirmBody}>
-                <FastImage source={account_restrictions} style={styles.confirmIcon} resizeMode="contain" />
-                <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, textAlign: 'center', alignSelf: 'center', marginTop: 12 }}>
-                  {effectiveHasFundPassword ? 'Change Fund Password?' : 'Set Fund Password?'}
-                </AppText>
-                <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, textAlign: 'center', lineHeight: 22, marginTop: 8, paddingHorizontal: 10 }}>
-                  For the security of your assets, withdrawals and P2P selling will be temporarily locked for{' '}
-                  <AppText weight={BOLD} style={{ color: themeColors.text }}>24 hours</AppText> after you set or change your fund password.
-                </AppText>
-              </View>
-
-              <View style={styles.confirmActions}>
-                <TouchableOpacityView
-                  onPress={() => setFundPasswordModalOpen(false)}
-                  style={[styles.cancelBtn, { borderColor: themeColors.border }]}
-                >
-                  <AppText weight={SEMI_BOLD} style={{ color: themeColors.text }}>Cancel</AppText>
-                </TouchableOpacityView>
-                <TouchableOpacityView
-                  onPress={() => {
-                    setFundPasswordModalOpen(false);
-                    showError("Fund Password setup coming soon");
-                    // navigation.navigate(SET_FUND_PASSWORD_SCREEN); // TODO: implement screen
-                  }}
-                  style={[styles.confirmOkBtn, { backgroundColor: colors.buttonBg }]}
-                >
-                  <AppText weight={BOLD} style={{ color: colors.white }}>Confirm</AppText>
-                </TouchableOpacityView>
-              </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
+      <Modal
+        visible={isRestrictModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRestrictModalOpen(false)}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+          <View style={[styles.confirmModal, { backgroundColor: themeColors.card }]}>
+            <View style={styles.restrictContent}>
+              <FastImage source={account_restrictions} style={styles.restrictImg} resizeMode="contain" />
+              <AppText weight={BOLD} type={EIGHTEEN} style={[styles.restrictTitle, { color: themeColors.text }]}>
+                {isFund 
+                  ? (effectiveHasFundPassword ? "Are you sure you want to change the fund password?" : "Are you sure you want to set your fund password?")
+                  : "Account Restrictions"
+                }
+              </AppText>
+              <AppText type={FOURTEEN} style={[styles.restrictText, { color: themeColors.secondaryText }]}>
+                {isFund ? (
+                  <>
+                    For the security of your assets, withdrawals and P2P selling will be temporarily locked for <AppText weight={BOLD} style={{ color: themeColors.text }}>24 hours</AppText> after you {effectiveHasFundPassword ? 'change' : 'set'} your fund password.
+                  </>
+                ) : (
+                  <>
+                    For the security of your account, withdrawals and P2P selling will be temporarily locked for <AppText weight={BOLD} style={{ color: themeColors.text }}>24 hours</AppText> after a password change.
+                  </>
+                )}
+              </AppText>
+            </View>
+            <View style={styles.restrictActions}>
+              <Button
+                children="Cancel"
+                onPress={() => setRestrictModalOpen(false)}
+                containerStyle={[styles.cancelBtn, { borderColor: themeColors.border }]}
+                titleStyle={{ color: themeColors.text }}
+              />
+              <Button
+                children="Confirm"
+                onPress={handleRestrictConfirm}
+                containerStyle={styles.confirmBtn}
+              />
+            </View>
+          </View>
         </View>
-      )}
-
-      {/* Account Restrictions Modal (Password Change) */}
-      {isPasswordChangeModalOpen && (
-        <View style={StyleSheet.absoluteFill}>
-          <TouchableOpacity
-            activeOpacity={1}
-            style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}
-            onPress={() => setPasswordChangeModalOpen(false)}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              style={[styles.confirmModal, { backgroundColor: themeColors.card }]}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View style={styles.confirmBody}>
-                <FastImage
-                  source={account_restrictions}
-                  style={[styles.confirmIcon, { width: 100, height: 100 }]}
-                  resizeMode="contain"
-                />
-                <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, textAlign: 'center', alignSelf: 'center', marginTop: 12 }}>
-                  Account Restrictions
-                </AppText>
-                <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, textAlign: 'center', lineHeight: 22, marginTop: 8, paddingHorizontal: 10 }}>
-                  For the security of your account, withdrawals and P2P selling will be temporarily locked for{' '}
-                  <AppText weight={BOLD} style={{ color: themeColors.text }}>24 hours</AppText> after a password change.
-                </AppText>
-              </View>
-
-              <View style={styles.confirmActions}>
-                <TouchableOpacityView
-                  onPress={() => setPasswordChangeModalOpen(false)}
-                  style={[styles.cancelBtn, { borderColor: themeColors.border, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F2F5', borderWidth: 0 }]}
-                >
-                  <AppText weight={SEMI_BOLD} style={{ color: themeColors.text }}>Cancel</AppText>
-                </TouchableOpacityView>
-                <TouchableOpacityView
-                  onPress={proceedToPasswordChange}
-                  style={[styles.confirmOkBtn, { backgroundColor: '#2B3139' }]}
-                >
-                  <AppText weight={BOLD} style={{ color: colors.white }}>Confirm</AppText>
-                </TouchableOpacityView>
-              </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </View>
-      )}
+      </Modal>
     </AppSafeAreaView>
   );
 };
@@ -1056,4 +1025,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Restrict Styles
+  restrictContent: { alignItems: 'center', marginBottom: 32 },
+  restrictImg: { width: 100, height: 100, marginBottom: 20 },
+  restrictTitle: { marginBottom: 12, textAlign: 'center' },
+  restrictText: { textAlign: 'center', paddingHorizontal: 10, lineHeight: 22 },
+  restrictActions: { flexDirection: 'row', gap: 12, width: '100%' },
+  cancelBtn: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, backgroundColor: 'transparent' },
+  confirmBtn: { flex: 1, height: 48, borderRadius: 12, backgroundColor: colors.buttonBg },
 });

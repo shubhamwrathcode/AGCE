@@ -25,6 +25,7 @@ import {
 } from '../../shared';
 import FastImage from 'react-native-fast-image';
 import { back_ic, copyIcon, GOOGLE_VERIFY, EMAIL_VERIFY, qrCodeIcon, apple, playstore } from '../../helper/ImageAssets';
+import * as routes from '../../navigation/routes';
 import TouchableOpacityView from '../../shared/components/TouchableOpacityView';
 import {
   generateTwoFactorQr,
@@ -87,7 +88,7 @@ const SetupTwoFactorScreen = () => {
     }
     const ok = await dispatch(confirm2fa(gaCode, identityProof));
     if (ok) {
-      navigation.popToTop();
+      navigation.navigate(routes.TWO_FACTOR_AUTHENTICATION);
     }
   };
 

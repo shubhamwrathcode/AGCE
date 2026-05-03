@@ -282,6 +282,7 @@ export const securityChangePasswordAction =
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.security_change_password(data);
+      console.log("security_change_password response:", response);
 
       if (response?.success) {
         showSuccess(response?.message || 'Password changed successfully.');
@@ -298,6 +299,64 @@ export const securityChangePasswordAction =
       dispatch(setLoading(false));
     }
   };
+
+export const securityAddFundPasswordAction =
+  (data: any) => async (dispatch: AppDispatch) => {
+    try {
+      dispatch(setLoading(true));
+      const response: any = await appOperation.customer.security_add_fund_password(data);
+      console.log("security_add_fund_password response:", response);
+
+      if (response?.success) {
+        showSuccess(response?.message || 'Fund password updated successfully.');
+        return true;
+      } else {
+        showError(response?.message || 'Failed to update fund password');
+        return false;
+      }
+    } catch (e: any) {
+      console.error("security_add_fund_password catch error:", e);
+      logger(e);
+      showError(e?.message || 'Something went wrong');
+      return false;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
+export const getFundPasswordStatusAction = () => async (dispatch: AppDispatch) => {
+  try {
+    const response: any = await appOperation.customer.security_get_fund_password_status();
+    if (response?.success) {
+      return response?.data;
+    }
+    return null;
+  } catch (e) {
+    logger(e);
+    return null;
+  }
+};
+
+/** Unified security verification — same as web's verifyAllSecurityMethods */
+export const verifySecurityAllMethods = (data: { type: string; code?: string; credential?: any }) => async (dispatch: AppDispatch) => {
+  try {
+    dispatch(setLoading(true));
+    const response: any = await appOperation.customer.verify_all_security_methods(data);
+    console.log("verify_all_security_methods response:", response);
+    if (response?.success) {
+      return response;
+    } else {
+      showError(response?.message || 'Verification failed');
+      return null;
+    }
+  } catch (e: any) {
+    logger(e);
+    showError(e?.message || 'Verification failed');
+    return null;
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
 
 export const changeCurrencyPreference =
   (data: CurrencyPreferenceProps) => async (dispatch: AppDispatch) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -23,82 +23,74 @@ import {
   SIXTEEN,
   THIRTEEN,
   BOLD,
+  EIGHTEEN,
 } from '../../shared';
 import { colors } from '../../theme/colors';
 import FastImage from 'react-native-fast-image';
 import TouchableOpacityView from '../../shared/components/TouchableOpacityView';
-import { back_ic, SHARE_NEW_ICON, eye_open_icon, eye_close_icon, checkIc, closeIcon, minus } from '../../helper/ImageAssets';
+import {
+  back_ic,
+  SHARE_NEW_ICON,
+  checkIc,
+  closeIcon,
+  minus,
+  SECURITY_SHEIELD
+} from '../../helper/ImageAssets';
 import {
   sendSecurityOtp,
   securityChangePasswordAction,
+  verifySecurityAllMethods,
+  verifySecurityPasskey,
+  securityAddFundPasswordAction,
 } from '../../actions/accountActions';
-import { FORGOT_PASSWORD_SCREEN, RESET_PASSWORD_FROM_CHANGE } from '../../navigation/routes';
+import { RESET_PASSWORD_FROM_CHANGE } from '../../navigation/routes';
 import { showError } from '../../helper/logger';
 import { VerificationOptionsSheet } from '../../shared/components/VerificationOptionsSheet';
 import { SpinnerSecond } from '../../shared/components/SpinnerSecond';
 import { validatePasswordStrict } from '../../helper/utility';
-
-const RuleItem = ({ state, label, doneColor }) => {
-  const isOk = state === "ok";
-  const isBad = state === "bad";
-  const isPending = state === "pending";
-  return (
-    <View style={styles.ruleRow}>
-      <View
-        style={[
-          styles.ruleDot,
-          {
-            borderColor: isOk ? null : "#B8BDC7",
-            backgroundColor: isOk ? doneColor : "transparent",
-          },
-        ]}
-      >
-        {isOk ? (
-          <FastImage source={checkIc} style={{ width: 8, height: 8 }} tintColor="#FFFFFF" resizeMode="contain" />
-        ) : null}
-        {isBad ? <FastImage source={closeIcon} style={{ width: 7, height: 7 }} tintColor={colors.red} resizeMode="contain" /> : null}
-        {isPending ? <FastImage source={minus} style={{ width: 12, height: 12 }} resizeMode="contain" /> : null}
-      </View>
-      <AppText type={THIRTEEN} style={{ color: "#9AA3AF" }}>
-        {label}
-      </AppText>
-    </View>
-  );
-};
+import { useTheme } from '../../hooks/useTheme';
 
 const maskEmail = (email: string) => {
   if (!email) return '';
   const [username, domain] = email.split('@');
   if (!domain) return email;
-  return `${(username || '').substring(0, 3)}***${(username || '').slice(-10)}@${domain}`;
+  const masked = username.substring(0, 2) + '***' + username.slice(-1);
+  return `${masked}@${domain}`;
 };
 
 const maskPhone = (phone: string | number) => {
   if (!phone) return '';
-  const cleaned = String(phone).replace(/\s/g, '');
-  if (cleaned.length < 4) return phone;
-  return '****' + cleaned.slice(-4);
+  const str = String(phone).replace(/\s/g, '');
+  if (str.length < 7) return str;
+  return str.substring(0, 3) + '****' + str.slice(-4);
+};
+
+const PHASE = {
+  VERIFY: 'verify',
+  CHANGE: 'change',
 };
 
 const ChangePassword = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const dispatch = useAppDispatch();
+  const { colors: themeColors, isDark } = useTheme();
+
   const userData = useAppSelector((state: any) => state.auth.userData);
   const isLoading = useAppSelector((state: any) => state.auth.isLoading);
-  const theme = useAppSelector((state: any) => state.auth.theme);
+
+  const isFund = route?.params?.type === 'fund';
+  const hasExisting = useMemo(() => {
+    if (isFund) return !!(userData?.fundPassword || userData?.isFundPasswordSet || userData?.payPin);
+    return true; // Login password always exists
+  }, [isFund, userData]);
 
   const emailId = userData?.emailId ?? userData?.email_id ?? '';
   const profileMobile = userData?.mobileNumber ?? userData?.mobile_number ?? '';
   const profileCountryCode = userData?.country_code ?? userData?.countryCode ?? '';
   const mobileNumber = profileCountryCode && profileMobile ? `${profileCountryCode} ${profileMobile}`.trim() : profileMobile || '';
-  const usernamePart = useMemo(() => {
-    const id = String(emailId || profileMobile || "");
-    return id.includes("@") ? id.split("@")[0] : id;
-  }, [emailId, profileMobile]);
 
   const [otp, setOtp] = useState('');
-  // Set default dots for oldPassword as requested (similar to web saved state)
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -108,37 +100,25 @@ const ChangePassword = () => {
   const [resendTimer, setResendTimer] = useState(0);
   const [verifyMethod, setVerifyMethod] = useState('');
   const [availableMethods, setAvailableMethods] = useState<any[]>([]);
+  const [phase, setPhase] = useState(PHASE.VERIFY);
   const optionsSheetRef = useRef<any>(null);
-
-  const isDark = theme === 'Dark';
-  const textSecondary = isDark ? 'rgba(255,255,255,0.6)' : '#666';
 
   useEffect(() => {
     const methods: any[] = [];
-    if (userData?.hasPasskey) methods.push({ value: 'passkey', label: 'Passkey', description: 'Use fingerprint or Face ID' });
+    // Web excludes passkey for setFundPassword flow
+    if (!isFund && userData?.hasPasskey) {
+      methods.push({ value: 'passkey', label: 'Passkey', description: 'Use fingerprint or Face ID' });
+    }
     if ((userData?.['2fa'] ?? 0) === 2) methods.push({ value: 'totp', label: 'Google Authenticator', description: 'Use your authenticator app' });
     if (emailId) methods.push({ value: 'email', label: 'Email OTP', description: `Send code to ${maskEmail(emailId)}` });
     if (profileMobile) methods.push({ value: 'mobile', label: 'Mobile OTP', description: `Send code to ${maskPhone(mobileNumber)}` });
     setAvailableMethods(methods);
 
-    const initialMethod = route?.params?.verifyMethod;
-    const isVerified = route?.params?.verified;
-    const prefilledOtp = route?.params?.otpCode;
-
-    if (initialMethod && methods.find(m => m.value === initialMethod)) {
-      setVerifyMethod(initialMethod);
-      if (isVerified && prefilledOtp) {
-        setOtp(prefilledOtp);
-      } else if (route?.params?.autoSent) {
-        setResendTimer(60);
-      }
-    } else if (!verifyMethod && methods.length > 0) {
-      if (userData?.hasPasskey) setVerifyMethod('passkey');
-      else if ((userData?.['2fa'] ?? 0) === 2) setVerifyMethod('totp');
-      else if (emailId) setVerifyMethod('email');
-      else if (profileMobile) setVerifyMethod('mobile');
+    if (methods.length > 0 && !verifyMethod) {
+      // Pick first in order: Passkey (if login), TOTP, Email, Mobile
+      setVerifyMethod(methods[0].value);
     }
-  }, [userData, emailId, profileMobile, mobileNumber, route?.params]);
+  }, [userData, emailId, profileMobile, mobileNumber, isFund]);
 
   useEffect(() => {
     if (resendTimer <= 0) return;
@@ -146,73 +126,20 @@ const ChangePassword = () => {
     return () => clearTimeout(t);
   }, [resendTimer]);
 
-  const handleSendOtp = async () => {
+  const handleSendOtp = useCallback(async () => {
     const target = verifyMethod === 'email' ? 'email' : 'mobile';
-    const ok = await dispatch(sendSecurityOtp(target, 'change_password'));
+    const purpose = isFund ? 'fund_password' : 'change_password';
+    const ok = await dispatch(sendSecurityOtp(target, purpose));
     if (ok) setResendTimer(60);
-  };
-
-  const signupPasswordRules = useMemo(
-    () => [
-      {
-        id: "notAllNumbers",
-        label: "Cannot be all numbers",
-        passes: (p) => p.length > 0 && !/^\d+$/.test(p),
-      },
-      {
-        id: "notAllLetters",
-        label: "Cannot be all letters (case-sensitive)",
-        passes: (p) => p.length > 0 && !/^[a-zA-Z]+$/.test(p),
-      },
-      {
-        id: "minLength",
-        label: "Minimum 8 characters required",
-        passes: (p) => p.length >= 8,
-      },
-      {
-        id: "notContainsUsername",
-        label: "Cannot contain username",
-        passes: (p) => !usernamePart || usernamePart.length < 2 || !p.toLowerCase().includes(usernamePart.toLowerCase()),
-      },
-      {
-        id: "complexity",
-        label: "Uppercase, lowercase, number, and a special character (#?!@$%^&*-)",
-        passes: (p) => validatePasswordStrict(p),
-      },
-    ],
-    [usernamePart]
-  );
-
-  const passwordRuleRowStates = useMemo(() => {
-    const p = String(newPassword || "");
-    if (!p.trim()) return signupPasswordRules.map(() => "idle");
-    const results = signupPasswordRules.map((r) => r.passes(p));
-    const firstFail = results.findIndex((ok) => !ok);
-    if (firstFail === -1) return signupPasswordRules.map(() => "ok");
-    return signupPasswordRules.map((_, i) => {
-      if (i < firstFail) return "ok";
-      if (i === firstFail) return "bad";
-      return "pending";
-    });
-  }, [newPassword, signupPasswordRules]);
-
-  const isReady = useMemo(() => {
-    const p = String(newPassword || "");
-    if (!p.trim()) return false;
-    return signupPasswordRules.every((r) => r.passes(p));
-  }, [newPassword, signupPasswordRules]);
+  }, [dispatch, verifyMethod, isFund]);
 
   const handleSubmit = async () => {
-    if (verifyMethod !== 'totp' && verifyMethod !== 'passkey' && !otp && !route?.params?.verified) {
-      showError('Please enter verification code');
+    if (hasExisting && !oldPassword) {
+      showError('Please enter your current password');
       return;
     }
-    if (!oldPassword) {
-      showError('Please enter your old password');
-      return;
-    }
-    if (!isReady) {
-      showError('Please meet all password requirements');
+    if (!newPassword || !confirmPassword) {
+      showError('Please fill in all password fields');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -220,18 +147,95 @@ const ChangePassword = () => {
       return;
     }
 
-    const payload = {
-      oldPassword: oldPassword,
-      newPassword: newPassword,
-      confirmNewPassword: confirmPassword,
-    };
+    const isOk = validatePasswordStrict(newPassword);
+    if (!isOk) {
+      showError('Password must be 8+ chars with upper, lower, number, and special character');
+      return;
+    }
 
-    const success = await dispatch(securityChangePasswordAction(payload));
+    setChangeSubmitBusy(true);
+    try {
+      // Step 2: Change Login Password
+      const loginPayload = {
+        oldPassword,
+        newPassword,
+        confirmNewPassword: confirmPassword
+      };
+      console.log("Changing Login Password with payload:", loginPayload);
+      const success = await dispatch(securityChangePasswordAction(loginPayload));
+      if (success) {
+        navigation.goBack();
+      }
+    } finally {
+      setChangeSubmitBusy(false);
+    }
+  };
+
+  const [changeSubmitBusy, setChangeSubmitBusy] = useState(false);
+  const [verifyBusy, setVerifyBusy] = useState(false);
+
+  const handleVerifySubmit = async () => {
+    if (verifyMethod !== 'totp' && verifyMethod !== 'passkey' && !otp) {
+      showError('Please enter verification code');
+      return;
+    }
+
+    setVerifyBusy(true);
+    try {
+      let verifyRes: any = null;
+      if (verifyMethod === 'passkey') {
+        const signId = emailId || profileMobile;
+        const uid = await dispatch(verifySecurityPasskey(signId));
+        if (!uid) {
+          console.log("Passkey verification failed or cancelled");
+          return;
+        }
+        verifyRes = { success: true, data: { userId: uid } };
+      } else {
+        verifyRes = await dispatch(verifySecurityAllMethods({
+          type: verifyMethod,
+          code: otp
+        }));
+      }
+
+      console.log("Verification Response:", verifyRes);
+      if (verifyRes?.success) {
+        if (isFund) {
+          // Fund password remains single flow if it doesn't have existing, 
+          // but here we follow the web's phased approach for change.
+          setPhase(PHASE.CHANGE);
+        } else {
+          setPhase(PHASE.CHANGE);
+        }
+      }
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
+  const handleFundSubmitDirect = async () => {
+    if (!newPassword || !confirmPassword) {
+      showError('Please fill in all password fields');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showError('Passwords do not match');
+      return;
+    }
+    if (verifyMethod !== 'totp' && verifyMethod !== 'passkey' && !otp) {
+      showError('Please enter verification code');
+      return;
+    }
+
+    const fundPayload = {
+      fund_password: newPassword,
+      confirm_fund_password: confirmPassword,
+      code: otp,
+      type: verifyMethod
+    };
+    console.log("Setting Fund Password (Direct Call) with payload:", fundPayload);
+    const success = await dispatch(securityAddFundPasswordAction(fundPayload));
     if (success) {
-      setOtp('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setResendTimer(0);
       navigation.goBack();
     }
   };
@@ -240,142 +244,166 @@ const ChangePassword = () => {
     setVerifyMethod(value);
     setOtp('');
     setResendTimer(0);
-    setOptionsSheetVisible(false);
+    optionsSheetRef.current?.close();
   };
 
   const getVerifyTitle = () => {
-    if (verifyMethod === 'totp') return 'Authenticator App';
-    if (verifyMethod === 'email') return 'Email Verification';
-    if (verifyMethod === 'mobile') return 'Mobile Verification';
-    return 'Security Verification';
+    if (verifyMethod === 'totp') return 'Google Authenticator Code';
+    if (verifyMethod === 'email') return 'Email Verification Code';
+    if (verifyMethod === 'mobile') return 'Mobile Verification Code';
+    if (verifyMethod === 'passkey') return 'Passkey Verification';
+    return 'Verification';
   };
 
   const getVerifyDesc = () => {
-    if (verifyMethod === 'totp') return 'Enter the 6-digit code from your authenticator app';
-    if (verifyMethod === 'email') return `We'll send a verification code to ${maskEmail(emailId)}`;
-    if (verifyMethod === 'mobile') return `We'll send a verification code to ${maskPhone(mobileNumber)}`;
+    if (verifyMethod === 'totp') return 'Enter the 6-digit code from your authenticator app.';
+    if (verifyMethod === 'email') return `Verification code sent to ${maskEmail(emailId)}.`;
+    if (verifyMethod === 'mobile') return `Verification code sent to ${maskPhone(mobileNumber)}.`;
+    if (verifyMethod === 'passkey') return 'Use your device passkey to verify.';
     return '';
   };
 
-  return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <FastImage source={back_ic} style={styles.backIcon} tintColor={colors.black} resizeMode="contain" />
-          </TouchableOpacity>
-          <AppText weight={SEMI_BOLD} type={SIXTEEN} color={colors.black} style={{ right: 10 }}>Change Login Password</AppText>
-          <View style={{ width: 24 }} />
-        </View>
+  const renderVerify = () => (
+    <View style={styles.verifyContainer}>
+      <AppText weight={BOLD} type={EIGHTEEN} style={[styles.verifyMainTitle, { color: themeColors.text }]}>
+        {verifyMethod === 'totp' ? 'Authenticator App Verification' : 'Identity Verification'}
+      </AppText>
+      <AppText type={FOURTEEN} style={[styles.verifySubtitle, { color: themeColors.secondaryText }]}>
+        {verifyMethod === 'totp' 
+          ? 'Enter the 6-digit code generated by the Authenticator App.'
+          : getVerifyDesc()}
+      </AppText>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+      <Input
+        title={verifyMethod === 'totp' ? "Authenticator App" : getVerifyTitle()}
+        value={otp}
+        onChangeText={setOtp}
+        placeholder="Please Enter"
+        keyboardType="number-pad"
+        maxLength={6}
+        isOtp={verifyMethod !== 'totp' && verifyMethod !== 'passkey'}
+        otpText={resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Get OTP'}
+        onSendOtp={handleSendOtp}
+        mainContainer={{ marginTop: 25 }}
+        disabled={verifyMethod === 'passkey'}
+      />
+
+      <Button
+        children="Submit"
+        onPress={handleVerifySubmit}
+        loading={verifyBusy}
+        containerStyle={[styles.confirmBtnFull, { backgroundColor: colors.buttonBg, marginTop: 40 }]}
+        titleStyle={{ color: '#FFFFFF' }}
+      />
+
+      <View style={styles.verifyLinks}>
+        {availableMethods.length > 1 && (
+          <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.verifyLinkItem}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.buttonBg }}>
+              Switch to Another Verification Method
+            </AppText>
+          </TouchableOpacityView>
+        )}
+        <TouchableOpacityView 
+          onPress={() => navigation.navigate('SecurityVerificationUnavailable')} 
+          style={styles.verifyLinkItem}
         >
-          {/* Verification Section */}
-          {!route?.params?.verified && (
-            <View style={{ marginBottom: 10 }}>
-              <AppText weight={SEMI_BOLD} type={FOURTEEN} color={colors.black} style={styles.sectionTitle}>
-                {getVerifyTitle()}
-              </AppText>
-              <AppText type={TEN} color={textSecondary} style={styles.sectionDesc}>
-                {getVerifyDesc()}
-              </AppText>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.buttonBg }}>
+            Security verification unavailable?
+          </AppText>
+        </TouchableOpacityView>
+      </View>
 
-              {verifyMethod !== 'passkey' && (
-                <Input
-                  title="Enter 6-digit Code"
-                  value={otp}
-                  onChangeText={setOtp}
-                  placeholder="Enter code here..."
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  isOtp={true}
-                  otpText={resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Get OTP'}
-                  onSendOtp={handleSendOtp}
-                  mainContainer={{ marginTop: 10 }}
-                />
-              )}
+      <View style={styles.protectedFooter}>
+        <FastImage source={SECURITY_SHEIELD} style={styles.protectedIcon} resizeMode="contain" />
+        <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Protected by Balance Risk</AppText>
+      </View>
+    </View>
+  );
 
-              {availableMethods.length > 1 && (
-                <TouchableOpacityView onPress={() => {
-                  optionsSheetRef.current?.open();
-                }} style={styles.switchWrap}>
-                  <AppText type={TWELVE} color={colors.buttonBg} style={{ fontWeight: '500' }}>Switch to Another Verification Option</AppText>
-                  <FastImage source={SHARE_NEW_ICON}
-                    style={{ width: 14, height: 14, marginLeft: 5 }}
-                    resizeMode="contain" tintColor={colors.buttonBg} />
-                </TouchableOpacityView>
-              )}
-            </View>
-          )}
+  const renderChange = () => (
+    <View style={styles.unifiedContainer}>
+      <AppText weight={BOLD} type={EIGHTEEN} style={[styles.mainTitle, { color: themeColors.text }]}>
+        {hasExisting ? (isFund ? 'Change Fund Password' : 'Change Login Password') : 'Set Fund Password'}
+      </AppText>
 
-          <AppText color={colors.black} type={FOURTEEN} weight={SEMI_BOLD} style={{ marginTop: 10 }}>Old Password</AppText>
-          <Input
-            placeholder="Enter your Old Password"
-            value={oldPassword}
-            onChangeText={setOldPassword}
-            secureTextEntry={!showOldPassword}
-            isSecure
-            onPressVisible={() => setShowOldPassword(!showOldPassword)}
-            autoCapitalize="none"
-            containerStyle={styles.passwordInput}
-          />
+      {hasExisting && (
+        <Input
+          title={isFund ? "Current Fund Password" : "Current Login Password"}
+          value={oldPassword}
+          onChangeText={setOldPassword}
+          placeholder="Please Enter"
+          secureTextEntry={!showOldPassword}
+          isSecure
+          onPressVisible={() => setShowOldPassword(!showOldPassword)}
+          mainContainer={{ marginTop: 20 }}
+        />
+      )}
 
-          <AppText color={colors.black} type={FOURTEEN} weight={SEMI_BOLD} style={{ marginTop: 20 }}>New Password</AppText>
-          <Input
-            placeholder="Enter your New Password"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry={!showNewPassword}
-            isSecure
-            onPressVisible={() => setShowNewPassword(!showNewPassword)}
-            autoCapitalize="none"
-            containerStyle={styles.passwordInput}
-          />
+      <Input
+        title={isFund ? "New Fund Password" : "New Login Password"}
+        value={newPassword}
+        onChangeText={setNewPassword}
+        placeholder="Please Enter"
+        secureTextEntry={!showNewPassword}
+        isSecure
+        onPressVisible={() => setShowNewPassword(!showNewPassword)}
+        mainContainer={{ marginTop: 20 }}
+      />
+      <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 8 }}>
+        Choose a strong {isFund ? 'fund ' : ''}password and keep it private.
+      </AppText>
 
-          <View style={styles.rulesBox}>
-            {signupPasswordRules.map((rule, idx) => (
-              <RuleItem
-                key={rule.id}
-                state={passwordRuleRowStates[idx]}
-                label={rule.label}
-                doneColor={colors.buttonBg}
-              />
-            ))}
-          </View>
+      <Input
+        title={isFund ? "Confirm Fund Password" : "Confirm Login Password"}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder="Please Enter"
+        secureTextEntry={!showConfirmPassword}
+        isSecure
+        onPressVisible={() => setShowConfirmPassword(!showConfirmPassword)}
+        mainContainer={{ marginTop: 20 }}
+      />
 
-          <AppText color={colors.black} type={FOURTEEN} weight={SEMI_BOLD} style={{ marginTop: 20 }}>Confirm Password</AppText>
-          <Input
-            placeholder="Re-Enter your New Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={!showConfirmPassword}
-            isSecure
-            onPressVisible={() => setShowConfirmPassword(!showConfirmPassword)}
-            autoCapitalize="none"
-            containerStyle={styles.passwordInput}
-          />
+      <Button
+        children="Confirm"
+        onPress={isFund && !hasExisting ? handleFundSubmitDirect : handleSubmit}
+        loading={isLoading || changeSubmitBusy}
+        containerStyle={[styles.confirmBtnFull, { backgroundColor: colors.buttonBg, marginTop: 40 }]}
+        titleStyle={{ color: '#FFFFFF' }}
+      />
 
-          <Button
-            children="Confirm"
-            onPress={handleSubmit}
-            loading={isLoading}
-            containerStyle={styles.submitBtn}
-            titleStyle={{ color: colors.white, fontWeight: '700' }}
-            disabled={(!otp && verifyMethod !== 'totp' && verifyMethod !== 'passkey' && !route?.params?.verified) || !oldPassword || !newPassword || !confirmPassword}
-          />
+      {(!isFund && hasExisting) && (
+        <TouchableOpacity
+          onPress={() => navigation.navigate(RESET_PASSWORD_FROM_CHANGE)}
+          style={styles.forgotBtn}
+        >
+          <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: colors.buttonBg, textDecorationLine: 'underline' }}>Forgot password?</AppText>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate(RESET_PASSWORD_FROM_CHANGE)}
-            style={styles.forgotBtn}
-          >
-            <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: colors.buttonBg, textDecorationLine: 'underline' }}>Forgot password?</AppText>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+  return (
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} />
+        </TouchableOpacity>
+        <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+          {isFund ? 'Fund Password' : 'Login Password'}
+        </AppText>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {phase === PHASE.VERIFY ? renderVerify() : renderChange()}
+      </ScrollView>
 
       <VerificationOptionsSheet
         sheetRef={optionsSheetRef}
@@ -395,50 +423,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 15,
     justifyContent: "space-between",
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backBtn: { padding: 4 },
-  backIcon: { width: 20, height: 20, resizeMode: "contain" },
+  backIcon: { width: 18, height: 18, resizeMode: "contain" },
   scroll: { flex: 1 },
   scrollContent: { padding: 24, paddingBottom: 60 },
-  sectionTitle: { fontSize: 18, marginBottom: 5 },
-  sectionDesc: { marginBottom: 20, opacity: 0.8 },
-  switchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: -10,
-    marginBottom: 5,
+
+  unifiedContainer: { paddingVertical: 5 },
+  mainTitle: { fontSize: 22, },
+  verificationSection: { paddingTop: 10, borderTopWidth: 1 },
+  sectionHeading: { marginBottom: 8 },
+  switchMethodBtn: { marginTop: 12, alignSelf: 'flex-start' },
+  confirmBtnFull: { height: 52, borderRadius: 26 },
+  forgotBtn: { marginTop: 20, alignItems: 'center' },
+
+  verifyContainer: { paddingVertical: 5 },
+  verifyMainTitle: { fontSize: 24, marginBottom: 12 },
+  verifySubtitle: { lineHeight: 20, marginBottom: 10 },
+  verifyLinks: { marginTop: 30, alignItems: 'center', gap: 15 },
+  verifyLinkItem: {},
+  protectedFooter: { 
+    marginTop: 50, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    opacity: 0.7
   },
-  passwordInput: {
-    marginTop: 8,
-  },
-  rulesBox: {
-    marginTop: 12,
-    gap: 8,
-  },
-  ruleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  ruleDot: {
-    width: 15,
-    height: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-  },
-  submitBtn: {
-    marginTop: 30,
-    backgroundColor: colors.buttonBg,
-    borderRadius: 30,
-    height: 52,
-  },
-  forgotBtn: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
+  protectedIcon: { width: 14, height: 14, marginRight: 6, tintColor: colors.secondaryText },
 });
 
 export default ChangePassword;

@@ -215,7 +215,7 @@ const ChangeEmailScreen = () => {
             <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
           <AppText weight={BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
-            Change Email
+            {/* Change Email */}
           </AppText>
         </View>
 
@@ -237,7 +237,7 @@ const ChangeEmailScreen = () => {
                 <>
                   <View style={{ alignItems: 'center', marginVertical: 30 }}>
                     <View style={[styles.passkeyIconWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]}>
-                       <FastImage source={FINGERPRINT} style={{ width: 44, height: 44 }} resizeMode="contain" tintColor={themeColors.button} />
+                      <FastImage source={FINGERPRINT} style={{ width: 44, height: 44 }} resizeMode="contain" tintColor={themeColors.button} />
                     </View>
                   </View>
                   <Button
@@ -310,10 +310,10 @@ const ChangeEmailScreen = () => {
                 <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
                   New Email
                 </AppText>
-                <View style={{ 
-                  backgroundColor: themeColors.input, 
-                  borderRadius: 8, 
-                  height: 52, 
+                <View style={{
+                  backgroundColor: themeColors.input,
+                  borderRadius: 8,
+                  height: 52,
                   paddingHorizontal: 16,
                   borderWidth: isDark ? 1 : 0,
                   borderColor: isDark ? themeColors.border : 'transparent'
@@ -334,12 +334,12 @@ const ChangeEmailScreen = () => {
                 <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
                   Email OTP
                 </AppText>
-                <View style={{ 
-                  flexDirection: 'row', 
-                  alignItems: 'center', 
-                  backgroundColor: themeColors.input, 
-                  borderRadius: 8, 
-                  height: 52, 
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: themeColors.input,
+                  borderRadius: 8,
+                  height: 52,
                   paddingHorizontal: 16,
                   borderWidth: isDark ? 1 : 0,
                   borderColor: isDark ? themeColors.border : 'transparent'

@@ -25,7 +25,7 @@ import {
   FIFTEEN,
 } from '../../shared';
 import FastImage from 'react-native-fast-image';
-import { back_ic, pasteImg, PHONE_VERIFY, SHARE_NEW_ICON } from '../../helper/ImageAssets';
+import { back_ic, pasteImg, PHONE_VERIFY, SHARE_NEW_ICON, security_risk_vector, EMAIL_VERIFY, GOOGLE_VERIFY, FINGERPRINT } from '../../helper/ImageAssets';
 import AuthPhoneInput from '../../shared/components/AuthPhoneInput';
 import { TextInput } from 'react-native';
 import * as routes from '../../navigation/routes';
@@ -82,8 +82,10 @@ const AddPhoneNumberScreen = () => {
   const hasEmail = !!emailId;
   const hasMobile = !!profileMobile;
   const hasGoogleAuth = (userData?.['2fa'] ?? 0) === 2;
+  const hasPasskey = (userData?.passkeys_count ?? 0) > 0;
+  const passkeySupported = Platform.OS === 'ios' || Platform.OS === 'android';
 
-  const firstStep = hasGoogleAuth ? 1 : 2;
+  const firstStep = 2;
   const [step, setStep] = useState(firstStep);
   const [verifyMethod, setVerifyMethod] = useState('email');
   const [googleCode, setGoogleCode] = useState('');
@@ -101,6 +103,7 @@ const AddPhoneNumberScreen = () => {
     emailOtp: '',
     googleCode: '',
   });
+  const [showRiskOptions, setShowRiskOptions] = useState(false);
 
   const [availableMethods, setAvailableMethods] = useState([]);
   const verifyOptionsSheetRef = useRef(null);
@@ -161,6 +164,14 @@ const AddPhoneNumberScreen = () => {
       identityProofRef.current.emailOtp = otp;
       identityProofRef.current.verifyMethod = verifyMethod;
       setStep(3);
+    } else if (step === 3) {
+      if (hasGoogleAuth) {
+        setStep(4);
+      } else {
+        handleComplete();
+      }
+    } else if (step === 4) {
+      handleComplete();
     }
   };
 
@@ -170,30 +181,10 @@ const AddPhoneNumberScreen = () => {
     const digits = String(newMobileNumber ?? '').replace(/\D/g, '');
     const fullNumber = typeof overrideFullNumber === 'string' ? overrideFullNumber : `${cc}${digits}`;
 
-    if (hasMobile) {
-      /** CHANGE MODE: Calls security/mobile/change/initiate — include identity proof here. */
-      const proof = identityProofRef.current;
-      const vm = proof.verifyMethod || verifyMethod;
-      const identity = {
-        newMobileNumber: digits,
-        newCountryCode: cc,
-      };
-      if (vm === 'email') identity.currentEmailOtp = proof.emailOtp || emailOtp;
-      else if (vm === 'mobile') identity.currentMobileOtp = proof.emailOtp || emailOtp;
-      else if (vm === 'totp') identity.tofaCode = proof.googleCode || googleCode;
-
-      const ok = await dispatch(initiateMobileChange(identity));
-      if (ok) {
-        lastNewMobileSendIdentifierRef.current = fullNumber;
-        setResendTimerNewMobile(60);
-      }
-    } else {
-      /** ADD MODE: Just send security OTP as usual. */
-      const ok = await dispatch(sendSecurityOtp('new_mobile', 'add_mobile', fullNumber));
-      if (ok) {
-        lastNewMobileSendIdentifierRef.current = fullNumber;
-        setResendTimerNewMobile(60);
-      }
+    const ok = await dispatch(sendSecurityOtp('new_mobile', hasMobile ? 'change_mobile' : 'add_mobile', fullNumber));
+    if (ok) {
+      lastNewMobileSendIdentifierRef.current = fullNumber;
+      setResendTimerNewMobile(60);
     }
   };
 
@@ -216,15 +207,14 @@ const AddPhoneNumberScreen = () => {
     const savedTotp = String(proof.googleCode || googleCode || '').replace(/\D/g, '').slice(0, CODE_LENGTH);
 
     const identity = {};
-    if (vm === 'email' && savedEmailOtp.length === CODE_LENGTH) {
-      identity.emailOtp = savedEmailOtp;
-    } else if (vm === 'mobile' && savedEmailOtp.length === CODE_LENGTH) {
-      identity.currentMobileOtp = savedEmailOtp;
-    } else if (vm === 'totp' && savedTotp.length === CODE_LENGTH) {
-      identity.tofaCode = savedTotp;
-    } else if (hasGoogleAuth && savedTotp.length === CODE_LENGTH && !savedEmailOtp) {
+    if (savedEmailOtp.length === CODE_LENGTH) {
+      if (vm === 'email') identity.emailOtp = savedEmailOtp;
+      else if (vm === 'mobile') identity.currentMobileOtp = savedEmailOtp;
+    }
+    if (hasGoogleAuth && savedTotp.length === CODE_LENGTH) {
       identity.tofaCode = savedTotp;
     }
+
     if (!identity.emailOtp && !identity.currentMobileOtp && !identity.tofaCode) {
       showError('Verification is required. Please complete the email or authenticator step.');
       return;
@@ -237,13 +227,20 @@ const AddPhoneNumberScreen = () => {
         ? lastNewMobileSendIdentifierRef.current
         : rebuildSendKey;
 
-    /** Same as web `TwofactorPage` → `handleAddMobileComplete`: one POST; include `identifier` = phone key used for `new_mobile` send-otp so SMS OTP validates. */
     if (hasMobile) {
-      /** CHANGE MODE: Calls security/mobile/change/complete. */
-      const success = await dispatch(completeMobileChange(smsOtp));
-      if (success) {
-        await dispatch(getUserProfile());
-        navigation.navigate(routes.TWO_FACTOR_AUTHENTICATION);
+      /** CHANGE MODE: Must call Initiate (with identity proof) then Complete (with SMS OTP) sequentially. */
+      const initiateData = {
+        newMobileNumber: mobileNumberDigits,
+        newCountryCode: ccNorm,
+        ...identity
+      };
+      const initSuccess = await dispatch(initiateMobileChange(initiateData));
+      if (initSuccess) {
+        const completeSuccess = await dispatch(completeMobileChange(smsOtp));
+        if (completeSuccess) {
+          await dispatch(getUserProfile());
+          navigation.navigate(routes.TWO_FACTOR_AUTHENTICATION);
+        }
       }
     } else {
       /** ADD MODE: Calls security/mobile/add. */
@@ -260,8 +257,8 @@ const AddPhoneNumberScreen = () => {
     }
   };
 
-  const flowTotal = hasGoogleAuth ? 4 : 3;
-  const flowIndex = hasGoogleAuth ? step : step - 1;
+  const flowTotal = hasGoogleAuth ? 3 : 2;
+  const flowIndex = step - 1;
   const progressPct = Math.min(100, (flowIndex / flowTotal) * 100);
 
   const stepBadge = (n) => (
@@ -406,8 +403,8 @@ const AddPhoneNumberScreen = () => {
                 disabled={isLoading || (verifyMethod === 'totp' ? googleCode.length !== CODE_LENGTH : emailOtp.length !== CODE_LENGTH)}
               />
 
-              {hasEmail && hasMobile && (
-                <TouchableOpacity onPress={() => verifyOptionsSheetRef.current?.open()} style={{ marginTop: 24 }}>
+              {hasEmail && (
+                <TouchableOpacity onPress={() => setShowRiskOptions(true)} style={{ marginTop: 24 }}>
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ textDecorationLine: 'underline', color: themeColors.text }}>
                     Choose other verification method
                   </AppText>
@@ -476,8 +473,8 @@ const AddPhoneNumberScreen = () => {
               </View>
 
               <Button
-                children="Confirm"
-                onPress={handleComplete}
+                children={hasGoogleAuth ? "Next" : "Confirm"}
+                onPress={handleVerifyIdentity}
                 loading={showButtonLoading}
                 containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: themeColors.button }}
                 titleStyle={{ color: themeColors.buttonText, fontSize: 16 }}
@@ -485,8 +482,103 @@ const AddPhoneNumberScreen = () => {
               />
             </View>
           )}
+
+          {step === 4 && hasGoogleAuth && (
+            <View style={{ paddingTop: 10 }}>
+              <AppText type={EIGHTEEN} weight={BOLD} style={{ color: themeColors.text, marginBottom: 12 }}>
+                Verify Authenticator
+              </AppText>
+              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
+                Enter the 6-digit code from your Google Authenticator app to finalize the changes.
+              </AppText>
+
+              <View style={{ marginBottom: 32 }}>
+                <OtpInput6Digit
+                  value={googleCode}
+                  onChangeText={setGoogleCode}
+                  disabled={isLoading}
+                />
+              </View>
+
+              <Button
+                children="Confirm"
+                onPress={handleVerifyIdentity}
+                loading={showButtonLoading}
+                containerStyle={{ borderRadius: 24, minHeight: 52, backgroundColor: themeColors.button }}
+                titleStyle={{ color: themeColors.buttonText, fontSize: 16 }}
+                disabled={isLoading || googleCode.length !== CODE_LENGTH}
+              />
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {showRiskOptions && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: themeColors.background, zIndex: 999 }]}>
+          <AppSafeAreaView style={{ flex: 1 }}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => setShowRiskOptions(false)} style={styles.backBtn}>
+                <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
+              </TouchableOpacity>
+              <AppText weight={BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
+                Security Verification
+              </AppText>
+              <View style={{ width: 40 }} />
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 24, alignItems: 'center' }}>
+              <View style={{ width: 120, height: 120, marginBottom: 24 }}>
+                <FastImage source={security_risk_vector} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+              </View>
+
+              <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, textAlign: 'center', marginBottom: 12 }}>
+                Security Risk Warning
+              </AppText>
+              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, textAlign: 'center', marginBottom: 32, lineHeight: 20 }}>
+                To enhance your account security, please activate at least one additional verification method.
+              </AppText>
+
+              <View style={{ width: '100%' }}>
+                {availableMethods.map((m) => (
+                  <TouchableOpacity
+                    key={m.value}
+                    onPress={() => {
+                      setVerifyMethod(m.value);
+                      if (m.value === 'email') setEmailOtp('');
+                      if (m.value === 'totp') setGoogleCode('');
+                      setResendTimerAddMobile(0);
+                      handleSendOtpIdentity(m.value);
+                      setShowRiskOptions(false);
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: 16,
+                      backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                      borderRadius: 12,
+                      marginBottom: 12,
+                      borderWidth: 1,
+                      borderColor: themeColors.border
+                    }}
+                  >
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isDark ? '#262626' : '#EEE', alignItems: 'center', justifyContent: 'center' }}>
+                      <FastImage 
+                        source={m.value === 'totp' ? GOOGLE_VERIFY : (m.value === 'email' ? EMAIL_VERIFY : PHONE_VERIFY)} 
+                        style={{ width: 16, height: 16 }} 
+                        tintColor={themeColors.text}
+                      />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 16 }}>
+                      <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{m.label}</AppText>
+                    </View>
+                    <AppText style={{ color: themeColors.secondaryText }}>›</AppText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </AppSafeAreaView>
+        </View>
+      )}
       <VerificationOptionsSheet
         sheetRef={verifyOptionsSheetRef}
         options={availableMethods}

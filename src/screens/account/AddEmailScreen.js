@@ -127,12 +127,6 @@ const AddEmailScreen = () => {
     setAvailableMethods(methods);
   }, [hasEmail, hasMobile, hasGoogleAuth]);
 
-  useEffect(() => {
-    if (step < 3 && verifyMethod !== 'totp') {
-      handleSendOtpIdentity(verifyMethod);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, verifyMethod]);
 
   const handleVerifyIdentity = async () => {
     const code = verifyMethod === 'totp' ? googleCode : mobileOtp;

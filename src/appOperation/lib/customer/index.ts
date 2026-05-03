@@ -60,6 +60,8 @@ export default (appOperation: AppOperation) => ({
     appOperation.put('user/currency-preference', data, CUSTOMER_TYPE),
   security_change_password: (data: any) =>
     appOperation.post('security/change-password', data, CUSTOMER_TYPE),
+  security_add_fund_password: (data: any) =>
+    appOperation.post('security/add-fund-password', data, CUSTOMER_TYPE),
   user_portfolio: (id: any) =>
     appOperation.get(
       `wallet/estimated-portfolio?walletType=${id}`,
@@ -409,6 +411,15 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/verify-totp - body { code, purpose } for add_passkey etc. */
   securityVerifyTotp: (code: string, purpose: string) =>
     appOperation.post('security/verify-totp', { code: String(code), purpose }, CUSTOMER_TYPE),
+  /** Same as web: POST security/verify-all-security-methods - body { type, code?, credential? } */
+  verify_all_security_methods: (data: any) =>
+    appOperation.post('security/verify-all-security-methods', data, CUSTOMER_TYPE),
+  /** Same as web: GET security/get-security-methods-list - returns enabled methods */
+  get_security_methods_list: () =>
+    appOperation.get('security/get-security-methods-list', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: GET security/get-fund-password-status */
+  security_get_fund_password_status: () =>
+    appOperation.get('security/get-fund-password-status', undefined, undefined, CUSTOMER_TYPE),
   /** Same as web: GET security/passkeys - returns { success, data: { passkeys: [], count } } */
   passkeyGetList: () =>
     appOperation.get('security/passkeys', undefined, undefined, CUSTOMER_TYPE),
