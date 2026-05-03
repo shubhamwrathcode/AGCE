@@ -114,6 +114,7 @@ import WithdrawWallet from "../screens/wallet/WithdrawWallet";
 import Earning from "../screens/other/Earning";
 import DashboardInner from "../screens/dashboardInner/DashboardInner";
 import Spot from "../screens/spotScreen/Spot";
+import SpotChartScreen from "../screens/spotScreen/SpotChartScreen";
 import ProfileDrawer from "../screens/profileDrawer/ProfileDrawer";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import Support from "../screens/supportSreen/Support";
@@ -361,6 +362,7 @@ const MyAuthLoadingStack = () => {
         component={WalletHistory}
       />
       <Stack.Screen name={routes.SPOT_MARKET_SCREEN} component={SpotMarket as any} />
+      <Stack.Screen name={routes.SPOT_CHART_SCREEN} component={SpotChartScreen} />
       <Stack.Screen name={routes.MORE_MENU_SCREEN} component={MoreMenu} />
       <Stack.Screen name={routes.TRANSFER_SCREEN} component={Transfer} />
       <Stack.Screen

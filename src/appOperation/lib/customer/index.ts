@@ -335,15 +335,15 @@ export default (appOperation: AppOperation) => ({
       CUSTOMER_TYPE,
     ),
   past_orders: (data: PastOrdersProps) =>
-    appOperation.post('exchange/past-order', data, CUSTOMER_TYPE),
+    appOperation.post('spot/v1/orders/history', data, CUSTOMER_TYPE),
   open_orders: (data: OpenOrdersProps) =>
-    appOperation.post('exchange/historical-data', data, CUSTOMER_TYPE),
+    appOperation.post('spot/v1/orders/my', data, CUSTOMER_TYPE),
   cancel_order: (data: CancelOrderProps) =>
-    appOperation.post('exchange/cancel-order', data, CUSTOMER_TYPE),
+    appOperation.post('spot/v1/orders/cancel', data, CUSTOMER_TYPE),
   close_option_order: (data: CancelOrderProps) =>
     appOperation.post('options/cancelOrder', data, CUSTOMER_TYPE),
   place_order: (data: PlaceOrderProps) =>
-    appOperation.post('exchange/place-order', data, CUSTOMER_TYPE),
+    appOperation.post('spot/v1/orders', data, CUSTOMER_TYPE),
   place_reverse_order: (data: any) =>
     appOperation.post('futures/order', data, CUSTOMER_TYPE),
   close_position: (data: any) =>
@@ -595,7 +595,7 @@ export default (appOperation: AppOperation) => ({
       break_staking: (data: any) =>
         appOperation.post('staking/break_staking', data, CUSTOMER_TYPE),
         get_trade_history: (skip: any, limit: any) =>
-        appOperation.get(`transaction/trade-history?skip=${skip}&limit=${limit}`,  undefined,
+        appOperation.get(`spot/v1/trades/my?skip=${skip}&limit=${limit}`,  undefined,
           undefined, CUSTOMER_TYPE),
         subscribe_earning_package: (data: any) =>
           appOperation.post('earning/subscribe-earning-package', data, CUSTOMER_TYPE),
