@@ -10,21 +10,24 @@ import {
   Animated,
   LayoutAnimation,
   UIManager,
+  AppState,
+  ActivityIndicator,
 } from "react-native";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
-import { useRoute, useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useRoute, useNavigation, useFocusEffect, useIsFocused } from "@react-navigation/native";
 import moment from "moment";
 import { useDispatch } from "react-redux";
 import { useTheme } from "../../hooks/useTheme";
 import { AppText, SEMI_BOLD, ELEVEN, TEN } from "../../shared";
 import FastImage from "react-native-fast-image";
-import { back_ic, downIcon, upIcon, Refresh } from "../../helper/ImageAssets";
+import { back_ic, downIcon, upIcon, Refresh, starIcon, starFillIcon, notification_bell_ic, bell_ic } from "../../helper/ImageAssets";
 import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
 import { SocketContext } from "../../SocketProvider";
 import { CHART_WEB_BASE_URL } from "../../helper/Constants";
 import TradingDataModal from "../../common/TradingDataModal/TradingDataModal";
+import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
 import { setBuyOrders, setRecentTrades, setSellOrders, setSpotSelectedPair } from "../../slices/homeSlice";
 import { getUserSpotWallet } from "../../actions/walletActions";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
@@ -36,14 +39,19 @@ const { width: Width, height: Height } = Dimensions.get("window");
 const CHART_BLOCK_HEIGHT = Math.round(Height * 0.38);
 const ORDER_BOOK_ROWS = 12;
 
-const toFinite = (v) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
+const orderBookDataEqual = (a, b) => {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i],
+      y = b[i];
+    if (String(x?.price) !== String(y?.price) || String(x?.remaining) !== String(y?.remaining)) return false;
+  }
+  return true;
 };
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
 const SHIMMER_STRIP_WIDTH_DEFAULT = 100;
-const ShimmerBox = ({
+const ShimmerBox = React.memo(({
   width,
   height,
   borderRadius = 8,
@@ -98,9 +106,88 @@ const ShimmerBox = ({
       </Animated.View>
     </View>
   );
-};
+});
 
-const OrderBookSkeleton = ({ rows = 12 }) => {
+const CHART_BG_FALLBACK = "transparent";
+
+const SKELETON_CANDLES = [
+  { bodyH: 15, bodyBot: 30, wickH: 25, wickBot: 25 },
+  { bodyH: 20, bodyBot: 35, wickH: 30, wickBot: 30 },
+  { bodyH: 30, bodyBot: 40, wickH: 45, wickBot: 35 },
+  { bodyH: 20, bodyBot: 65, wickH: 35, wickBot: 60 },
+  { bodyH: 40, bodyBot: 50, wickH: 55, wickBot: 45 },
+  { bodyH: 25, bodyBot: 25, wickH: 45, wickBot: 15 },
+  { bodyH: 50, bodyBot: 45, wickH: 70, wickBot: 35 },
+  { bodyH: 35, bodyBot: 80, wickH: 50, wickBot: 75 },
+  { bodyH: 15, bodyBot: 100, wickH: 30, wickBot: 95 },
+  { bodyH: 25, bodyBot: 105, wickH: 40, wickBot: 95 },
+  { bodyH: 35, bodyBot: 85, wickH: 50, wickBot: 75 },
+  { bodyH: 45, bodyBot: 50, wickH: 60, wickBot: 40 },
+  { bodyH: 20, bodyBot: 60, wickH: 40, wickBot: 50 },
+  { bodyH: 45, bodyBot: 20, wickH: 60, wickBot: 10 },
+  { bodyH: 30, bodyBot: 10, wickH: 45, wickBot: 5 },
+  { bodyH: 15, bodyBot: 35, wickH: 30, wickBot: 30 },
+  { bodyH: 35, bodyBot: 30, wickH: 50, wickBot: 20 },
+  { bodyH: 25, bodyBot: 60, wickH: 40, wickBot: 50 },
+  { bodyH: 45, bodyBot: 20, wickH: 65, wickBot: 15 },
+  { bodyH: 20, bodyBot: 50, wickH: 35, wickBot: 40 },
+  { bodyH: 10, bodyBot: 65, wickH: 20, wickBot: 60 },
+  { bodyH: 25, bodyBot: 45, wickH: 35, wickBot: 40 },
+  { bodyH: 40, bodyBot: 55, wickH: 50, wickBot: 50 },
+  { bodyH: 15, bodyBot: 80, wickH: 25, wickBot: 75 },
+  { bodyH: 30, bodyBot: 70, wickH: 50, wickBot: 60 },
+  { bodyH: 25, bodyBot: 55, wickH: 40, wickBot: 45 },
+];
+
+const ChartSkeleton = React.memo(({ height = CHART_BLOCK_HEIGHT, width = Width }) => {
+  const { colors: themeColors, isDark } = useTheme();
+  const bg = themeColors.background ?? CHART_BG_FALLBACK;
+  return (
+    <View style={{ width, height, backgroundColor: bg, paddingTop: 12, paddingHorizontal: 12, paddingBottom: 15, justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+        <ShimmerBox width={24} height={24} borderRadius={4} style={{ marginRight: 15 }} />
+        {['1min', '5min', '15min', '1H', '1D'].map((v, i) => (
+          <ShimmerBox key={i} width={50} height={24} borderRadius={4} style={{ marginRight: 10 }} />
+        ))}
+      </View>
+
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        <View style={{ flex: 1, paddingRight: 15 }}>
+          <ShimmerBox width={140} height={16} borderRadius={4} style={{ marginBottom: 8 }} />
+          <ShimmerBox width={180} height={12} borderRadius={4} style={{ marginBottom: 16 }} />
+
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', flex: 1, paddingBottom: 15, marginTop: 10 }}>
+            {SKELETON_CANDLES.map((candle, i) => {
+              return (
+                <View key={i} style={{ alignItems: 'center', width: 8, height: '100%', justifyContent: 'flex-end' }}>
+                  <ShimmerBox
+                    width={1.5} height={candle.wickH} borderRadius={1}
+                    style={{ position: 'absolute', bottom: candle.wickBot }}
+                    shimmerDuration={1500} shimmerToValue={60} shimmerStripWidth={60} shimmerColorsOverride={["transparent", isDark ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.8)", "transparent"]}
+                  />
+                  <ShimmerBox
+                    width={6} height={candle.bodyH} borderRadius={2}
+                    style={{ position: 'absolute', bottom: candle.bodyBot }}
+                    shimmerDuration={1500} shimmerToValue={60} shimmerStripWidth={60} shimmerColorsOverride={["transparent", isDark ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.8)", "transparent"]}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={{ width: 45, justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: 25 }}>
+          <ShimmerBox width={40} height={12} borderRadius={4} />
+          <ShimmerBox width={40} height={12} borderRadius={4} />
+          <ShimmerBox width={40} height={12} borderRadius={4} />
+          <ShimmerBox width={40} height={12} borderRadius={4} />
+        </View>
+      </View>
+    </View>
+  );
+});
+
+const OrderBookSkeleton = React.memo(({ rows = 12 }) => {
   const ROW_HEIGHT = 19;
   const BONE_HEIGHT = 14;
   const BONE_RADIUS = 4;
@@ -122,10 +209,16 @@ const OrderBookSkeleton = ({ rows = 12 }) => {
       ))}
     </View>
   );
-};
+});
 
 /** One row: bid (qty | price + green depth) + ask (price + red depth | qty) — theme colors from app. */
-function DepthRow({ bid, ask, maxBidVol, maxAskVol, themeColors, isDark, formatPrice, formatQty }) {
+const toFinite = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+const DepthRow = React.memo(({ bid, ask, maxBidVol, maxAskVol, themeColors, isDark, formatPrice, formatQty }) => {
   const baseGreen = isDark ? "#213438" : "#C6F9E9";
   const baseRed = isDark ? "#352933f7" : "#FFD9DB";
   const bidRem = bid ? toFinite(bid.remaining) : 0;
@@ -176,7 +269,7 @@ function DepthRow({ bid, ask, maxBidVol, maxAskVol, themeColors, isDark, formatP
       </View>
     </View>
   );
-}
+});
 
 const SpotChartScreen = () => {
   const dispatch = useDispatch();
@@ -189,10 +282,11 @@ const SpotChartScreen = () => {
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
   const sellOrders = useAppSelector((state) => state.home.sellOrders);
   const userData = useAppSelector((state) => state.auth.userData);
+  const loading = useAppSelector((state) => state.auth.loading);
   const userSpotWallet = useAppSelector((state) => state.wallet.userSpotWallet);
   const recentTrades = useAppSelector((state) => state.home.recentTrades);
-
-  const [pairSheetVisible, setPairSheetVisible] = useState(false);
+  const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
+  const favoriteArrayLoaded = useAppSelector((state) => state.home.favoriteArrayLoaded);
 
   const params = route.params || {};
   /** Redux pair wins over stale navigation params after user changes pair in `TradingDataModal`. */
@@ -209,12 +303,46 @@ const SpotChartScreen = () => {
       volume: params.volume ?? spotSelectedPair?.volume,
       buy_price: spotSelectedPair?.buy_price ?? params.buy_price,
       change_percentage: spotSelectedPair?.change_percentage ?? params.change_percentage,
+      _id: spotSelectedPair?._id ?? params._id ?? params.pair_id,
     }),
     [spotSelectedPair, params]
   );
 
   const pairRef = useRef(mergedPair);
   pairRef.current = mergedPair;
+
+  const isFav = useMemo(() => {
+    if (!favoriteArray || !mergedPair?._id) return false;
+    return favoriteArray.includes(mergedPair._id);
+  }, [favoriteArray, mergedPair?._id]);
+
+  useEffect(() => {
+    if (userData && !favoriteArrayLoaded) {
+      dispatch(getFavoriteArray());
+    }
+  }, [userData, favoriteArrayLoaded, dispatch]);
+
+  const [favLoading, setFavLoading] = useState(false);
+
+  const toggleFavorite = useCallback(async () => {
+    if (!mergedPair?._id || favLoading) {
+      return;
+    }
+    setFavLoading(true);
+    try {
+      await dispatch(addToFavorites({ pair_id: mergedPair._id }));
+    } catch (e) {
+      console.log("Favorite toggle error", e);
+    } finally {
+      setFavLoading(false);
+    }
+  }, [dispatch, mergedPair?._id, favLoading]);
+
+  const onNotificationPress = useCallback(() => {
+    NavigationService.navigate(routes.NOTIFICATION_SCREEN);
+  }, []);
+
+  const [pairSheetVisible, setPairSheetVisible] = useState(false);
 
   const pairBase = mergedPair?.base_currency || "-";
   const pairQuote = mergedPair?.quote_currency || "-";
@@ -258,7 +386,49 @@ const SpotChartScreen = () => {
     }
   }, [activeTab, userData, dispatch]);
 
+  const [lastSocketData, setLastSocketData] = useState(null);
   const socket = useAppSelector((state) => state.home.socket);
+  const isFocused = useIsFocused();
+  const isFocusedRef = useRef(true);
+  const appStateRef = useRef(AppState.currentState);
+
+  useEffect(() => {
+    isFocusedRef.current = isFocused;
+  }, [isFocused]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      appStateRef.current = next;
+    });
+    return () => sub.remove();
+  }, []);
+
+  const socketThrottleTimerRef = useRef(null);
+  const socketLastFlushRef = useRef(0);
+  const pendingSocketFlushRef = useRef(null);
+  const lastFlushedBuyRef = useRef(null);
+  const lastFlushedSellRef = useRef(null);
+  const SOCKET_UI_THROTTLE_MS = 800;
+
+  const flushSocketToState = useCallback((payload) => {
+    if (!payload || !isFocusedRef.current) return;
+    setLastSocketData(payload.data);
+    if (payload.sellOrders) {
+      if (!orderBookDataEqual(lastFlushedSellRef.current, payload.sellOrders)) {
+        lastFlushedSellRef.current = payload.sellOrders;
+        dispatch(setSellOrders(payload.sellOrders));
+      }
+    }
+    if (payload.buyOrders) {
+      if (!orderBookDataEqual(lastFlushedBuyRef.current, payload.buyOrders)) {
+        lastFlushedBuyRef.current = payload.buyOrders;
+        dispatch(setBuyOrders(payload.buyOrders));
+      }
+    }
+    if (payload.recentTrades) {
+      dispatch(setRecentTrades(payload.recentTrades));
+    }
+  }, [dispatch]);
 
   const transformLocalOrder = useCallback((order, index) => {
     const price = parseFloat(order.price);
@@ -289,12 +459,66 @@ const SpotChartScreen = () => {
       return () => {
         // unsubscribe on blur
         unsubscribeFromExchange?.(p.base_currency_id, p.quote_currency_id);
+        dispatch(setBuyOrders([]));
+        dispatch(setSellOrders([]));
+        dispatch(setRecentTrades([]));
+        setLastSocketData(null);
+        lastFlushedBuyRef.current = null;
+        lastFlushedSellRef.current = null;
       };
-    }, [
-      subscribeToExchange,
-      unsubscribeFromExchange,
-    ])
+    }, [subscribeToExchange, unsubscribeFromExchange, dispatch])
   );
+
+  useEffect(() => {
+    if (!socket || !isFocused) return;
+
+    const handleMessage = (data) => {
+      if (!isFocusedRef.current || appStateRef.current !== "active") return;
+
+      if (data?.buy_order || data?.sell_order || data?.recent_trades) {
+        const buyOrders = data?.buy_order ? (data.buy_order || []).map(transformLocalOrder) : null;
+        const sellOrders = data?.sell_order ? (data.sell_order || []).map(transformLocalOrder) : null;
+        const payload = {
+          data,
+          buyOrders,
+          sellOrders,
+          recentTrades: data?.recent_trades || null,
+        };
+
+        pendingSocketFlushRef.current = payload;
+        const now = Date.now();
+        const elapsed = now - socketLastFlushRef.current;
+        if (elapsed >= SOCKET_UI_THROTTLE_MS || socketLastFlushRef.current === 0) {
+          socketLastFlushRef.current = now;
+          flushSocketToState(payload);
+          pendingSocketFlushRef.current = null;
+          if (socketThrottleTimerRef.current) {
+            clearTimeout(socketThrottleTimerRef.current);
+            socketThrottleTimerRef.current = null;
+          }
+        } else if (!socketThrottleTimerRef.current) {
+          socketThrottleTimerRef.current = setTimeout(() => {
+            socketThrottleTimerRef.current = null;
+            socketLastFlushRef.current = Date.now();
+            const pending = pendingSocketFlushRef.current;
+            pendingSocketFlushRef.current = null;
+            if (pending) flushSocketToState(pending);
+          }, SOCKET_UI_THROTTLE_MS - elapsed);
+        }
+      }
+    };
+
+    socket.on("message", handleMessage);
+    socket.on("exchange:update", handleMessage);
+    return () => {
+      socket.off("message", handleMessage);
+      socket.off("exchange:update", handleMessage);
+      if (socketThrottleTimerRef.current) {
+        clearTimeout(socketThrottleTimerRef.current);
+        socketThrottleTimerRef.current = null;
+      }
+    };
+  }, [socket, isFocused, transformLocalOrder, flushSocketToState]);
 
   const chartUri = useMemo(() => {
     const themeSlug = theme === "Dark" ? "dark" : "light";
@@ -307,6 +531,7 @@ const SpotChartScreen = () => {
       dispatch(setSpotSelectedPair(coin));
       dispatch(setBuyOrders([]));
       dispatch(setSellOrders([]));
+      setLastSocketData(null);
     },
     [dispatch]
   );
@@ -315,6 +540,7 @@ const SpotChartScreen = () => {
     dispatch(setBuyOrders([]));
     dispatch(setSellOrders([]));
     dispatch(setRecentTrades([]));
+    setLastSocketData(null);
   }, [mergedPair?.base_currency_id, mergedPair?.quote_currency_id, dispatch]);
 
   const [webViewReady, setWebViewReady] = useState(false);
@@ -460,6 +686,33 @@ const SpotChartScreen = () => {
             />
           </TouchableOpacity>
         </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={toggleFavorite}
+            style={styles.headerIconBtn}
+            activeOpacity={0.7}
+            disabled={favLoading}
+          >
+            {favLoading ? (
+              <ActivityIndicator size="small" color={isFav ? "#FFD700" : themeColors.text} />
+            ) : (
+              <FastImage
+                source={isFav ? starFillIcon : starIcon}
+                style={styles.headerIcon}
+                resizeMode="contain"
+                tintColor={isFav ? "#FFD700" : themeColors.text}
+              />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onNotificationPress} style={styles.headerIconBtn} activeOpacity={0.7}>
+            <FastImage
+              source={bell_ic}
+              style={styles.headerIcon}
+              resizeMode="contain"
+              tintColor={themeColors.text}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.body}>
@@ -515,7 +768,7 @@ const SpotChartScreen = () => {
           {/* Chart — WebView clipped so it does not paint over the order book below */}
           <View style={[styles.chartWrap, { backgroundColor: bg }]}>
             {showSkeleton ? (
-              <View style={[styles.chartSkeleton, { height: CHART_BLOCK_HEIGHT, backgroundColor: themeColors.card }]} />
+              <ChartSkeleton />
             ) : null}
             <View
               style={[
@@ -632,7 +885,7 @@ const SpotChartScreen = () => {
                 </View>
               </View>
 
-              {buyOrders?.length > 0 || sellOrders?.length > 0 ? (
+              {lastSocketData || buyOrders?.length > 0 || sellOrders?.length > 0 ? (
                 depthRows.map((row, idx) => (
                   <DepthRow
                     key={`d_${idx}`}
@@ -674,52 +927,48 @@ const SpotChartScreen = () => {
                     Time
                   </AppText>
                 </View>
-                {recentTrades.length > 0 ? (
-                  recentTrades.slice(0, 20).map((item, index) => (
-                    <View key={item?._id || index} style={styles.mtRow}>
-                      <View style={{ flex: 1 }}>
+                <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled style={{ maxHeight: Height * 0.5 }}>
+                  {recentTrades?.length > 0 ? (
+                    recentTrades?.slice(0, 50)?.map((item, index) => (
+                      <View key={item?._id || index} style={styles.mtRow}>
                         <AppText
                           type={TEN}
                           style={[
                             styles.mtCell,
                             {
-                              color: item?.side === "BUY" ? themeColors.green : themeColors.danger,
+                              color: item?.side === "BUY" ? (themeColors.green || "#00c076") : (themeColors.danger || "#ff3b30"),
                               textAlign: "left",
                               fontWeight: "600",
                             },
                           ]}
                         >
-                          {parseFloat(item?.price || 0)}
+                          {String(item?.price || 0)}
                         </AppText>
-                      </View>
-                      <View style={{ flex: 1, alignItems: "center" }}>
                         <AppText
                           type={TEN}
-                          style={[styles.mtCell, { color: themeColors.text, textAlign: "center" }]}
+                          style={[styles.mtCell, { color: themeColors.text || "#000", textAlign: "center" }]}
                         >
-                          {parseFloat(item?.quantity || 0)}
+                          {String(item?.quantity || 0)}
                         </AppText>
-                      </View>
-                      <View style={{ flex: 1, alignItems: "flex-end" }}>
                         <AppText
                           type={TEN}
                           style={[
                             styles.mtCell,
-                            { color: themeColors.secondaryText, textAlign: "right" },
+                            { color: themeColors.secondaryText || "#888", textAlign: "right" },
                           ]}
                         >
                           {formatRecentTradeTime(item)}
                         </AppText>
                       </View>
+                    ))
+                  ) : (
+                    <View style={styles.noDataContainer}>
+                      <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
+                        No market trades yet
+                      </AppText>
                     </View>
-                  ))
-                ) : (
-                  <View style={styles.noDataContainer}>
-                    <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                      No market trades yet
-                    </AppText>
-                  </View>
-                )}
+                  )}
+                </ScrollView>
               </View>
             </View>
 
@@ -889,6 +1138,22 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     alignItems: "center",
     justifyContent: "center",
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 8,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerIcon: {
+    width: 20,
+    height: 20,
   },
   headerPairRow: {
     flexDirection: "row",
@@ -1069,7 +1334,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   mtContainer: {
-    flex: 1,
     marginTop: 4,
   },
   mtHeader: {
@@ -1093,7 +1357,6 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   assetsContainer: {
-    flex: 1,
     marginTop: 4,
   },
   assetsHeader: {

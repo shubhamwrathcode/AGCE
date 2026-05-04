@@ -140,14 +140,15 @@ export const addToFavorites =
     dispatch(setLoading(true));
     try {
       const response: any = await appOperation.customer.add_to_favorite(data);
-
       if (response.success) {
-        // dispatch(setFavoriteArray(response?.data));
+        showSuccess(response?.message || "Favorites updated");
         dispatch(getFavoriteArray());
-        // dispatch(setFavorites());
+      } else {
+        showError(response?.message || "Failed to update favorites");
       }
     } catch (e) {
       logger(e);
+      showError(e?.message || "An error occurred");
     } finally {
       dispatch(setLoading(false));
     }

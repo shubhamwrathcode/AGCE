@@ -71,9 +71,11 @@ import { universalPaddingHorizontal, borderWidth } from "../../theme/dimens";
 const SPOT_ORDER_V_GAP = 8;
 import {
   AppText,
+  BOLD,
   Button,
   CommonModal,
   Input,
+  MEDIUM,
   SEMI_BOLD,
   THIRTEEN,
 } from "../../shared";
@@ -3401,13 +3403,13 @@ const styles = StyleSheet.create({
   spotOrderInputValue: {
     flex: 1,
     fontSize: 11,
-    fontWeight: "600",
     textAlign: "center",
     textAlignVertical: "center",
     paddingVertical: 0,
     paddingHorizontal: 2,
     minHeight: 20,
     alignSelf: "stretch",
+    fontFamily: MEDIUM
   },
   spotOrderTotalValue: {
     flex: 1,
