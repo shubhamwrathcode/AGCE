@@ -250,6 +250,7 @@ export const SocketProvider = ({ children }) => {
       socketService.onConnect(handleConnect);
       socketService.on("market:update", handleMarketUpdate);
       socketService.on("exchange:update", handleExchangeUpdate);
+      socketService.on("message", handleExchangeUpdate);
       socketService.on("futures:update", handleFuturesUpdate);
 
       // subscribeToMarket(); removed to prevent auto-subscribe, Market data should only be subscribed on Market screen

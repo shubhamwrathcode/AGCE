@@ -85,7 +85,7 @@ import {
   setCoinData,
   setOpenOrders,
   setPastOrders,
-  setRandom,
+  setRandom, setRecentTrades,
   setSellOrders,
   setSocket,
   setSpotSelectedPair,
@@ -616,10 +616,8 @@ const Spot = () => {
 
   const [currency, setCurrency] = useState(null);
   const [currencyData, setCurrencyData] = useState(null);
-  const [recentTrades, setRecentTrades] = useState([]);
   const [LocalBuyOrders, setLocalBuyOrders] = useState([]);
   const [LocalSellOrders, setLocalSellOrders] = useState([]);
-  const [LocalRecentTrade, setLocalRecentTrade] = useState([]);
   const [orderFilter, setOrderFilter] = useState("All");
   const [pastOrderFilter, setPastOrderFilter] = useState("All");
   const [expandedRowIndex, setExpandedRowIndex] = useState(null);
@@ -629,6 +627,7 @@ const Spot = () => {
   const [isCancelLoading, setIsCancelLoading] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
   const isSpotFocused = useIsFocused();
+  const recentTrades = useAppSelector((state) => state.home.recentTrades);
 
   const rbSheetNumber = useRef();
   const rbSheetlimit = useRef();
@@ -745,7 +744,7 @@ const Spot = () => {
       setLocalSellOrders([]);
       dispatch(setBuyOrders([]));
       dispatch(setSellOrders([]));
-      setRecentTrades([]);
+      dispatch(setRecentTrades([]));
       setSpotMyTrades([]);
       setStopPrice("");
       setTradeHistorySideFilter("All");
@@ -843,6 +842,8 @@ const Spot = () => {
   const isMarketLikeOrder = spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET";
   const showStopPriceField = spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET";
   const [openOrderKindTab, setOpenOrderKindTab] = useState("all");
+  // const [orderBookReady, setOrderBookReady] = useState(false);
+  // const [showOrderBookSkeleton, setShowOrderBookSkeleton] = useState(true);
   const [spotMyTrades, setSpotMyTrades] = useState([]);
   const [tradeHistorySideFilter, setTradeHistorySideFilter] = useState("All");
   const [activePercentage, setActivePercentage] = useState(0);
@@ -987,7 +988,9 @@ const Spot = () => {
       return;
     }
     setLastSocketData(payload.data);
-    if (payload.recentTrades !== undefined) setLocalRecentTrade(payload.recentTrades ?? []);
+    if (payload.recentTrades?.length !== undefined) {
+      // already in Redux via setCoinData in SocketProvider
+    }
     if (payload.sellOrders?.length !== undefined) {
       if (!orderBookDataEqual(lastFlushedSellRef.current, payload.sellOrders)) {
         lastFlushedSellRef.current = payload.sellOrders;
@@ -1081,7 +1084,7 @@ const Spot = () => {
           data,
           buyOrders: transformedBuyOrders,
           sellOrders: transformedSellOrders,
-          recentTrades: data?.recent_trades ?? [],
+          recentTrades: data?.recent_trades ?? recentTrades,
         });
       }
     };
@@ -1104,9 +1107,9 @@ const Spot = () => {
     if (currency?.available === "LOCAL") {
       dispatch(setBuyOrders(LocalBuyOrders));
       dispatch(setSellOrders(LocalSellOrders));
-      setRecentTrades(LocalRecentTrade);
+      dispatch(setRecentTrades(recentTrades));
     }
-  }, [LocalBuyOrders, LocalSellOrders, LocalRecentTrade, currency, dispatch]);
+  }, [LocalBuyOrders, LocalSellOrders, recentTrades, currency, dispatch]);
 
   // Order history now comes from socket (executed_order), so we removed the API call here
   // This matches the website implementation where order history comes from socket messages
@@ -1381,7 +1384,7 @@ const Spot = () => {
               justifyContent: "center",
             }}
           >
-           <FastImage source={item.icon} tintColor={colors.white} style={{width:20,height:20}} resizeMode="contain"/>
+            <FastImage source={item.icon} tintColor={colors.white} style={{ width: 20, height: 20 }} resizeMode="contain" />
           </View>
           <View style={{ flex: 1, marginLeft: 12, paddingRight: 8 }}>
             <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 16, marginBottom: 4 }}>
@@ -1392,8 +1395,8 @@ const Spot = () => {
             </AppText>
           </View>
           {selected ? (
-            <View style={{width:16,height:16,borderRadius:10,backgroundColor:colors.black,alignItems:"center",justifyContent:"center"}}>
-            <FastImage source={tick} tintColor={colors.white} style={{width:8,height:8}} resizeMode="contain"/>
+            <View style={{ width: 16, height: 16, borderRadius: 10, backgroundColor: colors.black, alignItems: "center", justifyContent: "center" }}>
+              <FastImage source={tick} tintColor={colors.white} style={{ width: 8, height: 8 }} resizeMode="contain" />
             </View>
           ) : (
             <View style={{ width: 26 }} />
@@ -1436,7 +1439,7 @@ const Spot = () => {
               borderColor: themeColors.themeBorderColor,
             }}
           >
-           <FastImage source={REMOVE} style={{width:22,height:22}} resizeMode="contain" tintColor={colors.black}/>
+            <FastImage source={REMOVE} style={{ width: 22, height: 22 }} resizeMode="contain" tintColor={colors.black} />
           </TouchableOpacity>
         </View>
 
@@ -1457,9 +1460,9 @@ const Spot = () => {
                 )
               }
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ marginLeft: 4,top:2 }}
+              style={{ marginLeft: 4, top: 2 }}
             >
-               <FastImage source={INFO} style={{width:12,height:12}} resizeMode="contain"/>
+              <FastImage source={INFO} style={{ width: 12, height: 12 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
           {ORDER_TYPE_SHEET_BASIC.map(renderRow)}
@@ -1476,9 +1479,9 @@ const Spot = () => {
                 )
               }
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ marginLeft: 4 ,top:2}}
+              style={{ marginLeft: 4, top: 2 }}
             >
-               <FastImage source={INFO} style={{width:12,height:12}} resizeMode="contain"/>
+              <FastImage source={INFO} style={{ width: 12, height: 12 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
           {ORDER_TYPE_SHEET_ADVANCED.map(renderRow)}
@@ -2075,7 +2078,7 @@ const Spot = () => {
                             color: themeColors.secondaryText,
                             textAlign: "center",
                             alignSelf: "stretch",
-                            top:5
+                            top: 5
                           },
                         ]}
                       >
@@ -2216,7 +2219,7 @@ const Spot = () => {
                           color: themeColors.secondaryText,
                           textAlign: "center",
                           alignSelf: "stretch",
-                          top:5
+                          top: 5
                         },
                       ]}
                     >
@@ -2293,7 +2296,7 @@ const Spot = () => {
                           color: themeColors.secondaryText,
                           textAlign: "center",
                           alignSelf: "stretch",
-                          marginTop:3
+                          marginTop: 3
                         },
                       ]}
                     >
@@ -2506,7 +2509,7 @@ const Spot = () => {
             <OrderBookSection
               theme={theme}
               colors={colors}
-              styles={styles}     
+              styles={styles}
               buy_price={buy_price}
               change_percentage={change_percentage}
               quote_currency={quote_currency}
@@ -3389,7 +3392,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "stretch",
-    bottom:5
+    bottom: 5
   },
   spotOrderStepBtnText: {
     fontSize: 11,

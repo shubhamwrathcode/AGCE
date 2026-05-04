@@ -32,6 +32,7 @@ import {
   tradeIcon,
   progress_icon_pending,
   verification_reject,
+  giftIc,
 } from "../../helper/ImageAssets";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { borderWidth, universalPaddingHorizontal, universalPaddingHorizontalHigh } from "../../theme/dimens";
@@ -408,7 +409,7 @@ const KycStatus = () => {
     const fetchStatus = async () => {
       const data = await dispatch(getKycStatus());
       if (!mounted) return;
-      
+
       setContentLoading(false);
       dispatch(setLoading(false));
 

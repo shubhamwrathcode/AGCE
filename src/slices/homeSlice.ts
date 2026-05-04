@@ -42,6 +42,7 @@ export const initialState: HomeSliceProps = {
     tradeHistory: [],
   },
   futurePositions: [],
+  recentTrades: [],
   random: 1,
   twoFaQrData: undefined,
   conversionHistory: [],
@@ -144,6 +145,11 @@ export const homeSlice = createSlice({
       if (Array.isArray(payload?.executed_order)) {
         if (!isEqual(state.pastOrders, payload.executed_order)) {
           state.pastOrders = payload.executed_order;
+        }
+      }
+      if (Array.isArray(payload?.recent_trades)) {
+        if (!isEqual(state.recentTrades, payload.recent_trades)) {
+          state.recentTrades = payload.recent_trades;
         }
       }
     },
@@ -316,6 +322,9 @@ export const homeSlice = createSlice({
     setFuturesSelectedPair: (state, {payload}) => {
       state.futuresSelectedPair = payload ?? null;
     },
+    setRecentTrades: (state, {payload}) => {
+      state.recentTrades = payload;
+    },
   },
 });
 export const {
@@ -372,6 +381,7 @@ export const {
   setTreeRoot,
   setFlatInvestments,
   setUserTickets,
-  setTicketChats
+  setTicketChats,
+  setRecentTrades
 } = homeSlice.actions;
 export const homeReducer = homeSlice.reducer;
