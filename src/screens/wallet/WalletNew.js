@@ -39,7 +39,7 @@ import {
   getUserFuturesWallet,
   getUserMainWallet,
   getUserOptionsWallet,
-  getUserPortfolio,
+  getAllWalletsPortfolio,
   getUserPortfolioArbitrage,
   getUserPortfolioEarning,
   getUserPortfolioFutures,
@@ -150,7 +150,7 @@ const WalletNew = () => {
   const isFirstLoad = useRef(true);
 
   const fetchWalletData = useCallback(() => {
-    dispatch(getUserPortfolio("", noGlobalLoader));
+    dispatch(getAllWalletsPortfolio(noGlobalLoader));
     dispatch(getUserPortfolioMain("main", noGlobalLoader));
     dispatch(getUserPortfolioSpot("spot", noGlobalLoader));
     dispatch(getUserPortfolioSwap("swap", noGlobalLoader));

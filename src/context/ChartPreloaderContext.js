@@ -41,6 +41,7 @@ import { Dimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
 import { useAppSelector } from '../store/hooks';
 import { colors } from '../theme/colors';
+import { CHART_WEB_BASE_URL } from '../helper/Constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -50,8 +51,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SPOT_DEFAULT_PAIR = 'BTC_USDT';
 const FUTURES_DEFAULT_PAIR = 'BTC_USDT';
 
-const SPOT_BASE_DARK = 'https://zillion.wrathcode.com/chart/dark/';
-const SPOT_BASE_LIGHT = 'https://zillion.wrathcode.com/chart/light/';
+const SPOT_BASE_DARK = `${CHART_WEB_BASE_URL}chart/dark/`;
+const SPOT_BASE_LIGHT = `${CHART_WEB_BASE_URL}chart/light/`;
 const FUTURES_BASE = 'https://zillion.wrathcode.com/futures-chart/dark/';
 
 // ─── Context ──────────────────────────────────────────────────────────────────

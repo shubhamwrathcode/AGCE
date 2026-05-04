@@ -56,7 +56,6 @@ import {
   getUserFuturesWallet,
   getUserMainWallet,
   getUserOptionsWallet,
-  getUserPortfolio,
   getUserSpotWallet,
   getUserSwapWallet,
   getUserWallet,

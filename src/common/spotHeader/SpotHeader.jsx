@@ -1,68 +1,221 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
-import FastImage from 'react-native-fast-image'
-import { candle, menu } from '../../helper/ImageAssets'
-import TradingDataModal from '../TradingDataModal/TradingDataModal'
-import { colors } from '../../theme/colors'
-import { AppText } from '../AppText'
-import { toFixedThree } from '../../helper/utility'
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  Animated,
+  Dimensions,
+} from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import FastImage from "react-native-fast-image";
+import LinearGradient from "react-native-linear-gradient";
+import { candle, downIcon } from "../../helper/ImageAssets";
+import TradingDataModal from "../TradingDataModal/TradingDataModal";
+import { AppText, SEMI_BOLD } from "../AppText";
+import { toFixedThree } from "../../helper/utility";
+import { useTheme } from "../../hooks/useTheme";
 
-const SpotHeader = ({ title, setCurrency, theme, isDark, change, onCandlePress }) => {
-  const [modalVisible, setModalVisible] = useState(false)
+const { width: SCREEN_W } = Dimensions.get("window");
+const HEADER_SHIMMER_STRIP = 140;
 
-  const darkMode = typeof isDark === "boolean" ? isDark : theme === "Dark";
+/** Same surface + shimmer language as Spot order book `ShimmerBox` (input bg). */
+const HeaderShimmerBar = ({ width: w, height, borderRadius = 6, style }) => {
+  const { colors: themeColors, isDark } = useTheme();
+  const boneColor =
+    themeColors?.input ??
+    themeColors?.card ??
+    (isDark ? "rgba(100, 130, 180, 0.22)" : "rgba(160, 185, 220, 0.35)");
+  const shimmerColors = isDark
+    ? ["transparent", "rgba(255,255,255,0.26)", "transparent"]
+    : ["transparent", "rgba(255,255,255,0.72)", "transparent"];
+  const stripW = HEADER_SHIMMER_STRIP;
+  const shimmerX = useRef(new Animated.Value(-stripW)).current;
+
+  useEffect(() => {
+    shimmerX.setValue(-stripW);
+    const run = () => {
+      shimmerX.setValue(-stripW);
+      Animated.timing(shimmerX, {
+        toValue: SCREEN_W,
+        duration: 900,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) run();
+      });
+    };
+    run();
+    return () => shimmerX.stopAnimation();
+  }, [shimmerX, stripW, isDark]);
+
+  return (
+    <View
+      style={[
+        { width: w, height, borderRadius, overflow: "hidden", backgroundColor: boneColor },
+        style,
+      ]}
+    >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          { position: "absolute", top: 0, bottom: 0, width: stripW, left: 0 },
+          { transform: [{ translateX: shimmerX }] },
+        ]}
+      >
+        <LinearGradient
+          colors={shimmerColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{ flex: 1, width: stripW }}
+        />
+      </Animated.View>
+    </View>
+  );
+};
+
+/**
+ * Spot header: pair + chevron opens pair sheet; change % below; right = trend / candle / more.
+ * @param {boolean} [pairLoading] — show input-style skeleton in left block until pair metadata is ready.
+ */
+const SpotHeader = ({
+  title,
+  setCurrency,
+  change,
+  onCandlePress,
+  onTrendPress,
+  onMorePress,
+  isDark: isDarkProp,
+  pairLoading = false,
+}) => {
+  const [pairSheetVisible, setPairSheetVisible] = useState(false);
+  const { colors: themeColors, theme, isDark: isDarkFromHook } = useTheme();
+  const darkMode =
+    typeof isDarkProp === "boolean" ? isDarkProp : isDarkFromHook;
+
+  const openPairSheet = () => setPairSheetVisible(true);
+
+  const iconTint = darkMode ? themeColors.text : "#222";
+  const titleColor = darkMode ? themeColors.text : "#222";
+  const changeColor =
+    change == null || Number.isNaN(Number(change))
+      ? themeColors.secondaryText
+      : Number(change) < 0
+        ? themeColors.red
+        : themeColors.green;
+
+  const leftContent = pairLoading ? (
+    <View style={styles.leftArea} accessibilityState={{ busy: true }}>
+      <View style={styles.pairRow}>
+        <HeaderShimmerBar width={132} height={17} borderRadius={5} />
+        <View style={{ width: 11, height: 11, marginLeft: 5 }} />
+      </View>
+      <HeaderShimmerBar width={76} height={13} borderRadius={5} style={{ marginTop: 6 }} />
+    </View>
+  ) : (
+    <TouchableOpacity
+      style={styles.leftArea}
+      onPress={openPairSheet}
+      activeOpacity={0.75}
+      hitSlop={{ top: 8, bottom: 8, right: 8 }}
+    >
+      <View style={styles.pairRow}>
+        <AppText weight={SEMI_BOLD} style={[styles.pairTitle, { color: titleColor }]}>
+          {title}
+        </AppText>
+        <FastImage
+          source={downIcon}
+          style={{ width: 11, height: 11, marginLeft: 5 }}
+          tintColor={iconTint}
+          resizeMode="contain"
+        />
+      </View>
+      <AppText style={[styles.changeText, { color: changeColor }]}>
+        {change != null && change !== ""
+          ? `${Number(change) >= 0 ? "+" : ""}${toFixedThree(change)}%`
+          : "—"}
+      </AppText>
+    </TouchableOpacity>
+  );
+
   return (
     <>
-      <View style={styles.container}>
-        <TouchableOpacity style={[styles.miniContainer,]} onPress={() => setModalVisible(true)} activeOpacity={0.7}>
-          <FastImage source={menu} style={styles.menu} resizeMode='contain' tintColor={darkMode ? colors.white : colors.black} />
-          <AppText style={[styles.title, { color: darkMode ? "#fff" : "#222" }]}>{title}</AppText>
-          <AppText style={{ color: change < 0 ? colors.red : colors.green }}>{toFixedThree(change)}%</AppText>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.miniContainer, {}]} onPress={onCandlePress} activeOpacity={0.7}>
-          <FastImage source={candle} style={styles.strr} resizeMode='contain' tintColor={darkMode ? colors.white : colors.black} />
-        </TouchableOpacity>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: themeColors.background },
+        ]}
+      >
+        {leftContent}
+
+        <View style={styles.rightIcons}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={onCandlePress}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <FastImage
+              source={candle}
+              style={styles.headerIcon}
+              resizeMode="contain"
+              tintColor={iconTint}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
+
       <TradingDataModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        visible={pairSheetVisible}
+        onClose={() => setPairSheetVisible(false)}
         setCurrency={setCurrency}
         isDark={darkMode}
+        theme={theme}
       />
     </>
-  )
-}
+  );
+};
 
-export default SpotHeader
+export default SpotHeader;
 
 const styles = StyleSheet.create({
   container: {
-    // backgroundColor:"#F5F5F5",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 20,
-    paddingHorizontal: 15
+    paddingTop: 16,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
   },
-  miniContainer: {
+  leftArea: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  pairRow: {
     flexDirection: "row",
-    alignItems: "center"
+    alignItems: "center",
   },
-  strr: {
-    height: 20,
-    width: 20,
-    marginRight: 5
-  },
-  menu: {
-    height: 42,
-    width: 36
-  },
-  title: {
+  pairTitle: {
     fontSize: 17,
-    fontWeight: "600",
-    marginHorizontal: 10
+    letterSpacing: -0.2,
   },
-  percent: {
-    // color:"#E86161"
-  }
-})
+  chevron: {
+    marginLeft: 4,
+    marginTop: 1,
+  },
+  changeText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  rightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  iconBtn: {
+    padding: 6,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerIcon: {
+    width: 25,
+    height: 25,
+  },
+});

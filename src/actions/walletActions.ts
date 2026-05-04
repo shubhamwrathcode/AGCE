@@ -68,10 +68,35 @@ import {AppDispatch} from '../store/store';
 
 const useGlobalLoader = (opts?: { useGlobalLoader?: boolean }) => opts?.useGlobalLoader !== false;
 
+/** Overview / total equity — avoids `estimated-portfolio?walletType=` empty → 400 Invalid wallet type. */
+export const getAllWalletsPortfolio =
+  (options?: { useGlobalLoader?: boolean }) => async (dispatch: AppDispatch) => {
+    if (useGlobalLoader(options)) dispatch(setLoading(true));
+    try {
+      const response: any = await appOperation.customer.all_wallets_portfolio();
+      if (response.success) {
+        dispatch(setWalletBalance(response?.data));
+      }
+    } catch (e) {
+      logger(e);
+    } finally {
+      if (useGlobalLoader(options)) dispatch(setLoading(false));
+    }
+  };
+
 export const getUserPortfolio = (id: any, options?: { useGlobalLoader?: boolean }) => async (dispatch: AppDispatch) => {
+  const walletType = String(id ?? "").trim();
+  if (!walletType) {
+    if (__DEV__) {
+      console.warn(
+        "[Wallet] getUserPortfolio skipped: empty walletType (use getAllWalletsPortfolio for overview total)",
+      );
+    }
+    return;
+  }
   if (useGlobalLoader(options)) dispatch(setLoading(true));
   try {
-    const response: any = await appOperation.customer.user_portfolio(id);
+    const response: any = await appOperation.customer.user_portfolio(walletType);
     if (response.success) {
       dispatch(setWalletBalance(response?.data));
     }

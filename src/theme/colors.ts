@@ -48,6 +48,10 @@ export const colors = {
   filterBgColor: '#7E7E7E',
   lightYellow: '#EEC879',
   buyBtnGreen: '#38B781',
+  /** Spot buy / long — use with `spotTradeSell` for consistent trading UI */
+  spotTradeBuy: '#38B781',
+  /** Spot sell / short */
+  spotTradeSell: '#ED4E4E',
   infoBox: '#FEEFB3',
   infoBoxTextColor: '#9F6000',
   descText: 'rgba(255, 255, 255, 0.6)',
@@ -71,7 +75,7 @@ export const colors = {
   themeElevationColor: "#2b313d",
   overlayColor: "#303744",
   buyButtonColor: "#00C076",
-  sellButtonColor: "#f6465d",
+  sellButtonColor: "#ED4E4E",
   blueThemeColor: '#1e56f5',
   starColor:"#ffc108"
 };
@@ -97,6 +101,8 @@ export const lightTheme = {
   textOnButton: '#FFFFFF',
   red: '#FF4F4F',
   green: '#4ED46C',
+  spotTradeBuy: '#38B781',
+  spotTradeSell: '#ED4E4E',
 };
 
 export const darkTheme = {
@@ -117,4 +123,6 @@ export const darkTheme = {
   textOnButton: '#FFFFFF',
   red: '#FF4F4F',
   green: '#4ED46C',
+  spotTradeBuy: '#38B781',
+  spotTradeSell: '#ED4E4E',
 };

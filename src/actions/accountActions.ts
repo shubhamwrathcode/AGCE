@@ -28,7 +28,7 @@ import {
 } from '../slices/homeSlice';
 import { AppDispatch } from '../store/store';
 import { logoutAction } from './authActions';
-import { getUserPortfolio, getUserPortfolioArbitrage, getUserPortfolioEarning, getUserPortfolioMain, getUserPortfolioSpot, getUserPortfolioSwap } from './walletActions';
+import { getAllWalletsPortfolio, getUserPortfolioArbitrage, getUserPortfolioEarning, getUserPortfolioMain, getUserPortfolioSpot, getUserPortfolioSwap } from './walletActions';
 import { Alert } from 'react-native';
 import { getReferralList } from './homeActions';
 import { Passkey } from 'react-native-passkey';
@@ -367,7 +367,7 @@ export const changeCurrencyPreference =
       if (response?.success) {
         showSuccess(response?.message || "Currency preference updated successfully");
         dispatch(getUserProfile());
-        dispatch(getUserPortfolio(""));
+        dispatch(getAllWalletsPortfolio());
         dispatch(getUserPortfolioMain("main"));
         dispatch(getUserPortfolioSpot("spot"));
         dispatch(getUserPortfolioSwap("swap"));

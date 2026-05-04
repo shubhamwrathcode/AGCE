@@ -8,6 +8,11 @@ export const SELECTED_LANGUAGE = 'SELECTED_LANGUAGE';
  */
 export const BASE_URL = 'https://agcebackend.wrathcode.com/';
 /**
+ * Spot chart WebView (ejected web), e.g. `.../chart/light/BTC_USDT`.
+ * Not the API host — keep separate from `BASE_URL`.
+ */
+export const CHART_WEB_BASE_URL = 'https://agce.wrathcode.com/';
+/**
  * Static / uploaded assets (coin icons, profile images, banners) — same as web
  * `baseImage` / `appUrl2` (`https://backend.demoexchange.wrathcode.com`).
  * Build URLs as `${IMAGE_BASE_URL}${icon_path}` (path from API, e.g. `icons/...`).

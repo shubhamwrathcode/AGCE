@@ -2,6 +2,7 @@
 import React, { createContext, useRef } from "react";
 import { WebView } from "react-native-webview";
 import { View } from "react-native";
+import { CHART_WEB_BASE_URL } from "./helper/Constants";
 
 export const ChartContext = createContext();
 
@@ -23,7 +24,7 @@ export function ChartProvider({ children }) {
       >
         <WebView
           ref={webview}
-          source={{ uri: "https://zillion.wrathcode.com/chart/dark/BTC_USDT" }}
+          source={{ uri: `${CHART_WEB_BASE_URL}chart/dark/BTC_USDT` }}
           javaScriptEnabled
           domStorageEnabled
           onLoadEnd={() => { }}

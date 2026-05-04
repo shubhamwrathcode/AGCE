@@ -404,6 +404,13 @@ export const security_risk_vector = require('../../assets/images/security_risk_v
 export const change_email_vector = require('../../assets/images/change_email_vector.png');
 export const playstore = require('../../assets/images/playstore.png');
 export const account_restrictions = require('../../assets/images/account_restrictions.png');
+export const market_ic = require('../../assets/images/market_ic.png');
+export const spotMarket = require('../../assets/images/spotMarket.png');
+export const spotLimitTrade = require('../../assets/images/spotLimitTrade.png');
+export const limitTrade = require('../../assets/images/limitTrade.png');
+
+
+
 
 
 

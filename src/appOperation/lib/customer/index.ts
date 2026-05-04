@@ -77,6 +77,9 @@ export default (appOperation: AppOperation) => ({
       appOperation.get('user/deposit-active-coins-fiat', undefined, undefined, CUSTOMER_TYPE),
   user_wallet: () =>
     appOperation.get('wallet/user-wallet', undefined, undefined, CUSTOMER_TYPE),
+  /** Total estimated portfolio across wallets (no `walletType` query) — same as web `allWalletsPortfolio`. */
+  all_wallets_portfolio: () =>
+    appOperation.get('wallet/all-wallets-portfolio', undefined, undefined, CUSTOMER_TYPE),
   user_main_wallet: (id: any) =>
     appOperation.get(`wallet/user-wallet?wallet_type=${id}`, undefined, undefined, CUSTOMER_TYPE),
   generate_address: (data: GenerateAddressProps) =>

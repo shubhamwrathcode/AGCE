@@ -334,10 +334,15 @@ export interface CancelOrderProps {
 export interface PlaceOrderProps {
   base_currency_id: string;
   order_type: string;
-  price: string;
+  price: string | number;
   quantity: string;
   quote_currency_id: string;
   side: string;
+  /** Spot engine: trigger / stop reference for STOP_LIMIT / STOP_MARKET */
+  stop_price?: string | number;
+  /** GTC (default) | IOC | FOK for LIMIT / STOP_LIMIT */
+  time_in_force?: string;
+  max_slippage_percent?: number;
 }
 
 export interface HistoricDataProps {
