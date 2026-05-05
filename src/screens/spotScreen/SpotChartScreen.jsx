@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  ImageBackground,
 } from "react-native";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
@@ -23,7 +24,6 @@ import { useDispatch } from "react-redux";
 import { useTheme } from "../../hooks/useTheme";
 import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD } from "../../shared";
 import FastImage from "react-native-fast-image";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   back_ic,
   downIcon,
@@ -33,6 +33,14 @@ import {
   starFillIcon,
   notification_bell_ic,
   bell_ic,
+  margin,
+  futuresIcon,
+  Robot,
+  margin_ic,
+  future_ic,
+  bots_ic,
+  buyImage,
+  selImage,
 } from "../../helper/ImageAssets";
 import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
@@ -43,7 +51,7 @@ import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
 import { setBuyOrders, setRecentTrades, setSellOrders, setSpotSelectedPair } from "../../slices/homeSlice";
 import { getUserSpotWallet } from "../../actions/walletActions";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
-import { lightTheme } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import * as routes from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -455,9 +463,7 @@ const SpotChartScreen = () => {
     [pairTickSize]
   );
   const [orderBookAggStep, setOrderBookAggStep] = useState(DEFAULT_ORDER_BOOK_AGG_OPTIONS[0]);
-  const [orderBookAggOpen, setOrderBookAggOpen] = useState(false);
-  const [aggMenuLayout, setAggMenuLayout] = useState(null);
-  const aggTriggerRef = useRef(null);
+  // Aggregation dropdown disabled per design (no selector next to Assets)
   /** both = split, bids = buy side only, asks = sell side only (matches web `orderBookViewMode`) */
   const [orderBookViewMode, setOrderBookViewMode] = useState("both");
 
@@ -556,23 +562,7 @@ const SpotChartScreen = () => {
     }
   }, [dispatch]);
 
-  const transformLocalOrder = useCallback((order, index) => {
-    const price = parseFloat(order.price);
-    const remaining = parseFloat(order.remaining ?? order.quantity ?? 0);
-    return {
-      _id: `local_${order.price}_${remaining}_${index}`,
-      side: order.side,
-      price,
-      quantity: parseFloat(order.quantity ?? order.remaining ?? 0),
-      filled: 0,
-      remaining,
-      total: parseFloat(order.total ?? price * remaining),
-      status: "PENDING",
-      transaction_fee: 0,
-      tds: 0,
-      __v: 0,
-    };
-  }, []);
+
 
   useFocusEffect(
     useCallback(() => {
@@ -799,27 +789,7 @@ const SpotChartScreen = () => {
   const totalVolBar = bidVolSum + askVolSum || 1;
   const bidPct = (bidVolSum / totalVolBar) * 100;
 
-  const openAggMenu = useCallback(() => {
-    requestAnimationFrame(() => {
-      aggTriggerRef.current?.measureInWindow((x, y, w, h) => {
-        setAggMenuLayout({ x, y, w, h });
-        setOrderBookAggOpen(true);
-      });
-    });
-  }, []);
-
-  const closeAggMenu = useCallback(() => {
-    setOrderBookAggOpen(false);
-    setAggMenuLayout(null);
-  }, []);
-
-  const selectAggStep = useCallback(
-    (opt) => {
-      setOrderBookAggStep(opt);
-      closeAggMenu();
-    },
-    [closeAggMenu]
-  );
+  // (openAggMenu/closeAggMenu/selectAggStep removed)
 
   const goToSpotTradeSide = useCallback(
     (side) => {
@@ -1022,12 +992,7 @@ const SpotChartScreen = () => {
                     ],
                   ]}
                 >
-                  <Ionicons
-                    name={CHART_BOTTOM_TAB_ICON[tab] ?? "ellipse-outline"}
-                    size={18}
-                    color={activeTab === tab ? themeColors.text : themeColors.secondaryText}
-                    style={{ marginBottom: 4 }}
-                  />
+                 
                   <AppText
                     type={TEN}
                     weight={activeTab === tab ? SEMI_BOLD : undefined}
@@ -1038,30 +1003,7 @@ const SpotChartScreen = () => {
                 </TouchableOpacity>
               ))}
             </View>
-            {activeTab === "Order Book" ? (
-              <TouchableOpacity
-                ref={aggTriggerRef}
-                activeOpacity={0.75}
-                onPress={openAggMenu}
-                style={[
-                  styles.obAggTrigger,
-                  {
-                    backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
-                    borderColor: themeColors.themeBorderColor,
-                  },
-                ]}
-              >
-                <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                  {formatAggStepLabel(orderBookAggStep)}
-                </AppText>
-                <FastImage
-                  source={downIcon}
-                  style={styles.obAggCaret}
-                  resizeMode="contain"
-                  tintColor={themeColors.secondaryText}
-                />
-              </TouchableOpacity>
-            ) : null}
+            {/** Agg dropdown removed (design) */}
           </View>
 
           {/* Slide-in animation on tab press (renders 2 panels only during animation). */}
@@ -1077,9 +1019,27 @@ const SpotChartScreen = () => {
                 <View style={{ width: Width }}>
                   {bottomSlidePair.from === "Order Book" ? (
                     <View style={{ width: Width, paddingHorizontal: 12 }}>
-              <View style={[styles.obRatioBar, { backgroundColor: themeColors.card }]}>
-                <View style={[styles.obRatioBid, { flex: 1, backgroundColor: themeColors.green }]} />
-                <View style={[styles.obRatioAsk, { flex: 1, backgroundColor: themeColors.red }]} />
+              <View style={styles.obRatioRow}>
+                <ImageBackground
+                  source={buyImage}
+                  resizeMode="stretch"
+                  style={styles.obRatioPill}
+                  imageStyle={{ }}
+                >
+                  <AppText style={{ color: themeColors.green, fontWeight: "800", fontSize: 12 }}>
+                    {Math.round(bidPct)}%
+                  </AppText>
+                </ImageBackground>
+                <ImageBackground
+                  source={selImage}
+                  resizeMode="stretch"
+                  style={styles.obRatioPill}
+                  imageStyle={{  }}
+                >
+                  <AppText style={{ color: themeColors.red, fontWeight: "800", fontSize: 12 }}>
+                    {Math.round(100 - bidPct)}%
+                  </AppText>
+                </ImageBackground>
               </View>
 
               <View style={styles.obColHeader}>
@@ -1307,9 +1267,27 @@ const SpotChartScreen = () => {
                 <View style={{ width: Width }}>
                   {bottomSlidePair.to === "Order Book" ? (
                     <View style={{ width: Width, paddingHorizontal: 12 }}>
-                      <View style={[styles.obRatioBar, { backgroundColor: themeColors.card }]}>
-                        <View style={[styles.obRatioBid, { flex: 1, backgroundColor: themeColors.green }]} />
-                        <View style={[styles.obRatioAsk, { flex: 1, backgroundColor: themeColors.red }]} />
+                      <View style={styles.obRatioRow}>
+                        <ImageBackground
+                          source={buyImage}
+                          resizeMode="stretch"
+                          style={styles.obRatioPill}
+                          imageStyle={{ borderRadius: 10 }}
+                        >
+                          <AppText style={{ color: themeColors.green, fontWeight: "800", fontSize: 12 }}>
+                            {Math.round(bidPct)}%
+                          </AppText>
+                        </ImageBackground>
+                        <ImageBackground
+                          source={selImage}
+                          resizeMode="stretch"
+                          style={styles.obRatioPill}
+                          imageStyle={{ borderRadius: 10 }}
+                        >
+                          <AppText style={{ color: themeColors.red, fontWeight: "800", fontSize: 12 }}>
+                            {Math.round(100 - bidPct)}%
+                          </AppText>
+                        </ImageBackground>
                       </View>
                       <View style={styles.obColHeader}>
                         <View style={styles.depthBidSide}>
@@ -1500,9 +1478,27 @@ const SpotChartScreen = () => {
             <View style={styles.chartBottomTabBody}>
               {mountedTab === "Order Book" ? (
                 <View style={{ width: Width, paddingHorizontal: 12 }}>
-                  <View style={[styles.obRatioBar, { backgroundColor: themeColors.card }]}>
-                    <View style={[styles.obRatioBid, { flex: 1, backgroundColor: themeColors.green }]} />
-                    <View style={[styles.obRatioAsk, { flex: 1, backgroundColor: themeColors.red }]} />
+                  <View style={[styles.obRatioRow,{gap:0}]}>
+                    <ImageBackground
+                      source={buyImage}
+                      resizeMode="stretch"
+                      style={styles.obRatioPill}
+                      imageStyle={{ borderRadius: 10 }}
+                    >
+                      <AppText style={{ color: themeColors.green, fontWeight: "800", fontSize: 12 }}>
+                        {Math.round(bidPct)}%
+                      </AppText>
+                    </ImageBackground>
+                    <ImageBackground
+                      source={selImage}
+                      resizeMode="stretch"
+                      style={styles.obRatioPill}
+                      imageStyle={{ borderRadius: 10 }}
+                    >
+                      <AppText style={{ color: themeColors.red, fontWeight: "800", fontSize: 12 }}>
+                        {Math.round(100 - bidPct)}%
+                      </AppText>
+                    </ImageBackground>
                   </View>
                   <View style={styles.obColHeader}>
                     <View style={styles.depthBidSide}>
@@ -1692,82 +1688,69 @@ const SpotChartScreen = () => {
         </ScrollView>
       </View>
 
-      <Modal
-        visible={orderBookAggOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={closeAggMenu}
-      >
-        <Pressable style={styles.aggModalBackdrop} onPress={closeAggMenu} />
-        {aggMenuLayout ? (
-          <View
-            style={[
-              styles.aggMenuPopover,
-              {
-                top: aggMenuLayout.y + aggMenuLayout.h + 6,
-                left: Math.max(
-                  8,
-                  Math.min(aggMenuLayout.x + aggMenuLayout.w - 160, Width - 8 - 160)
-                ),
-                backgroundColor: themeColors.card ?? bg,
-                borderColor: themeColors.themeBorderColor,
-              },
-            ]}
-          >
-            {orderBookAggOptions.map((opt) => {
-              const selected = Number(orderBookAggStep) === Number(opt);
-              return (
-                <TouchableOpacity
-                  key={String(opt)}
-                  style={[
-                    styles.aggMenuRow,
-                    selected && { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" },
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => selectAggStep(opt)}
-                >
-                  <AppText
-                    type={TEN}
-                    weight={selected ? SEMI_BOLD : undefined}
-                    style={{ color: themeColors.text }}
-                  >
-                    {formatAggStepLabel(opt)}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : null}
-      </Modal>
-
       <View
         style={[
           styles.chartBottomBar,
           {
-            borderTopColor: themeColors.themeBorderColor,
-            backgroundColor: themeColors.background,
+            backgroundColor: colors.white,
             paddingBottom: Math.max(insets.bottom, 10),
           },
         ]}
       >
-        <TouchableOpacity
-          style={[styles.chartBottomBtn, { backgroundColor: themeColors.spotTradeBuy ?? themeColors.green }]}
-          onPress={() => goToSpotTradeSide("BUY")}
-          activeOpacity={0.88}
-        >
-          <AppText weight={SEMI_BOLD} style={{ color: themePalette.white }}>
-            Buy
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.chartBottomBtn, { backgroundColor: themeColors.spotTradeSell ?? themeColors.red }]}
-          onPress={() => goToSpotTradeSide("SELL")}
-          activeOpacity={0.88}
-        >
-          <AppText weight={SEMI_BOLD} style={{ color: themePalette.white }}>
-            Sell
-          </AppText>
-        </TouchableOpacity>
+        <View style={styles.chartBottomLeftIcons}>
+          {[
+            { id: "margin", label: "Margin", icon: margin_ic },
+            { id: "futures", label: "Futures", icon: future_ic },
+            { id: "bots", label: "Bots", icon: bots_ic },
+          ].map((it) => (
+            <TouchableOpacity
+              key={it.id}
+              activeOpacity={0.8}
+              onPress={() => {}}
+              style={styles.chartBottomIconItem}
+              accessibilityLabel={it.label}
+            >
+              <FastImage
+                source={it.icon}
+                style={styles.chartBottomIcon}
+                resizeMode="contain"
+                tintColor={themeColors.text}
+              />
+              <AppText style={[styles.chartBottomIconLabel, { color: themeColors.text }]}>
+                {it.label}
+              </AppText>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.chartBottomBtnsWrap}>
+          <TouchableOpacity
+            style={[
+              styles.chartBottomBtn,
+              { backgroundColor: themeColors.spotTradeBuy ?? themeColors.green },
+              { flex: 1.1 },
+            ]}
+            onPress={() => goToSpotTradeSide("BUY")}
+            activeOpacity={0.88}
+          >
+            <AppText weight={SEMI_BOLD} style={{ color: themePalette.white }}>
+              Buy
+            </AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.chartBottomBtn,
+              { backgroundColor: themeColors.spotTradeSell ?? themeColors.red },
+              { flex: 1.1 },
+            ]}
+            onPress={() => goToSpotTradeSide("SELL")}
+            activeOpacity={0.88}
+          >
+            <AppText weight={SEMI_BOLD} style={{ color: themePalette.white }}>
+              Sell
+            </AppText>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TradingDataModal
@@ -1784,6 +1767,7 @@ const SpotChartScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+ 
   },
   body: {
     flex: 1,
@@ -1791,17 +1775,41 @@ const styles = StyleSheet.create({
   chartBottomBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 5,
     paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  chartBottomLeftIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingRight: 10,
+  },
+  chartBottomIconItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 46,
+  },
+  chartBottomIcon: {
+    width: 22,
+    height: 22,
+  },
+  chartBottomIconLabel: {
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: "600",
+  },
+  chartBottomBtnsWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   chartBottomBtn: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 999,
   },
   scrollMain: {
     flex: 1,
@@ -1986,18 +1994,19 @@ const styles = StyleSheet.create({
   obTabActive: {
     // backgroundColor overridden inline to match theme
   },
-  obRatioBar: {
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
+  obRatioRow: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     marginBottom: 10,
   },
-  obRatioBid: {
-    height: "100%",
-  },
-  obRatioAsk: {
-    height: "100%",
+  obRatioPill: {
+    flex: 1,
+    height: 24,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   obColHeader: {
     flexDirection: "row",

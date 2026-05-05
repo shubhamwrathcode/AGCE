@@ -415,6 +415,13 @@ export const selImage = require('../../assets/images/selImage.png');
 export const buyImage = require('../../assets/images/buyImage.png');
 export const moreImg = require('../../assets/images/moreImg.png');
 export const modes = require('../../assets/images/modes.png');
+export const bots_ic = require('../../assets/images/bots_ic.png');
+export const margin_ic = require('../../assets/images/margin_ic.png');
+export const future_ic = require('../../assets/images/future_ic.png');
+
+
+
+
 
 
 
