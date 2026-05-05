@@ -142,16 +142,39 @@ export const homeSlice = createSlice({
         }
       }
       // Order history (executed_order) - same as web exchangeData.executed_order
-      if (Array.isArray(payload?.executed_order)) {
-        if (!isEqual(state.pastOrders, payload.executed_order)) {
-          state.pastOrders = payload.executed_order;
-        }
+      // Order history (executed_order) - UPSERT logic to prevent blinking
+      if (Array.isArray(payload?.executed_order) && payload.executed_order.length > 0) {
+        const existing = Array.isArray(state.pastOrders) ? [...state.pastOrders] : [];
+        const newItems = payload.executed_order;
+        
+        newItems.forEach(newItem => {
+          const newId = String(newItem?._id || newItem?.id || newItem?.order_id || "");
+          if (!newId) return;
+          const idx = existing.findIndex(ex => String(ex?._id || ex?.id || ex?.order_id || "") === newId);
+          if (idx > -1) {
+            existing[idx] = { ...existing[idx], ...newItem };
+          } else {
+            existing.unshift(newItem);
+          }
+        });
+        state.pastOrders = existing;
       }
-      // Mobile socket sometimes sends `executed_trades` instead of `executed_order`
-      if (!Array.isArray(payload?.executed_order) && Array.isArray(payload?.executed_trades)) {
-        if (!isEqual(state.pastOrders, payload.executed_trades)) {
-          state.pastOrders = payload.executed_trades;
-        }
+      // Mobile socket executed_trades - UPSERT logic
+      if (!Array.isArray(payload?.executed_order) && Array.isArray(payload?.executed_trades) && payload.executed_trades.length > 0) {
+        const existing = Array.isArray(state.pastOrders) ? [...state.pastOrders] : [];
+        const newItems = payload.executed_trades;
+
+        newItems.forEach(newItem => {
+          const newId = String(newItem?._id || newItem?.id || newItem?.order_id || "");
+          if (!newId) return;
+          const idx = existing.findIndex(ex => String(ex?._id || ex?.id || ex?.order_id || "") === newId);
+          if (idx > -1) {
+            existing[idx] = { ...existing[idx], ...newItem };
+          } else {
+            existing.unshift(newItem);
+          }
+        });
+        state.pastOrders = existing;
       }
       if (Array.isArray(payload?.recent_trades)) {
         if (!isEqual(state.recentTrades, payload.recent_trades)) {

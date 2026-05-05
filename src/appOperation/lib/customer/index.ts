@@ -338,9 +338,9 @@ export default (appOperation: AppOperation) => ({
       CUSTOMER_TYPE,
     ),
   past_orders: (data: PastOrdersProps) =>
-    appOperation.post('spot/v1/orders/history', data, CUSTOMER_TYPE),
+    appOperation.get('spot/v1/me/orders/history', data, undefined, CUSTOMER_TYPE),
   open_orders: (data: OpenOrdersProps) =>
-    appOperation.post('spot/v1/orders/my', data, CUSTOMER_TYPE),
+    appOperation.get('spot/v1/me/orders/open', data, undefined, CUSTOMER_TYPE),
   cancel_order: (data: CancelOrderProps) =>
     appOperation.post('spot/v1/orders/cancel', data, CUSTOMER_TYPE),
   close_option_order: (data: CancelOrderProps) =>
@@ -597,8 +597,8 @@ export default (appOperation: AppOperation) => ({
             ),
       break_staking: (data: any) =>
         appOperation.post('staking/break_staking', data, CUSTOMER_TYPE),
-        get_trade_history: (skip: any, limit: any) =>
-        appOperation.get(`spot/v1/trades/my?skip=${skip}&limit=${limit}`,  undefined,
+        get_trade_history: (skip: any, limit: any, pair?: string) =>
+        appOperation.get(`spot/v1/trades/my?skip=${skip}&limit=${limit}${pair ? `&pair=${pair}` : ""}`,  undefined,
           undefined, CUSTOMER_TYPE),
         subscribe_earning_package: (data: any) =>
           appOperation.post('earning/subscribe-earning-package', data, CUSTOMER_TYPE),

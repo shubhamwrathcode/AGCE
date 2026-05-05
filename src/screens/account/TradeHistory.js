@@ -1,36 +1,31 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions } from "react-native";
 import ReactNativeModal from "react-native-modal";
 import {
   AppSafeAreaView,
   AppText,
   Toolbar,
+  MEDIUM,
 } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
 import FastImage from "react-native-fast-image";
-import { linkIcon, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from "../../helper/ImageAssets";
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, right_ic } from "../../helper/ImageAssets";
 import { useDispatch } from "react-redux";
-import { getTradeHistory } from "../../actions/walletActions";
+import { getPastOrders } from "../../actions/homeActions";
 import moment from "moment";
 import TradeHistorySkeleton from "./TradeHistorySkeleton";
-import { toFixedSix, toFixedEight } from "../../helper/utility";
+import { toFixedEight } from "../../helper/utility";
 import NavigationService from "../../navigation/NavigationService";
 import { SPOT_ORDER_HISTORY_DETAIL } from "../../navigation/routes";
-import { fontFamilySemiBold } from "../../theme/typography";
+import { fontFamilyBold, fontFamilySemiBold } from "../../theme/typography";
 import { cancelOrder } from "../../actions/homeActions";
-import { CommonModal } from "../../shared";
 
-const TradeHistory = ({
-  investments = [],
-  totalSelfInvestment = 0,
-  totalDownlineInvestment = 0,
-  totalAllInvestment = 0,
-}) => {
+const TradeHistory = () => {
   const dispatch = useDispatch();
   const { colors: themeColors, isDark } = useTheme();
-  const tradeHistoryRedux = useAppSelector((state) => state.wallet.tradeHistory);
+  const tradeHistoryRedux = useAppSelector((state) => state.home.pastOrders);
   const [tradeHistory, setTradeHistory] = useState([]);
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -40,15 +35,6 @@ const TradeHistory = ({
   const [isCancelLoading, setIsCancelLoading] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
   const limit = 10;
-  const hasLoggedCardRef = useRef(false);
-
-  // Log one card's full data once (to see all fields for history detail page)
-  useEffect(() => {
-    if (tradeHistory?.length > 0 && !hasLoggedCardRef.current) {
-      hasLoggedCardRef.current = true;
-      console.log("TradeHistory — one card full data:", JSON.stringify(tradeHistory[0], null, 2));
-    }
-  }, [tradeHistory]);
 
   useEffect(() => {
     setSkip(0);
@@ -64,6 +50,7 @@ const TradeHistory = ({
       setTradeHistory(tradeHistoryRedux);
       setIsInitialLoad(false);
     } else {
+      // Append only if it's a new page (pagination)
       setTradeHistory(prev => [...prev, ...tradeHistoryRedux]);
     }
     if (tradeHistoryRedux.length < limit) setHasMore(false);
@@ -72,15 +59,14 @@ const TradeHistory = ({
 
   const loadMoreData = (currentSkip, isInitial = false) => {
     if (loading || (!hasMore && !isInitial)) return;
-
     setLoading(true);
     setSkip(currentSkip);
-    dispatch(getTradeHistory(currentSkip, limit));
+    dispatch(getPastOrders({ skip: currentSkip, limit }));
   };
 
   const handleScroll = (event) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const paddingToBottom = 20;
+    const paddingToBottom = 100;
     const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
 
     if (isCloseToBottom && hasMore && !loading) {
@@ -94,102 +80,89 @@ const TradeHistory = ({
     if (s === "FILLED" || s === "COMPLETED" || s === "EXECUTED") return colors.green;
     if (s === "REJECTED" || s === "CANCELLED" || s === "CANCELED") return colors.red;
     if (s === "PARTIAL") return colors.amber;
-    if (s === "OPEN" || s === "PENDING") return colors.lightYellow;
+    if (s === "OPEN" || s === "PENDING") return colors.lightYellow || "#EAB308";
     return themeColors.secondaryText;
   };
 
-  const formatDateTimeCard = (dateString) => {
-    if (!dateString) return "---";
-    return moment(dateString).format("YYYY-MM-DD HH:mm:ss");
+  const getStatusLabel = (s = "") => {
+    const statusUpper = s.toUpperCase().trim();
+    if (statusUpper === "FILLED") return "Filled";
+    if (statusUpper === "CANCELLED" || statusUpper === "CANCELED") return "Cancelled";
+    if (statusUpper === "REJECTED") return "Rejected";
+    if (statusUpper === "PARTIAL") return "Partial";
+    if (statusUpper === "OPEN") return "Open";
+    if (statusUpper === "PENDING") return "Pending";
+    return s || "---";
   };
 
   const renderCard = (inv, idx) => {
-    const currencyPair = inv?.side === "BUY"
-      ? `${inv.ask_currency || inv.base_currency}/${inv.pay_currency || inv.quote_currency}`
-      : `${inv.pay_currency || inv.quote_currency}/${inv.ask_currency || inv.base_currency}`;
+    const baseSym = inv?.ask_currency || inv?.base_currency || "";
+    const quoteSym = inv?.pay_currency || inv?.quote_currency || "";
+    let currencyPair = (baseSym && quoteSym) ? `${baseSym}/${quoteSym}` : (inv?.pair || "---");
+
+    if (currencyPair !== "---" && !currencyPair.includes("/")) {
+      const quotes = ["USDT", "BTC", "ETH", "INR", "BNB"];
+      for (const q of quotes) {
+        if (currencyPair.endsWith(q)) {
+          currencyPair = currencyPair.replace(q, `/${q}`);
+          break;
+        }
+      }
+    }
+
     const qty = Number(inv?.quantity ?? inv?.filled ?? 0) || 0;
-    const remaining = Number(inv?.remaining) || 0;
-    const filled = qty > 0 ? qty - remaining : (Number(inv?.filled) || 0);
-    const totalQty = qty || filled || 0;
+    const filled = Number(inv?.filled_quantity ?? inv?.filled ?? 0);
+    const remaining = Number(inv?.remaining_quantity ?? inv?.remaining ?? Math.max(0, qty - filled));
     const price = Number(inv?.price) || 0;
-    const avgPrice = Number(inv?.avg_execution_price) || price;
-    const status = inv?.status || "";
-    const isFilled = String(status).toUpperCase().trim() === "FILLED";
-    const orderTypeLabel = (inv?.order_type === "MARKET" ? "Market" : "Limit") + " / " + (inv?.side === "BUY" ? "Buy" : "Sell");
-    
-    const getStatusLabel = (s = "") => {
-      const statusUpper = s.toUpperCase().trim();
-      if (statusUpper === "FILLED") return "Filled";
-      if (statusUpper === "CANCELLED" || statusUpper === "CANCELED") return "Cancelled";
-      if (statusUpper === "REJECTED") return "Rejected";
-      if (statusUpper === "PARTIAL") return "Partial";
-      if (statusUpper === "OPEN") return "Open";
-      if (statusUpper === "PENDING") return "Pending";
-      return s || "---";
-    };
-    const statusLabel = getStatusLabel(status);
+    const avgPrice = Number(inv?.avg_execution_price ?? inv?.avgPrice ?? inv?.average_price ?? price) || 0;
+    const value = Number(inv?.executed_value ?? inv?.executedValue ?? (avgPrice * filled));
+    const side = String(inv?.side || "").toUpperCase();
+    const type = String(inv?.order_type || inv?.type || "MARKET").toUpperCase();
+    const statusRaw = inv?.status || "";
+
+    const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at;
+    const dateStr = d ? moment(d).format("DD/MM/YYYY") : "---";
+    const timeStr = d ? moment(d).format("HH:mm:ss") : "---";
 
     const textColor = themeColors.text;
     const labelColor = themeColors.secondaryText;
-    const statusUpper = String(status).toUpperCase().trim();
-    const orderId = inv?._id || inv?.id;
-    const canCancel = !!orderId && !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpper);
+    const canCancel = !!(inv?._id || inv?.id) && !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(String(statusRaw).toUpperCase());
+
+    const KVRow = ({ label, value, valueColor }) => (
+      <View style={styles.kvRow}>
+        <AppText style={[styles.kvK, { color: labelColor }]}>{label}</AppText>
+        <AppText style={[styles.kvV, { color: valueColor || textColor }]}>{value}</AppText>
+      </View>
+    );
 
     return (
-      <TouchableOpacity
-        key={idx}
-        activeOpacity={0.8}
-        onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { order: inv })}
-        style={[styles.card, {}]}
-      >
-        {/* Top: Pair + link icon | Date time */}
-        <View style={styles.topRow}>
-          <View style={styles.pairRow}>
-            <AppText style={[styles.cardTitle, { color: textColor }]}>{currencyPair}</AppText>
-            {/* <FastImage source={linkIcon} style={styles.linkIcon} resizeMode="contain" tintColor={labelColor} /> */}
-          </View>
-          <AppText style={[styles.cardDate, { color: labelColor }]}>
-            {formatDateTimeCard(inv?.updatedAt || inv?.createdAt)}
-          </AppText>
-        </View>
-
-        {/* Limit / Buy (green) or Limit / Sell (red) */}
-        <AppText
-          style={[
-            styles.orderTypeLabel,
-            { color: inv?.side === "BUY" ? colors.green : colors.red },
-          ]}
+      <View key={idx} style={[styles.card, { backgroundColor: themeColors.background }]}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
         >
-          {orderTypeLabel}
-        </AppText>
+          <View style={styles.topHeader}>
+            <View style={styles.pairRow}>
+              <AppText style={[styles.pairTitle, { color: textColor }]} weight={MEDIUM}>{currencyPair}</AppText>
+              <FastImage source={right_ic} style={styles.chevron} resizeMode="contain" tintColor={labelColor} />
+            </View>
+            <AppText style={{ color: labelColor, fontSize: 11, marginTop: 2 }}>{dateStr} {timeStr}</AppText>
+          </View>
 
-        {/* Amount */}
-        <View style={styles.cardRow}>
-          <AppText style={[styles.cardLabel, { color: labelColor }]}>Amount:</AppText>
-          <AppText style={[styles.cardValue, { color: textColor }]}>
-            {toFixedEight(filled)} / {toFixedEight(totalQty)}
+          <AppText style={{ color: side === "BUY" ? colors.green : colors.red, fontSize: 12, marginBottom: 8 }} weight={MEDIUM}>
+            {type} / {side}
           </AppText>
-        </View>
 
-        {/* Price */}
-        <View style={styles.cardRow}>
-          <AppText style={[styles.cardLabel, { color: labelColor }]}>Avg. / Price:</AppText>
-          <AppText style={[styles.cardValue, { color: textColor }]}>
-            {isFilled ? `${toFixedSix(avgPrice)} / ${toFixedSix(price)} (Counterparty 1)` : `0 / ${toFixedSix(price)}`}
-          </AppText>
-        </View>
-
-        {/* Status */}
-        <View style={styles.cardRow}>
-          <AppText style={[styles.cardLabel, { color: labelColor }]}>Status:</AppText>
-          <AppText style={[styles.cardValue, { color: getStatusColor(status) }]}>{statusLabel}</AppText>
-        </View>
+          <KVRow label="Amount:" value={`${toFixedEight(filled)} / ${toFixedEight(qty)}`} />
+          <KVRow label="Avg. / Price:" value={`${toFixedEight(avgPrice)} / ${toFixedEight(price)}`} />
+          <KVRow label="Status:" value={getStatusLabel(statusRaw)} valueColor={getStatusColor(statusRaw)} />
+        </TouchableOpacity>
 
         {canCancel && (
-          <View style={[styles.cardRow, { marginTop: 8 }]}>
-            <AppText style={[styles.cardLabel, { color: labelColor }]}>Action:</AppText>
+          <View style={[styles.actionRow, { marginTop: 4 }]}>
+            <AppText style={[styles.kvK, { color: labelColor }]}>Action:</AppText>
             <TouchableOpacity
-              style={styles.cancelActionBtn}
+              style={styles.cancelBtn}
               onPress={() => {
                 setOrderToCancel(inv);
                 setIsCancelModalVisible(true);
@@ -199,27 +172,16 @@ const TradeHistory = ({
             </TouchableOpacity>
           </View>
         )}
-
         <View style={[styles.cardDivider, { backgroundColor: themeColors.border }]} />
-      </TouchableOpacity>
+      </View>
     );
   };
 
-
   return (
-    <AppSafeAreaView
-      style={[
-        styles.container,
-        { backgroundColor: themeColors.background },
-      ]}
-    >
-      <Toolbar
-        isSecond
-        title={"Spot Orders History"}
-        style={{ width: "65%", backgroundColor: "transparent" }}
-      />
+    <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <Toolbar isSecond title={"Spot Orders History"} style={{ width: "65%", backgroundColor: "transparent" }} />
 
-      {(tradeHistoryRedux == null || isInitialLoad) ? (
+      {(tradeHistoryRedux == null && isInitialLoad) ? (
         <TradeHistorySkeleton />
       ) : tradeHistory?.length > 0 ? (
         <ScrollView
@@ -254,66 +216,13 @@ const TradeHistory = ({
         onBackButtonPress={() => setIsCancelModalVisible(false)}
         style={{ justifyContent: "center", alignItems: "center" }}
       >
-        <View
-          style={{
-            backgroundColor: themeColors.themeElevationColor,
-            borderRadius: 20,
-            padding: 25,
-            width: Dimensions.get("window").width * 0.85,
-            alignItems: "center",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.25,
-            shadowRadius: 20,
-            elevation: 10,
-            borderWidth: 1,
-            borderColor: themeColors.border,
-          }}
-        >
-          <AppText
-            style={{
-              fontSize: 20,
-              fontWeight: "700",
-              color: themeColors.text,
-              textAlign: "center",
-              marginBottom: 15,
-            }}
-          >
-            Cancel Order
-          </AppText>
-
-          <AppText
-            style={{
-              fontSize: 15,
-              color: themeColors.secondaryText,
-              textAlign: "center",
-              marginBottom: 25,
-              lineHeight: 22,
-            }}
-          >
-            Are you sure you want to cancel this order?
-          </AppText>
-
+        <View style={[styles.modalContent, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}>
+          <AppText style={[styles.modalTitle, { color: themeColors.text }]}>Cancel Order</AppText>
+          <AppText style={[styles.modalSub, { color: themeColors.secondaryText }]}>Are you sure you want to cancel this order?</AppText>
           <View style={{ flexDirection: "row", width: "100%", gap: 10 }}>
-            <TouchableOpacity
-              onPress={() => setIsCancelModalVisible(false)}
-              style={{
-                flex: 1,
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                borderRadius: 12,
-                backgroundColor: themeColors.themeElevationColor,
-                borderWidth: 1,
-                borderColor: themeColors.themeBorderColor,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <AppText style={{ fontSize: 14, fontWeight: "600", color: themeColors.text }}>
-                No, Keep
-              </AppText>
+            <TouchableOpacity onPress={() => setIsCancelModalVisible(false)} style={[styles.modalBtn, { borderColor: themeColors.themeBorderColor }]}>
+              <AppText style={{ fontSize: 14, fontWeight: "600", color: themeColors.text }}>No, Keep</AppText>
             </TouchableOpacity>
-
             <TouchableOpacity
               disabled={isCancelLoading}
               onPress={async () => {
@@ -326,34 +235,11 @@ const TradeHistory = ({
                     setIsCancelModalVisible(false);
                     setOrderToCancel(null);
                   }
-                } else {
-                  setIsCancelModalVisible(false);
-                  setOrderToCancel(null);
                 }
               }}
-              style={{
-                flex: 1,
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                borderRadius: 12,
-                backgroundColor: themeColors.red,
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: themeColors.red,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 5,
-                opacity: isCancelLoading ? 0.7 : 1,
-              }}
+              style={[styles.modalBtn, { backgroundColor: colors.red, borderWeight: 0 }]}
             >
-              {isCancelLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <AppText style={{ fontSize: 14, fontWeight: "600", color: "#FFFFFF" }}>
-                  Yes, Cancel
-                </AppText>
-              )}
+              {isCancelLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <AppText style={{ fontSize: 14, fontWeight: "600", color: "#FFFFFF" }}>Yes, Cancel</AppText>}
             </TouchableOpacity>
           </View>
         </View>
@@ -365,100 +251,81 @@ const TradeHistory = ({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 5,
-    paddingBottom: 20,
+    paddingBottom: 40,
   },
-
   card: {
-    padding: 14,
-    paddingBottom: 0,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     width: "100%",
-    alignSelf: "center",
   },
   cardDivider: {
     height: 1,
-    marginTop: 14,
+    marginTop: 18,
+    opacity: 0.3,
   },
-
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
+  topHeader: {
+    marginBottom: 12,
   },
-
   pairRow: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
-    marginRight: 8,
   },
-
-  cardTitle: {
+  pairTitle: {
     fontSize: 14,
     marginRight: 6,
-    fontFamily: fontFamilySemiBold
   },
-
-  linkIcon: {
-    width: 16,
-    height: 16,
+  chevron: {
+    width: 12,
+    height: 12,
   },
-
-  cardDate: {
-    fontSize: 11,
-  },
-
-  orderTypeLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-
-  cardRow: {
+  kvRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    paddingVertical: 6,
   },
-
-  cardLabel: {
-    fontSize: 12,
+  kvK: {
+    fontSize: 11,
     flex: 1,
   },
-
-  cardValue: {
-    fontSize: 12,
+  kvV: {
+    fontSize: 11,
     flex: 1,
     textAlign: "right",
   },
-
-  noDataRow: {
-    justifyContent: "center",
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    flex: 1,
-    paddingTop: 50,
-  },
-  noDataText: {
-    color: "#888",
-    fontStyle: "italic",
     marginTop: 10,
-    fontSize: 14,
   },
-  loadingContainer: {
-    paddingVertical: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelActionBtn: {
+  cancelBtn: {
     borderWidth: 1,
-    borderColor: "#FF4F4F",
+    borderColor: colors.red,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 6,
     minWidth: 80,
     alignItems: "center",
+  },
+  loadingContainer: { paddingVertical: 20, alignItems: "center" },
+  noDataRow: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 },
+  modalContent: {
+    borderRadius: 20,
+    padding: 25,
+    width: Dimensions.get("window").width * 0.85,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  modalTitle: { fontSize: 20, fontFamily: fontFamilyBold, marginBottom: 15 },
+  modalSub: { fontSize: 15, textAlign: "center", marginBottom: 25, lineHeight: 22 },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
   },
 });
 

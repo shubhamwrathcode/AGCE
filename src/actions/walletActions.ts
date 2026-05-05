@@ -283,11 +283,11 @@ export const getqbsHistory = (skip: any, limit: any) => async (dispatch: AppDisp
   }
 };
 
-export const getTradeHistory = (skip: any, limit: any) => async (dispatch: AppDispatch) => {
+export const getTradeHistory = (skip: any, limit: any, pair?: string) => async (dispatch: AppDispatch) => {
   try {
     if (skip === 0) dispatch(clearTradeHistory());
     dispatch(setLoading(true));
-    const response: any = await appOperation.customer.get_trade_history(skip, limit);
+    const response: any = await appOperation.customer.get_trade_history(skip, limit, pair);
     // console.log(response, "getTradeHistory");
     if (response.success) {
       dispatch(setTradeHistory(response?.data));

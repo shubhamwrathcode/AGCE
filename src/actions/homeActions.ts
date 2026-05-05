@@ -161,7 +161,8 @@ export const getPastOrders =
       const response: any = await appOperation.customer.past_orders(data);
       // console.log(response, "getPastOrders");
       if (response.success) {
-        dispatch(setPastOrders(response?.data));
+        const items = Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.items) ? response.data.items : (Array.isArray(response?.data?.data) ? response.data.data : []));
+        dispatch(setPastOrders(items));
       }
     } catch (e) {
       logger(e);

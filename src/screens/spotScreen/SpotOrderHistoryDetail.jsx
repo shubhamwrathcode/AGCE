@@ -1,124 +1,128 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import { AppText } from "../../shared";
+import { useRoute } from "@react-navigation/native";
+import { AppText, MEDIUM } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
-import { useAppSelector } from "../../store/hooks";
 import FastImage from "react-native-fast-image";
-import { back_ic, cancelcheck, closeIcon, headPhoneIcon, pendingCheck, successcheck } from "../../helper/ImageAssets";
+import { back_ic, right_ic } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import moment from "moment";
-import { toFixedSix, toFixedEight } from "../../helper/utility";
-import { fontFamilyBold, fontFamilySemiBold } from "../../theme/typography";
-
-const formatDateTime = (dateString) => {
-  if (!dateString) return "---";
-  return moment(dateString).format("YYYY-MM-DD HH:mm:ss");
-};
+import { toFixedEight } from "../../helper/utility";
+import { fontFamilyBold } from "../../theme/typography";
 
 const SpotOrderHistoryDetail = () => {
   const route = useRoute();
-  const navigation = useNavigation();
-  const { colors: themeColors, isDark } = useTheme();
-  const order = route?.params?.order || {};
+  const { colors: themeColors } = useTheme();
+  const order = route?.params?.item || {}; // Changed to match Spot.jsx navigation
 
-  // Log full order data once (to see what detail page receives — then show all on history page)
-  useEffect(() => {
-    if (Object.keys(order).length > 0) {
-      console.log("SpotOrderHistoryDetail — order data received:", JSON.stringify(order, null, 2));
-    }
-  }, []);
-
+  // 1. Try to get symbols from explicit currency fields (Most reliable)
   const baseCurrency = order?.ask_currency || order?.base_currency || order?.base_currency_short_name || "";
   const quoteCurrency = order?.pay_currency || order?.quote_currency || order?.quote_currency_short_name || "";
-  const pair = order?.side === "BUY"
-    ? `${baseCurrency}/${quoteCurrency}`
-    : `${quoteCurrency}/${baseCurrency}`;
+
+  let pair = "---";
+  if (baseCurrency && quoteCurrency) {
+    pair = `${baseCurrency}/${quoteCurrency}`;
+  } else {
+    // 2. Fallback: If fields are missing, handle the pair string carefully
+    const rawPair = order?.pair || "";
+    if (rawPair.includes("/")) {
+      pair = rawPair;
+    } else if (rawPair.length >= 5) {
+      // Find where common quote currencies start from the end
+      const quotes = ["USDT", "BTC", "ETH", "INR", "BNB", "TRX"];
+      let found = false;
+      for (const q of quotes) {
+        if (rawPair.endsWith(q)) {
+          const base = rawPair.slice(0, rawPair.length - q.length);
+          pair = `${base}/${q}`;
+          found = true;
+          break;
+        }
+      }
+      // 3. Absolute Fallback: If still not found, just use the string as is or split at last 3/4
+      if (!found) {
+        pair = rawPair; // Don't split if unsure, better than wrong split
+      }
+    }
+  }
 
   const price = Number(order?.price) || 0;
   const qty = Number(order?.quantity) || 0;
-  const remaining = Number(order?.remaining) ?? 0;
-  const filledFromApi = Number(order?.filled);
-  const filled = filledFromApi != null && !Number.isNaN(filledFromApi) ? filledFromApi : (qty - remaining);
-  const avgPrice = Number(order?.avg_execution_price) || price;
-  const total = avgPrice * (filled || qty);
-  const fee = Number(order?.total_fee) || 0;
-  const status = order?.status || "";
-  const orderType = (order?.order_type === "MARKET" ? "Market" : "Limit") + " / " + (order?.side === "BUY" ? "Buy" : "Sell");
-  const isFilled = status === "FILLED";
-  const isCanceled = status === "CANCELLED" || status === "CANCELED";
-  const isPending = status === "OPEN" || status === "PENDING" || status === "PARTIAL";
+  const filled = Number(order?.filled_quantity ?? order?.filled ?? 0);
+  const remaining = Number(order?.remaining_quantity ?? order?.remaining ?? 0);
+  const avgPrice = Number(order?.avg_execution_price ?? order?.avgPrice ?? order?.average_price ?? price);
+  const value = Number(order?.executed_value ?? order?.executedValue ?? (avgPrice * filled));
+  const fee = Number(order?.total_fee ?? order?.fee ?? 0);
+  const tds = Number(order?.total_tds ?? order?.tds ?? 0);
+  const status = String(order?.status || "").toUpperCase();
+  const side = String(order?.side || "").toUpperCase();
+  const type = String(order?.order_type || order?.type || "MARKET").toUpperCase();
 
-  const orderNo = order?.orderId || order?.order_id || order?._id || order?.id || "---";
-  const filledQty = filled;
+  const d = order?.updatedAt || order?.updated_at || order?.createdAt || order?.created_at;
+  const dateStr = d ? moment(d).format("DD/MM/YYYY") : "---";
+  const timeStr = d ? moment(d).format("HH:mm:ss") : "---";
+
+  const getSideColor = (s) => (s === "BUY" ? colors.green : colors.red);
+  const getStatusColor = (st) => {
+    if (st === "FILLED" || st === "EXECUTED" || st === "SUCCESS") return colors.green;
+    if (st === "CANCELLED" || st === "CANCELED" || st === "REJECTED") return colors.red;
+    return colors.lightYellow || "#EAB308";
+  };
 
   const textColor = themeColors.text;
   const labelColor = themeColors.secondaryText;
 
-  const Row = ({ label, value, valueColor, numberOfValueLines = 1 }) => (
-    <View style={[styles.row, numberOfValueLines > 1 && styles.rowMultiline]}>
+  const Row = ({ label, value, valueColor }) => (
+    <View style={styles.row}>
       <AppText style={[styles.label, { color: labelColor }]}>{label}</AppText>
-      <AppText
-        style={[styles.value, { color: valueColor || textColor }, numberOfValueLines > 1 && styles.valueMultiline]}
-        numberOfLines={numberOfValueLines}
-      >
-        {value}
-      </AppText>
+      <AppText style={[styles.value, { color: valueColor || textColor }]}>{value}</AppText>
     </View>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {/* Header */}
+      {/* Header Bar */}
       <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
         <TouchableOpacity onPress={() => NavigationService.goBack()} style={styles.headerBtn}>
           <FastImage source={back_ic} style={styles.backIcon} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
-        <AppText style={[styles.headerTitle, { color: themeColors.text }]}>{pair}</AppText>
-        <View></View>
-
+        <AppText style={[styles.headerTitle, { color: themeColors.text }]}>Order Details</AppText>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.statusBlock}>
-          <View style={[styles.statusCircle, { borderWidth: 1, borderColor: isFilled ? colors.green : isCanceled ? colors.red : isPending ? (colors.lightYellow || colors.disabledText) : colors.disabledText }]}>
-            {isFilled && <FastImage source={successcheck} style={{ width: 40, height: 40 }} resizeMode="contain" />}
-            {isCanceled && <FastImage source={cancelcheck} style={styles.statusCircleIcon} resizeMode="contain" />}
-            {isPending && <FastImage source={pendingCheck} style={{ width: 30, height: 30 }} resizeMode="contain" />}
+        {/* Top Summary Header */}
+        <View style={styles.topSection}>
+          <View style={styles.pairHeaderRow}>
+            <AppText style={[styles.pairTitle, { color: textColor }]} weight={MEDIUM}>{pair}</AppText>
+            <FastImage source={right_ic} style={styles.chevron} resizeMode="contain" tintColor={labelColor} />
           </View>
-          <AppText style={[styles.statusText, { color: isFilled ? colors.green : isCanceled ? colors.red : isPending ? (colors.lightYellow || colors.disabledText) : colors.disabledText }]}>
-            {isFilled ? "Filled 100%" : isCanceled ? "Canceled" : isPending ? (status === "PARTIAL" ? "Partial" : status === "OPEN" ? "Open" : "Pending") : status}
+          <AppText style={[styles.dateTime, { color: labelColor }]}>{dateStr} {timeStr}</AppText>
+          <AppText style={[styles.sideType, { color: getSideColor(side) }]} weight={MEDIUM}>
+            {side} · {type}
           </AppText>
         </View>
 
-        {/* Order Summary - same as reference image */}
-        <View style={[styles.block, {}]}>
-          <Row label="Order No." value={String(orderNo)} numberOfValueLines={2} />
-          <Row label="Type" value={orderType} valueColor={order?.side === "BUY" ? colors.green : colors.red} />
-          <Row label="Filled / Amount" value={`${toFixedEight(filledQty)} / ${toFixedEight(qty)}`} />
-          <Row label="Avg. / Price" value={qty ? `${toFixedSix(avgPrice)} / ${toFixedSix(price)}${isFilled ? " (Counterparty 1)" : ""}` : `0 / ${toFixedSix(price)}`} />
-          <Row label="Conditions" value=" -- " />
-          <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-          <Row label="Fee" value={`${toFixedEight(fee)} ${baseCurrency}`} />
-          <Row label="Total" value={`${toFixedEight(total)} ${quoteCurrency}`} />
-          <Row label="Create time" value={formatDateTime(order?.createdAt)} />
-          <Row label="Update time" value={formatDateTime(order?.updatedAt)} />
+        {/* List of Details (Matches Screenshot) */}
+        <View style={styles.listSection}>
+          <Row label="Date" value={dateStr} />
+          <Row label="Time" value={timeStr} />
+          <Row label="Market" value={pair} />
+          <Row label="Side" value={side} valueColor={getSideColor(side)} />
+          <Row label="Type" value={type} />
+          <Row label="TIF" value={order?.time_in_force || order?.tif || "GTC"} />
+          <Row label="Price" value={type === "MARKET" ? "Market" : toFixedEight(price)} />
+          <Row label="Avg" value={toFixedEight(avgPrice)} />
+          <Row label="Quantity" value={toFixedEight(qty)} />
+          <Row label="Filled" value={toFixedEight(filled)} />
+          <Row label="Remaining" value={toFixedEight(remaining)} />
+          <Row label="Fill %" value={order?.fill_percent || (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%")} />
+          <Row label="Value" value={toFixedEight(value)} />
+          <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency || ""}`} />
+          <Row label="TDS" value={toFixedEight(tds)} />
+          <Row label="Status" value={status} valueColor={getStatusColor(status)} />
         </View>
-
-        {/* Divider before Trade Details */}
-        <View style={[styles.sectionDivider, { backgroundColor: themeColors.border }]} />
-
-        {/* Trade Details - same as reference image */}
-        <AppText style={[styles.sectionTitle, { color: textColor }]}>Trade Details</AppText>
-        <View style={[styles.block, {}]}>
-          <Row label="Date" value={formatDateTime(order?.updatedAt || order?.createdAt)} />
-          <Row label="Price" value={toFixedSix(avgPrice)} />
-          <Row label="Amount" value={toFixedEight(filledQty || qty)} />
-          <Row label="Fee" value={`${toFixedEight(fee)} ${baseCurrency}`} />
-          <Row label="Role" value="Taker" />
-        </View>
-        <AppText style={[styles.noMoreData, { color: labelColor }]}>No more data</AppText>
       </ScrollView>
     </View>
   );
@@ -138,7 +142,6 @@ const styles = StyleSheet.create({
   },
   headerBtn: {
     padding: 8,
-    minWidth: 40,
   },
   backIcon: {
     width: 20,
@@ -147,58 +150,46 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontFamily: fontFamilyBold,
-    right: 15,
-  },
-  headerRightIcon: {
-    width: 22,
-    height: 22,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 21,
-    paddingTop: 16,
-    paddingBottom: 32,
+    paddingHorizontal: 30,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
-  statusBlock: {
+  topSection: {
+    marginBottom: 20,
+  },
+  pairHeaderRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 4,
   },
-  statusCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
+  pairTitle: {
+    fontSize: 16,
+    marginRight: 6,
   },
-  checkmark: {
-    fontSize: 28,
-    color: colors.white,
-    fontWeight: "bold",
+  chevron: {
+    width: 12,
+    height: 12,
   },
-  statusCircleIcon: {
-    width: 40,
-    height: 40,
+  dateTime: {
+    fontSize: 11,
+    marginBottom: 4,
   },
-  statusText: {
-    fontSize: 15,
-    fontFamily: fontFamilySemiBold
+  sideType: {
+    fontSize: 12,
   },
-  block: {
-    borderRadius: 12,
-    padding: 5,
-    marginBottom: 16,
+  listSection: {
+    marginTop: 10,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-  },
-  rowMultiline: {
-    alignItems: "flex-start",
+    paddingVertical: 10,
   },
   label: {
     fontSize: 12,
@@ -208,31 +199,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     textAlign: "right",
-  },
-  valueMultiline: {
-    textAlign: "right",
-    flexShrink: 1,
-    maxWidth: "70%",
-  },
-  divider: {
-    height: 1,
-    opacity: 0.3,
-    marginVertical: 12,
-  },
-  sectionDivider: {
-    height: 1,
-    opacity: 0.3,
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  noMoreData: {
-    textAlign: "center",
-    fontSize: 12,
   },
 });
 
