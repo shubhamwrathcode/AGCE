@@ -347,7 +347,7 @@ export const rhombus = require('../../assets/images/rhombus.png');
 export const cancelcheck = require('../../assets/images/cancelcheck.png');
 export const successcheck = require('../../assets/images/successcheck.png');
 export const pendingCheck = require('../../assets/images/pendingcheck.png');
-export const candle = require('../../assets/images/candle.png');
+export const candle = require('../../assets/images/candel.png');
 export const introImageBlack3 = require('../../assets/images/introImageBlack3.png');
 export const introImageBlack2 = require('../../assets/images/introImageBlack2.png');
 export const introImageBlack1 = require('../../assets/images/introImageBlack1.png');
@@ -411,6 +411,15 @@ export const limitTrade = require('../../assets/images/limitTrade.png');
 export const order_3 = require('../../assets/images/order_3.png');
 export const order_2 = require('../../assets/images/order_2.png');
 export const order_1 = require('../../assets/images/order_1.png');
+export const selImage = require('../../assets/images/selImage.png');
+export const buyImage = require('../../assets/images/buyImage.png');
+export const moreImg = require('../../assets/images/moreImg.png');
+export const modes = require('../../assets/images/modes.png');
+
+
+
+
+
 
 
 

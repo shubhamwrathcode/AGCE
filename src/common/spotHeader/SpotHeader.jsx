@@ -8,11 +8,14 @@ import {
 import React, { useState, useEffect, useRef } from "react";
 import FastImage from "react-native-fast-image";
 import LinearGradient from "react-native-linear-gradient";
-import { candle, downIcon } from "../../helper/ImageAssets";
+import { back_ic, candle, downIcon, modes, moreImg } from "../../helper/ImageAssets";
 import TradingDataModal from "../TradingDataModal/TradingDataModal";
 import { AppText, SEMI_BOLD } from "../AppText";
 import { toFixedThree } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { colors } from "../../theme/colors";
+import { Alert, Platform, ToastAndroid } from "react-native";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const HEADER_SHIMMER_STRIP = 140;
@@ -82,6 +85,7 @@ const SpotHeader = ({
   onCandlePress,
   onTrendPress,
   onMorePress,
+  onBackPress,
   isDark: isDarkProp,
   pairLoading = false,
 }) => {
@@ -101,56 +105,120 @@ const SpotHeader = ({
         ? themeColors.red
         : themeColors.green;
 
+  const showComingSoon = () => {
+    if (Platform.OS === "android") {
+      ToastAndroid.show("Coming soon", ToastAndroid.SHORT);
+    } else {
+      Alert.alert("Coming soon");
+    }
+  };
+
   const leftContent = pairLoading ? (
-    <View style={styles.leftArea} accessibilityState={{ busy: true }}>
+    <View style={styles.pairBlock} accessibilityState={{ busy: true }}>
       <View style={styles.pairRow}>
-        <HeaderShimmerBar width={132} height={17} borderRadius={5} />
-        <View style={{ width: 11, height: 11, marginLeft: 5 }} />
+        <HeaderShimmerBar width={150} height={22} borderRadius={6} />
+        <View style={{ width: 12, height: 12, marginLeft: 8 }} />
       </View>
-      <HeaderShimmerBar width={76} height={13} borderRadius={5} style={{ marginTop: 6 }} />
+      <HeaderShimmerBar width={96} height={18} borderRadius={8} style={{ marginTop: 10 }} />
     </View>
   ) : (
-    <TouchableOpacity
-      style={styles.leftArea}
-      onPress={openPairSheet}
-      activeOpacity={0.75}
-      hitSlop={{ top: 8, bottom: 8, right: 8 }}
-    >
+    <View style={styles.pairBlock}>
       <View style={styles.pairRow}>
-        <AppText weight={SEMI_BOLD} style={[styles.pairTitle, { color: titleColor }]}>
-          {title}
-        </AppText>
-        <FastImage
-          source={downIcon}
-          style={{ width: 11, height: 11, marginLeft: 5 }}
-          tintColor={iconTint}
-          resizeMode="contain"
-        />
+        <TouchableOpacity
+          onPress={openPairSheet}
+          activeOpacity={0.75}
+          hitSlop={{ top: 8, bottom: 8, right: 8 }}
+          style={{ flexDirection: "row", alignItems: "center", flexShrink: 1 }}
+        >
+          <AppText weight={SEMI_BOLD} style={[styles.pairTitle, { color: titleColor }]} numberOfLines={1}>
+            {title}
+          </AppText>
+          <FastImage
+            source={downIcon}
+            style={{ width: 12, height: 12, marginLeft: 8, marginTop: 2 }}
+            tintColor={iconTint}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
+        {/* No Favorite button here */}
       </View>
-      <AppText style={[styles.changeText, { color: changeColor }]}>
-        {change != null && change !== ""
-          ? `${Number(change) >= 0 ? "+" : ""}${toFixedThree(change)}%`
-          : "—"}
-      </AppText>
-    </TouchableOpacity>
+      <View
+        style={[
+          styles.changePill,
+          {
+            backgroundColor: colors.green,
+            borderColor:colors.green
+          },
+        ]}
+      >
+        <AppText style={[styles.changeText, { color: colors.white }]}>
+          {change != null && change !== ""
+            ? `${Number(change) >= 0 ? "+" : ""}${toFixedThree(change)}%`
+            : "—"}
+        </AppText>
+      </View>
+    </View>
   );
 
   return (
     <>
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: themeColors.background },
-        ]}
-      >
-        {leftContent}
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={styles.topRow}>
+          <TouchableOpacity
+            onPress={onBackPress}
+            activeOpacity={0.75}
+            style={styles.backBtn}
+            disabled={!onBackPress}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <FastImage source={back_ic} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={colors.black} />
+          </TouchableOpacity>
+          <View style={styles.topTabs}>
+            {["Spot", "Margin", "Fiat", "P2P", "Convert"].map((t, idx, arr) => {
+              const active = t === "Spot";
+              return (
+                <View
+                  key={t}
+                  style={[
+                    styles.topTabItem,
+                    // `gap` is not supported on all RN versions; use margins for consistent spacing
+                    idx !== arr.length - 1 && { marginRight: 5 },
+                  ]}
+                >
+                  <AppText style={{ fontSize: 14, fontWeight: active ? "700" : "600", color: active ? themeColors.text : themeColors.secondaryText }}>
+                    {t}
+                  </AppText>
+                  <View style={[styles.topTabUnderline, { backgroundColor: active ? themeColors.text : "transparent" }]} />
+                </View>
+              );
+            })}
+          </View>
+        </View>
 
-        <View style={styles.rightIcons}>
+        <View style={styles.pairRowMain}>
+          <View style={{ flex: 1 }}>
+            {leftContent}
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={showComingSoon}
+            style={styles.iconBtn}
+            accessibilityLabel="More options"
+          >
+            <FastImage
+              source={modes}
+              style={styles.headerIcon}
+              resizeMode="contain"
+              tintColor={iconTint}
+            />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={onCandlePress}
             activeOpacity={0.7}
-            hitSlop={{ top: 18, bottom: 18, left: 18, right: 18 }}
             accessibilityRole="button"
             accessibilityLabel="Open chart"
           >
@@ -161,6 +229,23 @@ const SpotHeader = ({
               tintColor={iconTint}
             />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={showComingSoon}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Open chart"
+          >
+            <FastImage
+              source={moreImg}
+              style={styles.headerIcon}
+              resizeMode="contain"
+              tintColor={iconTint}
+            />
+          </TouchableOpacity>
+
+          {/* (removed duplicate more icon; Coming soon uses the above button) */}
         </View>
       </View>
 
@@ -179,47 +264,78 @@ export default SpotHeader;
 
 const styles = StyleSheet.create({
   container: {
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 12,
+  },
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 16,
-    paddingBottom: 10,
-    paddingHorizontal: 10,
   },
-  leftArea: {
+  backBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topTabs: {
     flex: 1,
-    paddingRight: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 8,
+    paddingLeft: 5,
+  },
+  topTabItem: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 6,
+  },
+  topTabUnderline: {
+    height: 3,
+    width: 30,
+    borderRadius: 2,
+  },
+  pairRowMain: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    paddingHorizontal: 5,
+    gap: 4,
+  },
+  pairBlock: {
+    paddingRight: 10,
   },
   pairRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   pairTitle: {
-    fontSize: 17,
+    fontSize: 18,
     letterSpacing: -0.2,
   },
-  chevron: {
-    marginLeft: 4,
-    marginTop: 1,
+  changePill: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    borderRadius: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent:"flex-start",
+    alignItems:"center",
+    paddingHorizontal:5
   },
   changeText: {
     fontSize: 13,
-    fontWeight: "600",
-  },
-  rightIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+
   },
   iconBtn: {
-    padding: 12,
-    minWidth: 44,
-    minHeight: 44,
+    padding: 6,
+    minWidth: 34,
+    minHeight: 34,
     justifyContent: "center",
     alignItems: "center",
   },
   headerIcon: {
-    width: 25,
-    height: 25,
+    width: 22,
+    height: 22,
   },
 });
