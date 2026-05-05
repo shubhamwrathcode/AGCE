@@ -15,7 +15,7 @@ import { useTheme } from '../hooks/useTheme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const CustomDropdown = ({ data = [], onSelect, selected }) => {
+const CustomDropdown = ({ data = [], onSelect, selected, compact = false }) => {
   const { colors: themeColors, isDark } = useTheme();
   const [visible, setVisible] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
@@ -44,29 +44,40 @@ const CustomDropdown = ({ data = [], onSelect, selected }) => {
       <TouchableOpacity
         ref={buttonRef}
         style={[
-          styles.dropdownTrigger, 
-          { 
-            backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
-            borderColor: themeColors.border,
-            borderWidth: 1 
-          }
+          styles.dropdownTrigger,
+          compact && styles.dropdownTriggerCompact,
+          compact
+            ? {
+                backgroundColor: themeColors.input,
+                borderColor: themeColors.themeBorderColor,
+                borderWidth: 1,
+              }
+            : {
+                backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
+                borderColor: themeColors.border,
+                borderWidth: 1,
+              },
         ]}
         onPress={openDropdown}
         activeOpacity={0.8}
       >
         <AppText
-          type={THIRTEEN}
+          type={compact ? ELEVEN : THIRTEEN}
           style={{
             flex: 1,
-            color: isPlaceholder ? themeColors.secondaryText : themeColors.text
+            color: isPlaceholder ? themeColors.secondaryText : themeColors.text,
+            ...(compact ? { fontSize: 11 } : null),
           }}
         >
           {selected || 'Select option'}
         </AppText>
         <FastImage
           source={DOWN_ARROW}
-          style={[styles.arrow, { transform: [{ rotate: visible ? '180deg' : '0deg' }] }]}
-          tintColor={themeColors.text}
+          style={[
+            compact ? styles.arrowCompact : styles.arrow,
+            { transform: [{ rotate: visible ? '180deg' : '0deg' }] },
+          ]}
+          tintColor={themeColors.secondaryText}
           resizeMode='contain'
         />
       </TouchableOpacity>
@@ -132,9 +143,21 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 8,
   },
+  dropdownTriggerCompact: {
+    minHeight: 28,
+    height: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
+    borderRadius: 6,
+  },
   arrow: {
     width: 10,
     height: 10,
+  },
+  arrowCompact: {
+    width: 8,
+    height: 8,
+    marginLeft: 4,
   },
   modalOverlay: {
     flex: 1,

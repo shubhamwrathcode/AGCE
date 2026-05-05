@@ -437,9 +437,6 @@ const SpotChartScreen = () => {
   const volume = mergedPair?.volume;
 
   const [activeTab, setActiveTab] = useState("Order Book");
-  const tabPagerRef = useRef(null);
-  /** Keeps chip highlight in sync during swipe (onMomentumScrollEnd fires too late). */
-  const tabPagerIndexRef = useRef(0);
   const pairTickSize = mergedPair?.tick_size ?? 0.01;
   const orderBookAggOptions = useMemo(
     () => getOrderBookAggOptionsForPair(pairTickSize),
@@ -474,23 +471,9 @@ const SpotChartScreen = () => {
   const filteredWallets = getFilteredWallets();
 
   const handleTabChange = (tab) => {
-    const index = CHART_BOTTOM_TABS.indexOf(tab);
-    if (index === -1) return;
-    tabPagerIndexRef.current = index;
+    if (!CHART_BOTTOM_TABS.includes(tab)) return;
     setActiveTab(tab);
-    tabPagerRef.current?.scrollTo({ x: index * Width, animated: true });
   };
-
-  const syncActiveTabFromPagerOffset = useCallback((contentOffsetX) => {
-    const idx = Math.min(
-      CHART_BOTTOM_TABS.length - 1,
-      Math.max(0, Math.floor((contentOffsetX + Width * 0.5) / Width))
-    );
-    if (idx !== tabPagerIndexRef.current && CHART_BOTTOM_TABS[idx]) {
-      tabPagerIndexRef.current = idx;
-      setActiveTab(CHART_BOTTOM_TABS[idx]);
-    }
-  }, []);
 
   useEffect(() => {
     if (activeTab === "Assets" && userData) {
@@ -1037,20 +1020,9 @@ const SpotChartScreen = () => {
             ) : null}
           </View>
 
-          <ScrollView
-            ref={tabPagerRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            scrollEventThrottle={16}
-            onScroll={(e) => syncActiveTabFromPagerOffset(e.nativeEvent.contentOffset.x)}
-            onMomentumScrollEnd={(e) => {
-              syncActiveTabFromPagerOffset(e.nativeEvent.contentOffset.x);
-            }}
-            style={styles.tabPager}
-          >
+          {/* One panel mounted at a time — avoids horizontal pager stretching all tabs to tallest (e.g. Market Trades). */}
+          <View style={styles.chartBottomTabBody}>
+            {activeTab === "Order Book" ? (
             <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={[styles.obRatioBar, { backgroundColor: themeColors.card }]}>
                 <View style={[styles.obRatioBid, { flex: 1, backgroundColor: themeColors.green }]} />
@@ -1089,7 +1061,8 @@ const SpotChartScreen = () => {
                 <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />
               )}
             </View>
-
+            ) : null}
+            {activeTab === "Market Trades" ? (
             <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={styles.mtContainer}>
                 <View style={styles.mtHeader}>
@@ -1159,7 +1132,8 @@ const SpotChartScreen = () => {
                 </View>
               </View>
             </View>
-
+            ) : null}
+            {activeTab === "Assets" ? (
             <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={styles.assetsContainer}>
                 {!userData ? (
@@ -1276,7 +1250,8 @@ const SpotChartScreen = () => {
                 )}
               </View>
             </View>
-          </ScrollView>
+            ) : null}
+          </View>
         </ScrollView>
       </View>
 
@@ -1397,8 +1372,9 @@ const styles = StyleSheet.create({
   scrollMainContent: {
     flexGrow: 1,
   },
-  tabPager: {
+  chartBottomTabBody: {
     width: Width,
+    alignSelf: "center",
   },
   header: {
     flexDirection: "row",

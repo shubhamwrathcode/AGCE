@@ -150,7 +150,9 @@ const SpotHeader = ({
             style={styles.iconBtn}
             onPress={onCandlePress}
             activeOpacity={0.7}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 18, bottom: 18, left: 18, right: 18 }}
+            accessibilityRole="button"
+            accessibilityLabel="Open chart"
           >
             <FastImage
               source={candle}
@@ -210,7 +212,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   iconBtn: {
-    padding: 6,
+    padding: 12,
+    minWidth: 44,
+    minHeight: 44,
     justifyContent: "center",
     alignItems: "center",
   },

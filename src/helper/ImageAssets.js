@@ -321,7 +321,7 @@ export const PHOTO_ID_MINI_ICON2 = require('../../assets/images/photoidmini2.png
 export const PHOTO_ID_MINI_ICON3 = require('../../assets/images/photoidmini3.png');
 export const PHOTO_ID_VECTOR = require('../../assets/images/photoid_vector.png');
 export const NO_NOTIFICATION_ICON = require('../../assets/images/no_notification.png');
-export const NO_NOTIFICATION_ICON_LIGHT = require('../../assets/images/no_notification_light.png');
+export const NO_NOTIFICATION_ICON_LIGHT = require('../../assets/images/no_notification.png');
 
 
 
