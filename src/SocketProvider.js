@@ -140,6 +140,7 @@ export const SocketProvider = ({ children }) => {
 
     let cancelled = false;
     let marketThrottleTimer = null;
+    let exchangeThrottleTimer = null;
     let futuresThrottleTimer = null;
 
     const setup = async () => {
@@ -213,13 +214,41 @@ export const SocketProvider = ({ children }) => {
         }
       };
 
-      const handleExchangeUpdate = (data) => {
-        if (currentExchangeSubscription.current == null) return;
-        if (data) {
-          dispatch(setCoinData(data));
-        }
+      // Throttle exchange updates to avoid Redux/render storms (Spot screen is heavy).
+      let lastExchangeFlush = 0;
+      let pendingExchangeData = null;
+      // Production: keep UI responsive (history tabs + lists)
+      const EXCHANGE_THROTTLE_MS = 800;
+
+      const flushExchangeData = () => {
+        if (!pendingExchangeData) return;
+        const data = pendingExchangeData;
+        pendingExchangeData = null;
+        lastExchangeFlush = Date.now();
+        dispatch(setCoinData(data));
         dispatch(setSocketLoading(false));
         dispatch(setLoading(false));
+      };
+
+      const handleExchangeUpdate = (data) => {
+        if (currentExchangeSubscription.current == null) return;
+        if (!data) return;
+        pendingExchangeData = data;
+        const now = Date.now();
+        const elapsed = now - lastExchangeFlush;
+
+        if (elapsed >= EXCHANGE_THROTTLE_MS || lastExchangeFlush === 0) {
+          flushExchangeData();
+          if (exchangeThrottleTimer) {
+            clearTimeout(exchangeThrottleTimer);
+            exchangeThrottleTimer = null;
+          }
+        } else if (!exchangeThrottleTimer) {
+          exchangeThrottleTimer = setTimeout(() => {
+            exchangeThrottleTimer = null;
+            flushExchangeData();
+          }, EXCHANGE_THROTTLE_MS - elapsed);
+        }
       };
 
       let pendingFuturesData = null;
@@ -260,6 +289,10 @@ export const SocketProvider = ({ children }) => {
       if (marketThrottleTimer) {
         clearTimeout(marketThrottleTimer);
         marketThrottleTimer = null;
+      }
+      if (exchangeThrottleTimer) {
+        clearTimeout(exchangeThrottleTimer);
+        exchangeThrottleTimer = null;
       }
       if (futuresThrottleTimer) {
         clearTimeout(futuresThrottleTimer);

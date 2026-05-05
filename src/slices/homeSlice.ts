@@ -147,6 +147,12 @@ export const homeSlice = createSlice({
           state.pastOrders = payload.executed_order;
         }
       }
+      // Mobile socket sometimes sends `executed_trades` instead of `executed_order`
+      if (!Array.isArray(payload?.executed_order) && Array.isArray(payload?.executed_trades)) {
+        if (!isEqual(state.pastOrders, payload.executed_trades)) {
+          state.pastOrders = payload.executed_trades;
+        }
+      }
       if (Array.isArray(payload?.recent_trades)) {
         if (!isEqual(state.recentTrades, payload.recent_trades)) {
           state.recentTrades = payload.recent_trades;

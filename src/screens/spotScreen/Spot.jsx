@@ -67,7 +67,7 @@ import {
   toFixedThree,
   twoFixedTwo,
 } from "../../helper/utility";
-import { colors } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { universalPaddingHorizontal, borderWidth } from "../../theme/dimens";
@@ -936,6 +936,9 @@ const Spot = () => {
   const socket = useAppSelector((state) => state.home.socket);
   const openOrders = useAppSelector((state) => state.home.spotOpenOrders);
   const pastOrders = useAppSelector((state) => state.home.pastOrders);
+  // Keep terminal readable: avoid logging whole arrays continuously
+  // (use the rate-limited lens logs inside the socket handler instead)
+  
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
   const sellOrders = useAppSelector((state) => state.home.sellOrders);
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
@@ -948,13 +951,20 @@ const Spot = () => {
   const [orderFilter, setOrderFilter] = useState("All");
   const [pastOrderFilter, setPastOrderFilter] = useState("All");
   const [expandedRowIndex, setExpandedRowIndex] = useState(null);
+  const [showExecutedTrades, setShowExecutedTrades] = useState({});
   const [lastSocketData, setLastSocketData] = useState(null);
+  /** Web parity: flip true once socket sends `buy_order`/`sell_order` key (empty array still counts). */
+  const [orderBookSocketReady, setOrderBookSocketReady] = useState(false);
   const [appState, setAppState] = useState(AppState.currentState);
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const [isCancelLoading, setIsCancelLoading] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
   const isSpotFocused = useIsFocused();
   const recentTrades = useAppSelector((state) => state.home.recentTrades);
+
+  // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
+  const historyOnly = __DEV__ && route?.params?.historyOnly === true;
+  const tradesUiThrottleRef = useRef({ lastAt: 0, lastSig: "" });
 
   const rbSheetNumber = useRef();
   const rbSheetlimit = useRef();
@@ -1074,6 +1084,7 @@ const Spot = () => {
       dispatch(setSellOrders([]));
       dispatch(setRecentTrades([]));
       setSpotMyTrades([]);
+      setOrderBookSocketReady(false);
       setStopPrice("");
       setTradeHistorySideFilter("All");
     }
@@ -1211,13 +1222,16 @@ const Spot = () => {
       const to = tabId;
       const dir = to > from ? 1 : -1;
       setExpandedRowIndex(null);
-      setActiveTab(to); // highlight immediately
+      activeTabRef.current = to;
+      // In history-only mode the screen is light, so switch highlight immediately.
+      // Outside history-only, we can delay highlight if needed, but keep it immediate for better UX.
+      setActiveTab(to);
       ordersAnimatingRef.current = true;
       setOrdersSlidePair({ from, to, dir });
       ordersSlideX.setValue(0);
       Animated.timing(ordersSlideX, {
         toValue: -dir * Width,
-        duration: 180,
+        duration: 120,
         useNativeDriver: true,
       }).start(({ finished }) => {
         ordersAnimatingRef.current = false;
@@ -1273,8 +1287,8 @@ const Spot = () => {
   const [focusSettling, setFocusSettling] = useState(false);
   const focusSettlingTimeoutRef = useRef(null);
 
-  const orderBookReady = !!lastSocketData || (buyOrders?.length > 0 || sellOrders?.length > 0);
-  const showOrderBookSkeleton = !orderBookReady;
+  const orderBookReady = orderBookSocketReady;
+  const showOrderBookSkeleton = !orderBookSocketReady;
   /** Header shows skeleton until `coinData` row exists for the pair (LOCAL pairs skip list lookup). */
   const pairMetaReady =
     currencyData != null || effectiveCurrency?.available === "LOCAL";
@@ -1442,6 +1456,10 @@ const Spot = () => {
       return;
     }
     setLastSocketData(payload.data);
+    if (historyOnly) {
+      // In history-only mode, skip orderbook/recentTrades dispatches to keep UI ultra-light.
+      return;
+    }
     if (payload.recentTrades?.length !== undefined) {
       // already in Redux via setCoinData in SocketProvider
     }
@@ -1459,31 +1477,15 @@ const Spot = () => {
         dispatch(setBuyOrders(payload.buyOrders));
       }
     }
+    if (payload.recentTrades?.length !== undefined) {
+      dispatch(setRecentTrades(payload.recentTrades));
+    }
   }, [dispatch]);
   flushSocketToStateRef.current = flushSocketToState;
 
   // Socket listener only when Spot is focused - when blurred we remove listeners so no work in background
   useEffect(() => {
     if (!socket || !isSpotFocused) return;
-
-    const transformLocalOrder = (order, index) => {
-      const price = parseFloat(order.price);
-      const quantity = parseFloat(order.quantity ?? order.remaining ?? 0);
-      const remaining = parseFloat(order.remaining ?? order.quantity ?? 0);
-      return {
-        _id: `local_${order.price}_${remaining}_${index}`,
-        side: order.side,
-        price,
-        quantity,
-        filled: 0,
-        remaining,
-        total: parseFloat(order.total ?? price * remaining),
-        status: "PENDING",
-        transaction_fee: 0,
-        tds: 0,
-        __v: 0,
-      };
-    };
 
     const scheduleFlush = (payload) => {
       pendingSocketFlushRef.current = payload;
@@ -1519,26 +1521,57 @@ const Spot = () => {
       latestSocketDataRef.current = data;
       if (!isSpotFocusedRef.current || appStateRef.current !== "active") return;
 
-      if (data?.open_orders && Array.isArray(data.open_orders)) {
-        dispatch(setOpenOrders(data.open_orders));
-      }
-      if (data?.executed_order && Array.isArray(data.executed_order)) {
-        dispatch(setPastOrders(data.executed_order));
-      }
-      if (data?.trade_history !== undefined) {
-        setSpotMyTrades(Array.isArray(data.trade_history) ? data.trade_history : []);
+      // PERF: avoid duplicate Redux churn. SocketProvider already dispatches `setCoinData` for exchange:update.
+      // Some backends send `executed_trades` instead of `trade_history` in exchange:update
+      if (data?.trade_history !== undefined || data?.executed_trades !== undefined) {
+        const nextTrades = Array.isArray(data?.trade_history)
+          ? data.trade_history
+          : Array.isArray(data?.executed_trades)
+            ? data.executed_trades
+            : [];
+
+        // Match web TradeHistory fields when backend uses `executed_trades`
+        const normalizedTrades = Array.isArray(data?.trade_history)
+          ? nextTrades
+          : nextTrades.map((t) => ({
+              ...t,
+              quote_quantity: t?.quote_quantity ?? t?.quote,
+              createdAt: t?.createdAt ?? t?.created_at ?? t?.time,
+              executed_at: t?.executed_at ?? t?.time,
+              // web uses fee/tds + assets as-is; role uses is_maker
+            }));
+
+        // Eject perf: throttle + dedupe trade list updates (prevents render storms while switching tabs)
+        const now = Date.now();
+        const len = Array.isArray(normalizedTrades) ? normalizedTrades.length : 0;
+        const firstId = len > 0 ? (normalizedTrades[0]?._id ?? normalizedTrades[0]?.trade_id ?? normalizedTrades[0]?.id ?? "") : "";
+        const lastId = len > 0 ? (normalizedTrades[len - 1]?._id ?? normalizedTrades[len - 1]?.trade_id ?? normalizedTrades[len - 1]?.id ?? "") : "";
+        const sig = `${len}:${firstId}:${lastId}`;
+        if (sig !== tradesUiThrottleRef.current.lastSig || now - tradesUiThrottleRef.current.lastAt > 600) {
+          tradesUiThrottleRef.current.lastSig = sig;
+          tradesUiThrottleRef.current.lastAt = now;
+          setSpotMyTrades(normalizedTrades);
+        }
       }
 
-      if (data?.buy_order || data?.sell_order) {
-        const transformedBuyOrders = (data?.buy_order || []).map(transformLocalOrder);
-        const transformedSellOrders = (data?.sell_order || []).map(transformLocalOrder);
-        latestLocalBuyOrdersRef.current = transformedBuyOrders;
-        latestLocalSellOrdersRef.current = transformedSellOrders;
+      const hasBuyArr = Array.isArray(data?.buy_order);
+      const hasSellArr = Array.isArray(data?.sell_order);
+      if (!historyOnly && (hasBuyArr || hasSellArr)) {
+        setOrderBookSocketReady(true);
+      }
+      if (hasBuyArr) {
+        latestLocalBuyOrdersRef.current = data.buy_order;
+      }
+      if (hasSellArr) {
+        latestLocalSellOrdersRef.current = data.sell_order;
+      }
+
+      if (!historyOnly && (hasBuyArr || hasSellArr || Array.isArray(data?.recent_trades))) {
         scheduleFlush({
           data,
-          buyOrders: transformedBuyOrders,
-          sellOrders: transformedSellOrders,
-          recentTrades: data?.recent_trades,
+          buyOrders: hasBuyArr ? data.buy_order : undefined,
+          sellOrders: hasSellArr ? data.sell_order : undefined,
+          recentTrades: Array.isArray(data?.recent_trades) ? data.recent_trades : undefined,
         });
       }
     };
@@ -2077,9 +2110,78 @@ const Spot = () => {
   };
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
+  const normalizePairSymbol = useCallback((v) => {
+    if (v == null) return "";
+    const s = String(v).trim();
+    return s && s.toLowerCase() !== "undefined" && s.toLowerCase() !== "null" ? s : "";
+  }, []);
+
+  const getOrderStatusRaw = useCallback((inv) => {
+    return (
+      inv?.status ??
+      inv?.order_status ??
+      inv?.orderStatus ??
+      inv?.state ??
+      inv?.status_text ??
+      inv?.statusText ??
+      ""
+    );
+  }, []);
+
+  const getOrderStatusLabel = useCallback((inv) => {
+    const raw = getOrderStatusRaw(inv);
+    const status = String(raw || "").toUpperCase().trim();
+    if (!status) return "---";
+    if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(status)) return "Filled";
+    if (["CANCELLED", "CANCELED"].includes(status)) return "Cancelled";
+    if (["OPEN", "PENDING"].includes(status)) return "Open";
+    if (["PARTIAL", "PARTIALLY_FILLED", "PARTIAL_FILLED"].includes(status)) return "Partial";
+    return String(raw);
+  }, [getOrderStatusRaw]);
+
+  const getBaseCoinIconUri = useCallback((inv) => {
+    const uri =
+      inv?.base_currency_image ??
+      inv?.base_currency_icon ??
+      inv?.base_currency_logo ??
+      inv?.baseCurrencyImage ??
+      inv?.baseCurrencyIcon ??
+      currencyData?.base_currency_image ??
+      currencyData?.base_currency_icon ??
+      currencyData?.base_currency_logo ??
+      null;
+    return typeof uri === "string" && uri.length > 0 ? uri : null;
+  }, [currencyData]);
+
+  const buildCurrencyPairText = useCallback((inv) => {
+    const base =
+      normalizePairSymbol(inv?.base_currency_short_name) ||
+      normalizePairSymbol(inv?.ask_currency) ||
+      normalizePairSymbol(inv?.base_currency) ||
+      normalizePairSymbol(inv?.base_currency_name) ||
+      normalizePairSymbol(base_currency);
+    const quote =
+      normalizePairSymbol(inv?.quote_currency_short_name) ||
+      normalizePairSymbol(inv?.pay_currency) ||
+      normalizePairSymbol(inv?.quote_currency) ||
+      normalizePairSymbol(inv?.quote_currency_name) ||
+      normalizePairSymbol(quote_currency);
+    if (!base || !quote) return `${base || "-"} / ${quote || "-"}`;
+    return `${base}/${quote}`;
+  }, [base_currency, quote_currency, normalizePairSymbol]);
+
   // Stable keyExtractors for order FlatLists (avoid inline functions)
-  const openOrderKeyExtractor = useCallback((item, idx) => item?._id ?? `open_${idx}`, []);
-  const pastOrderKeyExtractor = useCallback((item, idx) => item?._id ?? `past_${idx}`, []);
+  // Prefer stable keys (avoid index fallback -> remounts on sort/filter)
+  const openOrderKeyExtractor = useCallback((item, idx) => {
+    const id = item?._id ?? item?.order_id ?? item?.id;
+    const t = item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt;
+    return id ? `open_${id}` : `open_${t ?? "na"}_${idx}`;
+  }, []);
+  const pastOrderKeyExtractor = useCallback((item, idx) => {
+    const id = item?._id ?? item?.order_id ?? item?.id;
+    const t = item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt;
+    return id ? `past_${id}` : `past_${t ?? "na"}_${idx}`;
+  }, []);
 
   // Memoize filtered open orders for better performance
   const filteredOpenOrders = useMemo(() => {
@@ -2096,17 +2198,114 @@ const Spot = () => {
   }, [openOrders, orderFilter, openOrderKindTab]);
 
   // Memoize filtered past orders for better performance
+  const pastOrdersNormalized = useMemo(() => {
+    // If socket sends `executed_trades` (trade rows) instead of `executed_order` (order rows),
+    // group trades by order_id to match web UI expectations.
+    if (!Array.isArray(pastOrders) || pastOrders.length === 0) return [];
+
+    // IMPORTANT: Only treat as *trade rows* when we actually see per-trade identifiers.
+    // Order rows can also contain `order_id`/`time` and should NOT be grouped.
+    const looksLikeTradeRows = pastOrders.some(
+      (x) =>
+        x?.trade_id != null ||
+        (x?.is_maker != null && (x?.fee_asset != null || x?.tds_asset != null) && x?.quote != null)
+    );
+    if (!looksLikeTradeRows) return pastOrders;
+
+    const map = new Map();
+    const seenTradeKeysByOrder = new Map();
+    for (const t of pastOrders) {
+      const orderId = t?.order_id ?? t?._id ?? t?.id ?? "unknown";
+      const prev = map.get(orderId);
+      const tradeKey =
+        t?.trade_id ??
+        `${t?.time ?? ""}|${t?.price ?? ""}|${t?.quantity ?? ""}|${t?.fee ?? ""}|${t?.side ?? ""}`;
+
+      let orderSeen = seenTradeKeysByOrder.get(orderId);
+      if (!orderSeen) {
+        orderSeen = new Set();
+        seenTradeKeysByOrder.set(orderId, orderSeen);
+      }
+      if (orderSeen.has(tradeKey)) {
+        continue; // dedupe repeated socket trades
+      }
+      orderSeen.add(tradeKey);
+      const qty = Number(t?.quantity ?? 0) || 0;
+      const quoteVal = Number(t?.quote ?? 0) || 0;
+      const fee = Number(t?.fee ?? 0) || 0;
+      const tds = Number(t?.tds ?? 0) || 0;
+      const time = t?.time ?? t?.created_at ?? t?.createdAt ?? t?.executed_at ?? t?.executedAt;
+
+      if (!prev) {
+        map.set(orderId, {
+          _id: orderId,
+          order_id: orderId,
+          side: (t?.side || "").toUpperCase(),
+          order_type: "MARKET",
+          tif: "",
+          price: t?.price,
+          avg_execution_price: t?.price,
+          quantity: qty,
+          filled: qty,
+          remaining: 0,
+          fill_percent: 100,
+          executed_value: quoteVal,
+          total_fee: fee,
+          total_tds: tds,
+          fee_asset: t?.fee_asset,
+          tds_asset: t?.tds_asset,
+          pay_currency: t?.fee_asset ?? quote_currency,
+          ask_currency: base_currency,
+          status: "FILLED",
+          createdAt: time,
+          updatedAt: time,
+          executed_prices: [
+            {
+              price: t?.price,
+              quantity: t?.quantity,
+              fee: t?.fee,
+              time,
+              trade_id: t?.trade_id,
+            },
+          ],
+        });
+      } else {
+        prev.quantity = (Number(prev.quantity) || 0) + qty;
+        prev.filled = (Number(prev.filled) || 0) + qty;
+        prev.executed_value = (Number(prev.executed_value) || 0) + quoteVal;
+        prev.total_fee = (Number(prev.total_fee) || 0) + fee;
+        prev.total_tds = (Number(prev.total_tds) || 0) + tds;
+        prev.executed_prices = Array.isArray(prev.executed_prices) ? prev.executed_prices : [];
+        prev.executed_prices.push({
+          price: t?.price,
+          quantity: t?.quantity,
+          fee: t?.fee,
+          time,
+          trade_id: t?.trade_id,
+        });
+        // latest time for sorting
+        const prevTime = Date.parse(prev.updatedAt || prev.createdAt || "") || 0;
+        const nextTime = Date.parse(time || "") || 0;
+        if (nextTime > prevTime) {
+          prev.updatedAt = time;
+        }
+      }
+    }
+
+    return Array.from(map.values());
+  }, [pastOrders, base_currency, quote_currency]);
+
   const filteredPastOrders = useMemo(() => {
-    if (!pastOrders?.length) return [];
+    if (!pastOrdersNormalized?.length) return [];
     const filtered = pastOrderFilter === "All"
-      ? [...pastOrders]
-      : pastOrders.filter((item) => item?.side === pastOrderFilter);
+      ? [...pastOrdersNormalized]
+      : pastOrdersNormalized.filter((item) => item?.side === pastOrderFilter);
     return filtered.sort((a, b) => {
       const dateA = new Date(a?.created_at || a?.createdAt || a?.updated_at || a?.updatedAt || 0).getTime();
       const dateB = new Date(b?.created_at || b?.createdAt || b?.updated_at || b?.updatedAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [pastOrders, pastOrderFilter]);
+  }, [pastOrdersNormalized, pastOrderFilter]);
 
   const filteredMyTrades = useMemo(() => {
     if (!spotMyTrades?.length) return [];
@@ -2122,7 +2321,12 @@ const Spot = () => {
   }, [spotMyTrades, tradeHistorySideFilter]);
 
   const myTradesSlice = useMemo(() => filteredMyTrades.slice(0, 5), [filteredMyTrades]);
-  const tradeHistoryKeyExtractor = useCallback((item, idx) => item?._id ?? `th_${idx}`, []);
+  const tradeHistoryKeyExtractor = useCallback((item, idx) => {
+    const id = item?._id ?? item?.trade_id ?? item?.id;
+    const t = item?.executed_at ?? item?.executedAt ?? item?.created_at ?? item?.createdAt;
+    const p = item?.price ?? item?.rate ?? item?.avg_price;
+    return id ? `th_${id}` : `th_${t ?? "na"}_${p ?? "na"}_${idx}`;
+  }, []);
 
   // Total: when amount is 0/empty show same default price as Limit field; else amount * price
   const totalDisplayValue = useMemo(() => {
@@ -2204,23 +2408,41 @@ const Spot = () => {
 
   // Memoized render function for open orders - Card Format (same design as OpenOrder.js screen)
   const renderOpenOrderItem = useCallback(({ item: inv, index: idx }) => {
-    const currencyPair = inv?.side === "BUY"
-      ? `${inv?.base_currency_short_name || inv?.ask_currency || inv?.base_currency}/${inv?.quote_currency_short_name || inv?.pay_currency || inv?.quote_currency}`
-      : `${inv?.quote_currency_short_name || inv?.pay_currency || inv?.quote_currency}/${inv?.base_currency_short_name || inv?.ask_currency || inv?.base_currency}`;
-    const qty = Number(inv?.quantity ?? inv?.filled ?? 0) || 0;
-    const remaining = Number(inv?.remaining) ?? 0;
-    const filled = qty > 0 ? qty - remaining : (Number(inv?.filled) || 0);
-    const totalQty = qty || filled || 0;
-    const price = Number(inv?.price) || 0;
-    const avgPrice = Number(inv?.avg_execution_price) || price;
-    const status = inv?.status || "";
-    const isFilled = status === "FILLED";
-    const orderTypeLabel = (inv?.order_type === "MARKET" ? "Market" : "Limit") + " / " + (inv?.side === "BUY" ? "Buy" : "Sell");
-    const statusLabel = status === "FILLED" ? "Filled" : (status === "CANCELLED" || status === "CANCELED" ? "Canceled" : (status === "OPEN" ? "Open" : (status === "PARTIAL" ? "Partial" : status)));
+    const currencyPair = buildCurrencyPairText(inv);
+    const baseIconUri = getBaseCoinIconUri(inv);
+    const statusRaw = getOrderStatusRaw(inv);
+    const statusLabel = getOrderStatusLabel(inv);
 
-    const statusUpper = String(status).toUpperCase().trim();
+    const statusUpper = String(statusRaw || "").toUpperCase().trim();
     const orderId = inv?._id || inv?.id;
     const canCancel = !!orderId && !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpper);
+
+    const qty = Number(inv?.quantity ?? 0) || 0;
+    const filledQty = Number(inv?.filled ?? 0) || 0;
+    const remainingQty = Number(inv?.remaining ?? 0) || Math.max(0, qty - filledQty);
+
+    const quoteCc =
+      normalizePairSymbol(inv?.pay_currency) ||
+      normalizePairSymbol(inv?.fee_asset) ||
+      normalizePairSymbol(quote_currency);
+    const baseSym = normalizePairSymbol(base_currency) || normalizePairSymbol(currencyPair.split("/")?.[0]);
+
+    const priceNum = Number(inv?.price) || 0;
+    const avgNum = Number(inv?.avg_execution_price ?? inv?.avgPrice ?? inv?.average_price ?? inv?.averagePrice) || 0;
+
+    const fillPercent = (() => {
+      const fp = inv?.fill_percent;
+      if (fp == null || String(fp).trim() === "") {
+        if (qty > 0) return `${Math.round((filledQty / qty) * 100)}%`;
+        return "—";
+      }
+      const s = String(fp).trim();
+      return s.endsWith("%") ? s : `${s}%`;
+    })();
+
+    const execValue = Number(inv?.executed_value ?? inv?.executedValue ?? 0);
+    const fee = inv?.total_fee ?? inv?.fee;
+    const tds = inv?.total_tds ?? inv?.tds;
 
     const textColor = themeColors.text;
     const labelColor = themeColors.secondaryText;
@@ -2235,40 +2457,34 @@ const Spot = () => {
         >
           <View style={styles.openOrderTopRow}>
             <View style={styles.pairRow}>
+              {baseIconUri ? (
+                <FastImage
+                  source={{ uri: baseIconUri }}
+                  style={styles.coinIconSmall}
+                  resizeMode="contain"
+                />
+              ) : null}
               <AppText style={[styles.openOrderCardTitle, { color: textColor }]}>{currencyPair}</AppText>
             </View>
-            <AppText style={[styles.openOrderCardDate, { color: labelColor }]}>
-              {formatDateTimeCard(inv?.updatedAt || inv?.createdAt)}
-            </AppText>
           </View>
 
-          <AppText
-            style={[
-              styles.openOrderTypeLabel,
-              { color: inv?.side === "BUY" ? themeColors.green : themeColors.red },
-            ]}
-          >
-            {orderTypeLabel}
-          </AppText>
-
-          <View style={styles.openOrderCardRow}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Amount:</AppText>
-            <AppText style={[styles.openOrderCardValue, { color: textColor }]}>
-              {toFixedEight(filled)} / {toFixedEight(totalQty)}
-            </AppText>
-          </View>
-
-          <View style={styles.openOrderCardRow}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Avg. / Price:</AppText>
-            <AppText style={[styles.openOrderCardValue, { color: textColor }]}>
-              {isFilled ? `${toFixedSix(avgPrice)} / ${toFixedSix(price)} (Counterparty 1)` : `0 / ${toFixedSix(price)}`}
-            </AppText>
-          </View>
-
-          <View style={styles.openOrderCardRow}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Status:</AppText>
-            <AppText style={[styles.openOrderCardValue, { color: getStatusColor(inv?.status) }]}>{statusLabel}</AppText>
-          </View>
+          {/* Web-like mobile list */}
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Date</AppText><AppText style={[styles.kvV, { color: textColor }]}>{moment(inv?.updatedAt || inv?.createdAt).isValid() ? moment(inv?.updatedAt || inv?.createdAt).format("DD/MM/YYYY") : "---"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Time</AppText><AppText style={[styles.kvV, { color: textColor }]}>{moment(inv?.updatedAt || inv?.createdAt).isValid() ? moment(inv?.updatedAt || inv?.createdAt).format("HH:mm:ss") : "---"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Market</AppText><AppText style={[styles.kvV, { color: textColor }]}>{currencyPair}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Side</AppText><AppText style={[styles.kvV, { color: getSideColor(inv?.side) }]}>{String(inv?.side || "---").toUpperCase()}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Type</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.order_type === "LIMIT" ? "Limit" : "Market"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>TIF</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.tif || "—"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Price</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.order_type === "LIMIT" ? toFixedEight(priceNum) : "Market"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Avg</AppText><AppText style={[styles.kvV, { color: textColor }]}>{avgNum ? toFixedEight(avgNum) : "—"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Quantity</AppText><AppText style={[styles.kvV, { color: textColor }]}>{toFixedEight(qty)} {baseSym || ""}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Filled</AppText><AppText style={[styles.kvV, { color: textColor }]}>{toFixedEight(filledQty)} {baseSym || ""}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Remaining</AppText><AppText style={[styles.kvV, { color: textColor }]}>{toFixedEight(remainingQty)} {baseSym || ""}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Fill %</AppText><AppText style={[styles.kvV, { color: textColor }]}>{fillPercent}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Value</AppText><AppText style={[styles.kvV, { color: textColor }]}>{Number.isFinite(execValue) ? toFixedEight(execValue) : "—"}{quoteCc ? ` ${quoteCc}` : ""}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Fee</AppText><AppText style={[styles.kvV, { color: textColor }]}>{fee != null ? toFixedEight(fee) : "0"}{quoteCc ? ` ${quoteCc}` : ""}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>TDS</AppText><AppText style={[styles.kvV, { color: textColor }]}>{tds != null ? toFixedEight(tds) : "0"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Status</AppText><AppText style={[styles.kvV, { color: getStatusColor(statusRaw) }]}>{statusLabel}</AppText></View>
         </TouchableOpacity>
 
         {canCancel && (
@@ -2289,7 +2505,7 @@ const Spot = () => {
         <View style={[styles.openOrderCardDivider, { backgroundColor: themeColors.themeBorderColor }]} />
       </View>
     );
-  }, [themeColors, formatDateTimeCard, getStatusColor]);
+  }, [themeColors, getStatusColor, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusLabel, getOrderStatusRaw, normalizePairSymbol, quote_currency, base_currency, getSideColor]);
 
   // Format currency pair for past orders
   const formatCurrencyPair = useCallback((trade) => {
@@ -2307,22 +2523,40 @@ const Spot = () => {
 
   // Memoized render function for past orders - same card UI as Open Orders; tap → SPOT_ORDER_HISTORY_DETAIL with full order data
   const renderPastOrderItem = useCallback(({ item: inv, index: idx }) => {
-    const currencyPair = inv?.side === "BUY"
-      ? `${inv?.base_currency_short_name || inv?.ask_currency || inv?.base_currency}/${inv?.quote_currency_short_name || inv?.pay_currency || inv?.quote_currency}`
-      : `${inv?.quote_currency_short_name || inv?.pay_currency || inv?.quote_currency}/${inv?.base_currency_short_name || inv?.ask_currency || inv?.base_currency}`;
-    const qty = Number(inv?.quantity ?? inv?.filled ?? 0) || 0;
-    const remaining = Number(inv?.remaining) ?? 0;
-    const filled = qty > 0 ? qty - remaining : (Number(inv?.filled) || 0);
-    const totalQty = qty || filled || 0;
-    const price = Number(inv?.price) || 0;
-    const avgPrice = Number(inv?.avg_execution_price) || price;
-    const status = inv?.status || "";
-    const isFilled = status === "FILLED";
-    const orderTypeLabel = (inv?.order_type === "MARKET" ? "Market" : "Limit") + " / " + (inv?.side === "BUY" ? "Buy" : "Sell");
-    const statusLabel = status === "FILLED" ? "Filled" : (status === "CANCELLED" || status === "CANCELED" ? "Cancelled" : (status === "OPEN" ? "Open" : (status === "PARTIAL" ? "Partial" : status)));
-    const statusUpper = String(status).toUpperCase().trim();
-    const orderId = inv?._id || inv?.id;
-    const canCancel = !!orderId && !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpper);
+    const orderId = inv?._id || inv?.order_id || inv?.id;
+    const currencyPair = buildCurrencyPairText(inv);
+    const baseIconUri = getBaseCoinIconUri(inv);
+
+    const qty = Number(inv?.quantity ?? 0) || 0;
+    const filledQty = Number(inv?.filled ?? 0) || qty;
+    const remainingQty = Number(inv?.remaining ?? 0) || 0;
+
+    const priceNum = Number(inv?.price) || 0;
+    const avgNum = Number(inv?.avg_execution_price ?? inv?.avgPrice ?? inv?.average_price ?? inv?.averagePrice) || 0;
+
+    const quoteCc =
+      normalizePairSymbol(inv?.pay_currency) ||
+      normalizePairSymbol(inv?.fee_asset) ||
+      normalizePairSymbol(quote_currency);
+
+    const baseSym = normalizePairSymbol(base_currency) || normalizePairSymbol(currencyPair.split("/")?.[0]);
+
+    const fillPercent = (() => {
+      const fp = inv?.fill_percent;
+      if (fp == null || String(fp).trim() === "") return "—";
+      const s = String(fp).trim();
+      return s.endsWith("%") ? s : `${s}%`;
+    })();
+
+    const execValue = Number(inv?.executed_value ?? inv?.executedValue ?? inv?.quote ?? 0);
+    const fee = inv?.total_fee ?? inv?.fee;
+    const tds = inv?.total_tds ?? inv?.tds;
+
+    const statusRaw = getOrderStatusRaw(inv);
+    const statusLabel = getOrderStatusLabel(inv);
+
+    const hasExecutedTrades = Array.isArray(inv?.executed_prices) && inv.executed_prices.length > 0;
+    const showTrades = !!showExecutedTrades?.[orderId];
 
     const textColor = themeColors.text;
     const labelColor = themeColors.secondaryText;
@@ -2331,67 +2565,94 @@ const Spot = () => {
       <View
         style={[styles.openOrderCard, { backgroundColor: themeColors.background }]}
       >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { order: inv })}
-        >
+        <View>
           <View style={styles.openOrderTopRow}>
             <View style={styles.pairRow}>
+              {baseIconUri ? (
+                <FastImage
+                  source={{ uri: baseIconUri }}
+                  style={styles.coinIconSmall}
+                  resizeMode="contain"
+                />
+              ) : null}
               <AppText style={[styles.openOrderCardTitle, { color: textColor }]}>{currencyPair}</AppText>
             </View>
-            <AppText style={[styles.openOrderCardDate, { color: labelColor }]}>
-              {formatDateTimeCard(inv?.updatedAt || inv?.createdAt)}
-            </AppText>
           </View>
 
-          <AppText
-            style={[
-              styles.openOrderTypeLabel,
-              { color: inv?.side === "BUY" ? themeColors.green : themeColors.red },
-            ]}
-          >
-            {orderTypeLabel}
-          </AppText>
+          {/* EXACT screenshot fields only */}
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Date</AppText><AppText style={[styles.kvV, { color: textColor }]}>{moment(inv?.updatedAt || inv?.createdAt).isValid() ? moment(inv?.updatedAt || inv?.createdAt).format("DD/MM/YYYY") : "---"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Time</AppText><AppText style={[styles.kvV, { color: textColor }]}>{moment(inv?.updatedAt || inv?.createdAt).isValid() ? moment(inv?.updatedAt || inv?.createdAt).format("HH:mm:ss") : "---"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Market</AppText><AppText style={[styles.kvV, { color: textColor }]}>{currencyPair}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Side</AppText><AppText style={[styles.kvV, { color: getSideColor(inv?.side) }]}>{String(inv?.side || "---").toUpperCase()}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Type</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.order_type === "LIMIT" ? "Limit" : "Market"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>TIF</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.tif || "—"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Price</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.order_type === "LIMIT" ? toFixedEight(priceNum) : "Market"}</AppText></View>
+        </View>
 
-          <View style={styles.openOrderCardRow}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Amount:</AppText>
-            <AppText style={[styles.openOrderCardValue, { color: textColor }]}>
-              {toFixedEight(filled)} / {toFixedEight(totalQty)}
-            </AppText>
-          </View>
-
-          <View style={styles.openOrderCardRow}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Avg. / Price:</AppText>
-            <AppText style={[styles.openOrderCardValue, { color: textColor }]}>
-              {isFilled ? `${toFixedSix(avgPrice)} / ${toFixedSix(price)} (Counterparty 1)` : `0 / ${toFixedSix(price)}`}
-            </AppText>
-          </View>
-
-          <View style={styles.openOrderCardRow}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Status:</AppText>
-            <AppText style={[styles.openOrderCardValue, { color: getStatusColor(inv?.status) }]}>{statusLabel}</AppText>
-          </View>
-        </TouchableOpacity>
-
-        {canCancel && (
-          <View style={[styles.openOrderCardRow, { marginTop: 8 }]}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Action:</AppText>
+        {hasExecutedTrades && (
+          <View style={{ marginTop: 8 }}>
             <TouchableOpacity
-              style={styles.cancelActionBtn}
-              onPress={() => {
-                setOrderToCancel(inv);
-                setIsCancelModalVisible(true);
-              }}
+              activeOpacity={0.8}
+              style={styles.execTradesBtn}
+              onPress={() => setShowExecutedTrades((p) => ({ ...p, [orderId]: !p?.[orderId] }))}
             >
-              <AppText style={{ color: themeColors.red, fontWeight: "600", fontSize: 13 }}>Cancel</AppText>
+              <View style={styles.execTradesBtnRow}>
+                <FastImage
+                  source={downIcon}
+                  tintColor={ colors.lightGrey}
+                  style={[
+                    styles.orderHistoryChevron,
+                    {  transform: [{ rotate: showTrades ? "180deg" : "0deg" }] },
+                  ]}
+                  resizeMode="contain"
+                />
+                <AppText style={[styles.execTradesBtnText, { color: textColor }]}> Executed trades</AppText>
+              </View>
             </TouchableOpacity>
+
+            {showTrades && (
+              <View style={styles.execTradesBox}>
+                {inv.executed_prices.map((tr, i) => (
+                  <View
+                    key={`${orderId}_${tr?.trade_id ?? i}`}
+                    style={[
+                      styles.execTradeItem,
+                      i === inv.executed_prices.length - 1 ? { borderBottomWidth: 0, marginBottom: 0 } : null,
+                    ]}
+                  >
+                    <View style={styles.execTradeHeaderRow}>
+                      <AppText style={[styles.execTradeHeaderText, { color: labelColor }]}>
+                        Trade #{i + 1}
+                      </AppText>
+                    </View>
+
+                    <View style={styles.execTradeKvRow}>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor }]}>Price:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor }]}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
+                    </View>
+                    <View style={styles.execTradeKvRow}>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor }]}>Executed:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor }]}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
+                    </View>
+                    <View style={styles.execTradeKvRow}>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor }]}>Fee:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor }]}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
+                    </View>
+                    <View style={styles.execTradeKvRow}>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor }]}>Total:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor }]}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
         <View style={[styles.openOrderCardDivider, { backgroundColor: themeColors.themeBorderColor }]} />
       </View>
     );
-  }, [themeColors, formatDateTimeCard, getStatusColor]);
+  }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor]);
 
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>
@@ -2413,6 +2674,7 @@ const Spot = () => {
             onBackPress={() => navigation.goBack()}
           />
 
+          {!historyOnly && (
           <View style={styles.secondcontainer}>
             {/* Left: Order book (ratio + controls inside). */}
             <View style={styles.leftPanel}>
@@ -2979,10 +3241,11 @@ const Spot = () => {
             </View>
 
           </View>
+          )}
         </>
 
         {/* Bottom tabs: Open Orders / Order History / Trade History */}
-        {orderBookReady && (
+        {(historyOnly || orderBookReady) && (
           <View
             style={{
               flexDirection: "row",
@@ -3035,7 +3298,7 @@ const Spot = () => {
         )}
 
         {/* Tab content: same three sections as web TradeHistorySection; one panel mounted so height isn’t driven by the tallest tab */}
-        {orderBookReady && (
+        {(historyOnly || orderBookReady) && (
           <View style={styles.ordersTabContentWrapper}>
             {/* Slide-in animation on tab press (renders 2 panels only during animation). */}
             {ordersSlidePair ? (
@@ -4790,11 +5053,23 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 8,
   },
+  orderHistoryChevron: {
+    width: 10,
+    height: 10,
+    marginTop: 2,
+  },
   pairRow: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
     marginRight: 8,
+  },
+  coinIconSmall: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    marginRight: 6,
+    backgroundColor: "transparent",
   },
   openOrderCardTitle: {
     fontSize: 14,
@@ -4814,6 +5089,76 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 6,
+  },
+  kvRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 1,
+  },
+  kvK: {
+    fontSize: 11,
+    flex: 1,
+  },
+  kvV: {
+    fontSize: 11,
+    flex: 1,
+    textAlign: "right",
+  },
+  execTradesBtn: {
+    alignSelf: "flex-end",
+    paddingVertical: 4,
+    paddingHorizontal: 5,
+    borderWidth:1,
+    borderColor:lightTheme.inputBorder,
+    borderRadius:5,
+
+  },
+  execTradesBtnRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  execTradesBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  execTradesBox: {
+    marginTop: 8,
+    backgroundColor: "#EAEDF0",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  execTradeItem: {
+    backgroundColor: "transparent",
+    borderBottomWidth: 1,
+    borderBottomColor: lightTheme.inputBorder,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginBottom: 0,
+  },
+  execTradeHeaderRow: {
+    marginBottom: 6,
+  },
+  execTradeHeaderText: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  execTradeKvRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 1,
+  },
+  execTradeKvK: {
+    fontSize: 12,
+    flex: 1,
+  },
+  execTradeKvV: {
+    fontSize: 12,
+    flex: 1,
+    textAlign: "right",
+    fontWeight: "400",
   },
   openOrderCardLabel: {
     fontSize: 12,
