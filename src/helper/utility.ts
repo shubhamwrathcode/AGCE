@@ -121,6 +121,33 @@ export const toFixedEight = (value: string | number) => {
   let val = Number(value);
   return val < 1 ? val?.toFixed(8) : val?.toFixed(3);
 };
+
+export const SPOT_PAIR_QUOTES = [
+  "USDT", "USDC", "FDUSD", "BUSD", "TUSD", "USDD", "DAI", "BTC", "ETH", "BNB", "SOL", "TRX", "TRY", "EUR", "GBP",
+];
+
+export function spotOpenOrderMarketLabel(item: any, selectedBase?: string, selectedQuote?: string) {
+  if (!item) return "---/---";
+  // Check common field names for pair/symbol
+  const rawPair = item.pair ?? item.symbol ?? item.market ?? item.pair_name ?? "";
+  const compact = rawPair != null ? String(rawPair).trim().toUpperCase() : "";
+  
+  if (compact && compact !== "---") {
+    for (const q of SPOT_PAIR_QUOTES) {
+      if (compact.endsWith(q) && compact.length > q.length) {
+        return `${compact.slice(0, -q.length)}/${q}`;
+      }
+    }
+    return compact;
+  }
+  const ask = item?.ask_currency || item?.base_currency || item?.base_asset || selectedBase || "---";
+  const pay = item?.pay_currency || item?.quote_currency || item?.quote_asset || selectedQuote || "---";
+  return item?.side === "SELL" ? `${pay}/${ask}` : `${ask}/${pay}`;
+}
+
+export function tradeHistoryBaseAsset(item: any, selectedBase?: string, selectedQuote?: string) {
+  return spotOpenOrderMarketLabel(item, selectedBase, selectedQuote).split("/")[0] || "";
+}
 export const imagePathCorrection = (value: string) => {
   let temp = value?.replace('\\', '/');
   let temp2 = temp?.replace('\\', '/');

@@ -61,6 +61,8 @@ import {
   toFixedSix,
   toFixedThree,
   twoFixedTwo,
+  spotOpenOrderMarketLabel,
+  tradeHistoryBaseAsset,
 } from "../../helper/utility";
 import { colors, lightTheme } from "../../theme/colors";
 import CustomDropdown from "../../shared/components/CustomDropdown";
@@ -188,10 +190,15 @@ function matchesOpenOrderKind(item, kind) {
   return true;
 }
 
-function tradeHistoryMarketLabel(item) {
-  if (item?.pair != null && String(item.pair).trim() !== "") return String(item.pair).trim();
-  return "---";
+function tradeHistoryMarketLabel(item, selectedBase, selectedQuote) {
+  return spotOpenOrderMarketLabel(item, selectedBase, selectedQuote);
 }
+
+function tradeHistoryQuoteAsset(item, selectedBase, selectedQuote) {
+  const parts = spotOpenOrderMarketLabel(item, selectedBase, selectedQuote).split("/");
+  return parts.length === 2 ? parts[1] : "";
+}
+
 
 export const Data = [
   { label: "0.1", value: "0.1" },
@@ -240,6 +247,13 @@ function roundSpotPriceToAgg(price, agg) {
   if (!Number.isFinite(n) || !Number.isFinite(a) || a <= 0) return n;
   return Math.round(n / a) * a;
 }
+
+const safeToFixed8 = (value, fallback = "0") => {
+  const parsed = parseFloat(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const s = parsed.toFixed(8).replace(/\.?0+$/, "");
+  return s === "" ? "0" : s;
+};
 
 function aggregateSpotOrderBookRows(orders, agg) {
   if (!orders?.length) return [];
@@ -1477,6 +1491,79 @@ const Spot = () => {
       dispatch(setRecentTrades(payload.recentTrades));
     }
   }, [dispatch]);
+  const renderTradeHistorySection = () => {
+    if (!filteredMyTrades?.length) {
+      return (
+        <View style={styles.noDataRow}>
+          <FastImage
+            source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+            resizeMode="contain"
+            style={{ width: 80, height: 80 }}
+          />
+        </View>
+      );
+    }
+    return (
+      <>
+        <View style={styles.scrollContent}>
+          {myTradesSlice.slice(0, 5).map((item) => {
+            const mLabel = tradeHistoryMarketLabel(item, effectiveCurrency?.base_currency, effectiveCurrency?.quote_currency);
+            const baseSym = tradeHistoryBaseAsset(item, effectiveCurrency?.base_currency, effectiveCurrency?.quote_currency);
+            const side = String(item?.side || "").toUpperCase();
+            const role = item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—";
+            const sideColor = side === "BUY" ? themeColors.green : themeColors.red;
+            const ts = item?.executed_at || item?.executedAt || item?.created_at;
+            const m = moment(ts);
+            const dateStr = m.isValid() ? m.format("DD/MM/YYYY") : "—";
+            const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
+
+            return (
+              <View
+                key={tradeHistoryKeyExtractor(item)}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 0,
+                  borderBottomWidth: 1,
+                  borderBottomColor: themeColors.themeBorderColor,
+                }}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => NavigationService.navigate('Trade_History', { activeTab: 1 })}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+                    <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>{mLabel}</AppText>
+                    <FastImage source={right_ic} style={{ width: 11, height: 11, marginLeft: 4 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                  </View>
+                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>{dateStr} {timeStr}</AppText>
+                </TouchableOpacity>
+                <AppText style={{ color: sideColor, fontSize: 13, marginBottom: 12 }} weight={MEDIUM}>
+                  {side} · {role}
+                </AppText>
+
+                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Date</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{dateStr}</AppText></View>
+                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Time</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{timeStr}</AppText></View>
+                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Pair</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{mLabel}</AppText></View>
+                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Side</AppText><AppText style={[styles.kvV, { color: sideColor, fontSize: 11, textAlign: 'right' }]}>{side}</AppText></View>
+                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Role</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{role}</AppText></View>
+                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Price</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{safeToFixed8(item?.price, "—")}</AppText></View>
+                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Quantity</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{safeToFixed8(item?.quantity, "—")} {baseSym}</AppText></View>
+              </View>
+            );
+          })}
+        </View>
+        {filteredMyTrades?.length > 5 && (
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => NavigationService.navigate('Trade_History', { activeTab: 1 })}
+          >
+            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+          </TouchableOpacity>
+        )}
+      </>
+    );
+  };
+
   flushSocketToStateRef.current = flushSocketToState;
 
   // Socket listener only when Spot is focused - when blurred we remove listeners so no work in background
@@ -3426,9 +3513,9 @@ const Spot = () => {
                               ))}
                             </View>
                             {filteredPastOrders?.length > 5 && (
-                              <TouchableOpacityView
+                              <TouchableOpacity
                                 style={styles.viewAllButton}
-                                onPress={() => NavigationService.navigate('Trade_History')}
+                                onPress={() => NavigationService.navigate('Trade_History', { activeTab: 0 })}
                               >
                                 <AppText
                                   style={[
@@ -3438,7 +3525,7 @@ const Spot = () => {
                                 >
                                   View More
                                 </AppText>
-                              </TouchableOpacityView>
+                              </TouchableOpacity>
                             )}
                           </>
                         ) : (
@@ -3457,7 +3544,7 @@ const Spot = () => {
                           style={{
                             flexDirection: "row",
                             alignItems: "center",
-                            justifyContent: "flex-end",
+                            justifyContent: "flex-start",
                             gap: 6,
                             marginBottom: 4,
                             paddingLeft: 2,
@@ -3486,77 +3573,7 @@ const Spot = () => {
                             <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
                           </TouchableOpacity>
                         </View>
-                        {filteredMyTrades?.length > 0 ? (
-                          <View style={styles.scrollContent}>
-                            {myTradesSlice.map((item) => (
-                              <View
-                                key={tradeHistoryKeyExtractor(item)}
-                                style={{
-                                  paddingVertical: 12,
-                                  paddingHorizontal: 8,
-                                  borderBottomWidth: StyleSheet.hairlineWidth,
-                                  borderBottomColor: themeColors.themeBorderColor,
-                                }}
-                              >
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                                  <AppText style={{ color: themeColors.text, fontWeight: "700", fontSize: 13 }}>{tradeHistoryMarketLabel(item)}</AppText>
-                                  <AppText
-                                    style={{
-                                      fontSize: 12,
-                                      fontWeight: "700",
-                                      color: String(item?.side).toUpperCase() === "BUY" ? themeColors.green : themeColors.red,
-                                    }}
-                                  >
-                                    {String(item?.side || "").toUpperCase()}
-                                  </AppText>
-                                </View>
-                                <AppText style={{ color: themeColors.secondaryText, fontSize: 11, marginTop: 4 }}>
-                                  {(() => {
-                                    const ts = item?.executed_at || item?.executedAt || item?.created_at;
-                                    if (!ts) return "—";
-                                    const m = moment(ts);
-                                    return m.isValid() ? m.format("DD/MM/YYYY HH:mm:ss") : "—";
-                                  })()}
-                                </AppText>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Price</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.price ?? "—"}</AppText>
-                                </View>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Qty</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.quantity ?? "—"}</AppText>
-                                </View>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Role</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>
-                                    {item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—"}
-                                  </AppText>
-                                </View>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Value</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.quote_quantity ?? (Number(item?.price) * Number(item?.quantity))?.toFixed(8) ?? "—"}</AppText>
-                                </View>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Fee</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.fee ?? "0"} {item?.fee_asset ?? ""}</AppText>
-                                </View>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>TDS</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.tds ?? "0"}</AppText>
-                                </View>
-                              </View>
-                            ))}
-
-                          </View>
-                        ) : (
-                          <View style={styles.noDataRow}>
-                            <FastImage
-                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                              resizeMode="contain"
-                              style={{ width: 80, height: 80 }}
-                            />
-                          </View>
-                        )}
+                        {renderTradeHistorySection()}
                       </View>
                     )}
                   </View>
@@ -3676,12 +3693,12 @@ const Spot = () => {
                               ))}
                             </View>
                             {filteredPastOrders?.length > 5 && (
-                              <TouchableOpacityView
+                              <TouchableOpacity
                                 style={styles.viewAllButton}
-                                onPress={() => NavigationService.navigate('Trade_History')}
+                                onPress={() => NavigationService.navigate('Trade_History', { activeTab: 0 })}
                               >
                                 <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
-                              </TouchableOpacityView>
+                              </TouchableOpacity>
                             )}
                           </>
                         ) : (
@@ -3729,76 +3746,7 @@ const Spot = () => {
                             <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
                           </TouchableOpacity>
                         </View>
-
-                        {filteredMyTrades?.length > 0 ? (
-                          <View style={styles.scrollContent}>
-                            {myTradesSlice.map((item) => (
-                              <View
-                                key={tradeHistoryKeyExtractor(item)}
-                                style={{
-                                  paddingVertical: 12,
-                                  paddingHorizontal: 8,
-                                  borderBottomWidth: StyleSheet.hairlineWidth,
-                                  borderBottomColor: themeColors.themeBorderColor,
-                                }}
-                              >
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                                  <AppText style={{ color: themeColors.text, fontWeight: "700", fontSize: 13 }}>
-                                    {tradeHistoryMarketLabel(item)}
-                                  </AppText>
-                                  <AppText
-                                    style={{
-                                      fontSize: 12,
-                                      fontWeight: "700",
-                                      color:
-                                        String(item?.side).toUpperCase() === "BUY" ? themeColors.green : themeColors.red,
-                                    }}
-                                  >
-                                    {String(item?.side || "").toUpperCase()}
-                                  </AppText>
-                                </View>
-                                <AppText style={{ color: themeColors.secondaryText, fontSize: 11, marginTop: 4 }}>
-                                  {(() => {
-                                    const ts = item?.executed_at || item?.executedAt || item?.created_at;
-                                    if (!ts) return "—";
-                                    const m = moment(ts);
-                                    return m.isValid() ? m.format("DD/MM/YYYY HH:mm:ss") : "—";
-                                  })()}
-                                </AppText>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Price</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.price ?? "—"}</AppText>
-                                </View>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Qty</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.quantity ?? "—"}</AppText>
-                                </View>
-                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Role</AppText>
-                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>
-                                    {item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—"}
-                                  </AppText>
-                                </View>
-                              </View>
-                            ))}
-                            {filteredMyTrades?.length > 5 && (
-                              <TouchableOpacityView
-                                style={styles.viewAllButton}
-                                onPress={() => NavigationService.navigate("Trade_History")}
-                              >
-                                <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
-                              </TouchableOpacityView>
-                            )}
-                          </View>
-                        ) : (
-                          <View style={styles.noDataRow}>
-                            <FastImage
-                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                              resizeMode="contain"
-                              style={{ width: 80, height: 80 }}
-                            />
-                          </View>
-                        )}
+                        {renderTradeHistorySection()}
                       </View>
                     )}
                   </View>
@@ -3979,76 +3927,7 @@ const Spot = () => {
                         <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
                       </TouchableOpacity>
                     </View>
-
-                    {filteredMyTrades?.length > 0 ? (
-                      <View style={styles.scrollContent}>
-                        {myTradesSlice.map((item) => (
-                          <View
-                            key={tradeHistoryKeyExtractor(item)}
-                            style={{
-                              paddingVertical: 12,
-                              paddingHorizontal: 8,
-                              borderBottomWidth: StyleSheet.hairlineWidth,
-                              borderBottomColor: themeColors.themeBorderColor,
-                            }}
-                          >
-                            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                              <AppText style={{ color: themeColors.text, fontWeight: "700", fontSize: 13 }}>
-                                {tradeHistoryMarketLabel(item)}
-                              </AppText>
-                              <AppText
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: "700",
-                                  color:
-                                    String(item?.side).toUpperCase() === "BUY" ? themeColors.green : themeColors.red,
-                                }}
-                              >
-                                {String(item?.side || "").toUpperCase()}
-                              </AppText>
-                            </View>
-                            <AppText style={{ color: themeColors.secondaryText, fontSize: 11, marginTop: 4 }}>
-                              {(() => {
-                                const ts = item?.executed_at || item?.executedAt || item?.created_at;
-                                if (!ts) return "—";
-                                const m = moment(ts);
-                                return m.isValid() ? m.format("DD/MM/YYYY HH:mm:ss") : "—";
-                              })()}
-                            </AppText>
-                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
-                              <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Price</AppText>
-                              <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.price ?? "—"}</AppText>
-                            </View>
-                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                              <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Qty</AppText>
-                              <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.quantity ?? "—"}</AppText>
-                            </View>
-                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                              <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Role</AppText>
-                              <AppText style={{ color: themeColors.text, fontSize: 12 }}>
-                                {item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—"}
-                              </AppText>
-                            </View>
-                          </View>
-                        ))}
-                        {filteredMyTrades?.length > 5 && (
-                          <TouchableOpacityView
-                            style={styles.viewAllButton}
-                            onPress={() => NavigationService.navigate("Trade_History")}
-                          >
-                            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
-                          </TouchableOpacityView>
-                        )}
-                      </View>
-                    ) : (
-                      <View style={styles.noDataRow}>
-                        <FastImage
-                          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                          resizeMode="contain"
-                          style={{ width: 80, height: 80 }}
-                        />
-                      </View>
-                    )}
+                    {renderTradeHistorySection()}
                   </View>
                 ) : null}
               </>
@@ -5151,7 +5030,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     flex: 1,
     textAlign: "right",
-    fontWeight: "400",
   },
   openOrderCardLabel: {
     fontSize: 12,
