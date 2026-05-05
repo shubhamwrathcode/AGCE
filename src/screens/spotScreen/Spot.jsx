@@ -428,6 +428,8 @@ const ORDER_BOOK_LIST_STYLE = { maxHeight: ORDER_BOOK_LIST_MAX_HEIGHT, flexGrow:
 const ORDER_BOOK_LIST_END_PAD = 10;
 const ORDER_BOOK_HEADER_ROW_STYLE = { flexDirection: "row", justifyContent: "space-between" };
 const ORDER_BOOK_HEADER_LABEL_STYLE = { color: "#9D9D9D" };
+/** Keep order book area stable when toggling view (both/bids/asks). */
+const ORDER_BOOK_PANEL_FIXED_HEIGHT = ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 92;
 const ORDER_BOOK_SHIMMER_STRIP_WIDTH = 240;
 
 const OrderBookSkeleton = () => {
@@ -504,7 +506,7 @@ const OrderBookPanel = memo(({
   );
   const currentPriceColor = change_percentage < 0 ? themeColors.red : themeColors.green;
   return (
-    <View>
+    <View style={{ minHeight: ORDER_BOOK_PANEL_FIXED_HEIGHT }}>
       <View style={ORDER_BOOK_HEADER_ROW_STYLE}>
         <View>
           <AppText style={ORDER_BOOK_HEADER_LABEL_STYLE}>Price</AppText>
@@ -537,7 +539,9 @@ const OrderBookPanel = memo(({
           }
           ListEmptyComponent={listEmptySell}
         />
-      ) : null}
+      ) : (
+        <View style={{ height: ORDER_BOOK_LIST_MAX_HEIGHT }} />
+      )}
       <View style={styles.currentPriceBox}>
         {showOrderBookSkeleton ? (
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
@@ -575,7 +579,9 @@ const OrderBookPanel = memo(({
           }
           ListEmptyComponent={listEmptyBuy}
         />
-      ) : null}
+      ) : (
+        <View style={{ height: ORDER_BOOK_LIST_MAX_HEIGHT }} />
+      )}
     </View>
   );
 }, orderBookPanelAreEqual);
@@ -716,25 +722,6 @@ const OrderBookSection = memo(({
 
   return (
     <View style={sty.rightPanel}>
-      <OrderBookPanel
-        sellData={sellOrdersForDisplay}
-        buyData={buyOrdersForDisplay}
-        buy_price={buy_price}
-        change_percentage={change_percentage}
-        quote_currency={quote_currency}
-        base_currency={base_currency}
-        orderBookReady={orderBookReady}
-        showOrderBookSkeleton={showOrderBookSkeleton}
-        showAskSide={showAskSide}
-        showBidSide={showBidSide}
-        styles={sty}
-        renderSellOrderItem={renderSellOrderItem}
-        renderBuyOrderItem={renderBuyOrderItem}
-        sellKeyExtractor={sellKeyExtractor}
-        buyKeyExtractor={buyKeyExtractor}
-        getOrderItemLayout={getOrderItemLayout}
-      />
-
       <View style={sty.spotObToolbarRow}>
         <TouchableOpacity
           ref={aggTriggerRef}
@@ -772,6 +759,25 @@ const OrderBookSection = memo(({
           <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={sty.spotObViewCycleIcon} resizeMode="contain" />
         </TouchableOpacity>
       </View>
+
+      <OrderBookPanel
+        sellData={sellOrdersForDisplay}
+        buyData={buyOrdersForDisplay}
+        buy_price={buy_price}
+        change_percentage={change_percentage}
+        quote_currency={quote_currency}
+        base_currency={base_currency}
+        orderBookReady={orderBookReady}
+        showOrderBookSkeleton={showOrderBookSkeleton}
+        showAskSide={showAskSide}
+        showBidSide={showBidSide}
+        styles={sty}
+        renderSellOrderItem={renderSellOrderItem}
+        renderBuyOrderItem={renderBuyOrderItem}
+        sellKeyExtractor={sellKeyExtractor}
+        buyKeyExtractor={buyKeyExtractor}
+        getOrderItemLayout={getOrderItemLayout}
+      />
 
       <Modal visible={orderBookAggOpen} transparent animationType="fade" onRequestClose={closeAggMenu}>
         <Pressable style={sty.spotObAggBackdrop} onPress={closeAggMenu} />
@@ -1093,21 +1099,41 @@ const Spot = () => {
 
 
 
+  /** `activeTab` drives header highlight; `mountedOrdersTab` drives rendered body (avoids tallest-tab height). */
   const [activeTab, setActiveTab] = useState(1);
+  const [mountedOrdersTab, setMountedOrdersTab] = useState(1);
   activeTabRef.current = activeTab;
+  /** Tab press slide animation (no swipe; avoids tallest-tab height issue by mounting 1–2 panels only). */
+  const ordersSlideX = useRef(new Animated.Value(0)).current;
+  const ordersAnimatingRef = useRef(false);
+  const [ordersSlidePair, setOrdersSlidePair] = useState(null); // { from:number, to:number, dir:1|-1 } | null
+
   const handleSpotOrdersPrimaryTab = useCallback(
     (tabId) => {
       if (tabId < 1 || tabId > 3) return;
       if (activeTab === tabId) return;
-      LayoutAnimation.configureNext({
-        duration: 280,
-        update: { type: LayoutAnimation.Types.easeInEaseOut },
-        create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-      });
+      if (ordersAnimatingRef.current) return;
+      const from = mountedOrdersTab;
+      const to = tabId;
+      const dir = to > from ? 1 : -1;
       setExpandedRowIndex(null);
-      setActiveTab(tabId);
+      setActiveTab(to); // highlight immediately
+      ordersAnimatingRef.current = true;
+      setOrdersSlidePair({ from, to, dir });
+      ordersSlideX.setValue(0);
+      Animated.timing(ordersSlideX, {
+        toValue: -dir * Width,
+        duration: 180,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        ordersAnimatingRef.current = false;
+        if (!finished) return;
+        setMountedOrdersTab(to);
+        setOrdersSlidePair(null);
+        ordersSlideX.setValue(0);
+      });
     },
-    [activeTab]
+    [activeTab, mountedOrdersTab, ordersSlideX]
   );
 
   const [tab, setTab] = useState("Buy");
@@ -1203,6 +1229,20 @@ const Spot = () => {
             quote_currency_id: currentPair.quote_currency_id,
           };
         }
+      }
+      // If pair has no ids, ensure we don't show stale data from a previous subscription.
+      if (!currentPair?.base_currency_id || !currentPair?.quote_currency_id) {
+        const lastExchange = lastSubscribedExchangeRef.current;
+        if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
+          unsubscribeFromExchange(lastExchange.base_currency_id, lastExchange.quote_currency_id);
+          lastSubscribedExchangeRef.current = null;
+        }
+        dispatch(setBuyOrders([]));
+        dispatch(setSellOrders([]));
+        dispatch(setRecentTrades([]));
+        setLastSocketData(null);
+        setLocalBuyOrders([]);
+        setLocalSellOrders([]);
       }
       if (currentPair?.available === "LOCAL") {
         if (latestLocalBuyOrdersRef.current?.length > 0) {
@@ -1379,7 +1419,7 @@ const Spot = () => {
           data,
           buyOrders: transformedBuyOrders,
           sellOrders: transformedSellOrders,
-          recentTrades: data?.recent_trades ?? recentTrades,
+          recentTrades: data?.recent_trades,
         });
       }
     };
@@ -2873,9 +2913,23 @@ const Spot = () => {
         {/* Tab content: same three sections as web TradeHistorySection; one panel mounted so height isn’t driven by the tallest tab */}
         {orderBookReady && (
           <View style={styles.ordersTabContentWrapper}>
-            {/* Single panel mounted — height follows active tab only (not max of all tabs). */}
-            {activeTab === 1 ? (
-              <View style={styles.ordersTabPanel}>
+            {/* Slide-in animation on tab press (renders 2 panels only during animation). */}
+            {ordersSlidePair ? (
+              <View style={{ width: Width, overflow: "hidden" }}>
+                <Animated.View
+                  style={{
+                    flexDirection: "row",
+                    width: Width * 2,
+                    transform: [
+                      {
+                        translateX: ordersSlideX,
+                      },
+                    ],
+                  }}
+                >
+                  <View style={{ width: Width }}>
+                    {ordersSlidePair.from === 1 ? (
+                      <View style={styles.ordersTabPanel}>
               <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
                 <ScrollView
                   horizontal
@@ -2983,9 +3037,8 @@ const Spot = () => {
                 </View>
               )}
               </View>
-            ) : null}
-            {activeTab === 2 ? (
-              <View style={styles.ordersTabPanel}>
+                    ) : ordersSlidePair.from === 2 ? (
+                      <View style={styles.ordersTabPanel}>
               {pastOrders?.length > 0 ? (
                 <>
                   <View style={styles.scrollContent}>
@@ -3021,9 +3074,8 @@ const Spot = () => {
                 </View>
               )}
               </View>
-            ) : null}
-            {activeTab === 3 ? (
-              <View style={styles.ordersTabPanel}>
+                    ) : (
+                      <View style={styles.ordersTabPanel}>
               <View
                 style={{
                   flexDirection: "row",
@@ -3124,7 +3176,501 @@ const Spot = () => {
                 </View>
               )}
               </View>
-            ) : null}
+                    )}
+                  </View>
+
+                  <View style={{ width: Width }}>
+                    {ordersSlidePair.to === 1 ? (
+                      <View style={styles.ordersTabPanel}>
+                        <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            nestedScrollEnabled
+                            keyboardShouldPersistTaps="handled"
+                            contentContainerStyle={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                              paddingVertical: 2,
+                              paddingRight: 14,
+                            }}
+                          >
+                            {SPOT_OPEN_ORDER_KINDS.map((k) => {
+                              const active = openOrderKindTab === k.id;
+                              return (
+                                <TouchableOpacity
+                                  key={k.id}
+                                  activeOpacity={0.85}
+                                  onPress={() => setOpenOrderKindTab(k.id)}
+                                  style={{
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 4,
+                                    borderRadius: 6,
+                                    borderWidth: active ? 1 : 0,
+                                    borderColor: active ? themeColors.themeBorderColor : "transparent",
+                                    backgroundColor: active ? themeColors.input : "transparent",
+                                  }}
+                                >
+                                  <AppText
+                                    style={{
+                                      fontSize: 11,
+                                      color: active ? themeColors.text : themeColors.secondaryText,
+                                      fontWeight: active ? "600" : "500",
+                                    }}
+                                  >
+                                    {k.label}
+                                  </AppText>
+                                </TouchableOpacity>
+                              );
+                            })}
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2 }}>
+                              <View style={{ width: 102 }}>
+                                <CustomDropdown
+                                  compact
+                                  data={SPOT_SIDE_DROPDOWN_LABELS}
+                                  selected={spotDropdownLabelFromSideFilter(orderFilter)}
+                                  onSelect={(label) => setOrderFilter(spotSideFilterFromDropdownLabel(label))}
+                                />
+                              </View>
+                              <TouchableOpacity
+                                onPress={() => {
+                                  setOpenOrderKindTab("all");
+                                  setOrderFilter("All");
+                                }}
+                                style={{
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  paddingVertical: 4,
+                                  paddingLeft: 4,
+                                  marginLeft: 2,
+                                }}
+                              >
+                                <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                                <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
+                              </TouchableOpacity>
+                            </View>
+                          </ScrollView>
+                        </View>
+
+                        {filteredOpenOrders?.length > 0 ? (
+                          <>
+                            <View style={styles.scrollContent}>
+                              {openOrdersSlice.map((item, index) => (
+                                <View key={openOrderKeyExtractor(item)}>
+                                  {renderOpenOrderItem({ item, index })}
+                                </View>
+                              ))}
+                            </View>
+                            {filteredOpenOrders?.length > 5 && (
+                              <TouchableOpacity
+                                style={styles.viewAllButton}
+                                onPress={() => NavigationService.navigate('Open_Order')}
+                              >
+                                <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                              </TouchableOpacity>
+                            )}
+                          </>
+                        ) : (
+                          <View style={styles.noDataRow}>
+                            <FastImage
+                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                              resizeMode="contain"
+                              style={{ width: 80, height: 80 }}
+                            />
+                          </View>
+                        )}
+                      </View>
+                    ) : ordersSlidePair.to === 2 ? (
+                      <View style={styles.ordersTabPanel}>
+                        {pastOrders?.length > 0 ? (
+                          <>
+                            <View style={styles.scrollContent}>
+                              {(pastOrdersSlice ?? []).map((item, index) => (
+                                <View key={pastOrderKeyExtractor(item)}>
+                                  {renderPastOrderItem({ item, index })}
+                                </View>
+                              ))}
+                            </View>
+                            {filteredPastOrders?.length > 5 && (
+                              <TouchableOpacityView
+                                style={styles.viewAllButton}
+                                onPress={() => NavigationService.navigate('Trade_History')}
+                              >
+                                <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                              </TouchableOpacityView>
+                            )}
+                          </>
+                        ) : (
+                          <View style={styles.noDataRow}>
+                            <FastImage
+                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                              resizeMode="contain"
+                              style={{ width: 80, height: 80 }}
+                            />
+                          </View>
+                        )}
+                      </View>
+                    ) : (
+                      <View style={styles.ordersTabPanel}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            gap: 6,
+                            marginBottom: 4,
+                            paddingLeft: 2,
+                            paddingRight: 14,
+                          }}
+                        >
+                          <View style={{ width: 102 }}>
+                            <CustomDropdown
+                              compact
+                              data={SPOT_SIDE_DROPDOWN_LABELS}
+                              selected={spotDropdownLabelFromSideFilter(tradeHistorySideFilter)}
+                              onSelect={(label) => setTradeHistorySideFilter(spotSideFilterFromDropdownLabel(label))}
+                            />
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => setTradeHistorySideFilter("All")}
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 4,
+                              paddingVertical: 4,
+                              paddingLeft: 4,
+                            }}
+                          >
+                            <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
+                          </TouchableOpacity>
+                        </View>
+
+                        {filteredMyTrades?.length > 0 ? (
+                          <View style={styles.scrollContent}>
+                            {myTradesSlice.map((item) => (
+                              <View
+                                key={tradeHistoryKeyExtractor(item)}
+                                style={{
+                                  paddingVertical: 12,
+                                  paddingHorizontal: 8,
+                                  borderBottomWidth: StyleSheet.hairlineWidth,
+                                  borderBottomColor: themeColors.themeBorderColor,
+                                }}
+                              >
+                                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                                  <AppText style={{ color: themeColors.text, fontWeight: "700", fontSize: 13 }}>
+                                    {tradeHistoryMarketLabel(item)}
+                                  </AppText>
+                                  <AppText
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: "700",
+                                      color:
+                                        String(item?.side).toUpperCase() === "BUY" ? themeColors.green : themeColors.red,
+                                    }}
+                                  >
+                                    {String(item?.side || "").toUpperCase()}
+                                  </AppText>
+                                </View>
+                                <AppText style={{ color: themeColors.secondaryText, fontSize: 11, marginTop: 4 }}>
+                                  {(() => {
+                                    const ts = item?.executed_at || item?.executedAt || item?.created_at;
+                                    if (!ts) return "—";
+                                    const m = moment(ts);
+                                    return m.isValid() ? m.format("DD/MM/YYYY HH:mm:ss") : "—";
+                                  })()}
+                                </AppText>
+                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
+                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Price</AppText>
+                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.price ?? "—"}</AppText>
+                                </View>
+                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Qty</AppText>
+                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.quantity ?? "—"}</AppText>
+                                </View>
+                                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Role</AppText>
+                                  <AppText style={{ color: themeColors.text, fontSize: 12 }}>
+                                    {item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—"}
+                                  </AppText>
+                                </View>
+                              </View>
+                            ))}
+                            {filteredMyTrades?.length > 5 && (
+                              <TouchableOpacityView
+                                style={styles.viewAllButton}
+                                onPress={() => NavigationService.navigate("Trade_History")}
+                              >
+                                <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                              </TouchableOpacityView>
+                            )}
+                          </View>
+                        ) : (
+                          <View style={styles.noDataRow}>
+                            <FastImage
+                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                              resizeMode="contain"
+                              style={{ width: 80, height: 80 }}
+                            />
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                </Animated.View>
+              </View>
+            ) : (
+              <>
+                {/* Single panel mounted — height follows active tab only (not max of all tabs). */}
+                {mountedOrdersTab === 1 ? (
+                  <View style={styles.ordersTabPanel}>
+                    {/* existing Open Orders panel */}
+                    <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                        contentContainerStyle={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                          paddingVertical: 2,
+                          paddingRight: 14,
+                        }}
+                      >
+                        {SPOT_OPEN_ORDER_KINDS.map((k) => {
+                          const active = openOrderKindTab === k.id;
+                          return (
+                            <TouchableOpacity
+                              key={k.id}
+                              activeOpacity={0.85}
+                              onPress={() => setOpenOrderKindTab(k.id)}
+                              style={{
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                borderRadius: 6,
+                                borderWidth: active ? 1 : 0,
+                                borderColor: active ? themeColors.themeBorderColor : "transparent",
+                                backgroundColor: active ? themeColors.input : "transparent",
+                              }}
+                            >
+                              <AppText
+                                style={{
+                                  fontSize: 11,
+                                  color: active ? themeColors.text : themeColors.secondaryText,
+                                  fontWeight: active ? "600" : "500",
+                                }}
+                              >
+                                {k.label}
+                              </AppText>
+                            </TouchableOpacity>
+                          );
+                        })}
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2 }}>
+                          <View style={{ width: 102 }}>
+                            <CustomDropdown
+                              compact
+                              data={SPOT_SIDE_DROPDOWN_LABELS}
+                              selected={spotDropdownLabelFromSideFilter(orderFilter)}
+                              onSelect={(label) => setOrderFilter(spotSideFilterFromDropdownLabel(label))}
+                            />
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => {
+                              setOpenOrderKindTab("all");
+                              setOrderFilter("All");
+                            }}
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 4,
+                              paddingVertical: 4,
+                              paddingLeft: 4,
+                              marginLeft: 2,
+                            }}
+                          >
+                            <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
+                          </TouchableOpacity>
+                        </View>
+                      </ScrollView>
+                    </View>
+
+                    {filteredOpenOrders?.length > 0 ? (
+                      <>
+                        <View style={styles.scrollContent}>
+                          {openOrdersSlice.map((item, index) => (
+                            <View key={openOrderKeyExtractor(item)}>
+                              {renderOpenOrderItem({ item, index })}
+                            </View>
+                          ))}
+                        </View>
+                        {filteredOpenOrders?.length > 5 && (
+                          <TouchableOpacity
+                            style={styles.viewAllButton}
+                            onPress={() => NavigationService.navigate('Open_Order')}
+                          >
+                            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.noDataRow}>
+                        <FastImage
+                          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                          resizeMode="contain"
+                          style={{ width: 80, height: 80 }}
+                        />
+                      </View>
+                    )}
+                  </View>
+                ) : null}
+
+                {mountedOrdersTab === 2 ? (
+                  <View style={styles.ordersTabPanel}>
+                    {pastOrders?.length > 0 ? (
+                      <>
+                        <View style={styles.scrollContent}>
+                          {(pastOrdersSlice ?? []).map((item, index) => (
+                            <View key={pastOrderKeyExtractor(item)}>
+                              {renderPastOrderItem({ item, index })}
+                            </View>
+                          ))}
+                        </View>
+                        {filteredPastOrders?.length > 5 && (
+                          <TouchableOpacityView
+                            style={styles.viewAllButton}
+                            onPress={() => NavigationService.navigate('Trade_History')}
+                          >
+                            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                          </TouchableOpacityView>
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.noDataRow}>
+                        <FastImage
+                          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                          resizeMode="contain"
+                          style={{ width: 80, height: 80 }}
+                        />
+                      </View>
+                    )}
+                  </View>
+                ) : null}
+
+                {mountedOrdersTab === 3 ? (
+                  <View style={styles.ordersTabPanel}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        gap: 6,
+                        marginBottom: 4,
+                        paddingLeft: 2,
+                        paddingRight: 14,
+                      }}
+                    >
+                      <View style={{ width: 102 }}>
+                        <CustomDropdown
+                          compact
+                          data={SPOT_SIDE_DROPDOWN_LABELS}
+                          selected={spotDropdownLabelFromSideFilter(tradeHistorySideFilter)}
+                          onSelect={(label) => setTradeHistorySideFilter(spotSideFilterFromDropdownLabel(label))}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => setTradeHistorySideFilter("All")}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 4,
+                          paddingVertical: 4,
+                          paddingLeft: 4,
+                        }}
+                      >
+                        <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                        <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
+                      </TouchableOpacity>
+                    </View>
+
+                    {filteredMyTrades?.length > 0 ? (
+                      <View style={styles.scrollContent}>
+                        {myTradesSlice.map((item) => (
+                          <View
+                            key={tradeHistoryKeyExtractor(item)}
+                            style={{
+                              paddingVertical: 12,
+                              paddingHorizontal: 8,
+                              borderBottomWidth: StyleSheet.hairlineWidth,
+                              borderBottomColor: themeColors.themeBorderColor,
+                            }}
+                          >
+                            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                              <AppText style={{ color: themeColors.text, fontWeight: "700", fontSize: 13 }}>
+                                {tradeHistoryMarketLabel(item)}
+                              </AppText>
+                              <AppText
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: "700",
+                                  color:
+                                    String(item?.side).toUpperCase() === "BUY" ? themeColors.green : themeColors.red,
+                                }}
+                              >
+                                {String(item?.side || "").toUpperCase()}
+                              </AppText>
+                            </View>
+                            <AppText style={{ color: themeColors.secondaryText, fontSize: 11, marginTop: 4 }}>
+                              {(() => {
+                                const ts = item?.executed_at || item?.executedAt || item?.created_at;
+                                if (!ts) return "—";
+                                const m = moment(ts);
+                                return m.isValid() ? m.format("DD/MM/YYYY HH:mm:ss") : "—";
+                              })()}
+                            </AppText>
+                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
+                              <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Price</AppText>
+                              <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.price ?? "—"}</AppText>
+                            </View>
+                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                              <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Qty</AppText>
+                              <AppText style={{ color: themeColors.text, fontSize: 12 }}>{item?.quantity ?? "—"}</AppText>
+                            </View>
+                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                              <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Role</AppText>
+                              <AppText style={{ color: themeColors.text, fontSize: 12 }}>
+                                {item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—"}
+                              </AppText>
+                            </View>
+                          </View>
+                        ))}
+                        {filteredMyTrades?.length > 5 && (
+                          <TouchableOpacityView
+                            style={styles.viewAllButton}
+                            onPress={() => NavigationService.navigate("Trade_History")}
+                          >
+                            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                          </TouchableOpacityView>
+                        )}
+                      </View>
+                    ) : (
+                      <View style={styles.noDataRow}>
+                        <FastImage
+                          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                          resizeMode="contain"
+                          style={{ width: 80, height: 80 }}
+                        />
+                      </View>
+                    )}
+                  </View>
+                ) : null}
+              </>
+            )}
           </View>
         )}
         {/* Sweet Alert Style Modal */}
@@ -3819,7 +4365,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 6,
+    marginBottom: 6,
   },
   spotObAggTrigger: {
     flex: 1,

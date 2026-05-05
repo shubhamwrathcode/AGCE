@@ -58,9 +58,6 @@ export const SocketProvider = ({ children }) => {
 
   const subscribeToExchange = useCallback((baseCurrencyId, quoteCurrencyId) => {
     if (!baseCurrencyId || !quoteCurrencyId) {
-      if (socketService.getSocket()?.connected) {
-        socketService.emit("exchange:subscribe", {});
-      }
       return;
     }
     const subKey = `${baseCurrencyId}-${quoteCurrencyId}`;

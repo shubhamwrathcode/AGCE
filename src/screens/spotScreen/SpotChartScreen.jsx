@@ -23,6 +23,7 @@ import { useDispatch } from "react-redux";
 import { useTheme } from "../../hooks/useTheme";
 import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD } from "../../shared";
 import FastImage from "react-native-fast-image";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   back_ic,
   downIcon,
@@ -57,6 +58,12 @@ const TAB_SCROLL_BAR_CLEARANCE = 72;
 
 /** Pager + chip labels (stable reference for scroll sync callbacks). */
 const CHART_BOTTOM_TABS = ["Order Book", "Market Trades", "Assets"];
+
+const CHART_BOTTOM_TAB_ICON = {
+  "Order Book": "book-outline",
+  "Market Trades": "stats-chart-outline",
+  Assets: "wallet-outline",
+};
 
 const DEFAULT_ORDER_BOOK_AGG_OPTIONS = [0.1, 0.5, 1, 10, 100];
 
@@ -436,7 +443,12 @@ const SpotChartScreen = () => {
   const low = mergedPair?.low;
   const volume = mergedPair?.volume;
 
+  /** `activeTab` drives header highlight & controls; `mountedTab` drives rendered body to avoid height issues. */
   const [activeTab, setActiveTab] = useState("Order Book");
+  const [mountedTab, setMountedTab] = useState("Order Book");
+  /** Tab press slide animation (mount 1–2 panels only; avoids tallest-tab height issue). */
+  const bottomSlideX = useRef(new Animated.Value(0)).current;
+  const [bottomSlidePair, setBottomSlidePair] = useState(null); // { from:string, to:string, dir:1|-1 } | null
   const pairTickSize = mergedPair?.tick_size ?? 0.01;
   const orderBookAggOptions = useMemo(
     () => getOrderBookAggOptionsForPair(pairTickSize),
@@ -472,7 +484,26 @@ const SpotChartScreen = () => {
 
   const handleTabChange = (tab) => {
     if (!CHART_BOTTOM_TABS.includes(tab)) return;
-    setActiveTab(tab);
+    if (bottomSlidePair) return;
+    if (activeTab === tab) return;
+    const from = mountedTab;
+    const to = tab;
+    const fromIdx = CHART_BOTTOM_TABS.indexOf(from);
+    const toIdx = CHART_BOTTOM_TABS.indexOf(to);
+    const dir = toIdx > fromIdx ? 1 : -1;
+    setActiveTab(to); // update highlight + dropdown immediately
+    setBottomSlidePair({ from, to, dir });
+    bottomSlideX.setValue(0);
+    Animated.timing(bottomSlideX, {
+      toValue: -dir * Width,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) return;
+      setMountedTab(to);
+      setBottomSlidePair(null);
+      bottomSlideX.setValue(0);
+    });
   };
 
   useEffect(() => {
@@ -546,11 +577,17 @@ const SpotChartScreen = () => {
   useFocusEffect(
     useCallback(() => {
       const p = pairRef.current;
-      if (!p?.base_currency_id || !p?.quote_currency_id) return undefined;
+      if (!p?.base_currency_id || !p?.quote_currency_id) {
+        dispatch(setBuyOrders([]));
+        dispatch(setSellOrders([]));
+        dispatch(setRecentTrades([]));
+        setLastSocketData(null);
+        return undefined;
+      }
       /** Idempotent — keeps same exchange stream when stacked above Spot (do not clear Redux on blur). */
       subscribeToExchange?.(p.base_currency_id, p.quote_currency_id);
       return undefined;
-    }, [subscribeToExchange])
+    }, [subscribeToExchange, dispatch])
   );
 
   // useEffect(() => {
@@ -979,11 +1016,18 @@ const SpotChartScreen = () => {
                   onPress={() => handleTabChange(tab)}
                   style={[
                     styles.obTab,
-                    activeTab === tab && {
-                      backgroundColor: isDark ? "rgba(255,255,255,0.1)" : lightTheme.input,
-                    },
+                    activeTab === tab && [
+                      styles.obTabActive,
+                      { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : lightTheme.input },
+                    ],
                   ]}
                 >
+                  <Ionicons
+                    name={CHART_BOTTOM_TAB_ICON[tab] ?? "ellipse-outline"}
+                    size={18}
+                    color={activeTab === tab ? themeColors.text : themeColors.secondaryText}
+                    style={{ marginBottom: 4 }}
+                  />
                   <AppText
                     type={TEN}
                     weight={activeTab === tab ? SEMI_BOLD : undefined}
@@ -1020,10 +1064,19 @@ const SpotChartScreen = () => {
             ) : null}
           </View>
 
-          {/* One panel mounted at a time — avoids horizontal pager stretching all tabs to tallest (e.g. Market Trades). */}
-          <View style={styles.chartBottomTabBody}>
-            {activeTab === "Order Book" ? (
-            <View style={{ width: Width, paddingHorizontal: 12 }}>
+          {/* Slide-in animation on tab press (renders 2 panels only during animation). */}
+          {bottomSlidePair ? (
+            <View style={{ width: Width, overflow: "hidden" }}>
+              <Animated.View
+                style={{
+                  flexDirection: "row",
+                  width: Width * 2,
+                  transform: [{ translateX: bottomSlideX }],
+                }}
+              >
+                <View style={{ width: Width }}>
+                  {bottomSlidePair.from === "Order Book" ? (
+                    <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={[styles.obRatioBar, { backgroundColor: themeColors.card }]}>
                 <View style={[styles.obRatioBid, { flex: 1, backgroundColor: themeColors.green }]} />
                 <View style={[styles.obRatioAsk, { flex: 1, backgroundColor: themeColors.red }]} />
@@ -1060,10 +1113,9 @@ const SpotChartScreen = () => {
               ) : (
                 <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />
               )}
-            </View>
-            ) : null}
-            {activeTab === "Market Trades" ? (
-            <View style={{ width: Width, paddingHorizontal: 12 }}>
+                    </View>
+                  ) : bottomSlidePair.from === "Market Trades" ? (
+                    <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={styles.mtContainer}>
                 <View style={styles.mtHeader}>
                   <AppText
@@ -1131,10 +1183,9 @@ const SpotChartScreen = () => {
                   )}
                 </View>
               </View>
-            </View>
-            ) : null}
-            {activeTab === "Assets" ? (
-            <View style={{ width: Width, paddingHorizontal: 12 }}>
+                    </View>
+                  ) : (
+                    <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={styles.assetsContainer}>
                 {!userData ? (
                   <View style={styles.noDataContainer}>
@@ -1249,9 +1300,395 @@ const SpotChartScreen = () => {
                   </>
                 )}
               </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={{ width: Width }}>
+                  {bottomSlidePair.to === "Order Book" ? (
+                    <View style={{ width: Width, paddingHorizontal: 12 }}>
+                      <View style={[styles.obRatioBar, { backgroundColor: themeColors.card }]}>
+                        <View style={[styles.obRatioBid, { flex: 1, backgroundColor: themeColors.green }]} />
+                        <View style={[styles.obRatioAsk, { flex: 1, backgroundColor: themeColors.red }]} />
+                      </View>
+                      <View style={styles.obColHeader}>
+                        <View style={styles.depthBidSide}>
+                          <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
+                            Bid
+                          </AppText>
+                        </View>
+                        <View style={[styles.depthMidRule, { backgroundColor: "transparent" }]} />
+                        <View style={styles.depthAskSide}>
+                          <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
+                            Ask
+                          </AppText>
+                        </View>
+                      </View>
+                      {lastSocketData || buyOrders?.length > 0 || sellOrders?.length > 0 ? (
+                        depthRows.map((row, idx) => (
+                          <DepthRow
+                            key={`d2_${idx}`}
+                            bid={row.bid}
+                            ask={row.ask}
+                            maxBidVol={maxBidVol}
+                            maxAskVol={maxAskVol}
+                            themeColors={themeColors}
+                            isDark={isDark}
+                            formatPrice={formatPrice}
+                            formatQty={formatQty}
+                          />
+                        ))
+                      ) : (
+                        <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />
+                      )}
+                    </View>
+                  ) : bottomSlidePair.to === "Market Trades" ? (
+                    <View style={{ width: Width, paddingHorizontal: 12 }}>
+                      <View style={styles.mtContainer}>
+                        <View style={styles.mtHeader}>
+                          <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
+                            Price({pairQuote})
+                          </AppText>
+                          <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
+                            Quantity({pairBase})
+                          </AppText>
+                          <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                            Time
+                          </AppText>
+                        </View>
+                        <View>
+                          {recentTrades?.length > 0 ? (
+                            recentTrades?.slice(0, 50)?.map((item, index) => (
+                              <View key={item?._id || index} style={styles.mtRow}>
+                                <AppText
+                                  type={TEN}
+                                  style={[
+                                    styles.mtCell,
+                                    {
+                                      color:
+                                        item?.side === "BUY"
+                                          ? themeColors.green || "#00c076"
+                                          : themeColors.red || "#ff3b30",
+                                      textAlign: "left",
+                                      fontWeight: "600",
+                                    },
+                                  ]}
+                                >
+                                  {String(item?.price || 0)}
+                                </AppText>
+                                <AppText type={TEN} style={[styles.mtCell, { color: themeColors.text || "#000", textAlign: "center" }]}>
+                                  {String(item?.quantity || 0)}
+                                </AppText>
+                                <AppText
+                                  type={TEN}
+                                  style={[styles.mtCell, { color: themeColors.secondaryText || "#888", textAlign: "right" }]}
+                                >
+                                  {formatRecentTradeTime(item)}
+                                </AppText>
+                              </View>
+                            ))
+                          ) : (
+                            <View style={styles.noDataContainer}>
+                              <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
+                                No market trades yet
+                              </AppText>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ width: Width, paddingHorizontal: 12 }}>
+                      <View style={styles.assetsContainer}>
+                        {!userData ? (
+                          <View style={styles.noDataContainer}>
+                            <AppText type={TEN} style={{ color: themeColors.secondaryText, marginBottom: 10 }}>
+                              Please login to view your wallets
+                            </AppText>
+                            <TouchableOpacity style={styles.loginBtn} onPress={() => NavigationService.navigate(routes.LOGIN_SCREEN)}>
+                              <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+                                Login
+                              </AppText>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <>
+                            <View style={styles.assetsHeader}>
+                              <View style={styles.assetsHeaderTitleRow}>
+                                <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                                  Spot Wallets
+                                </AppText>
+                                <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
+                                  <FastImage
+                                    source={Refresh}
+                                    style={{ width: 14, height: 14 }}
+                                    resizeMode="contain"
+                                    tintColor={themeColors.text}
+                                  />
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                            <View style={styles.assetsActionRow}>
+                              <TouchableOpacity
+                                style={[styles.assetActionBtn, { backgroundColor: themeColors.green }]}
+                                onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}
+                              >
+                                <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+                                  Deposit
+                                </AppText>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
+                                onPress={() => NavigationService.navigate(routes.WITHDRAW_Coin_SCREEN)}
+                              >
+                                <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+                                  Withdraw
+                                </AppText>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
+                                onPress={() => NavigationService.navigate(routes.TRANSFER_SCREEN)}
+                              >
+                                <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+                                  Transfer
+                                </AppText>
+                              </TouchableOpacity>
+                            </View>
+                            <View style={styles.assetsListHeader}>
+                              <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
+                                Asset
+                              </AppText>
+                              <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                                Balance
+                              </AppText>
+                            </View>
+                            {filteredWallets.length > 0 ? (
+                              filteredWallets.map((wallet, index) => (
+                                <View key={wallet?._id || index} style={styles.assetRow}>
+                                  <View style={styles.assetInfo}>
+                                    <FastImage
+                                      source={{ uri: `${IMAGE_BASE_URL}${wallet?.icon_path}` }}
+                                      style={styles.assetIcon}
+                                      resizeMode="contain"
+                                    />
+                                    <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                                      {wallet?.short_name}
+                                    </AppText>
+                                  </View>
+                                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
+                                    {parseFloat(Number(wallet?.balance || 0).toFixed(8))}
+                                  </AppText>
+                                </View>
+                              ))
+                            ) : (
+                              <View style={styles.noDataContainer}>
+                                <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
+                                  No assets in spot wallet
+                                </AppText>
+                              </View>
+                            )}
+                          </>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </Animated.View>
             </View>
-            ) : null}
-          </View>
+          ) : (
+            /* One panel mounted at a time — avoids tallest-tab stretching. */
+            <View style={styles.chartBottomTabBody}>
+              {mountedTab === "Order Book" ? (
+                <View style={{ width: Width, paddingHorizontal: 12 }}>
+                  <View style={[styles.obRatioBar, { backgroundColor: themeColors.card }]}>
+                    <View style={[styles.obRatioBid, { flex: 1, backgroundColor: themeColors.green }]} />
+                    <View style={[styles.obRatioAsk, { flex: 1, backgroundColor: themeColors.red }]} />
+                  </View>
+                  <View style={styles.obColHeader}>
+                    <View style={styles.depthBidSide}>
+                      <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
+                        Bid
+                      </AppText>
+                    </View>
+                    <View style={[styles.depthMidRule, { backgroundColor: "transparent" }]} />
+                    <View style={styles.depthAskSide}>
+                      <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
+                        Ask
+                      </AppText>
+                    </View>
+                  </View>
+                  {lastSocketData || buyOrders?.length > 0 || sellOrders?.length > 0 ? (
+                    depthRows.map((row, idx) => (
+                      <DepthRow
+                        key={`d_${idx}`}
+                        bid={row.bid}
+                        ask={row.ask}
+                        maxBidVol={maxBidVol}
+                        maxAskVol={maxAskVol}
+                        themeColors={themeColors}
+                        isDark={isDark}
+                        formatPrice={formatPrice}
+                        formatQty={formatQty}
+                      />
+                    ))
+                  ) : (
+                    <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />
+                  )}
+                </View>
+              ) : null}
+              {mountedTab === "Market Trades" ? (
+                <View style={{ width: Width, paddingHorizontal: 12 }}>
+                  <View style={styles.mtContainer}>
+                    <View style={styles.mtHeader}>
+                      <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
+                        Price({pairQuote})
+                      </AppText>
+                      <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
+                        Quantity({pairBase})
+                      </AppText>
+                      <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                        Time
+                      </AppText>
+                    </View>
+                    <View>
+                      {recentTrades?.length > 0 ? (
+                        recentTrades?.slice(0, 50)?.map((item, index) => (
+                          <View key={item?._id || index} style={styles.mtRow}>
+                            <AppText
+                              type={TEN}
+                              style={[
+                                styles.mtCell,
+                                {
+                                  color:
+                                    item?.side === "BUY"
+                                      ? themeColors.green || "#00c076"
+                                      : themeColors.red || "#ff3b30",
+                                  textAlign: "left",
+                                  fontWeight: "600",
+                                },
+                              ]}
+                            >
+                              {String(item?.price || 0)}
+                            </AppText>
+                            <AppText type={TEN} style={[styles.mtCell, { color: themeColors.text || "#000", textAlign: "center" }]}>
+                              {String(item?.quantity || 0)}
+                            </AppText>
+                            <AppText
+                              type={TEN}
+                              style={[styles.mtCell, { color: themeColors.secondaryText || "#888", textAlign: "right" }]}
+                            >
+                              {formatRecentTradeTime(item)}
+                            </AppText>
+                          </View>
+                        ))
+                      ) : (
+                        <View style={styles.noDataContainer}>
+                          <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
+                            No market trades yet
+                          </AppText>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+              {mountedTab === "Assets" ? (
+                <View style={{ width: Width, paddingHorizontal: 12 }}>
+                  <View style={styles.assetsContainer}>
+                    {!userData ? (
+                      <View style={styles.noDataContainer}>
+                        <AppText type={TEN} style={{ color: themeColors.secondaryText, marginBottom: 10 }}>
+                          Please login to view your wallets
+                        </AppText>
+                        <TouchableOpacity style={styles.loginBtn} onPress={() => NavigationService.navigate(routes.LOGIN_SCREEN)}>
+                          <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+                            Login
+                          </AppText>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <>
+                        <View style={styles.assetsHeader}>
+                          <View style={styles.assetsHeaderTitleRow}>
+                            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                              Spot Wallets
+                            </AppText>
+                            <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
+                              <FastImage
+                                source={Refresh}
+                                style={{ width: 14, height: 14 }}
+                                resizeMode="contain"
+                                tintColor={themeColors.text}
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                        <View style={styles.assetsActionRow}>
+                          <TouchableOpacity
+                            style={[styles.assetActionBtn, { backgroundColor: themeColors.green }]}
+                            onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}
+                          >
+                            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+                              Deposit
+                            </AppText>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
+                            onPress={() => NavigationService.navigate(routes.WITHDRAW_Coin_SCREEN)}
+                          >
+                            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+                              Withdraw
+                            </AppText>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
+                            onPress={() => NavigationService.navigate(routes.TRANSFER_SCREEN)}
+                          >
+                            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+                              Transfer
+                            </AppText>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.assetsListHeader}>
+                          <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
+                            Asset
+                          </AppText>
+                          <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                            Balance
+                          </AppText>
+                        </View>
+                        {filteredWallets.length > 0 ? (
+                          filteredWallets.map((wallet, index) => (
+                            <View key={wallet?._id || index} style={styles.assetRow}>
+                              <View style={styles.assetInfo}>
+                                <FastImage
+                                  source={{ uri: `${IMAGE_BASE_URL}${wallet?.icon_path}` }}
+                                  style={styles.assetIcon}
+                                  resizeMode="contain"
+                                />
+                                <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                                  {wallet?.short_name}
+                                </AppText>
+                              </View>
+                              <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
+                                {parseFloat(Number(wallet?.balance || 0).toFixed(8))}
+                              </AppText>
+                            </View>
+                          ))
+                        ) : (
+                          <View style={styles.noDataContainer}>
+                            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
+                              No assets in spot wallet
+                            </AppText>
+                          </View>
+                        )}
+                      </>
+                    )}
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -1495,14 +1932,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 10,
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
   obTabsLeft: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: 10,
+    gap: 18,
     marginRight: 8,
   },
   obAggTrigger: {
@@ -1540,9 +1976,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   obTab: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    minWidth: 64,
+    borderRadius: 10,
+  },
+  obTabActive: {
+    // backgroundColor overridden inline to match theme
   },
   obRatioBar: {
     height: 4,
