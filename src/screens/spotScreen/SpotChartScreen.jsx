@@ -12,6 +12,8 @@ import {
   UIManager,
   AppState,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from "react-native";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
@@ -19,9 +21,18 @@ import { useRoute, useNavigation, useFocusEffect, useIsFocused } from "@react-na
 import moment from "moment";
 import { useDispatch } from "react-redux";
 import { useTheme } from "../../hooks/useTheme";
-import { AppText, SEMI_BOLD, ELEVEN, TEN } from "../../shared";
+import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD } from "../../shared";
 import FastImage from "react-native-fast-image";
-import { back_ic, downIcon, upIcon, Refresh, starIcon, starFillIcon, notification_bell_ic, bell_ic } from "../../helper/ImageAssets";
+import {
+  back_ic,
+  downIcon,
+  upIcon,
+  Refresh,
+  starIcon,
+  starFillIcon,
+  notification_bell_ic,
+  bell_ic,
+} from "../../helper/ImageAssets";
 import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
 import { SocketContext } from "../../SocketProvider";
@@ -34,10 +45,79 @@ import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { lightTheme } from "../../theme/colors";
 import * as routes from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors as themePalette } from "../../theme/colors";
 
 const { width: Width, height: Height } = Dimensions.get("window");
 const CHART_BLOCK_HEIGHT = Math.round(Height * 0.38);
 const ORDER_BOOK_ROWS = 12;
+/** Tail padding below tab pager + clearance for fixed Buy/Sell bar */
+const TAB_SCROLL_BOTTOM_GAP = 12;
+const TAB_SCROLL_BAR_CLEARANCE = 72;
+
+/** Pager + chip labels (stable reference for scroll sync callbacks). */
+const CHART_BOTTOM_TABS = ["Order Book", "Market Trades", "Assets"];
+
+const DEFAULT_ORDER_BOOK_AGG_OPTIONS = [0.1, 0.5, 1, 10, 100];
+
+/** Same idea as web `TradePage/index.js`: steps = tick × 1, 10, 100, … */
+function getOrderBookAggOptionsForPair(tickSize) {
+  const tick = Number(tickSize);
+  if (!Number.isFinite(tick) || tick <= 0) {
+    return DEFAULT_ORDER_BOOK_AGG_OPTIONS.slice();
+  }
+  const mults = [1, 10, 100, 1000, 10000];
+  const out = [];
+  for (const m of mults) {
+    const v = tick * m;
+    if (!Number.isFinite(v) || v <= 0) continue;
+    out.push(parseFloat(Number(v).toPrecision(12)));
+  }
+  const unique = Array.from(new Set(out)).sort((a, b) => a - b);
+  return unique.length ? unique : DEFAULT_ORDER_BOOK_AGG_OPTIONS.slice();
+}
+
+function roundPriceToAgg(price, agg) {
+  const n = Number(price);
+  const a = Number(agg);
+  if (!Number.isFinite(n) || !Number.isFinite(a) || a <= 0) return n;
+  return Math.round(n / a) * a;
+}
+
+function aggregateOrderBookRows(orders, agg) {
+  if (!orders?.length) return [];
+  const map = new Map();
+  for (const o of orders) {
+    const bucket = roundPriceToAgg(o.price, agg);
+    const prev = map.get(bucket);
+    if (prev) {
+      prev.quantity = (Number(prev.quantity) || 0) + (Number(o.quantity) || 0);
+      prev.remaining = (Number(prev.remaining) || 0) + (Number(o.remaining) || 0);
+    } else {
+      map.set(bucket, { ...o, price: bucket });
+    }
+  }
+  return Array.from(map.values());
+}
+
+/** Show only the numeric step (no quote currency suffix). */
+function formatAggStepLabel(step) {
+  if (step == null || step === "") return "—";
+  if (typeof step === "number" && Number.isFinite(step)) {
+    const s = step >= 1 ? step.toString() : step.toFixed(8).replace(/\.?0+$/, "");
+    return s || String(step);
+  }
+  const raw = String(step).trim();
+  const m = raw.match(/^-?\d*\.?\d+(?:e[+-]?\d+)?/i);
+  if (m) {
+    const n = Number(m[0]);
+    if (Number.isFinite(n)) {
+      const s = n >= 1 ? n.toString() : n.toFixed(8).replace(/\.?0+$/, "");
+      return s || m[0];
+    }
+  }
+  return raw;
+}
 
 const orderBookDataEqual = (a, b) => {
   if (a === b) return true;
@@ -276,7 +356,10 @@ const SpotChartScreen = () => {
   const { colors: themeColors, theme, isDark } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const { subscribeToExchange, unsubscribeFromExchange } = useContext(SocketContext) || {};
+  const insets = useSafeAreaInsets();
+  const tabScrollBottomPadding =
+    TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
+  const { subscribeToExchange } = useContext(SocketContext) || {};
 
   const spotSelectedPair = useAppSelector((state) => state.home.spotSelectedPair);
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
@@ -304,6 +387,7 @@ const SpotChartScreen = () => {
       buy_price: spotSelectedPair?.buy_price ?? params.buy_price,
       change_percentage: spotSelectedPair?.change_percentage ?? params.change_percentage,
       _id: spotSelectedPair?._id ?? params._id ?? params.pair_id,
+      tick_size: spotSelectedPair?.tick_size ?? params?.tick_size,
     }),
     [spotSelectedPair, params]
   );
@@ -353,8 +437,25 @@ const SpotChartScreen = () => {
   const volume = mergedPair?.volume;
 
   const [activeTab, setActiveTab] = useState("Order Book");
-  const scrollRef = useRef(null);
-  const tabs = ["Order Book", "Market Trades", "Assets"];
+  const tabPagerRef = useRef(null);
+  /** Keeps chip highlight in sync during swipe (onMomentumScrollEnd fires too late). */
+  const tabPagerIndexRef = useRef(0);
+  const pairTickSize = mergedPair?.tick_size ?? 0.01;
+  const orderBookAggOptions = useMemo(
+    () => getOrderBookAggOptionsForPair(pairTickSize),
+    [pairTickSize]
+  );
+  const [orderBookAggStep, setOrderBookAggStep] = useState(DEFAULT_ORDER_BOOK_AGG_OPTIONS[0]);
+  const [orderBookAggOpen, setOrderBookAggOpen] = useState(false);
+  const [aggMenuLayout, setAggMenuLayout] = useState(null);
+  const aggTriggerRef = useRef(null);
+  /** both = split, bids = buy side only, asks = sell side only (matches web `orderBookViewMode`) */
+  const [orderBookViewMode, setOrderBookViewMode] = useState("both");
+
+  useEffect(() => {
+    if (!orderBookAggOptions.length) return;
+    setOrderBookAggStep(orderBookAggOptions[0]);
+  }, [orderBookAggOptions, mergedPair?.base_currency_id, mergedPair?.quote_currency_id]);
 
   const formatRecentTradeTime = (item) => {
     const ts = item?.executed_at || item?.executedAt || item?.time || item?.created_at;
@@ -373,12 +474,23 @@ const SpotChartScreen = () => {
   const filteredWallets = getFilteredWallets();
 
   const handleTabChange = (tab) => {
-    const index = tabs.indexOf(tab);
+    const index = CHART_BOTTOM_TABS.indexOf(tab);
     if (index === -1) return;
-
+    tabPagerIndexRef.current = index;
     setActiveTab(tab);
-    scrollRef.current?.scrollTo({ x: index * Width, animated: true });
+    tabPagerRef.current?.scrollTo({ x: index * Width, animated: true });
   };
+
+  const syncActiveTabFromPagerOffset = useCallback((contentOffsetX) => {
+    const idx = Math.min(
+      CHART_BOTTOM_TABS.length - 1,
+      Math.max(0, Math.floor((contentOffsetX + Width * 0.5) / Width))
+    );
+    if (idx !== tabPagerIndexRef.current && CHART_BOTTOM_TABS[idx]) {
+      tabPagerIndexRef.current = idx;
+      setActiveTab(CHART_BOTTOM_TABS[idx]);
+    }
+  }, []);
 
   useEffect(() => {
     if (activeTab === "Assets" && userData) {
@@ -452,73 +564,62 @@ const SpotChartScreen = () => {
     useCallback(() => {
       const p = pairRef.current;
       if (!p?.base_currency_id || !p?.quote_currency_id) return undefined;
-
-      // subscribe on focus
+      /** Idempotent — keeps same exchange stream when stacked above Spot (do not clear Redux on blur). */
       subscribeToExchange?.(p.base_currency_id, p.quote_currency_id);
-
-      return () => {
-        // unsubscribe on blur
-        unsubscribeFromExchange?.(p.base_currency_id, p.quote_currency_id);
-        dispatch(setBuyOrders([]));
-        dispatch(setSellOrders([]));
-        dispatch(setRecentTrades([]));
-        setLastSocketData(null);
-        lastFlushedBuyRef.current = null;
-        lastFlushedSellRef.current = null;
-      };
-    }, [subscribeToExchange, unsubscribeFromExchange, dispatch])
+      return undefined;
+    }, [subscribeToExchange])
   );
 
-  useEffect(() => {
-    if (!socket || !isFocused) return;
+  // useEffect(() => {
+  //   if (!socket || !isFocused) return;
 
-    const handleMessage = (data) => {
-      if (!isFocusedRef.current || appStateRef.current !== "active") return;
+  //   const handleMessage = (data) => {
+  //     if (!isFocusedRef.current || appStateRef.current !== "active") return;
 
-      if (data?.buy_order || data?.sell_order || data?.recent_trades) {
-        const buyOrders = data?.buy_order ? (data.buy_order || []).map(transformLocalOrder) : null;
-        const sellOrders = data?.sell_order ? (data.sell_order || []).map(transformLocalOrder) : null;
-        const payload = {
-          data,
-          buyOrders,
-          sellOrders,
-          recentTrades: data?.recent_trades || null,
-        };
+  //     if (data?.buy_order || data?.sell_order || data?.recent_trades) {
+  //       const buyOrders = data?.buy_order ? (data.buy_order || []).map(transformLocalOrder) : null;
+  //       const sellOrders = data?.sell_order ? (data.sell_order || []).map(transformLocalOrder) : null;
+  //       const payload = {
+  //         data,
+  //         buyOrders,
+  //         sellOrders,
+  //         recentTrades: data?.recent_trades || null,
+  //       };
 
-        pendingSocketFlushRef.current = payload;
-        const now = Date.now();
-        const elapsed = now - socketLastFlushRef.current;
-        if (elapsed >= SOCKET_UI_THROTTLE_MS || socketLastFlushRef.current === 0) {
-          socketLastFlushRef.current = now;
-          flushSocketToState(payload);
-          pendingSocketFlushRef.current = null;
-          if (socketThrottleTimerRef.current) {
-            clearTimeout(socketThrottleTimerRef.current);
-            socketThrottleTimerRef.current = null;
-          }
-        } else if (!socketThrottleTimerRef.current) {
-          socketThrottleTimerRef.current = setTimeout(() => {
-            socketThrottleTimerRef.current = null;
-            socketLastFlushRef.current = Date.now();
-            const pending = pendingSocketFlushRef.current;
-            pendingSocketFlushRef.current = null;
-            if (pending) flushSocketToState(pending);
-          }, SOCKET_UI_THROTTLE_MS - elapsed);
-        }
-      }
-    };
+  //       pendingSocketFlushRef.current = payload;
+  //       const now = Date.now();
+  //       const elapsed = now - socketLastFlushRef.current;
+  //       if (elapsed >= SOCKET_UI_THROTTLE_MS || socketLastFlushRef.current === 0) {
+  //         socketLastFlushRef.current = now;
+  //         flushSocketToState(payload);
+  //         pendingSocketFlushRef.current = null;
+  //         if (socketThrottleTimerRef.current) {
+  //           clearTimeout(socketThrottleTimerRef.current);
+  //           socketThrottleTimerRef.current = null;
+  //         }
+  //       } else if (!socketThrottleTimerRef.current) {
+  //         socketThrottleTimerRef.current = setTimeout(() => {
+  //           socketThrottleTimerRef.current = null;
+  //           socketLastFlushRef.current = Date.now();
+  //           const pending = pendingSocketFlushRef.current;
+  //           pendingSocketFlushRef.current = null;
+  //           if (pending) flushSocketToState(pending);
+  //         }, SOCKET_UI_THROTTLE_MS - elapsed);
+  //       }
+  //     }
+  //   };
 
-    socket.on("message", handleMessage);
-    socket.on("exchange:update", handleMessage);
-    return () => {
-      socket.off("message", handleMessage);
-      socket.off("exchange:update", handleMessage);
-      if (socketThrottleTimerRef.current) {
-        clearTimeout(socketThrottleTimerRef.current);
-        socketThrottleTimerRef.current = null;
-      }
-    };
-  }, [socket, isFocused, transformLocalOrder, flushSocketToState]);
+  //   socket.on("message", handleMessage);
+  //   socket.on("exchange:update", handleMessage);
+  //   return () => {
+  //     socket.off("message", handleMessage);
+  //     socket.off("exchange:update", handleMessage);
+  //     if (socketThrottleTimerRef.current) {
+  //       clearTimeout(socketThrottleTimerRef.current);
+  //       socketThrottleTimerRef.current = null;
+  //     }
+  //   };
+  // }, [socket, isFocused, transformLocalOrder, flushSocketToState]);
 
   const chartUri = useMemo(() => {
     const themeSlug = theme === "Dark" ? "dark" : "light";
@@ -536,7 +637,18 @@ const SpotChartScreen = () => {
     [dispatch]
   );
 
+  const prevChartPairKeyRef = useRef(null);
   useEffect(() => {
+    const base = mergedPair?.base_currency_id;
+    const quote = mergedPair?.quote_currency_id;
+    if (!base || !quote) return;
+    const key = `${base}-${quote}`;
+    if (prevChartPairKeyRef.current == null) {
+      prevChartPairKeyRef.current = key;
+      return;
+    }
+    if (prevChartPairKeyRef.current === key) return;
+    prevChartPairKeyRef.current = key;
     dispatch(setBuyOrders([]));
     dispatch(setSellOrders([]));
     dispatch(setRecentTrades([]));
@@ -602,13 +714,20 @@ const SpotChartScreen = () => {
   const isNeg = Number(pairChange) < 0;
   const changeColor = isNeg ? themeColors.red : themeColors.green;
 
-  const sellsSorted = useMemo(() => {
-    if (!sellOrders?.length) return [];
-    return [...sellOrders].sort((a, b) => toFinite(a?.price) - toFinite(b?.price));
-  }, [sellOrders]);
+  const bidsAggregated = useMemo(() => {
+    if (!buyOrders?.length) return [];
+    const agg = aggregateOrderBookRows(buyOrders, orderBookAggStep);
+    return agg.sort((a, b) => toFinite(b.price) - toFinite(a.price));
+  }, [buyOrders, orderBookAggStep]);
 
-  const bidsDisplay = useMemo(() => (buyOrders || []).slice(0, ORDER_BOOK_ROWS), [buyOrders]);
-  const asksDisplay = useMemo(() => sellsSorted.slice(0, ORDER_BOOK_ROWS), [sellsSorted]);
+  const asksAggregated = useMemo(() => {
+    if (!sellOrders?.length) return [];
+    const agg = aggregateOrderBookRows(sellOrders, orderBookAggStep);
+    return agg.sort((a, b) => toFinite(a.price) - toFinite(b.price));
+  }, [sellOrders, orderBookAggStep]);
+
+  const bidsDisplay = useMemo(() => bidsAggregated.slice(0, ORDER_BOOK_ROWS), [bidsAggregated]);
+  const asksDisplay = useMemo(() => asksAggregated.slice(0, ORDER_BOOK_ROWS), [asksAggregated]);
 
   const maxBidVol = useMemo(
     () => Math.max(1, ...bidsDisplay.map((o) => toFinite(o?.remaining))),
@@ -636,13 +755,18 @@ const SpotChartScreen = () => {
   const depthRows = useMemo(() => {
     const rows = [];
     for (let i = 0; i < ORDER_BOOK_ROWS; i++) {
-      rows.push({
-        bid: bidsDisplay[i] || null,
-        ask: asksDisplay[i] || null,
-      });
+      const bid = bidsDisplay[i] || null;
+      const ask = asksDisplay[i] || null;
+      if (orderBookViewMode === "both") {
+        rows.push({ bid, ask });
+      } else if (orderBookViewMode === "bids") {
+        rows.push({ bid, ask: null });
+      } else {
+        rows.push({ bid: null, ask });
+      }
     }
     return rows;
-  }, [bidsDisplay, asksDisplay]);
+  }, [bidsDisplay, asksDisplay, orderBookViewMode]);
 
   const bidVolSum = useMemo(
     () => bidsDisplay.reduce((s, o) => s + toFinite(o?.remaining), 0),
@@ -655,27 +779,66 @@ const SpotChartScreen = () => {
   const totalVolBar = bidVolSum + askVolSum || 1;
   const bidPct = (bidVolSum / totalVolBar) * 100;
 
+  const openAggMenu = useCallback(() => {
+    requestAnimationFrame(() => {
+      aggTriggerRef.current?.measureInWindow((x, y, w, h) => {
+        setAggMenuLayout({ x, y, w, h });
+        setOrderBookAggOpen(true);
+      });
+    });
+  }, []);
+
+  const closeAggMenu = useCallback(() => {
+    setOrderBookAggOpen(false);
+    setAggMenuLayout(null);
+  }, []);
+
+  const selectAggStep = useCallback(
+    (opt) => {
+      setOrderBookAggStep(opt);
+      closeAggMenu();
+    },
+    [closeAggMenu]
+  );
+
+  const goToSpotTradeSide = useCallback(
+    (side) => {
+      navigation.navigate({
+        name: routes.NAVIGATION_BOTTOM_TAB_STACK,
+        params: {
+          screen: routes.WALLET_SCREEN,
+          params: { spotTradeSide: side },
+        },
+      });
+    },
+    [navigation]
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
 
       <View style={[styles.header, { backgroundColor: bg }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <FastImage
-            source={back_ic}
-            style={styles.backIcon}
-            resizeMode="contain"
-            tintColor={themeColors.text}
-          />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+            <FastImage
+              source={back_ic}
+              style={styles.backIcon}
+              resizeMode="contain"
+              tintColor={themeColors.text}
+            />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerPairRow}
             onPress={() => setPairSheetVisible(true)}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <AppText weight={SEMI_BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
+            <AppText
+              weight={BOLD}
+              numberOfLines={1}
+              style={[styles.headerTitle, { color: themeColors.text }]}
+            >
               {pairBase}/{pairQuote}
             </AppText>
             <FastImage
@@ -718,9 +881,12 @@ const SpotChartScreen = () => {
       <View style={styles.body}>
         <ScrollView
           style={styles.scrollMain}
-          contentContainerStyle={styles.scrollMainContent}
+          contentContainerStyle={[
+            styles.scrollMainContent,
+            { paddingBottom: tabScrollBottomPadding },
+          ]}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator
           nestedScrollEnabled
         >
           {/* 24h strip (same content as former Spot minicontainer; colors from theme / change %) */}
@@ -765,11 +931,8 @@ const SpotChartScreen = () => {
             </View>
           </View>
 
-          {/* Chart — WebView clipped so it does not paint over the order book below */}
-          <View style={[styles.chartWrap, { backgroundColor: bg }]}>
-            {showSkeleton ? (
-              <ChartSkeleton />
-            ) : null}
+          {/* Chart — fixed height; skeleton overlays WebView (never stacked) so layout does not jump */}
+          <View style={[styles.chartWrap, { backgroundColor: bg, height: CHART_BLOCK_HEIGHT }]}>
             <View
               style={[
                 styles.chartWebWrap,
@@ -807,47 +970,87 @@ const SpotChartScreen = () => {
                 />
               ) : null}
             </View>
+            {showSkeleton ? (
+              <View style={styles.chartSkeletonOverlay} pointerEvents="none">
+                <ChartSkeleton height={CHART_BLOCK_HEIGHT} width={Width} />
+              </View>
+            ) : null}
           </View>
-        </ScrollView>
 
-        {/* Order book: own flex region so it stays on screen (not only below a long scroll). */}
-        <View style={[styles.obSection, { flex: 1, paddingHorizontal: 0 }]}>
-          <View style={[styles.obTabsRow, { paddingHorizontal: 12 }]}>
-            {tabs.map((tab, i) => (
+        {/* Order book + tabs — same vertical scroll as chart (full-height scroll) */}
+          <View
+            style={[
+              styles.obTabsRow,
+              {
+                paddingHorizontal: 12,
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: themeColors.themeBorderColor,
+              },
+            ]}
+          >
+            <View style={styles.obTabsLeft}>
+              {CHART_BOTTOM_TABS.map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  activeOpacity={0.7}
+                  onPress={() => handleTabChange(tab)}
+                  style={[
+                    styles.obTab,
+                    activeTab === tab && {
+                      backgroundColor: isDark ? "rgba(255,255,255,0.1)" : lightTheme.input,
+                    },
+                  ]}
+                >
+                  <AppText
+                    type={TEN}
+                    weight={activeTab === tab ? SEMI_BOLD : undefined}
+                    style={{ color: activeTab === tab ? themeColors.text : themeColors.secondaryText }}
+                  >
+                    {tab}
+                  </AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {activeTab === "Order Book" ? (
               <TouchableOpacity
-                key={tab}
-                activeOpacity={0.7}
-                onPress={() => handleTabChange(tab)}
+                ref={aggTriggerRef}
+                activeOpacity={0.75}
+                onPress={openAggMenu}
                 style={[
-                  styles.obTab,
-                  activeTab === tab && {
-                    backgroundColor: isDark ? "rgba(255,255,255,0.1)" : lightTheme.input,
+                  styles.obAggTrigger,
+                  {
+                    backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
+                    borderColor: themeColors.themeBorderColor,
                   },
                 ]}
               >
-                <AppText
-                  type={TEN}
-                  weight={activeTab === tab ? SEMI_BOLD : undefined}
-                  style={{ color: activeTab === tab ? themeColors.text : themeColors.secondaryText }}
-                >
-                  {tab}
+                <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                  {formatAggStepLabel(orderBookAggStep)}
                 </AppText>
+                <FastImage
+                  source={downIcon}
+                  style={styles.obAggCaret}
+                  resizeMode="contain"
+                  tintColor={themeColors.secondaryText}
+                />
               </TouchableOpacity>
-            ))}
+            ) : null}
           </View>
 
           <ScrollView
-            ref={scrollRef}
+            ref={tabPagerRef}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+            onScroll={(e) => syncActiveTabFromPagerOffset(e.nativeEvent.contentOffset.x)}
             onMomentumScrollEnd={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / Width);
-              if (tabs[index]) setActiveTab(tabs[index]);
+              syncActiveTabFromPagerOffset(e.nativeEvent.contentOffset.x);
             }}
-            style={{ flex: 1 }}
+            style={styles.tabPager}
           >
-            {/* Slide 1: Order Book */}
             <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={[styles.obRatioBar, { backgroundColor: themeColors.card }]}>
                 <View style={[styles.obRatioBid, { flex: 1, backgroundColor: themeColors.green }]} />
@@ -865,23 +1068,6 @@ const SpotChartScreen = () => {
                   <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
                     Ask
                   </AppText>
-                  <TouchableOpacity
-                    style={[
-                      styles.precisionContainer,
-                      { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)" },
-                    ]}
-                    activeOpacity={0.7}
-                  >
-                    <AppText type={TEN} style={{ color: themeColors.text, marginRight: 2 }}>
-                      0.001
-                    </AppText>
-                    <FastImage
-                      source={downIcon}
-                      style={styles.precisionIcon}
-                      resizeMode="contain"
-                      tintColor={themeColors.secondaryText}
-                    />
-                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -904,7 +1090,6 @@ const SpotChartScreen = () => {
               )}
             </View>
 
-            {/* Slide 2: Market Trades */}
             <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={styles.mtContainer}>
                 <View style={styles.mtHeader}>
@@ -927,7 +1112,7 @@ const SpotChartScreen = () => {
                     Time
                   </AppText>
                 </View>
-                <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled style={{ maxHeight: Height * 0.5 }}>
+                <View>
                   {recentTrades?.length > 0 ? (
                     recentTrades?.slice(0, 50)?.map((item, index) => (
                       <View key={item?._id || index} style={styles.mtRow}>
@@ -936,7 +1121,10 @@ const SpotChartScreen = () => {
                           style={[
                             styles.mtCell,
                             {
-                              color: item?.side === "BUY" ? (themeColors.green || "#00c076") : (themeColors.danger || "#ff3b30"),
+                              color:
+                                item?.side === "BUY"
+                                  ? themeColors.green || "#00c076"
+                                  : themeColors.red || "#ff3b30",
                               textAlign: "left",
                               fontWeight: "600",
                             },
@@ -968,11 +1156,10 @@ const SpotChartScreen = () => {
                       </AppText>
                     </View>
                   )}
-                </ScrollView>
+                </View>
               </View>
             </View>
 
-            {/* Slide 3: Assets */}
             <View style={{ width: Width, paddingHorizontal: 12 }}>
               <View style={styles.assetsContainer}>
                 {!userData ? (
@@ -985,7 +1172,7 @@ const SpotChartScreen = () => {
                     </AppText>
                     <TouchableOpacity
                       style={styles.loginBtn}
-                      onPress={() => navigation.navigate("Login")}
+                      onPress={() => NavigationService.navigate(routes.LOGIN_SCREEN)}
                     >
                       <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                         Login
@@ -1020,7 +1207,7 @@ const SpotChartScreen = () => {
                         </AppText>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.assetActionBtn, { backgroundColor: themeColors.danger }]}
+                        style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
                         onPress={() => NavigationService.navigate(routes.WITHDRAW_Coin_SCREEN)}
                       >
                         <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
@@ -1090,7 +1277,85 @@ const SpotChartScreen = () => {
               </View>
             </View>
           </ScrollView>
-        </View>
+        </ScrollView>
+      </View>
+
+      <Modal
+        visible={orderBookAggOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAggMenu}
+      >
+        <Pressable style={styles.aggModalBackdrop} onPress={closeAggMenu} />
+        {aggMenuLayout ? (
+          <View
+            style={[
+              styles.aggMenuPopover,
+              {
+                top: aggMenuLayout.y + aggMenuLayout.h + 6,
+                left: Math.max(
+                  8,
+                  Math.min(aggMenuLayout.x + aggMenuLayout.w - 160, Width - 8 - 160)
+                ),
+                backgroundColor: themeColors.card ?? bg,
+                borderColor: themeColors.themeBorderColor,
+              },
+            ]}
+          >
+            {orderBookAggOptions.map((opt) => {
+              const selected = Number(orderBookAggStep) === Number(opt);
+              return (
+                <TouchableOpacity
+                  key={String(opt)}
+                  style={[
+                    styles.aggMenuRow,
+                    selected && { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" },
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => selectAggStep(opt)}
+                >
+                  <AppText
+                    type={TEN}
+                    weight={selected ? SEMI_BOLD : undefined}
+                    style={{ color: themeColors.text }}
+                  >
+                    {formatAggStepLabel(opt)}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
+      </Modal>
+
+      <View
+        style={[
+          styles.chartBottomBar,
+          {
+            borderTopColor: themeColors.themeBorderColor,
+            backgroundColor: themeColors.background,
+            paddingBottom: Math.max(insets.bottom, 10),
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={[styles.chartBottomBtn, { backgroundColor: themeColors.spotTradeBuy ?? themeColors.green }]}
+          onPress={() => goToSpotTradeSide("BUY")}
+          activeOpacity={0.88}
+        >
+          <AppText weight={SEMI_BOLD} style={{ color: themePalette.white }}>
+            Buy
+          </AppText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.chartBottomBtn, { backgroundColor: themeColors.spotTradeSell ?? themeColors.red }]}
+          onPress={() => goToSpotTradeSide("SELL")}
+          activeOpacity={0.88}
+        >
+          <AppText weight={SEMI_BOLD} style={{ color: themePalette.white }}>
+            Sell
+          </AppText>
+        </TouchableOpacity>
       </View>
 
       <TradingDataModal
@@ -1111,11 +1376,29 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
   },
+  chartBottomBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  chartBottomBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 10,
+  },
   scrollMain: {
-    flexGrow: 0,
+    flex: 1,
   },
   scrollMainContent: {
-    paddingBottom: 8,
+    flexGrow: 1,
+  },
+  tabPager: {
+    width: Width,
   },
   header: {
     flexDirection: "row",
@@ -1134,11 +1417,13 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
   },
-  headerCenter: {
-    marginLeft: 4,
-    alignItems: "center",
-    justifyContent: "center",
+  headerLeft: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    minWidth: 0,
+    paddingRight: 8,
   },
   headerRight: {
     flexDirection: "row",
@@ -1158,11 +1443,14 @@ const styles = StyleSheet.create({
   headerPairRow: {
     flexDirection: "row",
     alignItems: "center",
-    maxWidth: "100%",
+    flexShrink: 1,
+    marginLeft: 2,
+    paddingRight: 4,
   },
   headerTitle: {
     fontSize: 14,
     letterSpacing: 0.15,
+    flexShrink: 1,
   },
   headerChevron: {
     width: 11,
@@ -1182,8 +1470,8 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   statMainPrice: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
+  fontFamily:SEMI_BOLD
   },
   statChange: {
     fontSize: 11,
@@ -1217,24 +1505,63 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
-  chartSkeleton: {
-    width: Width,
+  chartSkeletonOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
   chartWebWrap: {
     width: Width,
     backgroundColor: "transparent",
     overflow: "hidden",
   },
-  obSection: {
-    minHeight: 200,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-  },
   obTabsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    marginBottom: 14,
+    justifyContent: "space-between",
+    marginBottom: 10,
+    paddingVertical: 4,
+  },
+  obTabsLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 10,
+    marginRight: 8,
+  },
+  obAggTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 6,
+    flexShrink: 0,
+  },
+  obAggCaret: {
+    width: 10,
+    height: 10,
+  },
+  aggModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.25)",
+  },
+  aggMenuPopover: {
+    position: "absolute",
+    width: 160,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  aggMenuRow: {
+    paddingVertical: 11,
+    paddingHorizontal: 14,
   },
   obTab: {
     paddingHorizontal: 10,
@@ -1261,6 +1588,8 @@ const styles = StyleSheet.create({
   },
   obColH: {
     fontWeight: "600",
+    
+
   },
   precisionContainer: {
     flexDirection: "row",
@@ -1291,7 +1620,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    right: 8
   },
   depthQty: {
     width: 48,

@@ -408,6 +408,11 @@ export const market_ic = require('../../assets/images/market_ic.png');
 export const spotMarket = require('../../assets/images/spotMarket.png');
 export const spotLimitTrade = require('../../assets/images/spotLimitTrade.png');
 export const limitTrade = require('../../assets/images/limitTrade.png');
+export const order_3 = require('../../assets/images/order_3.png');
+export const order_2 = require('../../assets/images/order_2.png');
+export const order_1 = require('../../assets/images/order_1.png');
+
+
 
 
 

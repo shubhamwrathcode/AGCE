@@ -17,6 +17,8 @@ import {
   Platform,
   UIManager,
   Alert,
+  Modal,
+  Pressable,
 } from "react-native";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -44,6 +46,9 @@ import {
   NO_NOTIFICATION_ICON,
   NO_NOTIFICATION_ICON_LIGHT,
   printIcon,
+  order_1,
+  order_2,
+  order_3,
   REMOVE,
   spotLimitTrade,
   spotMarket,
@@ -77,6 +82,7 @@ import {
   Input,
   MEDIUM,
   SEMI_BOLD,
+  TEN,
   THIRTEEN,
 } from "../../shared";
 import PercentQuickSelect from "../../shared/components/PercentQuickSelect";
@@ -198,6 +204,68 @@ const orderBookDataEqual = (a, b) => {
 const toFiniteOB = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const clamp01OB = (v) => Math.max(0, Math.min(1, v));
 
+const SPOT_ORDER_BOOK_AGG_DEFAULTS = [0.1, 0.5, 1, 10, 100];
+
+function getSpotOrderBookAggOptionsForPair(tickSize) {
+  const tick = Number(tickSize);
+  if (!Number.isFinite(tick) || tick <= 0) {
+    return SPOT_ORDER_BOOK_AGG_DEFAULTS.slice();
+  }
+  const mults = [1, 10, 100, 1000, 10000];
+  const out = [];
+  for (const m of mults) {
+    const v = tick * m;
+    if (!Number.isFinite(v) || v <= 0) continue;
+    out.push(parseFloat(Number(v).toPrecision(12)));
+  }
+  const unique = Array.from(new Set(out)).sort((a, b) => a - b);
+  return unique.length ? unique : SPOT_ORDER_BOOK_AGG_DEFAULTS.slice();
+}
+
+function roundSpotPriceToAgg(price, agg) {
+  const n = Number(price);
+  const a = Number(agg);
+  if (!Number.isFinite(n) || !Number.isFinite(a) || a <= 0) return n;
+  return Math.round(n / a) * a;
+}
+
+function aggregateSpotOrderBookRows(orders, agg) {
+  if (!orders?.length) return [];
+  const map = new Map();
+  for (const o of orders) {
+    const bucket = roundSpotPriceToAgg(o.price, agg);
+    const prev = map.get(bucket);
+    if (prev) {
+      prev.quantity = (Number(prev.quantity) || 0) + (Number(o.quantity) || 0);
+      prev.remaining = (Number(prev.remaining) || 0) + (Number(o.remaining) || 0);
+    } else {
+      map.set(bucket, { ...o, price: bucket });
+    }
+  }
+  return Array.from(map.values());
+}
+
+/** Numeric step only (no quote suffix in UI). */
+function formatSpotAggStepLabel(step) {
+  if (step == null || step === "") return "—";
+  if (typeof step === "number" && Number.isFinite(step)) {
+    const s = step >= 1 ? step.toString() : step.toFixed(8).replace(/\.?0+$/, "");
+    return s || String(step);
+  }
+  const raw = String(step).trim();
+  const m = raw.match(/^-?\d*\.?\d+(?:e[+-]?\d+)?/i);
+  if (m) {
+    const n = Number(m[0]);
+    if (Number.isFinite(n)) {
+      const s = n >= 1 ? n.toString() : n.toFixed(8).replace(/\.?0+$/, "");
+      return s || m[0];
+    }
+  }
+  return raw;
+}
+
+const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
+
 const orderBookSellRowAreEqual = (prev, next) =>
   prev.theme === next.theme &&
   prev.maxVolume === next.maxVolume &&
@@ -213,7 +281,6 @@ const OrderBookSellRow = memo(({ item, maxVolume, onPress, formatPrice, formatQu
   const b = Math.min(1, a + 1e-6);
   const handlePress = useCallback(() => { onPress(item?.price, item?.remaining); }, [onPress, item?.price, item?.remaining]);
 
-  // Adjusted tints for better theme awareness
   const baseRed = isDark ? "#352933f7" : "#FFD9DB";
 
   return (
@@ -248,7 +315,6 @@ const OrderBookBuyRow = memo(({ item, maxVolume, onPress, formatPrice, formatQua
   const b = Math.min(1, a + 1e-6);
   const handlePress = useCallback(() => { onPress(item?.price, item?.remaining); }, [onPress, item?.price, item?.remaining]);
 
-  // Adjusted tints for better theme awareness
   const baseGreen = isDark ? "#213438" : "#C6F9E9";
 
   return (
@@ -276,37 +342,10 @@ const orderBookPanelAreEqual = (prev, next) =>
   prev.base_currency === next.base_currency &&
   prev.orderBookReady === next.orderBookReady &&
   prev.showOrderBookSkeleton === next.showOrderBookSkeleton &&
+  prev.showAskSide === next.showAskSide &&
+  prev.showBidSide === next.showBidSide &&
   orderBookDataEqual(prev.sellData, next.sellData) &&
   orderBookDataEqual(prev.buyData, next.buyData);
-
-// Order book skeleton: shimmer rows (Price/Quantity columns). Wider strip + no shimmer on header text.
-const ORDER_BOOK_SHIMMER_STRIP_WIDTH = 240;
-const OrderBookSkeleton = () => {
-  const { colors: themeColors, isDark } = useTheme();
-  const ROWS = 8;
-  const ROW_HEIGHT = 22;
-  const BONE_HEIGHT = 15;
-  const BONE_RADIUS = 6;
-  return (
-    <View style={{ flex: 1, paddingVertical: 6, paddingHorizontal: 8, gap: 2 }}>
-      {[...Array(ROWS)].map((_, i) => (
-        <View
-          key={i}
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            height: ROW_HEIGHT,
-            paddingHorizontal: 4,
-          }}
-        >
-          <ShimmerBox width="52%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
-          <ShimmerBox width="52%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} style={{ marginLeft: 3 }} />
-        </View>
-      ))}
-    </View>
-  );
-};
 
 const SHIMMER_STRIP_WIDTH_DEFAULT = 100;
 const ShimmerBox = ({
@@ -364,12 +403,45 @@ const ShimmerBox = ({
   );
 };
 
-const ORDER_BOOK_LIST_STYLE = { maxHeight: 220, flexGrow: 0 };
+/** ~7 visible rows per list; user scrolls for more. */
+const ORDER_BOOK_VISIBLE_ROWS = 7;
+const ORDER_BOOK_ROW_LAYOUT_HEIGHT = 24;
+const ORDER_BOOK_LIST_MAX_HEIGHT =
+  ORDER_BOOK_VISIBLE_ROWS * ORDER_BOOK_ROW_LAYOUT_HEIGHT - 5;
+const ORDER_BOOK_LIST_STYLE = { maxHeight: ORDER_BOOK_LIST_MAX_HEIGHT, flexGrow: 0 };
+/** Tail inset after last row; inverted asks use paddingTop for the scroll end. */
+const ORDER_BOOK_LIST_END_PAD = 10;
 const ORDER_BOOK_HEADER_ROW_STYLE = { flexDirection: "row", justifyContent: "space-between" };
 const ORDER_BOOK_HEADER_LABEL_STYLE = { color: "#9D9D9D" };
+const ORDER_BOOK_SHIMMER_STRIP_WIDTH = 240;
 
-// Memoized order book panel – re-renders only when order book data or price display changes.
-// Header always shows Price/Quantity text (no shimmer on labels). Skeleton only in list + price box.
+const OrderBookSkeleton = () => {
+  const { colors: themeColors, isDark } = useTheme();
+  const ROWS = ORDER_BOOK_VISIBLE_ROWS;
+  const ROW_HEIGHT = 22;
+  const BONE_HEIGHT = 15;
+  const BONE_RADIUS = 6;
+  return (
+    <View style={{ flex: 1, paddingVertical: 6, paddingHorizontal: 8, gap: 2 }}>
+      {[...Array(ROWS)].map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            height: ROW_HEIGHT,
+            paddingHorizontal: 4,
+          }}
+        >
+          <ShimmerBox width="52%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
+          <ShimmerBox width="52%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} style={{ marginLeft: 3 }} />
+        </View>
+      ))}
+    </View>
+  );
+};
+
 const OrderBookPanel = memo(({
   sellData,
   buyData,
@@ -379,6 +451,8 @@ const OrderBookPanel = memo(({
   base_currency,
   orderBookReady,
   showOrderBookSkeleton,
+  showAskSide = true,
+  showBidSide = true,
   styles,
   renderSellOrderItem,
   renderBuyOrderItem,
@@ -387,6 +461,8 @@ const OrderBookPanel = memo(({
   getOrderItemLayout,
 }) => {
   const { colors: themeColors, theme, isDark } = useTheme();
+  const sellListStyle = ORDER_BOOK_LIST_STYLE;
+  const buyListStyle = ORDER_BOOK_LIST_STYLE;
   const listEmptySell = useMemo(
     () => (
       <View style={styles.emptyOrderBook}>
@@ -397,7 +473,7 @@ const OrderBookPanel = memo(({
         )}
       </View>
     ),
-    [showOrderBookSkeleton, colors, styles.emptyOrderBook, theme]
+    [showOrderBookSkeleton, themeColors.secondaryText, styles.emptyOrderBook, theme]
   );
   const listEmptyBuy = useMemo(
     () => (
@@ -409,13 +485,11 @@ const OrderBookPanel = memo(({
         )}
       </View>
     ),
-    [showOrderBookSkeleton, themeColors, styles.emptyOrderBook, theme, isDark]
+    [showOrderBookSkeleton, themeColors.secondaryText, styles.emptyOrderBook, theme, isDark]
   );
   const currentPriceColor = change_percentage < 0 ? themeColors.red : themeColors.green;
-  const bg = themeColors.themeElevationColor;
   return (
-    <View style={styles.rightPanel}>
-      {/* Price / Quantity header: always show text so shimmer doesn't cover labels */}
+    <View>
       <View style={ORDER_BOOK_HEADER_ROW_STYLE}>
         <View>
           <AppText style={ORDER_BOOK_HEADER_LABEL_STYLE}>Price</AppText>
@@ -426,23 +500,29 @@ const OrderBookPanel = memo(({
           <AppText style={ORDER_BOOK_HEADER_LABEL_STYLE}>({base_currency})</AppText>
         </View>
       </View>
-      <FlatList
-        data={sellData}
-        keyExtractor={sellKeyExtractor}
-        renderItem={renderSellOrderItem}
-        getItemLayout={getOrderItemLayout}
-        removeClippedSubviews={true}
-        initialNumToRender={7}
-        maxToRenderPerBatch={7}
-        windowSize={5}
-        updateCellsBatchingPeriod={100}
-        inverted={true}
-        style={ORDER_BOOK_LIST_STYLE}
-        nestedScrollEnabled={true}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={sellData?.length === 0 ? styles.emptyListContainer : undefined}
-        ListEmptyComponent={listEmptySell}
-      />
+      {showAskSide ? (
+        <FlatList
+          data={sellData}
+          keyExtractor={sellKeyExtractor}
+          renderItem={renderSellOrderItem}
+          getItemLayout={getOrderItemLayout}
+          removeClippedSubviews={true}
+          initialNumToRender={ORDER_BOOK_VISIBLE_ROWS + 2}
+          maxToRenderPerBatch={ORDER_BOOK_VISIBLE_ROWS + 2}
+          windowSize={5}
+          updateCellsBatchingPeriod={100}
+          inverted={true}
+          style={sellListStyle}
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={
+            sellData?.length === 0
+              ? styles.orderBookEmptyList
+              : styles.orderBookListContentAsks
+          }
+          ListEmptyComponent={listEmptySell}
+        />
+      ) : null}
       <View style={styles.currentPriceBox}>
         {showOrderBookSkeleton ? (
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
@@ -458,31 +538,36 @@ const OrderBookPanel = memo(({
           </>
         )}
       </View>
-      <FlatList
-        data={buyData}
-        keyExtractor={buyKeyExtractor}
-        renderItem={renderBuyOrderItem}
-        inverted={false}
-        getItemLayout={getOrderItemLayout}
-        removeClippedSubviews={true}
-        initialNumToRender={7}
-        maxToRenderPerBatch={7}
-        windowSize={5}
-        updateCellsBatchingPeriod={100}
-        style={ORDER_BOOK_LIST_STYLE}
-        nestedScrollEnabled={true}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={buyData?.length === 0 ? styles.emptyListContainer : undefined}
-        ListEmptyComponent={listEmptyBuy}
-      />
+      {showBidSide ? (
+        <FlatList
+          data={buyData}
+          keyExtractor={buyKeyExtractor}
+          renderItem={renderBuyOrderItem}
+          inverted={false}
+          getItemLayout={getOrderItemLayout}
+          removeClippedSubviews={true}
+          initialNumToRender={ORDER_BOOK_VISIBLE_ROWS + 2}
+          maxToRenderPerBatch={ORDER_BOOK_VISIBLE_ROWS + 2}
+          windowSize={5}
+          updateCellsBatchingPeriod={100}
+          style={buyListStyle}
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={
+            buyData?.length === 0
+              ? styles.orderBookEmptyList
+              : styles.orderBookListContentBids
+          }
+          ListEmptyComponent={listEmptyBuy}
+        />
+      ) : null}
     </View>
   );
 }, orderBookPanelAreEqual);
 OrderBookPanel.displayName = "OrderBookPanel";
 
-// Isolated order book: subscribes to Redux here so Spot (and Open Orders / Order History tabs) does not re-render on every order book update → instant tab switching
 const OrderBookSection = memo(({
-  styles,
+  styles: sty,
   buy_price,
   change_percentage,
   quote_currency,
@@ -492,40 +577,84 @@ const OrderBookSection = memo(({
   onOrderBookPress,
   formatPrice,
   formatQuantity,
+  tickSize,
+  pairResetKey,
 }) => {
-  const { colors: themeColors, theme, isDark } = useTheme();
+  const { theme, colors: themeColors, isDark } = useTheme();
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
   const sellOrders = useAppSelector((state) => state.home.sellOrders);
 
-  const lastSevenObjects = useMemo(() => {
-    if (!sellOrders || sellOrders.length === 0) return [];
-    return [...sellOrders].sort((a, b) => (parseFloat(a?.price) || 0) - (parseFloat(b?.price) || 0));
-  }, [sellOrders]);
+  const orderBookAggOptions = useMemo(() => getSpotOrderBookAggOptionsForPair(tickSize), [tickSize]);
+  const [orderBookAggStep, setOrderBookAggStep] = useState(SPOT_ORDER_BOOK_AGG_DEFAULTS[0]);
+  const [orderBookAggOpen, setOrderBookAggOpen] = useState(false);
+  const [aggMenuLayout, setAggMenuLayout] = useState(null);
+  const aggTriggerRef = useRef(null);
+  const [viewModeIndex, setViewModeIndex] = useState(0);
+  const orderBookViewMode = viewModeIndex === 0 ? "both" : viewModeIndex === 1 ? "bids" : "asks";
 
-  const startingSevenObjects = useMemo(() => {
-    if (!buyOrders || buyOrders.length === 0) return [];
-    return buyOrders;
-  }, [buyOrders]);
+  useEffect(() => {
+    if (!orderBookAggOptions.length) return;
+    setOrderBookAggStep(orderBookAggOptions[0]);
+  }, [orderBookAggOptions, pairResetKey]);
+
+  const openAggMenu = useCallback(() => {
+    requestAnimationFrame(() => {
+      aggTriggerRef.current?.measureInWindow((x, y, w, h) => {
+        setAggMenuLayout({ x, y, w, h });
+        setOrderBookAggOpen(true);
+      });
+    });
+  }, []);
+
+  const closeAggMenu = useCallback(() => {
+    setOrderBookAggOpen(false);
+    setAggMenuLayout(null);
+  }, []);
+
+  const selectAggStep = useCallback(
+    (opt) => {
+      setOrderBookAggStep(opt);
+      closeAggMenu();
+    },
+    [closeAggMenu]
+  );
+
+  const cycleViewMode = useCallback(() => {
+    setViewModeIndex((i) => (i + 1) % 3);
+  }, []);
+
+  const asksAggregated = useMemo(() => {
+    if (!sellOrders?.length) return [];
+    const agg = aggregateSpotOrderBookRows(sellOrders, orderBookAggStep);
+    return [...agg].sort((a, b) => toFiniteOB(a.price) - toFiniteOB(b.price));
+  }, [sellOrders, orderBookAggStep]);
+
+  const bidsAggregated = useMemo(() => {
+    if (!buyOrders?.length) return [];
+    const agg = aggregateSpotOrderBookRows(buyOrders, orderBookAggStep);
+    return [...agg].sort((a, b) => toFiniteOB(b.price) - toFiniteOB(a.price));
+  }, [buyOrders, orderBookAggStep]);
+
+  const showAskSide = orderBookViewMode !== "bids";
+  const showBidSide = orderBookViewMode !== "asks";
 
   const sellOrdersForDisplay = useMemo(
-    () => (showOrderBookSkeleton ? [] : (orderBookReady ? lastSevenObjects : [])),
-    [showOrderBookSkeleton, orderBookReady, lastSevenObjects]
+    () => (showOrderBookSkeleton ? [] : (orderBookReady && showAskSide ? asksAggregated : [])),
+    [showOrderBookSkeleton, orderBookReady, showAskSide, asksAggregated]
   );
   const buyOrdersForDisplay = useMemo(
-    () => (showOrderBookSkeleton ? [] : (orderBookReady ? startingSevenObjects : [])),
-    [showOrderBookSkeleton, orderBookReady, startingSevenObjects]
+    () => (showOrderBookSkeleton ? [] : (orderBookReady && showBidSide ? bidsAggregated : [])),
+    [showOrderBookSkeleton, orderBookReady, showBidSide, bidsAggregated]
   );
 
-  const toFiniteLocal = (v) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
-  const maxBuyVolume = useMemo(() => {
-    return Math.max(1, ...(buyOrders || []).map((o) => toFiniteLocal(o?.remaining)).filter(Number.isFinite));
-  }, [buyOrders]);
-  const maxSellVolume = useMemo(() => {
-    return Math.max(1, ...(sellOrders || []).map((o) => toFiniteLocal(o?.remaining)).filter(Number.isFinite));
-  }, [sellOrders]);
+  const maxBuyVolume = useMemo(
+    () => Math.max(1, ...bidsAggregated.map((o) => toFiniteOB(o?.remaining)).filter(Number.isFinite)),
+    [bidsAggregated]
+  );
+  const maxSellVolume = useMemo(
+    () => Math.max(1, ...asksAggregated.map((o) => toFiniteOB(o?.remaining)).filter(Number.isFinite)),
+    [asksAggregated]
+  );
 
   const renderSellOrderItem = useCallback(
     ({ item }) => (
@@ -536,10 +665,10 @@ const OrderBookSection = memo(({
         onPress={onOrderBookPress}
         formatPrice={formatPrice}
         formatQuantity={formatQuantity}
-        styles={styles}
+        styles={sty}
       />
     ),
-    [maxSellVolume, theme, onOrderBookPress, formatPrice, formatQuantity]
+    [maxSellVolume, theme, onOrderBookPress, formatPrice, formatQuantity, sty]
   );
   const renderBuyOrderItem = useCallback(
     ({ item }) => (
@@ -550,10 +679,10 @@ const OrderBookSection = memo(({
         onPress={onOrderBookPress}
         formatPrice={formatPrice}
         formatQuantity={formatQuantity}
-        styles={styles}
+        styles={sty}
       />
     ),
-    [maxBuyVolume, theme, onOrderBookPress, formatPrice, formatQuantity]
+    [maxBuyVolume, theme, onOrderBookPress, formatPrice, formatQuantity, sty]
   );
 
   const sellKeyExtractor = useCallback((item) => {
@@ -564,30 +693,111 @@ const OrderBookSection = memo(({
     const p = item?.price != null ? String(Number(item.price)) : "";
     return `buy_${p}`;
   }, []);
-  const ORDER_ROW_HEIGHT = 24;
   const getOrderItemLayout = useCallback((_, index) => ({
-    length: ORDER_ROW_HEIGHT,
-    offset: ORDER_ROW_HEIGHT * index,
+    length: ORDER_BOOK_ROW_LAYOUT_HEIGHT,
+    offset: ORDER_BOOK_ROW_LAYOUT_HEIGHT * index,
     index,
   }), []);
 
   return (
-    <OrderBookPanel
-      sellData={sellOrdersForDisplay}
-      buyData={buyOrdersForDisplay}
-      buy_price={buy_price}
-      change_percentage={change_percentage}
-      quote_currency={quote_currency}
-      base_currency={base_currency}
-      orderBookReady={orderBookReady}
-      showOrderBookSkeleton={showOrderBookSkeleton}
-      styles={styles}
-      renderSellOrderItem={renderSellOrderItem}
-      renderBuyOrderItem={renderBuyOrderItem}
-      sellKeyExtractor={sellKeyExtractor}
-      buyKeyExtractor={buyKeyExtractor}
-      getOrderItemLayout={getOrderItemLayout}
-    />
+    <View style={sty.rightPanel}>
+      <OrderBookPanel
+        sellData={sellOrdersForDisplay}
+        buyData={buyOrdersForDisplay}
+        buy_price={buy_price}
+        change_percentage={change_percentage}
+        quote_currency={quote_currency}
+        base_currency={base_currency}
+        orderBookReady={orderBookReady}
+        showOrderBookSkeleton={showOrderBookSkeleton}
+        showAskSide={showAskSide}
+        showBidSide={showBidSide}
+        styles={sty}
+        renderSellOrderItem={renderSellOrderItem}
+        renderBuyOrderItem={renderBuyOrderItem}
+        sellKeyExtractor={sellKeyExtractor}
+        buyKeyExtractor={buyKeyExtractor}
+        getOrderItemLayout={getOrderItemLayout}
+      />
+
+      <View style={sty.spotObToolbarRow}>
+        <TouchableOpacity
+          ref={aggTriggerRef}
+          activeOpacity={0.75}
+          onPress={openAggMenu}
+          style={[
+            sty.spotObAggTrigger,
+            {
+              backgroundColor: themeColors.input,
+              borderColor: themeColors.themeBorderColor,
+            },
+          ]}
+        >
+          <AppText
+            type={TEN}
+            weight={SEMI_BOLD}
+            style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}
+          >
+            {formatSpotAggStepLabel(orderBookAggStep)}
+          </AppText>
+          <FastImage source={downIcon} style={sty.spotObAggCaret} resizeMode="contain" tintColor={themeColors.secondaryText} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={cycleViewMode}
+          activeOpacity={0.75}
+          style={[
+            sty.spotObViewCycleBtn,
+            {
+              backgroundColor: themeColors.input,
+              borderColor: themeColors.themeBorderColor,
+            },
+          ]}
+          accessibilityLabel="Order book layout"
+        >
+          <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={sty.spotObViewCycleIcon} resizeMode="contain" />
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={orderBookAggOpen} transparent animationType="fade" onRequestClose={closeAggMenu}>
+        <Pressable style={sty.spotObAggBackdrop} onPress={closeAggMenu} />
+        {aggMenuLayout ? (
+          <View
+            style={[
+              sty.spotObAggPopover,
+              {
+                top: aggMenuLayout.y + aggMenuLayout.h + 4,
+                left: Math.max(8, Math.min(aggMenuLayout.x + aggMenuLayout.w - 144, Width - 8 - 144)),
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.themeBorderColor,
+              },
+            ]}
+          >
+            {orderBookAggOptions.map((opt) => {
+              const selected = Number(orderBookAggStep) === Number(opt);
+              return (
+                <TouchableOpacity
+                  key={String(opt)}
+                  style={[
+                    sty.spotObAggRow,
+                    selected && { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" },
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => selectAggStep(opt)}
+                >
+                  <AppText
+                    type={TEN}
+                    weight={selected ? SEMI_BOLD : undefined}
+                    style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}
+                  >
+                    {formatSpotAggStepLabel(opt)}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
+      </Modal>
+    </View>
   );
 });
 OrderBookSection.displayName = "OrderBookSection";
@@ -725,6 +935,21 @@ const Spot = () => {
       navigation.setParams({ coinDetail: undefined });
     }
   }, [route?.params?.coinDetail, dispatch, navigation, spotSelectedPair]);
+
+  /** SpotChartScreen bottom Buy/Sell → navigate here with `spotTradeSide` */
+  useEffect(() => {
+    const raw = route?.params?.spotTradeSide;
+    if (raw == null || raw === "") return;
+    const u = String(raw).toUpperCase();
+    if (u === "BUY") {
+      setTab("Buy");
+      setIsBuy(true);
+    } else if (u === "SELL") {
+      setTab("Sell");
+      setIsBuy(false);
+    }
+    navigation.setParams({ spotTradeSide: undefined });
+  }, [route?.params?.spotTradeSide, navigation]);
 
   // Removed automatic restoration from Redux cache to ensure only fresh socket data is shown.
   // This satisfies the requirement: "if data comes from backend, show; otherwise don't".
@@ -888,16 +1113,16 @@ const Spot = () => {
         const newKey = `${currentPair.base_currency_id}-${currentPair.quote_currency_id}`;
         const lastExchange = lastSubscribedExchangeRef.current;
         const alreadySubscribed =
-          lastExchange &&
+          !!lastExchange &&
           `${lastExchange.base_currency_id}-${lastExchange.quote_currency_id}` === newKey;
-        // Clear order book before subscribing so we don't show stale data during connection
-        dispatch(setBuyOrders([]));
-        dispatch(setSellOrders([]));
-        setLastSocketData(null);
-        setLocalBuyOrders([]);
-        setLocalSellOrders([]);
-
+        /** Only clear + resubscribe when the exchange pair actually changed (or first load).
+         *  Returning from SpotChartScreen keeps `lastSubscribedExchangeRef` + Redux book — Binance-style (no full reload). */
         if (!alreadySubscribed) {
+          dispatch(setBuyOrders([]));
+          dispatch(setSellOrders([]));
+          setLastSocketData(null);
+          setLocalBuyOrders([]);
+          setLocalSellOrders([]);
           if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
             unsubscribeFromExchange(lastExchange.base_currency_id, lastExchange.quote_currency_id);
           }
@@ -938,25 +1163,22 @@ const Spot = () => {
         }
         pendingSocketFlushRef.current = null;
 
-        // Unsubscribe from exchange when leaving Spot to avoid unnecessary updates
-        const last = lastSubscribedExchangeRef.current;
-        if (last?.base_currency_id != null && last?.quote_currency_id != null) {
-          unsubscribeFromExchange(last.base_currency_id, last.quote_currency_id);
-          lastSubscribedExchangeRef.current = null;
-        }
-
-        // Clear order book data when leaving the screen so "last saved data" is never shown on return.
-        // Data will only reappear once the next socket update is received.
-        dispatch(setBuyOrders([]));
-        dispatch(setSellOrders([]));
-        setLastSocketData(null);
-        setLocalBuyOrders([]);
-        setLocalSellOrders([]);
-        lastFlushedBuyRef.current = null;
-        lastFlushedSellRef.current = null;
+        /** Do not unsubscribe or clear the order book on blur (e.g. opening SpotChartScreen).
+         *  SocketProvider keeps one exchange subscription; Redux keeps last book until pair changes or Spot unmounts. */
       };
     }, [subscribeToExchange, unsubscribeFromExchange, currency, dispatch])
   );
+
+  /** Tear down exchange subscription only when Spot screen unmounts (leave trading stack), not on blur. */
+  useEffect(() => {
+    return () => {
+      const last = lastSubscribedExchangeRef.current;
+      if (last?.base_currency_id != null && last?.quote_currency_id != null) {
+        unsubscribeFromExchange(last.base_currency_id, last.quote_currency_id);
+        lastSubscribedExchangeRef.current = null;
+      }
+    };
+  }, [unsubscribeFromExchange]);
 
   // Keep ref in sync for callbacks (socket, flushSocketToState) so they see current focus without delay
   useEffect(() => {
@@ -2502,15 +2724,12 @@ const Spot = () => {
                   >
                     {base_currency || "BTC"} Staking Estimated APR: 2.45%
                   </AppText>
-                  <Ionicons name="chevron-forward" size={16} color={themeColors.secondaryText} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Right Section (Order Book) – isolated so its updates do not re-render Spot or tabs */}
+            {/* Right: classic order book + agg dropdown + layout cycle (Redux-isolated) */}
             <OrderBookSection
-              theme={theme}
-              colors={colors}
               styles={styles}
               buy_price={buy_price}
               change_percentage={change_percentage}
@@ -2521,6 +2740,8 @@ const Spot = () => {
               onOrderBookPress={handleOrderBookClick}
               formatPrice={formatPrice}
               formatQuantity={formatQuantity}
+              tickSize={currencyData?.tick_size ?? spotSelectedPair?.tick_size ?? 0.01}
+              pairResetKey={`${base_currency_id ?? ""}_${quote_currency_id ?? ""}`}
             />
           </View>
         </>
@@ -3578,11 +3799,63 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   currentPriceBox: {
-    marginVertical: 10,
+    marginVertical: 6,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // alignItems: "flex-end",
+  },
+  spotObToolbarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+  },
+  spotObAggTrigger: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 32,
+  },
+  spotObAggCaret: {
+    width: 10,
+    height: 10,
+  },
+  spotObViewCycleBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  spotObViewCycleIcon: {
+    width: 15,
+    height: 15,
+  },
+  spotObAggBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.25)",
+  },
+  spotObAggPopover: {
+    position: "absolute",
+    width: 144,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  spotObAggRow: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   currentPrice: {
     color: "#00C076",
@@ -3644,6 +3917,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: 200,
     backgroundColor: "transparent",
+  },
+  orderBookEmptyList: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: ORDER_BOOK_LIST_MAX_HEIGHT,
+    backgroundColor: "transparent",
+  },
+  orderBookListContentAsks: {
+    flexGrow: 0,
+    paddingTop: ORDER_BOOK_LIST_END_PAD,
+  },
+  orderBookListContentBids: {
+    flexGrow: 0,
+    paddingBottom: ORDER_BOOK_LIST_END_PAD,
   },
   emptyOrderBook: {
     alignItems: "center",
