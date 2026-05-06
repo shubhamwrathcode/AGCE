@@ -1350,6 +1350,9 @@ const Spot = () => {
   const [stopPrice, setStopPrice] = useState("");
   const [limitIoc, setLimitIoc] = useState(false);
   const [limitFok, setLimitFok] = useState(false);
+  const [slippageEnabled, setSlippageEnabled] = useState(false);
+  const [slippagePct, setSlippagePct] = useState("0.5");
+  const inputSelectionColor = "#000";
   const [isBuy, setIsBuy] = useState(true);
   const [total, setTotal] = useState("");
   // const [chartLoading, setChartLoading] = useState(true);
@@ -1370,9 +1373,40 @@ const Spot = () => {
         return "LIMIT";
     }
   }, [numberSelectLimit]);
+  // Web parity flags (see `arab_global_exchange/src/ui/Pages/TradePage/index.js`)
+  const isStopOrder = spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET";
   const isLimit = spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT";
   const isMarketLikeOrder = spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET";
-  const showStopPriceField = spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET";
+  const showStopPriceField = isStopOrder;
+  const showAmtDenomSelect =
+    spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET" || spotOrderType === "STOP_LIMIT";
+  const showSpotOrderFooter =
+    spotOrderType === "LIMIT" || spotOrderType === "MARKET" || spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET";
+
+  const slippageBounds = useMemo(() => {
+    const minRaw = Number(currencyData?.min_slippage_percent);
+    const maxRaw = Number(currencyData?.max_slippage_percent);
+    const min = Number.isFinite(minRaw) && minRaw > 0 ? minRaw : 0.1;
+    const max = Number.isFinite(maxRaw) && maxRaw >= min ? maxRaw : Math.max(1, min);
+    return { min, max };
+  }, [currencyData?.min_slippage_percent, currencyData?.max_slippage_percent]);
+
+  const slippagePlaceholder = useMemo(
+    () => `Allowed ${slippageBounds.min}% - ${slippageBounds.max}%`,
+    [slippageBounds.max, slippageBounds.min]
+  );
+
+  const slippageError = useMemo(() => {
+    if (!slippageEnabled) return "";
+    const text = String(slippagePct ?? "").trim();
+    if (text === "") return "";
+    const n = Number(text);
+    if (!Number.isFinite(n)) return "Enter a valid slippage percent.";
+    if (n < slippageBounds.min || n > slippageBounds.max) {
+      return `Slippage must be between ${slippageBounds.min}% and ${slippageBounds.max}%.`;
+    }
+    return "";
+  }, [slippageBounds.max, slippageBounds.min, slippageEnabled, slippagePct]);
   const [openOrderKindTab, setOpenOrderKindTab] = useState("all");
   // const [orderBookReady, setOrderBookReady] = useState(false);
   // const [showOrderBookSkeleton, setShowOrderBookSkeleton] = useState(true);
@@ -2013,21 +2047,21 @@ const Spot = () => {
         >
           <View
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
+              width: 34,
+              height: 34,
+              borderRadius: 17,
               backgroundColor: colors.newThemeColor,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <FastImage source={item.icon} tintColor={colors.white} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <FastImage source={item.icon} tintColor={colors.white} style={{ width: 16, height: 16 }} resizeMode="contain" />
           </View>
           <View style={{ flex: 1, marginLeft: 12, paddingRight: 8 }}>
-            <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 16, marginBottom: 4 }}>
+            <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14, marginBottom: 3 }}>
               {item.name}
             </AppText>
-            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, fontSize: 12, lineHeight: 17 }}>
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, fontSize: 11, lineHeight: 15 }}>
               {item.description}
             </AppText>
           </View>
@@ -2059,7 +2093,7 @@ const Spot = () => {
             borderBottomColor: themeColors.themeBorderColor,
           }}
         >
-          <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>
+          <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text }}>
             Order Type
           </AppText>
           <TouchableOpacity
@@ -2076,7 +2110,7 @@ const Spot = () => {
               borderColor: themeColors.themeBorderColor,
             }}
           >
-            <FastImage source={REMOVE} style={{ width: 22, height: 22 }} resizeMode="contain" tintColor={colors.black} />
+            <FastImage source={REMOVE} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={colors.black} />
           </TouchableOpacity>
         </View>
 
@@ -2086,7 +2120,7 @@ const Spot = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, marginBottom: 6 }}>
-            <AppText weight={SEMI_BOLD} style={{ fontSize: 14, color: themeColors.text }}>
+            <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
               Basic
             </AppText>
             <TouchableOpacity
@@ -2172,6 +2206,13 @@ const Spot = () => {
     if ((spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT") && (limitFok || limitIoc)) {
       data.time_in_force = limitFok ? "FOK" : "IOC";
     }
+    if ((spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET") && slippageEnabled && !slippageError) {
+      const raw = String(slippagePct ?? "").trim();
+      const n = parseFloat(raw);
+      if (Number.isFinite(n) && n > 0) {
+        data.max_slippage_percent = n;
+      }
+    }
     return { data, orderPriceForValidation };
   }, [
     amount,
@@ -2182,6 +2223,9 @@ const Spot = () => {
     limitIoc,
     price,
     quote_currency_id,
+    slippageEnabled,
+    slippageError,
+    slippagePct,
     spotOrderType,
     stopPrice,
   ]);
@@ -3084,31 +3128,35 @@ const Spot = () => {
                   </TouchableOpacity>
                 </View>
 
-                {isLimit && (
-                  <View style={styles.spotOrderInputBlock}>
-                    <View
-                      style={[
-                        styles.spotOrderFieldCard,
-                        {
-                          backgroundColor: themeColors.input,
-                          borderColor: themeColors.themeBorderColor,
-                        },
-                      ]}
-                    >
-                      <View style={styles.spotOrderFieldStack}>
-                        <AppText
-                          style={[
-                            styles.spotOrderInputLabel,
-                            {
-                              color: themeColors.secondaryText,
-                              textAlign: "center",
-                              alignSelf: "stretch",
-                              top: 5
-                            },
-                          ]}
-                        >
-                          Price ({quote_currency})
-                        </AppText>
+                {/* Price field (web parity)
+                    - LIMIT / STOP_LIMIT: editable + stepper
+                    - MARKET / STOP_MARKET: readonly "Best Market Price" */}
+                <View style={styles.spotOrderInputBlock}>
+                  <View
+                    style={[
+                      styles.spotOrderFieldCard,
+                      {
+                        backgroundColor: themeColors.input,
+                        borderColor: themeColors.themeBorderColor,
+                      },
+                    ]}
+                  >
+                    <View style={styles.spotOrderFieldStack}>
+                      <AppText
+                        style={[
+                          styles.spotOrderInputLabel,
+                          {
+                            color: themeColors.secondaryText,
+                            textAlign: "center",
+                            alignSelf: "stretch",
+                            top: 5,
+                          },
+                        ]}
+                      >
+                        Price ({quote_currency})
+                      </AppText>
+
+                      {isLimit ? (
                         <View
                           style={[
                             styles.spotOrderInputBox,
@@ -3129,6 +3177,7 @@ const Spot = () => {
                           <TextInput
                             placeholder={String(buy_price)}
                             placeholderTextColor={themeColors.secondaryText}
+                            selectionColor={inputSelectionColor}
                             value={price || formatTotal(buy_price)}
                             onChangeText={(text) => handlePriceInput(text, setPrice)}
                             onBlur={() => handlePriceBlur(price, setPrice)}
@@ -3141,7 +3190,7 @@ const Spot = () => {
                                 ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                               },
                             ]}
-                            editable={isLimit}
+                            editable
                           />
                           <TouchableOpacity
                             onPress={() => handlePriceStep(1)}
@@ -3151,10 +3200,23 @@ const Spot = () => {
                             <AppText style={[styles.spotOrderStepBtnText, { color: themeColors.secondaryText }]}>+</AppText>
                           </TouchableOpacity>
                         </View>
-                      </View>
+                      ) : (
+                        <View
+                          style={{
+                            width: "100%",
+                            minHeight: 22,
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                        >
+                          <AppText style={[styles.spotOrderInputValue, { color: themeColors.secondaryText }]}>
+                            ---Best Market Price---
+                          </AppText>
+                        </View>
+                      )}
                     </View>
                   </View>
-                )}
+                </View>
 
                 {showStopPriceField && (
                   <View style={styles.spotOrderInputBlock}>
@@ -3175,6 +3237,7 @@ const Spot = () => {
                               color: themeColors.secondaryText,
                               textAlign: "center",
                               alignSelf: "stretch",
+                              top:5
                             },
                           ]}
                         >
@@ -3200,6 +3263,7 @@ const Spot = () => {
                           <TextInput
                             placeholder={String(buy_price)}
                             placeholderTextColor={themeColors.secondaryText}
+                            selectionColor={inputSelectionColor}
                             value={stopPrice}
                             onChangeText={(text) => handlePriceInput(text, setStopPrice)}
                             onBlur={() => handlePriceBlur(stopPrice, setStopPrice)}
@@ -3270,6 +3334,7 @@ const Spot = () => {
                         <TextInput
                           placeholder={"Amount"}
                           placeholderTextColor={themeColors.secondaryText}
+                          selectionColor={inputSelectionColor}
                           value={amount}
                           onChangeText={(text) => handleQty(text)}
                           onBlur={() => handleQuantityBlur(amount, setAmount)}
@@ -3294,7 +3359,6 @@ const Spot = () => {
                     </View>
                   </View>
                 </View>
-
                 <View style={styles.spotOrderSliderWrap}>
                   <PercentQuickSelect
                     activeValue={activePercentage}
@@ -3303,6 +3367,7 @@ const Spot = () => {
                   />
                 </View>
 
+                {spotOrderType === "LIMIT" ? (
                 <View style={styles.spotOrderInputBlock}>
                   <View
                     style={[
@@ -3356,9 +3421,10 @@ const Spot = () => {
                     </View>
                   </View>
                 </View>
-
-                {isLimit && (
-                  <View style={styles.spotOrderTifRow}>
+                ) : null}
+                {/* Web parity: IOC/FOK toggles are visible for Spot form footer.
+                    API uses them only for LIMIT / STOP_LIMIT (we only send then), but UI stays consistent. */}
+                <View style={styles.spotOrderTifRow}>
                     <TouchableOpacity
                       onPress={() => {
                         setLimitIoc((v) => {
@@ -3370,19 +3436,11 @@ const Spot = () => {
                       style={styles.spotOrderTifChip}
                       hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                     >
-                      <View
-                        style={[
-                          styles.spotOrderTifBox,
-                          {
-                            borderColor: limitIoc
-                              ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
-                              : themeColors.themeBorderColor,
-                            backgroundColor: limitIoc
-                              ? `${themeColors.spotTradeBuy ?? colors.spotTradeBuy}22`
-                              : "transparent",
-                          },
-                        ]}
-                      />
+                      <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
+                        {limitIoc ? (
+                          <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                        ) : null}
+                      </View>
                       <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>IOC</AppText>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -3396,21 +3454,113 @@ const Spot = () => {
                       style={styles.spotOrderTifChip}
                       hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                     >
-                      <View
-                        style={[
-                          styles.spotOrderTifBox,
-                          {
-                            borderColor: limitFok
-                              ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
-                              : themeColors.themeBorderColor,
-                            backgroundColor: limitFok
-                              ? `${themeColors.spotTradeBuy ?? colors.spotTradeBuy}22`
-                              : "transparent",
-                          },
-                        ]}
-                      />
+                      <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
+                        {limitFok ? (
+                          <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                        ) : null}
+                      </View>
                       <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
                     </TouchableOpacity>
+                  </View>
+
+                {isMarketLikeOrder && (
+                  <View style={{ marginBottom: SPOT_ORDER_V_GAP }}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setSlippageEnabled((v) => !v)}
+                      style={styles.slippageToggleRow}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <View
+                        style={[
+                          styles.slippageCheckbox,
+                          { borderColor: themeColors.themeBorderColor },
+                        ]}
+                      >
+                        {slippageEnabled ? (
+                          <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                        ) : null}
+                      </View>
+                      <AppText style={[styles.slippageToggleText, { color: themeColors.text }]}>Slippage</AppText>
+                    </TouchableOpacity>
+
+                    {slippageEnabled ? (
+                      <>
+                        <View style={styles.spotOrderInputBlock}>
+                          <View
+                            style={[
+                              styles.spotOrderFieldCard,
+                              {
+                                backgroundColor: themeColors.input,
+                                borderColor: themeColors.themeBorderColor,
+                              },
+                            ]}
+                          >
+                            <View style={styles.spotOrderFieldStack}>
+                              <AppText
+                                style={[
+                                  styles.spotOrderInputLabel,
+                                  {
+                                    color: themeColors.secondaryText,
+                                    textAlign: "center",
+                                    alignSelf: "stretch",
+                                    marginTop: 3,
+                                  },
+                                ]}
+                              >
+                                Slippage (%)
+                              </AppText>
+                              <View
+                                style={[
+                                  styles.spotOrderInputBox,
+                                  {
+                                    backgroundColor: "transparent",
+                                    paddingHorizontal: 0,
+                                    paddingVertical: 0,
+                                    alignItems: "center",
+                                  },
+                                ]}
+                              >
+                                <TextInput
+                                  value={slippagePct}
+                                  onChangeText={(t) => setSlippagePct(String(t).replace(/[^0-9.]/g, ""))}
+                                  placeholder={slippagePlaceholder}
+                                  placeholderTextColor={themeColors.secondaryText}
+                                  selectionColor={inputSelectionColor}
+                                  keyboardType="numeric"
+                                  style={[
+                                    styles.spotOrderInputValue,
+                                    {
+                                      flex: 0,
+                                      width: "100%",
+                                      color: themeColors.text,
+                                      textAlign: "center",
+                                      ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
+                                    },
+                                  ]}
+                                />
+                                <View
+                                  pointerEvents="none"
+                                  style={{
+                                    position: "absolute",
+                                    right: 10,
+                                    height: "100%",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>%</AppText>
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                        {slippageError ? (
+                          <AppText style={{ color: themeColors.red, fontSize: 11, marginTop: 6 }}>
+                            {slippageError}
+                          </AppText>
+                        ) : null}
+                      </>
+                    ) : null}
                   </View>
                 )}
 
@@ -3934,7 +4084,7 @@ const Spot = () => {
           closeOnDragDown={true}
           closeOnPressMask={true}
           height={orderTypeSheetHeight}
-          animationType="fade"
+          animationType="slide"
           customStyles={{
             container: {
               backgroundColor: themeColors.themeElevationColor,
@@ -4190,6 +4340,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   spotOrderTifText: {
+    fontSize: 9,
+  },
+  slippageToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  slippageCheckbox: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  slippageCheckIcon: {
+    width: 7,
+    height: 7,
+  },
+  slippageToggleText: {
     fontSize: 9,
   },
   spotOrderSubmitWrap: {
