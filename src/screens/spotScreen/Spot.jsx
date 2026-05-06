@@ -1028,6 +1028,61 @@ const Spot = () => {
   const [orderToCancel, setOrderToCancel] = useState(null);
   const isSpotFocused = useIsFocused();
   const recentTrades = useAppSelector((state) => state.home.recentTrades);
+  
+  const [isPriceFocused, setIsPriceFocused] = useState(false);
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const [isStopFocused, setIsStopFocused] = useState(false);
+
+  const priceAnim = useRef(new Animated.Value(0)).current;
+  const amountAnim = useRef(new Animated.Value(0)).current;
+  const stopAnim = useRef(new Animated.Value(0)).current;
+  const amountInputRef = useRef(null);
+
+  /** Must run before setAmount so next render’s Animated styles already see 1 (fixes +/− without focus overlap). */
+  const syncAmountAnimForQuantityString = useCallback((qtyStr) => {
+    if (String(qtyStr ?? "").trim() !== "") {
+      amountAnim.setValue(1);
+    }
+  }, []);
+
+  useEffect(() => {
+    const priceFilled = String(price ?? "").trim() !== "";
+    const buyFilled = buy_price != null && String(buy_price).trim() !== "";
+    Animated.timing(priceAnim, {
+      toValue: isPriceFocused || priceFilled || buyFilled ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [isPriceFocused, price, buy_price]);
+
+  useLayoutEffect(() => {
+    const hasAmt = String(amount ?? "").trim() !== "";
+    if (hasAmt) {
+      amountAnim.setValue(1);
+      return;
+    }
+    if (isAmountFocused) {
+      Animated.timing(amountAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+      return;
+    }
+    Animated.timing(amountAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [amount, isAmountFocused]);
+
+  useEffect(() => {
+    Animated.timing(stopAnim, {
+      toValue: (isStopFocused || stopPrice) ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [isStopFocused, stopPrice]);
 
   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
@@ -1142,7 +1197,6 @@ const Spot = () => {
       currentCurrencyRef.current?.quote_currency !== spotSelectedPair.quote_currency) {
       setCurrency(spotSelectedPair);
       currentCurrencyRef.current = spotSelectedPair;
-      setAmount("1");
       setPrice(formatPrice(spotSelectedPair.buy_price).toString());
       setActivePercentage("");
       setLastSocketData(null);
@@ -1346,7 +1400,7 @@ const Spot = () => {
 
   const [tab, setTab] = useState("Buy");
   const [price, setPrice] = useState("");
-  const [amount, setAmount] = useState("1");
+  const [amount, setAmount] = useState("");
   const [stopPrice, setStopPrice] = useState("");
   const [limitIoc, setLimitIoc] = useState(false);
   const [limitFok, setLimitFok] = useState(false);
@@ -1803,8 +1857,10 @@ const Spot = () => {
     if (isLimit) {
       setPrice(formatPrice(itemPrice).toString());
     }
-    setAmount(formatQuantity(itemQuantity).toString());
-  }, [isLimit, formatPrice, formatQuantity]);
+    const q = formatQuantity(itemQuantity).toString();
+    syncAmountAnimForQuantityString(q);
+    setAmount(q);
+  }, [isLimit, formatPrice, formatQuantity, syncAmountAnimForQuantityString]);
 
   const validateOrder = (price, quantity, side, orderKind = "LIMIT") => {
     const tick_size = currencyData?.tick_size || 0.01;
@@ -1960,6 +2016,7 @@ const Spot = () => {
     const next = Math.max(0, current + delta * stepSize);
     const prec = getQuantityPrecision();
     const val = parseFloat(next.toFixed(prec)).toString();
+    syncAmountAnimForQuantityString(val);
     setAmount(val);
   };
 
@@ -2004,19 +2061,25 @@ const Spot = () => {
         val / (!isMarketLikeOrder ? price || buy_price : buy_price)
       );
 
-      setAmount(finalQuantity.toString() || '0');
+      const amtStr = finalQuantity.toString() || "0";
+      syncAmountAnimForQuantityString(amtStr);
+      setAmount(amtStr);
       // handleTotal(percentCalculation(coinBalance?.quote_currency_balance || 0, value));
     } else {
       const finalQuantity = toFixed8(
         percentCalculation(coinBalance?.base_currency_balance || 0, value)
       );
-      setAmount(finalQuantity.toString() || '0');
+      const amtStr = finalQuantity.toString() || "0";
+      syncAmountAnimForQuantityString(amtStr);
+      setAmount(amtStr);
     }
   };
 
   const handleTotal = (text) => {
     const qty = Number(text) / Number(price);
-    setAmount(qty?.toString());
+    const qStr = qty?.toString();
+    syncAmountAnimForQuantityString(qStr);
+    setAmount(qStr);
     setTotal(multiply(price, qty));
   };
 
@@ -3009,184 +3072,210 @@ const Spot = () => {
           />
 
           <View style={styles.secondcontainer}>
-              {/* Left: Order book (ratio + controls inside). */}
-              <View style={styles.leftPanel}>
-                <OrderBookSection
-                  styles={styles}
-                  buy_price={buy_price}
-                  change_percentage={change_percentage}
-                  quote_currency={quote_currency}
-                  base_currency={base_currency}
-                  orderBookReady={orderBookReady}
-                  showOrderBookSkeleton={showOrderBookSkeleton}
-                  onOrderBookPress={handleOrderBookClick}
-                  formatPrice={formatPrice}
-                  formatQuantity={formatQuantity}
-                  tickSize={currencyData?.tick_size ?? spotSelectedPair?.tick_size ?? 0.01}
-                  pairResetKey={`${base_currency_id ?? ""}_${quote_currency_id ?? ""}`}
-                />
+            {/* Left: Order book (ratio + controls inside). */}
+            <View style={styles.leftPanel}>
+              <OrderBookSection
+                styles={styles}
+                buy_price={buy_price}
+                change_percentage={change_percentage}
+                quote_currency={quote_currency}
+                base_currency={base_currency}
+                orderBookReady={orderBookReady}
+                showOrderBookSkeleton={showOrderBookSkeleton}
+                onOrderBookPress={handleOrderBookClick}
+                formatPrice={formatPrice}
+                formatQuantity={formatQuantity}
+                tickSize={currencyData?.tick_size ?? spotSelectedPair?.tick_size ?? 0.01}
+                pairResetKey={`${base_currency_id ?? ""}_${quote_currency_id ?? ""}`}
+              />
+            </View>
+
+            {/* Right: Buy/Sell + fields */}
+            <View style={styles.rightPanel}>
+
+              <View
+                style={[
+                  styles.tabContainer,
+                  {
+                    borderWidth: 0.5,
+                    borderColor: themeColors.themeBorderColor,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    paddingVertical: 0,
+                    paddingHorizontal: 0,
+                  },
+                ]}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => { setTab("Buy"); setIsBuy(true); }}
+                  style={{ flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center", paddingVertical: 15 }}
+                >
+                  <ImageBackground
+                    source={trade_btn}
+                    tintColor={tab === "Buy" ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy) : themeColors.background}
+                    resizeMode="stretch"
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: tab === "Buy" ? colors.white : themeColors.secondaryText }]}>Buy</AppText>
+                  </ImageBackground>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => { setTab("Sell"); setIsBuy(false); }}
+                  style={{ flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center", paddingVertical: 15 }}
+                >
+                  <ImageBackground
+                    source={trade_btn}
+                    tintColor={tab === "Sell" ? (themeColors.spotTradeSell ?? colors.spotTradeSell) : themeColors.background}
+                    resizeMode="stretch"
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      transform: [{ rotate: "180deg" }],
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <AppText weight={SEMI_BOLD} style={[styles.tabText, {
+                      color: tab === "Sell" ? themeColors.textOnButton : themeColors.secondaryText,
+                      transform: [{ rotate: '180deg' }]
+                    }]}>Sell</AppText>
+                  </ImageBackground>
+                </TouchableOpacity>
               </View>
 
-              {/* Right: Buy/Sell + fields */}
-              <View style={styles.rightPanel}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.dropdown,
+                    {
+                      backgroundColor: themeColors.input,
+                      flex: 1,
+                      borderRadius: 8,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: themeColors.themeBorderColor,
+                    },
+                  ]}
+                  onPress={() => rbSheetlimit?.current?.open()}
+                >
+                  <FastImage
+                    source={INFO}
+                    style={{ height: 12, width: 12 }}
+                    resizeMode="contain"
+                    tintColor={themeColors.secondaryText}
+                  />
+                  <AppText
+                    style={[styles.dropdownText, { color: themeColors.text, flex: 1, textAlign: "center" }]}
+                    numberOfLines={1}
+                  >
+                    {numberSelectLimit}
+                  </AppText>
+                  <FastImage
+                    source={downIcon}
+                    resizeMode="contain"
+                    style={{ width: 9, height: 9 }}
+                    tintColor={themeColors.secondaryText}
+                  />
+                </TouchableOpacity>
+              </View>
 
+              {/* Price field (web parity)
+                    - LIMIT / STOP_LIMIT: editable + stepper
+                    - MARKET / STOP_MARKET: readonly "Best Market Price" */}
+              <View style={styles.spotOrderInputBlock}>
                 <View
                   style={[
-                    styles.tabContainer,
+                    styles.spotOrderFieldCard,
+                    styles.spotOrderFieldCardDense,
                     {
-                      borderWidth: 0.5,
+                      backgroundColor: themeColors.input,
                       borderColor: themeColors.themeBorderColor,
-                      borderRadius: 8,
-                      overflow: "hidden",
-                      paddingVertical: 0,
-                      paddingHorizontal: 0,
                     },
                   ]}
                 >
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => { setTab("Buy"); setIsBuy(true); }}
-                    style={{ flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center", paddingVertical: 15 }}
-                  >
-                    <ImageBackground
-                      source={trade_btn}
-                      tintColor={tab === "Buy" ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy) : themeColors.background}
-                      resizeMode="stretch"
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: tab === "Buy" ? colors.white : themeColors.secondaryText }]}>Buy</AppText>
-                    </ImageBackground>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => { setTab("Sell"); setIsBuy(false); }}
-                    style={{ flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center", paddingVertical: 15 }}
-                  >
-                    <ImageBackground
-                      source={trade_btn}
-                      tintColor={tab === "Sell" ? (themeColors.spotTradeSell ?? colors.spotTradeSell) : themeColors.background}
-                      resizeMode="stretch"
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                        transform: [{ rotate: "180deg" }],
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <AppText weight={SEMI_BOLD} style={[styles.tabText, {
-                        color: tab === "Sell" ? themeColors.textOnButton : themeColors.secondaryText,
-                        transform: [{ rotate: '180deg' }]
-                      }]}>Sell</AppText>
-                    </ImageBackground>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <TouchableOpacity
-                    style={[
-                      styles.dropdown,
-                      {
-                        backgroundColor: themeColors.input,
-                        flex: 1,
-                        borderRadius: 8,
-                        borderWidth: StyleSheet.hairlineWidth,
-                        borderColor: themeColors.themeBorderColor,
-                      },
-                    ]}
-                    onPress={() => rbSheetlimit?.current?.open()}
-                  >
-                    <FastImage
-                      source={INFO}
-                      style={{ height: 12, width: 12 }}
-                      resizeMode="contain"
-                      tintColor={themeColors.secondaryText}
-                    />
-                    <AppText
-                      style={[styles.dropdownText, { color: themeColors.text, flex: 1, textAlign: "center" }]}
-                      numberOfLines={1}
-                    >
-                      {numberSelectLimit}
-                    </AppText>
-                    <FastImage
-                      source={downIcon}
-                      resizeMode="contain"
-                      style={{ width: 9, height: 9 }}
-                      tintColor={themeColors.secondaryText}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Price field (web parity)
-                    - LIMIT / STOP_LIMIT: editable + stepper
-                    - MARKET / STOP_MARKET: readonly "Best Market Price" */}
-                <View style={styles.spotOrderInputBlock}>
-                  <View
-                    style={[
-                      styles.spotOrderFieldCard,
-                      {
-                        backgroundColor: themeColors.input,
-                        borderColor: themeColors.themeBorderColor,
-                      },
-                    ]}
-                  >
-                    <View style={styles.spotOrderFieldStack}>
-                      <AppText
+                  <View style={styles.spotOrderFieldStack}>
+                      <Animated.Text
                         style={[
                           styles.spotOrderInputLabel,
                           {
-                            color: themeColors.secondaryText,
+                            position: "absolute",
+                            left: 0,
+                            right: 0,
                             textAlign: "center",
-                            alignSelf: "stretch",
-                            top: 5,
+                            top: priceAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [9, 1],
+                            }),
+                            fontSize: priceAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [9, 7],
+                            }),
+                            lineHeight: priceAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [12, 9],
+                            }),
+                            color: themeColors.secondaryText,
                           },
                         ]}
                       >
                         Price ({quote_currency})
-                      </AppText>
+                      </Animated.Text>
 
                       {isLimit ? (
-                        <View
+                        <Animated.View
                           style={[
                             styles.spotOrderInputBox,
+                            styles.spotOrderInputBoxDense,
                             {
                               backgroundColor: "transparent",
                               paddingHorizontal: 0,
                               paddingVertical: 0,
+                              marginTop: priceAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [15, 4],
+                              }),
                             },
                           ]}
                         >
                           <TouchableOpacity
                             onPress={() => handlePriceStep(-1)}
-                            style={styles.spotOrderStepBtn}
+                            style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
                             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           >
-                            <AppText style={[styles.spotOrderStepBtnText, { color: themeColors.secondaryText }]}>−</AppText>
+                            <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>−</AppText>
                           </TouchableOpacity>
                           <TextInput
-                            placeholder={String(buy_price)}
+                            placeholder={""}
                             placeholderTextColor={themeColors.secondaryText}
                             selectionColor={inputSelectionColor}
                             value={price || formatTotal(buy_price)}
                             onChangeText={(text) => handlePriceInput(text, setPrice)}
-                            onBlur={() => handlePriceBlur(price, setPrice)}
+                            onBlur={() => {
+                              setIsPriceFocused(false);
+                              handlePriceBlur(price, setPrice);
+                            }}
+                            onFocus={() => setIsPriceFocused(true)}
                             keyboardType="numeric"
                             style={[
                               styles.spotOrderInputValue,
+                              styles.spotOrderInputValueDense,
                               {
+                                top:2,
                                 color: themeColors.text,
                                 textAlign: "center",
+                                textAlignVertical: "center",
                                 ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                               },
                             ]}
@@ -3194,102 +3283,35 @@ const Spot = () => {
                           />
                           <TouchableOpacity
                             onPress={() => handlePriceStep(1)}
-                            style={styles.spotOrderStepBtn}
+                            style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
                             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           >
-                            <AppText style={[styles.spotOrderStepBtnText, { color: themeColors.secondaryText }]}>+</AppText>
+                            <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>+</AppText>
                           </TouchableOpacity>
-                        </View>
+                        </Animated.View>
                       ) : (
-                        <View
+                        <Animated.View
                           style={{
                             width: "100%",
-                            minHeight: 22,
+                            minHeight: 18,
                             justifyContent: "center",
                             alignItems: "center",
+                            marginTop: priceAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [15, 4],
+                            }),
                           }}
                         >
-                          <AppText style={[styles.spotOrderInputValue, { color: themeColors.secondaryText }]}>
+                          <AppText style={[styles.spotOrderInputValue, styles.spotOrderInputValueDense, { color: themeColors.secondaryText }]}>
                             ---Best Market Price---
                           </AppText>
-                        </View>
+                        </Animated.View>
                       )}
                     </View>
                   </View>
                 </View>
 
-                {showStopPriceField && (
-                  <View style={styles.spotOrderInputBlock}>
-                    <View
-                      style={[
-                        styles.spotOrderFieldCard,
-                        {
-                          backgroundColor: themeColors.input,
-                          borderColor: themeColors.themeBorderColor,
-                        },
-                      ]}
-                    >
-                      <View style={styles.spotOrderFieldStack}>
-                        <AppText
-                          style={[
-                            styles.spotOrderInputLabel,
-                            {
-                              color: themeColors.secondaryText,
-                              textAlign: "center",
-                              alignSelf: "stretch",
-                              top:5
-                            },
-                          ]}
-                        >
-                          Stop ({quote_currency})
-                        </AppText>
-                        <View
-                          style={[
-                            styles.spotOrderInputBox,
-                            {
-                              backgroundColor: "transparent",
-                              paddingHorizontal: 0,
-                              paddingVertical: 0,
-                            },
-                          ]}
-                        >
-                          <TouchableOpacity
-                            onPress={() => handleStopPriceStep(-1)}
-                            style={styles.spotOrderStepBtn}
-                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          >
-                            <AppText style={[styles.spotOrderStepBtnText, { color: themeColors.secondaryText }]}>−</AppText>
-                          </TouchableOpacity>
-                          <TextInput
-                            placeholder={String(buy_price)}
-                            placeholderTextColor={themeColors.secondaryText}
-                            selectionColor={inputSelectionColor}
-                            value={stopPrice}
-                            onChangeText={(text) => handlePriceInput(text, setStopPrice)}
-                            onBlur={() => handlePriceBlur(stopPrice, setStopPrice)}
-                            keyboardType="numeric"
-                            style={[
-                              styles.spotOrderInputValue,
-                              {
-                                color: themeColors.text,
-                                textAlign: "center",
-                                ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
-                              },
-                            ]}
-                          />
-                          <TouchableOpacity
-                            onPress={() => handleStopPriceStep(1)}
-                            style={styles.spotOrderStepBtn}
-                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          >
-                            <AppText style={[styles.spotOrderStepBtnText, { color: themeColors.secondaryText }]}>+</AppText>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
+              {showStopPriceField && (
                 <View style={styles.spotOrderInputBlock}>
                   <View
                     style={[
@@ -3301,19 +3323,28 @@ const Spot = () => {
                     ]}
                   >
                     <View style={styles.spotOrderFieldStack}>
-                      <AppText
+                      <Animated.Text
                         style={[
                           styles.spotOrderInputLabel,
                           {
-                            color: themeColors.secondaryText,
+                            position: "absolute",
+                            left: 0,
+                            right: 0,
                             textAlign: "center",
-                            alignSelf: "stretch",
-                            top: 5
+                            top: stopAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [11, 2],
+                            }),
+                            fontSize: stopAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [10, 8],
+                            }),
+                            color: themeColors.secondaryText,
                           },
                         ]}
                       >
-                        Amount ({base_currency})
-                      </AppText>
+                        Stop ({quote_currency})
+                      </Animated.Text>
                       <View
                         style={[
                           styles.spotOrderInputBox,
@@ -3321,35 +3352,41 @@ const Spot = () => {
                             backgroundColor: "transparent",
                             paddingHorizontal: 0,
                             paddingVertical: 0,
+                            marginTop: 6,
                           },
                         ]}
                       >
                         <TouchableOpacity
-                          onPress={() => handleAmountStep(-1)}
+                          onPress={() => handleStopPriceStep(-1)}
                           style={styles.spotOrderStepBtn}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         >
                           <AppText style={[styles.spotOrderStepBtnText, { color: themeColors.secondaryText }]}>−</AppText>
                         </TouchableOpacity>
                         <TextInput
-                          placeholder={"Amount"}
+                          placeholder={""}
                           placeholderTextColor={themeColors.secondaryText}
                           selectionColor={inputSelectionColor}
-                          value={amount}
-                          onChangeText={(text) => handleQty(text)}
-                          onBlur={() => handleQuantityBlur(amount, setAmount)}
+                          value={stopPrice}
+                          onChangeText={(text) => handlePriceInput(text, setStopPrice)}
+                          onBlur={() => {
+                            setIsStopFocused(false);
+                            handlePriceBlur(stopPrice, setStopPrice);
+                          }}
+                          onFocus={() => setIsStopFocused(true)}
                           keyboardType="numeric"
                           style={[
                             styles.spotOrderInputValue,
                             {
                               color: themeColors.text,
                               textAlign: "center",
+                              textAlignVertical: "center",
                               ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                             },
                           ]}
                         />
                         <TouchableOpacity
-                          onPress={() => handleAmountStep(1)}
+                          onPress={() => handleStopPriceStep(1)}
                           style={styles.spotOrderStepBtn}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         >
@@ -3359,325 +3396,482 @@ const Spot = () => {
                     </View>
                   </View>
                 </View>
-                <View style={styles.spotOrderSliderWrap}>
-                  <PercentQuickSelect
-                    activeValue={activePercentage}
-                    onSelect={handleTotalPercentage}
-                    theme={theme}
-                  />
-                </View>
+              )}
 
-                {spotOrderType === "LIMIT" ? (
+              <View style={styles.spotOrderInputBlock}>
+                <View
+                  style={[
+                    styles.spotOrderFieldCard,
+                    isAmountFocused || String(amount ?? "").trim() !== ""
+                      ? styles.spotOrderFieldCardDense
+                      : styles.spotOrderFieldCardTight,
+                    {
+                      backgroundColor: themeColors.input,
+                      borderColor: themeColors.themeBorderColor,
+                    },
+                  ]}
+                >
+                  <View style={styles.spotOrderFieldStack}>
+                    {isAmountFocused || String(amount ?? "").trim() !== "" ? (
+                      <Animated.Text
+                        style={[
+                          styles.spotOrderInputLabel,
+                          {
+                            position: "absolute",
+                            left: 0,
+                            right: 0,
+                            textAlign: "center",
+                            top: amountAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [9, 1],
+                            }),
+                            fontSize: amountAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [9, 7],
+                            }),
+                            lineHeight: amountAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [12, 9],
+                            }),
+                            color: themeColors.secondaryText,
+                          },
+                        ]}
+                      >
+                        Amount ({base_currency})
+                      </Animated.Text>
+                    ) : null}
+                    <Animated.View
+                      style={[
+                        styles.spotOrderInputBox,
+                        styles.spotOrderInputBoxDense,
+                        {
+                          backgroundColor: "transparent",
+                          paddingHorizontal: 0,
+                          paddingVertical: 0,
+                          marginTop: amountAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 4],
+                          }),
+                        },
+                      ]}
+                    >
+                      <TouchableOpacity
+                        onPress={() => handleAmountStep(-1)}
+                        style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
+                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      >
+                        <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>−</AppText>
+                      </TouchableOpacity>
+                      <TextInput
+                        ref={amountInputRef}
+                        placeholder={""}
+                        placeholderTextColor={themeColors.secondaryText}
+                        selectionColor={inputSelectionColor}
+                        value={amount}
+                        onChangeText={(text) => handleQty(text)}
+                        onBlur={() => {
+                          setIsAmountFocused(false);
+                          handleQuantityBlur(amount, setAmount);
+                        }}
+                        onFocus={() => setIsAmountFocused(true)}
+                        keyboardType="numeric"
+                        style={[
+                          styles.spotOrderInputValue,
+                          styles.spotOrderInputValueDense,
+                          {
+                            color:
+                              !isAmountFocused && String(amount ?? "").trim() === ""
+                                ? "transparent"
+                                : themeColors.text,
+                            textAlign: "center",
+                            textAlignVertical: "center",
+                            ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
+                          },
+                        ]}
+                      />
+                      <TouchableOpacity
+                        onPress={() => handleAmountStep(1)}
+                        style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
+                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      >
+                        <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>+</AppText>
+                      </TouchableOpacity>
+                    </Animated.View>
+                    {!isAmountFocused && String(amount ?? "").trim() === "" ? (
+                      <View pointerEvents="none" style={styles.spotOrderAmountEmptyOverlay}>
+                        <AppText
+                          style={[
+                            styles.spotOrderInputLabel,
+                            { color: themeColors.secondaryText, textAlign: "center" },
+                          ]}
+                        >
+                          Amount ({base_currency})
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+              <View style={styles.spotOrderSliderWrap}>
+                <PercentQuickSelect
+                  activeValue={activePercentage}
+                  onSelect={handleTotalPercentage}
+                  theme={theme}
+                />
+              </View>
+
+              {spotOrderType === "LIMIT" ? (
                 <View style={styles.spotOrderInputBlock}>
                   <View
                     style={[
                       styles.spotOrderFieldCard,
+                      String(amount ?? "").trim() !== ""
+                        ? styles.spotOrderFieldCardDense
+                        : styles.spotOrderFieldCardTight,
                       {
                         backgroundColor: themeColors.input,
                         borderColor: themeColors.themeBorderColor,
                       },
                     ]}
                   >
-                    <View style={styles.spotOrderFieldStack}>
-                      <AppText
-                        style={[
-                          styles.spotOrderInputLabel,
-                          {
-                            color: themeColors.secondaryText,
-                            textAlign: "center",
-                            alignSelf: "stretch",
-                            marginTop: 3
-                          },
-                        ]}
-                      >
-                        Total ({quote_currency})
-                      </AppText>
-                      <View
-                        style={{
-                          width: "100%",
-                          minHeight: 20,
-                          justifyContent: "center",
-                          alignItems: "center",
-                        }}
-                      >
+                    {String(amount ?? "").trim() === "" ? (
+                      <View style={styles.spotOrderTotalEmptyInner}>
                         <AppText
                           style={[
-                            styles.spotOrderInputValue,
-                            {
-                              flex: 0,
-                              color: themeColors.text,
-                              textAlign: "center",
-                              width: "100%",
-                              paddingVertical: 0,
-                              lineHeight: 11,
-                              minHeight: 0,
-                            },
+                            styles.spotOrderInputLabel,
+                            { color: themeColors.secondaryText, textAlign: "center" },
                           ]}
-                          numberOfLines={1}
                         >
-                          {formatTotal(totalDisplayValue) ?? "0"}
+                          Total ({quote_currency})
                         </AppText>
                       </View>
-                    </View>
-                  </View>
-                </View>
-                ) : null}
-                {/* Web parity: IOC/FOK toggles are visible for Spot form footer.
-                    API uses them only for LIMIT / STOP_LIMIT (we only send then), but UI stays consistent. */}
-                <View style={styles.spotOrderTifRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setLimitIoc((v) => {
-                          const next = !v;
-                          if (next) setLimitFok(false);
-                          return next;
-                        });
-                      }}
-                      style={styles.spotOrderTifChip}
-                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                    >
-                      <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
-                        {limitIoc ? (
-                          <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
-                        ) : null}
-                      </View>
-                      <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>IOC</AppText>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setLimitFok((v) => {
-                          const next = !v;
-                          if (next) setLimitIoc(false);
-                          return next;
-                        });
-                      }}
-                      style={styles.spotOrderTifChip}
-                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                    >
-                      <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
-                        {limitFok ? (
-                          <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
-                        ) : null}
-                      </View>
-                      <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
-                    </TouchableOpacity>
-                  </View>
-
-                {isMarketLikeOrder && (
-                  <View style={{ marginBottom: SPOT_ORDER_V_GAP }}>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => setSlippageEnabled((v) => !v)}
-                      style={styles.slippageToggleRow}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <View
-                        style={[
-                          styles.slippageCheckbox,
-                          { borderColor: themeColors.themeBorderColor },
-                        ]}
-                      >
-                        {slippageEnabled ? (
-                          <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
-                        ) : null}
-                      </View>
-                      <AppText style={[styles.slippageToggleText, { color: themeColors.text }]}>Slippage</AppText>
-                    </TouchableOpacity>
-
-                    {slippageEnabled ? (
-                      <>
-                        <View style={styles.spotOrderInputBlock}>
-                          <View
+                    ) : (
+                      <View style={styles.spotOrderFieldStack}>
+                        <Animated.Text
+                          style={[
+                            styles.spotOrderInputLabel,
+                            {
+                              position: "absolute",
+                              left: 0,
+                              right: 0,
+                              textAlign: "center",
+                              top: amountAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [9, 1],
+                              }),
+                              fontSize: amountAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [9, 7],
+                              }),
+                              lineHeight: amountAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [12, 9],
+                              }),
+                              color: themeColors.secondaryText,
+                            },
+                          ]}
+                        >
+                          Total ({quote_currency})
+                        </Animated.Text>
+                        <Animated.View
+                          style={[
+                            styles.spotOrderInputBox,
+                            styles.spotOrderInputBoxDense,
+                            {
+                              backgroundColor: "transparent",
+                              paddingHorizontal: 0,
+                              paddingVertical: 0,
+                              marginTop: amountAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 4],
+                              }),
+                            },
+                          ]}
+                        >
+                          <View style={styles.spotOrderTotalSideSpacer} />
+                          <TextInput
+                            placeholder={""}
+                            placeholderTextColor={themeColors.secondaryText}
+                            selectionColor={inputSelectionColor}
+                            value={amount ? formatTotal(totalDisplayValue) : ""}
+                            keyboardType="numeric"
                             style={[
-                              styles.spotOrderFieldCard,
+                              styles.spotOrderInputValue,
+                              styles.spotOrderInputValueDense,
                               {
-                                backgroundColor: themeColors.input,
-                                borderColor: themeColors.themeBorderColor,
+                                flex: 1,
+                                color: themeColors.text,
+                                textAlign: "center",
+                                textAlignVertical: "center",
+                                paddingVertical: 0,
+                                ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                               },
                             ]}
-                          >
-                            <View style={styles.spotOrderFieldStack}>
-                              <AppText
+                            editable={false}
+                          />
+                          <View style={styles.spotOrderTotalSideSpacer} />
+                        </Animated.View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ) : null}
+              {/* Web parity: IOC/FOK toggles are visible for Spot form footer.
+                    API uses them only for LIMIT / STOP_LIMIT (we only send then), but UI stays consistent. */}
+              <View style={styles.spotOrderTifRow}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setLimitIoc((v) => {
+                      const next = !v;
+                      if (next) setLimitFok(false);
+                      return next;
+                    });
+                  }}
+                  style={styles.spotOrderTifChip}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                >
+                  <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
+                    {limitIoc ? (
+                      <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                    ) : null}
+                  </View>
+                  <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>IOC</AppText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setLimitFok((v) => {
+                      const next = !v;
+                      if (next) setLimitIoc(false);
+                      return next;
+                    });
+                  }}
+                  style={styles.spotOrderTifChip}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                >
+                  <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
+                    {limitFok ? (
+                      <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                    ) : null}
+                  </View>
+                  <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
+                </TouchableOpacity>
+              </View>
+
+              {isMarketLikeOrder && (
+                <View style={{ marginBottom: SPOT_ORDER_V_GAP }}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => setSlippageEnabled((v) => !v)}
+                    style={styles.slippageToggleRow}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <View
+                      style={[
+                        styles.slippageCheckbox,
+                        { borderColor: themeColors.themeBorderColor },
+                      ]}
+                    >
+                      {slippageEnabled ? (
+                        <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                      ) : null}
+                    </View>
+                    <AppText style={[styles.slippageToggleText, { color: themeColors.text }]}>Slippage</AppText>
+                  </TouchableOpacity>
+
+                  {slippageEnabled ? (
+                    <>
+                      <View style={styles.spotOrderInputBlock}>
+                        <View
+                          style={[
+                            styles.spotOrderFieldCard,
+                            {
+                              backgroundColor: themeColors.input,
+                              borderColor: themeColors.themeBorderColor,
+                            },
+                          ]}
+                        >
+                          <View style={styles.spotOrderFieldStack}>
+                            <AppText
+                              style={[
+                                styles.spotOrderInputLabel,
+                                {
+                                  color: themeColors.secondaryText,
+                                  textAlign: "center",
+                                  alignSelf: "stretch",
+                                  marginTop: 3,
+                                },
+                              ]}
+                            >
+                              Slippage (%)
+                            </AppText>
+                            <View
+                              style={[
+                                styles.spotOrderInputBox,
+                                {
+                                  backgroundColor: "transparent",
+                                  paddingHorizontal: 0,
+                                  paddingVertical: 0,
+                                  alignItems: "center",
+                                },
+                              ]}
+                            >
+                              <TextInput
+                                value={slippagePct}
+                                onChangeText={(t) => setSlippagePct(String(t).replace(/[^0-9.]/g, ""))}
+                                placeholder={slippagePlaceholder}
+                                placeholderTextColor={themeColors.secondaryText}
+                                selectionColor={inputSelectionColor}
+                                keyboardType="numeric"
                                 style={[
-                                  styles.spotOrderInputLabel,
+                                  styles.spotOrderInputValue,
                                   {
-                                    color: themeColors.secondaryText,
+                                    flex: 0,
+                                    width: "100%",
+                                    color: themeColors.text,
                                     textAlign: "center",
-                                    alignSelf: "stretch",
-                                    marginTop: 3,
+                                    ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                                   },
                                 ]}
-                              >
-                                Slippage (%)
-                              </AppText>
+                              />
                               <View
-                                style={[
-                                  styles.spotOrderInputBox,
-                                  {
-                                    backgroundColor: "transparent",
-                                    paddingHorizontal: 0,
-                                    paddingVertical: 0,
-                                    alignItems: "center",
-                                  },
-                                ]}
+                                pointerEvents="none"
+                                style={{
+                                  position: "absolute",
+                                  right: 10,
+                                  height: "100%",
+                                  justifyContent: "center",
+                                }}
                               >
-                                <TextInput
-                                  value={slippagePct}
-                                  onChangeText={(t) => setSlippagePct(String(t).replace(/[^0-9.]/g, ""))}
-                                  placeholder={slippagePlaceholder}
-                                  placeholderTextColor={themeColors.secondaryText}
-                                  selectionColor={inputSelectionColor}
-                                  keyboardType="numeric"
-                                  style={[
-                                    styles.spotOrderInputValue,
-                                    {
-                                      flex: 0,
-                                      width: "100%",
-                                      color: themeColors.text,
-                                      textAlign: "center",
-                                      ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
-                                    },
-                                  ]}
-                                />
-                                <View
-                                  pointerEvents="none"
-                                  style={{
-                                    position: "absolute",
-                                    right: 10,
-                                    height: "100%",
-                                    justifyContent: "center",
-                                  }}
-                                >
-                                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>%</AppText>
-                                </View>
+                                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>%</AppText>
                               </View>
                             </View>
                           </View>
                         </View>
-                        {slippageError ? (
-                          <AppText style={{ color: themeColors.red, fontSize: 11, marginTop: 6 }}>
-                            {slippageError}
-                          </AppText>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </View>
-                )}
-
-                {/* Coin Info */}
-                <View style={styles.assetBox}>
-                  <View style={styles.assetRow}>
-                    <AppText
-                      style={[
-                        styles.assetLabel,
-                        { color: themeColors.text },
-                      ]}
-                    >
-                      Coin
-                    </AppText>
-                    <AppText
-                      style={[
-                        styles.assetLabel,
-                        { color: themeColors.text },
-                      ]}
-                    >
-                      Total Assets
-                    </AppText>
-                  </View>
-                  <View style={styles.assetRow}>
-                    <AppText style={[styles.assetValue, { color: themeColors.text }]}>{quote_currency}</AppText>
-                    <AppText style={[styles.assetValue, { color: themeColors.text }]}>
-                      {coinBalance?.quote_currency_balance || 0}
-                    </AppText>
-                  </View>
-                  <View style={styles.assetRow}>
-                    <AppText style={[styles.assetValue, { color: themeColors.text }]}>{base_currency}</AppText>
-                    <AppText style={[styles.assetValue, { color: themeColors.text }]}>
-                      {coinBalance?.base_currency_balance || 0}
-                    </AppText>
-                  </View>
-
-                  <View style={styles.assetActionRow}>
-                    {["Deposit", "Transfer", "Withdraw"].map((btn, i) => (
-                      <TouchableOpacity
-                        key={i}
-                        activeOpacity={0.75}
-                        style={[
-                          styles.assetActionBtn,
-                          {
-                            backgroundColor: themeColors.input,
-                            borderColor: themeColors.themeBorderColor,
-                          },
-                        ]}
-                        onPress={() =>
-                          NavigationService.navigate(
-                            btn == "Withdraw"
-                              ? WALLET_WITHDRAW_SCREEN
-                              : btn == "Deposit"
-                                ? DEPOSIT_COIN_SCREEN
-                                : TRANSFER_SCREEN
-                          )
-                        }
-                      >
-                        <AppText style={[styles.assetActionText, { color: themeColors.text }]}>{btn}</AppText>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                      </View>
+                      {slippageError ? (
+                        <AppText style={{ color: themeColors.red, fontSize: 11, marginTop: 6 }}>
+                          {slippageError}
+                        </AppText>
+                      ) : null}
+                    </>
+                  ) : null}
                 </View>
+              )}
 
-                {/* Buy Button */}
-                <View style={styles.spotOrderSubmitWrap}>
-                  <Button
-                    children={
-                      isBuy
-                        ? `Buy ${base_currency}`
-                        : `Sell ${base_currency}`
-                    }
-                    disabled={!amount}
-                    containerStyle={[
-                      styles.spotOrderSubmitBtn,
-                      {
-                        backgroundColor: isBuy
-                          ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
-                          : (themeColors.spotTradeSell ?? colors.spotTradeSell),
-                      },
-                    ]}
-                    onPress={() => onSubmit()}
-                    titleStyle={styles.spotOrderSubmitTitle}
-                  />
-                </View>
-
-                {/* Web TradeCenterSection: fees + staking row directly under Buy/Sell CTA */}
-                <View style={styles.spotOrderFooterBelowCta}>
-                  <View style={styles.spotOrderFooterFeesRow}>
-                    <AppText weight={SEMI_BOLD} style={[styles.spotOrderFooterFeeText, { color: themeColors.text }]}>
-                      Maker {spotFooterMakerTakerPct.maker}%
-                    </AppText>
-                    <AppText weight={SEMI_BOLD} style={[styles.spotOrderFooterFeeText, { color: themeColors.text }]}>
-                      Taker {spotFooterMakerTakerPct.taker}%
-                    </AppText>
-                  </View>
-                  <TouchableOpacity
-                    activeOpacity={0.75}
-                    onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
+              {/* Coin Info */}
+              <View style={styles.assetBox}>
+                <View style={styles.assetRow}>
+                  <AppText
                     style={[
-                      styles.spotOrderStakingCard,
-                      {
-                        borderColor: themeColors.themeBorderColor,
-                        backgroundColor: themeColors.themeElevationColor,
-                      },
+                      styles.assetLabel,
+                      { color: themeColors.text },
                     ]}
                   >
-                    <AppText
-                      weight={SEMI_BOLD}
-                      numberOfLines={1}
-                      style={[styles.spotOrderStakingAprText, { flex: 1 }]}
+                    Coin
+                  </AppText>
+                  <AppText
+                    style={[
+                      styles.assetLabel,
+                      { color: themeColors.text },
+                    ]}
+                  >
+                    Total Assets
+                  </AppText>
+                </View>
+                <View style={styles.assetRow}>
+                  <AppText style={[styles.assetValue, { color: themeColors.text }]}>{quote_currency}</AppText>
+                  <AppText style={[styles.assetValue, { color: themeColors.text }]}>
+                    {coinBalance?.quote_currency_balance || 0}
+                  </AppText>
+                </View>
+                <View style={styles.assetRow}>
+                  <AppText style={[styles.assetValue, { color: themeColors.text }]}>{base_currency}</AppText>
+                  <AppText style={[styles.assetValue, { color: themeColors.text }]}>
+                    {coinBalance?.base_currency_balance || 0}
+                  </AppText>
+                </View>
+
+                <View style={styles.assetActionRow}>
+                  {["Deposit", "Transfer", "Withdraw"].map((btn, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      activeOpacity={0.75}
+                      style={[
+                        styles.assetActionBtn,
+                        {
+                          backgroundColor: themeColors.input,
+                          borderColor: themeColors.themeBorderColor,
+                        },
+                      ]}
+                      onPress={() =>
+                        NavigationService.navigate(
+                          btn == "Withdraw"
+                            ? WALLET_WITHDRAW_SCREEN
+                            : btn == "Deposit"
+                              ? DEPOSIT_COIN_SCREEN
+                              : TRANSFER_SCREEN
+                        )
+                      }
                     >
-                      {base_currency || "BTC"} Staking Estimated APR: 2.45%
-                    </AppText>
-                  </TouchableOpacity>
+                      <AppText style={[styles.assetActionText, { color: themeColors.text }]}>{btn}</AppText>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
+
+              {/* Buy Button */}
+              <View style={styles.spotOrderSubmitWrap}>
+                <Button
+                  children={
+                    isBuy
+                      ? `Buy ${base_currency}`
+                      : `Sell ${base_currency}`
+                  }
+                  disabled={!amount}
+                  containerStyle={[
+                    styles.spotOrderSubmitBtn,
+                    {
+                      backgroundColor: isBuy
+                        ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
+                        : (themeColors.spotTradeSell ?? colors.spotTradeSell),
+                    },
+                  ]}
+                  onPress={() => onSubmit()}
+                  titleStyle={styles.spotOrderSubmitTitle}
+                />
+              </View>
+
+              {/* Web TradeCenterSection: fees + staking row directly under Buy/Sell CTA */}
+              <View style={styles.spotOrderFooterBelowCta}>
+                <View style={styles.spotOrderFooterFeesRow}>
+                  <AppText weight={SEMI_BOLD} style={[styles.spotOrderFooterFeeText, { color: themeColors.text }]}>
+                    Maker {spotFooterMakerTakerPct.maker}%
+                  </AppText>
+                  <AppText weight={SEMI_BOLD} style={[styles.spotOrderFooterFeeText, { color: themeColors.text }]}>
+                    Taker {spotFooterMakerTakerPct.taker}%
+                  </AppText>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
+                  style={[
+                    styles.spotOrderStakingCard,
+                    {
+                      borderColor: themeColors.themeBorderColor,
+                      backgroundColor: themeColors.themeElevationColor,
+                    },
+                  ]}
+                >
+                  <AppText
+                    weight={SEMI_BOLD}
+                    numberOfLines={1}
+                    style={[styles.spotOrderStakingAprText, { flex: 1 }]}
+                  >
+                    {base_currency || "BTC"} Staking Estimated APR: 2.45%
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            </View>
 
           </View>
         </>
@@ -3746,184 +3940,184 @@ const Spot = () => {
         {/* Bottom tabs: ek hi panel — Order History / Trade History data web jaisi APIs se (`me/orders/history`, `me/trades`). */}
         {(historyOnly || orderBookReady) && (
           <View style={styles.ordersTabContentWrapper}>
-              <Animated.View style={{ transform: [{ translateX: ordersTabsAnimX }] }}>
-                {mountedOrdersTab === 1 ? (
-                  <View style={styles.ordersTabPanel}>
-                    {/* existing Open Orders panel */}
-                    <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        nestedScrollEnabled
-                        keyboardShouldPersistTaps="handled"
-                        contentContainerStyle={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 6,
-                          paddingVertical: 2,
-                          paddingRight: 14,
-                        }}
-                      >
-                        {SPOT_OPEN_ORDER_KINDS.map((k) => {
-                          const active = openOrderKindTab === k.id;
-                          return (
-                            <TouchableOpacity
-                              key={k.id}
-                              activeOpacity={0.85}
-                              onPress={() => setOpenOrderKindTab(k.id)}
+            <Animated.View style={{ transform: [{ translateX: ordersTabsAnimX }] }}>
+              {mountedOrdersTab === 1 ? (
+                <View style={styles.ordersTabPanel}>
+                  {/* existing Open Orders panel */}
+                  <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      nestedScrollEnabled
+                      keyboardShouldPersistTaps="handled"
+                      contentContainerStyle={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        paddingVertical: 2,
+                        paddingRight: 14,
+                      }}
+                    >
+                      {SPOT_OPEN_ORDER_KINDS.map((k) => {
+                        const active = openOrderKindTab === k.id;
+                        return (
+                          <TouchableOpacity
+                            key={k.id}
+                            activeOpacity={0.85}
+                            onPress={() => setOpenOrderKindTab(k.id)}
+                            style={{
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                              borderWidth: active ? 1 : 0,
+                              borderColor: active ? themeColors.themeBorderColor : "transparent",
+                              backgroundColor: active ? themeColors.input : "transparent",
+                            }}
+                          >
+                            <AppText
                               style={{
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 6,
-                                borderWidth: active ? 1 : 0,
-                                borderColor: active ? themeColors.themeBorderColor : "transparent",
-                                backgroundColor: active ? themeColors.input : "transparent",
+                                fontSize: 11,
+                                color: active ? themeColors.text : themeColors.secondaryText,
+                                fontWeight: active ? "600" : "500",
                               }}
                             >
-                              <AppText
-                                style={{
-                                  fontSize: 11,
-                                  color: active ? themeColors.text : themeColors.secondaryText,
-                                  fontWeight: active ? "600" : "500",
-                                }}
-                              >
-                                {k.label}
-                              </AppText>
-                            </TouchableOpacity>
-                          );
-                        })}
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2, alignSelf: "flex-start" }}>
-                          <View style={{ width: 102 }}>
-                            <CustomDropdown
-                              compact
-                              data={SPOT_SIDE_DROPDOWN_LABELS}
-                              selected={spotDropdownLabelFromSideFilter(orderFilter)}
-                              onSelect={(label) => setOrderFilter(spotSideFilterFromDropdownLabel(label))}
-                            />
+                              {k.label}
+                            </AppText>
+                          </TouchableOpacity>
+                        );
+                      })}
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2, alignSelf: "flex-start" }}>
+                        <View style={{ width: 102 }}>
+                          <CustomDropdown
+                            compact
+                            data={SPOT_SIDE_DROPDOWN_LABELS}
+                            selected={spotDropdownLabelFromSideFilter(orderFilter)}
+                            onSelect={(label) => setOrderFilter(spotSideFilterFromDropdownLabel(label))}
+                          />
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setOpenOrderKindTab("all");
+                            setOrderFilter("All");
+                          }}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 4,
+                            paddingVertical: 4,
+                            paddingLeft: 4,
+                            marginLeft: 2,
+                          }}
+                        >
+                          <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                          <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
+                        </TouchableOpacity>
+                      </View>
+                    </ScrollView>
+                  </View>
+
+                  {filteredOpenOrders?.length > 0 ? (
+                    <>
+                      <View style={styles.scrollContent}>
+                        {openOrdersSlice.map((item, index) => (
+                          <View key={openOrderKeyExtractor(item)}>
+                            {renderOpenOrderItem({ item, index })}
                           </View>
-                          <TouchableOpacity
-                            onPress={() => {
-                              setOpenOrderKindTab("all");
-                              setOrderFilter("All");
-                            }}
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 4,
-                              paddingVertical: 4,
-                              paddingLeft: 4,
-                              marginLeft: 2,
-                            }}
-                          >
-                            <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
-                          </TouchableOpacity>
-                        </View>
-                      </ScrollView>
+                        ))}
+                      </View>
+                      {filteredOpenOrders?.length > 5 && (
+                        <TouchableOpacity
+                          style={styles.viewAllButton}
+                          onPress={() => NavigationService.navigate(OPEN_ORDER_SCREEN)}
+                        >
+                          <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View All</AppText>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  ) : (
+                    <View style={styles.noDataRow}>
+                      <FastImage
+                        source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                        resizeMode="contain"
+                        style={{ width: 80, height: 80 }}
+                      />
                     </View>
+                  )}
+                </View>
+              ) : null}
 
-                    {filteredOpenOrders?.length > 0 ? (
-                      <>
-                        <View style={styles.scrollContent}>
-                          {openOrdersSlice.map((item, index) => (
-                            <View key={openOrderKeyExtractor(item)}>
-                              {renderOpenOrderItem({ item, index })}
-                            </View>
-                          ))}
-                        </View>
-                        {filteredOpenOrders?.length > 5 && (
-                          <TouchableOpacity
-                            style={styles.viewAllButton}
-                            onPress={() => NavigationService.navigate(OPEN_ORDER_SCREEN)}
-                          >
-                            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View All</AppText>
-                          </TouchableOpacity>
-                        )}
-                      </>
-                    ) : (
-                      <View style={styles.noDataRow}>
-                        <FastImage
-                          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                          resizeMode="contain"
-                          style={{ width: 80, height: 80 }}
-                        />
+              {mountedOrdersTab === 2 ? (
+                <View style={styles.ordersTabPanel}>
+                  {pastOrdersForSpotPair?.length > 0 ? (
+                    <>
+                      <View style={styles.scrollContent}>
+                        {(pastOrdersSlice ?? []).map((item, index) => (
+                          <View key={pastOrderKeyExtractor(item)}>
+                            {renderPastOrderItem({ item, index })}
+                          </View>
+                        ))}
                       </View>
-                    )}
-                  </View>
-                ) : null}
+                      {pastOrdersForSpotPair?.length > 5 && (
+                        <TouchableOpacityView
+                          style={styles.viewAllButton}
+                          onPress={() => NavigationService.navigate('Trade_History')}
+                        >
+                          <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                        </TouchableOpacityView>
+                      )}
+                    </>
+                  ) : (
+                    <View style={styles.noDataRow}>
+                      <FastImage
+                        source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                        resizeMode="contain"
+                        style={{ width: 80, height: 80 }}
+                      />
+                    </View>
+                  )}
+                </View>
+              ) : null}
 
-                {mountedOrdersTab === 2 ? (
-                  <View style={styles.ordersTabPanel}>
-                    {pastOrdersForSpotPair?.length > 0 ? (
-                      <>
-                        <View style={styles.scrollContent}>
-                          {(pastOrdersSlice ?? []).map((item, index) => (
-                            <View key={pastOrderKeyExtractor(item)}>
-                              {renderPastOrderItem({ item, index })}
-                            </View>
-                          ))}
-                        </View>
-                        {pastOrdersForSpotPair?.length > 5 && (
-                          <TouchableOpacityView
-                            style={styles.viewAllButton}
-                            onPress={() => NavigationService.navigate('Trade_History')}
-                          >
-                            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
-                          </TouchableOpacityView>
-                        )}
-                      </>
-                    ) : (
-                      <View style={styles.noDataRow}>
-                        <FastImage
-                          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                          resizeMode="contain"
-                          style={{ width: 80, height: 80 }}
-                        />
-                      </View>
-                    )}
-                  </View>
-                ) : null}
-
-                {mountedOrdersTab === 3 ? (
-                  <View style={styles.ordersTabPanel}>
-                    <View
+              {mountedOrdersTab === 3 ? (
+                <View style={styles.ordersTabPanel}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      gap: 6,
+                      marginBottom: 4,
+                      paddingLeft: 2,
+                      paddingRight: 14,
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    <View style={{ width: 102 }}>
+                      <CustomDropdown
+                        compact
+                        data={SPOT_SIDE_DROPDOWN_LABELS}
+                        selected={spotDropdownLabelFromSideFilter(tradeHistorySideFilter)}
+                        onSelect={(label) => setTradeHistorySideFilter(spotSideFilterFromDropdownLabel(label))}
+                      />
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => setTradeHistorySideFilter("All")}
                       style={{
                         flexDirection: "row",
                         alignItems: "center",
-                        justifyContent: "flex-end",
-                        gap: 6,
-                        marginBottom: 4,
-                        paddingLeft: 2,
-                        paddingRight: 14,
-                        alignSelf: "flex-start",
+                        gap: 4,
+                        paddingVertical: 4,
+                        paddingLeft: 4,
                       }}
                     >
-                      <View style={{ width: 102 }}>
-                        <CustomDropdown
-                          compact
-                          data={SPOT_SIDE_DROPDOWN_LABELS}
-                          selected={spotDropdownLabelFromSideFilter(tradeHistorySideFilter)}
-                          onSelect={(label) => setTradeHistorySideFilter(spotSideFilterFromDropdownLabel(label))}
-                        />
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => setTradeHistorySideFilter("All")}
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 4,
-                          paddingVertical: 4,
-                          paddingLeft: 4,
-                        }}
-                      >
-                        <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                        <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
-                      </TouchableOpacity>
-                    </View>
-                    {renderTradeHistorySection()}
+                      <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                      <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
+                    </TouchableOpacity>
                   </View>
-                ) : null}
-              </Animated.View>
+                  {renderTradeHistorySection()}
+                </View>
+              ) : null}
+            </Animated.View>
           </View>
         )}
         {/* Sweet Alert Style Modal */}
@@ -4412,11 +4606,12 @@ const styles = StyleSheet.create({
   spotOrderFieldCard: {
     justifyContent: "center",
     alignItems: "stretch",
-    paddingVertical: 1,
+    paddingVertical: 2,
     paddingHorizontal: 3,
-    minHeight: 26,
+    minHeight: 34,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: "visible",
   },
   /** Inner: label + row treated as one block (centered inside spotOrderFieldCard). */
   spotOrderFieldStack: {
@@ -4424,20 +4619,21 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "stretch",
+    overflow: "visible",
   },
   spotOrderInputLabel: {
-    fontSize: 9,
+    fontSize: 10,
     textAlign: "center",
     marginBottom: 0,
-    lineHeight: 9,
+    lineHeight: 13,
   },
   spotOrderInputBox: {
     flexDirection: "row",
-    alignItems: "stretch",
+    alignItems: "center",
     justifyContent: "space-between",
     borderRadius: 6,
     paddingHorizontal: 2,
-    minHeight: 20,
+    minHeight: 22,
   },
   spotOrderStepBtn: {
     paddingVertical: 0,
@@ -4445,8 +4641,7 @@ const styles = StyleSheet.create({
     minWidth: 22,
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "stretch",
-    bottom: 5
+    alignSelf: "center",
   },
   spotOrderStepBtnText: {
     fontSize: 11,
@@ -4457,14 +4652,59 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: "center",
     textAlignVertical: "center",
-    paddingVertical: 0,
+    paddingVertical: 2,
     paddingHorizontal: 2,
-    minHeight: 20,
-    alignSelf: "stretch",
-    fontFamily: MEDIUM
+    minHeight: 22,
+    alignSelf: "center",
+    fontFamily: MEDIUM,
+    lineHeight: 16,
   },
   spotOrderTotalValue: {
     flex: 1,
+  },
+  /** Price / Amount / Total only — shorter vertical footprint */
+  spotOrderFieldCardDense: {
+    minHeight: 34,
+    paddingVertical: 1,
+    paddingHorizontal: 2,
+  },
+  /** Amount / Total when empty — Binance-like short row, label centered */
+  spotOrderFieldCardTight: {
+    minHeight: 26,
+    paddingVertical: 0,
+    paddingHorizontal: 2,
+    justifyContent: "center",
+  },
+  spotOrderAmountEmptyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2,
+  },
+  spotOrderTotalEmptyInner: {
+    minHeight: 17,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  spotOrderInputBoxDense: {
+    minHeight: 18,
+  },
+  spotOrderInputValueDense: {
+    minHeight: 18,
+    paddingVertical: 0,
+    fontSize: 8,
+    lineHeight: 12,
+  },
+  /** Price / Amount steppers (+/−) */
+  spotOrderStepBtnSpotPair: {
+    minWidth: 24,
+  },
+  /** Total row: same side width as ± so value centers like Price/Amount */
+  spotOrderTotalSideSpacer: {
+    minWidth: 24,
+  },
+  spotOrderStepBtnTextDense: {
+    fontSize: 10,
   },
   input: {
     // borderWidth: 1,
