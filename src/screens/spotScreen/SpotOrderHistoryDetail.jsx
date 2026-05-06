@@ -1,6 +1,7 @@
-import React from "react";
-import { View, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRoute } from "@react-navigation/native";
+import { useDispatch } from "react-redux";
 import { AppText, MEDIUM } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
@@ -8,44 +9,24 @@ import FastImage from "react-native-fast-image";
 import { back_ic, right_ic } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import moment from "moment";
-import { toFixedEight } from "../../helper/utility";
+import { toFixedEight, spotOpenOrderMarketLabel } from "../../helper/utility";
 import { fontFamilyBold } from "../../theme/typography";
+import { cancelOrder } from "../../actions/homeActions";
 
 const SpotOrderHistoryDetail = () => {
   const route = useRoute();
+  const dispatch = useDispatch();
   const { colors: themeColors } = useTheme();
-  const order = route?.params?.item || {}; // Changed to match Spot.jsx navigation
+  const order = route?.params?.order ?? route?.params?.item ?? {};
 
-  // 1. Try to get symbols from explicit currency fields (Most reliable)
-  const baseCurrency = order?.ask_currency || order?.base_currency || order?.base_currency_short_name || "";
-  const quoteCurrency = order?.pay_currency || order?.quote_currency || order?.quote_currency_short_name || "";
-
-  let pair = "---";
-  if (baseCurrency && quoteCurrency) {
-    pair = `${baseCurrency}/${quoteCurrency}`;
-  } else {
-    // 2. Fallback: If fields are missing, handle the pair string carefully
-    const rawPair = order?.pair || "";
-    if (rawPair.includes("/")) {
-      pair = rawPair;
-    } else if (rawPair.length >= 5) {
-      // Find where common quote currencies start from the end
-      const quotes = ["USDT", "BTC", "ETH", "INR", "BNB", "TRX"];
-      let found = false;
-      for (const q of quotes) {
-        if (rawPair.endsWith(q)) {
-          const base = rawPair.slice(0, rawPair.length - q.length);
-          pair = `${base}/${q}`;
-          found = true;
-          break;
-        }
-      }
-      // 3. Absolute Fallback: If still not found, just use the string as is or split at last 3/4
-      if (!found) {
-        pair = rawPair; // Don't split if unsure, better than wrong split
-      }
-    }
-  }
+  const pair = spotOpenOrderMarketLabel(order);
+  const quoteCurrency =
+    order?.pay_currency ||
+    order?.quote_currency ||
+    order?.quote_currency_short_name ||
+    order?.quote_asset ||
+    (typeof pair === "string" && pair.includes("/") ? pair.split("/")[1]?.trim() : "") ||
+    "";
 
   const price = Number(order?.price) || 0;
   const qty = Number(order?.quantity) || 0;
@@ -63,12 +44,24 @@ const SpotOrderHistoryDetail = () => {
   const dateStr = d ? moment(d).format("DD/MM/YYYY") : "---";
   const timeStr = d ? moment(d).format("HH:mm:ss") : "---";
 
-  const getSideColor = (s) => (s === "BUY" ? colors.green : colors.red);
+  const getSideColor = (s) => (s === "BUY" ? themeColors.green : themeColors.red);
   const getStatusColor = (st) => {
-    if (st === "FILLED" || st === "EXECUTED" || st === "SUCCESS") return colors.green;
-    if (st === "CANCELLED" || st === "CANCELED" || st === "REJECTED") return colors.red;
-    return colors.lightYellow || "#EAB308";
+    if (st === "FILLED" || st === "EXECUTED" || st === "SUCCESS") return themeColors.green;
+    if (st === "CANCELLED" || st === "CANCELED" || st === "REJECTED") return themeColors.red;
+    return themeColors.yellow || colors.lightYellow || "#EAB308";
   };
+
+  const orderIdForCancel = order?._id || order?.id;
+  const statusUpperCancel = String(order?.status || order?.user_status || "").toUpperCase();
+  const canCancel =
+    !!orderIdForCancel &&
+    !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpperCancel);
+
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  const rawTif = order?.time_in_force ?? order?.tif ?? order?.timeInForce;
+  const tifDisplay =
+    rawTif != null && String(rawTif).trim() !== "" ? String(rawTif).trim().toUpperCase() : "—";
 
   const textColor = themeColors.text;
   const labelColor = themeColors.secondaryText;
@@ -96,7 +89,6 @@ const SpotOrderHistoryDetail = () => {
         <View style={styles.topSection}>
           <View style={styles.pairHeaderRow}>
             <AppText style={[styles.pairTitle, { color: textColor }]} weight={MEDIUM}>{pair}</AppText>
-            <FastImage source={right_ic} style={styles.chevron} resizeMode="contain" tintColor={labelColor} />
           </View>
           <AppText style={[styles.dateTime, { color: labelColor }]}>{dateStr} {timeStr}</AppText>
           <AppText style={[styles.sideType, { color: getSideColor(side) }]} weight={MEDIUM}>
@@ -111,7 +103,7 @@ const SpotOrderHistoryDetail = () => {
           <Row label="Market" value={pair} />
           <Row label="Side" value={side} valueColor={getSideColor(side)} />
           <Row label="Type" value={type} />
-          <Row label="TIF" value={order?.time_in_force || order?.tif || "GTC"} />
+          <Row label="TIF" value={tifDisplay} />
           <Row label="Price" value={type === "MARKET" ? "Market" : toFixedEight(price)} />
           <Row label="Avg" value={toFixedEight(avgPrice)} />
           <Row label="Quantity" value={toFixedEight(qty)} />
@@ -119,10 +111,39 @@ const SpotOrderHistoryDetail = () => {
           <Row label="Remaining" value={toFixedEight(remaining)} />
           <Row label="Fill %" value={order?.fill_percent || (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%")} />
           <Row label="Value" value={toFixedEight(value)} />
-          <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency || ""}`} />
+          <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
           <Row label="TDS" value={toFixedEight(tds)} />
           <Row label="Status" value={status} valueColor={getStatusColor(status)} />
         </View>
+
+        {canCancel ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            disabled={cancelLoading}
+            onPress={async () => {
+              const oid = order?._id || order?.id;
+              if (!oid) return;
+              setCancelLoading(true);
+              try {
+                const res = await dispatch(cancelOrder({ order_id: oid }));
+                if (res?.success) {
+                  NavigationService.goBack();
+                }
+              } finally {
+                setCancelLoading(false);
+              }
+            }}
+            style={styles.cancelOrderBtn}
+          >
+            {cancelLoading ? (
+              <ActivityIndicator size="small" color={colors.red} />
+            ) : (
+              <AppText style={[styles.cancelOrderText, { color: colors.red }]} weight={MEDIUM}>
+                Cancel order
+              </AppText>
+            )}
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -155,17 +176,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 30,
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 25,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   topSection: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   pairHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   pairTitle: {
     fontSize: 16,
@@ -177,19 +198,20 @@ const styles = StyleSheet.create({
   },
   dateTime: {
     fontSize: 11,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sideType: {
     fontSize: 12,
+    marginTop: 2,
   },
   listSection: {
-    marginTop: 10,
+    marginTop: 4,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 6,
   },
   label: {
     fontSize: 12,
@@ -199,6 +221,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     textAlign: "right",
+  },
+  cancelOrderBtn: {
+    marginTop: 18,
+    marginBottom: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  cancelOrderText: {
+    fontSize: 15,
+    fontWeight: "600",
   },
 });
 

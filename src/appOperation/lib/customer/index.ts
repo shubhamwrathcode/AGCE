@@ -341,6 +341,27 @@ export default (appOperation: AppOperation) => ({
     appOperation.get('spot/v1/me/orders/history', data, undefined, CUSTOMER_TYPE),
   open_orders: (data: OpenOrdersProps) =>
     appOperation.get('spot/v1/me/orders/open', data, undefined, CUSTOMER_TYPE),
+  /** All pairs — paginated spot open orders (web parity: GET spot/v1/me/orders/open?page=&page_size=). */
+  spot_me_orders_open: (params: {
+    page?: number;
+    page_size?: number;
+    pair?: string;
+    side?: string;
+  } = {}) => {
+    const q: Record<string, string> = {};
+    const page = params.page != null ? Number(params.page) : 1;
+    const rawSize = Number(params.page_size);
+    const pageSize = Number.isFinite(rawSize) ? Math.min(100, Math.max(1, Math.floor(rawSize))) : 20;
+    q.page = String(Math.max(1, page));
+    q.page_size = String(pageSize);
+    if (params.pair != null && String(params.pair).trim() !== '') {
+      q.pair = String(params.pair).toUpperCase().replace(/\//g, '');
+    }
+    if (params.side != null && String(params.side).trim() !== '') {
+      q.side = String(params.side).toUpperCase();
+    }
+    return appOperation.get('spot/v1/me/orders/open', q, undefined, CUSTOMER_TYPE);
+  },
   cancel_order: (data: CancelOrderProps) =>
     appOperation.post('spot/v1/orders/cancel', data, CUSTOMER_TYPE),
   close_option_order: (data: CancelOrderProps) =>
@@ -597,9 +618,17 @@ export default (appOperation: AppOperation) => ({
             ),
       break_staking: (data: any) =>
         appOperation.post('staking/break_staking', data, CUSTOMER_TYPE),
+        /** Legacy — prefer `spot_me_trades` (web parity: GET /spot/v1/me/trades). */
         get_trade_history: (skip: any, limit: any, pair?: string) =>
-        appOperation.get(`spot/v1/trades/my?skip=${skip}&limit=${limit}${pair ? `&pair=${pair}` : ""}`,  undefined,
-          undefined, CUSTOMER_TYPE),
+          appOperation.get(
+            `spot/v1/trades/my?skip=${skip}&limit=${limit}${pair ? `&pair=${pair}` : ''}`,
+            undefined,
+            undefined,
+            CUSTOMER_TYPE,
+          ),
+        /** Same as web `AuthService.spotMeTrades`: GET /spot/v1/me/trades?page=&page_size=&pair= */
+        spot_me_trades: (params: {page?: number; page_size?: number; pair?: string}) =>
+          appOperation.get('spot/v1/me/trades', params, undefined, CUSTOMER_TYPE),
         subscribe_earning_package: (data: any) =>
           appOperation.post('earning/subscribe-earning-package', data, CUSTOMER_TYPE),
         swap_currency_list: () =>

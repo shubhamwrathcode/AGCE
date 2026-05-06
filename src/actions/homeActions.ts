@@ -155,9 +155,11 @@ export const addToFavorites =
   };
 
 export const getPastOrders =
-  (data: PastOrdersProps) => async (dispatch: AppDispatch) => {
+  (data: PastOrdersProps, options?: { useGlobalLoader?: boolean }) =>
+  async (dispatch: AppDispatch) => {
+    const useLoader = options?.useGlobalLoader !== false;
     try {
-      dispatch(setLoading(true));
+      if (useLoader) dispatch(setLoading(true));
       const response: any = await appOperation.customer.past_orders(data);
       // console.log(response, "getPastOrders");
       if (response.success) {
@@ -167,7 +169,7 @@ export const getPastOrders =
     } catch (e) {
       logger(e);
     } finally {
-      dispatch(setLoading(false));
+      if (useLoader) dispatch(setLoading(false));
     }
   };
 

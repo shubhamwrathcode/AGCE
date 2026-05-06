@@ -17,12 +17,12 @@ import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
 import FastImage from "react-native-fast-image";
-import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from "../../helper/ImageAssets";
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, right_ic } from "../../helper/ImageAssets";
 import { useDispatch } from "react-redux";
 import { getOpenOrders } from "../../actions/walletActions";
 import moment from "moment";
 import OpenOrderSkeleton from "./OpenOrderSkeleton";
-import { toFixedSix, toFixedEight } from "../../helper/utility";
+import { toFixedSix, toFixedEight, spotOpenOrderMarketLabel } from "../../helper/utility";
 import NavigationService from "../../navigation/NavigationService";
 import { SPOT_ORDER_HISTORY_DETAIL } from "../../navigation/routes";
 import { fontFamilySemiBold } from "../../theme/typography";
@@ -101,9 +101,7 @@ const OpenOrder = ({
   };
 
   const renderCard = (inv, idx) => {
-    const currencyPair = inv?.side === "BUY"
-      ? `${inv?.base_currency_short_name || inv?.ask_currency || inv?.base_currency}/${inv?.quote_currency_short_name || inv?.pay_currency || inv?.quote_currency}`
-      : `${inv?.quote_currency_short_name || inv?.pay_currency || inv?.quote_currency}/${inv?.base_currency_short_name || inv?.ask_currency || inv?.base_currency}`;
+    const currencyPair = spotOpenOrderMarketLabel(inv);
     const qty = Number(inv?.quantity ?? inv?.filled ?? 0) || 0;
     const remaining = Number(inv?.remaining) || 0;
     const filled = qty > 0 ? qty - remaining : (Number(inv?.filled) || 0);
@@ -132,16 +130,21 @@ const OpenOrder = ({
     const canCancel = !!orderId && !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(String(status).toUpperCase().trim());
 
     return (
-      <TouchableOpacity
-        key={idx}
-        activeOpacity={0.8}
-        onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { order: inv })}
-        style={styles.card}
-      >
+      <View key={idx} style={styles.card}>
         <View style={styles.topRow}>
-          <View style={styles.pairRow}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
+            style={styles.pairRow}
+          >
             <AppText style={[styles.cardTitle, { color: textColor }]}>{currencyPair}</AppText>
-          </View>
+            <FastImage
+              source={right_ic}
+              style={{ width: 12, height: 12, marginLeft: 2 }}
+              resizeMode="contain"
+              tintColor={labelColor}
+            />
+          </TouchableOpacity>
           <AppText style={[styles.cardDate, { color: labelColor }]}>
             {formatDateTimeCard(inv?.updatedAt || inv?.createdAt)}
           </AppText>
@@ -191,7 +194,7 @@ const OpenOrder = ({
         )}
 
         <View style={[styles.cardDivider, { backgroundColor: themeColors.border }]} />
-      </TouchableOpacity>
+      </View>
     );
   };
 

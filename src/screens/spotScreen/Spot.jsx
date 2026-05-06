@@ -20,7 +20,16 @@ import {
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-import React, { useCallback, useContext, useEffect, useRef, useState, useMemo, memo } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useMemo,
+  memo,
+} from "react";
 
 import SpotHeader from "../../shared/components/spotHeader/SpotHeader";
 import FastImage from "react-native-fast-image";
@@ -96,6 +105,7 @@ import {
   setSocket,
   setSpotSelectedPair,
 } from "../../slices/homeSlice";
+import { clearTradeHistory } from "../../slices/walletSlice";
 import { setLoading } from "../../slices/authSlice";
 import { useFocusEffect, useIsFocused, useRoute, useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
@@ -106,6 +116,7 @@ import {
   DEPOSIT_WALLET_SCREEN,
   KYC_STATUS_SCREEN,
   MARKET_SCREEN,
+  OPEN_ORDER_SCREEN,
   SPOT_ORDER_HISTORY_DETAIL,
   SPOT_CHART_SCREEN,
   TRANSFER_SCREEN,
@@ -199,6 +210,35 @@ function tradeHistoryQuoteAsset(item, selectedBase, selectedQuote) {
   return parts.length === 2 ? parts[1] : "";
 }
 
+/**
+ * Redux `pastOrders` may include orders from other pairs (e.g. History screen without pair filter).
+ * Spot Order History tab must only render rows for the selected spot pair — avoids wrong list flash.
+ */
+function spotPastOrderMatchesScreenPair(order, baseSym, quoteSym) {
+  if (!order || baseSym == null || quoteSym == null) return false;
+  const b = String(baseSym).trim().toUpperCase();
+  const q = String(quoteSym).trim().toUpperCase();
+  if (!b || !q) return false;
+
+  const ask = String(order?.ask_currency ?? "").trim().toUpperCase();
+  const pay = String(order?.pay_currency ?? "").trim().toUpperCase();
+  const ob = String(order?.base_currency ?? "").trim().toUpperCase();
+  const oq = String(order?.quote_currency ?? "").trim().toUpperCase();
+  if ((ask && pay && ask === b && pay === q) || (ob && oq && ob === b && oq === q)) return true;
+
+  const raw = String(order?.pair ?? order?.symbol ?? order?.market ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\//g, "");
+  const needle = `${b}${q}`;
+  if (!raw) return false;
+  if (raw === needle) return true;
+  if (raw.endsWith(q)) {
+    const prefix = raw.slice(0, raw.length - q.length);
+    if (prefix === b) return true;
+  }
+  return false;
+}
 
 export const Data = [
   { label: "0.1", value: "0.1" },
@@ -974,7 +1014,6 @@ const Spot = () => {
 
   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
-  const tradesUiThrottleRef = useRef({ lastAt: 0, lastSig: "" });
 
   const rbSheetNumber = useRef();
   const rbSheetlimit = useRef();
@@ -984,6 +1023,8 @@ const Spot = () => {
   const latestLocalSellOrdersRef = useRef([]);
   const currentCurrencyRef = useRef(null);
   const SOCKET_UI_THROTTLE_MS = 500;
+  /** Match web `TradePage`: poll spot history while the matching tab is visible (`SPOT_HIST_POLL_MS`). */
+  const SPOT_HIST_POLL_MS = 3000;
   const socketThrottleTimerRef = useRef(null);
   const socketLastFlushRef = useRef(0);
   const pendingSocketFlushRef = useRef(null);
@@ -1093,6 +1134,8 @@ const Spot = () => {
       dispatch(setBuyOrders([]));
       dispatch(setSellOrders([]));
       dispatch(setRecentTrades([]));
+      dispatch(setPastOrders([]));
+      dispatch(clearTradeHistory());
       setSpotMyTrades([]);
       setOrderBookSocketReady(false);
       setStopPrice("");
@@ -1214,44 +1257,55 @@ const Spot = () => {
 
 
 
-  /** `activeTab` drives header highlight; `mountedOrdersTab` drives rendered body (avoids tallest-tab height). */
+  /** `activeTab` + `mountedOrdersTab` stay in sync — single panel only (web-style API lists; no duplicate slide UI). */
   const [activeTab, setActiveTab] = useState(1);
   const [mountedOrdersTab, setMountedOrdersTab] = useState(1);
   activeTabRef.current = activeTab;
-  /** Tab press slide animation (no swipe; avoids tallest-tab height issue by mounting 1–2 panels only). */
-  const ordersSlideX = useRef(new Animated.Value(0)).current;
-  const ordersAnimatingRef = useRef(false);
-  const [ordersSlidePair, setOrdersSlidePair] = useState(null); // { from:number, to:number, dir:1|-1 } | null
+
+  /** Bottom tabs row: scroll so left tabs align left, right tab aligns right (narrow screens). */
+  const ordersBottomTabScrollRef = useRef(null);
+  const ordersBottomTabBarWidthRef = useRef(0);
+  const ordersBottomTabItemLayoutRef = useRef({});
+
+  const scrollOrdersBottomTabBarIntoView = useCallback((tabId) => {
+    const sv = ordersBottomTabScrollRef.current;
+    if (!sv) return;
+    const barW = ordersBottomTabBarWidthRef.current;
+    const lay = ordersBottomTabItemLayoutRef.current[tabId];
+    const pad = 10;
+    if (!lay?.width || barW <= 0) {
+      if (tabId === 1) sv.scrollTo({ x: 0, animated: true });
+      else if (tabId === 3) sv.scrollToEnd({ animated: true });
+      return;
+    }
+    let x = 0;
+    if (tabId === 1) {
+      x = Math.max(0, lay.x - pad);
+    } else if (tabId === 3) {
+      x = Math.max(0, lay.x + lay.width - barW + pad);
+    } else {
+      x = Math.max(0, lay.x + lay.width / 2 - barW / 2);
+    }
+    sv.scrollTo({ x, animated: true });
+  }, []);
+
+  useLayoutEffect(() => {
+    const id = requestAnimationFrame(() => {
+      scrollOrdersBottomTabBarIntoView(mountedOrdersTab);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [mountedOrdersTab, scrollOrdersBottomTabBarIntoView]);
 
   const handleSpotOrdersPrimaryTab = useCallback(
     (tabId) => {
       if (tabId < 1 || tabId > 3) return;
       if (activeTab === tabId) return;
-      if (ordersAnimatingRef.current) return;
-      const from = mountedOrdersTab;
-      const to = tabId;
-      const dir = to > from ? 1 : -1;
       setExpandedRowIndex(null);
-      activeTabRef.current = to;
-      // In history-only mode the screen is light, so switch highlight immediately.
-      // Outside history-only, we can delay highlight if needed, but keep it immediate for better UX.
-      setActiveTab(to);
-      ordersAnimatingRef.current = true;
-      setOrdersSlidePair({ from, to, dir });
-      ordersSlideX.setValue(0);
-      Animated.timing(ordersSlideX, {
-        toValue: -dir * Width,
-        duration: 120,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        ordersAnimatingRef.current = false;
-        if (!finished) return;
-        setMountedOrdersTab(to);
-        setOrdersSlidePair(null);
-        ordersSlideX.setValue(0);
-      });
+      activeTabRef.current = tabId;
+      setActiveTab(tabId);
+      setMountedOrdersTab(tabId);
     },
-    [activeTab, mountedOrdersTab, ordersSlideX]
+    [activeTab],
   );
 
   const [tab, setTab] = useState("Buy");
@@ -1287,6 +1341,8 @@ const Spot = () => {
   // const [orderBookReady, setOrderBookReady] = useState(false);
   // const [showOrderBookSkeleton, setShowOrderBookSkeleton] = useState(true);
   const [spotMyTrades, setSpotMyTrades] = useState([]);
+  /** Skip local state updates when REST poll returns identical rows (less re-render / jank). */
+  const spotMyTradesDataSigRef = useRef("");
   const [tradeHistorySideFilter, setTradeHistorySideFilter] = useState("All");
   const [activePercentage, setActivePercentage] = useState(0);
   const [balance, setBalance] = useState(0);
@@ -1491,78 +1547,6 @@ const Spot = () => {
       dispatch(setRecentTrades(payload.recentTrades));
     }
   }, [dispatch]);
-  const renderTradeHistorySection = () => {
-    if (!filteredMyTrades?.length) {
-      return (
-        <View style={styles.noDataRow}>
-          <FastImage
-            source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-            resizeMode="contain"
-            style={{ width: 80, height: 80 }}
-          />
-        </View>
-      );
-    }
-    return (
-      <>
-        <View style={styles.scrollContent}>
-          {myTradesSlice.slice(0, 5).map((item) => {
-            const mLabel = tradeHistoryMarketLabel(item, effectiveCurrency?.base_currency, effectiveCurrency?.quote_currency);
-            const baseSym = tradeHistoryBaseAsset(item, effectiveCurrency?.base_currency, effectiveCurrency?.quote_currency);
-            const side = String(item?.side || "").toUpperCase();
-            const role = item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—";
-            const sideColor = side === "BUY" ? themeColors.green : themeColors.red;
-            const ts = item?.executed_at || item?.executedAt || item?.created_at;
-            const m = moment(ts);
-            const dateStr = m.isValid() ? m.format("DD/MM/YYYY") : "—";
-            const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
-
-            return (
-              <View
-                key={tradeHistoryKeyExtractor(item)}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 0,
-                  borderBottomWidth: 1,
-                  borderBottomColor: themeColors.themeBorderColor,
-                }}
-              >
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => NavigationService.navigate('Trade_History', { activeTab: 1 })}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-                    <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>{mLabel}</AppText>
-                    <FastImage source={right_ic} style={{ width: 11, height: 11, marginLeft: 4 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
-                  </View>
-                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>{dateStr} {timeStr}</AppText>
-                </TouchableOpacity>
-                <AppText style={{ color: sideColor, fontSize: 13, marginBottom: 12 }} weight={MEDIUM}>
-                  {side} · {role}
-                </AppText>
-
-                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Date</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{dateStr}</AppText></View>
-                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Time</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{timeStr}</AppText></View>
-                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Pair</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{mLabel}</AppText></View>
-                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Side</AppText><AppText style={[styles.kvV, { color: sideColor, fontSize: 11, textAlign: 'right' }]}>{side}</AppText></View>
-                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Role</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{role}</AppText></View>
-                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Price</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{safeToFixed8(item?.price, "—")}</AppText></View>
-                <View style={styles.kvRow}><AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Quantity</AppText><AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: 'right' }]}>{safeToFixed8(item?.quantity, "—")} {baseSym}</AppText></View>
-              </View>
-            );
-          })}
-        </View>
-        {filteredMyTrades?.length > 5 && (
-          <TouchableOpacity
-            style={styles.viewAllButton}
-            onPress={() => NavigationService.navigate('Trade_History', { activeTab: 1 })}
-          >
-            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
-          </TouchableOpacity>
-        )}
-      </>
-    );
-  };
 
   flushSocketToStateRef.current = flushSocketToState;
 
@@ -1604,38 +1588,7 @@ const Spot = () => {
       latestSocketDataRef.current = data;
       if (!isSpotFocusedRef.current || appStateRef.current !== "active") return;
 
-      // PERF: avoid duplicate Redux churn. SocketProvider already dispatches `setCoinData` for exchange:update.
-      // Some backends send `executed_trades` instead of `trade_history` in exchange:update
-      if (data?.trade_history !== undefined || data?.executed_trades !== undefined) {
-        const nextTrades = Array.isArray(data?.trade_history)
-          ? data.trade_history
-          : Array.isArray(data?.executed_trades)
-            ? data.executed_trades
-            : [];
-
-        // Match web TradeHistory fields when backend uses `executed_trades`
-        const normalizedTrades = Array.isArray(data?.trade_history)
-          ? nextTrades
-          : nextTrades.map((t) => ({
-            ...t,
-            quote_quantity: t?.quote_quantity ?? t?.quote,
-            createdAt: t?.createdAt ?? t?.created_at ?? t?.time,
-            executed_at: t?.executed_at ?? t?.time,
-            // web uses fee/tds + assets as-is; role uses is_maker
-          }));
-
-        // Eject perf: throttle + dedupe trade list updates (prevents render storms while switching tabs)
-        const now = Date.now();
-        const len = Array.isArray(normalizedTrades) ? normalizedTrades.length : 0;
-        const firstId = len > 0 ? (normalizedTrades[0]?._id ?? normalizedTrades[0]?.trade_id ?? normalizedTrades[0]?.id ?? "") : "";
-        const lastId = len > 0 ? (normalizedTrades[len - 1]?._id ?? normalizedTrades[len - 1]?.trade_id ?? normalizedTrades[len - 1]?.id ?? "") : "";
-        const sig = `${len}:${firstId}:${lastId}`;
-        if (sig !== tradesUiThrottleRef.current.lastSig || now - tradesUiThrottleRef.current.lastAt > 600) {
-          tradesUiThrottleRef.current.lastSig = sig;
-          tradesUiThrottleRef.current.lastAt = now;
-          setSpotMyTrades(normalizedTrades);
-        }
-      }
+      // Trade History UI is API-only (getTradeHistory → Redux → spotMyTrades). Do not hydrate from socket.
 
       const hasBuyArr = Array.isArray(data?.buy_order);
       const hasSellArr = Array.isArray(data?.sell_order);
@@ -1681,32 +1634,61 @@ const Spot = () => {
     }
   }, [LocalBuyOrders, LocalSellOrders, recentTrades, currency, dispatch]);
 
-  // Fetch history on mount/pair change to match web (which polls/fetches on load)
+  // Web parity: poll only while the mounted tab panel is Order History (2) — matches visible UI after slide animation (avoids Redux updating mid-slide + stale list flash).
   useEffect(() => {
-    if (base_currency && quote_currency && userData) {
-      const pair = `${base_currency}${quote_currency}`.toUpperCase();
-      dispatch(getPastOrders({ page: 1, page_size: 50, pair }));
-      dispatch(getTradeHistory(0, 50, pair));
-    }
-  }, [base_currency, quote_currency, userData, dispatch]);
+    if (!base_currency || !quote_currency || !userData) return undefined;
+    if (!isSpotFocused) return undefined;
+    if (mountedOrdersTab !== 2) return undefined;
+    const pair = `${base_currency}${quote_currency}`.toUpperCase();
+    const tick = () =>
+      dispatch(getPastOrders({ page: 1, page_size: 50, pair }, { useGlobalLoader: false }));
+    tick();
+    const id = setInterval(tick, SPOT_HIST_POLL_MS);
+    return () => clearInterval(id);
+  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused]);
 
-  // Sync wallet trade history to local state
+  // Same for Trade History (3): poll only when that panel is actually mounted (not merely tab highlight mid-animation).
+  useEffect(() => {
+    if (!base_currency || !quote_currency || !userData) return undefined;
+    if (!isSpotFocused) return undefined;
+    if (mountedOrdersTab !== 3) return undefined;
+    const pair = `${base_currency}${quote_currency}`.toUpperCase();
+    const tick = () =>
+      dispatch(
+        getTradeHistory(0, 50, pair, {
+          useGlobalLoader: false,
+          clearBeforeFetch: false,
+        }),
+      );
+    tick();
+    const id = setInterval(tick, SPOT_HIST_POLL_MS);
+    return () => clearInterval(id);
+  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused]);
+
+  // Trade History list: mirror REST-only payload from getTradeHistory (no socket merge).
   const walletTradeHistory = useSelector((state) => state.wallet.tradeHistory);
   useEffect(() => {
-    if (Array.isArray(walletTradeHistory) && walletTradeHistory.length > 0) {
-      setSpotMyTrades((prev) => {
-        const freshIds = new Set(walletTradeHistory.map((r) => String(r._id || r.id || r.trade_id)));
-        const tail = (prev || []).filter((r) => !freshIds.has(String(r._id || r.id || r.trade_id)));
-        const norm = walletTradeHistory.map(t => ({
-          ...t,
-          _id: t._id || t.id || t.trade_id || `trade_${Math.random()}`
-        }));
-        return [...norm, ...tail].slice(0, 100);
-      });
-    }
+    const list = walletTradeHistory == null
+      ? []
+      : (Array.isArray(walletTradeHistory) ? walletTradeHistory : []);
+    const norm = list.map((t, idx) => ({
+      ...t,
+      _id: t._id || t.id || t.trade_id || `trade_row_${idx}`,
+    }));
+    const sig = norm
+      .map(
+        (t) =>
+          `${t._id}:${String(t.executed_at ?? t.executedAt ?? t.created_at ?? "")}:${String(t.price ?? "")}:${String(t.quantity ?? "")}:${String(t.side ?? "")}`,
+      )
+      .join("|");
+    if (sig === spotMyTradesDataSigRef.current) return;
+    spotMyTradesDataSigRef.current = sig;
+    setSpotMyTrades(norm);
   }, [walletTradeHistory]);
 
-
+  useEffect(() => {
+    spotMyTradesDataSigRef.current = "";
+  }, [base_currency, quote_currency]);
 
   const handleAmount = (text) => {
     setPrice(text?.toString());
@@ -2368,15 +2350,21 @@ const Spot = () => {
 
   const filteredPastOrders = useMemo(() => {
     if (!pastOrdersNormalized?.length) return [];
-    const filtered = pastOrderFilter === "All"
-      ? [...pastOrdersNormalized]
-      : pastOrdersNormalized.filter((item) => item?.side === pastOrderFilter);
+    if (pastOrderFilter === "All") return pastOrdersNormalized;
+    const filtered = pastOrdersNormalized.filter((item) => item?.side === pastOrderFilter);
     return filtered.sort((a, b) => {
       const dateA = new Date(a?.created_at || a?.createdAt || a?.updated_at || a?.updatedAt || 0).getTime();
       const dateB = new Date(b?.created_at || b?.createdAt || b?.updated_at || b?.updatedAt || 0).getTime();
       return dateB - dateA;
     });
   }, [pastOrdersNormalized, pastOrderFilter]);
+
+  const pastOrdersForSpotPair = useMemo(() => {
+    if (!base_currency || !quote_currency || !filteredPastOrders?.length) return [];
+    const b = String(base_currency).toUpperCase();
+    const q = String(quote_currency).toUpperCase();
+    return filteredPastOrders.filter((item) => spotPastOrderMatchesScreenPair(item, b, q));
+  }, [filteredPastOrders, base_currency, quote_currency]);
 
   const filteredMyTrades = useMemo(() => {
     if (!spotMyTrades?.length) return [];
@@ -2391,13 +2379,156 @@ const Spot = () => {
     });
   }, [spotMyTrades, tradeHistorySideFilter]);
 
-  const myTradesSlice = useMemo(() => filteredMyTrades, [filteredMyTrades]);
   const tradeHistoryKeyExtractor = useCallback((item, idx) => {
     const id = item?._id ?? item?.trade_id ?? item?.id;
     const t = item?.executed_at ?? item?.executedAt ?? item?.created_at ?? item?.createdAt;
     const p = item?.price ?? item?.rate ?? item?.avg_price;
     return id ? `th_${id}` : `th_${t ?? "na"}_${p ?? "na"}_${idx}`;
   }, []);
+
+  const tradeHistoryPreviewSlice = useMemo(
+    () => filteredMyTrades.slice(0, 5),
+    [filteredMyTrades],
+  );
+
+  const tradeHistorySectionNode = useMemo(() => {
+    if (!filteredMyTrades?.length) {
+      return (
+        <View style={styles.noDataRow}>
+          <FastImage
+            source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+            resizeMode="contain"
+            style={{ width: 80, height: 80 }}
+          />
+        </View>
+      );
+    }
+    const baseHint = effectiveCurrency?.base_currency;
+    const quoteHint = effectiveCurrency?.quote_currency;
+    return (
+      <>
+        <View style={styles.scrollContent}>
+          {tradeHistoryPreviewSlice.map((item, index) => {
+            const mLabel = tradeHistoryMarketLabel(item, baseHint, quoteHint);
+            const baseSym = tradeHistoryBaseAsset(item, baseHint, quoteHint);
+            const side = String(item?.side || "").toUpperCase();
+            const role = item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—";
+            const sideColor = side === "BUY" ? themeColors.green : themeColors.red;
+            const ts = item?.executed_at || item?.executedAt || item?.created_at;
+            const m = moment(ts);
+            const dateStr = m.isValid() ? m.format("DD/MM/YYYY") : "—";
+            const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
+
+            return (
+              <View
+                key={tradeHistoryKeyExtractor(item, index)}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 0,
+                  borderBottomWidth: 1,
+                  borderBottomColor: themeColors.themeBorderColor,
+                }}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => NavigationService.navigate("Trade_History", { activeTab: 1 })}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+                    <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>
+                      {mLabel}
+                    </AppText>
+                    <FastImage
+                      source={right_ic}
+                      style={{ width: 11, height: 11, marginLeft: 4 }}
+                      resizeMode="contain"
+                      tintColor={themeColors.secondaryText}
+                    />
+                  </View>
+                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>
+                    {dateStr} {timeStr}
+                  </AppText>
+                </TouchableOpacity>
+                <AppText style={{ color: sideColor, fontSize: 13, marginBottom: 12 }} weight={MEDIUM}>
+                  {side} · {role}
+                </AppText>
+
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Date</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                    {dateStr}
+                  </AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Time</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                    {timeStr}
+                  </AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Pair</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                    {mLabel}
+                  </AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Side</AppText>
+                  <AppText style={[styles.kvV, { color: sideColor, fontSize: 11, textAlign: "right" }]}>{side}</AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Role</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                    {role}
+                  </AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Price</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                    {safeToFixed8(item?.price, "—")}
+                  </AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Quantity</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                    {safeToFixed8(item?.quantity, "—")} {baseSym}
+                  </AppText>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+        {filteredMyTrades?.length > 5 && (
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => NavigationService.navigate("Trade_History", { activeTab: 1 })}
+          >
+            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+          </TouchableOpacity>
+        )}
+      </>
+    );
+  }, [
+    filteredMyTrades,
+    tradeHistoryPreviewSlice,
+    tradeHistoryKeyExtractor,
+    isDark,
+    themeColors,
+    effectiveCurrency?.base_currency,
+    effectiveCurrency?.quote_currency,
+    styles.scrollContent,
+    styles.kvRow,
+    styles.kvK,
+    styles.kvV,
+    styles.viewAllButton,
+    styles.viewAllText,
+    styles.noDataRow,
+    colors.buttonBg,
+  ]);
+
+  /** Same UI as `tradeHistorySectionNode`; kept for any `{renderTradeHistorySection()}` call sites / bundles. */
+  const renderTradeHistorySection = useCallback(
+    () => tradeHistorySectionNode,
+    [tradeHistorySectionNode],
+  );
 
   // Total: when amount is 0/empty show same default price as Limit field; else amount * price
   const totalDisplayValue = useMemo(() => {
@@ -2410,7 +2541,7 @@ const Spot = () => {
 
   // Stable slice references for FlatList data (avoid new array on every render)
   const openOrdersSlice = useMemo(() => filteredOpenOrders.slice(0, 5), [filteredOpenOrders]);
-  const pastOrdersSlice = useMemo(() => (filteredPastOrders ?? []).slice(0, 5), [filteredPastOrders]);
+  const pastOrdersSlice = useMemo(() => (pastOrdersForSpotPair ?? []).slice(0, 5), [pastOrdersForSpotPair]);
 
   // Estimated height for order cards (variable due to expand) - improves scroll perf when getItemLayout not used
   const ORDER_CARD_ESTIMATED_HEIGHT = 380;
@@ -2477,88 +2608,95 @@ const Spot = () => {
     return themeColors.text;
   }, [themeColors]);
 
-  // Memoized render function for open orders - Card Format (same design as OpenOrder.js screen)
-  const renderOpenOrderItem = useCallback(({ item: inv, index: idx }) => {
+  /** Open orders preview — matches detail header + Date…Price only; pair row → full detail; Cancel unchanged. */
+  const renderOpenOrderItem = useCallback(({ item: inv }) => {
     const currencyPair = buildCurrencyPairText(inv);
-    const baseIconUri = getBaseCoinIconUri(inv);
     const statusRaw = getOrderStatusRaw(inv);
-    const statusLabel = getOrderStatusLabel(inv);
-
     const statusUpper = String(statusRaw || "").toUpperCase().trim();
     const orderId = inv?._id || inv?.id;
-    const canCancel = !!orderId && !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpper);
-
-    const qty = Number(inv?.quantity ?? 0) || 0;
-    const filledQty = Number(inv?.filled ?? 0) || 0;
-    const remainingQty = Number(inv?.remaining ?? 0) || Math.max(0, qty - filledQty);
-
-    const quoteCc =
-      normalizePairSymbol(inv?.pay_currency) ||
-      normalizePairSymbol(inv?.fee_asset) ||
-      normalizePairSymbol(quote_currency);
-    const baseSym = normalizePairSymbol(base_currency) || normalizePairSymbol(currencyPair.split("/")?.[0]);
+    const canCancel =
+      !!orderId &&
+      !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpper);
 
     const priceNum = Number(inv?.price) || 0;
-    const avgNum = Number(inv?.avg_execution_price ?? inv?.avgPrice ?? inv?.average_price ?? inv?.averagePrice) || 0;
+    const typeUpper = String(inv?.order_type || inv?.type || inv?.orderType || "MARKET").toUpperCase();
+    const side = String(inv?.side || "").toUpperCase();
 
-    const fillPercent = (() => {
-      const fp = inv?.fill_percent;
-      if (fp == null || String(fp).trim() === "") {
-        if (qty > 0) return `${Math.round((filledQty / qty) * 100)}%`;
-        return "—";
-      }
-      const s = String(fp).trim();
-      return s.endsWith("%") ? s : `${s}%`;
-    })();
+    const eventTs =
+      inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp;
+    const eventM = eventTs ? moment(eventTs) : null;
+    const dateStr = eventM?.isValid() ? eventM.format("DD/MM/YYYY") : "---";
+    const timeStr = eventM?.isValid() ? eventM.format("HH:mm:ss") : "---";
+    const headerDateTime = eventM?.isValid() ? eventM.format("DD/MM/YYYY HH:mm:ss") : "---";
 
-    const execValue = Number(inv?.executed_value ?? inv?.executedValue ?? 0);
-    const fee = inv?.total_fee ?? inv?.fee;
-    const tds = inv?.total_tds ?? inv?.tds;
+    const rawTif = inv?.time_in_force ?? inv?.tif ?? inv?.timeInForce;
+    const tifStr =
+      rawTif != null && String(rawTif).trim() !== "" ? String(rawTif).trim().toUpperCase() : "—";
+
+    const priceDisplay =
+      String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(priceNum);
 
     const textColor = themeColors.text;
     const labelColor = themeColors.secondaryText;
 
     return (
-      <View
-        style={[styles.openOrderCard, { backgroundColor: themeColors.background }]}
-      >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { order: inv })}
-        >
+      <View style={[styles.openOrderCard, { backgroundColor: themeColors.background }]}>
+        <View>
           <View style={styles.openOrderTopRow}>
-            <View style={styles.pairRow}>
-              {baseIconUri ? (
+            <View style={{ flex: 1 }}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
+                style={{ flexDirection: "row", alignItems: "center" }}
+              >
+                <AppText style={[styles.openOrderCardTitle, { color: textColor, fontSize: 14 }]} weight={MEDIUM}>
+                  {currencyPair}
+                </AppText>
                 <FastImage
-                  source={{ uri: baseIconUri }}
-                  style={styles.coinIconSmall}
+                  source={right_ic}
+                  style={{ width: 12, height: 12 }}
                   resizeMode="contain"
+                  tintColor={labelColor}
                 />
-              ) : null}
-              <AppText style={[styles.openOrderCardTitle, { color: textColor }]}>{currencyPair}</AppText>
+              </TouchableOpacity>
+              <AppText style={{ color: labelColor, fontSize: 11, marginTop: 4 }}>{headerDateTime}</AppText>
+              <AppText style={{ color: getSideColor(inv?.side), fontSize: 12, marginTop: 4 }} weight={MEDIUM}>
+                {side} · {typeUpper}
+              </AppText>
             </View>
           </View>
 
-          {/* Web-like mobile list */}
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Date</AppText><AppText style={[styles.kvV, { color: textColor }]}>{moment(inv?.updatedAt || inv?.createdAt).isValid() ? moment(inv?.updatedAt || inv?.createdAt).format("DD/MM/YYYY") : "---"}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Time</AppText><AppText style={[styles.kvV, { color: textColor }]}>{moment(inv?.updatedAt || inv?.createdAt).isValid() ? moment(inv?.updatedAt || inv?.createdAt).format("HH:mm:ss") : "---"}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Market</AppText><AppText style={[styles.kvV, { color: textColor }]}>{currencyPair}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Side</AppText><AppText style={[styles.kvV, { color: getSideColor(inv?.side) }]}>{String(inv?.side || "---").toUpperCase()}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Type</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.order_type === "LIMIT" ? "Limit" : "Market"}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>TIF</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.tif || "—"}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Price</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.order_type === "LIMIT" ? toFixedEight(priceNum) : "Market"}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Avg</AppText><AppText style={[styles.kvV, { color: textColor }]}>{avgNum ? toFixedEight(avgNum) : "—"}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Quantity</AppText><AppText style={[styles.kvV, { color: textColor }]}>{toFixedEight(qty)} {baseSym || ""}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Filled</AppText><AppText style={[styles.kvV, { color: textColor }]}>{toFixedEight(filledQty)} {baseSym || ""}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Remaining</AppText><AppText style={[styles.kvV, { color: textColor }]}>{toFixedEight(remainingQty)} {baseSym || ""}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Fill %</AppText><AppText style={[styles.kvV, { color: textColor }]}>{fillPercent}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Value</AppText><AppText style={[styles.kvV, { color: textColor }]}>{Number.isFinite(execValue) ? toFixedEight(execValue) : "—"}{quoteCc ? ` ${quoteCc}` : ""}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Fee</AppText><AppText style={[styles.kvV, { color: textColor }]}>{fee != null ? toFixedEight(fee) : "0"}{quoteCc ? ` ${quoteCc}` : ""}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>TDS</AppText><AppText style={[styles.kvV, { color: textColor }]}>{tds != null ? toFixedEight(tds) : "0"}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Status</AppText><AppText style={[styles.kvV, { color: getStatusColor(statusRaw) }]}>{statusLabel}</AppText></View>
-        </TouchableOpacity>
+          <View style={styles.kvRow}>
+            <AppText style={[styles.kvK, { color: labelColor }]}>Date</AppText>
+            <AppText style={[styles.kvV, { color: textColor }]}>{dateStr}</AppText>
+          </View>
+          <View style={styles.kvRow}>
+            <AppText style={[styles.kvK, { color: labelColor }]}>Time</AppText>
+            <AppText style={[styles.kvV, { color: textColor }]}>{timeStr}</AppText>
+          </View>
+          <View style={styles.kvRow}>
+            <AppText style={[styles.kvK, { color: labelColor }]}>Market</AppText>
+            <AppText style={[styles.kvV, { color: textColor }]}>{currencyPair}</AppText>
+          </View>
+          <View style={styles.kvRow}>
+            <AppText style={[styles.kvK, { color: labelColor }]}>Side</AppText>
+            <AppText style={[styles.kvV, { color: getSideColor(inv?.side) }]}>{side || "—"}</AppText>
+          </View>
+          <View style={styles.kvRow}>
+            <AppText style={[styles.kvK, { color: labelColor }]}>Type</AppText>
+            <AppText style={[styles.kvV, { color: textColor }]}>{typeUpper}</AppText>
+          </View>
+          <View style={styles.kvRow}>
+            <AppText style={[styles.kvK, { color: labelColor }]}>TIF</AppText>
+            <AppText style={[styles.kvV, { color: textColor }]}>{tifStr}</AppText>
+          </View>
+          <View style={styles.kvRow}>
+            <AppText style={[styles.kvK, { color: labelColor }]}>Price</AppText>
+            <AppText style={[styles.kvV, { color: textColor }]}>{priceDisplay}</AppText>
+          </View>
+        </View>
 
-        {canCancel && (
+        {canCancel ? (
           <View style={[styles.openOrderCardRow, { marginTop: 8 }]}>
             <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Action:</AppText>
             <TouchableOpacity
@@ -2571,12 +2709,12 @@ const Spot = () => {
               <AppText style={{ color: themeColors.red, fontWeight: "600", fontSize: 13 }}>Cancel</AppText>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
 
         <View style={[styles.openOrderCardDivider, { backgroundColor: themeColors.themeBorderColor }]} />
       </View>
     );
-  }, [themeColors, getStatusColor, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusLabel, getOrderStatusRaw, normalizePairSymbol, quote_currency, base_currency, getSideColor]);
+  }, [themeColors, buildCurrencyPairText, getOrderStatusRaw, getSideColor]);
 
   // Memoized render function for past orders - same card UI as Open Orders; tap → SPOT_ORDER_HISTORY_DETAIL with full order data
   const renderPastOrderItem = useCallback(({ item: inv, index: idx }) => {
@@ -2619,7 +2757,7 @@ const Spot = () => {
             <View style={{ flex: 1 }}>
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() => navigation.navigate("SPOT_ORDER_HISTORY_DETAIL", { item: inv })}
+                onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
                 style={{ flexDirection: "row", alignItems: "center" }}
               >
                 <AppText style={[styles.openOrderCardTitle, { color: textColor, fontSize: 14, }]} weight={MEDIUM}>{currencyPair}</AppText>
@@ -2733,6 +2871,8 @@ const Spot = () => {
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
         contentContainerStyle={[
           styles.container,
           { backgroundColor: themeColors.background },
@@ -3331,19 +3471,27 @@ const Spot = () => {
             }}
           >
             <ScrollView
+              ref={ordersBottomTabScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ flexDirection: "row", alignItems: "center", gap: 8, paddingRight: 8 }}
               style={{ flex: 1 }}
+              onLayout={(e) => {
+                ordersBottomTabBarWidthRef.current = e.nativeEvent.layout.width;
+              }}
             >
               {[
-                { id: 1, label: "Open Orders", count: openOrders?.length },
+                { id: 1, label: "Open Orders" },
                 { id: 2, label: "Order History" },
                 { id: 3, label: "Trade History" },
               ].map((t) => (
                 <TouchableOpacity
                   key={t.id}
                   activeOpacity={0.8}
+                  onLayout={(e) => {
+                    const { x, width } = e.nativeEvent.layout;
+                    ordersBottomTabItemLayoutRef.current[t.id] = { x, width };
+                  }}
                   onPress={() => handleSpotOrdersPrimaryTab(t.id)}
                   style={{ alignItems: "center", minHeight: 28, justifyContent: "center", paddingHorizontal: 2 }}
                 >
@@ -3373,388 +3521,10 @@ const Spot = () => {
           </View>
         )}
 
-        {/* Tab content: same three sections as web TradeHistorySection; one panel mounted so height isn’t driven by the tallest tab */}
+        {/* Bottom tabs: ek hi panel — Order History / Trade History data web jaisi APIs se (`me/orders/history`, `me/trades`). */}
         {(historyOnly || orderBookReady) && (
           <View style={styles.ordersTabContentWrapper}>
-            {/* Slide-in animation on tab press (renders 2 panels only during animation). */}
-            {ordersSlidePair ? (
-              <View style={{ width: Width, overflow: "hidden" }}>
-                <Animated.View
-                  style={{
-                    flexDirection: "row",
-                    width: Width * 2,
-                    transform: [
-                      {
-                        translateX: ordersSlideX,
-                      },
-                    ],
-                  }}
-                >
-                  <View style={{ width: Width }}>
-                    {ordersSlidePair.from === 1 ? (
-                      <View style={styles.ordersTabPanel}>
-                        <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
-                          <ScrollView
-                            horizontal
-                            showsVerticalScrollIndicator={false}
-                            showsHorizontalScrollIndicator={false}
-                            nestedScrollEnabled
-                            keyboardShouldPersistTaps="handled"
-                            contentContainerStyle={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 6,
-                              paddingVertical: 2,
-                              paddingRight: 14,
-                            }}
-                          >
-                            {SPOT_OPEN_ORDER_KINDS.map((k) => {
-                              const active = openOrderKindTab === k.id;
-                              return (
-                                <TouchableOpacity
-                                  key={k.id}
-                                  activeOpacity={0.85}
-                                  onPress={() => setOpenOrderKindTab(k.id)}
-                                  style={{
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 4,
-                                    borderRadius: 6,
-                                    borderWidth: active ? 1 : 0,
-                                    borderColor: active ? themeColors.themeBorderColor : "transparent",
-                                    backgroundColor: active ? themeColors.input : "transparent",
-                                  }}
-                                >
-                                  <AppText
-                                    style={{
-                                      fontSize: 11,
-                                      color: active ? themeColors.text : themeColors.secondaryText,
-                                      fontWeight: active ? "600" : "500",
-                                    }}
-                                  >
-                                    {k.label}
-                                  </AppText>
-                                </TouchableOpacity>
-                              );
-                            })}
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2 }}>
-                              <View style={{ width: 102 }}>
-                                <CustomDropdown
-                                  compact
-                                  data={SPOT_SIDE_DROPDOWN_LABELS}
-                                  selected={spotDropdownLabelFromSideFilter(orderFilter)}
-                                  onSelect={(label) => setOrderFilter(spotSideFilterFromDropdownLabel(label))}
-                                />
-                              </View>
-                              <TouchableOpacity
-                                onPress={() => {
-                                  setOpenOrderKindTab("all");
-                                  setOrderFilter("All");
-                                }}
-                                style={{
-                                  flexDirection: "row",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  paddingVertical: 4,
-                                  paddingLeft: 4,
-                                  marginLeft: 2,
-                                }}
-                              >
-                                <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                                <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
-                              </TouchableOpacity>
-                            </View>
-                          </ScrollView>
-                        </View>
-
-                        {filteredOpenOrders?.length > 0 ? (
-                          <>
-                            <View style={styles.scrollContent}>
-                              {openOrdersSlice.map((item, index) => (
-                                <View key={openOrderKeyExtractor(item)}>
-                                  {renderOpenOrderItem({ item, index })}
-                                </View>
-                              ))}
-                            </View>
-                            {filteredOpenOrders?.length > 5 && (
-                              <TouchableOpacity
-                                style={styles.viewAllButton}
-                                onPress={() => NavigationService.navigate('Open_Order')}
-                              >
-                                <AppText
-                                  style={[
-                                    styles.viewAllText,
-                                    { color: colors.buttonBg },
-                                  ]}
-                                >
-                                  View More
-                                </AppText>
-                              </TouchableOpacity>
-                            )}
-                          </>
-                        ) : (
-                          <View style={styles.noDataRow}>
-                            <FastImage
-                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                              resizeMode="contain"
-                              style={{ width: 80, height: 80 }}
-                            />
-                          </View>
-                        )}
-                      </View>
-                    ) : ordersSlidePair.from === 2 ? (
-                      <View style={styles.ordersTabPanel}>
-                        {pastOrders?.length > 0 ? (
-                          <>
-                            <View style={styles.scrollContent}>
-                              {(pastOrdersSlice ?? []).map((item, index) => (
-                                <View key={pastOrderKeyExtractor(item)}>
-                                  {renderPastOrderItem({ item, index })}
-                                </View>
-                              ))}
-                            </View>
-                            {filteredPastOrders?.length > 5 && (
-                              <TouchableOpacity
-                                style={styles.viewAllButton}
-                                onPress={() => NavigationService.navigate('Trade_History', { activeTab: 0 })}
-                              >
-                                <AppText
-                                  style={[
-                                    styles.viewAllText,
-                                    { color: colors.buttonBg },
-                                  ]}
-                                >
-                                  View More
-                                </AppText>
-                              </TouchableOpacity>
-                            )}
-                          </>
-                        ) : (
-                          <View style={styles.noDataRow}>
-                            <FastImage
-                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                              resizeMode="contain"
-                              style={{ width: 80, height: 80 }}
-                            />
-                          </View>
-                        )}
-                      </View>
-                    ) : (
-                      <View style={styles.ordersTabPanel}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "flex-start",
-                            gap: 6,
-                            marginBottom: 4,
-                            paddingLeft: 2,
-                            paddingRight: 14,
-                          }}
-                        >
-                          <View style={{ width: 102 }}>
-                            <CustomDropdown
-                              compact
-                              data={SPOT_SIDE_DROPDOWN_LABELS}
-                              selected={spotDropdownLabelFromSideFilter(tradeHistorySideFilter)}
-                              onSelect={(label) => setTradeHistorySideFilter(spotSideFilterFromDropdownLabel(label))}
-                            />
-                          </View>
-                          <TouchableOpacity
-                            onPress={() => setTradeHistorySideFilter("All")}
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 4,
-                              paddingVertical: 4,
-                              paddingLeft: 4,
-                            }}
-                          >
-                            <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
-                          </TouchableOpacity>
-                        </View>
-                        {renderTradeHistorySection()}
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={{ width: Width }}>
-                    {ordersSlidePair.to === 1 ? (
-                      <View style={styles.ordersTabPanel}>
-                        <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
-                          <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            nestedScrollEnabled
-                            keyboardShouldPersistTaps="handled"
-                            contentContainerStyle={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 6,
-                              paddingVertical: 2,
-                              paddingRight: 14,
-                            }}
-                          >
-                            {SPOT_OPEN_ORDER_KINDS.map((k) => {
-                              const active = openOrderKindTab === k.id;
-                              return (
-                                <TouchableOpacity
-                                  key={k.id}
-                                  activeOpacity={0.85}
-                                  onPress={() => setOpenOrderKindTab(k.id)}
-                                  style={{
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 4,
-                                    borderRadius: 6,
-                                    borderWidth: active ? 1 : 0,
-                                    borderColor: active ? themeColors.themeBorderColor : "transparent",
-                                    backgroundColor: active ? themeColors.input : "transparent",
-                                  }}
-                                >
-                                  <AppText
-                                    style={{
-                                      fontSize: 11,
-                                      color: active ? themeColors.text : themeColors.secondaryText,
-                                      fontWeight: active ? "600" : "500",
-                                    }}
-                                  >
-                                    {k.label}
-                                  </AppText>
-                                </TouchableOpacity>
-                              );
-                            })}
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2 }}>
-                              <View style={{ width: 102 }}>
-                                <CustomDropdown
-                                  compact
-                                  data={SPOT_SIDE_DROPDOWN_LABELS}
-                                  selected={spotDropdownLabelFromSideFilter(orderFilter)}
-                                  onSelect={(label) => setOrderFilter(spotSideFilterFromDropdownLabel(label))}
-                                />
-                              </View>
-                              <TouchableOpacity
-                                onPress={() => {
-                                  setOpenOrderKindTab("all");
-                                  setOrderFilter("All");
-                                }}
-                                style={{
-                                  flexDirection: "row",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  paddingVertical: 4,
-                                  paddingLeft: 4,
-                                  marginLeft: 2,
-                                }}
-                              >
-                                <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                                <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
-                              </TouchableOpacity>
-                            </View>
-                          </ScrollView>
-                        </View>
-
-                        {filteredOpenOrders?.length > 0 ? (
-                          <>
-                            <View style={styles.scrollContent}>
-                              {openOrdersSlice.map((item, index) => (
-                                <View key={openOrderKeyExtractor(item)}>
-                                  {renderOpenOrderItem({ item, index })}
-                                </View>
-                              ))}
-                            </View>
-                            {filteredOpenOrders?.length > 5 && (
-                              <TouchableOpacity
-                                style={styles.viewAllButton}
-                                onPress={() => NavigationService.navigate('Open_Order')}
-                              >
-                                <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
-                              </TouchableOpacity>
-                            )}
-                          </>
-                        ) : (
-                          <View style={styles.noDataRow}>
-                            <FastImage
-                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                              resizeMode="contain"
-                              style={{ width: 80, height: 80 }}
-                            />
-                          </View>
-                        )}
-                      </View>
-                    ) : ordersSlidePair.to === 2 ? (
-                      <View style={styles.ordersTabPanel}>
-                        {pastOrders?.length > 0 ? (
-                          <>
-                            <View style={styles.scrollContent}>
-                              {(pastOrdersSlice ?? []).map((item, index) => (
-                                <View key={pastOrderKeyExtractor(item)}>
-                                  {renderPastOrderItem({ item, index })}
-                                </View>
-                              ))}
-                            </View>
-                            {filteredPastOrders?.length > 5 && (
-                              <TouchableOpacity
-                                style={styles.viewAllButton}
-                                onPress={() => NavigationService.navigate('Trade_History', { activeTab: 0 })}
-                              >
-                                <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
-                              </TouchableOpacity>
-                            )}
-                          </>
-                        ) : (
-                          <View style={styles.noDataRow}>
-                            <FastImage
-                              source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                              resizeMode="contain"
-                              style={{ width: 80, height: 80 }}
-                            />
-                          </View>
-                        )}
-                      </View>
-                    ) : (
-                      <View style={styles.ordersTabPanel}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "flex-end",
-                            gap: 6,
-                            marginBottom: 4,
-                            paddingLeft: 2,
-                            paddingRight: 14,
-                          }}
-                        >
-                          <View style={{ width: 102 }}>
-                            <CustomDropdown
-                              compact
-                              data={SPOT_SIDE_DROPDOWN_LABELS}
-                              selected={spotDropdownLabelFromSideFilter(tradeHistorySideFilter)}
-                              onSelect={(label) => setTradeHistorySideFilter(spotSideFilterFromDropdownLabel(label))}
-                            />
-                          </View>
-                          <TouchableOpacity
-                            onPress={() => setTradeHistorySideFilter("All")}
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 4,
-                              paddingVertical: 4,
-                              paddingLeft: 4,
-                            }}
-                          >
-                            <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
-                          </TouchableOpacity>
-                        </View>
-                        {renderTradeHistorySection()}
-                      </View>
-                    )}
-                  </View>
-                </Animated.View>
-              </View>
-            ) : (
               <>
-                {/* Single panel mounted — height follows active tab only (not max of all tabs). */}
                 {mountedOrdersTab === 1 ? (
                   <View style={styles.ordersTabPanel}>
                     {/* existing Open Orders panel */}
@@ -3842,9 +3612,9 @@ const Spot = () => {
                         {filteredOpenOrders?.length > 5 && (
                           <TouchableOpacity
                             style={styles.viewAllButton}
-                            onPress={() => NavigationService.navigate('Open_Order')}
+                            onPress={() => NavigationService.navigate(OPEN_ORDER_SCREEN)}
                           >
-                            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View All</AppText>
                           </TouchableOpacity>
                         )}
                       </>
@@ -3862,7 +3632,7 @@ const Spot = () => {
 
                 {mountedOrdersTab === 2 ? (
                   <View style={styles.ordersTabPanel}>
-                    {pastOrders?.length > 0 ? (
+                    {pastOrdersForSpotPair?.length > 0 ? (
                       <>
                         <View style={styles.scrollContent}>
                           {(pastOrdersSlice ?? []).map((item, index) => (
@@ -3871,7 +3641,7 @@ const Spot = () => {
                             </View>
                           ))}
                         </View>
-                        {filteredPastOrders?.length > 5 && (
+                        {pastOrdersForSpotPair?.length > 5 && (
                           <TouchableOpacityView
                             style={styles.viewAllButton}
                             onPress={() => NavigationService.navigate('Trade_History')}
@@ -3931,7 +3701,6 @@ const Spot = () => {
                   </View>
                 ) : null}
               </>
-            )}
           </View>
         )}
         {/* Sweet Alert Style Modal */}

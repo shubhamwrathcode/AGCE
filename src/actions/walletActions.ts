@@ -283,22 +283,56 @@ export const getqbsHistory = (skip: any, limit: any) => async (dispatch: AppDisp
   }
 };
 
-export const getTradeHistory = (skip: any, limit: any, pair?: string) => async (dispatch: AppDispatch) => {
-  try {
-    if (skip === 0) dispatch(clearTradeHistory());
-    dispatch(setLoading(true));
-    const response: any = await appOperation.customer.get_trade_history(skip, limit, pair);
-    // console.log(response, "getTradeHistory");
-    if (response.success) {
-      dispatch(setTradeHistory(response?.data));
+/** Normalize fills list — matches web `spotMeActivityItemsFromResponse`. */
+function spotTradeHistoryItemsFromResponse(res: any): any[] {
+  if (!res || typeof res !== 'object') return [];
+  const d = res.data;
+  if (Array.isArray(d?.items)) return d.items;
+  if (Array.isArray(res.items)) return res.items;
+  if (Array.isArray(d)) return d;
+  if (Array.isArray(d?.data)) return d.data;
+  if (Array.isArray(d?.records)) return d.records;
+  return [];
+}
+
+/**
+ * User trade fills — uses web parity endpoint `GET /spot/v1/me/trades` (page/page_size/pair).
+ * Spot passes `pair`; History screen omits `pair` for all markets.
+ */
+export const getTradeHistory =
+  (
+    skip: any,
+    limit: any,
+    pair?: string,
+    options?: { useGlobalLoader?: boolean; clearBeforeFetch?: boolean },
+  ) => async (dispatch: AppDispatch) => {
+    const useLoader = options?.useGlobalLoader !== false;
+    const shouldClear =
+      Number(skip) === 0 && options?.clearBeforeFetch !== false;
+    try {
+      if (shouldClear) dispatch(clearTradeHistory());
+      if (useLoader) dispatch(setLoading(true));
+      const lim = Math.min(100, Math.max(1, Number(limit) || 20));
+      const pg = Math.floor(Number(skip) / lim) + 1 || 1;
+      const params: {page: number; page_size: number; pair?: string} = {
+        page: pg,
+        page_size: lim,
+      };
+      const p = pair != null ? String(pair).trim() : '';
+      if (p !== '') {
+        params.pair = p.toUpperCase().replace(/\//g, '');
+      }
+      const response: any = await appOperation.customer.spot_me_trades(params);
+      if (response.success) {
+        const items = spotTradeHistoryItemsFromResponse(response);
+        dispatch(setTradeHistory(items));
+      }
+    } catch (e) {
+      logger(e);
+    } finally {
+      if (useLoader) dispatch(setLoading(false));
     }
-  } catch (e) {
-    logger(e);
-  } finally {
-    
-    dispatch(setLoading(false));
-  }
-};
+  };
 
 export const getInteralWalletHistory = (skip: any, limit: any) => async (dispatch: AppDispatch) => {
   try {
@@ -693,16 +727,35 @@ export const getWalletHistory = (skip: any, limit: any) => async (dispatch: AppD
   }
 };
 
+/** Normalize list from GET spot/v1/me/orders/open (and legacy shapes). */
+function spotMeOpenOrdersItemsFromResponse(response: any): any[] {
+  const d = response?.data;
+  if (Array.isArray(d?.items)) return d.items;
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(d)) return d;
+  return [];
+}
+
 export const getOpenOrders = (skip: any, limit: any) => async (dispatch: AppDispatch) => {
   try {
     if (skip === 0) dispatch(clearOpenOrders());
     dispatch(setLoading(true));
-    const response: any = await appOperation.customer.all_open_orders(skip, limit);
+    const lim = Number(limit) > 0 ? Number(limit) : 10;
+    const sk = Number(skip) >= 0 ? Number(skip) : 0;
+    const page = Math.floor(sk / lim) + 1;
+    const response: any = await appOperation.customer.spot_me_orders_open({
+      page,
+      page_size: lim,
+    });
+    const items = spotMeOpenOrdersItemsFromResponse(response);
     if (response.success) {
-      dispatch(setOpenOrders(response?.data));
+      dispatch(setOpenOrders(items));
+    } else {
+      dispatch(setOpenOrders([]));
     }
   } catch (e) {
     logger(e);
+    dispatch(setOpenOrders([]));
   } finally {
     dispatch(setLoading(false));
   }

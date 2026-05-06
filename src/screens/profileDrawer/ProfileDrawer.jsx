@@ -104,6 +104,7 @@ import {
   kyc_Details,
   KYC_STATUS_SCREEN,
   MARKET_SCREEN,
+  OPEN_ORDER_SCREEN,
   NOTIFICATION_SCREEN,
   PAYMENT_OPTIONS_SCREEN,
   SECURITY,
@@ -209,7 +210,7 @@ const getHistoryData = (theme) => [
     id: "1",
     title: "Open Orders",
     icon: theme == "Dark" ? orderIcon : orderIconLight,
-    onPress: () => NavigationService.navigate("Open_Order"),
+    onPress: () => NavigationService.navigate(OPEN_ORDER_SCREEN),
   },
 
   {

@@ -99,6 +99,8 @@ export const BUY_CRYPTO: string = 'buyCrypto';
 export const ORDER_CREATED: string = 'ORDER_CREATED';
 export const TRADE: string = 'TRADE';
 export const ORDER_HISTORY = "ORDER_HISTORY";
+/** Full list of spot open orders (`OpenOrder.js`). */
+export const OPEN_ORDER_SCREEN = "Open_Order";
 export const SPOT_ORDER_HISTORY_DETAIL = "SPOT_ORDER_HISTORY_DETAIL";
 export const FUTURE_ORDER_HISTORY = "FUTURE_ORDER_HISTORY";
 export const PROJECT_COMMIT = 'PROJECT_COMMIT';

@@ -133,6 +133,9 @@ export function spotOpenOrderMarketLabel(item: any, selectedBase?: string, selec
   const compact = rawPair != null ? String(rawPair).trim().toUpperCase() : "";
   
   if (compact && compact !== "---") {
+    if (compact.includes("/")) {
+      return compact;
+    }
     for (const q of SPOT_PAIR_QUOTES) {
       if (compact.endsWith(q) && compact.length > q.length) {
         return `${compact.slice(0, -q.length)}/${q}`;
@@ -140,9 +143,22 @@ export function spotOpenOrderMarketLabel(item: any, selectedBase?: string, selec
     }
     return compact;
   }
-  const ask = item?.ask_currency || item?.base_currency || item?.base_asset || selectedBase || "---";
-  const pay = item?.pay_currency || item?.quote_currency || item?.quote_asset || selectedQuote || "---";
-  return item?.side === "SELL" ? `${pay}/${ask}` : `${ask}/${pay}`;
+  const ask =
+    item?.ask_currency ||
+    item?.base_currency ||
+    item?.base_currency_short_name ||
+    item?.base_asset ||
+    selectedBase ||
+    "---";
+  const pay =
+    item?.pay_currency ||
+    item?.quote_currency ||
+    item?.quote_currency_short_name ||
+    item?.quote_asset ||
+    selectedQuote ||
+    "---";
+  const sideUp = String(item?.side ?? "").toUpperCase();
+  return sideUp === "SELL" ? `${pay}/${ask}` : `${ask}/${pay}`;
 }
 
 export function tradeHistoryBaseAsset(item: any, selectedBase?: string, selectedQuote?: string) {

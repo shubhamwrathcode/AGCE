@@ -397,7 +397,7 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.AIRDROP_SCREEN} component={AirDropScreen} />
       <Stack.Screen name={'Trade_History'} component={TradeHistory} />
       <Stack.Screen name={'Interanl_Trade_History'} component={InternalWalletHistory} />
-      <Stack.Screen name={'Open_Order'} component={OpenOrder} />
+      <Stack.Screen name={routes.OPEN_ORDER_SCREEN} component={OpenOrder} />
       <Stack.Screen name={'Wallet_History'} component={NewWalletHistory} />
       <Stack.Screen name={'Swap_History'} component={NewSwapHistory} />
       <Stack.Screen name={'Admin_Trade'} component={AdminTradeHistory} />
