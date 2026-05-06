@@ -346,7 +346,8 @@ const OrderBookSellRow = memo(({ item, maxVolume, onPress, formatPrice, formatQu
   const handlePress = useCallback(() => { onPress(item?.price, item?.remaining); }, [onPress, item?.price, item?.remaining]);
 
   // Depth bar color (web-like). Use low opacity so text stays readable.
-  const depthRed = isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)";
+  // Slightly stronger than web so it's visible on mobile screens.
+  const depthRed = isDark ? "rgba(232, 97, 97, 0.32)" : "rgba(255, 77, 79, 0.22)";
 
   return (
     <TouchableOpacity onPress={handlePress}>
@@ -358,7 +359,7 @@ const OrderBookSellRow = memo(({ item, maxVolume, onPress, formatPrice, formatQu
             top: 0,
             bottom: 0,
             right: 0,
-            width: `${Math.round(ratio * 100)}%`,
+            width: `${ratio > 0 ? Math.max(2, ratio * 100) : 0}%`,
             backgroundColor: depthRed,
           }}
         />
@@ -383,7 +384,7 @@ const OrderBookBuyRow = memo(({ item, maxVolume, onPress, formatPrice, formatQua
   const ratio = clamp01OB(remaining / denom);
   const handlePress = useCallback(() => { onPress(item?.price, item?.remaining); }, [onPress, item?.price, item?.remaining]);
 
-  const depthGreen = isDark ? "rgba(0, 192, 118, 0.16)" : "rgba(0, 192, 118, 0.12)";
+  const depthGreen = isDark ? "rgba(0, 192, 118, 0.28)" : "rgba(0, 192, 118, 0.18)";
 
   return (
     <TouchableOpacity onPress={handlePress}>
@@ -395,7 +396,7 @@ const OrderBookBuyRow = memo(({ item, maxVolume, onPress, formatPrice, formatQua
             top: 0,
             bottom: 0,
             left: 0,
-            width: `${Math.round(ratio * 100)}%`,
+            width: `${ratio > 0 ? Math.max(2, ratio * 100) : 0}%`,
             backgroundColor: depthGreen,
           }}
         />
@@ -783,11 +784,20 @@ const OrderBookSection = memo(({
   );
 
   const maxBuyVolume = useMemo(
-    () => Math.max(1, ...bidsAggregated.map((o) => toFiniteOB(o?.remaining)).filter(Number.isFinite)),
+    () => {
+      // Match web/mobile perception: scale depth by *visible* rows, so one huge order deep in book
+      // doesn't make all shown bars look tiny.
+      const vis = bidsAggregated.slice(0, ORDER_BOOK_VISIBLE_ROWS);
+      // Do not force >= 1 (many pairs have < 1 quantities). Denom fallback handled in row component.
+      return Math.max(0, ...vis.map((o) => toFiniteOB(o?.remaining)).filter(Number.isFinite));
+    },
     [bidsAggregated]
   );
   const maxSellVolume = useMemo(
-    () => Math.max(1, ...asksAggregated.map((o) => toFiniteOB(o?.remaining)).filter(Number.isFinite)),
+    () => {
+      const vis = asksAggregated.slice(0, ORDER_BOOK_VISIBLE_ROWS);
+      return Math.max(0, ...vis.map((o) => toFiniteOB(o?.remaining)).filter(Number.isFinite));
+    },
     [asksAggregated]
   );
 

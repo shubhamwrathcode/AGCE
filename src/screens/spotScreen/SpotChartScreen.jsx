@@ -22,7 +22,7 @@ import { useRoute, useNavigation, useFocusEffect, useIsFocused } from "@react-na
 import moment from "moment";
 import { useDispatch } from "react-redux";
 import { useTheme } from "../../hooks/useTheme";
-import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD } from "../../shared";
+import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD, THIRTEEN, MEDIUM } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
   back_ic,
@@ -31,6 +31,7 @@ import {
   Refresh,
   starIcon,
   starFillIcon,
+  right_ic,
   notification_bell_ic,
   bell_ic,
   margin,
@@ -41,6 +42,7 @@ import {
   bots_ic,
   buyImage,
   selImage,
+  arrowRightIcon,
 } from "../../helper/ImageAssets";
 import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
@@ -66,6 +68,7 @@ const TAB_SCROLL_BAR_CLEARANCE = 72;
 
 /** Pager + chip labels (stable reference for scroll sync callbacks). */
 const CHART_BOTTOM_TABS = ["Order Book", "Market Trades", "Assets"];
+const TOP_TABS = ["Chart", "Info"];
 
 const CHART_BOTTOM_TAB_ICON = {
   "Order Book": "book-outline",
@@ -316,14 +319,15 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const orderBookRemaining = (row) =>
   toFinite(row?.remaining ?? row?.quantity ?? row?.qty ?? row?.amount ?? 0);
 
-const DepthRow = React.memo(({ bid, ask, maxBidVol, maxAskVol, themeColors, isDark, formatPrice, formatQty }) => {
+const DepthRow = React.memo(({ bid, ask, bidFillPct, askFillPct, themeColors, isDark, formatPrice, formatQty }) => {
   // Depth bar colors (web-like). Keep low opacity so text stays readable.
-  const depthGreen = isDark ? "rgba(0, 192, 118, 0.16)" : "rgba(0, 192, 118, 0.12)";
-  const depthRed = isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)";
+  // Slightly stronger than web so it's visible on mobile screens.
+  const depthGreen = isDark ? "rgba(0, 192, 118, 0.28)" : "rgba(0, 192, 118, 0.18)";
+  const depthRed = isDark ? "rgba(232, 97, 97, 0.32)" : "rgba(255, 77, 79, 0.22)";
   const bidRem = bid ? orderBookRemaining(bid) : 0;
   const askRem = ask ? orderBookRemaining(ask) : 0;
-  const br = maxBidVol > 0 ? clamp01(bidRem / maxBidVol) : 0;
-  const ar = maxAskVol > 0 ? clamp01(askRem / maxAskVol) : 0;
+  const br = clamp01(Number(bidFillPct ?? 0) / 100);
+  const ar = clamp01(Number(askFillPct ?? 0) / 100);
 
   return (
     <View style={styles.depthRow}>
@@ -340,7 +344,7 @@ const DepthRow = React.memo(({ bid, ask, maxBidVol, maxAskVol, themeColors, isDa
                 top: 0,
                 bottom: 0,
                 left: 0,
-                width: `${Math.round(br * 100)}%`,
+                width: `${br > 0 ? Math.max(2, br * 100) : 0}%`,
                 backgroundColor: depthGreen,
               }}
             />
@@ -361,7 +365,7 @@ const DepthRow = React.memo(({ bid, ask, maxBidVol, maxAskVol, themeColors, isDa
                 top: 0,
                 bottom: 0,
                 right: 0,
-                width: `${Math.round(ar * 100)}%`,
+                width: `${ar > 0 ? Math.max(2, ar * 100) : 0}%`,
                 backgroundColor: depthRed,
               }}
             />
@@ -377,6 +381,48 @@ const DepthRow = React.memo(({ bid, ask, maxBidVol, maxAskVol, themeColors, isDa
     </View>
   );
 });
+
+// Web/Binance-like order book row (Price | Amount | Total) with depth behind the Total column.
+const WebObRow = React.memo(
+  ({ side, price, total, amount, fillPct, themeColors, isDark, formatPrice, formatQty, formatTotal }) => {
+    const depthGreen = isDark ? "rgba(0, 192, 118, 0.22)" : "rgba(0, 192, 118, 0.14)";
+    const depthRed = isDark ? "rgba(232, 97, 97, 0.24)" : "rgba(255, 77, 79, 0.16)";
+    const pct = clamp01(Number(fillPct ?? 0) / 100);
+    const depthColor = side === "ask" ? depthRed : depthGreen;
+    const priceColor = side === "ask" ? themeColors.red : themeColors.green;
+
+    return (
+      <View style={styles.webObRow}>
+        <AppText type={ELEVEN} style={[styles.webObCellPrice, { color: priceColor }]} numberOfLines={1}>
+          {Number.isFinite(Number(price)) ? formatPrice(price) : "—"}
+        </AppText>
+
+        <AppText type={ELEVEN} style={[styles.webObCellAmt, { color: themeColors.text }]} numberOfLines={1}>
+          {Number.isFinite(Number(amount)) ? formatQty(amount) : "—"}
+        </AppText>
+
+        <View style={styles.webObCellTotalWrap}>
+          <View style={[styles.webObCellTotalInner, { position: "relative", overflow: "hidden" }]}>
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: `${pct > 0 ? Math.max(2, pct * 100) : 0}%`,
+                backgroundColor: depthColor,
+              }}
+            />
+            <AppText type={ELEVEN} style={[styles.webObCellTotal, { color: themeColors.text }]} numberOfLines={1}>
+              {Number.isFinite(Number(total)) ? formatTotal(total) : "—"}
+            </AppText>
+          </View>
+        </View>
+      </View>
+    );
+  }
+);
 
 const SpotChartScreen = () => {
   const dispatch = useDispatch();
@@ -462,6 +508,30 @@ const SpotChartScreen = () => {
   const high = mergedPair?.high;
   const low = mergedPair?.low;
   const volume = mergedPair?.volume;
+
+  const [topTab, setTopTab] = useState("Chart");
+  const topTabX = useRef(new Animated.Value(0)).current;
+
+  const animateTopTab = useCallback(
+    (next) => {
+      const toValue = next === "Info" ? -Width : 0;
+      Animated.timing(topTabX, {
+        toValue,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+    },
+    [topTabX]
+  );
+
+  const onPressTopTab = useCallback(
+    (next) => {
+      if (next === topTab) return;
+      setTopTab(next);
+      animateTopTab(next);
+    },
+    [topTab, animateTopTab]
+  );
 
   /** `activeTab` drives header highlight & controls; `mountedTab` drives rendered body to avoid height issues. */
   const [activeTab, setActiveTab] = useState("Order Book");
@@ -592,56 +662,62 @@ const SpotChartScreen = () => {
     }, [subscribeToExchange, dispatch])
   );
 
-  // useEffect(() => {
-  //   if (!socket || !isFocused) return;
+  useEffect(() => {
+    if (!socket || !isFocused) return;
 
-  //   const handleMessage = (data) => {
-  //     if (!isFocusedRef.current || appStateRef.current !== "active") return;
+    const normalizeObRow = (o) => {
+      if (!o) return o;
+      const rem = toFinite(o?.remaining ?? o?.quantity ?? o?.qty ?? o?.amount ?? 0);
+      return { ...o, remaining: rem };
+    };
 
-  //     if (data?.buy_order || data?.sell_order || data?.recent_trades) {
-  //       const buyOrders = data?.buy_order ? (data.buy_order || []).map(transformLocalOrder) : null;
-  //       const sellOrders = data?.sell_order ? (data.sell_order || []).map(transformLocalOrder) : null;
-  //       const payload = {
-  //         data,
-  //         buyOrders,
-  //         sellOrders,
-  //         recentTrades: data?.recent_trades || null,
-  //       };
+    const handleMessage = (data) => {
+      if (!isFocusedRef.current || appStateRef.current !== "active") return;
 
-  //       pendingSocketFlushRef.current = payload;
-  //       const now = Date.now();
-  //       const elapsed = now - socketLastFlushRef.current;
-  //       if (elapsed >= SOCKET_UI_THROTTLE_MS || socketLastFlushRef.current === 0) {
-  //         socketLastFlushRef.current = now;
-  //         flushSocketToState(payload);
-  //         pendingSocketFlushRef.current = null;
-  //         if (socketThrottleTimerRef.current) {
-  //           clearTimeout(socketThrottleTimerRef.current);
-  //           socketThrottleTimerRef.current = null;
-  //         }
-  //       } else if (!socketThrottleTimerRef.current) {
-  //         socketThrottleTimerRef.current = setTimeout(() => {
-  //           socketThrottleTimerRef.current = null;
-  //           socketLastFlushRef.current = Date.now();
-  //           const pending = pendingSocketFlushRef.current;
-  //           pendingSocketFlushRef.current = null;
-  //           if (pending) flushSocketToState(pending);
-  //         }, SOCKET_UI_THROTTLE_MS - elapsed);
-  //       }
-  //     }
-  //   };
+      if (data?.buy_order || data?.sell_order || data?.recent_trades) {
+        const buy = data?.buy_order ? (data.buy_order || []).map(normalizeObRow) : null;
+        const sell = data?.sell_order ? (data.sell_order || []).map(normalizeObRow) : null;
+        const payload = {
+          data,
+          buyOrders: buy,
+          sellOrders: sell,
+          recentTrades: data?.recent_trades || null,
+        };
 
-  //   socket.on("message", handleMessage);
-  //   socket.on("exchange:update", handleMessage);
-  //   return () => {
-  //     socket.off("message", handleMessage);
-  //     socket.off("exchange:update", handleMessage);
-  //     if (socketThrottleTimerRef.current) {
-  //       clearTimeout(socketThrottleTimerRef.current);
-  //       socketThrottleTimerRef.current = null;
-  //     }
-  //   };
-  // }, [socket, isFocused, transformLocalOrder, flushSocketToState]);
+        pendingSocketFlushRef.current = payload;
+        const now = Date.now();
+        const elapsed = now - socketLastFlushRef.current;
+        if (elapsed >= SOCKET_UI_THROTTLE_MS || socketLastFlushRef.current === 0) {
+          socketLastFlushRef.current = now;
+          flushSocketToState(payload);
+          pendingSocketFlushRef.current = null;
+          if (socketThrottleTimerRef.current) {
+            clearTimeout(socketThrottleTimerRef.current);
+            socketThrottleTimerRef.current = null;
+          }
+        } else if (!socketThrottleTimerRef.current) {
+          socketThrottleTimerRef.current = setTimeout(() => {
+            socketThrottleTimerRef.current = null;
+            socketLastFlushRef.current = Date.now();
+            const pending = pendingSocketFlushRef.current;
+            pendingSocketFlushRef.current = null;
+            if (pending) flushSocketToState(pending);
+          }, SOCKET_UI_THROTTLE_MS - elapsed);
+        }
+      }
+    };
+
+    socket.on("message", handleMessage);
+    socket.on("exchange:update", handleMessage);
+    return () => {
+      socket.off("message", handleMessage);
+      socket.off("exchange:update", handleMessage);
+      if (socketThrottleTimerRef.current) {
+        clearTimeout(socketThrottleTimerRef.current);
+        socketThrottleTimerRef.current = null;
+      }
+    };
+  }, [socket, isFocused, flushSocketToState]);
 
   const chartUri = useMemo(() => {
     const themeSlug = theme === "Dark" ? "dark" : "light";
@@ -751,20 +827,47 @@ const SpotChartScreen = () => {
   const bidsDisplay = useMemo(() => bidsAggregated.slice(0, ORDER_BOOK_ROWS), [bidsAggregated]);
   const asksDisplay = useMemo(() => asksAggregated.slice(0, ORDER_BOOK_ROWS), [asksAggregated]);
 
-  const maxBidVol = useMemo(
-    () => Math.max(1, ...bidsDisplay.map((o) => orderBookRemaining(o))),
-    [bidsDisplay]
-  );
-  const maxAskVol = useMemo(
-    () => Math.max(1, ...asksDisplay.map((o) => orderBookRemaining(o))),
-    [asksDisplay]
-  );
+  // Binance-style depth heatmap uses cumulative volume (staircase look).
+  const bidCum = useMemo(() => {
+    let acc = 0;
+    return bidsDisplay.map((o) => {
+      acc += orderBookRemaining(o);
+      return acc;
+    });
+  }, [bidsDisplay]);
+  const askCum = useMemo(() => {
+    let acc = 0;
+    return asksDisplay.map((o) => {
+      acc += orderBookRemaining(o);
+      return acc;
+    });
+  }, [asksDisplay]);
+  const maxBidCum = useMemo(() => (bidCum.length ? bidCum[bidCum.length - 1] : 0), [bidCum]);
+  const maxAskCum = useMemo(() => (askCum.length ? askCum[askCum.length - 1] : 0), [askCum]);
 
   const formatPrice = useCallback((p) => {
     const n = Number(p);
     if (!Number.isFinite(n)) return "—";
     return String(toFixedFive(n));
   }, []);
+
+  const formatWithCommas = useCallback((s) => {
+    const str = String(s ?? "");
+    if (!str || str === "—") return str;
+    const [intPartRaw, decPart] = str.split(".");
+    const sign = intPartRaw.startsWith("-") ? "-" : "";
+    const intPart = sign ? intPartRaw.slice(1) : intPartRaw;
+    const withSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return `${sign}${withSep}${decPart != null && decPart !== "" ? `.${decPart}` : ""}`;
+  }, []);
+
+  const formatPriceComma = useCallback(
+    (p) => {
+      const base = formatPrice(p);
+      return formatWithCommas(base);
+    },
+    [formatPrice, formatWithCommas]
+  );
 
   const formatQty = useCallback((q) => {
     const n = Number(q);
@@ -774,21 +877,166 @@ const SpotChartScreen = () => {
     return n >= 1 ? n.toFixed(4) : n.toFixed(6);
   }, []);
 
+  const formatTotal = useCallback((v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "—";
+    if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+    if (n >= 1e3) return `${(n / 1e3).toFixed(2)}K`;
+    return n >= 1 ? n.toFixed(2) : n.toFixed(6);
+  }, []);
+
   const depthRows = useMemo(() => {
     const rows = [];
     for (let i = 0; i < ORDER_BOOK_ROWS; i++) {
       const bid = bidsDisplay[i] || null;
       const ask = asksDisplay[i] || null;
+      const bidFillPct = maxBidCum > 0 ? Math.min(100, (Number(bidCum[i] || 0) / maxBidCum) * 100) : 0;
+      const askFillPct = maxAskCum > 0 ? Math.min(100, (Number(askCum[i] || 0) / maxAskCum) * 100) : 0;
       if (orderBookViewMode === "both") {
-        rows.push({ bid, ask });
+        rows.push({ bid, ask, bidFillPct, askFillPct });
       } else if (orderBookViewMode === "bids") {
-        rows.push({ bid, ask: null });
+        rows.push({ bid, ask: null, bidFillPct, askFillPct: 0 });
       } else {
-        rows.push({ bid: null, ask });
+        rows.push({ bid: null, ask, bidFillPct: 0, askFillPct });
       }
     }
     return rows;
-  }, [bidsDisplay, asksDisplay, orderBookViewMode]);
+  }, [bidsDisplay, asksDisplay, orderBookViewMode, bidCum, askCum, maxBidCum, maxAskCum]);
+
+  // Web "Total" column is cumulative quote (price * amount).
+  const bidCumQuote = useMemo(() => {
+    let acc = 0;
+    return bidsDisplay.map((o) => {
+      acc += orderBookRemaining(o) * toFinite(o?.price);
+      return acc;
+    });
+  }, [bidsDisplay]);
+  const askCumQuote = useMemo(() => {
+    let acc = 0;
+    return asksDisplay.map((o) => {
+      acc += orderBookRemaining(o) * toFinite(o?.price);
+      return acc;
+    });
+  }, [asksDisplay]);
+
+  // Ask rows: display in descending price order (web-like).
+  const asksDisplayDesc = useMemo(() => {
+    if (!asksDisplay?.length) return [];
+    return [...asksDisplay].reverse();
+  }, [asksDisplay]);
+
+  const midPrice = mergedPair?.buy_price ?? mergedPair?.last ?? mergedPair?.price ?? null;
+
+  const orderBookWebNode = useMemo(() => {
+    const hasData = lastSocketData || buyOrders?.length > 0 || sellOrders?.length > 0;
+    if (!hasData) return <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />;
+
+    return (
+      <View>
+        <View style={styles.webObHeaderRow}>
+          <AppText type={TEN} style={[styles.webObHeaderCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
+            Price ({pairQuote})
+          </AppText>
+          <AppText type={TEN} style={[styles.webObHeaderCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
+            Amount ({pairBase})
+          </AppText>
+          <AppText type={TEN} style={[styles.webObHeaderCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+            Total ({pairQuote})
+          </AppText>
+        </View>
+
+        {orderBookViewMode !== "bids" &&
+          asksDisplayDesc.map((ask, idx) => {
+            const origIndex = asksDisplay.length - 1 - idx;
+            const fillPct = maxAskCum > 0 ? Math.min(100, (Number(askCum[origIndex] || 0) / maxAskCum) * 100) : 0;
+            const amount = orderBookRemaining(ask);
+            const total = askCumQuote[origIndex] ?? 0;
+            return (
+              <WebObRow
+                key={`ask_${ask?._id || origIndex}`}
+                side="ask"
+                price={ask?.price}
+                total={total}
+                amount={amount}
+                fillPct={fillPct}
+                themeColors={themeColors}
+                isDark={isDark}
+                formatPrice={formatPrice}
+                formatQty={formatQty}
+                formatTotal={formatTotal}
+              />
+            );
+          })}
+
+        <TouchableOpacity activeOpacity={0.75} style={styles.webObMidRow}>
+          <View style={styles.webObMidLeft}>
+            <AppText style={[styles.webObMidPrice, { color: changeColor }]} weight={MEDIUM} numberOfLines={1}>
+              {midPrice != null ? formatPriceComma(midPrice) : "—"}
+            </AppText>
+            <FastImage
+              source={arrowRightIcon}
+              resizeMode="contain"
+              style={[styles.webObMidArrow, { transform: [{ rotate: isNeg ? "90deg" : "-90deg" }] }]}
+              tintColor={changeColor}
+            />
+          </View>
+          <View style={styles.webObMidSubRow}>
+            <AppText type={TEN} style={[styles.webObMidSub, { color: themeColors.secondaryText }]} numberOfLines={1}>
+              {midPrice != null ? `$${formatPriceComma(midPrice)}` : "—"}
+            </AppText>
+            <AppText type={TEN} style={[styles.webObMidSub, { color: themeColors.secondaryText }]} numberOfLines={1}>
+              {mergedPair?.change_percentage != null ? `${toFixedThree(Number(mergedPair.change_percentage))}%` : "—"}
+            </AppText>
+          </View>
+         
+        </TouchableOpacity>
+
+        {orderBookViewMode !== "asks" &&
+          bidsDisplay.map((bid, idx) => {
+            const fillPct = maxBidCum > 0 ? Math.min(100, (Number(bidCum[idx] || 0) / maxBidCum) * 100) : 0;
+            const amount = orderBookRemaining(bid);
+            const total = bidCumQuote[idx] ?? 0;
+            return (
+              <WebObRow
+                key={`bid_${bid?._id || idx}`}
+                side="bid"
+                price={bid?.price}
+                total={total}
+                amount={amount}
+                fillPct={fillPct}
+                themeColors={themeColors}
+                isDark={isDark}
+                formatPrice={formatPrice}
+                formatQty={formatQty}
+                formatTotal={formatTotal}
+              />
+            );
+          })}
+      </View>
+    );
+  }, [
+    asksDisplayDesc,
+    asksDisplay,
+    bidsDisplay,
+    bidCum,
+    askCum,
+    maxBidCum,
+    maxAskCum,
+    bidCumQuote,
+    askCumQuote,
+    formatPrice,
+    formatQty,
+    formatTotal,
+    isDark,
+    lastSocketData,
+    buyOrders?.length,
+    sellOrders?.length,
+    midPrice,
+    orderBookViewMode,
+    pairBase,
+    pairQuote,
+    themeColors,
+  ]);
 
   const bidVolSum = useMemo(
     () => bidsDisplay.reduce((s, o) => s + orderBookRemaining(o), 0),
@@ -891,6 +1139,37 @@ const SpotChartScreen = () => {
           showsVerticalScrollIndicator
           nestedScrollEnabled
         >
+          <View
+            style={[
+              styles.topTabsRow,
+              { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: themeColors.themeBorderColor },
+            ]}
+          >
+            {TOP_TABS.map((t) => {
+              const active = topTab === t;
+              return (
+                <TouchableOpacity
+                  key={t}
+                  activeOpacity={0.75}
+                  onPress={() => onPressTopTab(t)}
+                  style={styles.topTabBtn}
+                >
+                  <AppText
+                    weight={active ? SEMI_BOLD : undefined}
+                    style={[styles.topTabText, { color: active ? themeColors.text : themeColors.secondaryText }]}
+                  >
+                    {t}
+                  </AppText>
+                  {active ? (
+                    <View style={[styles.topTabUnderline, { backgroundColor: "#000" }]} />
+                  ) : (
+                    <View style={styles.topTabUnderlineSpacer} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           {/* 24h strip (same content as former Spot minicontainer; colors from theme / change %) */}
           <View style={[styles.statsStrip, { borderBottomColor: themeColors.themeBorderColor }]}>
             <View style={styles.statsLeft}>
@@ -933,6 +1212,15 @@ const SpotChartScreen = () => {
             </View>
           </View>
 
+          <View style={{ width: Width, overflow: "hidden" }}>
+            <Animated.View
+              style={{
+                flexDirection: "row",
+                width: Width * 2,
+                transform: [{ translateX: topTabX }],
+              }}
+            >
+              <View style={{ width: Width }}>
           {/* Chart — fixed height; skeleton overlays WebView (never stacked) so layout does not jump */}
           <View style={[styles.chartWrap, { backgroundColor: bg, height: CHART_BLOCK_HEIGHT }]}>
             <View
@@ -1054,37 +1342,7 @@ const SpotChartScreen = () => {
                 </ImageBackground>
               </View>
 
-              <View style={styles.obColHeader}>
-                <View style={styles.depthBidSide}>
-                  <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
-                    Bid
-                  </AppText>
-                </View>
-                <View style={[styles.depthMidRule, { backgroundColor: "transparent" }]} />
-                <View style={styles.depthAskSide}>
-                  <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
-                    Ask
-                  </AppText>
-                </View>
-              </View>
-
-              {lastSocketData || buyOrders?.length > 0 || sellOrders?.length > 0 ? (
-                depthRows.map((row, idx) => (
-                  <DepthRow
-                    key={`d_${idx}`}
-                    bid={row.bid}
-                    ask={row.ask}
-                    maxBidVol={maxBidVol}
-                    maxAskVol={maxAskVol}
-                    themeColors={themeColors}
-                    isDark={isDark}
-                    formatPrice={formatPrice}
-                    formatQty={formatQty}
-                  />
-                ))
-              ) : (
-                <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />
-              )}
+              {orderBookWebNode}
                     </View>
                   ) : bottomSlidePair.from === "Market Trades" ? (
                     <View style={{ width: Width, paddingHorizontal: 12 }}>
@@ -1301,36 +1559,7 @@ const SpotChartScreen = () => {
                           </AppText>
                         </ImageBackground>
                       </View>
-                      <View style={styles.obColHeader}>
-                        <View style={styles.depthBidSide}>
-                          <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
-                            Bid
-                          </AppText>
-                        </View>
-                        <View style={[styles.depthMidRule, { backgroundColor: "transparent" }]} />
-                        <View style={styles.depthAskSide}>
-                          <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
-                            Ask
-                          </AppText>
-                        </View>
-                      </View>
-                      {lastSocketData || buyOrders?.length > 0 || sellOrders?.length > 0 ? (
-                        depthRows.map((row, idx) => (
-                          <DepthRow
-                            key={`d2_${idx}`}
-                            bid={row.bid}
-                            ask={row.ask}
-                            maxBidVol={maxBidVol}
-                            maxAskVol={maxAskVol}
-                            themeColors={themeColors}
-                            isDark={isDark}
-                            formatPrice={formatPrice}
-                            formatQty={formatQty}
-                          />
-                        ))
-                      ) : (
-                        <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />
-                      )}
+                      {orderBookWebNode}
                     </View>
                   ) : bottomSlidePair.to === "Market Trades" ? (
                     <View style={{ width: Width, paddingHorizontal: 12 }}>
@@ -1512,36 +1741,7 @@ const SpotChartScreen = () => {
                       </AppText>
                     </ImageBackground>
                   </View>
-                  <View style={styles.obColHeader}>
-                    <View style={styles.depthBidSide}>
-                      <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
-                        Bid
-                      </AppText>
-                    </View>
-                    <View style={[styles.depthMidRule, { backgroundColor: "transparent" }]} />
-                    <View style={styles.depthAskSide}>
-                      <AppText type={TEN} style={[styles.obColH, { color: themeColors.secondaryText }]}>
-                        Ask
-                      </AppText>
-                    </View>
-                  </View>
-                  {lastSocketData || buyOrders?.length > 0 || sellOrders?.length > 0 ? (
-                    depthRows.map((row, idx) => (
-                      <DepthRow
-                        key={`d_${idx}`}
-                        bid={row.bid}
-                        ask={row.ask}
-                        maxBidVol={maxBidVol}
-                        maxAskVol={maxAskVol}
-                        themeColors={themeColors}
-                        isDark={isDark}
-                        formatPrice={formatPrice}
-                        formatQty={formatQty}
-                      />
-                    ))
-                  ) : (
-                    <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />
-                  )}
+                  {orderBookWebNode}
                 </View>
               ) : null}
               {mountedTab === "Market Trades" ? (
@@ -1697,6 +1897,58 @@ const SpotChartScreen = () => {
               ) : null}
             </View>
           )}
+              </View>
+              <View style={{ width: Width, paddingHorizontal: 12, paddingVertical: 14 }}>
+                <View style={styles.infoTopRow}>
+                  <View style={styles.infoCoinRow}>
+                    <View style={styles.infoCoinIconWrap}>
+                      {mergedPair?.icon_path ? (
+                        <FastImage
+                          source={{ uri: `${IMAGE_BASE_URL}${mergedPair.icon_path}` }}
+                          style={styles.infoCoinIcon}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <AppText style={{ color: themeColors.text, fontWeight: "800" }}>
+                          {String(pairBase || "?").slice(0, 1).toUpperCase()}
+                        </AppText>
+                      )}
+                    </View>
+                    <AppText style={[styles.infoCoinName, { color: themeColors.text }]} numberOfLines={1}>
+                      {pairBase || "—"}
+                    </AppText>
+                  </View>
+                </View>
+
+                <View style={styles.infoList}>
+                  <View style={styles.infoListRow}>
+                    <AppText style={[styles.infoKey, { color: themeColors.secondaryText }]}>Total Supply</AppText>
+                    <AppText style={[styles.infoVal, { color: themeColors.text }]}>N/A</AppText>
+                  </View>
+                  <View style={styles.infoListRow}>
+                    <AppText style={[styles.infoKey, { color: themeColors.secondaryText }]}>Circulating Supply</AppText>
+                    <AppText style={[styles.infoVal, { color: themeColors.text }]}>N/A</AppText>
+                  </View>
+                  <View style={styles.infoListRow}>
+                    <AppText style={[styles.infoKey, { color: themeColors.secondaryText }]}>Volume</AppText>
+                    <AppText style={[styles.infoVal, { color: themeColors.text }]}>
+                      {mergedPair?.volume_quote != null
+                        ? `${formatWithCommas(twoFixedTwo(mergedPair.volume_quote))} ${pairQuote}`
+                        : volume != null
+                          ? `${formatWithCommas(twoFixedTwo(volume))} ${pairQuote}`
+                          : "N/A"}
+                    </AppText>
+                  </View>
+                  <View style={styles.infoListRow}>
+                    <AppText style={[styles.infoKey, { color: themeColors.secondaryText }]}>Issue Date</AppText>
+                    <AppText style={[styles.infoVal, { color: themeColors.text }]}>N/A</AppText>
+                  </View>
+                </View>
+
+                <AppText style={[styles.infoSectionTitle, { color: themeColors.secondaryText }]}>Information</AppText>
+              </View>
+            </Animated.View>
+          </View>
         </ScrollView>
       </View>
 
@@ -1891,12 +2143,98 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     marginTop: 1,
   },
+  topTabsRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 0,
+    gap: 10,
+  },
+  topTabBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  topTabText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  topTabUnderline: {
+    height: 3,
+    width: 16,
+    borderRadius: 999,
+    marginTop: 8,
+    alignSelf: "center",
+  },
+  topTabUnderlineSpacer: {
+    height: 3,
+    width: 16,
+    marginTop: 8,
+    backgroundColor: "transparent",
+    alignSelf: "center",
+  },
   statsStrip: {
     flexDirection: "row",
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     alignItems: "flex-start",
+  },
+  infoCard: {
+    borderRadius: 12,
+    padding: 12,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+  infoTopRow: {
+    paddingTop: 2,
+    paddingBottom: 14,
+  },
+  infoCoinRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  infoCoinIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    backgroundColor: "rgba(128,128,128,0.12)",
+  },
+  infoCoinIcon: {
+    width: 28,
+    height: 28,
+  },
+  infoCoinName: {
+    fontSize: 16,
+    flexShrink: 1,
+  },
+  infoList: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(128,128,128,0.18)",
+    paddingTop: 14,
+  },
+  infoListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 7,
+  },
+  infoKey: {
+    fontSize: 11,
+  },
+  infoVal: {
+    fontSize: 12,
+  },
+  infoSectionTitle: {
+    marginTop: 26,
+    fontSize: 14,
   },
   statsLeft: {
     width: "44%",
@@ -2099,6 +2437,87 @@ const styles = StyleSheet.create({
     width: StyleSheet.hairlineWidth,
     backgroundColor: "rgba(128,128,128,0.25)",
     marginHorizontal: 4,
+  },
+  webObHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(128,128,128,0.12)",
+    marginBottom: 4,
+  },
+  webObHeaderCell: {
+    flex: 1,
+    fontWeight: "600",
+  },
+  webObRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    minHeight: 19,
+    marginBottom: 1,
+  },
+  webObCellPrice: {
+    flex: 1,
+    fontSize: 10,
+    fontWeight: "600",
+    textAlign: "left",
+    paddingRight: 6,
+  },
+  webObCellTotalWrap: {
+    flex: 1,
+  },
+  webObCellTotalInner: {
+    flex: 1,
+    minHeight: 18,
+    justifyContent: "center",
+    borderRadius: 2,
+  },
+  webObCellTotal: {
+    fontSize: 10,
+    fontWeight: "600",
+    textAlign: "right",
+    paddingHorizontal: 4,
+  },
+  webObCellAmt: {
+    flex: 1,
+    fontSize: 10,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingLeft: 6,
+  },
+  webObMidRow: {
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  webObMidLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+  },
+  webObMidPrice: {
+    fontSize: 16,
+    letterSpacing: 0.15,
+  },
+  webObMidArrow: {
+    width: 12,
+    height: 12,
+    marginTop: 2,
+  },
+  webObMidSubRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    gap:5
+  },
+  webObMidSub: {
+    fontWeight: "600",
+  },
+  webObMidChevron: {
+    width: 14,
+    height: 14,
   },
   mtContainer: {
     marginTop: 4,
