@@ -1,13 +1,13 @@
-import { View, ScrollView, TouchableOpacity as RNTouchableOpacity, Image } from "react-native";
+import { View, ScrollView, TouchableOpacity as RNTouchableOpacity } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
-import { AppText, BLACK, BOLD, SEMI_BOLD, THIRTEEN, TWELVE, YELLOW } from "../../shared";
+import { AppText, BOLD, THIRTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useState, useRef } from "react";
 import { back_ic } from "../../helper/ImageAssets";
 import FastImage from "react-native-fast-image";
 import { useTheme } from "../../hooks/useTheme";
 
-const WalletHeader = ({ activeTab, setActiveTab }) => {
+const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
   const { colors: themeColors, theme } = useTheme();
   const scrollRef = useRef(null);
   const [layoutWidth, setLayoutWidth] = useState(0);
@@ -88,90 +88,33 @@ const WalletHeader = ({ activeTab, setActiveTab }) => {
         onLayout={handleLayout}
         onContentSizeChange={(w) => handleContentSizeChange(w)}
       >
-        <TouchableOpacity
-          onPress={() => setActiveTab("Overview")}
-          style={{ marginHorizontal: 14 }}
-        >
-          <AppText
-            weight={BOLD}
-            type={THIRTEEN}
-            style={{ color: activeTab === "Overview" ? colors.buttonBg : themeColors.secondaryText }}
-          >
-            Overview
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab("Main")}
-          style={{ marginHorizontal: 14 }}
-        >
-          <AppText
-            weight={BOLD}
-            type={THIRTEEN}
-            style={{ color: activeTab === "Main" ? colors.buttonBg : themeColors.secondaryText }}
-          >
-            Main
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab("Spot")}
-          style={{ marginHorizontal: 14 }}
-        >
-          <AppText
-            weight={BOLD}
-            type={THIRTEEN}
-            style={{ color: activeTab === "Spot" ? colors.buttonBg : themeColors.secondaryText }}
-          >
-            Spot
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab("Swap")}
-          style={{ marginHorizontal: 14 }}
-        >
-          <AppText
-            weight={BOLD}
-            type={THIRTEEN}
-            style={{ color: activeTab === "Swap" ? colors.buttonBg : themeColors.secondaryText }}
-          >
-            Swap
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab("Earning")}
-          style={{ marginHorizontal: 14 }}
-        >
-          <AppText
-            weight={BOLD}
-            type={THIRTEEN}
-            style={{ color: activeTab === "Earning" ? colors.buttonBg : themeColors.secondaryText }}
-          >
-            Earning
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab("Futures")}
-          style={{ marginHorizontal: 14 }}
-        >
-          <AppText
-            weight={BOLD}
-            type={THIRTEEN}
-            style={{ color: activeTab === "Futures" ? colors.buttonBg : themeColors.secondaryText }}
-          >
-            Futures
-          </AppText>
-        </TouchableOpacity>
-        {/* <TouchableOpacity
-          onPress={() => setActiveTab("Options")}
-          style={{ marginHorizontal: 14 }}
-        >
-          <AppText
-            weight={BOLD}
-            type={THIRTEEN}
-            color={activeTab === "Options" ? YELLOW : BLACK}
-          >
-            Options
-          </AppText>
-        </TouchableOpacity> */}
+        {(routes || []).map((r) => {
+          const isActive = activeTab === r.key;
+          return (
+            <TouchableOpacity
+              key={r.key}
+              onPress={() => setActiveTab(r.key)}
+              style={{ marginHorizontal: 14, alignItems: "center" }}
+            >
+              <AppText
+                weight={BOLD}
+                type={THIRTEEN}
+                style={{ color: isActive ? colors.buttonBg : themeColors.secondaryText }}
+              >
+                {r.title}
+              </AppText>
+              <View
+                style={{
+                  marginTop: 6,
+                  height: 3,
+                  width: 22,
+                  borderRadius: 2,
+                  backgroundColor: isActive ? colors.buttonBg : "transparent",
+                }}
+              />
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Right scroll icon (show when can scroll right) */}

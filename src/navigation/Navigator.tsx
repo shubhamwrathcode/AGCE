@@ -28,7 +28,6 @@ import {
   wallet_ic,
 } from "../helper/ImageAssets";
 import Home from "../features/home/screens/HomeDashboardScreen";
-import Trades from "../features/trades/screens/TradingHubScreen";
 import EditProfile from "../screens/account/EditProfile";
 import Notification from "../screens/other/Notification";
 import NotificationSettings from "../screens/account/NotificationSettings";
@@ -74,7 +73,6 @@ import EnterOtp from "../screens/account/EnterOtp";
 import ConvertHistory from "../screens/home/ConvertHistory";
 import LanguagePreference from "../screens/account/LanguagePreference";
 import Search from "../features/trades/screens/MarketSearchScreen";
-import SwapNEXBCoin from "../screens/trades/SwapNEXBCoin";
 import {
   AppText,
   BLACK,
@@ -88,7 +86,6 @@ import StakingSuccess from "../screens/Staking/StakingSuccess";
 import QsTransaction from "../screens/QuickBuySell/qsTransaction";
 import LackedStakes from "../screens/Staking/LackedStakes";
 import StakingHistory from "../screens/Staking/StakingHistory";
-import BtcCoinDetails from "../screens/trades/BtcCoinDetails";
 import { useAppSelector } from "../store/hooks";
 import { ChartPreloaderProvider } from "../context/ChartPreloaderContext";
 import BuyByCrypto from "../screens/P2P/BuyByCrypto";
@@ -291,7 +288,6 @@ const MyAuthLoadingStack = () => {
         name={routes.TWO_FACTOR_AUTHENTICATION}
         component={TwoFactor}
       />
-      <Stack.Screen name={routes.TRADE} component={BtcCoinDetails as any} />
       <Stack.Screen
         name={routes.TWO_FACTOR_QR_SCREEN}
         component={TwoFactorQr}

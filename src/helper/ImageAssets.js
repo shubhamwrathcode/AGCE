@@ -418,6 +418,8 @@ export const modes = require('../../assets/images/modes.png');
 export const bots_ic = require('../../assets/images/bots_ic.png');
 export const margin_ic = require('../../assets/images/margin_ic.png');
 export const future_ic = require('../../assets/images/future_ic.png');
+export const share_ic = require('../../assets/images/share_ic.png');
+
 
 
 

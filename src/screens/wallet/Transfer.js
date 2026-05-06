@@ -12,24 +12,25 @@ import { useDispatch } from "react-redux";
 import { getParticularCoinBalance, getUserMainWallet, getWalletType, handleTranferCoin } from "../../actions/walletActions";
 import WalletTypeModal from "../../shared/components/WalletTypeModal";
 import CoinListModal from "../../shared/components/CoinListModal";
-import { BASE_URL } from "../../helper/Constants";
+import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { DEPOSIT_COIN_SCREEN, DEPOSIT_SCREEN, DEPOSIT_WALLET_SCREEN } from "../../navigation/routes";
 import DepositWallet from "./DepositWallet";
 import TransferModal from "../../shared/components/TransferModal";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
 import TransferSkeleton from "./TransferSkeleton";
 
 const Height = Dimensions.get('window').height;
 const Transfer = () => {
   const dispatch = useDispatch();
+  const route = useRoute();
   const { colors: themeColors, isDark } = useTheme();
   const theme = isDark ? "Dark" : "Light";
   const WalletTypes = useAppSelector(state => state.wallet.walletTypes);
   const userWallet = useAppSelector(state => state.wallet.userMainWallet);
   const [coin, setCoin] = useState(userWallet[0]);
   const particularCoinBalance = useAppSelector(state => state.wallet.particularCoinBalance);
-  const [fromWallet, setFromWallet] = useState(WalletTypes[0]);
-  const [toWallet, setToWallet] = useState(WalletTypes[1]);
+  const [fromWallet, setFromWallet] = useState(undefined);
+  const [toWallet, setToWallet] = useState(undefined);
   const [modalVisible, setModalVisible] = useState(false);
   const [coinModal, setCoinModal] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -41,6 +42,15 @@ const Transfer = () => {
 
   const loading = useAppSelector(state => state.auth.isLoading);
 
+  const buildCoinIconUri = useCallback((iconPath) => {
+    const raw = iconPath === undefined || iconPath === null ? "" : String(iconPath).trim();
+    if (!raw) return null;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const base = String(IMAGE_BASE_URL || "").replace(/\/+$/, "");
+    const path = raw.startsWith("/") ? raw : `/${raw}`;
+    return `${base}${path}`;
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       if (isFirstMount.current) {
@@ -49,10 +59,31 @@ const Transfer = () => {
         isFirstMount.current = false;
       }
       dispatch(getWalletType());
-      dispatch(getUserMainWallet(fromWallet?.toLowerCase()));
+      if (fromWallet) dispatch(getUserMainWallet(fromWallet?.toLowerCase()));
       return () => { };
     }, [dispatch, fromWallet])
   );
+
+  useEffect(() => {
+    if (!Array.isArray(WalletTypes) || WalletTypes.length === 0) return;
+    // Web parity defaults: From=spot, To=main (if available)
+    const norm = (v) => String(v || "").toLowerCase();
+    const hasSpot = WalletTypes.some((t) => norm(t) === "spot");
+    const hasMain = WalletTypes.some((t) => norm(t) === "main");
+    const nextFrom = hasSpot ? "spot" : WalletTypes[0];
+    const nextTo =
+      hasMain && norm(nextFrom) !== "main"
+        ? "main"
+        : WalletTypes.find((t) => norm(t) !== norm(nextFrom)) || WalletTypes[0];
+    setFromWallet((prev) => (prev ? prev : nextFrom));
+    setToWallet((prev) => (prev ? prev : nextTo));
+  }, [WalletTypes]);
+
+  useEffect(() => {
+    const c = route?.params?.coin;
+    if (!c) return;
+    setCoin(c);
+  }, [route?.params?.coin]);
 
   useEffect(() => {
     let data = {
@@ -183,7 +214,11 @@ const Transfer = () => {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View style={{ borderRadius: 50, overflow: "hidden" }}>
                   <FastImage
-                    source={{ uri: BASE_URL + coin?.icon_path }}
+                    source={
+                      buildCoinIconUri(coin?.icon_path)
+                        ? { uri: buildCoinIconUri(coin?.icon_path) }
+                        : bitcoin_ic
+                    }
                     resizeMode="contain"
                     style={{ width: 30, height: 30 }}
                   />

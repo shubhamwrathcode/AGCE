@@ -20,8 +20,8 @@ import Animated, {
   FadeInDown,
   Layout,
 } from "react-native-reanimated";
-import { BASE_URL } from "../helper/Constants";
-import { AppText, BLACK, BOLD, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, TEN } from "./AppText";
+import { IMAGE_BASE_URL } from "../helper/Constants";
+import { AppText, BLACK, BOLD, DISCLAIMTEXT, SEMI_BOLD, TEN, TWELVE } from "./AppText";
 import FastImage from "react-native-fast-image";
 import { toFixedFive } from "../helper/utility";
 import { showError } from "../helper/logger";
@@ -51,19 +51,19 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
   // Animate modal appearance
   useEffect(() => {
     if (visible) {
-      opacity.value = withTiming(1, { duration: 300 });
+      opacity.value = withTiming(1, { duration: 160 });
       translateY.value = withSpring(0, {
-        damping: 20,
-        stiffness: 90,
+        damping: 18,
+        stiffness: 180,
       });
       scale.value = withSpring(1, {
-        damping: 15,
-        stiffness: 100,
+        damping: 14,
+        stiffness: 180,
       });
     } else {
-      opacity.value = withTiming(0, { duration: 200 });
-      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
-      scale.value = withTiming(0.9, { duration: 200 });
+      opacity.value = withTiming(0, { duration: 120 });
+      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 180 });
+      scale.value = withTiming(0.9, { duration: 120 });
     }
   }, [visible]);
 
@@ -96,12 +96,12 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
   });
 
   const handleClose = () => {
-    opacity.value = withTiming(0, { duration: 200 });
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
-    scale.value = withTiming(0.9, { duration: 200 });
+    opacity.value = withTiming(0, { duration: 120 });
+    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 180 });
+    scale.value = withTiming(0.9, { duration: 120 });
     setTimeout(() => {
       onClose();
-    }, 250);
+    }, 180);
   };
 
   const renderCoinItem = ({ item, index }) => {
@@ -143,7 +143,11 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
             }
           ]}>
             <FastImage
-              source={{ uri: BASE_URL + item?.icon_path }}
+              source={{
+                uri: /^https?:\/\//i.test(String(item?.icon_path || ""))
+                  ? String(item?.icon_path || "")
+                  : `${String(IMAGE_BASE_URL || "").replace(/\/+$/, "")}/${String(item?.icon_path || "").replace(/^\/+/, "")}`,
+              }}
               style={styles.coinIcon}
               resizeMode="contain"
             />
@@ -181,7 +185,7 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
               { color: isSelected ? themeColors.button : themeColors.text }
             ]}
             weight={isSelected ? BOLD : SEMI_BOLD}
-            type={FOURTEEN}
+            type={TWELVE}
           >
             {toFixedFive(item?.balance)}
           </AppText>
@@ -322,7 +326,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     letterSpacing: -0.5,
   },
   closeButton: {
@@ -338,11 +342,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     marginBottom: 20,
-    height: 48,
+    height: 42,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 13,
     paddingVertical: 0,
     fontWeight: '500',
   },
@@ -356,10 +360,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-    marginBottom: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    marginBottom: 8,
   },
   coinLeft: {
     flexDirection: "row",
@@ -367,23 +371,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   coinIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
     borderWidth: 1,
   },
   coinIcon: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
   },
   coinInfo: {
     flex: 1,
   },
   coinShortName: {
-    fontSize: 15,
+    fontSize: 13,
     marginBottom: 1,
     letterSpacing: -0.3,
   },

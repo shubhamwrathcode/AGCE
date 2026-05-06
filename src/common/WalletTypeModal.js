@@ -32,14 +32,14 @@ const WalletTypeModal = ({ visible, data, onSelect, onClose, selectedItem }) => 
 
   useEffect(() => {
     if (visible) {
-      opacity.value = withTiming(1, { duration: 300 });
+      opacity.value = withTiming(1, { duration: 160 });
       translateY.value = withSpring(0, {
-        damping: 20,
-        stiffness: 90,
+        damping: 18,
+        stiffness: 180,
       });
     } else {
-      opacity.value = withTiming(0, { duration: 200 });
-      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
+      opacity.value = withTiming(0, { duration: 120 });
+      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 180 });
     }
   }, [visible]);
 
@@ -60,11 +60,11 @@ const WalletTypeModal = ({ visible, data, onSelect, onClose, selectedItem }) => 
   });
 
   const handleClose = () => {
-    opacity.value = withTiming(0, { duration: 200 });
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
+    opacity.value = withTiming(0, { duration: 120 });
+    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 180 });
     setTimeout(() => {
       onClose();
-    }, 250);
+    }, 180);
   };
 
   const handleSelectItem = (item) => {
