@@ -39,8 +39,16 @@ const SpotOrderHistoryDetail = () => {
   const status = String(order?.status || "").toUpperCase();
   const side = String(order?.side || "").toUpperCase();
   const type = String(order?.order_type || order?.type || "MARKET").toUpperCase();
+  const role = order?.is_maker === true ? "Maker" : order?.is_maker === false ? "Taker" : "—";
 
-  const d = order?.updatedAt || order?.updated_at || order?.createdAt || order?.created_at;
+  const isTradeFill =
+    (order?.trade_id != null || order?.executed_at != null || order?.executedAt != null) &&
+    (order?.order_type == null && order?.type == null) &&
+    (order?.status == null && order?.user_status == null);
+
+  const d = isTradeFill
+    ? (order?.executed_at || order?.executedAt || order?.created_at || order?.createdAt)
+    : (order?.updatedAt || order?.updated_at || order?.createdAt || order?.created_at);
   const dateStr = d ? moment(d).format("DD/MM/YYYY") : "---";
   const timeStr = d ? moment(d).format("HH:mm:ss") : "---";
 
@@ -54,6 +62,7 @@ const SpotOrderHistoryDetail = () => {
   const orderIdForCancel = order?._id || order?.id;
   const statusUpperCancel = String(order?.status || order?.user_status || "").toUpperCase();
   const canCancel =
+    !isTradeFill &&
     !!orderIdForCancel &&
     !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpperCancel);
 
@@ -80,7 +89,9 @@ const SpotOrderHistoryDetail = () => {
         <TouchableOpacity onPress={() => NavigationService.goBack()} style={styles.headerBtn}>
           <FastImage source={back_ic} style={styles.backIcon} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
-        <AppText style={[styles.headerTitle, { color: themeColors.text }]}>Order Details</AppText>
+        <AppText style={[styles.headerTitle, { color: themeColors.text }]}>
+          {isTradeFill ? "Trade Details" : "Order Details"}
+        </AppText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -92,7 +103,7 @@ const SpotOrderHistoryDetail = () => {
           </View>
           <AppText style={[styles.dateTime, { color: labelColor }]}>{dateStr} {timeStr}</AppText>
           <AppText style={[styles.sideType, { color: getSideColor(side) }]} weight={MEDIUM}>
-            {side} · {type}
+            {side} · {isTradeFill ? role : type}
           </AppText>
         </View>
 
@@ -102,18 +113,32 @@ const SpotOrderHistoryDetail = () => {
           <Row label="Time" value={timeStr} />
           <Row label="Market" value={pair} />
           <Row label="Side" value={side} valueColor={getSideColor(side)} />
-          <Row label="Type" value={type} />
-          <Row label="TIF" value={tifDisplay} />
-          <Row label="Price" value={type === "MARKET" ? "Market" : toFixedEight(price)} />
-          <Row label="Avg" value={toFixedEight(avgPrice)} />
-          <Row label="Quantity" value={toFixedEight(qty)} />
-          <Row label="Filled" value={toFixedEight(filled)} />
-          <Row label="Remaining" value={toFixedEight(remaining)} />
-          <Row label="Fill %" value={order?.fill_percent || (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%")} />
-          <Row label="Value" value={toFixedEight(value)} />
-          <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
-          <Row label="TDS" value={toFixedEight(tds)} />
-          <Row label="Status" value={status} valueColor={getStatusColor(status)} />
+          {isTradeFill ? (
+            <>
+              <Row label="Role" value={role} />
+              <Row label="Price" value={toFixedEight(price)} />
+              <Row label="Quantity" value={toFixedEight(qty)} />
+              <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
+              <Row label="Total" value={toFixedEight(price * qty)} />
+              {order?.trade_id != null ? <Row label="Trade ID" value={String(order.trade_id)} /> : null}
+              {order?.order_id != null ? <Row label="Order ID" value={String(order.order_id)} /> : null}
+            </>
+          ) : (
+            <>
+              <Row label="Type" value={type} />
+              <Row label="TIF" value={tifDisplay} />
+              <Row label="Price" value={type === "MARKET" ? "Market" : toFixedEight(price)} />
+              <Row label="Avg" value={toFixedEight(avgPrice)} />
+              <Row label="Quantity" value={toFixedEight(qty)} />
+              <Row label="Filled" value={toFixedEight(filled)} />
+              <Row label="Remaining" value={toFixedEight(remaining)} />
+              <Row label="Fill %" value={order?.fill_percent || (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%")} />
+              <Row label="Value" value={toFixedEight(value)} />
+              <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
+              <Row label="TDS" value={toFixedEight(tds)} />
+              <Row label="Status" value={status} valueColor={getStatusColor(status)} />
+            </>
+          )}
         </View>
 
         {canCancel ? (

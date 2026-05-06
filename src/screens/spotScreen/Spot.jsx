@@ -343,24 +343,28 @@ const OrderBookSellRow = memo(({ item, maxVolume, onPress, formatPrice, formatQu
   const remaining = toFiniteOB(item?.remaining);
   const denom = maxVolume > 0 ? maxVolume : 1;
   const ratio = clamp01OB(remaining / denom);
-  const a = ratio;
-  const b = Math.min(1, a + 1e-6);
   const handlePress = useCallback(() => { onPress(item?.price, item?.remaining); }, [onPress, item?.price, item?.remaining]);
 
-  const baseRed = isDark ? "#352933f7" : "#FFD9DB";
+  // Depth bar color (web-like). Use low opacity so text stays readable.
+  const depthRed = isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)";
 
   return (
     <TouchableOpacity onPress={handlePress}>
-      <LinearGradient
-        style={styles.orderRow}
-        colors={[baseRed, baseRed, "transparent", "transparent"]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0, y: 0 }}
-        locations={[0, a, b, 1]}
-      >
+      <View style={[styles.orderRow, { position: "relative", overflow: "hidden" }]}>
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: `${Math.round(ratio * 100)}%`,
+            backgroundColor: depthRed,
+          }}
+        />
         <AppText style={[styles.orderPrice, { color: themeColors.red }]}>{formatPrice(item?.price)}</AppText>
         <AppText style={[styles.orderSize, { color: themeColors.text }]}>{formatQuantity(item?.remaining)}</AppText>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 }, orderBookSellRowAreEqual);
@@ -377,24 +381,27 @@ const OrderBookBuyRow = memo(({ item, maxVolume, onPress, formatPrice, formatQua
   const remaining = toFiniteOB(item?.remaining);
   const denom = maxVolume > 0 ? maxVolume : 1;
   const ratio = clamp01OB(remaining / denom);
-  const a = ratio;
-  const b = Math.min(1, a + 1e-6);
   const handlePress = useCallback(() => { onPress(item?.price, item?.remaining); }, [onPress, item?.price, item?.remaining]);
 
-  const baseGreen = isDark ? "#213438" : "#C6F9E9";
+  const depthGreen = isDark ? "rgba(0, 192, 118, 0.16)" : "rgba(0, 192, 118, 0.12)";
 
   return (
     <TouchableOpacity onPress={handlePress}>
-      <LinearGradient
-        style={styles.orderRow}
-        colors={[baseGreen, baseGreen, "transparent", "transparent"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        locations={[0, a, b, 1]}
-      >
+      <View style={[styles.orderRow, { position: "relative", overflow: "hidden" }]}>
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: `${Math.round(ratio * 100)}%`,
+            backgroundColor: depthGreen,
+          }}
+        />
         <AppText style={[styles.orderPrice, { color: themeColors.green }]}>{formatPrice(item?.price)}</AppText>
         <AppText style={[styles.orderSize, { color: themeColors.text }]}>{formatQuantity(item?.remaining)}</AppText>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 }, orderBookBuyRowAreEqual);
@@ -1676,11 +1683,11 @@ const Spot = () => {
     // Prefetch order history (tab 2)
     dispatch(getPastOrders({ page: 1, page_size: 50, pair }, { useGlobalLoader: false }));
 
-    // Prefetch trade fills (tab 3) — clear on prefetch so switching doesn't show stale pair data.
+    // Prefetch trade fills (tab 3) — do NOT clear on focus return (avoids list flicker/reload when coming back from detail).
     dispatch(
       getTradeHistory(0, 50, pair, {
         useGlobalLoader: false,
-        clearBeforeFetch: true,
+        clearBeforeFetch: false,
       }),
     );
   }, [base_currency, quote_currency, userData, dispatch, isSpotFocused]);
@@ -1718,6 +1725,9 @@ const Spot = () => {
   // Trade History list: mirror REST-only payload from getTradeHistory (no socket merge).
   const walletTradeHistory = useSelector((state) => state.wallet.tradeHistory);
   useEffect(() => {
+    // Optimization: when leaving Trade History tab, ignore background Redux updates
+    // to avoid heavy mapping + re-render during tab-switch animation.
+    if (mountedOrdersTab !== 3) return;
     const list = walletTradeHistory == null
       ? []
       : (Array.isArray(walletTradeHistory) ? walletTradeHistory : []);
@@ -1734,7 +1744,7 @@ const Spot = () => {
     if (sig === spotMyTradesDataSigRef.current) return;
     spotMyTradesDataSigRef.current = sig;
     setSpotMyTrades(norm);
-  }, [walletTradeHistory]);
+  }, [walletTradeHistory, mountedOrdersTab]);
 
   useEffect(() => {
     spotMyTradesDataSigRef.current = "";
@@ -2470,8 +2480,10 @@ const Spot = () => {
             const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
 
             return (
-              <View
+              <TouchableOpacity
                 key={tradeHistoryKeyExtractor(item, index)}
+                activeOpacity={0.85}
+                onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
                 style={{
                   paddingVertical: 10,
                   paddingHorizontal: 0,
@@ -2479,25 +2491,20 @@ const Spot = () => {
                   borderBottomColor: themeColors.themeBorderColor,
                 }}
               >
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => NavigationService.navigate("Trade_History", { activeTab: 1 })}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-                    <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>
-                      {mLabel}
-                    </AppText>
-                    <FastImage
-                      source={right_ic}
-                      style={{ width: 11, height: 11, marginLeft: 4 }}
-                      resizeMode="contain"
-                      tintColor={themeColors.secondaryText}
-                    />
-                  </View>
-                  <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>
-                    {dateStr} {timeStr}
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+                  <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>
+                    {mLabel}
                   </AppText>
-                </TouchableOpacity>
+                  <FastImage
+                    source={right_ic}
+                    style={{ width: 11, height: 11, marginLeft: 4 }}
+                    resizeMode="contain"
+                    tintColor={themeColors.secondaryText}
+                  />
+                </View>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>
+                  {dateStr} {timeStr}
+                </AppText>
                 <AppText style={{ color: sideColor, fontSize: 13, marginBottom: 12 }} weight={MEDIUM}>
                   {side} · {role}
                 </AppText>
@@ -2542,7 +2549,7 @@ const Spot = () => {
                     {safeToFixed8(item?.quantity, "—")} {baseSym}
                   </AppText>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -2690,7 +2697,11 @@ const Spot = () => {
     const labelColor = themeColors.secondaryText;
 
     return (
-      <View style={[styles.openOrderCard, { backgroundColor: themeColors.background }]}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
+        style={[styles.openOrderCard, { backgroundColor: themeColors.background }]}
+      >
         <View>
           <View style={styles.openOrderTopRow}>
             <View style={{ flex: 1 }}>
@@ -2751,6 +2762,7 @@ const Spot = () => {
             <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Action:</AppText>
             <TouchableOpacity
               style={styles.cancelActionBtn}
+              activeOpacity={0.8}
               onPress={() => {
                 setOrderToCancel(inv);
                 setIsCancelModalVisible(true);
@@ -2762,7 +2774,7 @@ const Spot = () => {
         ) : null}
 
         <View style={[styles.openOrderCardDivider, { backgroundColor: themeColors.themeBorderColor }]} />
-      </View>
+      </TouchableOpacity>
     );
   }, [themeColors, buildCurrencyPairText, getOrderStatusRaw, getSideColor]);
 
@@ -2799,7 +2811,9 @@ const Spot = () => {
     const labelColor = themeColors.secondaryText;
 
     return (
-      <View
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
         style={[styles.openOrderCard, { backgroundColor: themeColors.background }]}
       >
         <View>
@@ -2914,7 +2928,7 @@ const Spot = () => {
         )}
 
         <View style={[styles.openOrderCardDivider, { backgroundColor: themeColors.themeBorderColor }]} />
-      </View>
+      </TouchableOpacity>
     );
   }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor]);
 
@@ -2940,8 +2954,7 @@ const Spot = () => {
             onBackPress={() => navigation.goBack()}
           />
 
-          {!historyOnly && (
-            <View style={styles.secondcontainer}>
+          <View style={styles.secondcontainer}>
               {/* Left: Order book (ratio + controls inside). */}
               <View style={styles.leftPanel}>
                 <OrderBookSection
@@ -3506,8 +3519,7 @@ const Spot = () => {
                 </View>
               </View>
 
-            </View>
-          )}
+          </View>
         </>
 
         {/* Bottom tabs: Open Orders / Order History / Trade History */}
@@ -3620,7 +3632,7 @@ const Spot = () => {
                             </TouchableOpacity>
                           );
                         })}
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2, alignSelf: "flex-start" }}>
                           <View style={{ width: 102 }}>
                             <CustomDropdown
                               compact
@@ -3723,6 +3735,7 @@ const Spot = () => {
                         marginBottom: 4,
                         paddingLeft: 2,
                         paddingRight: 14,
+                        alignSelf: "flex-start",
                       }}
                     >
                       <View style={{ width: 102 }}>
@@ -4355,6 +4368,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 2,
+    width: "100%",
   },
   orderRowThreeCol: {
     flexDirection: "row",

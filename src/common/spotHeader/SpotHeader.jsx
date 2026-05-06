@@ -178,8 +178,11 @@ const SpotHeader = ({
             {["Spot", "Margin", "Fiat", "P2P", "Convert"].map((t, idx, arr) => {
               const active = t === "Spot";
               return (
-                <View
+                <TouchableOpacity
                   key={t}
+                  activeOpacity={0.75}
+                  disabled={active}
+                  onPress={!active ? showComingSoon : undefined}
                   style={[
                     styles.topTabItem,
                     // `gap` is not supported on all RN versions; use margins for consistent spacing
@@ -190,7 +193,7 @@ const SpotHeader = ({
                     {t}
                   </AppText>
                   <View style={[styles.topTabUnderline, { backgroundColor: active ? themeColors.text : "transparent" }]} />
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
   },
   topTabUnderline: {
     height: 3,
-    width: 30,
+    width: 18,
     borderRadius: 2,
   },
   pairRowMain: {

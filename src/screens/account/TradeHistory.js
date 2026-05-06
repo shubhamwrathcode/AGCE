@@ -93,8 +93,7 @@ const TradeHistory = () => {
 
   // 0 = Orders History, 1 = Trade History (Fills)
   const [activeTab, setActiveTab] = useState(route?.params?.activeTab ?? 0);
-  const prevTabRef = useRef(activeTab);
-  const tabAnimX = useRef(new Animated.Value(0)).current;
+  const pagerX = useRef(new Animated.Value(-(route?.params?.activeTab ?? 0) * screenW)).current;
 
   // Data Sources
   const pastOrdersRedux = useAppSelector((state) => state.home.pastOrders) || [];
@@ -121,7 +120,8 @@ const TradeHistory = () => {
   const [isCancelLoading, setIsCancelLoading] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [showExecutedTrades, setShowExecutedTrades] = useState({});
-  const listRef = useRef(null);
+  const ordersListRef = useRef(null);
+  const tradesListRef = useRef(null);
 
   const limit = 20;
 
@@ -138,7 +138,7 @@ const TradeHistory = () => {
   }, [walletTradeHistory]);
 
   /**
-   * Prefetch both tabs on focus (if cache empty).
+   * Prefetch both tabs on focus (if cache empty).   
    * This makes switching Orders ↔ Trades feel instant, regardless of entry point (Spot vs ProfileDrawer).
    */
   useEffect(() => {
@@ -171,7 +171,8 @@ const TradeHistory = () => {
         await dispatch(
           getTradeHistory(0, limit, undefined, {
             useGlobalLoader: false,
-            clearBeforeFetch: true,
+            // Keep old list visible until new arrives (prevents flicker/lag on back/switch)
+            clearBeforeFetch: false,
           }),
         );
       } finally {
@@ -295,7 +296,11 @@ const TradeHistory = () => {
       );
 
       return (
-        <View style={[styles.orderSpotCard, { backgroundColor: themeColors.background }]}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
+          style={[styles.orderSpotCard, { backgroundColor: themeColors.background }]}
+        >
           <View>
             <View style={styles.orderSpotHeaderRow}>
               <View style={{ flex: 1 }}>
@@ -412,7 +417,7 @@ const TradeHistory = () => {
           ) : null}
 
           <View style={[styles.orderSpotDivider, { backgroundColor: borderDivider }]} />
-        </View>
+        </TouchableOpacity>
       );
     },
     [themeColors, spotSelectedPair, showExecutedTrades, toggleExpand],
@@ -449,7 +454,11 @@ const TradeHistory = () => {
       );
 
       return (
-        <View style={[styles.tradeFillCard, { borderBottomColor: borderColor, backgroundColor: themeColors.background }]}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
+          style={[styles.tradeFillCard, { borderBottomColor: borderColor, backgroundColor: themeColors.background }]}
+        >
           <View style={styles.pairRow}>
             <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>
               {mLabel}
@@ -475,24 +484,22 @@ const TradeHistory = () => {
           {kv("Role", role)}
           {kv("Price", safeToFixed8(item?.price, "—"))}
           {kv("Quantity", `${safeToFixed8(item?.quantity, "—")}${baseSym ? ` ${baseSym}` : ""}`)}
-        </View>
+        </TouchableOpacity>
       );
     },
     [themeColors, spotSelectedPair],
   );
 
-  const listForTab = activeTab === 0 ? ordersData : tradesData;
-  /** Full skeleton only on first load for the visible tab — not on Orders ↔ Trades switch. */
-  const showFullSkeleton =
-    (activeTab === 0 ? loadingOrders : loadingTrades) && listForTab.length === 0;
+  const showOrdersSkeleton = loadingOrders && (ordersData?.length ?? 0) === 0;
+  const showTradesSkeleton = loadingTrades && (tradesData?.length ?? 0) === 0;
 
   const listKeyExtractor = useCallback((item, index) => {
     const id = item?._id ?? item?.id ?? item?.trade_id;
     return id != null ? String(id) : `row_${index}`;
   }, []);
 
-  const listFooter = useMemo(() => {
-    if (loadingMore && listForTab.length > 0) {
+  const listFooterOrders = useMemo(() => {
+    if (activeTab === 0 && loadingMore && (ordersData?.length ?? 0) > 0) {
       return (
         <View style={styles.listFooterLoading}>
           <ActivityIndicator size="small" color={themeColors.text} />
@@ -503,29 +510,36 @@ const TradeHistory = () => {
       );
     }
     return <View style={styles.listFooterSpacer} />;
-  }, [loadingMore, listForTab.length, themeColors.text, themeColors.secondaryText]);
+  }, [activeTab, loadingMore, ordersData?.length, themeColors.text, themeColors.secondaryText]);
 
-  const scrollListToTop = useCallback(() => {
-    // FlatList ref may be null on first render
-    try {
-      listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
-    } catch (e) {}
+  const listFooterTrades = useMemo(() => {
+    if (activeTab === 1 && loadingMore && (tradesData?.length ?? 0) > 0) {
+      return (
+        <View style={styles.listFooterLoading}>
+          <ActivityIndicator size="small" color={themeColors.text} />
+          <AppText style={[styles.listFooterLoadingText, { color: themeColors.secondaryText }]}>
+            Loading more…
+          </AppText>
+        </View>
+      );
+    }
+    return <View style={styles.listFooterSpacer} />;
+  }, [activeTab, loadingMore, tradesData?.length, themeColors.text, themeColors.secondaryText]);
+
+  const scrollOrdersToTop = useCallback(() => {
+    try { ordersListRef.current?.scrollToOffset?.({ offset: 0, animated: true }); } catch (e) {}
+  }, []);
+  const scrollTradesToTop = useCallback(() => {
+    try { tradesListRef.current?.scrollToOffset?.({ offset: 0, animated: true }); } catch (e) {}
   }, []);
 
-  const animateTabSwitch = useCallback(
-    (nextTab) => {
-      const prev = prevTabRef.current;
-      prevTabRef.current = nextTab;
-      const dir = nextTab > prev ? 1 : -1; // 0->1 swipe left, 1->0 swipe right
-      tabAnimX.setValue(dir * screenW * 0.25);
-      Animated.timing(tabAnimX, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-    },
-    [screenW, tabAnimX],
-  );
+  useEffect(() => {
+    Animated.timing(pagerX, {
+      toValue: -activeTab * screenW,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [activeTab, pagerX, screenW]);
 
   return (
     <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -534,9 +548,8 @@ const TradeHistory = () => {
       <View style={[styles.tabBar, { borderBottomColor: themeColors.themeBorderColor ?? "#eee" }]}>
         <TouchableOpacity
           onPress={() => {
-            animateTabSwitch(0);
             setActiveTab(0);
-            scrollListToTop();
+            scrollOrdersToTop();
           }}
           style={[styles.tab, activeTab === 0 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}
         >
@@ -544,9 +557,8 @@ const TradeHistory = () => {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => {
-            animateTabSwitch(1);
             setActiveTab(1);
-            scrollListToTop();
+            scrollTradesToTop();
           }}
           style={[styles.tab, activeTab === 1 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}
         >
@@ -554,34 +566,74 @@ const TradeHistory = () => {
         </TouchableOpacity>
       </View>
 
-      {showFullSkeleton ? (
-        <TradeHistorySkeleton />
-      ) : (
-        <Animated.View style={{ flex: 1, transform: [{ translateX: tabAnimX }] }}>
-          <FlatList
-            ref={listRef}
-            data={listForTab}
-            renderItem={activeTab === 0 ? renderOrderCard : renderTradeCard}
-            keyExtractor={listKeyExtractor}
-            extraData={{ activeTab, loadingMore, showExecutedTrades }}
-            removeClippedSubviews={Platform.OS === "android"}
-            initialNumToRender={12}
-            maxToRenderPerBatch={12}
-            windowSize={8}
-            updateCellsBatchingPeriod={50}
-            onEndReached={handleLoadMore}
-            onEndReachedThreshold={0.4}
-            contentContainerStyle={activeTab === 1 ? styles.tradesListContent : styles.ordersListContent}
-            ListFooterComponent={listFooter}
-            ListEmptyComponent={() => (
-              <View style={styles.noDataRow}>
-                <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" />
-                <AppText style={{ marginTop: 10, color: themeColors.secondaryText }}>No data found</AppText>
-              </View>
+      <Animated.View style={{ flex: 1, overflow: "hidden" }}>
+        <Animated.View
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            width: screenW * 2,
+            transform: [{ translateX: pagerX }],
+          }}
+        >
+          <View style={{ width: screenW }}>
+            {showOrdersSkeleton ? (
+              <TradeHistorySkeleton />
+            ) : (
+              <FlatList
+                ref={ordersListRef}
+                data={ordersData}
+                renderItem={renderOrderCard}
+                keyExtractor={listKeyExtractor}
+                extraData={{ showExecutedTrades, loadingMore }}
+                removeClippedSubviews={Platform.OS === "android"}
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={7}
+                updateCellsBatchingPeriod={50}
+                onEndReached={activeTab === 0 ? handleLoadMore : undefined}
+                onEndReachedThreshold={0.4}
+                contentContainerStyle={styles.ordersListContent}
+                ListFooterComponent={listFooterOrders}
+                ListEmptyComponent={() => (
+                  <View style={styles.noDataRow}>
+                    <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" />
+                    <AppText style={{ marginTop: 10, color: themeColors.secondaryText }}>No data found</AppText>
+                  </View>
+                )}
+              />
             )}
-          />
+          </View>
+
+          <View style={{ width: screenW }}>
+            {showTradesSkeleton ? (
+              <TradeHistorySkeleton />
+            ) : (
+              <FlatList
+                ref={tradesListRef}
+                data={tradesData}
+                renderItem={renderTradeCard}
+                keyExtractor={listKeyExtractor}
+                extraData={{ loadingMore }}
+                removeClippedSubviews={Platform.OS === "android"}
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={7}
+                updateCellsBatchingPeriod={50}
+                onEndReached={activeTab === 1 ? handleLoadMore : undefined}
+                onEndReachedThreshold={0.4}
+                contentContainerStyle={styles.tradesListContent}
+                ListFooterComponent={listFooterTrades}
+                ListEmptyComponent={() => (
+                  <View style={styles.noDataRow}>
+                    <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" />
+                    <AppText style={{ marginTop: 10, color: themeColors.secondaryText }}>No data found</AppText>
+                  </View>
+                )}
+              />
+            )}
+          </View>
         </Animated.View>
-      )}
+      </Animated.View>
 
       <ReactNativeModal isVisible={isCancelModalVisible} onBackdropPress={() => setIsCancelModalVisible(false)} style={{ margin: 0, justifyContent: "flex-end" }}>
         <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>

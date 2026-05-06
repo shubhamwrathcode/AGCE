@@ -103,13 +103,14 @@ function aggregateOrderBookRows(orders, agg) {
   if (!orders?.length) return [];
   const map = new Map();
   for (const o of orders) {
+    const rem = Number(o?.remaining ?? o?.quantity ?? o?.qty ?? o?.amount ?? 0) || 0;
     const bucket = roundPriceToAgg(o.price, agg);
     const prev = map.get(bucket);
     if (prev) {
       prev.quantity = (Number(prev.quantity) || 0) + (Number(o.quantity) || 0);
-      prev.remaining = (Number(prev.remaining) || 0) + (Number(o.remaining) || 0);
+      prev.remaining = (Number(prev.remaining) || 0) + rem;
     } else {
-      map.set(bucket, { ...o, price: bucket });
+      map.set(bucket, { ...o, price: bucket, remaining: rem });
     }
   }
   return Array.from(map.values());
@@ -312,54 +313,65 @@ const toFinite = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const orderBookRemaining = (row) =>
+  toFinite(row?.remaining ?? row?.quantity ?? row?.qty ?? row?.amount ?? 0);
 
 const DepthRow = React.memo(({ bid, ask, maxBidVol, maxAskVol, themeColors, isDark, formatPrice, formatQty }) => {
-  const baseGreen = isDark ? "#213438" : "#C6F9E9";
-  const baseRed = isDark ? "#352933f7" : "#FFD9DB";
-  const bidRem = bid ? toFinite(bid.remaining) : 0;
-  const askRem = ask ? toFinite(ask.remaining) : 0;
+  // Depth bar colors (web-like). Keep low opacity so text stays readable.
+  const depthGreen = isDark ? "rgba(0, 192, 118, 0.16)" : "rgba(0, 192, 118, 0.12)";
+  const depthRed = isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)";
+  const bidRem = bid ? orderBookRemaining(bid) : 0;
+  const askRem = ask ? orderBookRemaining(ask) : 0;
   const br = maxBidVol > 0 ? clamp01(bidRem / maxBidVol) : 0;
   const ar = maxAskVol > 0 ? clamp01(askRem / maxAskVol) : 0;
-  const bEnd = Math.min(1, br + 1e-6);
-  const aEnd = Math.min(1, ar + 1e-6);
 
   return (
     <View style={styles.depthRow}>
       <View style={styles.depthBidSide}>
         <AppText type={ELEVEN} style={[styles.depthQty, { color: themeColors.secondaryText }]} numberOfLines={1}>
-          {bid ? formatQty(bid.remaining) : "—"}
+          {bid ? formatQty(bidRem) : "—"}
         </AppText>
         <View style={styles.depthBidGradWrap}>
-          <LinearGradient
-            style={styles.depthGradInner}
-            colors={[baseGreen, baseGreen, "transparent", "transparent"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            locations={[0, br, bEnd, 1]}
-          >
+          <View style={[styles.depthGradInner, { position: "relative", overflow: "hidden" }]}>
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: `${Math.round(br * 100)}%`,
+                backgroundColor: depthGreen,
+              }}
+            />
             <AppText style={[styles.depthBidPrice, { color: themeColors.green }]}>
               {bid ? formatPrice(bid.price) : ""}
             </AppText>
-          </LinearGradient>
+          </View>
         </View>
       </View>
       <View style={styles.depthMidRule} />
       <View style={styles.depthAskSide}>
         <View style={styles.depthAskGradWrap}>
-          <LinearGradient
-            style={[styles.depthGradInner, styles.depthAskInner]}
-            colors={[baseRed, baseRed, "transparent", "transparent"]}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 0, y: 0 }}
-            locations={[0, ar, aEnd, 1]}
-          >
+          <View style={[styles.depthGradInner, styles.depthAskInner, { position: "relative", overflow: "hidden" }]}>
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: `${Math.round(ar * 100)}%`,
+                backgroundColor: depthRed,
+              }}
+            />
             <AppText style={[styles.depthAskPrice, { color: themeColors.red }]}>
               {ask ? formatPrice(ask.price) : ""}
             </AppText>
-          </LinearGradient>
+          </View>
         </View>
         <AppText type={ELEVEN} style={[styles.depthQty, { color: themeColors.secondaryText, textAlign: "right" }]} numberOfLines={1}>
-          {ask ? formatQty(ask.remaining) : "—"}
+          {ask ? formatQty(askRem) : "—"}
         </AppText>
       </View>
     </View>
@@ -740,11 +752,11 @@ const SpotChartScreen = () => {
   const asksDisplay = useMemo(() => asksAggregated.slice(0, ORDER_BOOK_ROWS), [asksAggregated]);
 
   const maxBidVol = useMemo(
-    () => Math.max(1, ...bidsDisplay.map((o) => toFinite(o?.remaining))),
+    () => Math.max(1, ...bidsDisplay.map((o) => orderBookRemaining(o))),
     [bidsDisplay]
   );
   const maxAskVol = useMemo(
-    () => Math.max(1, ...asksDisplay.map((o) => toFinite(o?.remaining))),
+    () => Math.max(1, ...asksDisplay.map((o) => orderBookRemaining(o))),
     [asksDisplay]
   );
 
@@ -779,11 +791,11 @@ const SpotChartScreen = () => {
   }, [bidsDisplay, asksDisplay, orderBookViewMode]);
 
   const bidVolSum = useMemo(
-    () => bidsDisplay.reduce((s, o) => s + toFinite(o?.remaining), 0),
+    () => bidsDisplay.reduce((s, o) => s + orderBookRemaining(o), 0),
     [bidsDisplay]
   );
   const askVolSum = useMemo(
-    () => asksDisplay.reduce((s, o) => s + toFinite(o?.remaining), 0),
+    () => asksDisplay.reduce((s, o) => s + orderBookRemaining(o), 0),
     [asksDisplay]
   );
   const totalVolBar = bidVolSum + askVolSum || 1;
