@@ -1045,6 +1045,12 @@ const Spot = () => {
     }
   }, []);
 
+  const syncStopAnimForPriceString = useCallback((priceStr) => {
+    if (String(priceStr ?? "").trim() !== "") {
+      stopAnim.setValue(1);
+    }
+  }, []);
+
   useEffect(() => {
     const priceFilled = String(price ?? "").trim() !== "";
     const buyFilled = buy_price != null && String(buy_price).trim() !== "";
@@ -1076,13 +1082,26 @@ const Spot = () => {
     }).start();
   }, [amount, isAmountFocused]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const hasStop = String(stopPrice ?? "").trim() !== "";
+    if (hasStop) {
+      stopAnim.setValue(1);
+      return;
+    }
+    if (isStopFocused) {
+      Animated.timing(stopAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+      return;
+    }
     Animated.timing(stopAnim, {
-      toValue: (isStopFocused || stopPrice) ? 1 : 0,
+      toValue: 0,
       duration: 200,
       useNativeDriver: false,
     }).start();
-  }, [isStopFocused, stopPrice]);
+  }, [stopPrice, isStopFocused]);
 
   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
@@ -1405,7 +1424,8 @@ const Spot = () => {
   const [limitIoc, setLimitIoc] = useState(false);
   const [limitFok, setLimitFok] = useState(false);
   const [slippageEnabled, setSlippageEnabled] = useState(false);
-  const [slippagePct, setSlippagePct] = useState("0.5");
+  const [slippagePct, setSlippagePct] = useState("");
+  const [isSlippageInputFocused, setIsSlippageInputFocused] = useState(false);
   const inputSelectionColor = "#000";
   const [isBuy, setIsBuy] = useState(true);
   const [total, setTotal] = useState("");
@@ -1461,6 +1481,11 @@ const Spot = () => {
     }
     return "";
   }, [slippageBounds.max, slippageBounds.min, slippageEnabled, slippagePct]);
+
+  useEffect(() => {
+    if (!slippageEnabled) setIsSlippageInputFocused(false);
+  }, [slippageEnabled]);
+
   const [openOrderKindTab, setOpenOrderKindTab] = useState("all");
   // const [orderBookReady, setOrderBookReady] = useState(false);
   // const [showOrderBookSkeleton, setShowOrderBookSkeleton] = useState(true);
@@ -2024,7 +2049,9 @@ const Spot = () => {
     const current = parseFloat(stopPrice || buy_price || "0") || 0;
     const next = Math.max(0, current + delta * tickSize);
     const prec = getPricePrecision();
-    setStopPrice(parseFloat(next.toFixed(prec)).toString());
+    const val = parseFloat(next.toFixed(prec)).toString();
+    syncStopAnimForPriceString(val);
+    setStopPrice(val);
   };
 
   const handleQty = (text) => handleQuantityInput(text, setAmount);
@@ -3316,6 +3343,9 @@ const Spot = () => {
                   <View
                     style={[
                       styles.spotOrderFieldCard,
+                      isStopFocused || String(stopPrice ?? "").trim() !== ""
+                        ? styles.spotOrderFieldCardDense
+                        : styles.spotOrderFieldCardTight,
                       {
                         backgroundColor: themeColors.input,
                         borderColor: themeColors.themeBorderColor,
@@ -3323,45 +3353,55 @@ const Spot = () => {
                     ]}
                   >
                     <View style={styles.spotOrderFieldStack}>
-                      <Animated.Text
-                        style={[
-                          styles.spotOrderInputLabel,
-                          {
-                            position: "absolute",
-                            left: 0,
-                            right: 0,
-                            textAlign: "center",
-                            top: stopAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [11, 2],
-                            }),
-                            fontSize: stopAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [10, 8],
-                            }),
-                            color: themeColors.secondaryText,
-                          },
-                        ]}
-                      >
-                        Stop ({quote_currency})
-                      </Animated.Text>
-                      <View
+                      {isStopFocused || String(stopPrice ?? "").trim() !== "" ? (
+                        <Animated.Text
+                          style={[
+                            styles.spotOrderInputLabel,
+                            {
+                              position: "absolute",
+                              left: 0,
+                              right: 0,
+                              textAlign: "center",
+                              top: stopAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [9, 1],
+                              }),
+                              fontSize: stopAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [9, 7],
+                              }),
+                              lineHeight: stopAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [12, 9],
+                              }),
+                              color: themeColors.secondaryText,
+                            },
+                          ]}
+                        >
+                          Stop ({quote_currency})
+                        </Animated.Text>
+                      ) : null}
+                      <Animated.View
                         style={[
                           styles.spotOrderInputBox,
+                          styles.spotOrderInputBoxDense,
                           {
                             backgroundColor: "transparent",
                             paddingHorizontal: 0,
                             paddingVertical: 0,
-                            marginTop: 6,
+                            marginTop: stopAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 4],
+                            }),
                           },
                         ]}
                       >
                         <TouchableOpacity
                           onPress={() => handleStopPriceStep(-1)}
-                          style={styles.spotOrderStepBtn}
+                          style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         >
-                          <AppText style={[styles.spotOrderStepBtnText, { color: themeColors.secondaryText }]}>−</AppText>
+                          <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>−</AppText>
                         </TouchableOpacity>
                         <TextInput
                           placeholder={""}
@@ -3377,8 +3417,12 @@ const Spot = () => {
                           keyboardType="numeric"
                           style={[
                             styles.spotOrderInputValue,
+                            styles.spotOrderInputValueDense,
                             {
-                              color: themeColors.text,
+                              color:
+                                !isStopFocused && String(stopPrice ?? "").trim() === ""
+                                  ? "transparent"
+                                  : themeColors.text,
                               textAlign: "center",
                               textAlignVertical: "center",
                               ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
@@ -3387,12 +3431,24 @@ const Spot = () => {
                         />
                         <TouchableOpacity
                           onPress={() => handleStopPriceStep(1)}
-                          style={styles.spotOrderStepBtn}
+                          style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         >
-                          <AppText style={[styles.spotOrderStepBtnText, { color: themeColors.secondaryText }]}>+</AppText>
+                          <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>+</AppText>
                         </TouchableOpacity>
-                      </View>
+                      </Animated.View>
+                      {!isStopFocused && String(stopPrice ?? "").trim() === "" ? (
+                        <View pointerEvents="none" style={styles.spotOrderAmountEmptyOverlay}>
+                          <AppText
+                            style={[
+                              styles.spotOrderInputLabel,
+                              { color: themeColors.secondaryText, textAlign: "center" },
+                            ]}
+                          >
+                            Stop ({quote_currency})
+                          </AppText>
+                        </View>
+                      ) : null}
                     </View>
                   </View>
                 </View>
@@ -3655,15 +3711,12 @@ const Spot = () => {
                   </View>
                   <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
                 </TouchableOpacity>
-              </View>
-
-              {isMarketLikeOrder && (
-                <View style={{ marginBottom: SPOT_ORDER_V_GAP }}>
+                {isMarketLikeOrder ? (
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => setSlippageEnabled((v) => !v)}
-                    style={styles.slippageToggleRow}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.spotOrderTifChip}
+                    hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                   >
                     <View
                       style={[
@@ -3675,88 +3728,80 @@ const Spot = () => {
                         <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
                       ) : null}
                     </View>
-                    <AppText style={[styles.slippageToggleText, { color: themeColors.text }]}>Slippage</AppText>
+                    <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>Slippage</AppText>
                   </TouchableOpacity>
+                ) : null}
+              </View>
 
-                  {slippageEnabled ? (
-                    <>
-                      <View style={styles.spotOrderInputBlock}>
+              {isMarketLikeOrder && slippageEnabled ? (
+                <View style={{ marginBottom: SPOT_ORDER_V_GAP }}>
+                  <View style={styles.spotOrderInputBlock}>
+                    <View
+                      style={[
+                        styles.spotOrderFieldCard,
+                        styles.spotOrderFieldCardDense,
+                        {
+                          backgroundColor: themeColors.input,
+                          borderColor: themeColors.themeBorderColor,
+                        },
+                      ]}
+                    >
+                      <View style={styles.spotOrderFieldStack}>
+                        {/*
+                          Web parity (TradeCenterSection): trade_amount_field_limit input-group,
+                          placeholder only — no floating label / animation.
+                        */}
                         <View
                           style={[
-                            styles.spotOrderFieldCard,
+                            styles.spotOrderInputBox,
+                            styles.spotOrderInputBoxDense,
                             {
-                              backgroundColor: themeColors.input,
-                              borderColor: themeColors.themeBorderColor,
+                              backgroundColor: "transparent",
+                              paddingHorizontal: 0,
+                              paddingVertical: 0,
+                              marginTop: 0,
                             },
                           ]}
                         >
-                          <View style={styles.spotOrderFieldStack}>
-                            <AppText
+                          <View style={styles.spotOrderTotalSideSpacer} />
+                          <View style={styles.spotOrderSlippageInputShell}>
+                            <TextInput
+                              value={slippagePct}
+                              onChangeText={(t) => setSlippagePct(String(t).replace(/[^0-9.]/g, ""))}
+                              placeholder={isSlippageInputFocused ? "" : slippagePlaceholder}
+                              placeholderTextColor={themeColors.secondaryText}
+                              selectionColor={inputSelectionColor}
+                              keyboardType="numeric"
+                              textAlign="center"
+                              accessibilityLabel="Slippage tolerance percent"
+                              onFocus={() => setIsSlippageInputFocused(true)}
+                              onBlur={() => setIsSlippageInputFocused(false)}
                               style={[
-                                styles.spotOrderInputLabel,
+                                styles.spotOrderSlippageInput,
                                 {
-                                  color: themeColors.secondaryText,
-                                  textAlign: "center",
-                                  alignSelf: "stretch",
-                                  marginTop: 3,
+                                  color: themeColors.text,
+                                  ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                                 },
                               ]}
-                            >
-                              Slippage (%)
-                            </AppText>
-                            <View
-                              style={[
-                                styles.spotOrderInputBox,
-                                {
-                                  backgroundColor: "transparent",
-                                  paddingHorizontal: 0,
-                                  paddingVertical: 0,
-                                  alignItems: "center",
-                                },
-                              ]}
-                            >
-                              <TextInput
-                                value={slippagePct}
-                                onChangeText={(t) => setSlippagePct(String(t).replace(/[^0-9.]/g, ""))}
-                                placeholder={slippagePlaceholder}
-                                placeholderTextColor={themeColors.secondaryText}
-                                selectionColor={inputSelectionColor}
-                                keyboardType="numeric"
-                                style={[
-                                  styles.spotOrderInputValue,
-                                  {
-                                    flex: 0,
-                                    width: "100%",
-                                    color: themeColors.text,
-                                    textAlign: "center",
-                                    ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
-                                  },
-                                ]}
-                              />
-                              <View
-                                pointerEvents="none"
-                                style={{
-                                  position: "absolute",
-                                  right: 10,
-                                  height: "100%",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>%</AppText>
-                              </View>
+                            />
+                            <View pointerEvents="none" style={styles.spotOrderSlippagePctWrap}>
+                              <AppText style={[styles.spotOrderSlippagePctText, { color: themeColors.secondaryText }]}>
+                                %
+                              </AppText>
                             </View>
                           </View>
+                          <View style={styles.spotOrderTotalSideSpacer} />
                         </View>
                       </View>
-                      {slippageError ? (
-                        <AppText style={{ color: themeColors.red, fontSize: 11, marginTop: 6 }}>
-                          {slippageError}
-                        </AppText>
-                      ) : null}
-                    </>
+                    </View>
+                  </View>
+                  {slippageError ? (
+                    <AppText style={[styles.spotOrderSlippageError, { color: themeColors.red }]}>
+                      {slippageError}
+                    </AppText>
                   ) : null}
                 </View>
-              )}
+              ) : null}
 
               {/* Coin Info */}
               <View style={styles.assetBox}>
@@ -4536,11 +4581,6 @@ const styles = StyleSheet.create({
   spotOrderTifText: {
     fontSize: 9,
   },
-  slippageToggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
   slippageCheckbox: {
     width: 12,
     height: 12,
@@ -4554,8 +4594,9 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
   },
-  slippageToggleText: {
+  spotOrderSlippageError: {
     fontSize: 9,
+    lineHeight: 12,
   },
   spotOrderSubmitWrap: {
     marginTop: SPOT_ORDER_V_GAP,
@@ -4695,6 +4736,39 @@ const styles = StyleSheet.create({
     fontSize: 8,
     lineHeight: 12,
   },
+  /** Slippage: slightly larger placeholder/value than dense amount; % overlay so caret stays centered */
+  spotOrderSlippageInputShell: {
+    flex: 1,
+    position: "relative",
+    minHeight: 20,
+    justifyContent: "center",
+    alignSelf: "stretch",
+  },
+  spotOrderSlippageInput: {
+    width: "100%",
+    fontSize: 10,
+    lineHeight: 14,
+    minHeight: 20,
+    paddingVertical: 0,
+    paddingLeft: 26,
+    paddingRight: 26,
+    fontFamily: MEDIUM,
+    textAlign: "center",
+    textAlignVertical: "center",
+  },
+  spotOrderSlippagePctWrap: {
+    position: "absolute",
+    right: -10,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+  },
+  spotOrderSlippagePctText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: MEDIUM,
+   
+  },
   /** Price / Amount steppers (+/−) */
   spotOrderStepBtnSpotPair: {
     minWidth: 24,
@@ -4737,7 +4811,6 @@ const styles = StyleSheet.create({
   assetBox: {
     borderRadius: 6,
     padding: 5,
-    marginTop: 0,
     marginBottom: SPOT_ORDER_V_GAP,
   },
   assetRow: {
