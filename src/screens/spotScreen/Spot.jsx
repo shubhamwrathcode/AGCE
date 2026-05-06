@@ -1262,6 +1262,24 @@ const Spot = () => {
   const [mountedOrdersTab, setMountedOrdersTab] = useState(1);
   activeTabRef.current = activeTab;
 
+  // Swipe animation for bottom tabs content (1 ↔ 2 ↔ 3)
+  const ordersTabsPrevRef = useRef(activeTab);
+  const ordersTabsAnimX = useRef(new Animated.Value(0)).current;
+  const animateOrdersTabsSwitch = useCallback(
+    (nextTabId) => {
+      const prev = ordersTabsPrevRef.current;
+      ordersTabsPrevRef.current = nextTabId;
+      const dir = nextTabId > prev ? 1 : -1;
+      ordersTabsAnimX.setValue(dir * (Width * 0.25));
+      Animated.timing(ordersTabsAnimX, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+    },
+    [ordersTabsAnimX],
+  );
+
   /** Bottom tabs row: scroll so left tabs align left, right tab aligns right (narrow screens). */
   const ordersBottomTabScrollRef = useRef(null);
   const ordersBottomTabBarWidthRef = useRef(0);
@@ -1301,11 +1319,12 @@ const Spot = () => {
       if (tabId < 1 || tabId > 3) return;
       if (activeTab === tabId) return;
       setExpandedRowIndex(null);
+      animateOrdersTabsSwitch(tabId);
       activeTabRef.current = tabId;
       setActiveTab(tabId);
       setMountedOrdersTab(tabId);
     },
-    [activeTab],
+    [activeTab, animateOrdersTabsSwitch],
   );
 
   const [tab, setTab] = useState("Buy");
@@ -1635,6 +1654,37 @@ const Spot = () => {
   }, [LocalBuyOrders, LocalSellOrders, recentTrades, currency, dispatch]);
 
   // Web parity: poll only while the mounted tab panel is Order History (2) — matches visible UI after slide animation (avoids Redux updating mid-slide + stale list flash).
+  /**
+   * Warm-switch prefetch:
+   * When Spot is focused and a pair is selected, prefetch BOTH:
+   * - Order History (executed orders)
+   * - Trade History (fills)
+   *
+   * This makes switching tab 2 ↔ 3 feel instant (same as History screen warm-cache behavior),
+   * while keeping the polling intervals gated to the mounted panel only.
+   */
+  const spotHistoryPrefetchRef = useRef({ pair: undefined, ts: 0 });
+  useEffect(() => {
+    if (!base_currency || !quote_currency || !userData) return;
+    if (!isSpotFocused) return;
+    const pair = `${base_currency}${quote_currency}`.toUpperCase();
+    const now = Date.now();
+    // Debounce: avoid spam on rapid re-renders.
+    if (spotHistoryPrefetchRef.current.pair === pair && now - (spotHistoryPrefetchRef.current.ts || 0) < 2500) return;
+    spotHistoryPrefetchRef.current = { pair, ts: now };
+
+    // Prefetch order history (tab 2)
+    dispatch(getPastOrders({ page: 1, page_size: 50, pair }, { useGlobalLoader: false }));
+
+    // Prefetch trade fills (tab 3) — clear on prefetch so switching doesn't show stale pair data.
+    dispatch(
+      getTradeHistory(0, 50, pair, {
+        useGlobalLoader: false,
+        clearBeforeFetch: true,
+      }),
+    );
+  }, [base_currency, quote_currency, userData, dispatch, isSpotFocused]);
+
   useEffect(() => {
     if (!base_currency || !quote_currency || !userData) return undefined;
     if (!isSpotFocused) return undefined;
@@ -3524,7 +3574,7 @@ const Spot = () => {
         {/* Bottom tabs: ek hi panel — Order History / Trade History data web jaisi APIs se (`me/orders/history`, `me/trades`). */}
         {(historyOnly || orderBookReady) && (
           <View style={styles.ordersTabContentWrapper}>
-              <>
+              <Animated.View style={{ transform: [{ translateX: ordersTabsAnimX }] }}>
                 {mountedOrdersTab === 1 ? (
                   <View style={styles.ordersTabPanel}>
                     {/* existing Open Orders panel */}
@@ -3700,7 +3750,7 @@ const Spot = () => {
                     {renderTradeHistorySection()}
                   </View>
                 ) : null}
-              </>
+              </Animated.View>
           </View>
         )}
         {/* Sweet Alert Style Modal */}

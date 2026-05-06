@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Animated,
+  Dimensions,
 } from "react-native";
 import ReactNativeModal from "react-native-modal";
 import {
@@ -87,9 +89,12 @@ const TradeHistory = () => {
   const route = useRoute();
   const isFocused = useIsFocused();
   const { colors: themeColors, isDark } = useTheme();
+  const screenW = Dimensions.get("window").width;
 
   // 0 = Orders History, 1 = Trade History (Fills)
   const [activeTab, setActiveTab] = useState(route?.params?.activeTab ?? 0);
+  const prevTabRef = useRef(activeTab);
+  const tabAnimX = useRef(new Animated.Value(0)).current;
 
   // Data Sources
   const pastOrdersRedux = useAppSelector((state) => state.home.pastOrders) || [];
@@ -116,6 +121,7 @@ const TradeHistory = () => {
   const [isCancelLoading, setIsCancelLoading] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [showExecutedTrades, setShowExecutedTrades] = useState({});
+  const listRef = useRef(null);
 
   const limit = 20;
 
@@ -499,15 +505,51 @@ const TradeHistory = () => {
     return <View style={styles.listFooterSpacer} />;
   }, [loadingMore, listForTab.length, themeColors.text, themeColors.secondaryText]);
 
+  const scrollListToTop = useCallback(() => {
+    // FlatList ref may be null on first render
+    try {
+      listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
+    } catch (e) {}
+  }, []);
+
+  const animateTabSwitch = useCallback(
+    (nextTab) => {
+      const prev = prevTabRef.current;
+      prevTabRef.current = nextTab;
+      const dir = nextTab > prev ? 1 : -1; // 0->1 swipe left, 1->0 swipe right
+      tabAnimX.setValue(dir * screenW * 0.25);
+      Animated.timing(tabAnimX, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+    },
+    [screenW, tabAnimX],
+  );
+
   return (
     <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Toolbar isSecond title={"History"} style={{ width: "58%", backgroundColor: "transparent" }} />
 
       <View style={[styles.tabBar, { borderBottomColor: themeColors.themeBorderColor ?? "#eee" }]}>
-        <TouchableOpacity onPress={() => setActiveTab(0)} style={[styles.tab, activeTab === 0 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
+        <TouchableOpacity
+          onPress={() => {
+            animateTabSwitch(0);
+            setActiveTab(0);
+            scrollListToTop();
+          }}
+          style={[styles.tab, activeTab === 0 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}
+        >
           <AppText style={[styles.tabText, { color: activeTab === 0 ? themeColors.text : themeColors.secondaryText }]}>Orders</AppText>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab(1)} style={[styles.tab, activeTab === 1 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
+        <TouchableOpacity
+          onPress={() => {
+            animateTabSwitch(1);
+            setActiveTab(1);
+            scrollListToTop();
+          }}
+          style={[styles.tab, activeTab === 1 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}
+        >
           <AppText style={[styles.tabText, { color: activeTab === 1 ? themeColors.text : themeColors.secondaryText }]}>Trades</AppText>
         </TouchableOpacity>
       </View>
@@ -515,27 +557,30 @@ const TradeHistory = () => {
       {showFullSkeleton ? (
         <TradeHistorySkeleton />
       ) : (
-        <FlatList
-          data={listForTab}
-          renderItem={activeTab === 0 ? renderOrderCard : renderTradeCard}
-          keyExtractor={listKeyExtractor}
-          extraData={{ activeTab, loadingMore, showExecutedTrades }}
-          removeClippedSubviews={Platform.OS === "android"}
-          initialNumToRender={12}
-          maxToRenderPerBatch={12}
-          windowSize={8}
-          updateCellsBatchingPeriod={50}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.4}
-          contentContainerStyle={activeTab === 1 ? styles.tradesListContent : styles.ordersListContent}
-          ListFooterComponent={listFooter}
-          ListEmptyComponent={() => (
-            <View style={styles.noDataRow}>
-              <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" />
-              <AppText style={{ marginTop: 10, color: themeColors.secondaryText }}>No data found</AppText>
-            </View>
-          )}
-        />
+        <Animated.View style={{ flex: 1, transform: [{ translateX: tabAnimX }] }}>
+          <FlatList
+            ref={listRef}
+            data={listForTab}
+            renderItem={activeTab === 0 ? renderOrderCard : renderTradeCard}
+            keyExtractor={listKeyExtractor}
+            extraData={{ activeTab, loadingMore, showExecutedTrades }}
+            removeClippedSubviews={Platform.OS === "android"}
+            initialNumToRender={12}
+            maxToRenderPerBatch={12}
+            windowSize={8}
+            updateCellsBatchingPeriod={50}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.4}
+            contentContainerStyle={activeTab === 1 ? styles.tradesListContent : styles.ordersListContent}
+            ListFooterComponent={listFooter}
+            ListEmptyComponent={() => (
+              <View style={styles.noDataRow}>
+                <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" />
+                <AppText style={{ marginTop: 10, color: themeColors.secondaryText }}>No data found</AppText>
+              </View>
+            )}
+          />
+        </Animated.View>
       )}
 
       <ReactNativeModal isVisible={isCancelModalVisible} onBackdropPress={() => setIsCancelModalVisible(false)} style={{ margin: 0, justifyContent: "flex-end" }}>
@@ -657,7 +702,7 @@ const styles = StyleSheet.create({
   },
   tradeFillCard: {
     paddingVertical: 10,
-    paddingHorizontal: 0,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
   },
   tradeKvRow: {
