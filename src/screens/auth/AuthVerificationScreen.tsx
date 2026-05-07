@@ -83,6 +83,8 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const passkeyQRSheetRef = useRef<any>(null);
 
   const lastAutoSentForMethod = useRef<number | null>(null);
+  const prevSelectedMethod = useRef<number>(initialMethod);
+  const autoSubmitEnabled = useRef<boolean>(true);
   const { height: winHeight } = useWindowDimensions();
   const passkeyQRSheetHeight = Math.min(winHeight * 0.9, 450);
   
@@ -104,6 +106,8 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
       setSelectedAuthMethod(firstMethod);
       setOtpCode("");
       setOtpError(false);
+      prevSelectedMethod.current = firstMethod;
+      autoSubmitEnabled.current = true;
       if (firstMethod !== 1 && firstMethod !== 3) {
         setResendTimer(0);
       }
@@ -122,6 +126,29 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
       }
     }
   }, [pending2FA]);
+
+  // Auto-send OTP when user switches between Email/Phone methods (no need to press Resend).
+  useEffect(() => {
+    if (!pending2FA) return;
+    if (prevSelectedMethod.current === selectedAuthMethod) return;
+
+    // Reset input when switching methods
+    setOtpCode("");
+    setOtpError(false);
+
+    // Allow re-auto-send when switching back later
+    lastAutoSentForMethod.current = null;
+    // Re-enable auto-submit on a fresh method switch
+    autoSubmitEnabled.current = true;
+
+    if (selectedAuthMethod === 1 || selectedAuthMethod === 3) {
+      prevSelectedMethod.current = selectedAuthMethod;
+      handleGetOtp();
+      return;
+    }
+
+    prevSelectedMethod.current = selectedAuthMethod;
+  }, [pending2FA, selectedAuthMethod]);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -176,6 +203,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const handleGetOtp = () => {
     const sendTo = selectedAuthMethod === 3 ? "mobile" : "email";
     setResendTimer(60);
+    autoSubmitEnabled.current = true;
     dispatch(sendLoginOtp(getVerifySignId(), sendTo, setResendTimer));
   };
 
@@ -196,7 +224,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     if (otpCode.length < 6) {
       setOtpError(true);
       showError("Please enter a valid 6-digit code");
-      return;
+      return false;
     }
     setOtpError(false);
     Keyboard.dismiss();
@@ -205,8 +233,25 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     );
     if (res && res.success === false) {
       setOtpError(true);
+      // After a wrong OTP once, require user to press Next for subsequent attempts
+      autoSubmitEnabled.current = false;
+      return false;
     }
+    return true;
   };
+
+  // Auto-submit on 6th digit for first attempt only.
+  useEffect(() => {
+    if (!pending2FA) return;
+    if (selectedAuthMethod === 4) return; // passkey flow
+    if (!autoSubmitEnabled.current) return;
+    if (showButtonLoading) return;
+    if (otpCode.length !== 6) return;
+
+    (async () => {
+      await handleSubmit();
+    })();
+  }, [otpCode, selectedAuthMethod, pending2FA, showButtonLoading]);
 
   const getMaskedEmail = (): string => {
     const signId = getVerifySignId() || "";
