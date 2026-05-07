@@ -20,32 +20,6 @@ const EarningBalance = ({theme}) => {
   }, []);
   return (
     <View>
-       {/* <View
-            style={{
-              marginTop: 15,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding:0
-              // backgroundColor:"orange"
-            }}
-          >
-            <AppText>Earning Wallet Balance</AppText>
-            <View style={styles.searchView}>
-              <FastImage
-                source={searchIcon}
-                tintColor={"#787878"}
-                resizeMode="contain"
-                style={{ width: 12, height: 12,width:"20%" }}
-              />
-              <TextInput
-                placeholder="Search"
-                placeholderTextColor={"#787878"}
-                style={{ fontSize: 10, paddingRight:10,color:"#222",width:'80%', }}
-              />
-            </View>
-          </View> */}
-
 
   <ScrollView horizontal showsHorizontalScrollIndicator={true}>
   <View style={{ padding: 10 }}>

@@ -1,4 +1,5 @@
 export const colors = {
+  orangeTheme:"#d1aa67",
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
