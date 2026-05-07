@@ -5,12 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Animated,
 } from "react-native";
 import { searchIcon } from "../../helper/ImageAssets";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { AppText, FOURTEEN, SEMI_BOLD } from "../../shared";
 import FastImage from "react-native-fast-image";
-import { colors } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import { SEARCH_SCREEN } from "../../navigation/routes";
 import { useTheme } from "../../hooks/useTheme";
@@ -19,19 +20,82 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const H_PAD = Math.max(14, SCREEN_WIDTH * 0.04);
 
 const TABS = [
-  { key: "Favourite", label: "Favourite" },
+  { key: "Favorites", label: "Favorites" },
   { key: "Spot", label: "Spot" },
-  { key: "Futures", label: "Futures" },
-  { key: "Discover", label: "Discover" },
-  { key: "MemeX", label: "MemeX" },
+  { key: "Cryptos", label: "Cryptos" },
+  { key: "USD_M_FUTURES", label: "USDⓈ-M Futures" },
+  { key: "COIN_M_FUTURES", label: "COIN-M Futures" },
+  { key: "OPTIONS", label: "Options" },
+  { key: "ALPHA", label: "Alpha" },
 ];
 
-const MarketHeader = ({ activeTab, setActiveTab, search, onSearchChange, showSearch }) => {
+const formatSubCategoryLabel = (key) => {
+  if (!key || key === "All") return "All";
+  return String(key)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const MarketHeader = ({
+  activeTab,
+  setActiveTab,
+  search,
+  onSearchChange,
+  showSearch,
+  showSubTabs = false,
+  subTabItems,
+  subCategories = [],
+  activeSubCategory = "All",
+  onSubCategoryChange,
+}) => {
   const { colors: themeColors } = useTheme();
 
   const textColor = themeColors.text;
   const placeholderColor = themeColors.secondaryText;
   const tabInactiveColor = themeColors.secondaryText;
+
+  const scrollRef = React.useRef(null);
+  const tabLayoutsRef = React.useRef({});
+  const underlineLeft = React.useRef(new Animated.Value(0)).current;
+  const underlineWidth = React.useRef(new Animated.Value(0)).current;
+
+  const animateUnderlineTo = React.useCallback(
+    (key, animated = true) => {
+      const layout = tabLayoutsRef.current?.[key];
+      if (!layout) return;
+
+      const tabX = layout.x ?? 0;
+      const tabW = Math.max(0, layout.width ?? 0);
+      // shorter underline, centered under selected tab
+      const lineW = Math.max(10, tabW * 0.55);
+      const toLeft = tabX + Math.max(0, (tabW - lineW) / 2);
+      const toW = lineW;
+
+      if (animated) {
+        Animated.parallel([
+          Animated.timing(underlineLeft, { toValue: toLeft, duration: 180, useNativeDriver: false }),
+          Animated.timing(underlineWidth, { toValue: toW, duration: 180, useNativeDriver: false }),
+        ]).start();
+      } else {
+        underlineLeft.setValue(toLeft);
+        underlineWidth.setValue(toW);
+      }
+
+      scrollRef.current?.scrollTo?.({ x: Math.max(0, tabX - H_PAD), animated: true });
+    },
+    [underlineLeft, underlineWidth]
+  );
+
+  React.useEffect(() => {
+    animateUnderlineTo(activeTab, true);
+  }, [activeTab, animateUnderlineTo]);
+
+  // First mount: once layouts come in, snap underline to active tab.
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => animateUnderlineTo(activeTab, false));
+    return () => cancelAnimationFrame(id);
+  }, [activeTab, animateUnderlineTo]);
 
   return (
     <View style={[styles.wrapper, { backgroundColor: themeColors.background }]}>
@@ -45,7 +109,7 @@ const MarketHeader = ({ activeTab, setActiveTab, search, onSearchChange, showSea
             tintColor={placeholderColor}
           />
           <TextInput
-            style={[styles.searchInput, { color: textColor }]}
+            style={[styles.searchInput, { color: textColor,fontSize:12 }]}
             placeholder="Search Coin Pairs"
             placeholderTextColor={placeholderColor}
             value={search}
@@ -69,34 +133,87 @@ const MarketHeader = ({ activeTab, setActiveTab, search, onSearchChange, showSea
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        ref={scrollRef}
         contentContainerStyle={styles.tabsScroll}
         style={styles.tabsRow}
       >
-        {TABS.map(({ key, label }) => {
-          const isActive = activeTab === key;
-          return (
-            <TouchableOpacity
-              key={key}
-              onPress={() => setActiveTab(key)}
-              style={[styles.tab, isActive && styles.tabActive]}
-              activeOpacity={0.8}
-            >
-              <AppText
-                type={FOURTEEN}
-                weight={SEMI_BOLD}
+        <View style={styles.tabsInner}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.underline,
+              {
+                backgroundColor: themeColors.button,
+                left: underlineLeft,
+                width: underlineWidth,
+              },
+            ]}
+          />
+
+          {TABS.map(({ key, label }) => {
+            const isActive = activeTab === key;
+            return (
+              <View
+                key={key}
+                onLayout={(e) => {
+                  tabLayoutsRef.current[key] = e.nativeEvent.layout;
+                  if (key === activeTab) animateUnderlineTo(key, false);
+                }}
+              >
+                <TouchableOpacity onPress={() => setActiveTab(key)} style={[styles.tab, isActive && styles.tabActive]} activeOpacity={0.8}>
+                  <AppText
+                    type={FOURTEEN}
+                    weight={SEMI_BOLD}
+                    style={[
+                      styles.tabLabel,
+                      { color: isActive ? textColor : tabInactiveColor },
+                      isActive && styles.tabLabelActive,
+                    ]}
+                  >
+                    {label}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+
+      {showSubTabs && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.subTabsScroll}
+          style={styles.subTabsRow}
+        >
+          {(Array.isArray(subTabItems) && subTabItems.length > 0
+            ? subTabItems
+            : ["All", ...(Array.isArray(subCategories) ? subCategories : [])].map((k) => ({
+                key: k,
+                label: formatSubCategoryLabel(k),
+              }))).map((it) => {
+            const isActive = activeSubCategory === it.key;
+            return (
+              <TouchableOpacity
+                key={it.key}
+                activeOpacity={0.85}
+                onPress={() => onSubCategoryChange?.(it.key)}
                 style={[
-                  styles.tabLabel,
-                  { color: isActive ? textColor : tabInactiveColor },
-                  isActive && styles.tabLabelActive,
+                  styles.subTabChip,
+                  {
+                    backgroundColor: isActive ? lightTheme.input : "transparent",
+                    borderColor: isActive ? themeColors.border : "transparent",
+                  },
                 ]}
               >
-                {label}
-              </AppText>
-              {isActive && <View style={[styles.tabUnderline, { backgroundColor: themeColors.button }]} />}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+                <AppText style={[styles.subTabText, { color: isActive ? themeColors.text : themeColors.secondaryText }]}>
+                  {it.label}
+                </AppText>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -134,27 +251,49 @@ const styles = StyleSheet.create({
   tabsScroll: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
-    paddingRight: 24,
+    paddingRight: 14,
+  },
+  tabsInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
   },
   tab: {
-    paddingVertical: 10,
-    paddingHorizontal: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
   tabActive: {},
   tabLabel: {
-    fontSize: 14,
+    fontSize: 12.5,
   },
   tabLabelActive: {
     fontWeight: "700",
   },
-  tabUnderline: {
+  underline: {
     position: "absolute",
     bottom: 0,
-    left: "20%",
-    right: "20%",
     height: 2,
     borderRadius: 1,
+    zIndex: 10,
+  },
+  subTabsRow: {
+    marginTop: 8,
+    maxHeight: 34,
+  },
+  subTabsScroll: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 14,
+  },
+  subTabChip: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+  },
+  subTabText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });
 

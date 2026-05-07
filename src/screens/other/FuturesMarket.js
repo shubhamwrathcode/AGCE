@@ -137,7 +137,7 @@ const FuturesMarket = ({ search }) => {
         <FuturesList data={filterFuturesData} onPress={handleNavigate} />
       ) : (
         <View style={styles.empty}>
-          <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} resizeMode="contain" style={{ width: 150, height: 150 }} />
+          <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} resizeMode="contain" style={{ width: 100, height: 100 }} />
           <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
             No futures data at the moment.
           </AppText>

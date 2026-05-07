@@ -34,7 +34,6 @@ const MarketFeaturedCard = ({ data, chartData, chartId, onPress }) => {
   const [chartWidth, setChartWidth] = React.useState(cardContentWidth);
   const priceNum = Number(data?.buy_price) || 0;
   const absoluteChange = (priceNum * Math.abs(change)) / 100;
-  const absoluteStr = absoluteChange >= 1 ? absoluteChange.toFixed(2) : absoluteChange.toFixed(4);
 
   return (
     <TouchableOpacityView
@@ -83,43 +82,43 @@ const MarketFeaturedCard = ({ data, chartData, chartId, onPress }) => {
           chartData={chartData}
           isPositive={isPositive}
           width={chartWidth}
-          height={46}
+          height={38}
           chartId={chartId}
           fallbackPrice={Number(data?.buy_price) || 100}
         />
       </View>
 
-      <AppText type={TEN} style={[styles.volumeText, { color: subTextColor }]} numberOfLines={1}>
+      {/* <AppText type={TEN} style={[styles.volumeText, { color: subTextColor }]} numberOfLines={1}>
         24H Volume：{volumeStr} (USD)
-      </AppText>
+      </AppText> */}
 
-      <View style={[styles.todayPill, isPositive ? styles.todayPillPositive : styles.todayPillNegative]}>
+      {/* <View style={[styles.todayPill, isPositive ? styles.todayPillPositive : styles.todayPillNegative]}>
         <AppText type={TEN} weight={SEMI_BOLD} style={[styles.todayPillText, { color: textColor }]}>
           {isPositive ? "▲ " : "▼ "}{absoluteStr} ({isPositive ? "+" : ""}{toFixedThree(change)}%) Today
         </AppText>
-      </View>
+      </View> */}
     </TouchableOpacityView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    paddingBottom: 52,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
     width: "100%",
     overflow: "hidden",
     borderWidth: 0.5,
-    borderRadius: 20,
+    borderRadius: 10,
     ...(Platform.OS === "ios"
       ? { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 }
-      : { elevation: 3 }),
+      : { elevation: 1 }),
   },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   nameBlock: {},
   symbolText: { marginTop: 2, fontSize: 11 },
@@ -137,13 +136,12 @@ const styles = StyleSheet.create({
     height: 36,
   },
   priceSection: {
-    marginBottom: 10,
+    marginBottom: 6,
   },
   graphWrap: {
     width: "100%",
     alignSelf: "stretch",
-    height: 46,
-    marginBottom: 10,
+    height: 38,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,

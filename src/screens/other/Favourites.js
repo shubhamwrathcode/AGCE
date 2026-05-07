@@ -13,7 +13,7 @@ import NavigationService from "../../navigation/NavigationService";
 import { colors } from "../../theme/colors";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 
-const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true }) => {
+const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, subCategory = "All" }) => {
   const dispatch = useDispatch();
   const theme = useAppSelector((state) => state.auth.theme);
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
@@ -38,6 +38,9 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true }) 
   const filterPairData = useMemo(() => {
     if (!coinPairs || !Array.isArray(coinPairs)) return [];
     let data = [...coinPairs];
+    if (subCategory && subCategory !== "All") {
+      data = data.filter((item) => String(item?.sub_category ?? "").trim() === String(subCategory).trim());
+    }
     if (search) {
       const s = search.toLowerCase();
       data = data.filter(
@@ -47,7 +50,7 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true }) 
       );
     }
     return data;
-  }, [coinPairs, search]);
+  }, [coinPairs, search, subCategory]);
 
   const favFilteredData = useMemo(() => {
     if (!isLoggedIn || !favoriteArray?.length) return [];

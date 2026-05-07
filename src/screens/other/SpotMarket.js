@@ -17,21 +17,17 @@ const QUOTE_OPTIONS = [
   { key: "ETH", label: "ETH", icon: Coin },
   { key: "BNB", label: "BNB", icon: bnbIcon },
 ];
-const TYPE_OPTIONS = [
-  { key: "All", label: "All" },
-  { key: "Gainers", label: "Gainers" },
-  { key: "Losers", label: "Losers" },
-  { key: "Trending", label: "Trending" },
-];
 
-const SpotMarket = ({ coinPairs, search = "" }) => {
+const SpotMarket = ({ coinPairs, search = "", subCategory = "All" }) => {
   const { colors: themeColors } = useTheme();
   const [spotQuoteCurrency, setSpotQuoteCurrency] = useState("USDT");
-  const [spotFilterType, setSpotFilterType] = useState("All");
 
   const filterData = useMemo(() => {
     if (!coinPairs || !Array.isArray(coinPairs)) return [];
     let data = [...coinPairs];
+    if (subCategory && subCategory !== "All") {
+      data = data.filter((item) => String(item?.sub_category ?? "").trim() === String(subCategory).trim());
+    }
     if (search) {
       const s = search.toLowerCase();
       data = data.filter(
@@ -47,19 +43,8 @@ const SpotMarket = ({ coinPairs, search = "" }) => {
           item?.base_currency?.toUpperCase() === spotQuoteCurrency
       );
     }
-    if (spotFilterType === "Gainers") {
-      data = data
-        .filter((item) => Number(item?.change_percentage) > 0)
-        .sort((a, b) => Number(b?.change_percentage) - Number(a?.change_percentage));
-    } else if (spotFilterType === "Losers") {
-      data = data
-        .filter((item) => Number(item?.change_percentage) < 0)
-        .sort((a, b) => Number(a?.change_percentage) - Number(b?.change_percentage));
-    } else if (spotFilterType === "Trending") {
-      data = data.sort((a, b) => Number(b?.volume) - Number(a?.volume));
-    }
     return data;
-  }, [coinPairs, search, spotQuoteCurrency, spotFilterType]);
+  }, [coinPairs, search, spotQuoteCurrency, subCategory]);
 
   const handleNavigate = (item) => {
     NavigationService.navigate(WALLET_SCREEN, { coinDetail: item });
@@ -71,36 +56,8 @@ const SpotMarket = ({ coinPairs, search = "" }) => {
 
   return (
     <View style={styles.container}>
-      {/* Row 1: Filter Type */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.filterScroll, styles.filterScrollType]}
-        style={styles.filterRow}
-      >
-        {TYPE_OPTIONS.map(({ key, label }) => (
-          <TouchableOpacity
-            key={key}
-            onPress={() => setSpotFilterType(key)}
-            style={[
-              styles.chip, 
-              { 
-                backgroundColor: chipBg(spotFilterType === key),
-                borderColor: chipBorder(spotFilterType === key),
-                borderWidth: 1
-              }
-            ]}
-            activeOpacity={0.8}
-          >
-            <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: chipTextColor(spotFilterType === key) }}>
-              {label}
-            </AppText>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Row 2: Quote Currency */}
-      <ScrollView
+      {/* Quote Currency */}
+      {/* <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[styles.filterScroll, styles.filterScrollType]}
@@ -133,7 +90,7 @@ const SpotMarket = ({ coinPairs, search = "" }) => {
             </AppText>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </ScrollView> */}
 
       <MarketList filterData={filterData} onPress={handleNavigate} />
     </View>

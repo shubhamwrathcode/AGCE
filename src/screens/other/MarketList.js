@@ -348,8 +348,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   emptyIcon: {
-    width: 120,
-    height: 120,
+    width: 80,
+    height: 80,
     marginBottom: 16,
     opacity: 0.7,
   },

@@ -6,8 +6,8 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "r
 import Favourites from "./Favourites";
 import SpotMarket from "./SpotMarket";
 import FuturesMarket from "./FuturesMarket";
-import DiscoverMarket from "./DiscoverMarket";
-import Memex from "./Memex";
+import CryptosMarket from "./CryptosMarket";
+import MarketPlaceholder from "./MarketPlaceholder";
 import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
 import { universalPaddingHorizontal } from "../../theme/dimens";
@@ -119,8 +119,34 @@ const Market = () => {
   const isLoggedIn = !!userData;
 
   const [activeTab, setActiveTab] = useState("Spot");
+  const [spotSubCategory, setSpotSubCategory] = useState("All");
+  const [alphaSubTab, setAlphaSubTab] = useState("ALL_CHAIN");
+  const TAB_KEYS = useMemo(
+    () => ["Favorites", "Spot", "Cryptos", "USD_M_FUTURES", "COIN_M_FUTURES", "OPTIONS", "ALPHA"],
+    []
+  );
+  const activeTabIndex = useMemo(() => Math.max(0, TAB_KEYS.indexOf(activeTab)), [TAB_KEYS, activeTab]);
+  const prevTabIndexRef = useRef(activeTabIndex);
+
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+
+  const contentSlideX = useRef(new Animated.Value(0)).current;
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const prev = prevTabIndexRef.current;
+    const next = activeTabIndex;
+    const dir = next > prev ? 1 : -1;
+    prevTabIndexRef.current = next;
+
+    contentSlideX.setValue(dir * 24);
+    contentOpacity.setValue(0.6);
+    Animated.parallel([
+      Animated.timing(contentSlideX, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(contentOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+    ]).start();
+  }, [activeTabIndex, contentOpacity, contentSlideX]);
 
   const onRefresh = useCallback(() => {
     console.log("Pull to refresh triggered! Fetching latest market data...");
@@ -132,7 +158,7 @@ const Market = () => {
       if (unsubscribeFromMarket) unsubscribeFromMarket();
       subscribeToMarket();
     }
-    if (activeTab === "Futures" && futureSocketService.getIsConnected()) {
+    if (activeTab === "USD_M_FUTURES" && futureSocketService.getIsConnected()) {
       futureSocketService.emit("message", { message: "futures", userId: userData?._id ?? "" });
     }
     setTimeout(() => {
@@ -144,9 +170,10 @@ const Market = () => {
   useEffect(() => {
     if (route?.params?.tab) {
       const t = route.params.tab;
-      if (["Favourite", "Spot", "Futures", "Discover", "MemeX"].includes(t)) setActiveTab(t);
-      else if (t === "Spots") setActiveTab("Spot");
-      else if (t === "memex") setActiveTab("MemeX");
+      if (["Favorites", "Spot", "Cryptos", "USD_M_FUTURES", "COIN_M_FUTURES", "OPTIONS", "ALPHA"].includes(t)) setActiveTab(t);
+      else if (t === "Favourite") setActiveTab("Favorites");
+      else if (t === "Futures") setActiveTab("USD_M_FUTURES");
+      else if (t === "Alpha") setActiveTab("ALPHA");
     }
   }, [route?.params?.tab]);
 
@@ -165,7 +192,7 @@ const Market = () => {
 
   // Fallback: if market:update didn't send futures_pairs, request from futures socket (same as Futures trading screen)
   useEffect(() => {
-    if (activeTab !== "Futures" || (futuresPairs && futuresPairs.length > 0)) return;
+    if (activeTab !== "USD_M_FUTURES" || (futuresPairs && futuresPairs.length > 0)) return;
 
     futureSocketService.connect();
     const payload = { message: "futures", userId: userData?._id ?? "" };
@@ -193,7 +220,42 @@ const Market = () => {
     };
   }, [activeTab, dispatch, userData?._id, futuresPairs?.length]);
 
-  const showSearch = activeTab === "Favourite" || activeTab === "Spot" || activeTab === "Futures";
+  const showSearch =
+    activeTab === "Favorites" ||
+    activeTab === "Spot" ||
+    activeTab === "Cryptos" ||
+    activeTab === "USD_M_FUTURES" ||
+    activeTab === "ALPHA";
+
+  const showSubTabs = activeTab === "Favorites" || activeTab === "Spot" || activeTab === "Cryptos" || activeTab === "ALPHA";
+
+  const alphaSubTabs = useMemo(
+    () => [
+      { key: "ALL_CHAIN", label: "All Chain" },
+      { key: "PUMP", label: "Pump" },
+      { key: "TOP_SEARCHES", label: "Top Searches" },
+      { key: "NEW", label: "New" },
+      { key: "THEMES", label: "Themes" },
+    ],
+    []
+  );
+
+  const spotSubCategories = useMemo(() => {
+    const list = Array.isArray(coinPairs) ? coinPairs : [];
+    if (!list.length) return [];
+    const s = new Set();
+    for (const p of list) {
+      const sc = p?.sub_category;
+      if (sc != null && String(sc).trim() !== "") s.add(String(sc).trim());
+    }
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [coinPairs]);
+
+  useEffect(() => {
+    if (spotSubCategory !== "All" && !spotSubCategories.includes(spotSubCategory)) {
+      setSpotSubCategory("All");
+    }
+  }, [spotSubCategory, spotSubCategories]);
 
   const [carouselIndex, setCarouselIndex] = useState(0);
   const hasMarketData = (coinPairs?.length ?? 0) > 0;
@@ -227,24 +289,26 @@ const Market = () => {
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
+           {/* Featured cards – Carousel (same as Home CoinSlider) */}
+        
         <MarketHeader
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           search={search}
           onSearchChange={setSearch}
           showSearch={showSearch}
+          showSubTabs={showSubTabs}
+          subTabItems={activeTab === "ALPHA" ? alphaSubTabs : undefined}
+          subCategories={activeTab === "ALPHA" ? [] : spotSubCategories}
+          activeSubCategory={activeTab === "ALPHA" ? alphaSubTab : spotSubCategory}
+          onSubCategoryChange={activeTab === "ALPHA" ? setAlphaSubTab : setSpotSubCategory}
         />
-        {contentLoading ? (
-          <MarketSkeleton />
-        ) : (
-          <>
-            {/* Featured cards – Carousel (same as Home CoinSlider) */}
-            {featuredCoins.length > 0 && (activeTab === "Spot" || activeTab === "Favourite" || activeTab === "Futures") && (
+           {featuredCoins?.length > 0 && (
               <View style={styles.carouselWrap}>
-                <Carousel
+               <Carousel
                   loop
                   width={ITEM_WIDTH}
-                  height={230}
+                  height={150}
                   autoPlay
                   data={featuredCoins}
                   scrollAnimationDuration={1000}
@@ -263,7 +327,7 @@ const Market = () => {
                     activeOffsetX: [-10, 10],
                   }}
                   style={styles.carousel}
-                />
+                /> 
                 <View style={styles.dotContainer}>
                   {featuredCoins.map((_, index) => (
                     <CustomDots key={index} index={index} activeIndex={carouselIndex} />
@@ -271,28 +335,58 @@ const Market = () => {
                 </View>
               </View>
             )}
+        {contentLoading ? (
+          <MarketSkeleton />
+        ) : (
+          <>
+       
 
-            {activeTab === "Favourite" && (
-              <View style={styles.tabContent}>
-                {!hasMarketData
-                  ? <TabListSkeleton rows={7} />
-                  : <Favourites coinPairs={coinPairs} search={search} isLoggedIn={isLoggedIn} />}
-              </View>
-            )}
-            {activeTab === "Spot" && (
-              <View style={styles.tabContent}>
-                {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} />}
-              </View>
-            )}
-            {activeTab === "Futures" && (
-              <View style={styles.tabContent}>
-                {futuresPairs.length === 0 ? <TabListSkeleton rows={8} /> : <FuturesMarket search={search} />}
-              </View>
-            )}
-            {activeTab === "Discover" && (
-              !hasMarketData ? <TabListSkeleton rows={8} /> : <DiscoverMarket coinPairs={coinPairs} />
-            )}
-            {activeTab === "MemeX" && <Memex />}
+            <Animated.View style={{ flex: 1, transform: [{ translateX: contentSlideX }], opacity: contentOpacity }}>
+              {activeTab === "Favorites" && (
+                <View style={styles.tabContent}>
+                  {!hasMarketData
+                    ? <TabListSkeleton rows={7} />
+                    : <Favourites coinPairs={coinPairs} search={search} isLoggedIn={isLoggedIn} subCategory={spotSubCategory} />}
+                </View>
+              )}
+              {activeTab === "Spot" && (
+                <View style={styles.tabContent}>
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} />}
+                </View>
+              )}
+              {activeTab === "Cryptos" && (
+                <View style={styles.tabContent}>
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} />}
+                </View>
+              )}
+              {activeTab === "USD_M_FUTURES" && (
+                <View style={styles.tabContent}>
+                  {futuresPairs.length === 0 ? (
+                    <MarketPlaceholder message="No futures data at the moment." />
+                  ) : (
+                    <FuturesMarket search={search} />
+                  )}
+                </View>
+              )}
+
+              {activeTab === "COIN_M_FUTURES" && (
+                <View style={styles.tabContent}>
+                  <MarketPlaceholder message="COIN-M futures markets are not available yet." />
+                </View>
+              )}
+
+              {activeTab === "OPTIONS" && (
+                <View style={styles.tabContent}>
+                  <MarketPlaceholder message="Options markets are not available yet." />
+                </View>
+              )}
+
+              {activeTab === "ALPHA" && (
+                <View style={styles.tabContent}>
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} />}
+                </View>
+              )}
+            </Animated.View>
           </>
         )}
       </KeyBoardAware>
