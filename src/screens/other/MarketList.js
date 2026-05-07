@@ -149,7 +149,7 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
     () => (
       <View style={[styles.tableHeader, { borderBottomColor: themeColors.border }]}>
         <View style={styles.headerCellName}>
-          <AppText style={[styles.tableHeaderText, { color: themeColors.secondaryText }]}>Name</AppText>
+          <AppText style={[styles.tableHeaderText, { color: themeColors.secondaryText }]}>Pair</AppText>
         </View>
         <View style={styles.headerCellPrice}>
           <AppText style={[styles.tableHeaderText, { color: themeColors.secondaryText }]}>Last Price</AppText>
