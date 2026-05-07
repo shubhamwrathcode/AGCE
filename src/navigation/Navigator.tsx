@@ -24,6 +24,8 @@ import {
   futuresActiveIcon,
   futuresIcon,
   homeIcon,
+  market_ic,
+  marketIcon,
   tradeImg,
   wallet_ic,
 } from "../helper/ImageAssets";
@@ -81,7 +83,7 @@ import {
   TEN,
   YELLOW,
 } from "../shared";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import StakingSuccess from "../screens/Staking/StakingSuccess";
 import QsTransaction from "../screens/QuickBuySell/qsTransaction";
 import LackedStakes from "../screens/Staking/LackedStakes";
@@ -154,6 +156,73 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 const P2PTab = createBottomTabNavigator();
 const P2PStack = createStackNavigator();
+
+const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
+  return (
+    <View style={customTabBarStyles.container}>
+        {state.routes.map((route: any, index: number) => {
+          const isFocused = state.index === index;
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          const onLongPress = () => {
+            navigation.emit({
+              type: "tabLongPress",
+              target: route.key,
+            });
+          };
+
+          const iconByRoute: any = {
+            [routes.HOME_SCREEN]: homeIcon,
+            [routes.MARKET_SCREEN]: marketIcon,
+            [routes.TRADE_SCREEN]: tradeImg,
+            [routes.FUTURES_SCREEN]: futuresActiveIcon,
+            [routes.WALLET_SCREEN]: wallet_ic,
+          };
+
+          const labelByRoute: any = {
+            [routes.HOME_SCREEN]: "Home",
+            [routes.MARKET_SCREEN]: "Market",
+            [routes.TRADE_SCREEN]: "Trade",
+            [routes.FUTURES_SCREEN]: "Future",
+            [routes.WALLET_SCREEN]: "Wallet",
+          };
+
+          const tint = isFocused ? colors.black : "#9CA3AF";
+          const icon = iconByRoute[route.name];
+          const label = labelByRoute[route.name] ?? route.name;
+
+          return (
+            <View key={route.key} style={customTabBarStyles.itemWrap}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={isFocused ? { selected: true } : {}}
+                accessibilityLabel={descriptors[route.key]?.options?.tabBarAccessibilityLabel}
+                testID={descriptors[route.key]?.options?.tabBarTestID}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                style={customTabBarStyles.item}
+                activeOpacity={0.8}
+              >
+                <FastImage source={icon} style={customTabBarStyles.icon} resizeMode="contain" tintColor={tint} />
+                <AppText weight={isFocused ? BOLD : MEDIUM} type={TEN} style={[customTabBarStyles.label, { color: tint }]}>
+                  {label}
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+    </View>
+  );
+};
 
 const options: any = {
   headerShown: false,
@@ -475,12 +544,12 @@ const AuthStack = () => (
 
 function BottomNavigation() {
   const { colors: themeColors, isDark } = useTheme();
-  const tabBarBg = isDark ? themeColors.tabBar : "#FFFFFF";
+  const tabBarBg = "#FFFFFF";
   const tabBorder = isDark ? themeColors.border : "#E5E7EB";
-  const activeIcon = isDark ? themeColors.button : colors.black;
+  const activeIcon = colors.black;
   const inactive = themeColors.inactiveTab;
 
-  const tabBarHeight = Platform.OS === "ios" ? 68 : 56;
+  const tabBarHeight = Platform.OS === "ios" ? 74 : 62;
 
   return (
     <ChartPreloaderProvider>
@@ -488,6 +557,8 @@ function BottomNavigation() {
         initialRouteName={routes.HOME_SCREEN}
         backBehavior={"history"}
         detachInactiveScreens={false}
+        sceneContainerStyle={{ backgroundColor: "#FFFFFF" }}
+        tabBar={(props) => <CustomBottomTabBar {...props} />}
         screenOptions={{
           headerShown: false,
           tabBarHideOnKeyboard: true,
@@ -495,20 +566,14 @@ function BottomNavigation() {
           tabBarActiveTintColor: activeIcon,
           tabBarInactiveTintColor: inactive,
           tabBarStyle: {
-            backgroundColor: tabBarBg,
+            // Real UI handled by CustomBottomTabBar
             height: tabBarHeight,
-            paddingTop: 0,
-            paddingBottom: Platform.OS === "ios" ? 16 : 8,
-            borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: tabBorder,
-            elevation: 12,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.08,
-            shadowRadius: 6,
+            backgroundColor: "transparent",
+            borderTopWidth: 0,
           },
           tabBarItemStyle: {
-            paddingTop: 2,
+            paddingTop: 0,
+            paddingBottom: 0,
           },
         }}
       >
@@ -517,22 +582,19 @@ function BottomNavigation() {
           options={{
             tabBarIcon: ({ focused }) => (
               <View style={bottomTabStyles.tabColumn}>
-                {focused ? (
-                  <View
-                    style={[
-                      bottomTabStyles.activeIndicator,
-                      { backgroundColor: activeIcon },
-                    ]}
+                <View
+                  style={[
+                    bottomTabStyles.iconWrap,
+                    { backgroundColor: "transparent" },
+                  ]}
+                >
+                  <FastImage
+                    source={homeIcon}
+                    style={bottomTabStyles.tabIcon}
+                    resizeMode="contain"
+                    tintColor={focused ? activeIcon : inactive}
                   />
-                ) : (
-                  <View style={bottomTabStyles.activeIndicatorPlaceholder} />
-                )}
-                <FastImage
-                  source={homeIcon}
-                  style={bottomTabStyles.tabIcon}
-                  resizeMode="contain"
-                  tintColor={focused ? activeIcon : inactive}
-                />
+                </View>
                 <AppText
                   weight={focused ? BOLD : MEDIUM}
                   type={TEN}
@@ -546,48 +608,61 @@ function BottomNavigation() {
           component={Home}
         />
         <Tab.Screen
-          name={routes.FUTURES_SCREEN}
+          name={routes.MARKET_SCREEN}
           options={{
             freezeOnBlur: true,
             unmountOnBlur: false,
             tabBarIcon: ({ focused }) => (
               <View style={bottomTabStyles.tabColumn}>
-                <View style={bottomTabStyles.activeIndicatorPlaceholder} />
-                <FastImage
-                  source={focused ? futuresActiveIcon : futuresActiveIcon}
-                  style={bottomTabStyles.tabIconMd}
-                  resizeMode="contain"
-                  tintColor={focused ? activeIcon : inactive}
-                />
+                <View
+                  style={[
+                    bottomTabStyles.iconWrap,
+                    { backgroundColor: "transparent" },
+                  ]}
+                >
+                  <FastImage
+                    source={marketIcon}
+                    style={bottomTabStyles.tabIconMd}
+                    resizeMode="contain"
+                    tintColor={focused ? activeIcon : inactive}
+                  />
+                </View>
                 <AppText
                   weight={focused ? BOLD : MEDIUM}
                   type={TEN}
                   style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
                 >
-                  Futures
+                  Market
                 </AppText>
               </View>
             ),
           }}
-          component={Futures}
+          component={Market}
         />
         <Tab.Screen
-          name={routes.WALLET_SCREEN}
+          name={routes.TRADE_SCREEN}
           options={{
-            tabBarLabel: "Trade",
             freezeOnBlur: true,
             unmountOnBlur: false,
             tabBarIcon: ({ focused }) => (
-              <View style={bottomTabStyles.tradeColumn}>
-                <FastImage
-                  source={tradeImg}
-                  style={bottomTabStyles.tradeAssetImg}
-                  resizeMode="contain"
-                />
+              <View style={bottomTabStyles.tabColumn}>
+                <View
+                  style={[
+                    bottomTabStyles.iconWrap,
+                    { backgroundColor: "transparent" },
+                  ]}
+                >
+                  <FastImage
+                    source={tradeImg}
+                    style={bottomTabStyles.tabIconMd}
+                    resizeMode="contain"
+                    tintColor={focused ? activeIcon : inactive}
+                  />
+                </View>
                 <AppText
                   weight={focused ? BOLD : MEDIUM}
                   type={TEN}
-                  style={[bottomTabStyles.tradeLabel, { color: focused ? activeIcon : inactive }]}
+                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
                 >
                   Trade
                 </AppText>
@@ -598,41 +673,55 @@ function BottomNavigation() {
           component={Spot}
         />
         <Tab.Screen
-          name={routes.ACCOUNT_SCREEN}
+          name={routes.FUTURES_SCREEN}
           options={{
+            freezeOnBlur: true,
+            unmountOnBlur: false,
             tabBarIcon: ({ focused }) => (
               <View style={bottomTabStyles.tabColumn}>
-                <View style={bottomTabStyles.activeIndicatorPlaceholder} />
-                <FastImage
-                  source={earningIcon}
-                  style={bottomTabStyles.tabIcon}
-                  resizeMode="contain"
-                  tintColor={focused ? activeIcon : inactive}
-                />
+                <View
+                  style={[
+                    bottomTabStyles.iconWrap,
+                    { backgroundColor: "transparent" },
+                  ]}
+                >
+                  <FastImage
+                    source={futuresActiveIcon}
+                    style={bottomTabStyles.tabIconMd}
+                    resizeMode="contain"
+                    tintColor={focused ? activeIcon : inactive}
+                  />
+                </View>
                 <AppText
                   weight={focused ? BOLD : MEDIUM}
                   type={TEN}
                   style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
                 >
-                  Earn
+                  Future
                 </AppText>
               </View>
             ),
           }}
-          component={Earning}
+          component={Futures}
         />
         <Tab.Screen
-          name={routes.EARING_SCREEN}
+          name={routes.WALLET_SCREEN}
           options={{
             tabBarIcon: ({ focused }) => (
               <View style={bottomTabStyles.tabColumn}>
-                <View style={bottomTabStyles.activeIndicatorPlaceholder} />
-                <FastImage
-                  source={wallet_ic}
-                  style={bottomTabStyles.tabIcon}
-                  resizeMode="contain"
-                  tintColor={focused ? activeIcon : inactive}
-                />
+                <View
+                  style={[
+                    bottomTabStyles.iconWrap,
+                    { backgroundColor: "transparent" },
+                  ]}
+                >
+                  <FastImage
+                    source={wallet_ic}
+                    style={bottomTabStyles.tabIcon}
+                    resizeMode="contain"
+                    tintColor={focused ? activeIcon : inactive}
+                  />
+                </View>
                 <AppText
                   weight={focused ? BOLD : MEDIUM}
                   type={TEN}
@@ -653,21 +742,16 @@ function BottomNavigation() {
 const bottomTabStyles = StyleSheet.create({
   tabColumn: {
     alignItems: "center",
-    justifyContent: "flex-end",
-    minHeight: 46,
-    paddingBottom: 0,
+    justifyContent: "center",
+    minHeight: 50,
   },
-  activeIndicator: {
-    width: 28,
-    height: 3,
-    borderRadius: 2,
-    marginBottom: 6,
-  },
-  activeIndicatorPlaceholder: {
-    height: 3,
-    marginBottom: 6,
-    width: 28,
-    opacity: 0,
+  iconWrap: {
+    width: 42,
+    height: 28,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 0,
   },
   tabIcon: {
     width: 22,
@@ -678,22 +762,36 @@ const bottomTabStyles = StyleSheet.create({
     height: 22,
   },
   tabLabel: {
-    marginTop: 4,
+    marginTop: 1,
   },
-  tradeColumn: {
+});
+
+const customTabBarStyles = StyleSheet.create({
+  container: {
+    height: Platform.OS === "ios" ? 74 : 62,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    minHeight: 46,
-    paddingBottom: 0,
+    justifyContent: "space-around",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#E5E7EB",
   },
-  /** Full-bleed trade asset (circle + arrows in PNG); no extra colored wrapper. */
-  tradeAssetImg: {
-    width: 52,
-    height: 52,
-    marginTop: -26,
-    marginBottom: 0,
+  itemWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  tradeLabel: {
+  item: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+  icon: {
+    width: 22,
+    height: 22,
+  },
+  label: {
     marginTop: 2,
   },
 });

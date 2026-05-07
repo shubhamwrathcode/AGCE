@@ -226,14 +226,19 @@
 //   },
 // });
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import CustomDots from './CustomDots';
 import { useAppSelector } from '../../store/hooks';
-import MarketFeaturedCard from '../other/MarketFeaturedCard';
 import NavigationService from '../../navigation/NavigationService';
 import { WALLET_SCREEN } from '../../navigation/routes';
+import FastImage from 'react-native-fast-image';
+import { IMAGE_BASE_URL } from '../../helper/Constants';
+import MiniSparkline from '../../shared/components/MiniSparkline';
+import { AppText, BOLD, FOURTEEN, NINE, SEMI_BOLD, TEN, TWELVE } from '../../shared';
+import { useTheme } from '../../hooks/useTheme';
+import { lightTheme } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -241,9 +246,10 @@ const CoinSlider = () => {
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const hotPairsChart = useAppSelector((state) => state.home.hotPairsChart) ?? {};
   const [activeIndex, setActiveIndex] = useState(0);
+  const { colors: themeColors } = useTheme();
 
   const SIDE_SPACE = 12;
-  const ITEM_WIDTH = width / 2 - SIDE_SPACE - 6;
+  const ITEM_WIDTH = width / 2 - SIDE_SPACE ;
 
   // Same as Market: preferred coins BTC, ETH, BNB with chart_data
   const featuredCoins = useMemo(() => {
@@ -270,16 +276,63 @@ const CoinSlider = () => {
     }
   }, []);
 
-  const renderItem = ({ item, index }) => (
-    <View style={styles.cardWrapper}>
-      <MarketFeaturedCard
-        data={item}
-        chartData={item?.chart_data}
-        chartId={`home-${index}`}
-        onPress={handlePress}
-      />
-    </View>
-  );
+  const formatInr = useCallback((v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '0';
+    const rounded = Math.round(n);
+    return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }, []);
+
+  const renderItem = ({ item, index }) => {
+    const sym = String(item?.base_currency || '').toUpperCase();
+    const coinName = sym === 'BTC' ? 'Bitcoin' : sym === 'ETH' ? 'Ethereum' : sym || '—';
+    const change = Number(item?.change_percentage) || 0;
+    const isPositive = change >= 0;
+    const pctStr = `${Math.abs(change).toFixed(1)}%`;
+    const priceStr = `INR ${formatInr(item?.buy_price)}`;
+
+    return (
+      <View style={styles.cardWrapper}>
+        <View style={[styles.card, { backgroundColor: lightTheme.input}]}>
+          <View style={styles.topRow}>
+              <FastImage
+                source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
+                resizeMode="contain"
+                style={styles.coinIcon}
+              />
+            <View style={styles.sparkWrap}>
+              <MiniSparkline
+                chartData={item?.chart_data}
+                isPositive={isPositive}
+                width={72}
+                height={26}
+                chartId={`home-mini-${index}`}
+                fallbackPrice={Number(item?.buy_price) || 100}
+              />
+            </View>
+          </View>
+
+          <View style={styles.midRow}>
+            <AppText weight={BOLD} type={TWELVE} numberOfLines={1} style={{ color: themeColors.text }}>
+              {coinName}{' '}
+              <AppText type={NINE} style={{ color: '#9CA3AF' }}>
+                {sym}
+              </AppText>
+            </AppText>
+            <View style={styles.pctRow}>
+              <AppText type={TEN} style={{ color: isPositive ? '#10B981' : '#EF4444' }}>
+                {isPositive ? '▲' : '▼'} {pctStr}
+              </AppText>
+            </View>
+          </View>
+
+          <AppText weight={SEMI_BOLD} type={TWELVE} numberOfLines={1} style={{ color: '#111827', marginTop: 6 }}>
+            {priceStr}
+          </AppText>
+        </View>
+      </View>
+    );
+  };
 
   if (featuredCoins.length === 0) return null;
 
@@ -288,7 +341,7 @@ const CoinSlider = () => {
       <Carousel
         loop
         width={ITEM_WIDTH}
-        height={230}
+        height={130}
         autoPlay
         data={featuredCoins}
         scrollAnimationDuration={1000}
@@ -316,12 +369,52 @@ const CoinSlider = () => {
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    marginHorizontal: 5, // small spacing between cards
+    marginHorizontal: 5,
+  },
+  card: {
+    borderRadius: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    justifyContent: 'flex-start',
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coinIcon: {
+    width: 26,
+    height: 26,
+  },
+  sparkWrap: {
+    width: 78,
+    height: 30,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  midRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  pctRow: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   dotContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 10,
+    marginTop: -20,
   },
 });
 

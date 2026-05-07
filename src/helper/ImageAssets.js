@@ -42,7 +42,6 @@ export const upIcon = require('../../assets/images/up_ic.png');
 export const downIcon = require('../../assets/images/down_ic.png');
 export const depositIcon = require('../../assets/images/deposit_ic.png');
 export const withdrawIcon = require('../../assets/images/widthdraw_ic.png');
-export const referralIcon = require('../../assets/images/refferal_ic.png');
 export const convertIcon = require('../../assets/images/convertIcon.png');
 export const convertIconDark = require('../../assets/images/convertIconDark.png');
 
@@ -419,6 +418,11 @@ export const bots_ic = require('../../assets/images/bots_ic.png');
 export const margin_ic = require('../../assets/images/margin_ic.png');
 export const future_ic = require('../../assets/images/future_ic.png');
 export const share_ic = require('../../assets/images/share_ic.png');
+export const connectwallet = require('../../assets/images/connectwallet.png');
+export const static_coin = require('../../assets/images/static_coin.png');
+export const static_coin2 = require('../../assets/images/static_coin2.png');
+export const static_coin1 = require('../../assets/images/static_coin1.png');
+
 
 
 

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   View,
+  Text,
   Dimensions,
   StyleSheet,
   TouchableOpacity,
@@ -11,6 +12,7 @@ import { useAppSelector } from "../../store/hooks";
 import { Screen } from "../../theme/dimens";
 import {
   BACK_ICON,
+  connectwallet,
   homeImage1,
   homeImage1Dark,
   homeImage2,
@@ -21,8 +23,8 @@ import {
   homeImage4Dark,
 } from "../../helper/ImageAssets";
 import FastImage from "react-native-fast-image";
-import { AppText, TWELVE } from "../../shared";
-import { colors } from "../../theme/colors";
+import { AppText, ELEVEN, FIFTEEN, FOURTEEN, MEDIUM, SEMI_BOLD, TEN, THIRTEEN, TWELVE } from "../../shared";
+import { colors, lightTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import {
   DEPOSIT_COIN_SCREEN,
@@ -33,7 +35,7 @@ import { useTheme } from "../../hooks/useTheme";
 
 const baseOptions = {
   vertical: false,
-  width: Screen.Width,
+  width: Screen.Width - 32,
   height: 110,
 };
 
@@ -46,26 +48,26 @@ const HomeSlider = () => {
   const banners = [
     {
       index: 0,
-      banner_path: theme == "Dark" ? homeImage1 : homeImage1Dark,
+      banner_path: connectwallet,
       title: `Complete your KYC verification to unlock all account features and ensure a seamless trading experience.`,
       onPress: () => NavigationService.navigate(KYC_STEP_ONE_SCREEN),
       isKyc: true,
     },
     {
       index: 1,
-      banner_path: theme == "Dark" ? homeImage2 : homeImage2Dark,
+      banner_path: connectwallet,
       title: `Start trading directly—buy and sell with full market access, real-time prices, and a smooth trading experience.`,
       onPress: () => NavigationService.navigate(WALLET_SCREEN),
     },
     {
       index: 2,
-      banner_path: theme == "Dark" ? homeImage3 : homeImage3Dark,
+      banner_path: connectwallet,
       title: `Add funds to your wallet quickly and securely to begin trading without any delays.`,
       onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN),
     },
     {
       index: 3,
-      banner_path: theme == "Dark" ? homeImage4 : homeImage4Dark,
+      banner_path: connectwallet,
       title: `Have a question or need help? Get quick assistance from our support team for any queries or concerns.`,
       onPress: () => NavigationService.navigate('Support'),
     },
@@ -76,17 +78,20 @@ const HomeSlider = () => {
       return kycVerified === 0 || kycVerified === 3;
     }
     return true;
-  });
+  }).slice(0, 3);
 
   const renderItem = ({ item }) => {
     return (
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, paddingRight: 10 }}>
         <TouchableOpacity
           style={{
             flex: 1,
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space-around",
+            justifyContent: "space-between",
+            paddingHorizontal: 12,
+            overflow: "hidden",
+            position: "relative",
           }}
           onPress={item?.onPress}
           activeOpacity={0.9}
@@ -94,24 +99,52 @@ const HomeSlider = () => {
           <FastImage
             source={item?.banner_path}
             style={{
-              width: item?.isKyc ? 80 : 70,
-              height: item?.isKyc ? 80 : 70,
+              width: 80,
+              height: 80,
             }}
             resizeMode="contain"
           />
-          <AppText style={{ width: "50%", right: 20, color: themeColors.text }} type={TWELVE}>
-            {item?.title}
-          </AppText>
-          <FastImage
-            source={BACK_ICON}
-            style={{
-              width: 16,
-              height: 16,
-              transform: [{ rotateX: "45deg" }, { rotateZ: "3.1rad" }],
-            }}
-            resizeMode="contain"
-            tintColor={themeColors.text}
-          />
+         
+         <View style={{ flex: 1, paddingHorizontal: 10, minWidth: 0 }}>
+           <AppText type={ELEVEN} style={{ color: colors.lightGrey }} numberOfLines={1}>
+             Events
+           </AppText>
+           <AppText weight={SEMI_BOLD} type={TWELVE} numberOfLines={2} style={{ flexShrink: 1 }}>
+             Connect Wallet & Unlock Crypto Trading.
+           </AppText>
+           <AppText type={TEN} numberOfLines={1}>
+             Explore now →
+           </AppText>
+
+
+         </View>
+
+         <View
+           style={{
+             position: "absolute",
+             right: 12,
+             bottom: 10,
+             minWidth: 40,
+             borderRadius: 5,
+             backgroundColor: "#E5E7EB",
+             paddingVertical: 2,
+             paddingHorizontal: 5,
+             alignItems: "center",
+             flexShrink: 0,
+           }}
+         >
+           {(() => {
+             const total = 3;
+             const current = Math.min(activeIndex + 1, total);
+             const totalColor = current === total ? "#000" : "#9CA3AF";
+             return (
+               <Text numberOfLines={1}>
+                 <Text style={{fontSize:11, color: "#000", fontWeight: "600" }}>{current}</Text>
+                 <Text style={{fontSize:11, color: totalColor, fontWeight: "600" }}>{`/${total}`}</Text>
+               </Text>
+             );
+           })()}
+         </View>
         </TouchableOpacity>
       </View>
     );
@@ -121,13 +154,13 @@ const HomeSlider = () => {
     <>
       <View
         style={{
-          flex: 1,
-          borderTopWidth: 0.5,
-          borderTopColor: themeColors.border,
-          borderBottomWidth: 1,
-          borderBottomColor: themeColors.border,
+          width: Screen.Width - 32,
+          alignSelf: "center",
           marginBottom: 5,
           height: 110,
+          backgroundColor: lightTheme.input,
+          borderRadius: 12,
+          overflow: "hidden",
         }}
       >
         <View
@@ -135,7 +168,6 @@ const HomeSlider = () => {
             width: "100%",
             alignSelf: "center",
             justifyContent: "center",
-            marginHorizontal: 20,
           }}
         >
           <Carousel

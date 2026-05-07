@@ -1,5 +1,5 @@
 import React from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
 import FastImage from "react-native-fast-image";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import Animated, {
@@ -17,13 +17,18 @@ import {
   swap,
   swapLight,
   margin,
+  wallet_ic,
   spotdarkfinalbottomtab,
   spotfinalbottomTab,
+  spotIcon,
+  earningAsset1,
+  newReferalIcon,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import {
   AIRDROP_SCREEN,
   CONVERT_SCREEN,
+  EARING_SCREEN,
   INVITE_AND_EARN_SCREEN,
   MORE_MENU_SCREEN,
   WALLET_SCREEN,
@@ -71,13 +76,14 @@ const MenuItem = React.memo(({ item, index }: any) => {
             item?.id === "6" ? styles.iconWrapMore : styles.iconWrap,
             {
               backgroundColor: isDark ? ICON_TILE_GREY_DARK : ICON_TILE_GREY_LIGHT,
+              borderRadius:20
             },
           ]}
         >
           <FastImage
             resizeMode="contain"
             source={item.icon}
-            tintColor={item?.id === "6" ? themeColors.text : undefined}
+            tintColor={item?.id === "6" ? themeColors.text : item?.id === "7" ? "#000" : undefined}
             style={item?.id === "6" ? styles.iconMore : styles.icon}
           />
         </View>
@@ -98,7 +104,7 @@ const HomeMenuBar = () => {
     {
       id: "1",
       title: checkValue(languages?.spot),
-      icon: theme == "Dark" ? spotdarkfinalbottomtab : spotdarkfinalbottomtab,
+      icon: spotIcon,
       onPress: () => NavigationService.navigate(WALLET_SCREEN),
     },
     {
@@ -109,17 +115,29 @@ const HomeMenuBar = () => {
         NavigationService.navigate(AIRDROP_SCREEN, { from: "home" }),
     },
     {
+      id: "3",
+      title: "Wallet",
+      icon: wallet_ic,
+      onPress: () => NavigationService.navigate(WALLET_SCREEN),
+    },
+    {
       id: "4",
       title: checkValue("Swap"),
-      icon: theme == "Dark" ? swapLight : swap,
+      icon:  swap,
       onPress: () => {
         NavigationService.navigate(CONVERT_SCREEN);
       },
     },
     {
       id: "5",
-      title: checkValue(languages?.reward),
-      icon: theme == "Dark" ? newHubIcon : newHubIconLight,
+      title: "Earning",
+      icon: earningAsset1,
+      onPress: () => NavigationService.navigate(EARING_SCREEN),
+    },
+    {
+      id: "7",
+      title: "Referral",
+      icon: newHubIcon,
       onPress: () => NavigationService.navigate(INVITE_AND_EARN_SCREEN),
     },
     {
@@ -128,6 +146,7 @@ const HomeMenuBar = () => {
       icon: moreOption,
       onPress: () => NavigationService.navigate(MORE_MENU_SCREEN),
     },
+
   ];
 
   const renderItem = ({ item, index }: any) => {
@@ -136,13 +155,15 @@ const HomeMenuBar = () => {
 
   return (
     <View style={styles.menuBarBackground}>
-      <View style={[styles.container, { justifyContent: "space-around",  }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {Data?.map((item, index) => (
-          <React.Fragment key={item.id}>
-            {renderItem({ item, index })}
-          </React.Fragment>
+          <React.Fragment key={item.id}>{renderItem({ item, index })}</React.Fragment>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -151,7 +172,6 @@ const HomeMenuBar = () => {
 const styles = StyleSheet.create({
   menuBarBackground: {
     width: "100%",
-    // backgroundColor: MENU_BAR_BG,
     borderRadius: 8,
     paddingVertical: 12,
     marginBottom: 10,
@@ -160,6 +180,11 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
+  },
+  scrollContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 3,
   },
   icon: {
     height: 18,
@@ -191,7 +216,7 @@ const styles = StyleSheet.create({
   },
   singleItem: {
     alignItems: "center",
-    width: (Width - 40) / 4,
+    width: (Width - 40) / 5,
 
   },
   itemSeparator: {

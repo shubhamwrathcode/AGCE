@@ -3,10 +3,13 @@ import { useFocusEffect } from "@react-navigation/native";
 import {
   AppSafeAreaView,
   AppText,
+  BOLD,
   Button,
   EIGHTEEN,
   ELEVEN,
   Header,
+  MEDIUM,
+  SEMI_BOLD,
   TWELVE,
   WHITE,
   YELLOW,
@@ -40,6 +43,10 @@ import {
   verificationImage,
   trade_btn,
   searchIcon,
+  coinInActive,
+  static_coin,
+  static_coin1,
+  static_coin2,
 } from "../../helper/ImageAssets";
 import {
   getBannerList,
@@ -72,6 +79,7 @@ import { colors, lightTheme } from "../../theme/colors";
 import { SocketContext } from "../../SocketProvider";
 
 import { useTheme } from "../../hooks/useTheme";
+import StakingDahboardData from "./StakingDahboardData";
 
 const Home = () => {
   const dispatch = useAppDispatch();
@@ -194,48 +202,48 @@ const Home = () => {
         </View>
 
         {(kycVerified === 0 || kycVerified === 3) && (
-        <View
-          style={{
-            backgroundColor: themeColors.card,
-            marginHorizontal: 12,
-            height: 160,
-            padding: 10,
-            borderRadius: 6,
-            marginVertical: 10,
-            borderWidth: 1,
-            borderColor: themeColors.border,
-          }}
-        >
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
+              backgroundColor: themeColors.card,
+              marginHorizontal: 12,
+              height: 160,
+              padding: 10,
+              borderRadius: 6,
               marginVertical: 10,
+              borderWidth: 1,
+              borderColor: themeColors.border,
             }}
           >
-            <FastImage
-              source={verificationImage}
-              style={{ width: 70, height: 70 }}
-              resizeMode="contain"
-            />
-            <View style={{ width: "70%" }}>
-              <AppText style={{ color: themeColors.button }} type={EIGHTEEN}>
-                Verification
-              </AppText>
-              <AppText style={{ color: themeColors.secondaryText }} type={ELEVEN}>
-                Verify your identity to secure your
-                account and unlock deposit/trading
-                access.
-              </AppText>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginVertical: 10,
+              }}
+            >
+              <FastImage
+                source={verificationImage}
+                style={{ width: 70, height: 70 }}
+                resizeMode="contain"
+              />
+              <View style={{ width: "70%" }}>
+                <AppText style={{ color: themeColors.button }} type={EIGHTEEN}>
+                  Verification
+                </AppText>
+                <AppText style={{ color: themeColors.secondaryText }} type={ELEVEN}>
+                  Verify your identity to secure your
+                  account and unlock deposit/trading
+                  access.
+                </AppText>
+              </View>
             </View>
+            <Button
+              onPress={() => NavigationService.navigate(KYC_STATUS_SCREEN)}
+              children="Verify Now"
+              containerStyle={{ width: "90%", height: 40, alignSelf: "center", backgroundColor: themeColors.button }}
+            />
           </View>
-          <Button
-            onPress={() => NavigationService.navigate(KYC_STATUS_SCREEN)}
-            children="Verify Now"
-            containerStyle={{ width: "90%", height: 40, alignSelf: "center", backgroundColor: themeColors.button }}
-          />
-        </View>
         )}
 
         <View>
@@ -249,10 +257,11 @@ const Home = () => {
         <View>
           {showCoinSkeleton ? <CoinSliderSkeleton /> : <CoinSlider />}
         </View>
-
         <View>
           {showCoinSkeleton ? <CoinListSkeleton /> : <CoinList />}
         </View>
+       
+
       </ScrollView>
     </AppSafeAreaView>
   );
@@ -263,8 +272,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 6,
-    marginBottom: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 8,
@@ -276,7 +283,7 @@ const styles = StyleSheet.create({
   },
   homeSearchPlaceholder: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12,
   },
 });
 

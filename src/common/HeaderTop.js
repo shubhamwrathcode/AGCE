@@ -12,7 +12,7 @@ import { NOTIFICATION_SCREEN } from "../navigation/routes";
 import { useAppSelector } from "../store/hooks";
 import { IMAGE_BASE_URL } from "../helper/Constants";
 import { useTheme } from "../hooks/useTheme";
-import { AppText, BOLD, EIGHTEEN } from "./AppText";
+import { AppText, BOLD, EIGHTEEN, SIXTEEN } from "./AppText";
 import { colors, lightTheme } from "../theme/colors";
 
 /** Resolves profile path from API (relative path, full URL, or alternate field names). */
@@ -71,7 +71,7 @@ const HeaderTop = () => {
         />
         <AppText
           weight={BOLD}
-          type={EIGHTEEN}
+          type={SIXTEEN}
           style={[styles.brandTitle, { color: titleColor }]}
         >
           AGCE
@@ -149,14 +149,14 @@ const styles = StyleSheet.create({
     right:10
   },
   brandLogo: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
   },
   brandTitle: {
     letterSpacing: 0.5,
   },
   actionIcon: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
   },
 });

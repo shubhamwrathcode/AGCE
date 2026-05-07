@@ -72,7 +72,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
           }}
         ></View>
         <View>
-          <AppText style={{ color: theme !== "Dark" ? "#000000BF" : colors.buttonBg}}>
+          <AppText style={{ color: theme !== "Dark" ? "#000000BF" : colors.buttonBg }}>
             {" "}
             {moment(item?.createdAt).format("lll")}{" "}
           </AppText>
@@ -131,15 +131,15 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
-          marginVertical: 10,
-
+          marginVertical: 15,
+          paddingHorizontal:5
         }}
       >
         <View style={{ flexDirection: "row", gap: 7, alignItems: "center" }}>
           <FastImage
             source={bell_ic}
             resizeMode="contain"
-            style={{ width: 20, height: 20 }}
+            style={{ width: 16, height: 16 }}
             tintColor={theme === "Dark" ? colors.white : colors.black}
           />
           <AppText color={BLACK} weight={SEMI_BOLD} type={THIRTEEN}>
@@ -168,9 +168,10 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
             style={{
               width: 8,
               height: 8,
+              top: 1,
               transform: [{ rotateX: "360deg" }, { rotateZ: "180deg" }],
             }}
-            tintColor={theme !== "Dark" ? colors.white : colors.white}
+            tintColor={colors.black}
           />
         </View>
       </View>
