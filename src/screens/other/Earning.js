@@ -652,7 +652,7 @@ const Earning = () => {
               <View style={styles.earningHeaderBanner}>
                 <View style={styles.earningHeaderBannerLeft}>
                   <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 6 }}>
-                    Zillion Exchange Earning
+                    AGCE Exchange Earning
                   </AppText>
                   <View style={styles.earningHeaderBannerSubrow}>
                     <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
