@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,11 @@ import {
   Modal,
 } from "react-native";
 import FastImage from "react-native-fast-image";
+import Toast from "react-native-simple-toast";
+
+const showComingSoonToast = () =>
+  Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM);
+
 // import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons'; // or use react-native-vector-icons
 // import MaterialIcons from 'react-native-vector-icon/MaterialIcons'
 const screenWidth = Dimensions.get("window").width;
@@ -49,6 +54,14 @@ import {
   orderIcon,
   profile_placeholder_ic,
   rewardHubIcon,
+  giftIc,
+  inviteIcon,
+  editIcon,
+  p2p_Icon,
+  buyCrypto,
+  convertIcon,
+  convertIconDark,
+  graphIcon,
   right,
   settings,
   settings_ic,
@@ -86,9 +99,19 @@ import {
   INFERNAL_TRANSFER_Light,
   airdropDark,
   airdropLight,
+  contact_ic,
+  contact_us,
+  headPhoneIcon,
+  scanner,
+  setting_icon,
+  referralProfile,
+  bots_ic,
+  newsicon,
+  p2pIcon,
+  spottradingIconNew,
 } from "../../helper/ImageAssets";
 import AntDesign from "react-native-vector-icons/AntDesign";
-import { AppText, BLACK, DISCLAIMTEXT, ELEVEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
+import { AppText, BLACK, DISCLAIMTEXT, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import NavigationService from "../../navigation/NavigationService";
 import { languages } from "../../helper/languages";
@@ -96,26 +119,24 @@ import { checkValue, copyText } from "../../helper/utility";
 import {
   ACCOUNT_SCREEN,
   ARBITORY_SCREEN,
-  CONVERT_SCREEN,
   CURRENCY_PREFERENCE_SCREEN,
   DEPOSIT_COIN_SCREEN,
-  DEPOSIT_WALLET_SCREEN,
   EARING_SCREEN,
-  kyc_Details,
   KYC_STATUS_SCREEN,
   MARKET_SCREEN,
   OPEN_ORDER_SCREEN,
   NOTIFICATION_SCREEN,
   PAYMENT_OPTIONS_SCREEN,
-  SECURITY,
   SETTING_SCREEN_New,
   TWO_FACTOR_AUTHENTICATION,
   AIRDROP_HISTORY_SCREEN,
   WALLET_WITHDRAW_SCREEN,
-  WITHDRAW_Coin_SCREEN,
+  REFERRAL_LIST,
+  SPOT_MARKET_SCREEN,
 } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { colors, darkTheme } from "../../theme/colors";
+import { fontFamilySemiBold } from "../../theme/typography";
 import { useTheme } from "../../hooks/useTheme";
 import { useDispatch } from "react-redux";
 import { getUserProfile } from "../../actions/accountActions";
@@ -252,6 +273,206 @@ const getHistoryData = (theme) => [
     onPress: () => NavigationService.navigate(AIRDROP_HISTORY_SCREEN),
   },
 ];
+
+const GRID_COLUMNS = 4;
+const gridSpacing = 10;
+const gridItemWidth = (Width - 32 - gridSpacing * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+
+const getShortcutMenuItems = (theme) => [
+  {
+    id: "sh1",
+    title: "Rewards Hub",
+    icon: rewardHubIcon,
+    onPress: showComingSoonToast,
+  },
+  {
+    id: "sh2",
+    title: "Invite Friends",
+    icon: inviteIcon,
+    onPress: showComingSoonToast,
+  },
+  {
+    id: "sh3",
+    title: "Bots",
+    icon: bots_ic,
+    onPress: showComingSoonToast,
+  },
+  {
+    id: "sh4",
+    title: "Copy Trading",
+    icon: spottradingIcon,
+    onPress: showComingSoonToast,
+  },
+  {
+    id: "sh5",
+    title: "Edit",
+    icon: editIcon,
+    onPress: showComingSoonToast,
+  },
+  {
+    id: "sh6",
+    title: "News",
+    icon: newsicon,
+    onPress: showComingSoonToast,
+  },
+];
+
+const getPopularMenuItems = (theme) => [
+  {
+    id: "p1",
+    title: "Deposit",
+    icon: newDepositIcon,
+    onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN),
+  },
+  {
+    id: "p2",
+    title: "P2P",
+    icon: p2pIcon,
+    onPress: showComingSoonToast,
+  },
+  {
+    id: "p3",
+    title: "Withdrawal",
+    icon: newWidthrawIcon,
+    onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN),
+  },
+  {
+    id: "p4",
+    title: "Convert",
+    icon: convertIcon,
+    onPress: showComingSoonToast,
+  },
+  {
+    id: "p5",
+    title: "Spot",
+    icon: spottradingIconNew,
+    onPress: () => NavigationService.navigate(SPOT_MARKET_SCREEN),
+  },
+  {
+    id: "p6",
+    title: "Buy Crypto",
+    icon: buyCrypto,
+    onPress: showComingSoonToast,
+  },
+  {
+    id: "p7",
+    title: "Soft Staking",
+    icon: stakingDrawer ,
+    onPress: showComingSoonToast,
+  },
+];
+
+/**
+ * Same 0–4 meaning as KycStatus.js. Only accept plain integers (no parseInt("3abc") === 3).
+ */
+function normalizeKycTierFromProfile(raw) {
+  if (raw === null || raw === undefined || raw === "" || raw === false) return 0;
+  if (raw === true) return 1;
+  const s = typeof raw === "string" ? raw.trim() : raw;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return 0;
+  const t = Math.trunc(n);
+  if (t !== n) return 0;
+  if (t < 0 || t > 4) return 0;
+  return t;
+}
+
+/**
+ * KYC pill: 0/1/4 → orange pending, 2 → green verified, 3 → red failed.
+ * If profile has kyc_status hint "pending/review" but tier is still 3, treat as in-review (orange).
+ */
+function getKycTierBadge(userData, isDark) {
+  const raw = userData?.kycVerified ?? userData?.kyc_verified;
+  let tier = normalizeKycTierFromProfile(raw);
+  const hint = String(userData?.kyc_status ?? userData?.kycStatus ?? "").toLowerCase();
+  if (
+    tier === 3 &&
+    hint &&
+    /pending|review|process|submit|progress|under/.test(hint) &&
+    !/reject|fail|declin|denied/.test(hint)
+  ) {
+    tier = 1;
+  }
+
+  if (tier === 2) {
+    return {
+      label: "Verified",
+      borderColor: "#22C55E",
+      fg: isDark ? "#86EFAC" : "#166534",
+      bg: isDark ? "rgba(34, 197, 94, 0.14)" : "#DCFCE7",
+    };
+  }
+  if (tier === 3) {
+    return {
+      label: "Failed",
+      borderColor: "#EF4444",
+      fg: isDark ? "#FCA5A5" : "#B91C1C",
+      bg: isDark ? "rgba(239, 68, 68, 0.14)" : "#FEE2E2",
+    };
+  }
+  if (tier === 0) {
+    return {
+      label: "Unverified",
+      borderColor: colors.orangeTheme,
+      fg: isDark ? "#FDBA74" : "#C2410C",
+      bg: isDark ? "rgba(249, 115, 22, 0.16)" : "#FFEDD5",
+    };
+  }
+  return {
+    label: "Pending",
+    borderColor: "#F97316",
+    fg: isDark ? "#FDBA74" : "#C2410C",
+    bg: isDark ? "rgba(249, 115, 22, 0.16)" : "#FFEDD5",
+  };
+}
+
+function maskProfileEmail(email) {
+  if (!email || typeof email !== "string") return "";
+  const at = email.indexOf("@");
+  if (at < 1) return email;
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const head = local.slice(0, Math.min(3, local.length));
+  const dom = domain.slice(0, Math.min(5, domain.length));
+  return `${head}*@${dom}**`;
+}
+
+const PROFILE_GRID_ICON_WRAP = 38;
+const PROFILE_GRID_ICON_INNER = 16;
+
+const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, itemWidth }) => (
+  <TouchableOpacity
+    style={{ width: itemWidth, alignItems: "center", marginBottom: 8 }}
+    onPress={onPress}
+    activeOpacity={0.78}
+  >
+    <View
+      style={{
+        width: PROFILE_GRID_ICON_WRAP,
+        height: PROFILE_GRID_ICON_WRAP,
+        borderRadius: PROFILE_GRID_ICON_WRAP / 2,
+        backgroundColor: isDark ? "#2B2D33" : "#EFEFF1",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <FastImage source={iconSource} style={{ width: PROFILE_GRID_ICON_INNER, height: PROFILE_GRID_ICON_INNER }} resizeMode="contain" />
+    </View>
+    <AppText
+    weight={SEMI_BOLD}
+      numberOfLines={2}
+      style={{
+        marginTop: 8,
+        fontSize: 11,
+        textAlign: "center",
+        color: themeColors.text,
+        lineHeight: 14,
+      }}
+    >
+      {title}
+    </AppText>
+  </TouchableOpacity>
+);
 
 const STAGGER_DELAY = 45;
 const ENTRANCE_DURATION = 380;
@@ -479,7 +700,20 @@ const ProfileDrawer = () => {
   const emailTextTranslateY = useRef(new Animated.Value(10)).current;
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showAllServicesModal, setShowAllServicesModal] = useState(false);
+  const [addToHome, setAddToHome] = useState(true);
   const logoutAnim = useRef(new Animated.Value(0)).current; // 0 closed → 1 open
+
+  const shortcutItems = useMemo(() => getShortcutMenuItems(effectiveTheme), [effectiveTheme]);
+  const popularItems = useMemo(() => getPopularMenuItems(effectiveTheme), [effectiveTheme]);
+  const kycBadge = useMemo(
+    () => getKycTierBadge(userData, isDark),
+    [userData?.kycVerified, userData?.kyc_verified, userData?.kyc_status, userData?.kycStatus, isDark]
+  );
+  const vipLevel = userData?.vipLevel ?? userData?.vip ?? 0;
+  const displayAccountLine = userData?.emailId
+    ? maskProfileEmail(userData.emailId)
+    : `${userData?.country_code || ""} ${userData?.mobileNumber || ""}`.trim();
 
   const openLogoutModal = () => {
     setShowLogoutModal(true);
@@ -536,289 +770,249 @@ const ProfileDrawer = () => {
 
 
 
+  const paperBg = isDark ? colors.newThemeColor : "#FFFFFF";
+  const allServicesList = [
+    ...Data.map((item, i) => ({ ...item, rowKey: `g-${item.id}-${i}` })),
+    ...Data2.map((item, i) => ({ ...item, rowKey: `s-${item.id}-${i}` })),
+    ...Data3.map((item, i) => ({ ...item, rowKey: `h-${item.id}-${i}` })),
+  ];
+
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.newThemeColor : themeColors.background }]}>
-      <View
-        style={{ marginTop: 20, marginHorizontal: 16, marginBottom: "10%" }}
-      >
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <TouchableOpacity onPress={() => NavigationService.goBack()}>
-            <FastImage
-              source={back_ic}
-              resizeMode="contain"
-              style={{ width: 20, height: 20 }}
-              tintColor={themeColors.text}
-            />
-          </TouchableOpacity>
-          <View style={{ flexDirection: "row", gap: 10, alignItems: 'center' }}>
-            <TouchableOpacity
-              onPress={() => {
-                const nextTheme = theme === "Dark" ? "Light" : "Dark";
-                dispatch(setTheme(nextTheme));
-                AsyncStorage.setItem('theme', nextTheme);
-              }}
-            >
-              <FastImage
-                source={DISPLAY_PIC}
-                resizeMode="contain"
-                style={{
-                  width: 35,
-                  height: 35,
-                }}
-                tintColor={themeColors.text}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ marginRight: 10 }}
-              onPress={openLogoutModal}
-            >
-              <FastImage
-                source={logoutIcon}
-                resizeMode="contain"
-                style={{
-                  width: 25,
-                  height: 25,
-                }}
-                tintColor={themeColors.text}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginTop: 20,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View
-              style={{
-                borderRadius: 50,
-                overflow: "hidden",
-                borderWidth: 1,
-                borderColor: colors.disclaimDarText,
-              }}
-            >
-              <FastImage
-                source={
-                  userData?.profilepicture
-                    ? { uri: IMAGE_BASE_URL + userData?.profilepicture }
-                    : defaultPic
-                }
-                style={{ height: 40, width: 40 }}
-                resizeMode="cover"
-              />
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-              <View style={{ marginLeft: 15 }}>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <View>
-                    <Animated.View
-                      style={{
-                        opacity: emailTextOpacity,
-                        transform: [{ translateY: emailTextTranslateY }],
-                      }}
-                    >
-                      <AppText
-                        style={{ color: themeColors.text, fontSize: 15, fontWeight: "600" }}
-                      >
-                        {userData?.emailId ||
-                          `${userData?.country_code} ${userData?.mobileNumber}`}
-                      </AppText>
-                    </Animated.View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                      <AppText color={DISCLAIMTEXT} type={ELEVEN}>UID: {userData?.uuid}</AppText>
-                      <TouchableOpacity onPress={() => copyText(userData?.uuid)}><FastImage source={copyIcon} resizeMode="contain" style={{ width: 10, height: 10 }} tintColor={colors.disabledText} /></TouchableOpacity>
-
-                    </View>
-
-                  </View>
-
-                  {userData?.kycVerified === 2 ? (
-                    <FastImage
-                      source={right}
-                      style={{ height: 20, width: 20, marginTop: 4 }}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <View style={{ gap: 10, marginTop: 5 }}>
-                      <TouchableOpacity
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 5,
-                        }}
-                        onPress={() =>
-                          NavigationService.navigate(KYC_STATUS_SCREEN)
-                        }
-                      >
-                        <AppText type={TWELVE} color={YELLOW}>
-                          Verify Now
-                        </AppText>
-                        <FastImage
-                          source={externalLinkIcon}
-                          resizeMode="contain"
-                          style={{ width: 10, height: 10 }}
-                          tintColor={colors.buttonBg}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </View>
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: isDark ? '#23242a' : themeColors.themeElevationColor,
-          borderTopLeftRadius: 50,
-          borderTopRightRadius: 50,
-          overflow: "hidden",
+    <View style={[styles.container, { backgroundColor: paperBg }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: Platform.OS === "ios" ? 12 : 20,
+          paddingBottom: 100,
         }}
       >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingTop: 8,
-          }}
-          showsVerticalScrollIndicator={false}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
+          <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={12}>
+            <FastImage source={back_ic} resizeMode="contain" style={{ width: 20, height: 20 }} tintColor={themeColors.text} />
+          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
+              hitSlop={8}
+            >
+              <FastImage source={scanner} resizeMode="contain" style={{ width: 20, height: 20 }} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => NavigationService.navigate(SETTING_SCREEN_New)} hitSlop={8}>
+            <FastImage source={setting_icon} resizeMode="contain" style={{ width: 20, height: 20 }}  />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => NavigationService.navigate("Support")} hitSlop={8}>
+              <FastImage source={headPhoneIcon} resizeMode="contain" style={{ width: 20, height: 20 }}  />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
+          style={{ flexDirection: "row", alignItems: "center" }}
         >
           <View
             style={{
-              marginTop: "10%",
-              marginHorizontal: 20,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 20,
-              gap: 12,
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              overflow: "hidden",
+              borderWidth: 1,
+              borderColor: colors.disclaimDarText,
             }}
           >
-            <AnimatedCard
-              theme={effectiveTheme}
-              delay={0}
-              onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
-            >
-              <DepositWithdrawCard
-                theme={effectiveTheme}
-                bigImage={effectiveTheme !== "Dark" ? depositImage : depositImageDark}
-                smallIcon={
-                  effectiveTheme !== "Dark" ? newDepositIcon : newDepositDarkIcon
-                }
-                label="Deposit"
-              />
-            </AnimatedCard>
+            <FastImage
+              source={
+                userData?.profilepicture
+                  ? { uri: IMAGE_BASE_URL + userData.profilepicture }
+                  : defaultPic
+              }
+              style={{ width: 56, height: 56 }}
+              resizeMode="cover"
+            />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Animated.View style={{ opacity: emailTextOpacity, transform: [{ translateY: emailTextTranslateY }] }}>
+              <AppText style={{ color: themeColors.text, fontSize: 16, fontWeight: "700" }} numberOfLines={1}>
+                {displayAccountLine}
+              </AppText>
+            </Animated.View>
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 6 }}>
+              <AppText type={TWELVE} color={DISCLAIMTEXT}>
+                UID: {userData?.uuid || "—"}
+              </AppText>
+              {userData?.uuid ? (
+                <TouchableOpacity onPress={() => copyText(userData.uuid)} hitSlop={8}>
+                  <FastImage source={copyIcon} resizeMode="contain" style={{ width: 12, height: 12 }} tintColor={colors.disabledText} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+              <View style={[styles.profileBadge, { backgroundColor: isDark ? "#2F3138" : "#F3F4F6" }]}>
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
+                  VIP {vipLevel}
+                </AppText>
+              </View>
+              <View
+                style={[
+                  styles.profileBadge,
+                  {
+                    backgroundColor: kycBadge.bg,
+                    borderWidth: 1,
+                    borderColor: kycBadge.borderColor,
+                  },
+                ]}
+              >
+                <Text
+                  allowFontScaling={false}
+                  style={{
+                    fontSize: 12,
+                    fontFamily: fontFamilySemiBold,
+                    color: kycBadge.fg,
+                  }}
+                >
+                  {kycBadge.label}
+                </Text>
+              </View>
+            </View>
+          </View>
+          {/* <MaterialIcons name="chevron-right" size={20} color={themeColors.secondaryText} /> */}
+        </TouchableOpacity>
 
-            <AnimatedCard
-              theme={effectiveTheme}
-              delay={80}
-              onPress={() => NavigationService.navigate(WALLET_WITHDRAW_SCREEN)}
-            >
-              <DepositWithdrawCard
-                theme={effectiveTheme}
-                bigImage={effectiveTheme !== "Dark" ? withdrawImage : withdrawImageDark}
-                smallIcon={
-                  effectiveTheme !== "Dark" ? newWidthrawIcon : newWidthrawDarkIcon
-                }
-                label="Withdrawal"
-              />
-            </AnimatedCard>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => NavigationService.navigate(REFERRAL_LIST)}
+          style={[
+            styles.referralCard,
+            {
+              backgroundColor: isDark ? "#2A2A2E" : "#F4F4F6",
+              borderColor: isDark ? themeColors.border : "#E8E8E8",
+            },
+          ]}
+        >
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+              Referral Program
+            </AppText>
+            <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginTop: 6, lineHeight: 18 }}>
+             { `Refer friends to earn a 35% \n commission`}
+            </AppText>
           </View>
-          <AppText
-            style={{
-              fontSize: 17,
-              fontWeight: "700",
-              marginHorizontal: 20,
-              marginTop: 10,
-              color: drawerColors.text,
-            }}
-          >
-            General Features
-          </AppText>
-          <View style={styles.secondcontainer}>
-            {Data?.map((item, index) => (
-              <AnimatedMenuItem
-                key={item.id}
-                index={index}
-                theme={effectiveTheme}
-                onPress={item?.onPress}
-                style={styles.singleItem}
-              >
-                <IconAndLabel
-                  theme={effectiveTheme}
-                  themeColors={drawerColors}
-                  iconSource={item.icon}
-                  title={item.title}
-                />
-              </AnimatedMenuItem>
-            ))}
+          <View style={styles.referralArtWrap}>
+            <FastImage source={referralProfile} style={{ width: 56, height: 56 }} resizeMode="contain" />
           </View>
+        </TouchableOpacity>
 
-          <AppText
-            style={{
-              fontSize: 17,
-              fontWeight: "700",
-              marginHorizontal: 20,
-              marginTop: 10,
-              color: drawerColors.text,
-            }}
-          >
-            Support Tools
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 26 }}>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+            Shortcut
           </AppText>
-          <View style={styles.secondcontainer}>
-            {Data2.map((item, index) => (
-              <AnimatedMenuItem
-                key={item.id}
-                index={index}
-                theme={effectiveTheme}
-                onPress={item.onPress}
-                style={styles.singleItem}
-              >
-                <IconAndLabel
-                  theme={effectiveTheme}
-                  themeColors={drawerColors}
-                  iconSource={item.icon}
-                  title={item.title}
-                />
-              </AnimatedMenuItem>
-            ))}
-          </View>
-          <AppText
-            style={{
-              fontSize: 17,
-              fontWeight: "700",
-              marginHorizontal: 20,
-              marginTop: 10,
-              color: drawerColors.text,
-            }}
-          >
-            History
+         
+        </View>
+
+        <View style={[styles.profileIconGrid, { marginTop: 14 }]}>
+          {shortcutItems.map((item) => (
+            <ProfileGridItem
+              key={item.id}
+              title={item.title}
+              iconSource={item.icon}
+              onPress={item.onPress}
+              themeColors={drawerColors}
+              isDark={isDark}
+              itemWidth={gridItemWidth}
+            />
+          ))}
+        </View>
+
+        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 22 }}>
+          Popular
+        </AppText>
+        <View style={[styles.profileIconGrid, { marginTop: 14 }]}>
+          {popularItems.map((item) => (
+            <ProfileGridItem
+              key={item.id}
+              title={item.title}
+              iconSource={item.icon}
+              onPress={item.onPress}
+              themeColors={drawerColors}
+              isDark={isDark}
+              itemWidth={gridItemWidth}
+            />
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* <View
+        style={[
+          styles.allServicesBar,
+          {
+            backgroundColor: paperBg,
+            borderTopColor: isDark ? themeColors.border : "#E8E8E8",
+          },
+        ]}
+      >
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={[styles.allServicesBtn, { backgroundColor: isDark ? "#2B2D33" : "#EFEFF1" }]}
+          onPress={() => setShowAllServicesModal(true)}
+        >
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+            All Services
           </AppText>
-          <View style={styles.secondcontainer}>
-            {Data3.map((item, index) => (
-              <AnimatedMenuItem
-                key={item.id}
-                index={index}
-                theme={effectiveTheme}
-                onPress={item.onPress}
-                style={styles.singleItem}
+        </TouchableOpacity>
+      </View> */}
+
+      <Modal visible={showAllServicesModal} transparent animationType="fade" onRequestClose={() => setShowAllServicesModal(false)}>
+        <View style={styles.allServicesModalRoot}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowAllServicesModal(false)} />
+          <View
+            style={[
+              styles.allServicesCard,
+              { backgroundColor: themeColors.background, borderColor: themeColors.border, zIndex: 2, alignSelf: "center", width: "100%", maxWidth: 400 },
+            ]}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                All Services
+              </AppText>
+              <TouchableOpacity onPress={() => setShowAllServicesModal(false)} hitSlop={10}>
+                <MaterialIcons name="close" size={20} color={themeColors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: Dimensions.get("window").height * 0.55 }} showsVerticalScrollIndicator={false}>
+              {allServicesList.map((item) => (
+                <TouchableOpacity
+                  key={item.rowKey}
+                  style={[styles.allServicesRow, { borderBottomColor: isDark ? "#333" : "#EEE" }]}
+                  onPress={() => {
+                    setShowAllServicesModal(false);
+                    item.onPress?.();
+                  }}
+                >
+                  <FastImage source={item.icon} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                  <AppText type={THIRTEEN} style={{ marginLeft: 12, color: themeColors.text, flex: 1 }}>
+                    {item.title}
+                  </AppText>
+                  <MaterialIcons name="chevron-right" size={18} color={themeColors.secondaryText} />
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={[styles.allServicesRow, { borderBottomWidth: 0 }]}
+                onPress={() => {
+                  setShowAllServicesModal(false);
+                  openLogoutModal();
+                }}
               >
-                <IconAndLabel
-                  theme={effectiveTheme}
-                  themeColors={drawerColors}
-                  iconSource={item.icon}
-                  title={item.title}
-                  textStyle={{ width: 60 }}
-                />
-              </AnimatedMenuItem>
-            ))}
+                <FastImage source={logoutIcon} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor="#C62828" />
+                <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ marginLeft: 12, color: "#C62828", flex: 1 }}>
+                  Logout
+                </AppText>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
-        </ScrollView>
-      </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={showLogoutModal}
@@ -1018,5 +1212,70 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 20,
     height: 60,
+  },
+  profileBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  referralCard: {
+    marginTop: 20,
+    padding: 10,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  referralArtWrap: {
+    width: 52,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileIconGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: gridSpacing,
+  },
+  homeCheckOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  allServicesBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === "ios" ? 28 : 16,
+  },
+  allServicesBtn: {
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  allServicesModalRoot: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  allServicesCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    maxHeight: "80%",
+  },
+  allServicesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });

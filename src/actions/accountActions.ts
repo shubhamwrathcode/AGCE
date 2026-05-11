@@ -32,7 +32,7 @@ import { getAllWalletsPortfolio, getUserPortfolioArbitrage, getUserPortfolioEarn
 import { Alert } from 'react-native';
 import { getReferralList } from './homeActions';
 import { Passkey } from 'react-native-passkey';
-import { PASSKEY_RP_ID } from '../helper/Constants';
+import { CHART_WEB_BASE_URL, PASSKEY_RP_ID } from '../helper/Constants';
 
 const toBase64URL = (str: string) =>
   str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -383,15 +383,96 @@ export const changeCurrencyPreference =
       dispatch(setLoading(false));
     }
   };
-/** Same as web: GET user/kyc-status - returns id_document_status, tax_document_status, selfie_status, needs_resubmission, documents_needing_resubmission, kyc_data */
-export const getKycStatus = () => async () => {
-  try {
-    const response: any = await appOperation.customer.get_kyc_status();
-    return response?.success ? response?.data : null;
-  } catch (e) {
-    logger(e);
-    return null;
+/** Map canonical Didit `GET /api/v1/kyc/status` payload into legacy fields used by `KycStatus.js`. */
+function normalizeKycStatusForUi(raw: any): any {
+  if (!raw || typeof raw !== 'object') return raw;
+  const inner =
+    raw.data && typeof raw.data === 'object' && raw.id_document_status == null && raw.tax_document_status == null
+      ? raw.data
+      : raw;
+  if (
+    inner.id_document_status != null ||
+    inner.tax_document_status != null ||
+    inner.selfie_status != null
+  ) {
+    return { ...inner };
   }
+  const statusRaw = inner.status ?? inner.kyc_status ?? '';
+  const sc = String(statusRaw)
+    .trim()
+    .toUpperCase()
+    .replace(/-/g, '_');
+  const doc = (() => {
+    if (['APPROVED', 'VERIFIED', 'SUCCESS', 'COMPLETE'].includes(sc)) return 'approved';
+    if (['REJECTED', 'FAILED', 'DECLINED', 'CANCELLED'].includes(sc)) return 'rejected';
+    if (sc === 'RESUBMISSION_REQUESTED') return 'resubmit_required';
+    if (['PENDING', 'NOT_STARTED', 'IN_PROGRESS', 'SUBMITTED', 'PROCESSING', 'EXPIRED'].includes(sc) || !sc)
+      return 'pending';
+    return 'pending';
+  })();
+  return {
+    ...inner,
+    id_document_status: inner.id_document_status ?? doc,
+    tax_document_status: inner.tax_document_status ?? doc,
+    selfie_status: inner.selfie_status ?? doc,
+    needs_resubmission: inner.needs_resubmission ?? sc === 'RESUBMISSION_REQUESTED',
+    documents_needing_resubmission: inner.documents_needing_resubmission ?? [],
+    kyc_data: inner.kyc_data ?? inner.kycData ?? null,
+  };
+}
+
+/**
+ * Web Didit flow uses `GET /api/v1/kyc/status`. Older backends used `GET v1/user/kyc-status`.
+ * Try canonical first; on failure try legacy; normalize for the Verification Center UI.
+ */
+export const getKycStatus = () => async () => {
+  let response: any = null;
+  let payload: any = null;
+  try {
+    response = await appOperation.customer.get_kyc_status();
+    if (response?.success && response?.data != null) {
+      payload = response.data;
+    }
+  } catch (e: any) {
+    if (__DEV__) console.log('[KYC API] get_kyc_status canonical failed', e?.code, e?.message);
+  }
+  if (payload == null) {
+    try {
+      response = await appOperation.customer.get_kyc_status_legacy();
+      if (response?.success && response?.data != null) {
+        payload = response.data;
+      }
+    } catch (e: any) {
+      if (__DEV__) console.warn('[KYC API] get_kyc_status legacy failed', e?.code, e?.message);
+      logger(e);
+      return null;
+    }
+  }
+  if (__DEV__) {
+    console.log('[KYC API] get_kyc_status (resolved)', {
+      success: response?.success,
+      code: response?.code,
+      message: response?.message,
+      hasPayload: !!payload,
+    });
+    if (payload && typeof payload === 'object') {
+      const n = normalizeKycStatusForUi({ ...payload });
+      console.log('[KYC API] get_kyc_status (status fields)', {
+        id_document_status: n.id_document_status,
+        tax_document_status: n.tax_document_status,
+        selfie_status: n.selfie_status,
+        needs_resubmission: n.needs_resubmission,
+        status: payload.status ?? payload.data?.status,
+        documents_needing_resubmission: Array.isArray(n.documents_needing_resubmission)
+          ? n.documents_needing_resubmission.map((x: any) => x?.type ?? x)
+          : n.documents_needing_resubmission,
+      });
+    } else if (!response?.success) {
+      console.warn('[KYC API] get_kyc_status no data', response);
+    }
+  }
+  if (payload == null) return null;
+  return normalizeKycStatusForUi(payload);
 };
 
 /** Same as web: GET api/meta/countries - list of { code, name, flag } */
@@ -415,10 +496,23 @@ export const getCountries = () => async () => {
 export const getKycConfig = (countryCode: string) => async () => {
   try {
     const response: any = await appOperation.customer.get_kyc_config(countryCode);
+    if (__DEV__) {
+      const payload = response?.success && response?.data ? response.data : response;
+      const idDocs = payload?.id_documents;
+      const taxDocs = payload?.tax_documents;
+      console.log('[KYC API] get_kyc_config', {
+        countryCode,
+        success: response?.success,
+        message: response?.message,
+        id_documents_count: Array.isArray(idDocs) ? idDocs.length : idDocs ? 1 : 0,
+        tax_documents_count: Array.isArray(taxDocs) ? taxDocs.length : taxDocs ? 1 : 0,
+      });
+    }
     if (response?.success && response?.data) return response.data;
     if (response?.id_documents) return response;
     return null;
   } catch (e) {
+    if (__DEV__) console.warn('[KYC API] get_kyc_config error', countryCode, e);
     logger(e);
     return null;
   }
@@ -430,23 +524,46 @@ export const createKycSession = (userDetails: any) => async (dispatch: AppDispat
     const cc = userDetails?.country_code || userDetails?.countryCode;
     const mobile = userDetails?.mobileNumber || userDetails?.phoneNumber || userDetails?.phone;
     const phone = mobile ? `${cc ? String(cc).replace(/\s/g, "") : ""}${String(mobile).replace(/\s/g, "")}` : undefined;
-    const body = {
+    const emailRaw = userDetails?.emailId ?? userDetails?.email;
+    const first = userDetails?.firstName ?? userDetails?.first_name;
+    const last = userDetails?.lastName ?? userDetails?.last_name;
+    /**
+     * HTTPS return + `open_in_app=1` so Didit (which often ignores custom schemes) lands on our page;
+     * the web page immediately opens `agce://…` and skips web profile APIs so stale `localStorage` tokens
+     * do not trigger 401 toasts while Chrome/Safari stays in the foreground.
+     */
+    const webOrigin = String(CHART_WEB_BASE_URL || "").replace(/\/+$/, "");
+    const body: Record<string, unknown> = {
       jurisdiction: "GLOBAL",
-      ...(userDetails?.email ? { email: String(userDetails.email) } : {}),
+      ...(emailRaw ? { email: String(emailRaw) } : {}),
       ...(phone && phone.length > 4 ? { phone } : {}),
-      ...(userDetails?.firstName ? { firstName: String(userDetails.firstName) } : {}),
-      ...(userDetails?.lastName ? { lastName: String(userDetails.lastName) } : {}),
-      returnUrl: "agce://kyc_return",
+      ...(first ? { firstName: String(first) } : {}),
+      ...(last ? { lastName: String(last) } : {}),
+      returnUrl: webOrigin
+        ? `${webOrigin}/user_profile/kyc/submitted?open_in_app=1`
+        : "agce://kyc_return?kyc_return=1",
     };
 
     const response: any = await appOperation.customer.create_kyc_session(body);
+    if (__DEV__) {
+      const data = response?.data;
+      console.log('[KYC API] create_kyc_session', {
+        success: response?.success,
+        message: response?.message,
+        code: response?.code,
+        hasOpenUrl: !!(data && typeof data === 'object' && ((data as any).diditUrl || (data as any).url)),
+        keys: data && typeof data === 'object' ? Object.keys(data) : [],
+      });
+    }
     if (response?.success) {
       return response?.data;
     } else {
+      if (__DEV__) console.warn('[KYC API] create_kyc_session failed', response);
       showError(response?.message || 'Failed to start verification');
       return null;
     }
   } catch (e: any) {
+    if (__DEV__) console.warn('[KYC API] create_kyc_session error', e);
     logger(e);
     showError(e?.message || 'Something went wrong');
     return null;

@@ -319,9 +319,9 @@ const SettingsScreen = () => {
               </View>
 
               {/* Change Button - Full Width style */}
-              <TouchableOpacity style={[styles.changeBtnFull, { borderColor: themeColors.border, backgroundColor: themeColors.input }]} onPress={handleEditProfile}>
+              {/* <TouchableOpacity style={[styles.changeBtnFull, { borderColor: themeColors.border, backgroundColor: themeColors.input }]} onPress={handleEditProfile}>
                 <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Change</AppText>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
 
@@ -343,54 +343,7 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Security Settings Section */}
-          <View style={[styles.webStyleCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-            <SectionHeader title="Security Settings" desc="Manage your account security and password settings" />
-            <View style={[styles.webStyleRow, { borderBottomWidth: 1, borderBottomColor: themeColors.border, paddingBottom: 15 }]}>
-              <View style={styles.rowLeft}>
-                <FastImage source={lock} style={styles.rowIcon} tintColor={themeColors.text} />
-                <View style={{ flex: 1, marginLeft: 15 }}>
-                  <AppText weight={SEMI_BOLD} type={FOURTEEN} color={themeColors.text}>Login Password</AppText>
-                  <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
-                    Change your account password. You will need to verify with OTP sent to your registered mobile number.
-                  </AppText>
-                </View>
-              </View>
-              <TouchableOpacity style={[styles.changeBtnLarge, { borderColor: themeColors.border, backgroundColor: themeColors.input }]} onPress={() => NavigationService.navigate(CHANGE_PASSWORD_SCREEN)}>
-                <AppText type={TEN} color={themeColors.text}>Change Password</AppText>
-              </TouchableOpacity>
-            </View>
-
-            {/* Anti-phishing code */}
-            <View style={[styles.webStyleRow, { marginTop: 15 }]}>
-              <View style={styles.rowLeft}>
-                <FastImage source={lock_ic} style={styles.rowIcon} tintColor={themeColors.text} />
-                <View style={{ flex: 1, marginLeft: 15 }}>
-                  <AppText weight={SEMI_BOLD} type={FOURTEEN} color={themeColors.text}>Anti-phishing Code</AppText>
-                  <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
-                    Set a unique 5-8 digit code that will appear in legitimate emails and notifications.
-                  </AppText>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.changeBtn, 
-                  { borderColor: themeColors.border, backgroundColor: themeColors.input },
-                  hasAntiPhishingCode && styles.changeBtnRemove
-                ]}
-                onPress={() =>
-                  NavigationService.navigate(
-                    ANTI_PHISHING_CODE_SCREEN,
-                    hasAntiPhishingCode ? { initialStep: 2 } : undefined
-                  )
-                }
-              >
-                <AppText type={TEN} color={hasAntiPhishingCode ? colors.red : themeColors.text}>
-                  {hasAntiPhishingCode ? "Remove" : "+ Set Code"}
-                </AppText>
-              </TouchableOpacity>
-            </View>
-          </View>
+        
         </ScrollView>
       )}
 

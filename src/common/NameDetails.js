@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { TouchableOpacity, View, StyleSheet } from "react-native";
 import {
   AppText,
@@ -6,12 +6,11 @@ import {
   SIXTEEN,
   TEN,
   FOURTEEN,
-  WHITE,
 } from "./AppText";
 import { Input } from "./Input";
 import { Button } from "./Button";
-import { colors } from "../theme/colors";
 import { useDispatch } from "react-redux";
+import { useTheme } from "../hooks/useTheme";
 import {
   editName,
 } from "../actions/accountActions";
@@ -30,6 +29,8 @@ const NameDetails = ({
   onPressAvatar,
 }) => {
   const dispatch = useDispatch();
+  const { colors: themeColors } = useTheme();
+  const styles = useMemo(() => createStyles(themeColors), [themeColors]);
 
   const handleUpdate = () => {
     let data = {
@@ -47,9 +48,11 @@ const NameDetails = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: colors.white }}>Edit Profile</AppText>
+          <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+            Edit Profile
+          </AppText>
           <TouchableOpacity onPress={onCloseNominee} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <FastImage source={closeIcon} style={styles.closeBtn} tintColor={colors.white} resizeMode="contain" />
+            <FastImage source={closeIcon} style={styles.closeBtn} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
         </View>
 
@@ -71,7 +74,7 @@ const NameDetails = ({
             />
           </View>
           <View style={styles.editBadge}>
-            <FastImage source={editImageIcon} style={styles.editIconMini} tintColor={colors.black} resizeMode="contain" />
+            <FastImage source={editImageIcon} style={styles.editIconMini} tintColor={themeColors.text} resizeMode="contain" />
           </View>
         </TouchableOpacity>
 
@@ -100,97 +103,99 @@ const NameDetails = ({
           onPress={handleUpdate}
           activeOpacity={0.8}
         >
-          <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: colors.black }}>Submit</AppText>
+          <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.buttonText }}>
+            Submit
+          </AppText>
         </TouchableOpacity>
       </KeyBoardAware>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  sheetContainer: {
-    flex: 1,
-    backgroundColor: colors.newThemeColor,
-  },
-  keyboardAware: {
-    backgroundColor: 'transparent',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  closeBtn: {
-    width: 20,
-    height: 20,
-    resizeMode: "contain",
-    right: 10
-  },
-  description: {
-    color: 'rgba(255,255,255,0.5)',
-    marginBottom: 25,
-    lineHeight: 16,
-  },
-  avatarSection: {
-    alignSelf: 'center',
-    marginBottom: 30,
-    position: 'relative',
-  },
-  avatarFrame: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: colors.buttonBg,
-  },
-  fullImage: {
-    width: '100%',
-    height: '100%',
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    backgroundColor: 'rgba(255,255,255,1)',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1a1a1a',
-  },
-  editIconMini: {
-    width: 12,
-    height: 12,
-  },
-  formContent: {
-    marginBottom: 10,
-  },
-  inputMain: {
-    marginBottom: 20,
-  },
-  inputContainer: {
-    backgroundColor: '#2b3139',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-  },
-  submitBtn: {
-    marginTop: 10,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const createStyles = (themeColors) =>
+  StyleSheet.create({
+    sheetContainer: {
+      flex: 1,
+    },
+    keyboardAware: {
+      backgroundColor: "transparent",
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      paddingBottom: 40,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 15,
+    },
+    closeBtn: {
+      width: 20,
+      height: 20,
+      resizeMode: "contain",
+      right: 10,
+    },
+    description: {
+      color: themeColors.secondaryText,
+      marginBottom: 25,
+      lineHeight: 16,
+    },
+    avatarSection: {
+      alignSelf: "center",
+      marginBottom: 30,
+      position: "relative",
+    },
+    avatarFrame: {
+      width: 90,
+      height: 90,
+      borderRadius: 45,
+      overflow: "hidden",
+      borderWidth: 2,
+      borderColor: themeColors.border,
+    },
+    fullImage: {
+      width: "100%",
+      height: "100%",
+    },
+    editBadge: {
+      position: "absolute",
+      bottom: 2,
+      right: 2,
+      backgroundColor: themeColors.input,
+      borderRadius: 12,
+      width: 24,
+      height: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: themeColors.border,
+    },
+    editIconMini: {
+      width: 12,
+      height: 12,
+    },
+    formContent: {
+      marginBottom: 10,
+    },
+    inputMain: {
+      marginBottom: 20,
+    },
+    inputContainer: {
+      backgroundColor: themeColors.input,
+      borderWidth: 1,
+      borderColor: themeColors.inputBorder,
+      borderRadius: 12,
+    },
+    submitBtn: {
+      marginTop: 10,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: themeColors.button,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });
 
 export default NameDetails;

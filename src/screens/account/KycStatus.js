@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Animated, Dimensions, StyleSheet, TouchableOpacity, View, ScrollView, FlatList, useWindowDimensions, Linking } from "react-native";
+import { Animated, AppState, Dimensions, StyleSheet, TouchableOpacity, View, ScrollView, FlatList, useWindowDimensions, Modal } from "react-native";
 import {
   AppSafeAreaView,
   AppText,
@@ -33,6 +33,8 @@ import {
   progress_icon_pending,
   verification_reject,
   giftIc,
+  checkarrow3,
+  verification_gift,
 } from "../../helper/ImageAssets";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { borderWidth, universalPaddingHorizontal, universalPaddingHorizontalHigh } from "../../theme/dimens";
@@ -44,6 +46,9 @@ import { setLoading } from "../../slices/authSlice";
 import { getUserProfile, getKycStatus, createKycSession } from "../../actions/accountActions";
 import KycStepHeader from "./KycStepHeader";
 import { useTheme } from "../../hooks/useTheme";
+import WebView from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LinearGradient from "react-native-linear-gradient";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SHIMMER_STRIP = 180;
@@ -116,6 +121,43 @@ const getDocTypeName = (code) => {
   const names = { AADHAAR: "Aadhaar Card", PAN: "PAN Card", TAX_ID: "TAX ID", PASSPORT: "Passport", NATIONAL_ID: "National ID Card", DRIVING_LICENSE: "Driving License", RESIDENCE_PERMIT: "Residence Permit", SSN: "SSN", TIN: "TIN", NIN: "NIN", TFN: "TFN", NRIC: "NRIC", EMIRATES_ID: "Emirates ID", VOTER_ID: "Voter ID" };
   return names[code] || code || "ID Document";
 };
+
+/** Matches `arab_global_exchange` KycPage `displayName` useMemo + `ViewComplete` / `ViewFailed` initials. */
+const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
+const KYC_AVATAR_GRADIENT_LOCATIONS = [0, 0.5, 1];
+
+function kycWebAlignedDisplayName(userData) {
+  const e = userData?.emailId ?? userData?.email;
+  if (!e) return "User";
+  const local = String(e).split("@")[0];
+  return `User-${local.slice(0, 8)}`;
+}
+
+function kycWebAlignedInitials(displayName) {
+  return (displayName || "U").slice(0, 2).toUpperCase();
+}
+
+function KycAvatarInitialsRing({ initials }) {
+  return (
+    <LinearGradient
+      colors={KYC_AVATAR_GRADIENT}
+      locations={KYC_AVATAR_GRADIENT_LOCATIONS}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 32,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <AppText type={FOURTEEN} style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "400", letterSpacing: -0.45 }}>
+        {initials}
+      </AppText>
+    </LinearGradient>
+  );
+}
 
 const LockedFeatures = () => {
   const { colors: themeColors } = useTheme();
@@ -211,8 +253,8 @@ const KycRejected = ({ onVerifyPress }) => {
   const isLoading = useAppSelector((state) => state.auth.isLoading);
   const kyc_reject_reason = userData?.kyc_reject_reason;
 
-  const displayName = userData?.email ? `User-${userData.email.split('@')[0].slice(0, 8)}` : "AGCE User";
-  const initials = displayName.slice(0, 2).toUpperCase();
+  const displayName = kycWebAlignedDisplayName(userData);
+  const initials = kycWebAlignedInitials(displayName);
 
   return (
     <View style={{ flex: 1, marginTop: 8 }}>
@@ -222,11 +264,11 @@ const KycRejected = ({ onVerifyPress }) => {
 
       <View style={{ marginBottom: 24, paddingHorizontal: 4 }}>
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
-          <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#8B5CF6', alignItems: "center", justifyContent: "center", marginRight: 16 }}>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>{initials}</AppText>
+          <View style={{ marginRight: 16 }}>
+            <KycAvatarInitialsRing initials={initials} />
           </View>
           <View style={{ flex: 1 }}>
-            <AppText type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>{displayName}</AppText>
+            <AppText type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>{displayName || "AGCE User"}</AppText>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: themeColors.red, marginRight: 6 }} />
               <AppText type={TWELVE} style={{ color: themeColors.red }}>Verification Failed</AppText>
@@ -314,8 +356,8 @@ const KycDue = ({ onVerifyPress }) => {
 const KycCompleted = () => {
   const { colors: themeColors } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
-  const displayName = userData?.email ? `User-${userData.email.split('@')[0].slice(0, 8)}` : "AGCE User";
-  const initials = displayName.slice(0, 2).toUpperCase();
+  const displayName = kycWebAlignedDisplayName(userData);
+  const initials = kycWebAlignedInitials(displayName);
 
   return (
     <View style={{ flex: 1, marginTop: 8 }}>
@@ -323,21 +365,20 @@ const KycCompleted = () => {
         Manage your identity verification and unlock platform features
       </AppText>
 
-      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 20 }]}>
+      <View style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, padding: 10 }]}>
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: themeColors.button, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.buttonText }}>{initials}</AppText>
+          <View style={{ marginRight: 16 }}>
+            <KycAvatarInitialsRing initials={initials} />
           </View>
           <View style={{ flex: 1 }}>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{displayName}</AppText>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{displayName || "AGCE User"}</AppText>
             <AppText type={TWELVE} style={{ color: themeColors.green, marginTop: 2 }}>Verified</AppText>
           </View>
-          <FastImage source={giftIc} style={{ width: 40, height: 40 }} resizeMode="contain" />
+          <FastImage source={verification_gift} style={{ width: 70, height: 70 }} resizeMode="contain" />
         </View>
-
         <View style={{ backgroundColor: themeColors.themeElevationColor, padding: 16, borderRadius: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-            <FastImage source={checkIc} tintColor={themeColors.green} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
+            <FastImage source={checkarrow3} tintColor={themeColors.green} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
             <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Verification Successful</AppText>
           </View>
           <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
@@ -363,6 +404,15 @@ const KycCompleted = () => {
   );
 };
 
+/** Didit return: custom scheme from web `KycSubmittedPage`, or HTTPS success page from `createKycSession` `returnUrl`. */
+function shouldCloseDiditKycWebView(url) {
+  if (!url || typeof url !== "string") return false;
+  const u = url.toLowerCase();
+  if (u.startsWith("agce://") && u.includes("kyc")) return true;
+  if (u.includes("/kyc/submitted")) return true;
+  return false;
+}
+
 const faqData = [
   { q: "How to complete individual KYC?", a: "Upload a valid government-issued ID, complete the liveness check when prompted, and submit your details in the Verification Center. This usually takes 2–5 minutes." },
   { q: "How to complete business KYC?", a: "Provide business registration documents, beneficial owner information, and any extra forms requested. Our team may review submissions as part of compliance checks." },
@@ -372,6 +422,7 @@ const faqData = [
 
 const KycStatus = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const userData = useAppSelector((state) => state.auth.userData);
   const dispatch = useAppDispatch();
   const { width: screenWidth } = useWindowDimensions();
@@ -388,6 +439,61 @@ const KycStatus = () => {
   const [existingCountryCode, setExistingCountryCode] = useState("");
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
   const [contentLoading, setContentLoading] = useState(true);
+  const [diditWebviewUrl, setDiditWebviewUrl] = useState(null);
+  /** After opening Didit (in-app WebView or external browser), refresh when user returns / flow completes. */
+  const diditExternalOpenedRef = useRef(false);
+  const diditWebCompleteOnceRef = useRef(false);
+
+  const applyKycStatusData = useCallback((data) => {
+    if (!data) return;
+    setIdDocStatus(data.id_document_status ?? null);
+    setTaxDocStatus(data.tax_document_status ?? null);
+    setSelfieStatus(data.selfie_status ?? null);
+    if (data.kyc_data) {
+      setSubmittedIdDocType(data.kyc_data.id_document_type ?? null);
+      setSubmittedTaxDocType(data.kyc_data.tax_document_type ?? null);
+      setExistingCountryCode(data.kyc_data.country_code ?? "");
+      if (data.kyc_data.id_document_number) setExistingIdDocNumber(data.kyc_data.id_document_number);
+      if (data.kyc_data.tax_document_number) setExistingTaxDocNumber(data.kyc_data.tax_document_number);
+    }
+    if (data.needs_resubmission) {
+      setDocumentsToResubmit(data.documents_needing_resubmission || []);
+    }
+  }, []);
+
+  const refreshAfterDiditFlow = useCallback(() => {
+    diditExternalOpenedRef.current = false;
+    dispatch(getUserProfile(false, false, true));
+    void dispatch(getKycStatus()).then((data) => {
+      applyKycStatusData(data);
+    });
+  }, [dispatch, applyKycStatusData]);
+
+  const closeDiditWebview = useCallback(() => {
+    diditWebCompleteOnceRef.current = false;
+    setDiditWebviewUrl(null);
+    diditExternalOpenedRef.current = false;
+  }, []);
+
+  const tryFinishDiditFromUrl = useCallback(
+    (url) => {
+      if (!shouldCloseDiditKycWebView(url) || diditWebCompleteOnceRef.current) return;
+      diditWebCompleteOnceRef.current = true;
+      setDiditWebviewUrl(null);
+      diditExternalOpenedRef.current = false;
+      refreshAfterDiditFlow();
+    },
+    [refreshAfterDiditFlow]
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active" && diditExternalOpenedRef.current && !diditWebviewUrl) {
+        refreshAfterDiditFlow();
+      }
+    });
+    return () => sub.remove();
+  }, [diditWebviewUrl, refreshAfterDiditFlow]);
 
   useFocusEffect(
     useCallback(() => {
@@ -414,19 +520,7 @@ const KycStatus = () => {
       dispatch(setLoading(false));
 
       if (!data) return;
-      setIdDocStatus(data.id_document_status ?? null);
-      setTaxDocStatus(data.tax_document_status ?? null);
-      setSelfieStatus(data.selfie_status ?? null);
-      if (data.kyc_data) {
-        setSubmittedIdDocType(data.kyc_data.id_document_type ?? null);
-        setSubmittedTaxDocType(data.kyc_data.tax_document_type ?? null);
-        setExistingCountryCode(data.kyc_data.country_code ?? "");
-        if (data.kyc_data.id_document_number) setExistingIdDocNumber(data.kyc_data.id_document_number);
-        if (data.kyc_data.tax_document_number) setExistingTaxDocNumber(data.kyc_data.tax_document_number);
-      }
-      if (data.needs_resubmission) {
-        setDocumentsToResubmit(data.documents_needing_resubmission || []);
-      }
+      applyKycStatusData(data);
     };
 
     fetchStatus(); // initial fetch
@@ -444,7 +538,7 @@ const KycStatus = () => {
       mounted = false;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [dispatch, kycVerified]);
+  }, [dispatch, kycVerified, applyKycStatusData]);
 
   const getRejectReason = (docType) => {
     const doc = documentsToResubmit.find((d) => d.type === docType);
@@ -453,10 +547,11 @@ const KycStatus = () => {
 
   const openVerifyModal = async () => {
     const sessionResponse = await dispatch(createKycSession(userData));
-    if (sessionResponse?.diditUrl) {
-      Linking.openURL(sessionResponse.diditUrl).catch(() => {
-        NavigationService.navigate(KYC_STEP_ONE_SCREEN, { resetForm: true });
-      });
+    const diditOpenUrl = sessionResponse?.diditUrl || sessionResponse?.url;
+    if (diditOpenUrl) {
+      diditExternalOpenedRef.current = true;
+      diditWebCompleteOnceRef.current = false;
+      setDiditWebviewUrl(diditOpenUrl);
     } else {
       NavigationService.navigate(KYC_STEP_ONE_SCREEN, { resetForm: true });
     }
@@ -464,17 +559,11 @@ const KycStatus = () => {
 
   const openResubmitModal = async () => {
     const sessionResponse = await dispatch(createKycSession(userData));
-    if (sessionResponse?.diditUrl) {
-      Linking.openURL(sessionResponse.diditUrl).catch(() => {
-        NavigationService.navigate(KYC_RESUBMIT_SCREEN, {
-          documentsToResubmit: documentsToResubmit || [],
-          existingCountryCode: existingCountryCode || "",
-          submittedIdDocType: submittedIdDocType || null,
-          submittedTaxDocType: submittedTaxDocType || null,
-          resubmitIdNumber: existingIdDocNumber || "",
-          resubmitTaxNumber: existingTaxDocNumber || "",
-        });
-      });
+    const diditOpenUrl = sessionResponse?.diditUrl || sessionResponse?.url;
+    if (diditOpenUrl) {
+      diditExternalOpenedRef.current = true;
+      diditWebCompleteOnceRef.current = false;
+      setDiditWebviewUrl(diditOpenUrl);
     } else {
       NavigationService.navigate(KYC_RESUBMIT_SCREEN, {
         documentsToResubmit: documentsToResubmit || [],
@@ -532,6 +621,54 @@ const KycStatus = () => {
           </View>
         </ScrollView>
       </KeyBoardAware>
+
+      <Modal visible={!!diditWebviewUrl} animationType="slide" presentationStyle="fullScreen" onRequestClose={closeDiditWebview}>
+        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: themeColors.background }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: themeColors.border,
+            }}
+          >
+            <TouchableOpacity onPress={closeDiditWebview} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close verification">
+              <FastImage source={closeIcon} style={{ width: 16, height: 16 }} resizeMode="contain" tintColor={themeColors.text} />
+            </TouchableOpacity>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+              Identity verification
+            </AppText>
+            <View style={{ width: 16 }} />
+          </View>
+          {diditWebviewUrl ? (
+            <WebView
+              source={{ uri: diditWebviewUrl }}
+              style={{ flex: 1, backgroundColor: themeColors.background }}
+              javaScriptEnabled
+              domStorageEnabled
+              sharedCookiesEnabled
+              startInLoadingState
+              setSupportMultipleWindows={true}
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              onShouldStartLoadWithRequest={(req) => {
+                const url = req?.url || "";
+                if (shouldCloseDiditKycWebView(url)) {
+                  tryFinishDiditFromUrl(url);
+                  return false;
+                }
+                return true;
+              }}
+              onNavigationStateChange={(nav) => {
+                tryFinishDiditFromUrl(nav?.url);
+              }}
+            />
+          ) : null}
+        </View>
+      </Modal>
     </AppSafeAreaView>
   );
 };

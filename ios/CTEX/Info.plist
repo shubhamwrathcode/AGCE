@@ -76,5 +76,16 @@
 	<string>AGCE does not require access to the microphone.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>AGCE requires access to the camera.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.agce.exchange</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>agce</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
