@@ -1,5 +1,10 @@
 import {appOperation} from '../appOperation';
 import {extractDepositCoinsList, normalizeDepositCoinsResponse} from '../helper/depositCoinsNormalize';
+import {
+  extractWithdrawCoinsList,
+  mapDepositCoinsToWithdrawCatalog,
+  normalizeWithdrawCoinsResponse,
+} from '../helper/withdrawCoinsNormalize';
 import {logger, showError} from '../helper/logger';
 import {
   GenerateAddressProps,
@@ -232,17 +237,47 @@ export const getDepositActiveCoins = (id: any) => async (dispatch: AppDispatch) 
   }
 };
 
-export const getWithdrawActiveCoins = (id: any) => async (dispatch: AppDispatch) => {
+export const getWithdrawActiveCoins = (_id?: any) => async (dispatch: AppDispatch) => {
   try {
-    const response: any = await appOperation.customer.widthraw_active_coins();
-    // console.log(response, "getUserPortfolioEarning");
-    if (response.success) {
-      dispatch(setWithdrawActiveCoins(response?.data));
+    let list: any[] = [];
+    try {
+      const res: any = await appOperation.customer.withdrawal_coins();
+      list = normalizeWithdrawCoinsResponse(extractWithdrawCoinsList(res));
+    } catch {
+      list = [];
     }
+
+    /** DepositCoin primary route — often same backend catalog as web when `withdrawal-coins` is empty. */
+    if (!list.length) {
+      try {
+        const resDep: any = await appOperation.customer.deposit_coins();
+        const raw = extractDepositCoinsList(resDep);
+        const depNorm = normalizeDepositCoinsResponse(raw);
+        list = mapDepositCoinsToWithdrawCatalog(depNorm);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (!list.length) {
+      try {
+        const response: any = await appOperation.customer.widthraw_active_coins();
+        const ok =
+          response?.success === true ||
+          response?.success === 1 ||
+          response?.success == null;
+        if (ok) {
+          list = normalizeWithdrawCoinsResponse(extractWithdrawCoinsList(response));
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    dispatch(setWithdrawActiveCoins(list.length ? list : []));
   } catch (e) {
     logger(e);
   } finally {
-    
     dispatch(setLoading(false));
   }
 };

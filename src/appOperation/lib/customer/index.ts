@@ -72,6 +72,9 @@ export default (appOperation: AppOperation) => ({
     /** Same as web DepositPage primary list: `GET /v1/wallet/deposit-coins` (Bearer). */
     deposit_coins: () =>
       appOperation.get('wallet/deposit-coins', undefined, undefined, CUSTOMER_TYPE),
+    /** Same as web WithdrawPage catalog: `GET /v1/wallet/withdrawal-coins` (Bearer). */
+    withdrawal_coins: () =>
+      appOperation.get('wallet/withdrawal-coins', undefined, undefined, CUSTOMER_TYPE),
     deposit_active_coins: () =>
       appOperation.get('user/deposit-active-coins', undefined, undefined, CUSTOMER_TYPE),
     widthraw_active_coins: () =>

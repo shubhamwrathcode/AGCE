@@ -23,6 +23,35 @@ export function networkKeysFromChain(chain) {
     return [];
 }
 
+/** Same chain code normalization as `withdrawCoinsNormalize` wallet `chains[]` rows. */
+const WALLET_CHAIN_TO_APP = {
+    BSC: 'BEP20',
+    ETH: 'ERC20',
+    ERC20: 'ERC20',
+    BEP20: 'BEP20',
+    TRC20: 'TRC20',
+    TRON: 'TRC20',
+    POLYGON: 'POLYGON',
+    MATIC: 'POLYGON',
+    BTC: 'BTC',
+    SOL: 'SOLANA',
+    SOLANA: 'SOLANA',
+};
+
+/** When `item.chain` is missing but API sends `chains: [{ chain, network, ... }]`. */
+export function networkKeysFromWalletChainsArray(chains) {
+    if (!Array.isArray(chains) || chains.length === 0) return [];
+    const out = [];
+    for (const ch of chains) {
+        if (!ch || typeof ch !== 'object') continue;
+        const raw = String(ch.chain || ch.network || '').trim().toUpperCase();
+        if (!raw) continue;
+        const code = String(WALLET_CHAIN_TO_APP[raw] || raw).trim().toUpperCase();
+        if (code && !out.includes(code)) out.push(code);
+    }
+    return out;
+}
+
 /** Web DepositPage: deposit_status[chain] === "ACTIVE" */
 export function getActiveDepositChainKeys(item) {
     if (!item) return [];
@@ -32,7 +61,7 @@ export function getActiveDepositChainKeys(item) {
         if (ds === 'SUSPENDED') return [];
         return keys;
     }
-    if (ds && typeof ds === 'object' && !Array.isArray(ds)) {
+    if (ds && typeof ds === 'object' && !Array.isArray(ds) && Object.keys(ds).length > 0) {
         return keys.filter((k) => ds[k] === 'ACTIVE');
     }
     return keys;
@@ -41,13 +70,17 @@ export function getActiveDepositChainKeys(item) {
 /** Web WithdrawPage: withdrawal_status[chain] === "ACTIVE" */
 export function getActiveWithdrawChainKeys(item) {
     if (!item) return [];
-    const keys = networkKeysFromChain(item.chain);
+    let keys = networkKeysFromChain(item.chain);
+    if (keys.length === 0 && Array.isArray(item.chains)) {
+        keys = networkKeysFromWalletChainsArray(item.chains);
+    }
     const ws = item.withdrawal_status;
     if (typeof ws === 'string') {
         if (ws === 'SUSPENDED') return [];
         return keys;
     }
-    if (ws && typeof ws === 'object' && !Array.isArray(ws)) {
+    // Empty `{}` must not filter out every network (catalog often omits per-chain flags).
+    if (ws && typeof ws === 'object' && !Array.isArray(ws) && Object.keys(ws).length > 0) {
         return keys.filter((k) => ws[k] === 'ACTIVE');
     }
     return keys;

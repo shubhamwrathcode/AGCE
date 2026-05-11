@@ -12,8 +12,9 @@ import {
 } from "react-native";
 import { AppText, FOURTEEN, RED, SEMI_BOLD, TEN, TWELVE, TWENTY } from "../../shared";
 import FastImage from "react-native-fast-image";
-import { searchIcon } from "../../helper/ImageAssets";
-import { BASE_URL } from "../../helper/Constants";
+import { NO_NOTIFICATION_ICON, searchIcon } from "../../helper/ImageAssets";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
+import { bitcoinIcon } from "../../helper/ImageAssets";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import { universalPaddingHorizontalHigh } from "../../theme/dimens";
@@ -301,6 +302,7 @@ const WithdrawCoinPickerPanel = ({ coins, onSelect, loading, refreshing, onRefre
   };
 
   const renderRow = ({ item }) => {
+    const iconUri = buildCoinImageUri(item);
     const disabled = isWithdrawCoinDisabled(item);
     const suspended =
       item?.withdrawal_status === "SUSPENDED" ||
@@ -321,7 +323,7 @@ const WithdrawCoinPickerPanel = ({ coins, onSelect, loading, refreshing, onRefre
         activeOpacity={disabled ? 1 : 0.7}
       >
         <FastImage
-          source={{ uri: BASE_URL + item?.icon_path }}
+          source={iconUri ? { uri: iconUri } : bitcoinIcon}
           style={styles.coinIcon}
           resizeMode="cover"
         />
@@ -420,9 +422,7 @@ const WithdrawCoinPickerPanel = ({ coins, onSelect, loading, refreshing, onRefre
           }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <AppText type={FOURTEEN} color={colors.textGray}>
-                No coins found
-              </AppText>
+             <FastImage source={NO_NOTIFICATION_ICON} style={{width:80,height:80,marginTop:40}} resizeMode="contain"/>
             </View>
           }
         />

@@ -20,7 +20,7 @@ import { eye_close_icon, eye_open_icon } from "../helper/ImageAssets";
 import TouchableOpacityView from "./TouchableOpacityView";
 import FastImage from "react-native-fast-image";
 import { Button } from "./Button";
-import { AppText, BLACK, FOURTEEN, SECOND, SEMI_BOLD, THIRTEEN, WHITE } from "./AppText";
+import { AppText, BLACK, FOURTEEN, SECOND, SEMI_BOLD, THIRTEEN, TWELVE, WHITE } from "./AppText";
 import { useAppSelector } from "../store/hooks";
 
 interface InputProps extends TextInputProps {
@@ -138,7 +138,7 @@ const Input = ({
         )}
         {max && (
           <AppText
-            style={{ color: themeColors.button, marginHorizontal: 10, fontSize: 14 }}
+            style={{ color: themeColors.button, marginHorizontal: 10, fontSize: 12 }}
             weight={SEMI_BOLD}
             onPress={onMax}
           >
@@ -157,7 +157,7 @@ const Input = ({
         {currency && (
           <AppText
             // style={styles.eyeIconContainer}
-            type={FOURTEEN}
+            type={TWELVE}
             style={{ color: themeColors.text }}
           >
             {currency}

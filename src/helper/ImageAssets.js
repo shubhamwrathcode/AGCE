@@ -423,6 +423,9 @@ export const static_coin = require('../../assets/images/static_coin.png');
 export const static_coin2 = require('../../assets/images/static_coin2.png');
 export const static_coin1 = require('../../assets/images/static_coin1.png');
 export const swapNetwork = require('../../assets/images/swapNetwork.png');
+export const user_withdarwal = require('../../assets/images/user_withdarwal.png');
+
+
 
 
 
