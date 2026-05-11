@@ -168,44 +168,55 @@ const Transfer = () => {
               borderWidth: 1,
               marginTop: 0
             }]}>
-              <FastImage source={sideIcon} resizeMode="contain" style={{ width: 50, height: 80 }} />
-              <View style={{ gap: 20 }}>
-                <TouchableOpacity style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "90%" }} onPress={() => openModal('from')}>
-                  <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN}>From</AppText>
-                  <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN}>{fromWallet?.toUpperCase()}</AppText>
-
+              <View style={styles.fromToCardInner}>
+                <FastImage source={sideIcon} resizeMode="contain" style={styles.sideRailIcon} />
+                <View style={styles.fromToRows}>
+                <TouchableOpacity style={styles.walletPickerRow} onPress={() => openModal("from")} activeOpacity={0.7}>
+                  <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN} style={styles.walletPickerLabel}>
+                    From
+                  </AppText>
+                  <View style={styles.walletPickerValueCol}>
+                    <AppText
+                      color={themeColors.text}
+                      weight={MEDIUM}
+                      type={FOURTEEN}
+                      numberOfLines={1}
+                      style={styles.walletPickerValueText}
+                    >
+                      {fromWallet?.toUpperCase()}
+                    </AppText>
+                  </View>
                   <FastImage
                     source={back_ic}
                     resizeMode="contain"
-                    style={{
-                      width: 15,
-                      height: 15,
-                      transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
-                    }}
+                    style={styles.walletPickerChevron}
                     tintColor={themeColors.text}
                   />
-
-
                 </TouchableOpacity>
-                <TouchableOpacity style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "90%" }} onPress={() => openModal('to')}>
-                  <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN}>To </AppText>
-                  <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN}>{toWallet?.toUpperCase()}</AppText>
-
+                <TouchableOpacity style={styles.walletPickerRow} onPress={() => openModal("to")} activeOpacity={0.7}>
+                  <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN} style={styles.walletPickerLabel}>
+                    To
+                  </AppText>
+                  <View style={styles.walletPickerValueCol}>
+                    <AppText
+                      color={themeColors.text}
+                      weight={MEDIUM}
+                      type={FOURTEEN}
+                      numberOfLines={1}
+                      style={styles.walletPickerValueText}
+                    >
+                      {toWallet?.toUpperCase()}
+                    </AppText>
+                  </View>
                   <FastImage
                     source={back_ic}
                     resizeMode="contain"
-                    style={{
-                      width: 15,
-                      height: 15,
-                      transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
-                    }}
+                    style={styles.walletPickerChevron}
                     tintColor={themeColors.text}
                   />
-
                 </TouchableOpacity>
               </View>
-
-
+              </View>
             </View>
             <TouchableOpacity style={{
               flexDirection: "row", justifyContent: "space-between", marginHorizontal: 20, borderBottomColor: isDark ? themeColors.border : "#EEE",
@@ -299,15 +310,57 @@ const styles = StyleSheet.create({
     paddingTop: 10
   },
   fromToCard: {
-    flexDirection: "row",
-    alignItems: "center",
     marginHorizontal: 20,
     width: "90%",
     alignSelf: "center",
     backgroundColor: "transparent",
     borderRadius: 10,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     zIndex: 1,
+  },
+  fromToCardInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    gap: 12,
+  },
+  sideRailIcon: {
+    width: 50,
+    height: 80,
+    flexShrink: 0,
+  },
+  fromToRows: {
+    minWidth: 200,
+    maxWidth: 300,
+    gap: 20,
+    flexShrink: 1,
+  },
+  walletPickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    minWidth: 0,
+  },
+  walletPickerLabel: {
+    width: 48,
+  },
+  walletPickerValueCol: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "flex-end",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  walletPickerValueText: {
+    width: "100%",
+    textAlign: "right",
+  },
+  walletPickerChevron: {
+    width: 15,
+    height: 15,
+    transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
   },
   inputContainer: {
     backgroundColor: "transparent",

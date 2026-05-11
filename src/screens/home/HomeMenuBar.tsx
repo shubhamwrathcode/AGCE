@@ -10,31 +10,23 @@ import Animated, {
 import { AppText, ELEVEN } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
 const Width = Dimensions.get("window").width;
+import Toast from "react-native-simple-toast";
 import {
   moreOption,
   newHubIcon,
-  newHubIconLight,
   swap,
-  swapLight,
   margin,
   wallet_ic,
-  spotdarkfinalbottomtab,
-  spotfinalbottomTab,
   spotIcon,
   earningAsset1,
-  newReferalIcon,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
-import {
-  AIRDROP_SCREEN,
-  CONVERT_SCREEN,
-  EARING_SCREEN,
-  INVITE_AND_EARN_SCREEN,
-  MORE_MENU_SCREEN,
-  WALLET_SCREEN,
-} from "../../navigation/routes";
+import { MORE_MENU_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { checkValue } from "../../helper/utility";
+
+const showComingSoonToast = () =>
+  Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
 
 /** Grey tile behind each menu icon (square behind icon only). */
 const ICON_TILE_GREY_LIGHT = "#EAEDF0";
@@ -96,7 +88,6 @@ const MenuItem = React.memo(({ item, index }: any) => {
 });
 
 const HomeMenuBar = () => {
-  const theme = useAppSelector((state) => state.auth.theme);
   const languages = useAppSelector((state) => {
     return state.account.languages;
   });
@@ -105,14 +96,13 @@ const HomeMenuBar = () => {
       id: "1",
       title: checkValue(languages?.spot),
       icon: spotIcon,
-      onPress: () => NavigationService.navigate(WALLET_SCREEN),
+      onPress: () => NavigationService.navigate(TRADE_SCREEN),
     },
     {
       id: "2",
       title: "Margin",
       icon: margin,
-      onPress: () =>
-        NavigationService.navigate(AIRDROP_SCREEN, { from: "home" }),
+      onPress: showComingSoonToast,
     },
     {
       id: "3",
@@ -123,29 +113,27 @@ const HomeMenuBar = () => {
     {
       id: "4",
       title: checkValue("Swap"),
-      icon:  swap,
-      onPress: () => {
-        NavigationService.navigate(CONVERT_SCREEN);
-      },
+      icon: swap,
+      onPress: showComingSoonToast,
     },
     {
       id: "5",
       title: "Earning",
       icon: earningAsset1,
-      onPress: () => NavigationService.navigate(EARING_SCREEN),
+      onPress: showComingSoonToast,
     },
     {
       id: "7",
       title: "Referral",
       icon: newHubIcon,
-      onPress: () => NavigationService.navigate(INVITE_AND_EARN_SCREEN),
+      onPress: showComingSoonToast,
     },
-    {
-      id: "6",
-      title: checkValue(languages?.more),
-      icon: moreOption,
-      onPress: () => NavigationService.navigate(MORE_MENU_SCREEN),
-    },
+    // {
+    //   id: "6",
+    //   title: checkValue(languages?.more),
+    //   icon: moreOption,
+    //   onPress: () => NavigationService.navigate(MORE_MENU_SCREEN),
+    // },
 
   ];
 

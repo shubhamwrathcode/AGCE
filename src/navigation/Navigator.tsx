@@ -84,6 +84,7 @@ import {
   YELLOW,
 } from "../shared";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import Toast from "react-native-simple-toast";
 import StakingSuccess from "../screens/Staking/StakingSuccess";
 import QsTransaction from "../screens/QuickBuySell/qsTransaction";
 import LackedStakes from "../screens/Staking/LackedStakes";
@@ -165,6 +166,10 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
         {state.routes.map((route: any, index: number) => {
           const isFocused = state.index === index;
           const onPress = () => {
+            if (route.name === routes.FUTURES_SCREEN) {
+              Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
+              return;
+            }
             const event = navigation.emit({
               type: "tabPress",
               target: route.key,

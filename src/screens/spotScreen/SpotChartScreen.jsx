@@ -6,8 +6,6 @@ import {
   TouchableOpacity,
   StatusBar,
   Platform,
-  ToastAndroid,
-  Alert,
   ScrollView,
   Animated,
   LayoutAnimation,
@@ -18,6 +16,7 @@ import {
   Pressable,
   ImageBackground,
 } from "react-native";
+import Toast from "react-native-simple-toast";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
 import { useRoute, useNavigation, useFocusEffect, useIsFocused } from "@react-navigation/native";
@@ -465,6 +464,13 @@ const SpotChartScreen = () => {
       high: params.high ?? spotSelectedPair?.high,
       low: params.low ?? spotSelectedPair?.low,
       volume: params.volume ?? spotSelectedPair?.volume,
+      /** Absolute 24h price change (quote); same role as web `changesHour` / ticker `change`. */
+      change: spotSelectedPair?.change ?? params?.change ?? params?.change_24hour,
+      volume_quote:
+        spotSelectedPair?.volume_quote ??
+        spotSelectedPair?.quote_volume ??
+        params?.volume_quote ??
+        params?.quote_volume,
       buy_price: spotSelectedPair?.buy_price ?? params.buy_price,
       change_percentage: spotSelectedPair?.change_percentage ?? params.change_percentage,
       _id: spotSelectedPair?._id ?? params._id ?? params.pair_id,
@@ -508,11 +514,7 @@ const SpotChartScreen = () => {
   }, []);
 
   const showComingSoon = useCallback(() => {
-    if (Platform.OS === "android") {
-      ToastAndroid.show("Coming soon", ToastAndroid.SHORT);
-    } else {
-      Alert.alert("Coming soon");
-    }
+    Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
   }, []);
 
   const [pairSheetVisible, setPairSheetVisible] = useState(false);
@@ -913,6 +915,44 @@ const SpotChartScreen = () => {
     [formatPrice, formatWithCommas]
   );
 
+  /** Merge REST pair snapshot with optional socket ticker (web TradeCenterSection parity). */
+  const liveMarketStats = useMemo(() => {
+    const base = {
+      high: mergedPair?.high,
+      low: mergedPair?.low,
+      volume: mergedPair?.volume,
+      changeAbs: mergedPair?.change,
+      volQuote: mergedPair?.volume_quote ?? mergedPair?.quote_volume,
+      last: mergedPair?.buy_price ?? mergedPair?.last_price ?? mergedPair?.price,
+    };
+    const d = lastSocketData;
+    if (!d) return base;
+    const t = d.ticker != null && typeof d.ticker === "object" ? d.ticker : null;
+    const src = t || d;
+    return {
+      high: src.high ?? src.h ?? base.high,
+      low: src.low ?? src.l ?? base.low,
+      volume: src.volume ?? src.v ?? base.volume,
+      changeAbs: src.change ?? src.change_24hour ?? src.changePercentage ?? base.changeAbs,
+      volQuote: src.quote_volume ?? src.volume_quote ?? src.quoteVolume ?? base.volQuote,
+      last: src.last ?? src.buy_price ?? src.c ?? base.last,
+    };
+  }, [lastSocketData, mergedPair]);
+
+  const formatChangeAbsDisplay = useCallback(
+    (raw) => {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return "—";
+      const dec = Math.abs(n) >= 1000 ? 2 : Math.abs(n) >= 1 ? 4 : 6;
+      const sign = n >= 0 ? "" : "-";
+      const body = formatWithCommas(String(Math.abs(n).toFixed(dec)).replace(/\.?0+$/, ""));
+      return `${sign}${body}`;
+    },
+    [formatWithCommas]
+  );
+
+  const stripDisplayPrice = liveMarketStats.last ?? pairPrice;
+
   // Web-style: never abbreviate Amount/Total (no K/M). Keep it readable with commas.
   const formatObQty = useCallback(
     (q) => {
@@ -1111,7 +1151,7 @@ const SpotChartScreen = () => {
       navigation.navigate({
         name: routes.NAVIGATION_BOTTOM_TAB_STACK,
         params: {
-          screen: routes.WALLET_SCREEN,
+          screen: routes.TRADE_SCREEN,
           params: { spotTradeSide: side },
         },
       });
@@ -1225,44 +1265,75 @@ const SpotChartScreen = () => {
             })}
           </View>
 
-          {/* 24h strip (same content as former Spot minicontainer; colors from theme / change %) */}
+          {/* 24h strip — layout aligned with web TradeCenterSection (TradePage): left price + 24h change; right 2×2 high/low + volumes */}
           <View style={[styles.statsStrip, { borderBottomColor: themeColors.themeBorderColor }]}>
-            <View style={styles.statsLeft}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <AppText style={[styles.statMainPrice, { color: changeColor }]}>
-                  {pairPrice != null && pairPrice !== "" ? String(pairPrice) : "—"}
+            <View style={styles.statsMainRow}>
+              <View style={styles.statsLeftCol}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <AppText style={[styles.statMainPrice, { color: changeColor }]} numberOfLines={1}>
+                    {stripDisplayPrice != null && stripDisplayPrice !== "" ? formatPriceComma(stripDisplayPrice) : "—"}
+                  </AppText>
+                  <FastImage
+                    source={isNeg ? downIcon : upIcon}
+                    resizeMode="contain"
+                    style={styles.statTrendIcon}
+                    tintColor={changeColor}
+                  />
+                </View>
+                <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statChangeSectionTitle, { color: themeColors.text }]}>
+                  24h Change
                 </AppText>
-                <FastImage
-                  source={isNeg ? downIcon : upIcon}
-                  resizeMode="contain"
-                  style={styles.statTrendIcon}
-                  tintColor={changeColor}
-                />
+                <View style={styles.statChangeRow}>
+                  <AppText style={[styles.statChangePct, { color: changeColor }]}>
+                    {mergedPair?.change_percentage != null
+                      ? `${Number(mergedPair.change_percentage) >= 0 ? "+" : ""}${toFixedThree(Number(mergedPair.change_percentage))}%`
+                      : "—"}
+                  </AppText>
+                  <AppText style={[styles.statChangeAbs, { color: changeColor }]}>
+                    {liveMarketStats.changeAbs != null && liveMarketStats.changeAbs !== ""
+                      ? formatChangeAbsDisplay(liveMarketStats.changeAbs)
+                      : "—"}
+                  </AppText>
+                </View>
               </View>
-              <AppText style={[styles.statChange, { color: changeColor }]}>
-                {mergedPair?.change_percentage != null ? `${toFixedThree(Number(mergedPair.change_percentage))}%` : "—"}
-              </AppText>
-            </View>
-            <View style={styles.statsRight}>
-              <View style={styles.statCell}>
-                <AppText type={TEN} style={[styles.statLabel, { color: themeColors.secondaryText }]}>
-                  24h High
-                </AppText>
-                <AppText type={ELEVEN} style={[styles.statValue, { color: themeColors.text }]}>{high ?? "—"}</AppText>
-              </View>
-              <View style={styles.statCell}>
-                <AppText type={TEN} style={[styles.statLabel, { color: themeColors.secondaryText }]}>
-                  24h Low
-                </AppText>
-                <AppText type={ELEVEN} style={[styles.statValue, { color: themeColors.text }]}>{low ?? "—"}</AppText>
-              </View>
-              <View style={styles.statCell}>
-                <AppText type={TEN} style={[styles.statLabel, { color: themeColors.secondaryText }]}>
-                  24h Vol
-                </AppText>
-                <AppText type={ELEVEN} style={[styles.statValue, { color: themeColors.text }]} numberOfLines={1}>
-                  {volume != null ? twoFixedTwo(volume) : "—"} {pairBase}
-                </AppText>
+
+              <View style={styles.statsRightCols}>
+                <View style={styles.statsCol}>
+                  <View style={styles.statKV}>
+                    <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                      {`24h High (${pairQuote})`}
+                    </AppText>
+                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVValue, { color: themeColors.green }]}>
+                      {liveMarketStats.high != null ? formatPriceComma(liveMarketStats.high) : "—"}
+                    </AppText>
+                  </View>
+                  <View style={[styles.statKV, styles.statKVGap]}>
+                    <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                      {`24h Volume (${pairBase})`}
+                    </AppText>
+                    <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: themeColors.secondaryText }]} numberOfLines={1}>
+                      {liveMarketStats.volume != null ? formatWithCommas(twoFixedTwo(liveMarketStats.volume)) : "—"}
+                    </AppText>
+                  </View>
+                </View>
+                <View style={styles.statsCol}>
+                  <View style={styles.statKV}>
+                    <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                      {`24h Low (${pairQuote})`}
+                    </AppText>
+                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVValue, { color: themeColors.red }]}>
+                      {liveMarketStats.low != null ? formatPriceComma(liveMarketStats.low) : "—"}
+                    </AppText>
+                  </View>
+                  <View style={[styles.statKV, styles.statKVGap]}>
+                    <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                      {`24h Volume (${pairQuote})`}
+                    </AppText>
+                    <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: themeColors.secondaryText }]} numberOfLines={1}>
+                      {liveMarketStats.volQuote != null ? formatWithCommas(twoFixedTwo(liveMarketStats.volQuote)) : "—"}
+                    </AppText>
+                  </View>
+                </View>
               </View>
             </View>
           </View>
@@ -2109,13 +2180,15 @@ const SpotChartScreen = () => {
               style={styles.chartBottomIconItem}
               accessibilityLabel={it.label}
             >
-              <FastImage
-                source={it.icon}
-                style={styles.chartBottomIcon}
-                resizeMode="contain"
-                tintColor={themeColors.text}
-              />
-              <AppText style={[styles.chartBottomIconLabel, { color: themeColors.text }]}>
+              <View style={styles.chartBottomIconImageWrap}>
+                <FastImage
+                  source={it.icon}
+                  style={styles.chartBottomIcon}
+                  resizeMode="contain"
+                  tintColor={themeColors.secondaryText}
+                />
+              </View>
+              <AppText style={[styles.chartBottomIconLabel, { color: themeColors.secondaryText }]}>
                 {it.label}
               </AppText>
             </TouchableOpacity>
@@ -2187,6 +2260,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minWidth: 46,
+  },
+  chartBottomIconImageWrap: {
+    opacity: 0.72,
   },
   chartBottomIcon: {
     width: 22,
@@ -2309,11 +2385,71 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   statsStrip: {
-    flexDirection: "row",
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  statsMainRow: {
+    flexDirection: "row",
     alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  statsLeftCol: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 6,
+  },
+  statsRightCols: {
+    flex: 1.15,
+    flexDirection: "row",
+    gap: 12,
+    minWidth: 0,
+  },
+  statsCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  statKV: {
+    minWidth: 0,
+  },
+  statKVGap: {
+    marginTop: 10,
+  },
+  statKVLabel: {
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  statKVValue: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  statKVValueMuted: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "500",
+  },
+  statChangeSectionTitle: {
+    marginTop: 8,
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  statChangeRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  statChangePct: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  statChangeAbs: {
+    fontSize: 13,
+    fontWeight: "600",
   },
   infoCard: {
     borderRadius: 12,
@@ -2371,40 +2507,13 @@ const styles = StyleSheet.create({
     marginTop: 26,
     fontSize: 14,
   },
-  statsLeft: {
-    width: "44%",
-    paddingRight: 8,
-  },
   statMainPrice: {
     fontSize: 16,
-    fontFamily: SEMI_BOLD
-  },
-  statChange: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 3,
+    fontFamily: SEMI_BOLD,
   },
   statTrendIcon: {
     width: 9,
     height: 9,
-  },
-  statsRight: {
-    flex: 1,
-    gap: 6,
-  },
-  statCell: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-  },
-  statLabel: {
-    flexShrink: 0,
-  },
-  statValue: {
-    fontWeight: "500",
-    flex: 1,
-    textAlign: "right",
   },
   chartWrap: {
     width: Width,

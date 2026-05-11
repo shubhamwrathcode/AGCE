@@ -407,7 +407,6 @@ export const bots_ic = require('../../assets/images/bots_ic.png');
 export const margin_ic = require('../../assets/images/margin_ic.png');
 export const future_ic = require('../../assets/images/future_ic.png');
 export const share_ic = require('../../assets/images/share_ic.png');
-export const connectwallet = require('../../assets/images/connectwallet.png');
 export const static_coin = require('../../assets/images/static_coin.png');
 export const static_coin2 = require('../../assets/images/static_coin2.png');
 export const static_coin1 = require('../../assets/images/static_coin1.png');
@@ -431,6 +430,18 @@ export const stakingDrawer = require('../../assets/images/stakingDrawer.png');
 export const checkarrow3 = require('../../assets/images/checkarrow3.png');
 export const verification_gift = require('../../assets/images/verification_gift.png');
 export const welcome_banner = require('../../assets/images/welcome_banner.png');
+export const connectwallet = require('../../assets/images/connectwallet.png');
+export const connectwallet1 = require('../../assets/images/connectwallet1.png');
+export const connectwallet2 = require('../../assets/images/connectwallet2.png');
+export const connectwallet3 = require('../../assets/images/connectwallet3.png');
+export const connectwallet4 = require('../../assets/images/connectwallet4.png');
+export const connectwallet5 = require('../../assets/images/connectwallet5.png');
+
+
+
+
+
+
 
 
 
