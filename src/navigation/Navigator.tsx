@@ -116,7 +116,8 @@ import Spot from "../screens/spotScreen/Spot";
 import SpotChartScreen from "../screens/spotScreen/SpotChartScreen";
 import ProfileDrawer from "../screens/profileDrawer/ProfileDrawer";
 import { createDrawerNavigator } from "@react-navigation/drawer";
-import Support from "../screens/supportSreen/Support";
+import SupportIssueList from "../screens/supportSreen/SupportIssueList";
+import CreateTicket from "../screens/supportSreen/CreateTicket";
 import kycDetails from "../screens/kycScrrens/kycDetails";
 import PanVerify from "../screens/kycScrrens/PanVerify";
 import AadharVerify from "../screens/kycScrrens/AadharVerify";
@@ -151,6 +152,7 @@ import TicketScreen from "../screens/supportSreen/TicketScreen";
 import { useTheme } from "../hooks/useTheme";
 import AirDropScreen from "../screens/airdrop/AirDropScreen";
 import AirdropHistoryScreen from "../screens/airdrop/AirdropHistoryScreen";
+import DepositHistoryDetailScreen from "../screens/account/DepositHistoryDetailScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -328,6 +330,10 @@ const MyAuthLoadingStack = () => {
         component={WalletHistoryDetails}
       />
       <Stack.Screen
+        name={routes.DEPOSIT_HISTORY_DETAIL_SCREEN}
+        component={DepositHistoryDetailScreen}
+      />
+      <Stack.Screen
         name={routes.TRADE_HISTORY_DETAILS_SCREEN}
         component={TradeHistoryDetails}
       />
@@ -445,7 +451,8 @@ const MyAuthLoadingStack = () => {
       />
       <Stack.Screen name={routes.Dashboard_Inner} component={DashboardInner} />
 
-      <Stack.Screen name={"Support"} component={Support} />
+      <Stack.Screen name={"Support"} component={SupportIssueList} />
+      <Stack.Screen name={routes.CREATE_TICKET_SCREEN} component={CreateTicket} />
       <Stack.Screen name={routes.kyc_Details} component={kycDetails} />
       <Stack.Screen name={"PanVerify"} component={PanVerify} />
       <Stack.Screen name={"AadharVerify"} component={AadharVerify} />

@@ -57,6 +57,8 @@ export const DEPOSIT_INR_SCREEN: string = 'DEPOSIT_INR_SCREEN';
 export const WITHDRAW_INR_SCREEN: string = 'WITHDRAW_INR_SCREEN';
 export const WALLET_HISTORY_DETAILS_SCREEN: string =
   'WALLET_HISTORY_DETAILS_SCREEN';
+export const DEPOSIT_HISTORY_DETAIL_SCREEN: string =
+  'DEPOSIT_HISTORY_DETAIL_SCREEN';
 export const TRADE_HISTORY_DETAILS_SCREEN: string =
   'TRADE_HISTORY_DETAILS_SCREEN';
 export const PAYMENT_OPTIONS_SCREEN: string = 'PAYMENT_OPTIONS_SCREEN';
@@ -133,6 +135,9 @@ export const BUY_OPTIONS_SCREEN = 'BUY_OPTIONS_SCREEN'
 export const OPTIONS_HISTORY_SCREEN = 'OPTIONS_HISTORY_SCREEN'
 export const ANTI_PHISHING_CODE_SCREEN: string = 'ANTI_PHISHING_CODE_SCREEN';
 export const RESET_PASSWORD_FROM_CHANGE: string = 'RESET_PASSWORD_FROM_CHANGE';
+
+/** Create a new support ticket (separate screen; list remains route name `Support`). */
+export const CREATE_TICKET_SCREEN = 'CreateTicket';
 
 
 

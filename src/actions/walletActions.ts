@@ -1,4 +1,5 @@
 import {appOperation} from '../appOperation';
+import {extractDepositCoinsList, normalizeDepositCoinsResponse} from '../helper/depositCoinsNormalize';
 import {logger, showError} from '../helper/logger';
 import {
   GenerateAddressProps,
@@ -207,11 +208,22 @@ export const getUserPortfolioOptions = (id: any, options?: { useGlobalLoader?: b
 
 export const getDepositActiveCoins = (id: any) => async (dispatch: AppDispatch) => {
   try {
-    const response: any = await appOperation.customer.deposit_active_coins();
-    // console.log(response, "getUserPortfolioEarning");
-    if (response.success) {
-      dispatch(setDepositActiveCoins(response?.data));
+    let list: any[] = [];
+    try {
+      const res: any = await appOperation.customer.deposit_coins();
+      list = normalizeDepositCoinsResponse(extractDepositCoinsList(res));
+    } catch {
+      list = [];
     }
+
+    if (!list.length) {
+      const response: any = await appOperation.customer.deposit_active_coins();
+      if (response?.success) {
+        list = normalizeDepositCoinsResponse(extractDepositCoinsList(response));
+      }
+    }
+
+    dispatch(setDepositActiveCoins(list.length ? list : []));
   } catch (e) {
     logger(e);
   } finally {

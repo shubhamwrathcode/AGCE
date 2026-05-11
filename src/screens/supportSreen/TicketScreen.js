@@ -125,7 +125,7 @@ const TicketScreen = () => {
     <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <FastImage source={back_ic} style={{ width: 22, height: 22 }} resizeMode="contain" tintColor={themeColors.text} />
+          <FastImage source={back_ic} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

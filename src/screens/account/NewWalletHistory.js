@@ -1,22 +1,16 @@
-import React, { useEffect, useState } from "react";
-import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
-import {
-  AppSafeAreaView,
-  AppText,
-  Toolbar,
-} from "../../shared";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
+import { AppSafeAreaView, AppText, Toolbar, SEMI_BOLD, TWELVE, TEN, FOURTEEN, FIFTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
-import { useAppSelector } from "../../store/hooks";
 import FastImage from "react-native-fast-image";
-import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from "../../helper/ImageAssets";
-import { getWalletHistory } from "../../actions/walletActions";
-import { useDispatch } from "react-redux";
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, copyIcon, externalLinkIcon } from "../../helper/ImageAssets";
+import { copyText } from "../../helper/utility";
 import moment from "moment";
 import NewWalletHistorySkeleton from "./NewWalletHistorySkeleton";
+import { appOperation } from "../../appOperation";
 import NavigationService from "../../navigation/NavigationService";
-import { WALLET_HISTORY_DETAILS_SCREEN } from "../../navigation/routes";
-import { fontFamilySemiBold } from "../../theme/typography";
+import { DEPOSIT_HISTORY_DETAIL_SCREEN } from "../../navigation/routes";
 
 const NewWalletHistory = ({
   investments = [],
@@ -24,119 +18,326 @@ const NewWalletHistory = ({
   totalDownlineInvestment = 0,
   totalAllInvestment = 0,
 }) => {
-  const dispatch = useDispatch();
   const { colors: themeColors, isDark } = useTheme();
-  const walletHistoryRedux = useAppSelector((state) => state.wallet.walletHistory);
-  const [walletHistory, setWalletHistory] = useState([]);
-  const [skip, setSkip] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState([]);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const limit = 10;
+  const limit = 20;
+
+  const rowsRef = useRef([]);
+  const hasMoreRef = useRef(true);
+  const loadingMoreRef = useRef(false);
 
   useEffect(() => {
-    setSkip(0);
-    setHasMore(true);
-    setWalletHistory([]);
-    setIsInitialLoad(true);
-    loadMoreData(0, true);
+    rowsRef.current = rows;
+  }, [rows]);
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  const extractDepositHistoryList = useCallback((res) => {
+    if (!res || res?.success === false) return [];
+    const d = res?.data;
+    if (Array.isArray(d)) return d;
+    if (d && Array.isArray(d.deposits)) return d.deposits;
+    if (d && Array.isArray(d.data)) return d.data;
+    if (d && Array.isArray(d.rows)) return d.rows;
+    if (d && Array.isArray(d.transactions)) return d.transactions;
+    if (d && Array.isArray(d.list)) return d.list;
+    return [];
   }, []);
 
+  const truncateMid = useCallback((s, headLen = 10, tailLen = 6) => {
+    if (s == null || s === "" || s === "—") return "—";
+    const str = String(s);
+    if (str.length <= headLen + tailLen + 1) return str;
+    return `${str.slice(0, headLen)}…${str.slice(-tailLen)}`;
+  }, []);
+
+  const pickExplorerHref = useCallback((raw) => {
+    if (raw == null) return null;
+    const s = typeof raw === "string" ? raw.trim() : String(raw).trim();
+    return s || null;
+  }, []);
+
+  const resolveExplorerUrl = useCallback(
+    (explorer, kind, value) => {
+      const ex = explorer && typeof explorer === "object" ? explorer : {};
+      const tpl =
+        kind === "address"
+          ? pickExplorerHref(ex.address) || pickExplorerHref(ex.address_url) || pickExplorerHref(ex.account)
+          : pickExplorerHref(ex.tx) ||
+            pickExplorerHref(ex.transaction) ||
+            pickExplorerHref(ex.tx_hash_url) ||
+            pickExplorerHref(ex.txUrl);
+      if (!tpl || !value || value === "—") return null;
+      if (/\{address\}/i.test(tpl) && kind === "address") return tpl.replace(/\{address\}/gi, encodeURIComponent(value));
+      if ((/\{txid\}/i.test(tpl) || /\{txhash\}/i.test(tpl)) && kind === "tx") {
+        return tpl.replace(/\{txid\}/gi, encodeURIComponent(value)).replace(/\{txhash\}/gi, encodeURIComponent(value));
+      }
+      return tpl;
+    },
+    [pickExplorerHref]
+  );
+
+  const historyStatusLabel = useCallback((raw) => {
+    const t = raw == null ? "" : String(raw).trim();
+    if (!t) return "—";
+    if (/success|completed|credited|confirm/i.test(t)) return "COMPLETED";
+    if (/pending|processing|in progress|confirming|queued|wait/i.test(t)) return "PENDING";
+    if (/fail|failed|reject|rejected|cancel|error/i.test(t)) return "FAILED";
+    return t.toUpperCase();
+  }, []);
+
+  const mapRow = useCallback(
+    (r, i) => {
+      const tx = r?.transaction_hash || r?.txid || r?.txId || r?.tx_id || r?.hash;
+      const addr = r?.address || r?.to_address || r?.destAddress || r?.destinationAddress;
+      const chainFullName =
+        r?.chain_full_name ||
+        r?.chainFullName ||
+        r?.chain_full ||
+        r?.chainName ||
+        r?.network_full_name ||
+        (r?.metadata && (r.metadata.chain_full_name || r.metadata.chainFullName || r.metadata.network_full_name)) ||
+        null;
+      const short =
+        r?.short_name ||
+        r?.shortName ||
+        r?.currency_short_name ||
+        r?.currency ||
+        r?.coin ||
+        r?.token ||
+        (r?.currency_id && (r.currency_id.short_name || r.currency_id.symbol)) ||
+        "—";
+      const amount =
+        r?.net_amount ??
+        r?.netAmount ??
+        r?.amount ??
+        r?.deposit_amount ??
+        r?.depositAmount ??
+        (r?.metadata && (r.metadata.net_amount ?? r.metadata.amount)) ??
+        "—";
+      const status = r?.status || r?.transaction_status || r?.action || "—";
+      const explorer = r?.explorer || r?.explorerLink || r?.explorer_link || (r?.metadata && r.metadata.explorer) || {};
+      return {
+        id: r?._id || r?.id || tx || `row-${i}`,
+        createdAt: r?.createdAt || r?.created_at || r?.time || r?.date,
+        chain: r?.chain || r?.network || (r?.metadata && r.metadata.chain) || "—",
+        chain_full_name: chainFullName != null && String(chainFullName).trim() ? String(chainFullName) : "—",
+        short_name: short != null && String(short).trim() ? String(short).toUpperCase() : "—",
+        amount: amount != null && amount !== "" ? String(amount) : "—",
+        status,
+        statusLabel: historyStatusLabel(status),
+        address: addr != null && addr !== "" ? String(addr) : "—",
+        addressShort: addr != null && addr !== "" ? truncateMid(addr) : "—",
+        txid: tx != null && tx !== "" ? String(tx) : "—",
+        txidShort: tx != null && tx !== "" ? truncateMid(tx) : "—",
+        depositWallet: r?.wallet || r?.walletType || r?.wallet_type || r?.depositWallet || "Main Wallet",
+        explorer,
+      };
+    },
+    [historyStatusLabel, truncateMid]
+  );
+
   useEffect(() => {
-    if (walletHistoryRedux == null) return;
-    if (isInitialLoad) {
-      setWalletHistory(walletHistoryRedux);
-      setIsInitialLoad(false);
-    } else {
-      setWalletHistory(prev => [...prev, ...walletHistoryRedux]);
+    let cancelled = false;
+    (async () => {
+      setLoadingInitial(true);
+      setRows([]);
+      rowsRef.current = [];
+      setHasMore(true);
+      hasMoreRef.current = true;
+      try {
+        const res = await appOperation.customer.verify_deposit({ skip: 0, limit });
+        if (cancelled) return;
+        const raw = extractDepositHistoryList(res);
+        const batch = (raw || []).map((r, i) => mapRow(r, i));
+        setRows(batch);
+        rowsRef.current = batch;
+        setHasMore(batch.length >= limit);
+        hasMoreRef.current = batch.length >= limit;
+      } catch {
+        if (!cancelled) {
+          setRows([]);
+          rowsRef.current = [];
+          setHasMore(false);
+          hasMoreRef.current = false;
+        }
+      } finally {
+        if (!cancelled) setLoadingInitial(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [extractDepositHistoryList, limit, mapRow]);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMoreRef.current || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    const skip = rowsRef.current.length;
+    try {
+      const res = await appOperation.customer.verify_deposit({ skip, limit });
+      const raw = extractDepositHistoryList(res);
+      const batch = (raw || []).map((r, i) => mapRow(r, skip + i));
+      if (!batch.length) {
+        setHasMore(false);
+        hasMoreRef.current = false;
+        return;
+      }
+      setRows((prev) => {
+        const next = [...prev, ...batch];
+        rowsRef.current = next;
+        return next;
+      });
+      setHasMore(batch.length >= limit);
+      hasMoreRef.current = batch.length >= limit;
+    } catch {
+      setHasMore(false);
+      hasMoreRef.current = false;
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
     }
-    if (walletHistoryRedux.length < limit) setHasMore(false);
-    setLoading(false);
-  }, [walletHistoryRedux]);
+  }, [extractDepositHistoryList, limit, mapRow]);
 
-  const loadMoreData = (currentSkip, isInitial = false) => {
-    if (loading || (!hasMore && !isInitial)) return;
-    
-    setLoading(true);
-    setSkip(currentSkip);
-    dispatch(getWalletHistory(currentSkip, limit));
-  };
+  const handleScroll = useCallback(
+    (event) => {
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const paddingToBottom = 220;
+      const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+      if (isCloseToBottom) void loadMore();
+    },
+    [loadMore]
+  );
 
-  const handleScroll = (event) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const paddingToBottom = 20;
-    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-
-    if (isCloseToBottom && hasMore && !loading) {
-      const nextSkip = skip + limit;
-      loadMoreData(nextSkip);
+  const openUrl = useCallback(async (url) => {
+    if (!url) return;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      /* ignore */
     }
-  };
+  }, []);
 
-  const getStatusColor = (status) => {
-    if (status === "SUCCESS") return "#4CAF50";
-    if (status === "COMPLETED") return "#FF9800";
-    return "#F44336";
-  };
+  const renderCard = useCallback(
+    (row, idx) => {
+      const dateStr = moment(row?.createdAt).isValid() ? moment(row.createdAt).format("DD/MM/YYYY, HH:mm:ss") : "—";
+      const networkText = row?.chain_full_name && row.chain_full_name !== "—" ? row.chain_full_name : row?.chain || "—";
+      const pillBg =
+        row?.statusLabel === "COMPLETED"
+          ? "rgba(20, 184, 166, 0.12)"
+          : row?.statusLabel === "FAILED"
+          ? "rgba(239, 68, 68, 0.10)"
+          : row?.statusLabel === "PENDING"
+          ? "rgba(245, 158, 11, 0.12)"
+          : "rgba(148, 163, 184, 0.12)";
+      const pillText =
+        row?.statusLabel === "COMPLETED"
+          ? "#16A34A"
+          : row?.statusLabel === "FAILED"
+          ? "#DC2626"
+          : row?.statusLabel === "PENDING"
+          ? "#B45309"
+          : themeColors.secondaryText;
+      const addressUrl = resolveExplorerUrl(row?.explorer, "address", row?.address);
+      const txUrl = resolveExplorerUrl(row?.explorer, "tx", row?.txid);
 
-  const formatDateTimeCard = (dateString) => {
-    if (!dateString) return "---";
-    return moment(dateString).format("YYYY-MM-DD HH:mm:ss");
-  };
-
-  const renderCard = (inv, idx) => {
-    const textColor = themeColors.text;
-    const labelColor = themeColors.secondaryText;
-    const typeLabel = inv?.transaction_type || "Transaction";
-    const isDeposit = (typeLabel || "").toLowerCase().includes("deposit");
-    const typeColor = isDeposit ? colors.green : (typeLabel || "").toLowerCase().includes("withdraw") ? colors.red : labelColor;
-
-    return (
-      <TouchableOpacity
-        key={idx}
-        activeOpacity={0.8}
-        onPress={() => NavigationService.navigate(WALLET_HISTORY_DETAILS_SCREEN, { item: inv })}
-        style={styles.card}
-      >
-        <View style={styles.topRow}>
-          <View style={styles.pairRow}>
-            {/* <AppText style={[styles.cardTitle, { color: textColor }]}>
-              {typeLabel}
-            </AppText> */}
-          </View>
-        
-        </View>
- <View style={{width:"100%",flexDirection:"row",justifyContent:"space-between"}}>
-        <AppText style={[styles.orderTypeLabel, { color: typeColor }]}>
-          {typeLabel}
-         
-        </AppText>
-        <AppText style={[styles.cardDate, { color: labelColor }]}>
-            {formatDateTimeCard(inv?.createdAt)}
+      const Row = ({ label, value, right }) => (
+        <View style={styles.depHistRow}>
+          <AppText type={TWELVE} style={[styles.depHistLabel, { color: themeColors.secondaryText }]}>
+            {label}
           </AppText>
+          <View style={styles.depHistValueWrap}>
+            <AppText type={TWELVE} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={1}>
+              {value}
+            </AppText>
+          </View>
+          {right ? <View style={styles.depHistRight}>{right}</View> : null}
         </View>
+      );
 
-        <View style={styles.cardRow}>
-          <AppText style={[styles.cardLabel, { color: labelColor }]}>Amount:</AppText>
-          <AppText style={[styles.cardValue, { color: textColor }]}>{inv?.amount ?? "0"}</AppText>
-        </View>
-        <View style={styles.cardRow}>
-          <AppText style={[styles.cardLabel, { color: labelColor }]}>Chain:</AppText>
-          <AppText style={[styles.cardValue, { color: textColor }]}>{inv?.chain || "---"}</AppText>
-        </View>
-        <View style={styles.cardRow}>
-          <AppText style={[styles.cardLabel, { color: labelColor }]}>Fee:</AppText>
-          <AppText style={[styles.cardValue, { color: textColor }]}>{inv?.fee ?? "0"}</AppText>
-        </View>
-        <View style={styles.cardRow}>
-          <AppText style={[styles.cardLabel, { color: labelColor }]}>Status:</AppText>
-          <AppText style={[styles.cardValue, { color: getStatusColor(inv?.status) }]}>{inv?.status || "---"}</AppText>
-        </View>
+      return (
+        <TouchableOpacity
+          key={row?.id || idx}
+          activeOpacity={0.92}
+          onPress={() => NavigationService.navigate(DEPOSIT_HISTORY_DETAIL_SCREEN, { row })}
+          style={[styles.depHistCard, { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : "#EEE" }]}
+        >
+          <View style={styles.depHistTop}>
+            <AppText type={TWELVE} style={{ color: themeColors.text }}>
+              {dateStr}
+            </AppText>
+            <View style={[styles.depHistPill, { backgroundColor: pillBg }]}>
+              <AppText type={TEN} weight={SEMI_BOLD} style={{ color: pillText }}>
+                {row?.statusLabel || "—"}
+              </AppText>
+            </View>
+          </View>
 
-        <View style={[styles.cardDivider, { backgroundColor: themeColors.border }]} />
-      </TouchableOpacity>
-    );
-  };
+          <View style={styles.depHistRows}>
+            <Row label="Network" value={networkText} />
+            <Row label="Amount" value={`${row?.amount ?? "—"} ${row?.short_name ?? ""}`.trim()} />
+            <Row label="Deposit Wallet" value={row?.depositWallet || "Main Wallet"} />
+            <Row
+              label="Address"
+              value={row?.addressShort || "—"}
+              right={
+                <View style={styles.depHistIconRow}>
+                  <TouchableOpacity
+                    onPress={() => (row?.address && row.address !== "—" ? copyText(row.address) : undefined)}
+                    disabled={!row?.address || row.address === "—"}
+                    style={styles.depHistIconBtn}
+                  >
+                    <FastImage source={copyIcon} style={styles.depHistIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                  </TouchableOpacity>
+                  {addressUrl ? (
+                    <TouchableOpacity onPress={() => openUrl(addressUrl)} style={styles.depHistIconBtn}>
+                      <FastImage
+                        source={externalLinkIcon}
+                        style={styles.depHistIcon}
+                        resizeMode="contain"
+                        tintColor={themeColors.secondaryText}
+                      />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              }
+            />
+            <Row
+              label="TxID"
+              value={row?.txidShort || "—"}
+              right={
+                <View style={styles.depHistIconRow}>
+                  <TouchableOpacity
+                    onPress={() => (row?.txid && row.txid !== "—" ? copyText(row.txid) : undefined)}
+                    disabled={!row?.txid || row.txid === "—"}
+                    style={styles.depHistIconBtn}
+                  >
+                    <FastImage source={copyIcon} style={styles.depHistIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                  </TouchableOpacity>
+                  {txUrl ? (
+                    <TouchableOpacity onPress={() => openUrl(txUrl)} style={styles.depHistIconBtn}>
+                      <FastImage
+                        source={externalLinkIcon}
+                        style={styles.depHistIcon}
+                        resizeMode="contain"
+                        tintColor={themeColors.secondaryText}
+                      />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              }
+            />
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [isDark, openUrl, resolveExplorerUrl, themeColors, TWELVE]
+  );
 
   return (
     <AppSafeAreaView
@@ -147,21 +348,21 @@ const NewWalletHistory = ({
     >
       <Toolbar
         isSecond
-        title={"Deposit/Withdrawal history"}
-        style={{ width: "75%", backgroundColor: "transparent" }}
+        title={"Deposit History"}
+        style={{ width: "65%", backgroundColor: "transparent" }}
       />
 
-      {(walletHistoryRedux == null || isInitialLoad) ? (
+      {loadingInitial ? (
         <NewWalletHistorySkeleton />
-      ) : walletHistory?.length > 0 ? (
+      ) : rows?.length > 0 ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           onScroll={handleScroll}
           scrollEventThrottle={400}
         >
-          {walletHistory.map((inv, idx) => renderCard(inv, idx))}
-          {loading && (
+          {rows.map((row, idx) => renderCard(row, idx))}
+          {loadingMore && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={colors.buttonBg || "#007AFF"} />
             </View>
@@ -183,59 +384,66 @@ const NewWalletHistory = ({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 5,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
-  card: {
+  depHistCard: {
+    borderWidth: 1,
+    borderRadius: 16,
     padding: 14,
-    paddingBottom: 0,
-    width: "100%",
-    alignSelf: "center",
+    marginBottom: 12,
   },
-  cardDivider: {
-    height: 1,
-    marginTop: 14,
-  },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  pairRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 8,
-  },
-  cardTitle: {
-    fontSize: 14,
-    marginRight: 6,
-    fontFamily: fontFamilySemiBold,
-  },
-  cardDate: {
-    fontSize: 11,
-  },
-  orderTypeLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 6,
-    justifyContent:"space-between"
-  },
-  cardRow: {
+  depHistTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 12,
   },
-  cardLabel: {
-    fontSize: 12,
-    flex: 1,
+  depHistPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  cardValue: {
-    fontSize: 12,
+  depHistRows: {
+    gap: 12,
+  },
+  depHistRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
+  },
+  depHistLabel: {
+    width: 120,
+  },
+  depHistValueWrap: {
     flex: 1,
+    minWidth: 0,
+  },
+  depHistValue: {
     textAlign: "right",
+  },
+  depHistRight: {
+    marginLeft: 10,
+  },
+  depHistIconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  depHistIconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.35)",
+  },
+  depHistIcon: {
+    width: 14,
+    height: 14,
   },
   noDataRow: {
     justifyContent: "center",

@@ -601,7 +601,7 @@ export const submitTicket =
       if (response.success) {
         dispatch(getUserTickets());
         handleResetInput();
-        showError(response?.message);
+        showSuccess(response?.message || 'Ticket submitted successfully.');
       } else {
         showError(response?.message);
       }
@@ -757,26 +757,35 @@ export const getUserReferCount = () => async (dispatch: AppDispatch) => {
   }
 };
 
-export const getUserTickets = () => async (dispatch: AppDispatch) => {
-  try {
-    dispatch(setLoading(true));
-    const response: any = await appOperation.customer.get_user_tickets();
-    if (response.success) {
-      dispatch(setUserTickets(response?.data?.reverse()));
+export const getUserTickets =
+  (opts?: { silent?: boolean }) => async (dispatch: AppDispatch) => {
+    const silent = !!opts?.silent;
+    try {
+      if (!silent) dispatch(setLoading(true));
+      const response: any = await appOperation.customer.get_user_tickets();
+      if (response.success) {
+        dispatch(setUserTickets(response?.data?.reverse()));
+      }
+    } catch (e) {
+      logger(e);
+    } finally {
+      if (!silent) dispatch(setLoading(false));
     }
-  } catch (e) {
-    logger(e);
-  } finally {
-    dispatch(setLoading(false));
-  }
-};
+  };
+
+const DEFAULT_TICKET_PRIORITIES = [
+  { id: 'low', name: 'Low' },
+  { id: 'medium', name: 'Medium' },
+  { id: 'high', name: 'High' },
+];
 
 export const getTicketCategories = (setCategories: any, setPriorities: any) => async (dispatch: AppDispatch) => {
   try {
     const response: any = await appOperation.customer.get_ticket_categories();
     if (response?.success) {
       setCategories(response?.data?.categories || []);
-      setPriorities(response?.data?.priorities || []);
+      const pri = response?.data?.priorities;
+      setPriorities(Array.isArray(pri) && pri.length ? pri : DEFAULT_TICKET_PRIORITIES);
     }
   } catch (e) {
     logger(e);

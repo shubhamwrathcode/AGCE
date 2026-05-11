@@ -69,6 +69,9 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
+    /** Same as web DepositPage primary list: `GET /v1/wallet/deposit-coins` (Bearer). */
+    deposit_coins: () =>
+      appOperation.get('wallet/deposit-coins', undefined, undefined, CUSTOMER_TYPE),
     deposit_active_coins: () =>
       appOperation.get('user/deposit-active-coins', undefined, undefined, CUSTOMER_TYPE),
     widthraw_active_coins: () =>
@@ -84,6 +87,9 @@ export default (appOperation: AppOperation) => ({
     appOperation.get(`wallet/user-wallet?wallet_type=${id}`, undefined, undefined, CUSTOMER_TYPE),
   generate_address: (data: GenerateAddressProps) =>
     appOperation.put('wallet/generate-address', data, CUSTOMER_TYPE),
+  /** Web parity: POST /v1/wallet/get-and-generate-address (Fireblocks tokenAssetId / assetId flow). */
+  get_and_generate_address: (data: { assetId: string; tokenAssetId?: string; short_name: string; generate: boolean }) =>
+    appOperation.post('wallet/get-and-generate-address', data, CUSTOMER_TYPE),
   withdraw_currency: (data: any) =>
     appOperation.post('wallet/withdrawal', data, CUSTOMER_TYPE),
   withdraw_fiat_currency: (data: any) =>

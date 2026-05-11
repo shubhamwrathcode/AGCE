@@ -5,6 +5,7 @@ import {
     ScrollView,
     TouchableOpacity,
     FlatList,
+    SectionList,
     TextInput,
     ActivityIndicator,
     Modal,
@@ -13,7 +14,10 @@ import {
     Platform,
     Vibration,
     RefreshControl,
+    Share,
+    Linking,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import {
     AppSafeAreaView,
@@ -34,7 +38,7 @@ import {
     WHITE,
     Toolbar,
     ELEVEN,
-    EIGHTEEN,
+    EIGHT,
     MEDIUM,
     BOLD,
 } from '../../shared';
@@ -44,22 +48,19 @@ import QRCode from 'react-native-qrcode-svg';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import NavigationService from '../../navigation/NavigationService';
-import { BASE_URL } from '../../helper/Constants';
-import { colors } from '../../theme/colors';
+import { buildCoinImageUri } from '../../helper/coinIconUrl';
+import { colors, lightTheme } from '../../theme/colors';
 import { useTheme } from '../../hooks/useTheme';
-import { universalPaddingHorizontal, universalPaddingHorizontalHigh } from '../../theme/dimens';
+import {universalPaddingHorizontalHigh } from '../../theme/dimens';
 import {
     getDepositActiveCoins,
-    generateAddress,
     verifyDeposit,
-    getAllCoins,
-    getDepositHistory,
 } from '../../actions/walletActions';
 import { getNotificationList } from '../../actions/homeActions';
 import { copyText, shortenAddress, dateFormatter } from '../../helper/utility';
-import { BACK_ICON, searchIcon, copyIcon, printIcon, upIcon, downIcon, INFO, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from '../../helper/ImageAssets';
+import { BACK_ICON, searchIcon, copyIcon, printIcon, upIcon, downIcon, INFO, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, back_ic, binIcon, swapNetwork, externalLinkIcon } from '../../helper/ImageAssets';
 import { setLoading } from '../../slices/authSlice';
-import { setWalletAddress } from '../../slices/walletSlice';
+// setWalletAddress removed: deposit address handled locally for web parity (address + memo)
 import { showError } from '../../helper/logger';
 import moment from 'moment';
 import { WALLET_HISTORY_SCREEN } from '../../navigation/routes';
@@ -68,12 +69,15 @@ import ShimmerBone from '../../shared/components/ShimmerBone';
 
 const SHEET_HEIGHT = Math.round(Dimensions.get('window').height * 0.72);
 
-/** FlatList row stride: inner row + bottom gap (must match `coinFlatListRow` marginBottom). */
-const COIN_LIST_ROW_GAP = 12;
-const COIN_LIST_ROW_INNER = 64;
-const COIN_LIST_ROW_STRIDE = COIN_LIST_ROW_INNER + COIN_LIST_ROW_GAP;
+/** Row height + gap under each coin row (compact select list). */
+const COIN_LIST_ROW_GAP = 6;
+const COIN_LIST_ROW_INNER = 52;
 
 const LETTER_KEYS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+/** Figma index rail: # then A–Z */
+const RAIL_KEYS = ['#', ...LETTER_KEYS];
+
+const DEPOSIT_RECENT_SHORT_NAMES_KEY = 'deposit_recent_short_names_v1';
 
 const triggerRailHaptic = () => {
     if (Platform.OS === 'android') {
@@ -85,52 +89,73 @@ const triggerRailHaptic = () => {
     }
 };
 
-/** First list index for each A–Z that appears in sorted data (by short_name). */
-const buildLetterFirstIndexMap = (sorted: any[]): Record<string, number> => {
-    const map: Record<string, number> = {};
-    (sorted || []).forEach((item, index) => {
-        const sn = String(item?.short_name || '');
-        const ch = sn.charAt(0);
-        if (!/[A-Za-z]/.test(ch)) return;
-        const L = ch.toUpperCase();
-        if (map[L] === undefined) map[L] = index;
-    });
-    return map;
+/** Section key: A–Z from first letter of `short_name`, else "#" (Figma). */
+const sectionLetterFromCoin = (item: any): string => {
+    const sn = String(item?.short_name || '');
+    const ch = sn.charAt(0);
+    return /[A-Za-z]/.test(ch) ? ch.toUpperCase() : '#';
 };
 
-/** Jump target: exact letter, else next letter with data, else previous. */
-const resolveScrollIndexForLetter = (letter: string, map: Record<string, number>): number | null => {
-    if (map[letter] !== undefined) return map[letter];
-    const start = LETTER_KEYS.indexOf(letter);
-    if (start < 0) return null;
-    for (let i = start; i < LETTER_KEYS.length; i++) {
-        const k = LETTER_KEYS[i];
-        if (map[k] !== undefined) return map[k];
+const buildDepositCoinSections = (sorted: any[]): { title: string; data: any[] }[] => {
+    const byLetter: Record<string, any[]> = {};
+    (sorted || []).forEach((item) => {
+        const title = sectionLetterFromCoin(item);
+        if (!byLetter[title]) byLetter[title] = [];
+        byLetter[title].push(item);
+    });
+    const order: string[] = [];
+    if (byLetter['#']?.length) order.push('#');
+    for (const L of LETTER_KEYS) {
+        if (byLetter[L]?.length) order.push(L);
+    }
+    return order.map((title) => ({ title, data: byLetter[title] }));
+};
+
+/** Jump to section: exact rail key, else next with rows, else previous. */
+const resolveScrollSectionIndex = (
+    letter: string,
+    sections: { title: string; data: any[] }[]
+): number => {
+    let idx = sections.findIndex((s) => s.title === letter);
+    if (idx >= 0) return idx;
+    const start = RAIL_KEYS.indexOf(letter);
+    if (start < 0) return -1;
+    for (let i = Math.max(0, start); i < RAIL_KEYS.length; i++) {
+        const L = RAIL_KEYS[i];
+        const j = sections.findIndex((s) => s.title === L);
+        if (j >= 0) return j;
     }
     for (let i = start - 1; i >= 0; i--) {
-        const k = LETTER_KEYS[i];
-        if (map[k] !== undefined) return map[k];
+        const L = RAIL_KEYS[i];
+        const j = sections.findIndex((s) => s.title === L);
+        if (j >= 0) return j;
     }
-    return null;
+    return -1;
 };
 
-const indexToRailLetter = (sorted: any[], index: number): string | null => {
-    if (index < 0 || index >= sorted.length) return null;
-    const sn = String(sorted[index]?.short_name || '');
-    const ch = sn.charAt(0);
-    if (!/[A-Za-z]/.test(ch)) return null;
-    return ch.toUpperCase();
-};
+/** Curated majors for "Trending" (deposit list); order matches common market priority. */
+const TRENDING_SHORT_ORDER = [
+    'BTC',
+    'ETH',
+    'USDT',
+    'USDC',
+    'SOL',
+    'BNB',
+    'XRP',
+    'DOGE',
+    'MATIC',
+    'SHIB',
+];
 
 const yToRailLetter = (locationY: number, railHeight: number): string => {
     const h = Math.max(1, railHeight);
     const y = Math.max(0, Math.min(locationY, h));
     const ratio = y / h;
     const idx = Math.min(
-        LETTER_KEYS.length - 1,
-        Math.floor(ratio * LETTER_KEYS.length)
+        RAIL_KEYS.length - 1,
+        Math.floor(ratio * RAIL_KEYS.length)
     );
-    return LETTER_KEYS[idx];
+    return RAIL_KEYS[idx];
 };
 
 /**
@@ -174,6 +199,8 @@ const getActiveNetworkKeys = (item: any): string[] => {
     return keys;
 };
 
+// (kept intentionally empty placeholder removed)
+
 const limitForChain = (limits: any, chainKey: string): string | number | null | undefined => {
     if (limits == null) return null;
     if (typeof limits === 'object' && !Array.isArray(limits) && chainKey in limits) {
@@ -201,10 +228,112 @@ const sortCoinsByShortName = (arr: any[]) =>
         })
     );
 
+const extractDepositHistoryList = (res: any): any[] => {
+    if (!res || res?.success === false) return [];
+    const d = (res as any).data;
+    if (Array.isArray(d)) return d;
+    if (d && Array.isArray(d.deposits)) return d.deposits;
+    if (d && Array.isArray(d.data)) return d.data;
+    if (d && Array.isArray(d.rows)) return d.rows;
+    if (d && Array.isArray(d.transactions)) return d.transactions;
+    if (d && Array.isArray(d.list)) return d.list;
+    return [];
+};
+
+const truncateMid = (s: any, headLen = 10, tailLen = 6) => {
+    if (s == null || s === '' || s === '—') return '—';
+    const str = String(s);
+    if (str.length <= headLen + tailLen + 1) return str;
+    return `${str.slice(0, headLen)}…${str.slice(-tailLen)}`;
+};
+
+const pickExplorerHref = (raw: any): string | null => {
+    if (raw == null) return null;
+    const s = typeof raw === 'string' ? raw.trim() : String(raw).trim();
+    return s || null;
+};
+
+const resolveExplorerUrl = (explorer: any, kind: 'address' | 'tx', value: string) => {
+    const ex = explorer && typeof explorer === 'object' ? explorer : {};
+    const tpl =
+        kind === 'address'
+            ? pickExplorerHref(ex.address) || pickExplorerHref(ex.address_url) || pickExplorerHref(ex.account)
+            : pickExplorerHref(ex.tx) ||
+              pickExplorerHref(ex.transaction) ||
+              pickExplorerHref(ex.tx_hash_url) ||
+              pickExplorerHref(ex.txUrl);
+    if (!tpl || !value || value === '—') return null;
+    if (/\{address\}/i.test(tpl) && kind === 'address') return tpl.replace(/\{address\}/gi, encodeURIComponent(value));
+    if ((/\{txid\}/i.test(tpl) || /\{txhash\}/i.test(tpl)) && kind === 'tx') {
+        return tpl
+            .replace(/\{txid\}/gi, encodeURIComponent(value))
+            .replace(/\{txhash\}/gi, encodeURIComponent(value));
+    }
+    return tpl;
+};
+
+const historyStatusLabel = (raw: any) => {
+    const t = raw == null ? '' : String(raw).trim();
+    if (!t) return '—';
+    if (/success|completed|credited|confirm/i.test(t)) return 'COMPLETED';
+    if (/pending|processing|in progress|confirming|queued|wait/i.test(t)) return 'PENDING';
+    if (/fail|failed|reject|rejected|cancel|error/i.test(t)) return 'FAILED';
+    return t.toUpperCase();
+};
+
+const mapDepositHistoryRow = (r: any, i: number) => {
+    const tx = r?.transaction_hash || r?.txid || r?.txId || r?.tx_id || r?.hash;
+    const addr = r?.address || r?.to_address || r?.destAddress || r?.destinationAddress;
+    const chainFullName =
+        r?.chain_full_name ||
+        r?.chainFullName ||
+        r?.chain_full ||
+        r?.chainName ||
+        r?.network_full_name ||
+        (r?.metadata && (r.metadata.chain_full_name || r.metadata.chainFullName || r.metadata.network_full_name)) ||
+        null;
+    const short =
+        r?.short_name ||
+        r?.shortName ||
+        r?.currency_short_name ||
+        r?.currency ||
+        r?.coin ||
+        r?.token ||
+        (r?.currency_id && (r.currency_id.short_name || r.currency_id.symbol)) ||
+        '—';
+    const amount =
+        r?.net_amount ??
+        r?.netAmount ??
+        r?.amount ??
+        r?.deposit_amount ??
+        r?.depositAmount ??
+        (r?.metadata && (r.metadata.net_amount ?? r.metadata.amount)) ??
+        '—';
+    const status = r?.status || r?.transaction_status || r?.action || '—';
+    const explorer = r?.explorer || r?.explorerLink || r?.explorer_link || (r?.metadata && r.metadata.explorer) || {};
+    return {
+        _id: r?._id || r?.id || tx || `row-${i}`,
+        createdAt: r?.createdAt || r?.created_at || r?.time || r?.date,
+        updatedAt: r?.updatedAt || r?.updated_at || r?.createdAt,
+        chain: r?.chain || r?.network || (r?.metadata && r.metadata.chain) || '—',
+        chain_full_name: chainFullName != null && String(chainFullName).trim() ? String(chainFullName) : '—',
+        short_name: short != null && String(short).trim() ? String(short).toUpperCase() : '—',
+        currency: r?.currency || r?.coin || r?.token || r?.asset || r?.name || short || '—',
+        amount: amount != null && amount !== '' ? String(amount) : '—',
+        status: status != null && String(status).trim() ? String(status) : '—',
+        statusLabel: historyStatusLabel(status),
+        explorer,
+        from_address: addr != null && addr !== '' ? addr : '—',
+        transaction_hash: tx != null && tx !== '' ? String(tx) : '—',
+        shortAddress: addr != null && addr !== '' ? truncateMid(addr) : '—',
+        shortTxHash: tx != null && tx !== '' ? truncateMid(tx) : '—',
+    };
+};
+
 const DepositCoinSelectListSkeleton = () => (
     <View style={styles.selectCoinPhase}>
         <View style={[styles.selectCoinSearchWrap, { borderWidth: 0 }]}>
-            <ShimmerBone width="100%" height={48} borderRadius={10} />
+            <ShimmerBone width="100%" height={40} borderRadius={10} />
         </View>
         <View style={styles.selectCoinListRow}>
             <View style={[styles.sectionListFlex, { paddingTop: 4 }]}>
@@ -218,10 +347,10 @@ const DepositCoinSelectListSkeleton = () => (
                             minHeight: COIN_LIST_ROW_INNER,
                         }}
                     >
-                        <ShimmerBone width={40} height={40} borderRadius={20} />
-                        <View style={{ marginLeft: 12, flex: 1 }}>
-                            <ShimmerBone width={88} height={16} borderRadius={4} style={{ marginBottom: 8 }} />
-                            <ShimmerBone width="55%" height={12} borderRadius={4} />
+                        <ShimmerBone width={28} height={28} borderRadius={14} />
+                        <View style={{ marginLeft: 10, flex: 1 }}>
+                            <ShimmerBone width={88} height={14} borderRadius={4} style={{ marginBottom: 6 }} />
+                            <ShimmerBone width="55%" height={11} borderRadius={4} />
                         </View>
                     </View>
                 ))}
@@ -230,11 +359,89 @@ const DepositCoinSelectListSkeleton = () => (
     </View>
 );
 
+const DepositAddressSkeleton = () => (
+    <View style={{ paddingTop: 6 }}>
+        {/* QR card */}
+        <View style={{ alignItems: 'center', marginTop: 18, marginBottom: 18 }}>
+            <View
+                style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: 10,
+                    borderRadius: 0,
+                    borderWidth: 1,
+                    borderColor: '#EEE',
+                }}
+            >
+                <ShimmerBone width={140} height={140} borderRadius={0} />
+            </View>
+            <View style={{ height: 10 }} />
+            <ShimmerBone width={105} height={12} borderRadius={6} />
+        </View>
+
+        {/* Network card */}
+        <View style={{ marginBottom: 10 }}>
+            <View
+                style={{
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    borderColor: '#EEE',
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                }}
+            >
+                <ShimmerBone width={64} height={12} borderRadius={6} style={{ marginBottom: 8 }} />
+                <ShimmerBone width={72} height={14} borderRadius={6} style={{ marginBottom: 6 }} />
+                <ShimmerBone width="70%" height={10} borderRadius={6} />
+            </View>
+        </View>
+
+        {/* Address card */}
+        <View style={{ marginBottom: 10 }}>
+            <View
+                style={{
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    borderColor: '#EEE',
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                }}
+            >
+                <ShimmerBone width={96} height={12} borderRadius={6} style={{ marginBottom: 10 }} />
+                <ShimmerBone width="100%" height={14} borderRadius={6} style={{ marginBottom: 6 }} />
+                <ShimmerBone width="86%" height={14} borderRadius={6} />
+            </View>
+        </View>
+
+        {/* Memo card */}
+        <View style={{ marginBottom: 10 }}>
+            <View
+                style={{
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    borderColor: '#EEE',
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                }}
+            >
+                <ShimmerBone width={84} height={12} borderRadius={6} style={{ marginBottom: 10 }} />
+                <ShimmerBone width="55%" height={14} borderRadius={6} />
+            </View>
+        </View>
+
+        <View style={{ marginTop: 10, alignItems: 'center' }}>
+            <ShimmerBone width={140} height={14} borderRadius={7} />
+        </View>
+
+        {/* Bottom button */}
+        <View style={{ height: 22 }} />
+        <ShimmerBone width="100%" height={52} borderRadius={26} />
+    </View>
+);
+
 const DepositCoin = () => {
     const route = useRoute();
     const dispatch = useAppDispatch();
     const { colors: themeColors, isDark } = useTheme();
-    const walletAddress = useAppSelector((state) => state.wallet.walletAddress);
     const depositActiveCoins = useAppSelector((state) => state.wallet.depositActiveCoins);
     const notificationList = useAppSelector((state) => state.home.notificationList);
 
@@ -246,33 +453,42 @@ const DepositCoin = () => {
     const [selectedCurrency, setSelectedCurrency] = useState<any>({});
     const [selectedNetwork, setSelectedNetwork] = useState('');
     const [depositAddress, setDepositAddress] = useState('');
+    const [depositMemo, setDepositMemo] = useState('');
+    const [generatingDepositAddress, setGeneratingDepositAddress] = useState(false);
+    const [resolvingDepositAddress, setResolvingDepositAddress] = useState(false);
     const [recentDepositHistory, setRecentDepositHistory] = useState<any[]>([]);
-    const [allCoinData, setAllCoinData] = useState<any[]>([]);
     const [modalData, setModalData] = useState<any>({});
     const [loadingDeposit, setLoadingDeposit] = useState(false);
     const [checkDepositStatus, setCheckDepositStatus] = useState(false);
     const [announcements, setAnnouncements] = useState<any[]>([]);
     const [faqActiveIndex, setFaqActiveIndex] = useState<number | null>(null);
+    const [showSelectCoinFaqModal, setShowSelectCoinFaqModal] = useState(false);
+    const [recentShortNames, setRecentShortNames] = useState<string[]>([]);
+    // NOTE: We no longer hide networks based on legacy `wallet/generate-address` errors.
+    // Web parity uses `wallet/get-and-generate-address` with tokenAssetId; if backend supports it,
+    // deposits like ADA→ADA work as on web.
 
     const faqData = [
         {
-            title: "How to deposit crypto?",
-            content: "To deposit cryptocurrency, you need to send it from your external wallet to the deposit address provided by Crypto Bank platform. Always double-check the address and network before confirming the transaction."
+            title: "How do I deposit crypto on AGCE?",
+            content:
+                "Select a coin and network, generate your Fireblocks deposit address, then send funds to that address from your external wallet. The network you select on AGCE must match the network you use to send—wrong network can result in loss of funds."
         },
         {
-            title: "How to Deposit Crypto Step-by-step Guide",
-            content: "• Go to Deposit Section – Navigate to the deposit page\n• Select Your Crypto – Choose the cryptocurrency\n• Copy the Deposit Address – Ensure you copy the correct address\n• Send Funds – Paste the address into your external wallet\n• Wait for Confirmation – Blockchain transactions may take time"
+            title: "Deposit crypto — step by step",
+            content:
+                "• Open Deposit — Go to Wallet → Deposit.\n• Select coin — From the list of active deposit assets.\n• Select network — e.g. BEP20, ERC20, TRC20, matching your withdrawal wallet.\n• Generate address — Creates your unique receiving address.\n• Send & wait — Funds credit after the chain confirms; refresh balance or check history."
         },
         {
-            title: "Deposit hasn't arrived?",
-            content: "• Check Transaction Status – Use a blockchain explorer\n• Verify the Network – Ensure you sent funds using the correct network\n• Confirm Minimum Deposit Amount – Some cryptocurrencies have a minimum deposit limit\n• Contact Support – If it's been a long time, reach out to customer support"
+            title: "My deposit hasn't arrived — what should I do?",
+            content:
+                "• Check Tx — On a block explorer, confirm the transaction is successful.\n• Match network — The sending network must be the one you selected on AGCE.\n• Correct address — Re-check the full deposit address.\n• Wait — Congestion can delay confirmations."
         }
     ];
 
     const networkSheetRef = useRef<any>(null);
-    const coinFlatListRef = useRef<FlatList<any>>(null);
-    const letterFirstIndexMapRef = useRef<Record<string, number>>({});
-    const sortedSelectCoinsRef = useRef<any[]>([]);
+    const coinSectionListRef = useRef<SectionList<any>>(null);
+    const depositSectionsRef = useRef<{ title: string; data: any[] }[]>([]);
     const railLayoutHeightRef = useRef(1);
     const railDragActiveRef = useRef(false);
     const lastRailHapticLetterRef = useRef<string | null>(null);
@@ -306,7 +522,7 @@ const DepositCoin = () => {
         } else {
             await Promise.all([
                 dispatch(getDepositActiveCoins(null)),
-                dispatch(getDepositHistory(0, 5))
+                fetchDepositHistory()
             ]);
         }
         setRefreshing(false);
@@ -342,7 +558,6 @@ const DepositCoin = () => {
     );
 
     useEffect(() => {
-        getAllCoinsData();
         handleNotifications();
         fetchDepositHistory();
     }, []);
@@ -365,26 +580,61 @@ const DepositCoin = () => {
         } else {
             setAvailableCurrency(allData);
         }
-    }, [searchPair]);
+    }, [searchPair, allData]);
 
-    /** Single continuous list: all coins sorted by `short_name` (search uses filtered `availableCurrency`). */
+    useEffect(() => {
+        (async () => {
+            try {
+                const raw = await AsyncStorage.getItem(DEPOSIT_RECENT_SHORT_NAMES_KEY);
+                if (raw) setRecentShortNames(JSON.parse(raw));
+            } catch {
+                /* ignore */
+            }
+        })();
+    }, []);
+
+    /** All visible coins sorted by `short_name` (search uses filtered `availableCurrency`). */
     const sortedSelectCoins = useMemo(
         () => sortCoinsByShortName(availableCurrency || []),
         [availableCurrency]
     );
 
-    const letterFirstIndexMap = useMemo(
-        () => buildLetterFirstIndexMap(sortedSelectCoins),
-        [sortedSelectCoins]
+    const trendingDepositCoins = useMemo(() => {
+        if (String(searchPair || '').trim()) return [];
+        const sorted = sortCoinsByShortName(allData || []);
+        const byShort = new Map(
+            sorted.map((c) => [String(c?.short_name || '').toUpperCase(), c])
+        );
+        const out: any[] = [];
+        for (const sym of TRENDING_SHORT_ORDER) {
+            const c = byShort.get(sym);
+            if (c != null && c._id != null) out.push(c);
+            if (out.length >= 8) break;
+        }
+        return out;
+    }, [allData, searchPair]);
+
+    const mainListCoins = useMemo(() => {
+        if (String(searchPair || '').trim()) return sortedSelectCoins;
+        const ex = new Set(trendingDepositCoins.map((c) => String(c?._id ?? '')));
+        return sortedSelectCoins.filter((c) => !ex.has(String(c?._id ?? '')));
+    }, [sortedSelectCoins, trendingDepositCoins, searchPair]);
+
+    const depositSections = useMemo(
+        () => buildDepositCoinSections(mainListCoins),
+        [mainListCoins]
     );
 
     useEffect(() => {
-        sortedSelectCoinsRef.current = sortedSelectCoins;
-    }, [sortedSelectCoins]);
+        depositSectionsRef.current = depositSections;
+    }, [depositSections]);
 
-    useEffect(() => {
-        letterFirstIndexMapRef.current = letterFirstIndexMap;
-    }, [letterFirstIndexMap]);
+    const recentDepositCoinsForList = useMemo(() => {
+        const list = allData || [];
+        return recentShortNames
+            .map((sn) => list.find((c) => String(c?.short_name) === String(sn)))
+            .filter(Boolean) as any[];
+    }, [recentShortNames, allData]);
 
     useEffect(() => {
         if (depositFlowPhase !== 'selectCoin') {
@@ -394,22 +644,20 @@ const DepositCoin = () => {
     }, [depositFlowPhase]);
 
     scrollToLetterRef.current = (letter: string, animated: boolean) => {
-        const map = letterFirstIndexMapRef.current;
-        const list = sortedSelectCoinsRef.current;
-        const idx = resolveScrollIndexForLetter(letter, map);
-        if (idx == null || idx < 0 || !list.length) return;
+        const sections = depositSectionsRef.current;
+        if (!sections.length) return;
+        const sectionIndex = resolveScrollSectionIndex(letter, sections);
+        if (sectionIndex < 0) return;
         try {
-            coinFlatListRef.current?.scrollToIndex({
-                index: idx,
+            coinSectionListRef.current?.scrollToLocation({
+                sectionIndex,
+                itemIndex: 0,
                 animated,
                 viewPosition: 0,
                 viewOffset: 0,
             });
         } catch {
-            coinFlatListRef.current?.scrollToOffset({
-                offset: idx * COIN_LIST_ROW_STRIDE,
-                animated,
-            });
+            /* scrollToLocation can throw if layout not ready */
         }
     };
 
@@ -426,10 +674,11 @@ const DepositCoin = () => {
     >(null);
     onViewableItemsChangedRef.current = ({ viewableItems }) => {
         if (railDragActiveRef.current) return;
-        const top = viewableItems.find((v: any) => v?.isViewable && typeof v?.index === 'number');
-        if (top?.index == null) return;
-        const letter = indexToRailLetter(sortedSelectCoinsRef.current, top.index);
-        setRailScrollLetter(letter);
+        const top = viewableItems.find(
+            (v: any) => v?.isViewable && v?.item != null && v?.item?.short_name != null
+        );
+        if (!top?.item) return;
+        setRailScrollLetter(sectionLetterFromCoin(top.item));
     };
 
     const onViewableItemsChanged = useCallback((info: { viewableItems: any[]; changed: any[] }) => {
@@ -484,20 +733,14 @@ const DepositCoin = () => {
         []
     );
 
-    const getCoinItemLayout = useCallback(
-        (_: any, index: number) => ({
-            length: COIN_LIST_ROW_STRIDE,
-            offset: COIN_LIST_ROW_STRIDE * index,
-            index,
-        }),
-        []
-    );
-
-    useEffect(() => {
-        if (walletAddress) {
-            setDepositAddress(walletAddress);
+    const clearRecentDepositCoins = useCallback(async () => {
+        try {
+            await AsyncStorage.removeItem(DEPOSIT_RECENT_SHORT_NAMES_KEY);
+            setRecentShortNames([]);
+        } catch {
+            /* ignore */
         }
-    }, [walletAddress]);
+    }, []);
 
     useEffect(() => {
         if (depositActiveCoins && Array.isArray(depositActiveCoins) && depositActiveCoins.length > 0) {
@@ -506,19 +749,13 @@ const DepositCoin = () => {
         }
     }, [depositActiveCoins]);
 
-    const getAllCoinsData = async () => {
-        const data = await dispatch(getAllCoins());
-        if (data) {
-            setAllCoinData(data);
-        }
-    };
-
     const fetchDepositHistory = async () => {
         try {
-            const result = await dispatch(getDepositHistory(0, 5));
-            if (result && Array.isArray(result) && result.length > 0) {
-                const recentData = result.slice(0, 5);
-                setRecentDepositHistory(recentData);
+            const res: any = await appOperation.customer.verify_deposit({ skip: 0, limit: 5 });
+            const raw = extractDepositHistoryList(res);
+            const list = (raw || []).map((r: any, i: number) => mapDepositHistoryRow(r, i));
+            if (list.length > 0) {
+                setRecentDepositHistory(list.slice(0, 5));
             } else {
                 setRecentDepositHistory([]);
             }
@@ -560,7 +797,8 @@ const DepositCoin = () => {
     }, [notificationList]);
 
     const openNetworkSheetForCoin = (item: any) => {
-        if (isCoinDepositDisabled(item)) {
+        const activeKeys = getActiveNetworkKeys(item);
+        if (!item || activeKeys.length === 0) {
             if (networkKeysFromChain(item?.chain).length === 0) {
                 showError('No deposit network available for this coin');
             } else {
@@ -578,11 +816,25 @@ const DepositCoin = () => {
         setSelectedCurrency(coin);
         setSelectedNetwork(chain);
         setDepositAddress('');
-        dispatch(setWalletAddress(''));
+        setDepositMemo('');
         networkSheetRef.current?.close();
         setCoinForNetworkSheet(null);
         setDepositFlowPhase('deposit');
-        getDepositAddress(false, chain);
+        getDepositAddress(false, chain, coin);
+        const sn = coin?.short_name;
+        if (sn) {
+            void (async () => {
+                try {
+                    const raw = await AsyncStorage.getItem(DEPOSIT_RECENT_SHORT_NAMES_KEY);
+                    let arr: string[] = raw ? JSON.parse(raw) : [];
+                    arr = [String(sn), ...arr.filter((s) => s !== sn)].slice(0, 12);
+                    await AsyncStorage.setItem(DEPOSIT_RECENT_SHORT_NAMES_KEY, JSON.stringify(arr));
+                    setRecentShortNames(arr);
+                } catch {
+                    /* ignore */
+                }
+            })();
+        }
     };
 
     const handleHeaderBack = () => {
@@ -591,7 +843,7 @@ const DepositCoin = () => {
             setSelectedCurrency({});
             setSelectedNetwork('');
             setDepositAddress('');
-            dispatch(setWalletAddress(''));
+            setDepositMemo('');
             setCoinForNetworkSheet(null);
             setSearchPair('');
         } else {
@@ -599,16 +851,51 @@ const DepositCoin = () => {
         }
     };
 
-    const getDepositAddress = async (generate: boolean, selectedNetwork: string) => {
+    const getDepositAddress = async (generate: boolean, selectedNetwork: string, coinOverride?: any) => {
         setDepositAddress('');
+        setDepositMemo('');
+        if (generate) setGeneratingDepositAddress(true);
+        else setResolvingDepositAddress(true);
         dispatch(setLoading(true));
-        const data = {
-            generate,
-            chain: selectedNetwork,
-            currency_id: selectedCurrency?._id || '',
-        };
-        await dispatch(generateAddress(data));
+        try {
+            const coin = coinOverride ?? selectedCurrency;
+            const sym = String(coin?.short_name || '').trim().toUpperCase();
+            const code = String(selectedNetwork || '').trim().toUpperCase();
+            const apiChain = String(coin?._chain_api_code?.[code] || code).trim().toUpperCase();
+            const tokenAssetId =
+                String(coin?._deposit_asset_id?.[code] || '').trim() ||
+                (sym && apiChain ? `${sym}_${apiChain}` : '');
+
+            // Web parity: POST `wallet/get-and-generate-address` with tokenAssetId + generate flag.
+            // If it fails (older backend), fallback to legacy PUT `wallet/generate-address`.
+            const res: any = tokenAssetId
+                ? await appOperation.customer.get_and_generate_address({
+                      assetId: tokenAssetId,
+                      tokenAssetId,
+                      short_name: sym,
+                      generate: !!generate,
+                  })
+                : null;
+
+            if (res?.success) {
+                const d = res?.data;
+                if (typeof d === 'string') {
+                    setDepositAddress(String(d));
+                } else if (d && typeof d === 'object') {
+                    const addr = d.address ?? d.depositAddress ?? d.walletAddress ?? d.data ?? d.deposit_address;
+                    const memo = d.memo ?? d.tag ?? d.memoTag ?? d.destinationTag;
+                    if (addr != null) setDepositAddress(String(addr));
+                    if (memo != null) setDepositMemo(String(memo));
+                }
+            } else if (res?.message) {
+                showError(res.message);
+            }
+        } catch (e: any) {
+            showError(e?.message);
+        }
         dispatch(setLoading(false));
+        if (generate) setGeneratingDepositAddress(false);
+        else setResolvingDepositAddress(false);
     };
 
     const completeDeposit = async () => {
@@ -638,10 +925,9 @@ const DepositCoin = () => {
             if (result?.success) {
                 if (result?.message === "New deposit detected. Processing transfer to main wallet.") {
                     // Show modal when deposit is detected (equivalent to depositHistory("showModal"))
-                    const historyData = await dispatch(getDepositHistory(0, 5));
-                    if (historyData && historyData.length > 0) {
-                        setRecentDepositHistory(historyData);
-                        const filteredData = historyData?.slice(0, 1)[0];
+                    await fetchDepositHistory();
+                    if (recentDepositHistory && recentDepositHistory.length > 0) {
+                        const filteredData = recentDepositHistory?.slice(0, 1)[0];
                         if (filteredData) {
                             const shortTxHash = shortenAddress(filteredData?.transaction_hash);
                             setModalData({ ...filteredData, shortTxHash });
@@ -694,6 +980,7 @@ const DepositCoin = () => {
                 !Array.isArray(item.deposit_status) &&
                 networkKeysFromChain(item.chain).length > 0 &&
                 getActiveNetworkKeys(item).length === 0);
+        const coinIconUri = buildCoinImageUri(item);
         return (
             <TouchableOpacity
                 style={[
@@ -704,18 +991,24 @@ const DepositCoin = () => {
                 onPress={() => openNetworkSheetForCoin(item)}
                 activeOpacity={disabled ? 1 : 0.7}
             >
-                <FastImage
-                    source={{ uri: BASE_URL + item?.icon_path }}
-                    style={styles.coinIcon}
-                    resizeMode="cover"
-                />
+                {coinIconUri ? (
+                    <FastImage
+                        source={{ uri: coinIconUri }}
+                        style={styles.coinIcon}
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View style={[styles.coinIcon, { backgroundColor: colors.textGray, opacity: 0.25 }]} />
+                )}
                 <View style={styles.coinInfo}>
-                    <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>
-                        {item?.short_name}
+                    <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.text }}>
+                        {item?.short_name || item?.name}
                     </AppText>
-                    <AppText type={TWELVE} color={colors.textGray}>
-                        {item?.name}
-                    </AppText>
+                    {item?.short_name && item?.name ? (
+                        <AppText type={ELEVEN} color={colors.textGray}>
+                            {item.name}
+                        </AppText>
+                    ) : null}
                 </View>
                 {suspended && (
                     <AppText type={TEN} color={RED} weight={SEMI_BOLD}>
@@ -729,225 +1022,381 @@ const DepositCoin = () => {
     const renderDepositHistoryItem = ({ item }: { item: any }) => {
         if (!item) return null;
 
-        const shortAddress = shortenAddress(item?.from_address || '', 12);
-        const shortTxHash = shortenAddress(item?.transaction_hash || '', 12);
+        const statusLabel = item?.statusLabel || historyStatusLabel(item?.status);
+        const statusTone =
+            statusLabel === 'COMPLETED'
+                ? 'success'
+                : statusLabel === 'FAILED'
+                ? 'danger'
+                : statusLabel === 'PENDING'
+                ? 'pending'
+                : 'neutral';
 
-        // Try multiple ways to find the coin image
-        let filteredImageData = null;
+        const dateStr = moment(item?.createdAt || item?.updatedAt).isValid()
+            ? moment(item?.createdAt || item?.updatedAt).format('DD/MM/YYYY, HH:mm:ss')
+            : '—';
 
-        // First try from allCoinData
-        if (allCoinData && allCoinData.length > 0) {
-            filteredImageData = allCoinData.find(
-                (data: any) =>
-                    data?.short_name === item?.short_name ||
-                    data?.short_name === item?.currency ||
-                    data?.name === item?.currency
-            );
-        }
+        const networkText =
+            item?.chain_full_name && item?.chain_full_name !== '—'
+                ? item.chain_full_name
+                : item?.chain || '—';
 
-        // If not found, try from depositActiveCoins
-        if (!filteredImageData && depositActiveCoins && depositActiveCoins.length > 0) {
-            filteredImageData = depositActiveCoins.find(
-                (data: any) =>
-                    data?.short_name === item?.short_name ||
-                    data?.short_name === item?.currency ||
-                    data?.name === item?.currency
-            );
-        }
+        const addrFull = item?.from_address && item?.from_address !== '—' ? String(item.from_address) : '';
+        const txFull = item?.transaction_hash && item?.transaction_hash !== '—' ? String(item.transaction_hash) : '';
+        const addrShort = item?.shortAddress || truncateMid(addrFull);
+        const txShort = item?.shortTxHash || truncateMid(txFull);
 
-        const imageUri = filteredImageData?.icon_path
-            ? BASE_URL + filteredImageData.icon_path
-            : null;
+        const addressUrl = resolveExplorerUrl(item?.explorer, 'address', addrFull);
+        const txUrl = resolveExplorerUrl(item?.explorer, 'tx', txFull);
+
+        const pillBg =
+            statusTone === 'success'
+                ? 'rgba(20, 184, 166, 0.12)'
+                : statusTone === 'danger'
+                ? 'rgba(239, 68, 68, 0.10)'
+                : statusTone === 'pending'
+                ? 'rgba(245, 158, 11, 0.12)'
+                : 'rgba(148, 163, 184, 0.12)';
+
+        const pillText =
+            statusTone === 'success'
+                ? '#16A34A'
+                : statusTone === 'danger'
+                ? '#DC2626'
+                : statusTone === 'pending'
+                ? '#B45309'
+                : themeColors.secondaryText;
+
+        const openUrl = async (url: string | null) => {
+            if (!url) return;
+            try {
+                await Linking.openURL(url);
+            } catch {
+                /* ignore */
+            }
+        };
+
+        const Row = ({
+            label,
+            value,
+            right,
+        }: {
+            label: string;
+            value: React.ReactNode;
+            right?: React.ReactNode;
+        }) => (
+            <View style={styles.depHistRow}>
+                <AppText type={TWELVE} style={[styles.depHistLabel, { color: themeColors.secondaryText }]}>
+                    {label}
+                </AppText>
+                <View style={styles.depHistValueWrap}>
+                    {typeof value === 'string' ? (
+                        <AppText type={TWELVE} style={[styles.depHistValue, { color: themeColors.text }]}>
+                            {value}
+                        </AppText>
+                    ) : (
+                        value
+                    )}
+                </View>
+                {right ? <View style={styles.depHistRight}>{right}</View> : null}
+            </View>
+        );
 
         return (
             <View
                 style={[
-                    styles.depositHistoryItem,
-                    { backgroundColor: themeColors.background, borderWidth: 1, borderColor: isDark ? themeColors.border : '#EEE' }
+                    styles.depHistCard,
+                    { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : '#EEE' },
                 ]}
             >
-                <TouchableOpacity
-                    style={styles.depositHistoryContent}
-                    onPress={() => handleDepositModal(item)}
-                    activeOpacity={0.7}
-                >
-                    <View style={styles.depositHistoryLeft}>
-                        <View style={styles.coinImageContainer}>
-                            {imageUri ? (
-                                <FastImage
-                                    source={{ uri: imageUri }}
-                                    style={styles.historyCoinIcon}
-                                    resizeMode="cover"
-                                />
-                            ) : (
-                                <View style={[styles.historyCoinIcon, { backgroundColor: colors.textGray, opacity: 0.3 }]} />
-                            )}
-                        </View>
-                        <View style={styles.depositHistoryLeftContent}>
-                            <AppText
-                                weight={SEMI_BOLD}
-                                type={FOURTEEN}
-                                numberOfLines={1}
-                                style={{ color: themeColors.text }}
-                            >
-                                {item?.amount} {item?.currency}
-                            </AppText>
-                            <AppText
-                                type={TWELVE}
-                                color={item?.status === 'SUCCESS' ? GREEN : YELLOW}
-                                style={{ marginTop: 4 }}
-                            >
-                                {item?.status === 'SUCCESS' ? 'Completed' : 'Pending'}
-                            </AppText>
-                        </View>
-                    </View>
-
-                    {/* Right Side: Network, Date, Address, TxID */}
-                    <View style={styles.depositHistoryRight}>
-                        <View style={styles.depositHistoryRightItem}>
-                            <View style={styles.labelValueRow}>
-                                <AppText type={TEN} color={colors.textGray} style={styles.labelText}>
-                                    Network
-                                </AppText>
-                                <AppText
-                                    type={TWELVE}
-                                    numberOfLines={1}
-                                    style={{ flex: 1, marginLeft: 8, color: themeColors.text }}
-                                >
-                                    {item?.chain || 'Internal transfer'}
-                                </AppText>
-                            </View>
-                        </View>
-                        <View style={[styles.depositHistoryRightItem, { marginTop: 6 }]}>
-                            <View style={styles.labelValueRow}>
-                                <AppText type={TEN} color={colors.textGray} style={styles.labelText}>
-                                    Date
-                                </AppText>
-                                <AppText
-                                    type={TEN}
-                                    style={{ flex: 1, marginLeft: 8, color: themeColors.text }}
-                                >
-                                    {moment(item.updatedAt).format('DD-MM-YYYY hh:mm A')}
-                                </AppText>
-                            </View>
-                        </View>
-                        <View style={[styles.depositHistoryRightItem, { marginTop: 6 }]}>
-                            <View style={styles.labelValueRow}>
-                                <AppText type={TEN} color={colors.textGray} style={styles.labelText}>
-                                    Address
-                                </AppText>
-                                <View style={[styles.addressRow, { flex: 1, marginLeft: 8, flexShrink: 1 }]}>
-                                    <AppText
-                                        type={TEN}
-                                        numberOfLines={1}
-                                        style={styles.addressText}
-                                    >
-                                        {shortAddress || '----'}
-                                    </AppText>
-                                    {shortAddress && (
-                                        <TouchableOpacity
-                                            onPress={(e) => {
-                                                e.stopPropagation();
-                                                copyText(item?.from_address);
-                                            }}
-                                            style={styles.copyButton}
-                                        >
-                                            <FastImage
-                                                source={copyIcon}
-                                                style={styles.copyIcon}
-                                                resizeMode="contain"
-                                                tintColor={colors.textGray}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </View>
-                        </View>
-                        <View style={[styles.depositHistoryRightItem, { marginTop: 6 }]}>
-                            <View style={styles.labelValueRow}>
-                                <AppText type={TEN} color={colors.textGray} style={styles.labelText}>
-                                    TxID
-                                </AppText>
-                                <View style={[styles.addressRow, {
-                                    flex: 1, marginLeft: 8, flexShrink: 1,
-                                }]}>
-                                    <AppText
-                                        type={TEN}
-                                        numberOfLines={1}
-                                        style={styles.addressText}
-                                        color={WHITE}
-                                    >
-                                        {shortTxHash || '----'}
-                                    </AppText>
-                                    {shortTxHash && (
-                                        <TouchableOpacity
-                                            onPress={(e) => {
-                                                e.stopPropagation();
-                                                copyText(item?.transaction_hash);
-                                            }}
-                                            style={styles.copyButton}
-                                        >
-                                            <FastImage
-                                                source={copyIcon}
-                                                style={styles.copyIcon}
-                                                resizeMode="contain"
-                                                tintColor={colors.textGray}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={styles.viewButton}
-                    onPress={() => handleDepositModal(item)}
-                    activeOpacity={0.7}
-                >
-                    <AppText type={FOURTEEN} color={YELLOW} weight={SEMI_BOLD}>
-                        View
+                <View style={styles.depHistTop}>
+                    <AppText type={TWELVE} style={{ color: themeColors.text }}>
+                        {dateStr}
                     </AppText>
-                </TouchableOpacity>
+                    <View style={[styles.depHistPill, { backgroundColor: pillBg }]}>
+                        <AppText type={TEN} weight={SEMI_BOLD} style={{ color: pillText }}>
+                            {statusLabel}
+                        </AppText>
+                    </View>
+                </View>
+
+                <View style={styles.depHistRows}>
+                    <Row label="Network" value={networkText} />
+                    <Row label="Amount" value={`${item?.amount ?? '—'} ${item?.short_name ?? item?.currency ?? ''}`.trim()} />
+                    <Row label="Deposit Wallet" value={item?.depositWallet || 'Main Wallet'} />
+                    <Row
+                        label="Address"
+                        value={
+                            <AppText type={THIRTEEN} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={1}>
+                                {addrShort || '—'}
+                            </AppText>
+                        }
+                        right={
+                            <View style={styles.depHistIconRow}>
+                                <TouchableOpacity
+                                    onPress={() => (addrFull ? copyText(addrFull) : undefined)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    disabled={!addrFull}
+                                    style={styles.depHistIconBtn}
+                                >
+                                    <FastImage source={copyIcon} style={styles.depHistIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                                </TouchableOpacity>
+                                {addressUrl ? (
+                                    <TouchableOpacity
+                                        onPress={() => openUrl(addressUrl)}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                        style={styles.depHistIconBtn}
+                                    >
+                                        <FastImage
+                                            source={externalLinkIcon}
+                                            style={styles.depHistIcon}
+                                            resizeMode="contain"
+                                            tintColor={themeColors.secondaryText}
+                                        />
+                                    </TouchableOpacity>
+                                ) : null}
+                            </View>
+                        }
+                    />
+                    <Row
+                        label="TxID"
+                        value={
+                            <AppText type={THIRTEEN} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={1}>
+                                {txShort || '—'}
+                            </AppText>
+                        }
+                        right={
+                            <View style={styles.depHistIconRow}>
+                                <TouchableOpacity
+                                    onPress={() => (txFull ? copyText(txFull) : undefined)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    disabled={!txFull}
+                                    style={styles.depHistIconBtn}
+                                >
+                                    <FastImage source={copyIcon} style={styles.depHistIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                                </TouchableOpacity>
+                                {txUrl ? (
+                                    <TouchableOpacity
+                                        onPress={() => openUrl(txUrl)}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                        style={styles.depHistIconBtn}
+                                    >
+                                        <FastImage
+                                            source={externalLinkIcon}
+                                            style={styles.depHistIcon}
+                                            resizeMode="contain"
+                                            tintColor={themeColors.secondaryText}
+                                        />
+                                    </TouchableOpacity>
+                                ) : null}
+                            </View>
+                        }
+                    />
+                </View>
             </View>
         );
     };
 
     const headerTitle =
         depositFlowPhase === 'selectCoin'
-            ? 'Select Coin'
+            ? 'Select Coins'
             : `Deposit ${selectedCurrency?.short_name || ''}`;
+
+    const renderDepositSectionHeader = useCallback(
+        (info: any) => (
+            <View
+                style={[
+                    styles.depositSectionHeader,
+                    { backgroundColor: themeColors.background },
+                ]}
+            >
+                <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.text }}>
+                    {String(info?.section?.title ?? '')}
+                </AppText>
+            </View>
+        ),
+        [themeColors.background, themeColors.text]
+    );
+
+    const renderSelectCoinListHeader = () => {
+        if (String(searchPair || '').trim()) return null;
+        return (
+            <View>
+                {recentDepositCoinsForList.length > 0 && (
+                    <View style={styles.depositHistoryChipsSection}>
+                        <View style={styles.depositHistoryChipsTitleRow}>
+                            <AppText
+                                weight={SEMI_BOLD}
+                                type={THIRTEEN}
+                                style={{ color: themeColors.text }}
+                            >
+                                History
+                            </AppText>
+                            <TouchableOpacity onPress={clearRecentDepositCoins} hitSlop={12}>
+                                <FastImage
+                                    source={binIcon}
+                                    style={styles.depositHistoryClearIcon}
+                                    resizeMode="contain"
+                                    tintColor={themeColors.secondaryText}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.depositRecentChipsScroll}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {recentDepositCoinsForList.map((item: any) => {
+                                const chipIconUri = buildCoinImageUri(item);
+                                return (
+                                <TouchableOpacity
+                                    key={String(item._id)}
+                                    style={[
+                                        styles.depositRecentChip,
+                                        {
+                                            backgroundColor: isDark
+                                                ? themeColors.border
+                                                : '#F0F0F0',
+                                            borderColor: isDark ? themeColors.border : '#EEE',
+                                        },
+                                    ]}
+                                    onPress={() => openNetworkSheetForCoin(item)}
+                                    activeOpacity={0.7}
+                                >
+                                    {chipIconUri ? (
+                                        <FastImage
+                                            source={{ uri: chipIconUri }}
+                                            style={styles.depositRecentChipIcon}
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        <View
+                                            style={[
+                                                styles.depositRecentChipIcon,
+                                                { backgroundColor: colors.textGray, opacity: 0.25 },
+                                            ]}
+                                        />
+                                    )}
+                                    <AppText
+                                        type={ELEVEN}
+                                        weight={SEMI_BOLD}
+                                        style={{ color: themeColors.text }}
+                                    >
+                                        {item.short_name}
+                                    </AppText>
+                                </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                )}
+                {trendingDepositCoins.length > 0 && (
+                    <View style={styles.trendingBlock}>
+                        <AppText
+                            weight={SEMI_BOLD}
+                            type={THIRTEEN}
+                            style={[styles.trendingTitle, { color: themeColors.text }]}
+                        >
+                            Trending Coins
+                        </AppText>
+                        {trendingDepositCoins.map((item: any) => (
+                            <View key={String(item._id)}>{renderCoinListItem({ item })}</View>
+                        ))}
+                    </View>
+                )}
+            </View>
+        );
+    };
+
+    const depositSummaryIconUri = buildCoinImageUri(selectedCurrency);
+    const depositNetworkDisplay = useMemo(() => {
+        if (!selectedNetwork) return '';
+        const api =
+            (selectedCurrency?._chain_api_code?.[selectedNetwork] || '').toString().trim();
+        const full =
+            (selectedCurrency?._chain_full_name?.[selectedNetwork] || '').toString().trim();
+        if (api && full) return `${api} — ${full}`;
+        if (full) return full;
+        if (api) return api;
+        return selectedNetwork;
+    }, [selectedCurrency, selectedNetwork]);
 
     return (
         <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
             <View style={styles.headerView}>
                 <TouchableOpacity onPress={handleHeaderBack}>
                     <FastImage
-                        source={BACK_ICON}
+                        source={back_ic}
                         resizeMode="contain"
-                        style={{ width: 20, height: 20 }}
+                        style={{ width: 16, height: 16 }}
                         tintColor={themeColors.text}
                     />
                 </TouchableOpacity>
                 <AppText
                     color={themeColors.text}
                     weight={SEMI_BOLD}
-                    type={EIGHTEEN}
+                    type={SIXTEEN}
                 >
                     {headerTitle}
                 </AppText>
-                <TouchableOpacity
-                    style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-                    onPress={() => NavigationService.navigate("Wallet_History")}
-                >
-                    <FastImage
-                        source={printIcon}
-                        resizeMode="contain"
-                        style={{ width: 24, height: 20 }}
-                        tintColor={themeColors.text}
-                    />
-
-                </TouchableOpacity>
+                {depositFlowPhase === 'selectCoin' ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setFaqActiveIndex(null);
+                                setShowSelectCoinFaqModal(true);
+                            }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <FastImage
+                                source={INFO}
+                                resizeMode="contain"
+                                style={{ width: 18, height: 18 }}
+                                tintColor={themeColors.text}
+                            />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => NavigationService.navigate('Wallet_History')}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <FastImage
+                                source={printIcon}
+                                resizeMode="contain"
+                                style={{ width: 20, height: 17 }}
+                                tintColor={themeColors.text}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setFaqActiveIndex(null);
+                                setShowSelectCoinFaqModal(true);
+                            }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <FastImage
+                                source={INFO}
+                                resizeMode="contain"
+                                style={{ width: 18, height: 18 }}
+                                tintColor={themeColors.text}
+                            />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => NavigationService.navigate('Wallet_History')}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <FastImage
+                                source={printIcon}
+                                resizeMode="contain"
+                                style={{ width: 20, height: 17 }}
+                                tintColor={themeColors.text}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
 
             {depositFlowPhase === 'selectCoin' ? (
@@ -978,14 +1427,17 @@ const DepositCoin = () => {
                             />
                         </View>
                         <View style={styles.selectCoinListRow}>
-                            <FlatList
+                            <SectionList
                                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}
-                                ref={coinFlatListRef}
-                                data={sortedSelectCoins}
+                                ref={coinSectionListRef}
+                                sections={depositSections}
                                 keyExtractor={(item, index) =>
-                                    item?._id ? String(item._id) : String(index)
+                                    item?._id ? String(item._id) : `row-${index}`
                                 }
                                 renderItem={renderCoinListItem}
+                                renderSectionHeader={renderDepositSectionHeader}
+                                stickySectionHeadersEnabled={false}
+                                ListHeaderComponent={renderSelectCoinListHeader}
                                 showsVerticalScrollIndicator={false}
                                 style={styles.sectionListFlex}
                                 contentContainerStyle={[
@@ -993,7 +1445,6 @@ const DepositCoin = () => {
                                     styles.sectionListContentWithIndex,
                                 ]}
                                 keyboardShouldPersistTaps="handled"
-                                getItemLayout={getCoinItemLayout}
                                 initialNumToRender={24}
                                 maxToRenderPerBatch={20}
                                 windowSize={9}
@@ -1002,30 +1453,18 @@ const DepositCoin = () => {
                                 viewabilityConfig={viewabilityConfig}
                                 onViewableItemsChanged={onViewableItemsChanged}
                                 extraData={isDark}
-                                onScrollToIndexFailed={({ index }) => {
-                                    const list = sortedSelectCoinsRef.current;
-                                    if (!list.length) return;
-                                    const safe = Math.max(0, Math.min(index, list.length - 1));
-                                    setTimeout(() => {
-                                        try {
-                                            coinFlatListRef.current?.scrollToOffset({
-                                                offset: safe * COIN_LIST_ROW_STRIDE,
-                                                animated: false,
-                                            });
-                                        } catch {
-                                            /* ignore */
-                                        }
-                                    }, 64);
-                                }}
                                 ListEmptyComponent={
-                                    <View style={styles.emptyContainer}>
-                                        <AppText type={FOURTEEN} color={colors.textGray}>
-                                            No coins found
-                                        </AppText>
-                                    </View>
+                                    mainListCoins.length === 0 &&
+                                    trendingDepositCoins.length === 0 ? (
+                                        <View style={styles.emptyContainer}>
+                                            <AppText type={THIRTEEN} color={colors.textGray}>
+                                                No coins found
+                                            </AppText>
+                                        </View>
+                                    ) : null
                                 }
                             />
-                            {sortedSelectCoins.length > 0 && (
+                            {depositSections.length > 0 && (
                                 <>
                                     {bubbleLetter != null && (
                                         <View
@@ -1042,7 +1481,7 @@ const DepositCoin = () => {
                                             >
                                                 <AppText
                                                     weight={SEMI_BOLD}
-                                                    type={TWENTY}
+                                                    type={SIXTEEN}
                                                     style={styles.alphabetBubbleText}
                                                 >
                                                     {bubbleLetter}
@@ -1061,7 +1500,7 @@ const DepositCoin = () => {
                                             style={styles.alphabetIndexLettersColumn}
                                             pointerEvents="none"
                                         >
-                                            {LETTER_KEYS.map((label) => {
+                                            {RAIL_KEYS.map((label) => {
                                                 const isHighlighted = highlightedRailLetter === label;
                                                 const mutedColor = themeColors.secondaryText;
                                                 const selectedColor = themeColors.text;
@@ -1071,7 +1510,7 @@ const DepositCoin = () => {
                                                         style={styles.alphabetIndexLetterCell}
                                                     >
                                                         <AppText
-                                                            type={TEN}
+                                                            type={EIGHT}
                                                             style={{
                                                                 ...styles.alphabetIndexLetter,
                                                                 color: isHighlighted
@@ -1097,181 +1536,235 @@ const DepositCoin = () => {
                 )
             ) : (
                 <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
-                    <View style={styles.container}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <View style={[styles.section, styles.selectedSection]}>
-                                <View style={styles.depositSummaryRow}>
-                                    <FastImage
-                                        source={{ uri: BASE_URL + selectedCurrency?.icon_path }}
-                                        style={styles.depositSummaryIcon}
-                                        resizeMode="cover"
-                                    />
-                                    <View style={{ flex: 1 }}>
-                                        <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>
-                                            {selectedCurrency?.short_name}{' '}
-                                            <AppText type={TWELVE} color={colors.textGray}>
-                                                {selectedCurrency?.name}
-                                            </AppText>
-                                        </AppText>
-                                        <AppText type={TWELVE} style={{ marginTop: 4, color: themeColors.secondaryText }}>
-                                            Network: {selectedNetwork}
+                    <View style={styles.depositWrap}>
+                        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.depositScrollContent}>
+                            {resolvingDepositAddress && !depositAddress ? (
+                                <DepositAddressSkeleton />
+                            ) : depositAddress ? (
+                                <>
+                                    <View style={styles.depositQrCenter}>
+                                        <View style={[styles.depositQrCard, { borderColor: isDark ? themeColors.border : '#EEE' }]}>
+                                            <QRCode
+                                                value={depositAddress}
+                                                size={140}
+                                                backgroundColor="#FFFFFF"
+                                                color="#000000"
+                                                quietZone={4}
+                                            />
+                                        </View>
+                                        <AppText type={TWELVE} style={[styles.depositQrHint, { color: themeColors.secondaryText }]}>
+                                            Scan to Deposit
                                         </AppText>
                                     </View>
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            setDepositFlowPhase('selectCoin');
-                                            setSelectedCurrency({});
-                                            setSelectedNetwork('');
-                                            setDepositAddress('');
-                                            dispatch(setWalletAddress(''));
-                                            setSearchPair('');
-                                        }}
-                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                    >
-                                        <AppText type={FOURTEEN} style={{ color: colors.buttonBg }} weight={SEMI_BOLD}>
-                                            Change
-                                        </AppText>
-                                    </TouchableOpacity>
-                                </View>
-                                <View style={styles.warningBox}>
-                                    <AppText type={TEN} color={colors.textGray}>
-                                        Make sure you also selected the same{' '}
-                                        <AppText type={TEN} weight={BOLD} style={{ color: colors.buttonBg }}>
-                                            {selectedCurrency?.short_name}-{selectedNetwork}
-                                        </AppText>{' '}
-                                        network on the platform where you are withdrawing funds for this deposit.
-                                    </AppText>
-                                </View>
-                            </View>
 
-                            {/* Deposit Address Section */}
-                            {selectedNetwork && (
-                                <View style={styles.section}>
-                                    <AppText weight={SEMI_BOLD} type={SIXTEEN} style={styles.sectionTitle}>
-                                        Deposit Address
-                                    </AppText>
-
-                                    {!depositAddress ? (
-                                        <Button
-                                            children="Generate Address"
-                                            onPress={() => getDepositAddress(true, selectedNetwork)}
-                                            containerStyle={styles.generateButton}
-                                        />
-                                    ) : (
-                                        <>
-                                            <View style={styles.warningBox}>
-                                                <AppText type={TEN} color={colors.textGray}>
-                                                    If you deposit via another network your assets may be lost
+                                    <View style={[styles.depositInfoCard, { borderColor: isDark ? themeColors.border : '#EEE' }]}>
+                                        <View style={styles.depositInfoRowHead}>
+                                            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                                                Network
+                                            </AppText>
+                                        </View>
+                                <View style={styles.depositNetworkRow}>
+                                            <View style={{ flex: 1 }}>
+                                                <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>
+                                                    {String(selectedNetwork || '').toUpperCase()}
+                                                </AppText>
+                                                <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 4 }}>
+                                                    {depositNetworkDisplay || '—'}
                                                 </AppText>
                                             </View>
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    if (!selectedCurrency) return;
+                                                    setCoinForNetworkSheet(selectedCurrency);
+                                                    // Ensure state is set before opening
+                                                    setTimeout(() => {
+                                                        networkSheetRef.current?.open();
+                                                    }, 0);
+                                                }}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            >
+                                                <FastImage
+                                                    source={swapNetwork}
+                                                    resizeMode="contain"
+                                                    style={{ width: 30, height: 30,bottom:5 }}
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
 
-                                            <View style={styles.addressContainer}>
-                                                <View style={styles.qrWrapper}>
-                                                    <QRCode value={depositAddress} size={100} />
-                                                </View>
-                                                <View style={styles.addressInfo}>
-                                                    <AppText type={TWELVE} color={colors.textGray}>
-                                                        Address
+                                    <View style={[styles.depositInfoCard, { borderColor: isDark ? themeColors.border : '#EEE' }]}>
+                                        <TouchableOpacity
+                                        disabled={true}
+                                            style={styles.depositAddressHeadRow}
+                                            onPress={() => setShowMoreDetailsModal(true)}
+                                            activeOpacity={0.7}
+                                        >
+                                            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                                                Deposit Address
+                                            </AppText>
+                                           
+                                        </TouchableOpacity>
+                                        <View style={styles.depositAddressRow}>
+                                            <AppText
+                                                weight={MEDIUM}
+                                                type={TWELVE}
+                                                numberOfLines={2}
+                                                style={{ flex: 1, color: colors.buttonBg }}
+                                            >
+                                                {depositAddress}
+                                            </AppText>
+                                            <TouchableOpacity
+                                                onPress={() => copyText(depositAddress)}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                style={styles.depositCopyBtn}
+                                            >
+                                                <FastImage
+                                                    source={copyIcon}
+                                                    style={{ width: 15, height: 15 }}
+                                                    resizeMode="contain"
+                                                    tintColor={themeColors.secondaryText}
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+
+                                    <View style={[styles.depositInfoCard, { borderColor: isDark ? themeColors.border : '#EEE' }]}>
+                                        <View style={styles.depositAddressHeadRow}>
+                                            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                                                Memo (Tag)
+                                            </AppText>
+                                        </View>
+                                        <View style={styles.depositAddressRow}>
+                                            <AppText
+                                                weight={SEMI_BOLD}
+                                                type={TWELVE}
+                                                numberOfLines={1}
+                                                style={{
+                                                    flex: 1,
+                                                    color:
+                                                        depositMemo && String(depositMemo).trim()
+                                                            ? themeColors.text
+                                                            : themeColors.secondaryText,
+                                                }}
+                                            >
+                                                {depositMemo && String(depositMemo).trim() ? depositMemo : '—'}
+                                            </AppText>
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    if (!depositMemo || !String(depositMemo).trim()) return;
+                                                    copyText(depositMemo);
+                                                }}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                style={styles.depositCopyBtn}
+                                                activeOpacity={depositMemo && String(depositMemo).trim() ? 0.7 : 1}
+                                            >
+                                                <FastImage
+                                                    source={copyIcon}
+                                                    style={{
+                                                        width: 15,
+                                                        height: 15,
+                                                        opacity: depositMemo && String(depositMemo).trim() ? 1 : 1.35,
+                                                        bottom:5
+                                                    }}
+                                                    resizeMode="contain"
+                                                    tintColor={themeColors.secondaryText}
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+
+                                    <TouchableOpacity
+                                        onPress={() => setShowMoreDetailsModal(true)}
+                                        style={styles.depositMoreDetailsCenter}
+                                        activeOpacity={0.7}
+                                    >
+                                        <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+                                            More Details {'>'}
+                                        </AppText>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <View style={styles.depositEmptyWrap}>
+                                    <View style={[styles.depositInfoCard, { borderColor: isDark ? themeColors.border : '#EEE' }]}>
+                                        <View style={styles.depositEmptyCardTopRow}>
+                                            <View style={styles.depositEmptyCoinRow}>
+                                                {buildCoinImageUri(selectedCurrency) ? (
+                                                    <FastImage
+                                                        source={{ uri: buildCoinImageUri(selectedCurrency)! }}
+                                                        style={styles.depositEmptyCoinIcon}
+                                                        resizeMode="cover"
+                                                    />
+                                                ) : (
+                                                    <View style={styles.depositEmptyCoinIconPlaceholder} />
+                                                )}
+                                                <View style={{ flex: 1 }}>
+                                                    <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>
+                                                        {selectedCurrency?.short_name || '—'}
                                                     </AppText>
-                                                    <TouchableOpacity
-                                                        style={styles.addressRow}
-                                                        onPress={() => {
-                                                            copyText(depositAddress);
-                                                        }}
-                                                    >
-                                                        <AppText type={FOURTEEN} numberOfLines={1} style={{ flex: 1, color: themeColors.text }}>
-                                                            {depositAddress}
-                                                        </AppText>
-                                                        <FastImage
-                                                            source={copyIcon}
-                                                            style={styles.copyIcon}
-                                                            resizeMode="contain"
-                                                            tintColor={colors.textGray}
-                                                        />
-                                                    </TouchableOpacity>
+                                                    <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
+                                                        {selectedCurrency?.name || '—'}
+                                                    </AppText>
                                                 </View>
+                                            </View>
+                                           
+                                        </View>
+
+                                        <View style={styles.depositEmptyDivider} />
+
+                                        <View style={styles.depositEmptyNetworkBlock}>
+                                            <View style={{}}>
+                                            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                                                Network
+                                            </AppText>
+                                            <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginTop: 6 }}>
+                                                {String(selectedNetwork || '').toUpperCase() || '—'}
+                                            </AppText>
+                                            <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
+                                                {depositNetworkDisplay || '—'}
+                                            </AppText>
                                             </View>
 
                                             <TouchableOpacity
-                                                onPress={() => setShowMoreDetailsModal(true)}
-                                                style={styles.moreDetailsButton}
+                                                onPress={() => {
+                                                    if (!selectedCurrency) return;
+                                                    setCoinForNetworkSheet(selectedCurrency);
+                                                    setTimeout(() => networkSheetRef.current?.open(), 0);
+                                                }}
+                                                style={{right:10}}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                             >
-                                                <AppText type={FOURTEEN} color={YELLOW}>
-                                                    More Details {'>'}
-                                                </AppText>
-                                            </TouchableOpacity>
-
-                                            {checkDepositStatus ? (
-                                                <View style={styles.loadingContainer}>
-                                                    <ActivityIndicator size="small" color={YELLOW} />
-                                                    <AppText type={TEN} color={GREEN} style={styles.loadingText}>
-                                                        Transaction in progress! Blockchain validation is underway.
-                                                        This may take a few minutes
-                                                    </AppText>
-                                                </View>
-                                            ) : (
-                                                <Button
-                                                    children="Transfer Completed"
-                                                    onPress={completeDeposit}
-                                                    containerStyle={styles.transferButton}
+                                                <FastImage
+                                                    source={swapNetwork}
+                                                    resizeMode="contain"
+                                                    style={{ width: 26, height: 26 }}
                                                 />
-                                            )}
-                                            <AppText type={TEN} color={YELLOW} style={styles.helpText}>
-                                                Click here once transaction status completed on your end.
-                                            </AppText>
-                                        </>
-                                    )}
+                                            </TouchableOpacity>
+                                            
+                                        </View>
+                                    </View>
+
+                                    <AppText
+                                        weight={SEMI_BOLD}
+                                        type={FOURTEEN}
+                                        style={[styles.depositEmptyTitle, { color: themeColors.text,marginLeft:5 }]}
+                                    >
+                                        Deposit Address
+                                    </AppText>
+                                    <Button
+                                        children="Generate deposit address"
+                                        onPress={() => getDepositAddress(true, selectedNetwork, selectedCurrency)}
+                                        containerStyle={styles.depositEmptyBtn}
+                                        loading={generatingDepositAddress}
+                                    />
                                 </View>
                             )}
 
-                            {/* FAQ Section - same card UI as KycStatus */}
-                            <View style={styles.faqSection}>
-                                <View style={[styles.faqSectionCard, { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : '#EEE', borderWidth: 1 }]}>
-                                    <AppText type={FIFTEEN} weight={SEMI_BOLD} style={[styles.faqSectionCardTitle, { color: themeColors.text }] as any}>
-                                        FAQ
-                                    </AppText>
-                                    <FlatList
-                                        data={faqData}
-                                        keyExtractor={(_, index) => String(index)}
-                                        style={styles.faqListWrap}
-                                        contentContainerStyle={styles.faqScrollContent}
-                                        scrollEnabled={false}
-                                        renderItem={({ item, index }) => (
-                                            <View style={[styles.faqItemInner, index === faqData.length - 1 && styles.faqItemInnerLast]}>
-                                                <TouchableOpacity
-                                                    style={styles.faqQuestionRow}
-                                                    onPress={() => setFaqActiveIndex(faqActiveIndex === index ? null : index)}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.faqQuestion, { color: themeColors.secondaryText }] as any}>
-                                                        {item.title}
-                                                    </AppText>
-                                                    <FastImage
-                                                        source={faqActiveIndex === index ? upIcon : downIcon}
-                                                        resizeMode="contain"
-                                                        style={styles.faqArrow}
-                                                        tintColor={themeColors.secondaryText}
-                                                    />
-                                                </TouchableOpacity>
-                                                {faqActiveIndex === index && (
-                                                    <View style={styles.faqAnswer}>
-                                                        {item.content.split('\n').map((line: string, lineIndex: number) => (
-                                                            <AppText key={lineIndex} type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
-                                                                {line}
-                                                            </AppText>
-                                                        ))}
-                                                    </View>
-                                                )}
-                                            </View>
-                                        )}
-                                    />
-                                </View>
-                            </View>
+                            {/* FAQ moved to header help icon (modal) */}
 
-                            {announcements?.length > 0 && (
+                            {!resolvingDepositAddress && announcements?.length > 0 && (
                                 <View style={styles.announcementsSection}>
                                     <View style={styles.announcementsHeader}>
-                                        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={styles.sectionTitle}>
+                                        <AppText weight={SEMI_BOLD} type={FIFTEEN} style={styles.sectionTitle}>
                                             Announcements
                                         </AppText>
                                         <TouchableOpacity
@@ -1314,10 +1807,11 @@ const DepositCoin = () => {
                             )}
 
                             {/* Recent Deposits Section */}
+                            {!resolvingDepositAddress && (
                             <View style={styles.recentDepositsSection}>
                                 <View style={styles.recentDepositsHeader}>
                                     <View style={styles.recentDepositsTitleRow}>
-                                        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={styles.sectionTitle}>
+                                        <AppText weight={SEMI_BOLD} type={FIFTEEN} style={styles.sectionTitle}>
                                             Recent Deposits
                                         </AppText>
                                         {loadingDeposit && (
@@ -1357,7 +1851,10 @@ const DepositCoin = () => {
                                         resizeMode='contain' />
                                 )}
                             </View>
+                            )}
                         </ScrollView>
+
+                       
                     </View>
                 </KeyBoardAware>
             )}
@@ -1446,12 +1943,96 @@ const DepositCoin = () => {
                     <View style={styles.networkSheetNotice}>
                         <FastImage source={INFO} style={styles.networkSheetNoticeIcon} resizeMode="contain" tintColor={colors.textGray} />
                         <AppText type={TEN} color={colors.textGray} style={{ flex: 1, lineHeight: 16 }}>
-                            Please note that only supported networks on our platform are shown; if you
-                            deposit via another network your assets may be lost.
+                        Ensure that the selected deposit network is the same as the network. Otherwise, you'll not be able to withdraw later. Want help to choose a network?
                         </AppText>
                     </View>
                 </View>
             </RBSheet>
+
+            <Modal
+                visible={showSelectCoinFaqModal}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setShowSelectCoinFaqModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            {
+                                backgroundColor: themeColors.background,
+                                borderColor: isDark ? themeColors.border : '#EEE',
+                                borderWidth: 1,
+                            },
+                        ]}
+                    >
+                        <View style={styles.modalHeader}>
+                            <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+                                Deposit help
+                            </AppText>
+                            <TouchableOpacity
+                                onPress={() => setShowSelectCoinFaqModal(false)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                                <AppText type={TWENTY} style={{ color: themeColors.text }}>
+                                    ×
+                                </AppText>
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView
+                            style={styles.modalList}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {faqData.map((item, index) => (
+                                <View
+                                    key={String(index)}
+                                    style={[
+                                        styles.faqItemInner,
+                                        index === faqData.length - 1 && styles.faqItemInnerLast,
+                                        { borderColor: isDark ? themeColors.border : colors.inputBorder },
+                                    ]}
+                                >
+                                    <TouchableOpacity
+                                        style={styles.faqQuestionRow}
+                                        onPress={() =>
+                                            setFaqActiveIndex(faqActiveIndex === index ? null : index)
+                                        }
+                                        activeOpacity={0.7}
+                                    >
+                                        <AppText
+                                            type={THIRTEEN}
+                                            weight={SEMI_BOLD}
+                                            style={[styles.faqQuestion, { color: themeColors.secondaryText }] as any}
+                                        >
+                                            {item.title}
+                                        </AppText>
+                                        <FastImage
+                                            source={faqActiveIndex === index ? upIcon : downIcon}
+                                            resizeMode="contain"
+                                            style={styles.faqArrow}
+                                            tintColor={themeColors.secondaryText}
+                                        />
+                                    </TouchableOpacity>
+                                    {faqActiveIndex === index && (
+                                        <View style={styles.faqAnswer}>
+                                            {item.content.split('\n').map((line: string, lineIndex: number) => (
+                                                <AppText
+                                                    key={lineIndex}
+                                                    type={TWELVE}
+                                                    style={{ color: themeColors.secondaryText, lineHeight: 18 }}
+                                                >
+                                                    {line}
+                                                </AppText>
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
 
             {/* More Details Modal */}
             <Modal
@@ -1468,39 +2049,47 @@ const DepositCoin = () => {
                         ]}
                     >
                         <View style={styles.modalHeader}>
-                            <AppText weight={SEMI_BOLD} type={SIXTEEN}>
+                            <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: themeColors.text }}>
                                 More Info
                             </AppText>
                             <TouchableOpacity onPress={() => setShowMoreDetailsModal(false)}>
-                                <AppText type={TWENTY}>×</AppText>
+                                <AppText type={TWENTY} style={{ color: themeColors.text }}>×</AppText>
                             </TouchableOpacity>
                         </View>
                         <View style={styles.detailsContainer}>
                             <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>Minimum deposit</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
+                                    Minimum deposit
+                                </AppText>
+                                <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
                                     {limitForChain(selectedCurrency?.min_deposit, selectedNetwork) ??
                                         '—'}{' '}
                                     {selectedCurrency?.short_name}
                                 </AppText>
                             </View>
                             <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>Maximum deposit</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
+                                    Maximum deposit
+                                </AppText>
+                                <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
                                     {limitForChain(selectedCurrency?.max_deposit, selectedNetwork) ??
                                         '—'}{' '}
                                     {selectedCurrency?.short_name}
                                 </AppText>
                             </View>
                             <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>Wallet</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
+                                    Wallet
+                                </AppText>
+                                <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
                                     Spot Wallet
                                 </AppText>
                             </View>
                             <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>Credited (Trading enabled)</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
+                                    Credited (Trading enabled)
+                                </AppText>
+                                <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
                                     After 2 network confirmations
                                 </AppText>
                             </View>
@@ -1805,7 +2394,135 @@ export default DepositCoin;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingHorizontal: universalPaddingHorizontalHigh,
+        paddingHorizontal: 16,
+    },
+    depositWrap: {
+        flex: 1,
+        paddingHorizontal: 16,
+    },
+    depositScrollContent: {
+        paddingBottom: 110,
+    },
+    depositQrCenter: {
+        alignItems: 'center',
+        marginTop: 18,
+        marginBottom: 18,
+    },
+    depositQrCard: {
+        backgroundColor: '#FFFFFF',
+        padding: 10,
+        borderRadius: 0,
+        borderWidth: 1,
+    },
+    depositQrHint: {
+        marginTop: 10,
+    },
+    depositEmptyWrap: {
+        paddingTop: 6,
+        paddingBottom: 10,
+        alignItems: 'center',
+    },
+    depositEmptyTitle: {
+        alignSelf: 'flex-start',
+        marginBottom: 10,
+        marginTop:10
+    },
+    depositEmptyBtn: {
+        width: '100%',
+        borderRadius: 24,
+        height: 44,
+        maxWidth: 320,
+        alignSelf: 'center',
+    },
+    depositEmptyCardTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    depositEmptyCoinRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        flex: 1,
+        minWidth: 0,
+    },
+    depositEmptyCoinIcon: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+    },
+    depositEmptyCoinIconPlaceholder: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: colors.textGray,
+        opacity: 0.25,
+    },
+    depositEmptyDivider: {
+        height: 1,
+        backgroundColor: colors.inputBorder,
+        opacity: 0.5,
+        marginTop: 10,
+        marginBottom: 10,
+    },
+    depositEmptyNetworkBlock: {
+        width: '100%',
+        flexDirection:"row",
+        justifyContent:"space-between",alignItems:"center"
+    },
+    depositInfoCard: {
+        borderWidth: 1,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        marginBottom: 10,
+ width:"100%",
+ marginTop:15,
+ backgroundColor:'transparent'
+    },
+    depositInfoRowHead: {
+        marginBottom: 6,
+    },
+    depositNetworkRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    depositAddressHeadRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    depositAddressRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    depositCopyBtn: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        bottom:5
+    },
+    depositMoreDetailsCenter: {
+        alignItems: 'center',
+        marginTop: 8,
+        marginBottom: 6,
+    },
+    depositBottomBar: {
+        position: 'absolute',
+        left: 16,
+        right: 16,
+        bottom: 10,
+    },
+    depositShareBtn: {
+        borderRadius: 24,
+        height: 52,
     },
     header: {
         flexDirection: 'row',
@@ -1819,16 +2536,16 @@ const styles = StyleSheet.create({
         height: 24,
     },
     section: {
-        marginBottom: 20,
-        padding: 15,
+        marginBottom: 12,
+        padding: 12,
         borderRadius: 10,
-        marginTop: 20,
+        marginTop: 12,
     },
     selectedSection: {
         borderColor: YELLOW,
     },
     sectionTitle: {
-        marginBottom: 10,
+        marginBottom: 6,
     },
     selectButton: {
         flexDirection: 'row',
@@ -1882,7 +2599,7 @@ const styles = StyleSheet.create({
         gap: 15,
     },
     qrWrapper: {
-        padding: 10,
+        padding: 8,
         borderRadius: 10,
     },
     addressInfo: {
@@ -1898,17 +2615,27 @@ const styles = StyleSheet.create({
         width: 16,
         height: 16,
     },
+    depositMetaWrap: {
+        marginTop: 12,
+        gap: 6,
+    },
+    depositMetaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 10,
+    },
     moreDetailsButton: {
-        marginTop: 15,
+        marginTop: 10,
     },
     transferButton: {
-        marginTop: 15,
+        marginTop: 10,
         width: '50%',
     },
     loadingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 15,
+        marginTop: 10,
         gap: 10,
     },
     loadingText: {
@@ -1934,7 +2661,7 @@ const styles = StyleSheet.create({
     faqScrollContent: { paddingBottom: 8 },
     faqItemInner: {
         paddingVertical: 12,
-        borderBottomWidth: 0.4,
+        borderBottomWidth: 0.3,
         borderColor: colors.inputBorder
     },
     faqItemInnerLast: { borderBottomWidth: 0 },
@@ -1948,7 +2675,6 @@ const styles = StyleSheet.create({
     faqAnswer: {
         marginTop: 10,
         paddingTop: 10,
-        borderTopWidth: 1,
     },
     announcementsSection: {
         marginTop: 20,
@@ -1986,82 +2712,69 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
-    depositHistoryItem: {
-        flexDirection: 'row',
-        padding: 12,
-        marginBottom: 10,
-        borderRadius: 8,
+    depHistCard: {
         borderWidth: 1,
-        alignItems: 'flex-start',
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: 12,
     },
-    depositHistoryContent: {
-        flex: 1,
+    depHistTop: {
         flexDirection: 'row',
-        minWidth: 0,
-    },
-    depositAmountRow: {
-        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        flexWrap: 'wrap',
-        marginBottom: 4,
+        marginBottom: 12,
     },
-    dateInfoRow: {
-        flexDirection: 'row',
+    depHistPill: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 999,
         alignItems: 'center',
-        marginTop: 4,
-    },
-    viewButton: {
         justifyContent: 'center',
-        alignItems: 'center',
-        paddingLeft: 10,
-        paddingRight: 5,
-        minWidth: 50,
     },
-    depositHistoryLeft: {
+    depHistRows: {
+        gap: 12,
+    },
+    depHistRow: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 10,
-        minWidth: 120,
+        alignItems: 'center',
+        minWidth: 0,
     },
-    coinImageContainer: {
-        justifyContent: 'flex-start',
+    depHistLabel: {
+        width: 120,
     },
-    depositHistoryLeftContent: {
+    depHistValueWrap: {
         flex: 1,
         minWidth: 0,
     },
-    depositHistoryRight: {
-        flex: 1,
-        minWidth: 0,
-        paddingLeft: 12,
-        marginRight: 8,
+    depHistValue: {
+        textAlign: 'right',
     },
-    depositHistoryRightItem: {
-        marginBottom: 6,
+    depHistRight: {
+        marginLeft: 10,
     },
-    labelValueRow: {
+    depHistIconRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        flexWrap: 'wrap',
-        width: "110%",
+        gap: 12,
     },
-    labelText: {
-        minWidth: 80,
-    },
-    historyCoinIcon: {
+    depHistIconBtn: {
         width: 30,
         height: 30,
         borderRadius: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(148, 163, 184, 0.35)',
     },
-    addressText: {
-        // marginRight: 5,
-        width: "100%"
+    depHistIcon: {
+        width: 14,
+        height: 14,
     },
     copyButton: {
         padding: 4,
     },
     emptyContainer: {
-        padding: 20,
+        paddingVertical: 16,
         alignItems: 'center',
     },
     modalOverlay: {
@@ -2079,7 +2792,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
     },
     confirmedHeader: {
         flexDirection: 'row',
@@ -2097,14 +2809,14 @@ const styles = StyleSheet.create({
     coinItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 4,
-        gap: 10,
+        paddingVertical: 6,
+        paddingHorizontal: 2,
+        gap: 8,
     },
     coinIcon: {
-        width: 30,
-        height: 30,
-        borderRadius: 15,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
     },
     coinInfo: {
         flex: 1,
@@ -2127,22 +2839,29 @@ const styles = StyleSheet.create({
     detailRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        paddingVertical: 12,
+        alignItems: 'center',
+        paddingVertical: 10,
         borderBottomWidth: 1,
+        borderBottomColor:lightTheme.inputBorder,
         minHeight: 44,
     },
     modalLabel: {
-        minWidth: 120,
-        maxWidth: 120,
+        flex: 1,
+        paddingRight: 12,
     },
     modalValue: {
         flex: 1,
-        marginLeft: 16,
+        marginLeft: 12,
         alignItems: 'flex-end',
+    },
+    modalValueText: {
+        flex: 1,
+        textAlign: 'right',
+        flexWrap: 'wrap',
     },
     warningText: {
         marginTop: 10,
+        lineHeight: 16,
     },
     stepContainer: {
         paddingVertical: 10,
@@ -2152,12 +2871,13 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginTop: 20,
-        paddingHorizontal: 25
+        marginTop: 8,
+        paddingHorizontal: 16,
+        paddingBottom: 4,
     },
     selectCoinPhase: {
         flex: 1,
-        paddingHorizontal: universalPaddingHorizontalHigh,
+        paddingHorizontal: 16,
     },
     selectCoinListRow: {
         flex: 1,
@@ -2175,28 +2895,72 @@ const styles = StyleSheet.create({
     selectCoinSearchWrap: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 12,
-        marginBottom: 8,
-        paddingHorizontal: 12,
-        borderRadius: 12,
+        marginTop: 6,
+        marginBottom: 6,
+        paddingHorizontal: 10,
+        borderRadius: 10,
         borderWidth: 1,
+        minHeight: 40,
     },
     selectCoinSearchIcon: {
-        width: 20,
-        height: 20,
-        marginRight: 10,
+        width: 17,
+        height: 17,
+        marginRight: 8,
     },
     selectCoinSearchInput: {
         flex: 1,
-        paddingVertical: 12,
-        fontSize: 14,
+        paddingVertical: 8,
+        fontSize: 13,
     },
     sectionListContent: {
-        paddingTop: 6,
-        paddingBottom: 32,
+        paddingTop: 2,
+        paddingBottom: 24,
     },
     sectionListContentWithIndex: {
-        paddingRight: 30,
+        paddingRight: 22,
+    },
+    depositSectionHeader: {
+        paddingTop: 8,
+        paddingBottom: 2,
+    },
+    depositHistoryChipsSection: {
+        marginBottom: 12,
+    },
+    depositHistoryChipsTitleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    depositHistoryClearIcon: {
+        width: 18,
+        height: 18,
+    },
+    depositRecentChipsScroll: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingRight: 8,
+    },
+    depositRecentChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+        gap: 6,
+        borderWidth: 1,
+    },
+    depositRecentChipIcon: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+    },
+    trendingBlock: {
+        marginBottom: 2,
+    },
+    trendingTitle: {
+        marginBottom: 6,
     },
     alphabetBubbleWrap: {
         ...StyleSheet.absoluteFillObject,
@@ -2210,9 +2974,9 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     alphabetBubble: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -2230,24 +2994,23 @@ const styles = StyleSheet.create({
         right: 0,
         top: 0,
         bottom: 0,
-        width: 28,
+        width: 20,
         maxHeight: '100%',
     },
     alphabetIndexLettersColumn: {
         flex: 1,
         flexDirection: 'column',
-        paddingVertical: 8,
+        paddingVertical: 4,
     },
     alphabetIndexLetterCell: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: 2,
+        minHeight: 0,
     },
     alphabetIndexLetter: {
-        fontSize: 10,
-        lineHeight: 12,
-        fontWeight: '700',
+        lineHeight: 10,
+        fontWeight: '600',
     },
     coinItemDisabled: {
         opacity: 0.45,
@@ -2281,7 +3044,7 @@ const styles = StyleSheet.create({
     networkSheetNotice: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: 'rgba(30, 86, 245, 0.12)',
+        backgroundColor: '#fff5ea',
         padding: 12,
         borderRadius: 10,
         marginTop: 4,

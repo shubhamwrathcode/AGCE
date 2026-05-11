@@ -20,7 +20,7 @@ import { eye_close_icon, eye_open_icon } from "../helper/ImageAssets";
 import TouchableOpacityView from "./TouchableOpacityView";
 import FastImage from "react-native-fast-image";
 import { Button } from "./Button";
-import { AppText, BLACK, FOURTEEN, SECOND, SEMI_BOLD, WHITE } from "./AppText";
+import { AppText, BLACK, FOURTEEN, SECOND, SEMI_BOLD, THIRTEEN, WHITE } from "./AppText";
 import { useAppSelector } from "../store/hooks";
 
 interface InputProps extends TextInputProps {
@@ -79,7 +79,7 @@ const Input = ({
   
   return (
     <View style={[styles.inputWrapper, mainContainer]}>
-      {title && <AppText style={[styles.title, { color: themeColors.text }]} weight={SEMI_BOLD}>{title}</AppText>}
+      {title && <AppText type={THIRTEEN} style={[styles.title, { color: themeColors.text }]} weight={SEMI_BOLD}>{title}</AppText>}
       <View
         style={[
           styles.container,
