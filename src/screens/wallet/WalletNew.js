@@ -27,6 +27,10 @@ import {
   appBg,
   loginDarkBg,
   back_ic,
+  bitcoin_ic,
+  coinActive,
+  moreOption,
+  searchIcon,
   eye_close_icon,
   eye_open_icon,
   linkIcon,
@@ -71,7 +75,6 @@ import WithdrawSheet from "../../shared/components/WithdrawSheet";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../../hooks/useTheme";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
-import { bitcoin_ic, coinActive, moreOption, searchIcon } from "../../helper/ImageAssets";
 import { TabView } from "react-native-tab-view";
 import { ScrollView } from "react-native-gesture-handler";
 import { routes } from "../../helper/dummydata";
@@ -84,6 +87,7 @@ import P2PWalletTab from "./tabs/P2PWalletTab";
 import SwapWalletTab from "./tabs/SwapWalletTab";
 import EarningWalletTab from "./tabs/EarningWalletTab";
 import FuturesWalletTab from "./tabs/FuturesWalletTab";
+import WalletTabQuickActions from "./WalletTabQuickActions";
 
 const WalletNew = () => {
   const dispatch = useDispatch();
@@ -668,47 +672,15 @@ const WalletNew = () => {
                         <AppText weight={SEMI_BOLD} type={EIGHTEEN}>Assets Overview</AppText>
                       </View>
 
-                      <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-                        <TouchableOpacity
-                          onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
-                          style={{
-                            paddingHorizontal: 16,
-                            paddingVertical: 10,
-                            borderRadius: 18,
-                            borderWidth: 1,
-                            borderColor: themeColors.border,
-                            backgroundColor: themeColors.themeElevationColor,
-                          }}
-                        >
-                          <AppText type={TWELVE} weight={SEMI_BOLD}>Deposit</AppText>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => NavigationService.navigate(WALLET_WITHDRAW_SCREEN)}
-                          style={{
-                            paddingHorizontal: 16,
-                            paddingVertical: 10,
-                            borderRadius: 18,
-                            borderWidth: 1,
-                            borderColor: themeColors.border,
-                            backgroundColor: themeColors.themeElevationColor,
-                          }}
-                        >
-                          <AppText type={TWELVE} weight={SEMI_BOLD}>Withdraw</AppText>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => NavigationService.navigate(TRANSFER_SCREEN)}
-                          style={{
-                            paddingHorizontal: 16,
-                            paddingVertical: 10,
-                            borderRadius: 18,
-                            borderWidth: 1,
-                            borderColor: themeColors.border,
-                            backgroundColor: themeColors.themeElevationColor,
-                          }}
-                        >
-                          <AppText type={TWELVE} weight={SEMI_BOLD}>Transfer</AppText>
-                        </TouchableOpacity>
-                      </View>
+                      <WalletTabQuickActions
+                        theme={theme}
+                        themeColors={themeColors}
+                        items={[
+                          { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
+                          { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN) },
+                          { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
+                        ]}
+                      />
 
                       <View
                         style={{

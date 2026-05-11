@@ -4,6 +4,7 @@ import FastImage from "react-native-fast-image";
 import { AppText, DISCLAIMTEXT, EIGHTEEN, SEMI_BOLD, TWELVE } from "../../../shared";
 import { colors } from "../../../theme/colors";
 import { bitcoin_ic, checkIc, moreOption, searchIcon } from "../../../helper/ImageAssets";
+import WalletTabQuickActions from "../WalletTabQuickActions";
 
 const SpotWalletTab = ({
   theme,
@@ -64,20 +65,16 @@ const SpotWalletTab = ({
         Spot Wallet Balance
       </AppText>
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
-        <TouchableOpacity onPress={onDeposit} style={[styles.pillBtn, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}>
-          <AppText type={TWELVE} weight={SEMI_BOLD}>Deposit</AppText>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onBuyCrypto} style={[styles.pillBtn, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}>
-          <AppText type={TWELVE} weight={SEMI_BOLD}>Buy Crypto</AppText>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onTransfer} style={[styles.pillBtn, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}>
-          <AppText type={TWELVE} weight={SEMI_BOLD}>Transfer</AppText>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onWithdraw} style={[styles.pillBtn, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}>
-          <AppText type={TWELVE} weight={SEMI_BOLD}>Withdraw</AppText>
-        </TouchableOpacity>
-      </View>
+      <WalletTabQuickActions
+        theme={theme}
+        themeColors={themeColors}
+        items={[
+          { key: "deposit", label: "Deposit", variant: "deposit", onPress: onDeposit },
+          { key: "buyCrypto", label: "Buy Crypto", variant: "buyCrypto", onPress: onBuyCrypto },
+          { key: "transfer", label: "Transfer", variant: "transfer", onPress: onTransfer },
+          { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: onWithdraw },
+        ]}
+      />
 
       <View
         style={{
@@ -195,12 +192,6 @@ const SpotWalletTab = ({
 };
 
 const styles = {
-  pillBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-    borderWidth: 1,
-  },
   searchBox: {
     flex: 1,
     flexDirection: "row",

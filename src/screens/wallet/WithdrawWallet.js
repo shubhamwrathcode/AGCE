@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Modal,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
 import {
@@ -73,7 +74,10 @@ import {
   networkKeysFromChain,
   parseNum,
   valueForChain,
+  canonicalWithdrawalChainForValidateAddress,
 } from "../../helper/walletChainHelpers";
+import { appOperation } from "../../appOperation";
+import { CUSTOMER_TYPE } from "../../appOperation/types";
 import { getNotificationList } from "../../actions/homeActions";
 import moment from "moment";
 
@@ -88,6 +92,25 @@ const AGCE_PHONE_COUNTRIES = [
   { flag: "🇺🇸", code: "+1", label: "United States" },
   { flag: "🇬🇧", code: "+44", label: "United Kingdom" },
 ];
+
+/** Same stable key as web `withdrawalAddressValidationKey` (useWithdrawPageController). */
+function withdrawalAddressValidationKey(net, addr, tokenAssetId) {
+  const a = String(addr || "").trim();
+  const n = net != null && String(net).trim() ? String(net).trim() : "";
+  const t = tokenAssetId != null && String(tokenAssetId).trim() ? String(tokenAssetId).trim() : "";
+  if (!n || !a) return "";
+  return `${n}::${a}::${t}`;
+}
+
+/** Web `withdrawPageShared.jsx` — digits + optional single decimal (withdraw amount field). */
+function sanitizeWithdrawAmountRaw(raw) {
+  let v = String(raw ?? "").replace(/[^\d.]/g, "");
+  const firstDot = v.indexOf(".");
+  if (firstDot !== -1) {
+    v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
+  }
+  return v;
+}
 
 const WithdrawWallet = () => {
   const dispatch = useDispatch();
@@ -123,7 +146,14 @@ const WithdrawWallet = () => {
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [availableBalance, setAvailableBalance] = useState("");
-  const [isValidWalletAddress, setIsValidWalletAddress] = useState(true);
+  /** Web parity: `validate-address` API + `withdrawAddressValidatedKey`. */
+  const [withdrawAddressValidError, setWithdrawAddressValidError] = useState("");
+  const [withdrawAddressValidatedKey, setWithdrawAddressValidatedKey] = useState("");
+  /** After an API validate attempt for current input (avoids “invalid” flash during debounce). */
+  const [withdrawAddressCheckDone, setWithdrawAddressCheckDone] = useState(false);
+  const [isWithdrawAddressValidating, setIsWithdrawAddressValidating] = useState(false);
+  const withdrawAddressValidationReqIdRef = useRef(0);
+  const withdrawAddrValidateDebounceTimerRef = useRef(null);
   const [otp, setOtp] = useState("");
   const [otpText, setOtpText] = useState("Get OTP");
   const [disableBtn, setDisableBtn] = useState(false);
@@ -197,6 +227,9 @@ const WithdrawWallet = () => {
 
   const handleNetworkChosenFromSheet = useCallback((chainKey) => {
     setNetwork(chainKey);
+    setWithdrawAddressValidError("");
+    setWithdrawAddressValidatedKey("");
+    setWithdrawAddressCheckDone(false);
     networkSheetRef.current?.close();
   }, []);
 
@@ -214,6 +247,44 @@ const WithdrawWallet = () => {
     () => valueForChain(selectedCurrency, "max_withdrawal", network),
     [selectedCurrency, network]
   );
+
+  const selectedTokenAssetId = useMemo(() => {
+    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0 || !network) return "";
+    const fromMap = selectedCurrency?.token_asset_ids?.[network];
+    if (fromMap != null && String(fromMap).trim()) return String(fromMap).trim();
+    return "";
+  }, [selectedCurrency, network]);
+
+  const currentWithdrawAddressValidationKey = useMemo(() => {
+    const a = String(withdrawAddress || "").trim();
+    const n = String(network || "").trim();
+    if (!a || !n) return "";
+    return withdrawalAddressValidationKey(n, a, selectedTokenAssetId);
+  }, [withdrawAddress, network, selectedTokenAssetId]);
+
+  const isWithdrawAddressValid = useMemo(() => {
+    if (!currentWithdrawAddressValidationKey) return true;
+    return withdrawAddressValidatedKey === currentWithdrawAddressValidationKey && !withdrawAddressValidError;
+  }, [currentWithdrawAddressValidationKey, withdrawAddressValidatedKey, withdrawAddressValidError]);
+
+  /**
+   * Amount / OTP / button — only when address+network validated successfully by API.
+   * Hide while verifying, on any validation error, or before a completed check (checkDone).
+   */
+  const showWithdrawContentAfterValidatedAddress = useMemo(() => {
+    if (!currentWithdrawAddressValidationKey) return false;
+    if (isWithdrawAddressValidating) return false;
+    if (!withdrawAddressCheckDone) return false;
+    if (String(withdrawAddressValidError || "").trim().length > 0) return false;
+    if (withdrawAddressValidatedKey !== currentWithdrawAddressValidationKey) return false;
+    return true;
+  }, [
+    currentWithdrawAddressValidationKey,
+    withdrawAddressValidatedKey,
+    withdrawAddressValidError,
+    isWithdrawAddressValidating,
+    withdrawAddressCheckDone,
+  ]);
 
   const faqData = [
     {
@@ -360,36 +431,160 @@ const WithdrawWallet = () => {
     setWithdrawAmount("");
     setWithdrawAddress("");
     setOtp("");
-    setIsValidWalletAddress(true);
+    setWithdrawAddressValidError("");
+    setWithdrawAddressValidatedKey("");
+    setWithdrawAddressCheckDone(false);
+    setIsWithdrawAddressValidating(false);
     setWithdrawToTab("address");
     dispatch(getUserMainWallet("main"));
     coinSheetRef.current?.close();
   };
 
   const handleWithdrawalAddress = (value) => {
-    const address = value;
-    setWithdrawAddress(address);
-    let isValid = false;
-    let regexPattern = /^$/;
-
-    if (network === "BEP20" || network === "ERC20" || network === "POLYGON") {
-      regexPattern = /^0x[a-fA-F0-9]{40}$/;
-    } else if (network === "TRC20") {
-      regexPattern = /^T[a-zA-Z0-9]{33}$/;
-    }
-
-    isValid = regexPattern.test(address);
-
-    if (!isValid && address.length > 0) {
-      setIsValidWalletAddress(false);
-    } else {
-      setIsValidWalletAddress(true);
-    }
+    setWithdrawAddress(value);
+    setWithdrawAddressValidError("");
+    setWithdrawAddressValidatedKey("");
+    setWithdrawAddressCheckDone(false);
   };
 
-  const handleMaxWithdrawal = () => {
-    setWithdrawAmount(availableBalance || "0");
-  };
+  const validateWithdrawAddressApi = useCallback(async () => {
+    const addr = String(withdrawAddress || "").trim();
+    const net = String(network || "").trim();
+    if (!addr || !net) return false;
+    const validatedKey = withdrawalAddressValidationKey(net, addr, selectedTokenAssetId);
+    if (validatedKey && withdrawAddressValidatedKey === validatedKey) {
+      setWithdrawAddressValidError("");
+      setWithdrawAddressCheckDone(true);
+      return true;
+    }
+    const reqId = ++withdrawAddressValidationReqIdRef.current;
+    setIsWithdrawAddressValidating(true);
+    try {
+      const chainCanon = canonicalWithdrawalChainForValidateAddress(net) || net.toUpperCase();
+      const body = { address: addr, chain: chainCanon };
+      if (selectedTokenAssetId) body.tokenAssetId = selectedTokenAssetId;
+      let r;
+      try {
+        r = await appOperation.customer.validate_withdraw_address(body);
+      } catch {
+        r = await appOperation.post("wallet/validate-address", body, CUSTOMER_TYPE);
+      }
+      if (reqId !== withdrawAddressValidationReqIdRef.current) return false;
+
+      const root = r && typeof r === "object" ? r : {};
+      const inner = root.data != null && typeof root.data === "object" && !Array.isArray(root.data) ? root.data : null;
+      const data = inner || root;
+
+      const validTrue =
+        root.valid === true ||
+        data.valid === true ||
+        (typeof data.valid === "string" && String(data.valid).toLowerCase() === "true");
+      const validFalse =
+        root.valid === false ||
+        data.valid === false ||
+        (typeof data.valid === "string" && String(data.valid).toLowerCase() === "false");
+
+      if (validFalse) {
+        setWithdrawAddressValidatedKey("");
+        const msg = String(data?.message || root?.message || "").trim();
+        setWithdrawAddressValidError(msg && msg.toLowerCase() !== "ok" ? msg : `Invalid address for ${net}`);
+        return false;
+      }
+
+      const successFlag = root.success === true || data.success === true;
+      const ok = (successFlag && validTrue) || validTrue === true;
+
+      if (ok) {
+        setWithdrawAddressValidError("");
+        setWithdrawAddressValidatedKey(validatedKey);
+        return true;
+      }
+      setWithdrawAddressValidatedKey("");
+      const msg = String(data?.message || root?.message || "").trim();
+      setWithdrawAddressValidError(msg && msg.toLowerCase() !== "ok" ? msg : `Invalid address for ${net}`);
+      return false;
+    } catch (e) {
+      if (reqId !== withdrawAddressValidationReqIdRef.current) return false;
+      setWithdrawAddressValidatedKey("");
+      const msg = String(e?.message || e?.msg || "").trim();
+      setWithdrawAddressValidError(msg || `Invalid address for ${net}`);
+      return false;
+    } finally {
+      if (reqId === withdrawAddressValidationReqIdRef.current) {
+        setIsWithdrawAddressValidating(false);
+        setWithdrawAddressCheckDone(true);
+      }
+    }
+  }, [withdrawAddress, network, selectedTokenAssetId, withdrawAddressValidatedKey]);
+
+  const validateWithdrawAddressApiRef = useRef(validateWithdrawAddressApi);
+  validateWithdrawAddressApiRef.current = validateWithdrawAddressApi;
+
+  useEffect(() => {
+    if (withdrawToTab !== "address") {
+      withdrawAddressValidationReqIdRef.current += 1;
+      if (withdrawAddrValidateDebounceTimerRef.current) {
+        clearTimeout(withdrawAddrValidateDebounceTimerRef.current);
+        withdrawAddrValidateDebounceTimerRef.current = null;
+      }
+      setWithdrawAddressValidError("");
+      setWithdrawAddressValidatedKey("");
+      setWithdrawAddressCheckDone(false);
+      setIsWithdrawAddressValidating(false);
+    }
+  }, [withdrawToTab]);
+
+  useEffect(() => {
+    if (withdrawToTab !== "address") return undefined;
+    const addr = String(withdrawAddress || "").trim();
+    const net = String(network || "").trim();
+    if (!addr || !net) {
+      if (withdrawAddrValidateDebounceTimerRef.current) {
+        clearTimeout(withdrawAddrValidateDebounceTimerRef.current);
+        withdrawAddrValidateDebounceTimerRef.current = null;
+      }
+      setWithdrawAddressValidError("");
+      setWithdrawAddressValidatedKey("");
+      setWithdrawAddressCheckDone(false);
+      setIsWithdrawAddressValidating(false);
+      return undefined;
+    }
+
+    const validatedKey = withdrawalAddressValidationKey(net, addr, selectedTokenAssetId);
+    if (validatedKey && withdrawAddressValidatedKey === validatedKey) {
+      setIsWithdrawAddressValidating(false);
+      return undefined;
+    }
+
+    if (withdrawAddrValidateDebounceTimerRef.current) {
+      clearTimeout(withdrawAddrValidateDebounceTimerRef.current);
+      withdrawAddrValidateDebounceTimerRef.current = null;
+    }
+    withdrawAddrValidateDebounceTimerRef.current = setTimeout(() => {
+      withdrawAddrValidateDebounceTimerRef.current = null;
+      void validateWithdrawAddressApiRef.current?.();
+    }, 500);
+
+    return () => {
+      if (withdrawAddrValidateDebounceTimerRef.current) {
+        clearTimeout(withdrawAddrValidateDebounceTimerRef.current);
+        withdrawAddrValidateDebounceTimerRef.current = null;
+      }
+    };
+  }, [withdrawToTab, withdrawAddress, network, selectedTokenAssetId, withdrawAddressValidatedKey]);
+
+  /** Web `effectiveAvailable` + `handleWithdrawMaxClick` (useWithdrawPageController). */
+  const effectiveWithdrawAvailable = useMemo(() => {
+    const raw = String(availableBalance ?? "").replace(/,/g, "");
+    const n = parseFloat(raw);
+    return Number.isFinite(n) ? n : 0;
+  }, [availableBalance]);
+
+  const handleMaxWithdrawal = useCallback(() => {
+    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0) return;
+    if (effectiveWithdrawAvailable <= 0) return;
+    setWithdrawAmount(sanitizeWithdrawAmountRaw(String(effectiveWithdrawAvailable)));
+  }, [selectedCurrency, effectiveWithdrawAvailable]);
 
   const handleGetOtp = () => {
     if (!selectedCurrency || Object.keys(selectedCurrency).length === 0) {
@@ -400,7 +595,11 @@ const WithdrawWallet = () => {
       showError("Please select a network first");
       return;
     }
-    if (!withdrawAddress || !isValidWalletAddress) {
+    if (isWithdrawAddressValidating) {
+      showError("Please wait while the address is being verified");
+      return;
+    }
+    if (!withdrawAddress || !isWithdrawAddressValid) {
       showError("Please enter a valid wallet address");
       return;
     }
@@ -435,7 +634,7 @@ const WithdrawWallet = () => {
   };
 
   const handleWithdraw = () => {
-    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0 || !withdrawAddress || !network || !withdrawAmount || !otp || !isValidWalletAddress) {
+    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0 || !withdrawAddress || !network || !withdrawAmount || !otp || !isWithdrawAddressValid) {
       showError("Please fill all required fields");
       return;
     }
@@ -863,45 +1062,64 @@ const WithdrawWallet = () => {
 
               {Object.keys(selectedCurrency).length > 0 && !network && activeWithdrawChains.length > 0 ? (
                 <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginTop: 8, lineHeight: 17 }}>
-                  Select a network, then enter the withdrawal address.
+                  Select a network for fees and address validation. You can enter the address below anytime.
                 </AppText>
               ) : null}
 
-              {!!network && (
-                <>
-                  <View
-                    style={[
-                      styles.wdAddressComposite,
-                      {
-                        borderColor: isDark ? themeColors.border : "#EEE",
-                        backgroundColor: isDark ? themeColors.card : themeColors.input,
-                      },
-                    ]}
-                  >
-                    <TextInput
-                      style={[styles.wdAddressField, { color: themeColors.text,fontSize:12 }]}
-                      placeholder="Enter Address"
-                      placeholderTextColor={themeColors.secondaryText}
-                      value={withdrawAddress}
-                      onChangeText={(value) => handleWithdrawalAddress(value)}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <TouchableOpacity
-                      onPress={() => NavigationService.navigate("Wallet_History")}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      style={styles.wdAddressBookHit}
-                      accessibilityLabel="Withdrawal history"
-                    >
-                      <FastImage source={user_withdarwal} style={{ width: 16, height: 16 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
-                    </TouchableOpacity>
-                  </View>
-                  {!isValidWalletAddress && String(withdrawAddress || "").trim().length > 0 ? (
-                    <AppText weight={SEMI_BOLD} type={TEN} style={{ color: "#DE7520", marginTop: 4 }}>
-                      Invalid wallet address for the selected network!
-                    </AppText>
-                  ) : null}
+              <View
+                style={[
+                  styles.wdAddressComposite,
+                  {
+                    borderColor: isDark ? themeColors.border : "#EEE",
+                    backgroundColor: isDark ? themeColors.card : themeColors.input,
+                  },
+                ]}
+              >
+                <TextInput
+                  style={[styles.wdAddressField, { color: themeColors.text, fontSize: 12 }]}
+                  placeholder="Enter Address"
+                  placeholderTextColor={themeColors.secondaryText}
+                  value={withdrawAddress}
+                  onChangeText={(value) => handleWithdrawalAddress(value)}
+                  onBlur={() => {
+                    if (withdrawAddrValidateDebounceTimerRef.current) {
+                      clearTimeout(withdrawAddrValidateDebounceTimerRef.current);
+                      withdrawAddrValidateDebounceTimerRef.current = null;
+                    }
+                    void validateWithdrawAddressApiRef.current?.();
+                  }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={() => NavigationService.navigate("Wallet_History")}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.wdAddressBookHit}
+                  accessibilityLabel="Withdrawal history"
+                >
+                  <FastImage source={user_withdarwal} style={{ width: 16, height: 16 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                </TouchableOpacity>
+              </View>
+              {isWithdrawAddressValidating && !!network && String(withdrawAddress || "").trim().length > 0 ? (
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
+                  <ActivityIndicator size="small" color={themeColors.secondaryText} />
+                  <AppText type={TEN} color={themeColors.secondaryText} style={{ marginLeft: 8 }}>
+                    Verifying address…
+                  </AppText>
+                </View>
+              ) : null}
+              {!isWithdrawAddressValidating &&
+              !!network &&
+              String(withdrawAddress || "").trim().length > 0 &&
+              withdrawAddressCheckDone &&
+              !isWithdrawAddressValid ? (
+                <AppText weight={SEMI_BOLD} type={TEN} style={{ color: "#DE7520", marginTop: 4 }}>
+                  {withdrawAddressValidError || "Please enter a valid withdrawal address."}
+                </AppText>
+              ) : null}
 
+                  {showWithdrawContentAfterValidatedAddress ? (
+                    <>
                   {Object.keys(selectedCurrency).length > 0 ? (
                     <>
                       <AppText style={[styles.withdrawSectionTitle, { marginTop: 12 }]} type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>
@@ -911,7 +1129,7 @@ const WithdrawWallet = () => {
                         placeholder={`Minimal ${chainMinWithdrawal ?? 0}`}
                         keyboardType="numeric"
                         value={withdrawAmount}
-                        onChangeText={(value) => setWithdrawAmount(value)}
+                        onChangeText={(value) => setWithdrawAmount(sanitizeWithdrawAmountRaw(value))}
                         max
                         onMax={handleMaxWithdrawal}
                         currency={selectedCurrency?.short_name}
@@ -954,7 +1172,7 @@ const WithdrawWallet = () => {
                         <View style={[styles.withdrawSummaryRow, styles.withdrawSummaryRowLast]}>
                           <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Receive amount</AppText>
                           <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.text }}>
-                            {withdrawAmount && parseNum(withdrawAmount, 0) > 0 && isValidWalletAddress
+                            {withdrawAmount && parseNum(withdrawAmount, 0) > 0 && isWithdrawAddressValid
                               ? `${parseFloat(withdrawAmount) - chainWithdrawalFee < 0 ? 0 : parseFloat(withdrawAmount) - chainWithdrawalFee || "—"} ${selectedCurrency?.short_name || ""}`.trim()
                               : `-- ${selectedCurrency?.short_name || ""}`.trim()}
                           </AppText>
@@ -968,7 +1186,7 @@ const WithdrawWallet = () => {
                     </>
                   ) : null}
 
-                  {Object.keys(selectedCurrency).length > 0 && isValidWalletAddress && withdrawAddress && withdrawAmount ? (
+                  {Object.keys(selectedCurrency).length > 0 && isWithdrawAddressValid && withdrawAddress && withdrawAmount ? (
                     <>
                       <AppText style={styles.withdrawSectionTitle} type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>
                         OTP Verification
@@ -986,7 +1204,7 @@ const WithdrawWallet = () => {
                   ) : null}
 
                   {Object.keys(selectedCurrency).length > 0 &&
-                    isValidWalletAddress &&
+                    isWithdrawAddressValid &&
                     withdrawAddress &&
                     withdrawAmount &&
                     !emailId ? (
@@ -1022,7 +1240,8 @@ const WithdrawWallet = () => {
                       withdrawToTab !== "address" ||
                       !network ||
                       !withdrawAddress ||
-                      !isValidWalletAddress ||
+                      !isWithdrawAddressValid ||
+                      isWithdrawAddressValidating ||
                       !emailId ||
                       !withdrawAmount ||
                       !otp ||
@@ -1031,8 +1250,8 @@ const WithdrawWallet = () => {
                     }
                     onPress={handleWithdraw}
                   />
-                </>
-              )}
+                    </>
+                  ) : null}
             </>
           ) : (
             <View style={{ marginTop: 4 }}>

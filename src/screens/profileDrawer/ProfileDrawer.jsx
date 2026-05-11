@@ -920,7 +920,6 @@ const ProfileDrawer = () => {
 
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={() => NavigationService.navigate(REFERRAL_LIST)}
           style={[
             styles.referralCard,
             {

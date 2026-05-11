@@ -48,7 +48,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
   const notificationList = useAppSelector(
     (state) => state.home.notificationList
   );
-  // console.log(notificationList, "notificationList");
+  const notificationRows = Array.isArray(notificationList) ? notificationList : [];
 
   // ✅ Memoize renderItem with useCallback for performance
   const renderItem = useCallback(({ item }) => {
@@ -85,7 +85,10 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
   }, [theme]);
 
   // ✅ Memoize keyExtractor
-  const keyExtractor = useCallback((item) => item._id, []);
+  const keyExtractor = useCallback(
+    (item) => String(item?._id ?? item?.id ?? ""),
+    []
+  );
   const handleNavigate = () => {
     let tab =
       activeTabList === 0
@@ -177,7 +180,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
       </View>
       <View>
         <FlatList
-          data={notificationList}
+          data={notificationRows}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           ListEmptyComponent={() => <ListEmptyComponent theme={theme} />}

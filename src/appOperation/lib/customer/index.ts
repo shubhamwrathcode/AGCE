@@ -93,6 +93,9 @@ export default (appOperation: AppOperation) => ({
   /** Web parity: POST /v1/wallet/get-and-generate-address (Fireblocks tokenAssetId / assetId flow). */
   get_and_generate_address: (data: { assetId: string; tokenAssetId?: string; short_name: string; generate: boolean }) =>
     appOperation.post('wallet/get-and-generate-address', data, CUSTOMER_TYPE),
+  /** Web parity: POST /api/v1/wallet/validate-address — body { address, chain, tokenAssetId? }. Uses `api/` prefix like web `baseWalletV1Api`. */
+  validate_withdraw_address: (data: { address: string; chain: string; tokenAssetId?: string }) =>
+    appOperation.post('api/v1/wallet/validate-address', data, CUSTOMER_TYPE),
   withdraw_currency: (data: any) =>
     appOperation.post('wallet/withdrawal', data, CUSTOMER_TYPE),
   withdraw_fiat_currency: (data: any) =>
@@ -216,15 +219,27 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('support/user-reply-ticket', data, CUSTOMER_TYPE),
   add_rating: (data: RatingProps) =>
     appOperation.post('user/rating', data, CUSTOMER_TYPE),
-  notification_list: () =>
-    appOperation.get(
+  /** Same contract as web: `GET .../user-notifications?page=&limit=` (defaults match web behaviour). */
+  notification_list: (opts?: { page?: number; limit?: number }) => {
+    const page = Math.max(1, opts?.page ?? 1);
+    const limit = Math.min(100, Math.max(1, opts?.limit ?? 50));
+    return appOperation.get(
       'notifications/user-notifications',
-      undefined,
+      { page, limit },
       undefined,
       CUSTOMER_TYPE,
-    ),
+    );
+  },
     mark_as_read: (data: any) =>
       appOperation.post('notifications/mark-as-read', data, CUSTOMER_TYPE),
+    /** GET `/v1/notifications/mark-all-as-read` — same as web `AuthService.markasAllRead`. */
+    mark_all_notifications_read: () =>
+      appOperation.get(
+        'notifications/mark-all-as-read',
+        undefined,
+        undefined,
+        CUSTOMER_TYPE,
+      ),
   send_kgin_otp: (data: any) =>
     appOperation.post('user/send-kgin-otp', data, CUSTOMER_TYPE),
   update_kgin: (data: any) =>

@@ -4,6 +4,7 @@ import FastImage from "react-native-fast-image";
 import { AppText, DISCLAIMTEXT, EIGHTEEN, SEMI_BOLD, TWELVE } from "../../../shared";
 import { colors } from "../../../theme/colors";
 import { bitcoin_ic, checkIc, moreOption, searchIcon } from "../../../helper/ImageAssets";
+import WalletTabQuickActions from "../WalletTabQuickActions";
 
 const GenericWalletTab = ({
   title,
@@ -63,19 +64,7 @@ const GenericWalletTab = ({
         {title}
       </AppText>
 
-      {actions?.length ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
-          {actions.map((a) => (
-            <TouchableOpacity
-              key={a.key}
-              onPress={a.onPress}
-              style={[styles.pillBtn, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}
-            >
-              <AppText type={TWELVE} weight={SEMI_BOLD}>{a.label}</AppText>
-            </TouchableOpacity>
-          ))}
-        </View>
-      ) : null}
+      {actions?.length ? <WalletTabQuickActions theme={theme} themeColors={themeColors} items={actions} /> : null}
 
       <View
         style={{
@@ -195,12 +184,6 @@ const GenericWalletTab = ({
 };
 
 const styles = {
-  pillBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-    borderWidth: 1,
-  },
   searchBox: {
     flex: 1,
     flexDirection: "row",

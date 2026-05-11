@@ -1160,10 +1160,10 @@ const SpotChartScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: bg }]}>
+    <View style={[styles.container, { backgroundColor: colors.white }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
 
-      <View style={[styles.header, { backgroundColor: bg }]}>
+      <View style={[styles.header, { backgroundColor: colors.white }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <FastImage
@@ -1240,7 +1240,7 @@ const SpotChartScreen = () => {
               { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: themeColors.themeBorderColor },
             ]}
           >
-            {TOP_TABS.map((t) => {
+            {/* {TOP_TABS.map((t) => {
               const active = topTab === t;
               return (
                 <TouchableOpacity
@@ -1262,7 +1262,7 @@ const SpotChartScreen = () => {
                   )}
                 </TouchableOpacity>
               );
-            })}
+            })} */}
           </View>
 
           {/* 24h strip — layout aligned with web TradeCenterSection (TradePage): left price + 24h change; right 2×2 high/low + volumes */}
@@ -2199,8 +2199,8 @@ const SpotChartScreen = () => {
           <TouchableOpacity
             style={[
               styles.chartBottomBtn,
+              styles.chartBottomBtnBuySell,
               { backgroundColor: themeColors.spotTradeBuy ?? themeColors.green },
-              { flex: 1.1 },
             ]}
             onPress={() => goToSpotTradeSide("BUY")}
             activeOpacity={0.88}
@@ -2212,8 +2212,8 @@ const SpotChartScreen = () => {
           <TouchableOpacity
             style={[
               styles.chartBottomBtn,
+              styles.chartBottomBtnBuySell,
               { backgroundColor: themeColors.spotTradeSell ?? themeColors.red },
-              { flex: 1.1 },
             ]}
             onPress={() => goToSpotTradeSide("SELL")}
             activeOpacity={0.88}
@@ -2247,30 +2247,32 @@ const styles = StyleSheet.create({
   chartBottomBar: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     paddingTop: 12,
   },
   chartBottomLeftIcons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingRight: 10,
+    gap: 5,
+    paddingRight: 5,
+    flexShrink: 0,
   },
   chartBottomIconItem: {
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 46,
+    minWidth: 42,
+    paddingHorizontal: 2,
   },
   chartBottomIconImageWrap: {
     opacity: 0.72,
   },
   chartBottomIcon: {
-    width: 22,
-    height: 22,
+    width: 16,
+    height: 16,
   },
   chartBottomIconLabel: {
     fontSize: 10,
-    marginTop: 4,
+    marginTop: 3,
     fontWeight: "600",
   },
   chartBottomBtnsWrap: {
@@ -2278,6 +2280,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    minWidth: 0,
   },
   chartBottomBtn: {
     flex: 1,
@@ -2285,6 +2288,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 999,
+  },
+  chartBottomBtnBuySell: {
+    flexGrow: 1,
+    flexBasis: 0,
+    minWidth: 96,
   },
   scrollMain: {
     flex: 1,

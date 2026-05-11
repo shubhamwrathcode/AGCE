@@ -93,26 +93,109 @@ export const getMemeList = () => async (dispatch: AppDispatch) => {
   }
 };
 
-export const getNotificationList = () => async (dispatch: AppDispatch) => {
-  try {
-    dispatch(setLoading(true));
-    const response: any = await appOperation.customer.notification_list();
-    if (response.success) {
-      dispatch(setNotificationList(response?.data));
-    }
-  } catch (e) {
-    logger(e);
-  } finally {
-    dispatch(setLoading(false));
+/** Same idea as web `NotificationPage` `extractList`: array at `data` or nested under common keys. */
+function normalizeUserNotificationsPayload(data: any): any[] {
+  if (data == null) {
+    return [];
   }
-};
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (typeof data !== 'object') {
+    return [];
+  }
+  const keys = ['data', 'notifications', 'items', 'list', 'records', 'rows', 'docs'];
+  for (const k of keys) {
+    const v = data[k];
+    if (Array.isArray(v)) {
+      return v;
+    }
+  }
+  return [];
+}
+
+function isNotificationListResponseOk(response: any): boolean {
+  if (response?.success === true || response?.success === 1) {
+    return true;
+  }
+  if (String(response?.success).toLowerCase() === 'true') {
+    return true;
+  }
+  // Some gateways only attach HTTP status on the parsed body
+  if (response?.code === 200 && response?.data !== undefined) {
+    return true;
+  }
+  return false;
+}
+
+/** Web `NotificationPage` parity: list from `data` or `data.data`, plus top-level `pagination` / `counts`. */
+export function parseNotificationsListResponse(response: any): {
+  ok: boolean;
+  list: any[];
+  pagination: any;
+  counts: any;
+  message?: string;
+} {
+  if (!isNotificationListResponseOk(response)) {
+    return {
+      ok: false,
+      list: [],
+      pagination: null,
+      counts: null,
+      message: response?.message,
+    };
+  }
+  const d = response?.data;
+  let list: any[] = [];
+  if (Array.isArray(d)) {
+    list = d;
+  } else if (d && typeof d === 'object' && Array.isArray(d.data)) {
+    list = d.data;
+  } else {
+    list = normalizeUserNotificationsPayload(d);
+  }
+  return {
+    ok: true,
+    list,
+    pagination: response?.pagination ?? null,
+    counts: response?.counts ?? null,
+  };
+}
+
+export const getNotificationList =
+  (opts?: { page?: number; limit?: number; skipGlobalLoader?: boolean }) =>
+  async (dispatch: AppDispatch) => {
+    try {
+      if (!opts?.skipGlobalLoader) {
+        dispatch(setLoading(true));
+      }
+      const response: any = await appOperation.customer.notification_list({
+        page: opts?.page ?? 1,
+        limit: opts?.limit ?? 50,
+      });
+      const parsed = parseNotificationsListResponse(response);
+      if (parsed.ok) {
+        dispatch(setNotificationList(parsed.list));
+      }
+    } catch (e) {
+      logger(e);
+    } finally {
+      if (!opts?.skipGlobalLoader) {
+        dispatch(setLoading(false));
+      }
+    }
+  };
 
 export const markAsRead = (id: any) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.mark_as_read(id);
-    if (response.success) {
-      dispatch(getNotificationList())
+    const ok =
+      response?.success === true ||
+      response?.success === 1 ||
+      String(response?.success).toLowerCase() === 'true';
+    if (ok) {
+      dispatch(getNotificationList());
     }
   } catch (e) {
     logger(e);

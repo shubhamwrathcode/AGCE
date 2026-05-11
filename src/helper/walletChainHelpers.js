@@ -121,3 +121,29 @@ export function parseNum(v, fallback = 0) {
     const n = parseFloat(v);
     return Number.isFinite(n) ? n : fallback;
 }
+
+/**
+ * Map UI/catalog chain code to canonical `chain` for `POST wallet/validate-address`
+ * (same mapping as web `canonicalWithdrawalChainFromUiCode`).
+ */
+export function canonicalWithdrawalChainForValidateAddress(uiCode) {
+    if (uiCode == null || uiCode === '') return '';
+    const u = String(uiCode).trim().toUpperCase();
+    const map = {
+        BSC: 'BEP20',
+        BNB: 'BEP20',
+        'BNB SMART CHAIN': 'BEP20',
+        BEP20: 'BEP20',
+        ETH: 'ERC20',
+        ETHEREUM: 'ERC20',
+        ERC20: 'ERC20',
+        TRX: 'TRC20',
+        TRON: 'TRC20',
+        TRC20: 'TRC20',
+        POLYGON: 'MATIC',
+        MATIC: 'MATIC',
+        SOL: 'SOL',
+        SOLANA: 'SOL',
+    };
+    return map[u] || u;
+}
