@@ -15,6 +15,7 @@ import { AuthHeader, AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/c
 import { authStyles } from "./authStyles";
 import { BASE_URL } from "../../helper/Constants";
 import { showError } from "../../helper/logger";
+import Toast from "react-native-simple-toast";
 import { appOperation } from "../../appOperation";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { googleRegister } from "../../actions/authActions";
@@ -278,6 +279,9 @@ const Register = () => {
       );
       return;
     }
+
+    Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
+    return;
 
     try {
       console.log("Starting Google Sign-In...");

@@ -109,6 +109,7 @@ import {
   newsicon,
   p2pIcon,
   spottradingIconNew,
+  checkIcon,
 } from "../../helper/ImageAssets";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { AppText, BLACK, DISCLAIMTEXT, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
@@ -132,7 +133,8 @@ import {
   AIRDROP_HISTORY_SCREEN,
   WALLET_WITHDRAW_SCREEN,
   REFERRAL_LIST,
-  SPOT_MARKET_SCREEN,
+  NAVIGATION_BOTTOM_TAB_STACK,
+  TRADE_SCREEN,
 } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { colors, darkTheme } from "../../theme/colors";
@@ -346,7 +348,8 @@ const getPopularMenuItems = (theme) => [
     id: "p5",
     title: "Spot",
     icon: spottradingIconNew,
-    onPress: () => NavigationService.navigate(SPOT_MARKET_SCREEN),
+    onPress: () =>
+      NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, { screen: TRADE_SCREEN }),
   },
   {
     id: "p6",
@@ -358,6 +361,21 @@ const getPopularMenuItems = (theme) => [
     id: "p7",
     title: "Soft Staking",
     icon: stakingDrawer ,
+    onPress: showComingSoonToast,
+  },
+];
+
+const getSecurityVerificationItems = (theme) => [
+  {
+    id: "sv2",
+    title: "Identification",
+    icon: theme !== "Dark" ? kycixonLight : kycixon,
+    onPress: () => NavigationService.navigate(KYC_STATUS_SCREEN),
+  },
+  {
+    id: "sv1",
+    title: "Two-factor",
+    icon: theme !== "Dark" ? lockLight : lock,
     onPress: showComingSoonToast,
   },
 ];
@@ -440,7 +458,7 @@ function maskProfileEmail(email) {
 const PROFILE_GRID_ICON_WRAP = 38;
 const PROFILE_GRID_ICON_INNER = 16;
 
-const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, itemWidth }) => (
+const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, itemWidth, iconTintColor }) => (
   <TouchableOpacity
     style={{ width: itemWidth, alignItems: "center", marginBottom: 8 }}
     onPress={onPress}
@@ -456,7 +474,12 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
         justifyContent: "center",
       }}
     >
-      <FastImage source={iconSource} style={{ width: PROFILE_GRID_ICON_INNER, height: PROFILE_GRID_ICON_INNER }} resizeMode="contain" />
+      <FastImage
+        source={iconSource}
+        style={{ width: PROFILE_GRID_ICON_INNER, height: PROFILE_GRID_ICON_INNER }}
+        resizeMode="contain"
+        {...(iconTintColor != null ? { tintColor: iconTintColor } : {})}
+      />
     </View>
     <AppText
     weight={SEMI_BOLD}
@@ -706,6 +729,10 @@ const ProfileDrawer = () => {
 
   const shortcutItems = useMemo(() => getShortcutMenuItems(effectiveTheme), [effectiveTheme]);
   const popularItems = useMemo(() => getPopularMenuItems(effectiveTheme), [effectiveTheme]);
+  const securityVerificationItems = useMemo(
+    () => getSecurityVerificationItems(effectiveTheme),
+    [effectiveTheme]
+  );
   const kycBadge = useMemo(
     () => getKycTierBadge(userData, isDark),
     [userData?.kycVerified, userData?.kyc_verified, userData?.kyc_status, userData?.kycStatus, isDark]
@@ -807,9 +834,8 @@ const ProfileDrawer = () => {
           </View>
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.88}
-          onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
+        <View
+          // onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
           style={{ flexDirection: "row", alignItems: "center" }}
         >
           <View
@@ -820,14 +846,16 @@ const ProfileDrawer = () => {
               overflow: "hidden",
               borderWidth: 1,
               borderColor: colors.disclaimDarText,
+              bottom:5
             }}
           >
             <FastImage
-              source={
-                userData?.profilepicture
-                  ? { uri: IMAGE_BASE_URL + userData.profilepicture }
-                  : defaultPic
-              }
+              // source={
+              //   userData?.profilepicture
+              //     ? { uri: IMAGE_BASE_URL + userData.profilepicture }
+              //     : defaultPic
+              // }
+              source={defaultPic}
               style={{ width: 56, height: 56 }}
               resizeMode="cover"
             />
@@ -877,8 +905,18 @@ const ProfileDrawer = () => {
               </View>
             </View>
           </View>
-          {/* <MaterialIcons name="chevron-right" size={20} color={themeColors.secondaryText} /> */}
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={openLogoutModal}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{ flexShrink: 0, justifyContent: "center", paddingLeft: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+          >
+            <FastImage source={logoutIcon} style={{ width: 22, height: 22,right:15 }} resizeMode="contain" />
+          </TouchableOpacity>
+        </View>
+
+      
 
         <TouchableOpacity
           activeOpacity={0.9}
@@ -903,6 +941,26 @@ const ProfileDrawer = () => {
             <FastImage source={referralProfile} style={{ width: 56, height: 56 }} resizeMode="contain" />
           </View>
         </TouchableOpacity>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+            Security & verification
+          </AppText>
+        </View>
+        <View style={[styles.profileIconGrid, { marginTop: 14 }]}>
+          {securityVerificationItems.map((item) => (
+            <ProfileGridItem
+              key={item.id}
+              title={item.title}
+              iconSource={item.icon}
+              onPress={item.onPress}
+              themeColors={drawerColors}
+              isDark={isDark}
+              itemWidth={gridItemWidth}
+              iconTintColor={colors.black}
+            />
+          ))}
+        </View>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 26 }}>
           <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>

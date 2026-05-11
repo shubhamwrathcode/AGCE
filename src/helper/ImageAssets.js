@@ -430,6 +430,8 @@ export const buyCrypto = require('../../assets/images/buycrypto.png');
 export const stakingDrawer = require('../../assets/images/stakingDrawer.png');
 export const checkarrow3 = require('../../assets/images/checkarrow3.png');
 export const verification_gift = require('../../assets/images/verification_gift.png');
+export const welcome_banner = require('../../assets/images/welcome_banner.png');
+
 
 
 

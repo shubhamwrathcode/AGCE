@@ -13,18 +13,16 @@ import {
 import RBSheet from "react-native-raw-bottom-sheet";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { clearPending2FA } from "../../slices/authSlice";
-import { sendLoginOtp, verifyUser, verifyPasskeyLogin } from "../../actions/authActions";
+import { sendLoginOtp, verifyUser } from "../../actions/authActions";
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN } from "../../navigation/routes";
-import { AppText, AppSafeAreaView, Button, BOLD, FOURTEEN as FOURTEEN_CONST, SEMI_BOLD, THIRTEEN, EIGHTEEN, SIXTEEN, TWENTY_SIX, MEDIUM } from "../../shared";
+import { AppText, AppSafeAreaView, Button, BOLD, FOURTEEN as FOURTEEN_CONST, SEMI_BOLD, THIRTEEN, EIGHTEEN, SIXTEEN, MEDIUM } from "../../shared";
 import { colors } from "../../theme/colors";
 import FastImage from "react-native-fast-image";
-import { closeIcon, EMAIL, FINGERPRINT, PHONE, KEY_ICON, pasteImg, SHARE_NEW_ICON } from "../../helper/ImageAssets";
+import { closeIcon, EMAIL, PHONE, KEY_ICON, pasteImg, SHARE_NEW_ICON } from "../../helper/ImageAssets";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { OtpInput6Digit } from "../../shared";
 import { showError } from "../../helper/logger";
-import QRCode from "react-native-qrcode-svg";
-import { BASE_URL } from "../../helper/Constants";
 import { SpinnerSecond } from "../../shared/components/SpinnerSecond";
 import { useTheme } from "../../hooks/useTheme";
 import Clipboard from "@react-native-community/clipboard";
@@ -35,7 +33,6 @@ const getMethodIcon = (type: number) => {
     case 1: return EMAIL;
     case 2: return "";
     case 3: return PHONE;
-    case 4: return FINGERPRINT;
     default: return "";
   }
 };
@@ -55,21 +52,21 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   
   const getFirstMethod = () => {
     if (!pending2FA) return 1;
-    const baseMethods = pending2FA.availableMethods ?? [];
-    const hasPasskey = baseMethods.some((m: any) => m.type === 4) || !!pending2FA?.data?.hasPasskey;
-    const hasAuth = baseMethods.some((m: any) => m.type === 2);
-    const hasEmail = baseMethods.some((m: any) => m.type === 1);
-    const hasPhone = baseMethods.some((m: any) => m.type === 3);
+    const baseMethods = (pending2FA.availableMethods ?? []).filter((m: any) => m.type !== 4);
+    const has = (t: number) => baseMethods.some((m: any) => m.type === t);
     const loginSignId = (pending2FA.loginSignId ?? "").trim();
     const loggedInWithEmail = loginSignId.includes("@");
-    let firstMethod = pending2FA.defaultMethod ?? 1;
-    if (hasPasskey) firstMethod = 4;
-    else if (hasAuth) firstMethod = 2;
-    else if (loggedInWithEmail && hasEmail) firstMethod = 1;
-    else if (!loggedInWithEmail && hasPhone) firstMethod = 3;
-    else if (hasEmail) firstMethod = 1;
-    else if (hasPhone) firstMethod = 3;
-    return firstMethod;
+
+    if (loggedInWithEmail && has(1)) return 1;
+    if (!loggedInWithEmail && loginSignId && has(3)) return 3;
+
+    const dm = Number(pending2FA.defaultMethod);
+    if (Number.isFinite(dm) && dm !== 4 && has(dm)) return dm;
+
+    if (has(1)) return 1;
+    if (has(3)) return 3;
+    if (has(2)) return 2;
+    return baseMethods[0]?.type ?? 1;
   };
 
   const initialMethod = getFirstMethod();
@@ -77,16 +74,12 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState(false);
   const [resendTimer, setResendTimer] = useState((initialMethod === 1 || initialMethod === 3) ? 60 : 0);
-  const [passkeyCancelledOrFailed, setPasskeyCancelledOrFailed] = useState(false);
-  const [passkeyVerifying, setPasskeyVerifying] = useState(false);
   const optionsSheetRef = useRef<any>(null);
-  const passkeyQRSheetRef = useRef<any>(null);
 
   const lastAutoSentForMethod = useRef<number | null>(null);
   const prevSelectedMethod = useRef<number>(initialMethod);
   const autoSubmitEnabled = useRef<boolean>(true);
   const { height: winHeight } = useWindowDimensions();
-  const passkeyQRSheetHeight = Math.min(winHeight * 0.9, 450);
   
   const sheetCustomStyles = {
     container: {
@@ -111,7 +104,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
       if (firstMethod !== 1 && firstMethod !== 3) {
         setResendTimer(0);
       }
-      setPasskeyCancelledOrFailed(false);
 
       if ((firstMethod === 1 || firstMethod === 3) && lastAutoSentForMethod.current !== firstMethod) {
         const signId = pending2FA.loginSignId ?? "";
@@ -176,7 +168,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
       case 1: return "Email Verification";
       case 2: return "Authenticator Verification";
       case 3: return "Phone Verification";
-      case 4: return "Passkey Authentication";
       default: return "Verification";
     }
   };
@@ -187,7 +178,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     if (selectedAuthMethod === 1) return `Enter the 6-digit verification code sent to ${masked || "your email"}.`;
     if (selectedAuthMethod === 2) return "Enter the 6-digit code from your authenticator app.";
     if (selectedAuthMethod === 3) return `Enter the 6-digit verification code sent to ${masked || "your phone"}.`;
-    if (selectedAuthMethod === 4) return "Use your registered passkey to verify.";
     return "Enter your verification code.";
   };
 
@@ -243,7 +233,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   // Auto-submit on 6th digit for first attempt only.
   useEffect(() => {
     if (!pending2FA) return;
-    if (selectedAuthMethod === 4) return; // passkey flow
     if (!autoSubmitEnabled.current) return;
     if (showButtonLoading) return;
     if (otpCode.length !== 6) return;
@@ -265,12 +254,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     return "****";
   };
 
-  const baseMethods = pending2FA?.availableMethods ?? [];
-  const hasPasskeyInList = baseMethods.some((m: any) => m.type === 4);
-  const methodsForOptions =
-    pending2FA?.data?.hasPasskey && !hasPasskeyInList
-      ? [{ type: 4, label: "Passkey", description: "Use Face ID, Touch ID, or Windows Hello" }, ...baseMethods]
-      : baseMethods;
+  const methodsForOptions = (pending2FA?.availableMethods ?? []).filter((m: any) => m.type !== 4);
   
   const alternativeMethods = (methodsForOptions ?? []).filter((m: any) => m.type !== selectedAuthMethod);
   const hasAlternative = alternativeMethods.length > 0;
@@ -279,26 +263,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     Math.max(180, 124 + 56 * alternativeMethods.length),
     winHeight * 0.6
   );
-
-  const hasAutoTriggeredPasskey = useRef(false);
-  useEffect(() => {
-    if (selectedAuthMethod !== 4) hasAutoTriggeredPasskey.current = false;
-  }, [selectedAuthMethod]);
-
-  useEffect(() => {
-    if (!pending2FA || selectedAuthMethod !== 4 || passkeyCancelledOrFailed || passkeyVerifying || hasAutoTriggeredPasskey.current) return;
-    hasAutoTriggeredPasskey.current = true;
-    setPasskeyVerifying(true);
-    dispatch(verifyPasskeyLogin(getVerifySignId()) as any)
-      .then((ok: boolean) => {
-        setPasskeyVerifying(false);
-        if (!ok) setPasskeyCancelledOrFailed(true);
-      })
-      .catch(() => {
-        setPasskeyVerifying(false);
-        setPasskeyCancelledOrFailed(true);
-      });
-  }, [pending2FA, selectedAuthMethod, passkeyCancelledOrFailed, passkeyVerifying]);
 
   if (!pending2FA) return null;
 
@@ -320,139 +284,18 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             title={""}
           />
 
-          {selectedAuthMethod !== 4 && (
-            <>
-              <AppText weight={BOLD} type={EIGHTEEN} style={[styles.title, { color: themeColors.text }]}>
-                {selectedAuthMethod === 1 ? "Verify Your Email" : selectedAuthMethod === 3 ? "Verify Your Phone" : getVerificationTitle()}
-              </AppText>
-              <AppText type={THIRTEEN} style={[styles.description, { color: themeColors.secondaryText }]}>
-                {selectedAuthMethod === 1 || selectedAuthMethod === 3
-                  ? `The verification code has been sent to your ${selectedAuthMethod === 1 ? "email" : "phone"} ${getMaskedEmail()}, valid for 10 minutes.`
-                  : getVerificationDescription()}
-              </AppText>
-            </>
-          )}
+          <>
+            <AppText weight={BOLD} type={EIGHTEEN} style={[styles.title, { color: themeColors.text }]}>
+              {selectedAuthMethod === 1 ? "Verify Your Email" : selectedAuthMethod === 3 ? "Verify Your Phone" : getVerificationTitle()}
+            </AppText>
+            <AppText type={THIRTEEN} style={[styles.description, { color: themeColors.secondaryText }]}>
+              {selectedAuthMethod === 1 || selectedAuthMethod === 3
+                ? `The verification code has been sent to your ${selectedAuthMethod === 1 ? "email" : "phone"} ${getMaskedEmail()}, valid for 10 minutes.`
+                : getVerificationDescription()}
+            </AppText>
+          </>
 
-          {selectedAuthMethod === 4 ? (
-            <View style={styles.passkeyPageWrap}>
-              {passkeyCancelledOrFailed ? (
-                <>
-                  <AppText weight={BOLD} type={EIGHTEEN} style={[styles.passkeyTitle, { color: themeColors.text }]}>
-                    Passkey Authentication
-                  </AppText>
-                  <AppText type={THIRTEEN} style={[styles.passkeySubtitle, { color: themeColors.secondaryText }]}>
-                    Click the button below to authenticate with your passkey.
-                  </AppText>
-
-                  <View style={styles.passkeyHeroWrap}>
-                    <View style={styles.passkeyHeroCircle}>
-                      <FastImage
-                        source={FINGERPRINT}
-                        resizeMode="contain"
-                        style={styles.passkeyHeroIcon}
-                        tintColor={"#FFFFFF"}
-                      />
-                    </View>
-                  </View>
-
-                  <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.passkeyHeroTitle, { color: themeColors.secondaryText }]}>
-                    Use your registered passkey to verify
-                  </AppText>
-                  <AppText type={THIRTEEN} style={[styles.passkeyHeroHint, { color: themeColors.secondaryText }]}>
-                    This will prompt Face ID, Touch ID, or Windows Hello
-                  </AppText>
-
-                  <Button
-                    children="Authenticate with Passkey"
-                    loading={passkeyVerifying}
-                    disabled={passkeyVerifying}
-                    onPress={async () => {
-                      setPasskeyCancelledOrFailed(false);
-                      setPasskeyVerifying(true);
-                      const ok = await dispatch(verifyPasskeyLogin(getVerifySignId()));
-                      setPasskeyVerifying(false);
-                      if (!ok) setPasskeyCancelledOrFailed(true);
-                    }}
-                    containerStyle={StyleSheet.flatten([styles.passkeyBtn, { backgroundColor: themeColors.button, }])}
-                  />
-                  {hasAlternative && (
-                    <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.switchRow}>
-                      <AppText
-                        type={FOURTEEN_CONST}
-                        weight={SEMI_BOLD}
-                        style={[styles.underlineText, { color: themeColors.text }]}
-                      >
-                        Switch verification method{' '}
-                      </AppText>
-                      <FastImage
-                        source={SHARE_NEW_ICON}
-                        style={{ width: 15, height: 15 }}
-                        tintColor={themeColors.text}
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacityView>
-                  )}
-                </>
-              ) : (
-                <>
-                  <AppText weight={BOLD} type={EIGHTEEN} style={[styles.passkeyTitle, { color: themeColors.text }]}>
-                    Passkey Authentication
-                  </AppText>
-                  <AppText type={THIRTEEN} style={[styles.passkeySubtitle, { color: themeColors.secondaryText }]}>
-                    Click the button below to authenticate with your passkey.
-                  </AppText>
-
-                  <View style={styles.passkeyHeroWrap}>
-                    <View style={styles.passkeyHeroCircle}>
-                      <FastImage
-                        source={FINGERPRINT}
-                        resizeMode="contain"
-                        style={styles.passkeyHeroIcon}
-                        tintColor={"#FFFFFF"}
-                      />
-                    </View>
-                  </View>
-
-                  <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.passkeyHeroTitle, { color: themeColors.secondaryText }]}>
-                    Use your registered passkey to verify
-                  </AppText>
-                  <AppText type={THIRTEEN} style={[styles.passkeyHeroHint, { color: themeColors.secondaryText }]}>
-                    This will prompt Face ID, Touch ID, or Windows Hello
-                  </AppText>
-                  <Button
-                    children="Authenticate with Passkey"
-                    loading={passkeyVerifying}
-                    disabled={passkeyVerifying}
-                    onPress={async () => {
-                      setPasskeyVerifying(true);
-                      const ok = await dispatch(verifyPasskeyLogin(getVerifySignId()));
-                      setPasskeyVerifying(false);
-                      if (!ok) setPasskeyCancelledOrFailed(true);
-                    }}
-                    containerStyle={StyleSheet.flatten([styles.passkeyBtn, { backgroundColor: themeColors.button }])}
-                  />
-                  {hasAlternative && (
-                    <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.switchRow}>
-                      <AppText
-                        type={FOURTEEN_CONST}
-                        weight={SEMI_BOLD}
-                        style={[styles.underlineText, { color: themeColors.text }]}
-                      >
-                        Switch verification method{' '}
-                      </AppText>
-                      <FastImage
-                        source={SHARE_NEW_ICON}
-                        style={{ width: 15, height: 15 }}
-                        tintColor={themeColors.text}
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacityView>
-                  )}
-                </>
-              )}
-            </View>
-          ) : (
-            <>
+          <>
               <OtpInput6Digit
                 value={otpCode}
                 onChangeText={(v: string) => {
@@ -519,10 +362,9 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                   </AppText>
                 </TouchableOpacityView>
               ) : null}
-            </>
-          )}
+          </>
 
-          {hasAlternative && selectedAuthMethod !== 4 ? (
+          {hasAlternative ? (
             <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.switchRow}>
               <AppText type={FOURTEEN_CONST} weight={SEMI_BOLD} style={[styles.underlineText, { color: themeColors.text }]}>
                 Switch verification method{' '}
@@ -588,40 +430,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
               </TouchableOpacityView>
             ))}
           </ScrollView>
-        </View>
-      </RBSheet>
-
-      <RBSheet
-        ref={passkeyQRSheetRef}
-        height={passkeyQRSheetHeight}
-        closeOnDragDown={false}
-        closeOnPressMask={true}
-        onClose={() => selectedAuthMethod === 4 && setPasskeyCancelledOrFailed(true)}
-        customStyles={sheetCustomStyles}
-      >
-        <View style={[sheetStyles.wrap, styles.passkeyQRSheetContent]}>
-          <View style={sheetStyles.header}>
-            <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
-              Passkeys
-            </AppText>
-            <TouchableOpacity onPress={() => passkeyQRSheetRef.current?.close()} style={[sheetStyles.closeBtn, { borderColor: themeColors.border }]}>
-              <FastImage source={closeIcon} resizeMode="contain" tintColor={themeColors.text} style={{ width: 10, height: 10 }} />
-            </TouchableOpacity>
-          </View>
-          <AppText type={FOURTEEN_CONST} style={{ marginBottom: 12, color: themeColors.text }}>
-            Scan this QR code with the device that has your passkey
-          </AppText>
-          <View style={{ alignItems: "center", marginVertical: 16 }}>
-            <QRCode
-              value={`${BASE_URL.replace(/\/$/, "")}/v1/security/passkey/auth?signId=${encodeURIComponent(getVerifySignId())}`}
-              size={200}
-              backgroundColor={isDark ? "#fff" : "#000"}
-              color={isDark ? "#000" : "#fff"}
-            />
-          </View>
-          <TouchableOpacity onPress={() => passkeyQRSheetRef.current?.close()} style={{ paddingVertical: 12 }}>
-            <AppText type={FOURTEEN_CONST} weight={SEMI_BOLD} style={{ color: themeColors.button }}>Cancel</AppText>
-          </TouchableOpacity>
         </View>
       </RBSheet>
 
@@ -700,50 +508,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-  },
-  passkeyPageWrap: {
-    marginVertical: 24,
-  },
-  passkeyTitle: {
-    marginTop: 6,
-    marginBottom: 10,
-  },
-  passkeySubtitle: {
-    marginBottom: 22,
-  },
-  passkeyHeroWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 18,
-  },
-  passkeyHeroCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "#16A34A",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  passkeyHeroIcon: {
-    width: 44,
-    height: 44,
-  },
-  passkeyHeroTitle: {
-    textAlign: "center",
-    marginTop: 8,
-  },
-  passkeyHeroHint: {
-    textAlign: "center",
-    marginTop: 10,
-    opacity: 0.7,
-  },
-  passkeyBtn: {
-    width: "100%",
-    marginTop:30
-    
-  },
-  passkeyQRSheetContent: {
-    paddingBottom: 44,
   },
 });
 

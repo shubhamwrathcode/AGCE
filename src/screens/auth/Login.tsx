@@ -1,21 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import FastImage from "react-native-fast-image";
 import { ActivityIndicator, Keyboard, Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { isValidPhoneNumber } from "libphonenumber-js";
-import { Passkey } from "react-native-passkey";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../navigation/routes";
 import { AppSafeAreaView, AppText, Button, ELEVEN, FOURTEEN, Input, MEDIUM, TEN } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
+import Toast from "react-native-simple-toast";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   googleLogin,
   login,
-  passkeyDiscoverableLogin,
-  verifyPasskeyLogin,
   type LoginThunkResult,
 } from "../../actions/authActions";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
@@ -23,7 +20,7 @@ import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import { checkValue, validateEmail } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
 import { setLoading } from "../../slices/authSlice";
-import { apple, googleIcon, passkey_login } from "../../helper/ImageAssets";
+import { apple, googleIcon } from "../../helper/ImageAssets";
 import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/components";
 import NavigationService from "../../navigation/NavigationService";
 import Checkbox from "../../shared/components/Checkbox";
@@ -48,10 +45,7 @@ const Login = (): JSX.Element => {
   const [passwordError, setPasswordError] = useState(false);
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] =
     useState(false);
-  const [isPasskeySignInInProgress, setIsPasskeySignInInProgress] = useState(false);
   const [isAppleSignInInProgress, setIsAppleSignInInProgress] = useState(false);
-  const [passkeySupported, setPasskeySupported] = useState(false);
-  const [hasPasskey, setHasPasskey] = useState(false);
   const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
   const emailSuggestBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -78,23 +72,6 @@ const Login = (): JSX.Element => {
     setPasswordError(false);
     setEmailSuggestListVisible(false);
   }, [index]);
-
-  useEffect(() => {
-    const checkPasskey = async () => {
-      try {
-        const supported = !!Passkey.isSupported();
-        setPasskeySupported(supported);
-        if (supported) {
-          const locallyHas = await AsyncStorage.getItem('hasPasskey');
-          setHasPasskey(locallyHas === 'true');
-        }
-      } catch {
-        setPasskeySupported(false);
-        setHasPasskey(false);
-      }
-    };
-    checkPasskey();
-  }, []);
 
   // Configure native Google Sign-In once
   useEffect(() => {
@@ -124,6 +101,9 @@ const Login = (): JSX.Element => {
       );
       return;
     }
+
+    Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
+    return;
 
     try {
       console.log("Starting Google Sign-In...");
@@ -189,17 +169,10 @@ const Login = (): JSX.Element => {
     }
   };
 
-  const signInWithPasskey = () => {
-    setIsPasskeySignInInProgress(true);
-    Promise.resolve(dispatch(passkeyDiscoverableLogin() as any)).finally(() => {
-      setIsPasskeySignInInProgress(false);
-    });
-  };
-
   const signInWithApple = async () => {
     setIsAppleSignInInProgress(true);
     try {
-      showError("Apple sign-in is not available yet. Please use email, Google, or Passkey.");
+      showError("Apple sign-in is not available yet. Please use email or Google.");
     } finally {
       setTimeout(() => setIsAppleSignInInProgress(false), 300);
     }
@@ -301,7 +274,7 @@ const Login = (): JSX.Element => {
     setEmailSuggestListVisible(false);
   };
 
-  const onNext = async () => {
+  const onNext = () => {
     if (index === 0) {
       if (!validateEmailOrUsername(signUpId)) return;
     } else {
@@ -323,25 +296,6 @@ const Login = (): JSX.Element => {
       }
     }
 
-    const normalizedId = getNormalizedLoginId();
-    if (passkeySupported && hasPasskey && normalizedId) {
-      setIsPasskeySignInInProgress(true);
-      try {
-        console.log("[Passkey][Login] attempting passkey login", { normalizedId });
-        const didLogin = await dispatch(verifyPasskeyLogin(normalizedId) as any);
-        console.log("[Passkey][Login] passkey login result", { didLogin });
-        if (didLogin) return;
-      } catch (e: any) {
-        console.error("[Passkey][Login] passkey login threw", {
-          message: e?.message,
-          code: e?.code,
-          name: e?.name,
-          raw: e,
-        });
-      } finally {
-        setIsPasskeySignInInProgress(false);
-      }
-    }
     setShowPassField(true);
   };
 
@@ -479,7 +433,7 @@ const Login = (): JSX.Element => {
               children={"Next"}
               disabled={false}
               onPress={onNext}
-              loading={showButtonLoading && !isGoogleSignInInProgress && !isPasskeySignInInProgress}
+              loading={showButtonLoading && !isGoogleSignInInProgress}
               containerStyle={{ marginTop: 18, backgroundColor: themeColors.button }}
             />
           )}
@@ -540,7 +494,7 @@ const Login = (): JSX.Element => {
                 children={"Login"}
                 disabled={false}
                 onPress={onSubmit}
-                loading={showButtonLoading && !isGoogleSignInInProgress && !isPasskeySignInInProgress}
+                loading={showButtonLoading && !isGoogleSignInInProgress}
                 containerStyle={{ marginTop: 30, backgroundColor: themeColors.button }}
                 titleStyle={{ color: themeColors.buttonText }}
               />
@@ -559,7 +513,7 @@ const Login = (): JSX.Element => {
             <TouchableOpacityView
               style={[styles.socialPill, { borderColor: themeColors.border }]}
               onPress={signInWithGoogle}
-              disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isAppleSignInInProgress || isLoading}
+              disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
             >
               {isGoogleSignInInProgress ? (
                 <ActivityIndicator size={"small"} color={themeColors.text} />
@@ -571,31 +525,11 @@ const Login = (): JSX.Element => {
               </AppText>
             </TouchableOpacityView>
 
-            <TouchableOpacityView
-              style={[styles.socialPill, { borderColor: themeColors.border }]}
-              onPress={signInWithPasskey}
-              disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isAppleSignInInProgress || isLoading}
-            >
-              {isPasskeySignInInProgress ? (
-                <ActivityIndicator size={"small"} color={themeColors.text} />
-              ) : (
-                <FastImage
-                  source={passkey_login}
-                  resizeMode="contain"
-                  style={styles.socialBrandIcon}
-                  tintColor={themeColors.text}
-                />
-              )}
-              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
-                Continue with Passkey
-              </AppText>
-            </TouchableOpacityView>
-
             {Platform.OS === "ios" ? (
               <TouchableOpacityView
                 style={[styles.socialPill, { borderColor: themeColors.border }]}
                 onPress={signInWithApple}
-                disabled={isGoogleSignInInProgress || isPasskeySignInInProgress || isAppleSignInInProgress || isLoading}
+                disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
               >
                 {isAppleSignInInProgress ? (
                   <ActivityIndicator size={"small"} color={themeColors.text} />
