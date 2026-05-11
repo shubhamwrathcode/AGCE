@@ -303,11 +303,12 @@ export const placeOrder =
   (data: PlaceOrderProps, setVisible: any) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
-      const response: any = await appOperation.customer.place_order(data);
+      const {total: _orderTotalUi, ...spotOrderBody} = data;
+      const response: any = await appOperation.customer.place_order(spotOrderBody);
 
       if (response.success) {
         dispatch(setOrderData(data));
-        showError(response?.message);
+        showSuccess(response?.message || 'Order placed successfully');
         setVisible(true);
       } else {
         showError(response?.message);

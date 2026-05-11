@@ -599,14 +599,20 @@ const Futures = () => {
   };
 
   const onConfirm = () => {
-    let data = {
-      base_currency_id: base_currency_id,
-      order_type: isLimit ? "LIMIT" : "MARKET",
-      price: !isLimit ? buy_price : isLimit && price ? price : buy_price,
-      quantity: amount,
-      quote_currency_id: quote_currency_id,
+    const t = isLimit ? "LIMIT" : "MARKET";
+    const baseSym = String(base_currency ?? "").trim().toUpperCase();
+    const quoteSym = String(quote_currency ?? "").trim().toUpperCase();
+    const pair = baseSym && quoteSym ? `${baseSym}${quoteSym}` : "";
+    const priceForApi = !isLimit ? buy_price : isLimit && price ? price : buy_price;
+    const data = {
+      pair,
+      type: t,
       side: isBuy ? "BUY" : "SELL",
+      quantity: String(amount),
     };
+    if (t === "LIMIT") {
+      data.price = String(priceForApi);
+    }
     dispatch(placeOrder(data, setVisible));
   };
 

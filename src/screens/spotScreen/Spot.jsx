@@ -74,6 +74,7 @@ import {
   tradeHistoryBaseAsset,
 } from "../../helper/utility";
 import { colors, lightTheme } from "../../theme/colors";
+import { fontFamily, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { universalPaddingHorizontal, borderWidth } from "../../theme/dimens";
@@ -2282,14 +2283,19 @@ const Spot = () => {
     const stopPxRaw = stopPrice !== undefined && stopPrice !== null && String(stopPrice).trim() !== ""
       ? stopPrice
       : buy_price;
+    const baseSym = String(base_currency ?? "").trim().toUpperCase();
+    const quoteSym = String(quote_currency ?? "").trim().toUpperCase();
+    const pair = baseSym && quoteSym ? `${baseSym}${quoteSym}` : "";
+
     const data = {
-      base_currency_id: base_currency_id,
-      order_type: spotOrderType,
-      price: String(orderPriceForApi),
-      quantity: String(amount),
-      quote_currency_id: quote_currency_id,
+      pair,
+      type: spotOrderType,
       side: isBuy ? "BUY" : "SELL",
+      quantity: String(amount),
     };
+    if (spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT") {
+      data.price = String(orderPriceForApi);
+    }
     if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
       data.stop_price = String(stopPxRaw);
     }
@@ -2303,16 +2309,24 @@ const Spot = () => {
         data.max_slippage_percent = n;
       }
     }
+    const amtNum = parseFloat(String(amount)) || 0;
+    const pxForNotional =
+      spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT"
+        ? orderPriceForApi
+        : refPrice;
+    if (Number.isFinite(amtNum) && Number.isFinite(pxForNotional)) {
+      data.total = String(pxForNotional * amtNum);
+    }
     return { data, orderPriceForValidation };
   }, [
     amount,
-    base_currency_id,
+    base_currency,
     buy_price,
     isBuy,
     limitFok,
     limitIoc,
     price,
-    quote_currency_id,
+    quote_currency,
     slippageEnabled,
     slippageError,
     slippagePct,
@@ -2323,6 +2337,10 @@ const Spot = () => {
   const onSubmit = () => {
     if (skip_buy_sell) {
       const { data, orderPriceForValidation } = buildSpotOrderPayload();
+      if (!data.pair) {
+        showError("Select a trading pair");
+        return;
+      }
       if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
         if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) return;
       }
@@ -2337,6 +2355,11 @@ const Spot = () => {
 
   const onConfirm = () => {
     const { data, orderPriceForValidation } = buildSpotOrderPayload();
+    if (!data.pair) {
+      showError("Select a trading pair");
+      setIsConfirm(false);
+      return;
+    }
     if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
       if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) {
         setIsConfirm(false);
@@ -3226,6 +3249,7 @@ const Spot = () => {
                   style={[
                     styles.spotOrderFieldCard,
                     styles.spotOrderFieldCardDense,
+                    styles.spotOrderFieldCardPrice,
                     {
                       backgroundColor: themeColors.input,
                       borderColor: themeColors.themeBorderColor,
@@ -3243,15 +3267,15 @@ const Spot = () => {
                             textAlign: "center",
                             top: priceAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [9, 1],
+                              outputRange: [11, 2],
                             }),
                             fontSize: priceAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [9, 7],
+                              outputRange: [12, 10],
                             }),
                             lineHeight: priceAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [12, 9],
+                              outputRange: [16, 13],
                             }),
                             color: themeColors.secondaryText,
                           },
@@ -3271,7 +3295,7 @@ const Spot = () => {
                               paddingVertical: 0,
                               marginTop: priceAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [15, 4],
+                                outputRange: [16, 14],
                               }),
                             },
                           ]}
@@ -3299,7 +3323,6 @@ const Spot = () => {
                               styles.spotOrderInputValue,
                               styles.spotOrderInputValueDense,
                               {
-                                top:2,
                                 color: themeColors.text,
                                 textAlign: "center",
                                 textAlignVertical: "center",
@@ -3320,12 +3343,12 @@ const Spot = () => {
                         <Animated.View
                           style={{
                             width: "100%",
-                            minHeight: 18,
+                            minHeight: 23,
                             justifyContent: "center",
                             alignItems: "center",
                             marginTop: priceAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [15, 4],
+                              outputRange: [16, 14],
                             }),
                           }}
                         >
@@ -3364,15 +3387,15 @@ const Spot = () => {
                               textAlign: "center",
                               top: stopAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [9, 1],
+                                outputRange: [11, 2],
                               }),
                               fontSize: stopAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [9, 7],
+                                outputRange: [12, 10],
                               }),
                               lineHeight: stopAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [12, 9],
+                                outputRange: [16, 13],
                               }),
                               color: themeColors.secondaryText,
                             },
@@ -3479,15 +3502,15 @@ const Spot = () => {
                             textAlign: "center",
                             top: amountAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [9, 1],
+                              outputRange: [11, 2],
                             }),
                             fontSize: amountAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [9, 7],
+                              outputRange: [12, 10],
                             }),
                             lineHeight: amountAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [12, 9],
+                              outputRange: [16, 13],
                             }),
                             color: themeColors.secondaryText,
                           },
@@ -3506,7 +3529,7 @@ const Spot = () => {
                           paddingVertical: 0,
                           marginTop: amountAnim.interpolate({
                             inputRange: [0, 1],
-                            outputRange: [0, 4],
+                            outputRange: [0, 8],
                           }),
                         },
                       ]}
@@ -3613,15 +3636,15 @@ const Spot = () => {
                               textAlign: "center",
                               top: amountAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [9, 1],
+                                outputRange: [11, 2],
                               }),
                               fontSize: amountAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [9, 7],
+                                outputRange: [12, 10],
                               }),
                               lineHeight: amountAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [12, 9],
+                                outputRange: [16, 13],
                               }),
                               color: themeColors.secondaryText,
                             },
@@ -3637,9 +3660,10 @@ const Spot = () => {
                               backgroundColor: "transparent",
                               paddingHorizontal: 0,
                               paddingVertical: 0,
+                              minHeight: 27,
                               marginTop: amountAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [0, 4],
+                                outputRange: [0, 12],
                               }),
                             },
                           ]}
@@ -4649,7 +4673,7 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     paddingVertical: 2,
     paddingHorizontal: 3,
-    minHeight: 34,
+    minHeight: 40,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "visible",
@@ -4663,10 +4687,12 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   spotOrderInputLabel: {
-    fontSize: 10,
+    fontSize: 13,
+    fontFamily: fontFamilySemiBold,
+    fontWeight: "600",
     textAlign: "center",
     marginBottom: 0,
-    lineHeight: 13,
+    lineHeight: 17,
   },
   spotOrderInputBox: {
     flexDirection: "row",
@@ -4674,44 +4700,48 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderRadius: 6,
     paddingHorizontal: 2,
-    minHeight: 22,
+    minHeight: 27,
   },
   spotOrderStepBtn: {
     paddingVertical: 0,
     paddingHorizontal: 0,
-    minWidth: 22,
+    minWidth: 24,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
   },
   spotOrderStepBtnText: {
-    fontSize: 11,
-    fontWeight: "400",
+    fontSize: 14,
+    fontFamily: fontFamily,
   },
   spotOrderInputValue: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 14,
     textAlign: "center",
     textAlignVertical: "center",
     paddingVertical: 2,
     paddingHorizontal: 2,
-    minHeight: 22,
+    minHeight: 27,
     alignSelf: "center",
-    fontFamily: MEDIUM,
-    lineHeight: 16,
+    fontFamily: fontFamily,
+    lineHeight: 20,
   },
   spotOrderTotalValue: {
     flex: 1,
   },
   /** Price / Amount / Total only — shorter vertical footprint */
   spotOrderFieldCardDense: {
-    minHeight: 34,
-    paddingVertical: 1,
+    minHeight: 44,
+    paddingVertical: 2,
     paddingHorizontal: 2,
+  },
+  /** Price row: extra min height so label ↔ value gap (marginTop) does not clip */
+  spotOrderFieldCardPrice: {
+    minHeight: 52,
   },
   /** Amount / Total when empty — Binance-like short row, label centered */
   spotOrderFieldCardTight: {
-    minHeight: 26,
+    minHeight: 32,
     paddingVertical: 0,
     paddingHorizontal: 2,
     justifyContent: "center",
@@ -4723,18 +4753,19 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   spotOrderTotalEmptyInner: {
-    minHeight: 17,
+    minHeight: 24,
     justifyContent: "center",
     alignItems: "center",
   },
   spotOrderInputBoxDense: {
-    minHeight: 18,
+    minHeight: 23,
   },
   spotOrderInputValueDense: {
-    minHeight: 18,
+    minHeight: 23,
     paddingVertical: 0,
-    fontSize: 8,
-    lineHeight: 12,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fontFamily,
   },
   /** Slippage: slightly larger placeholder/value than dense amount; % overlay so caret stays centered */
   spotOrderSlippageInputShell: {
@@ -4752,7 +4783,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     paddingLeft: 26,
     paddingRight: 26,
-    fontFamily: MEDIUM,
+    fontFamily: fontFamilyMedium,
     textAlign: "center",
     textAlignVertical: "center",
   },
@@ -4766,19 +4797,19 @@ const styles = StyleSheet.create({
   spotOrderSlippagePctText: {
     fontSize: 11,
     lineHeight: 14,
-    fontFamily: MEDIUM,
-   
+    fontFamily: fontFamilyMedium,
   },
   /** Price / Amount steppers (+/−) */
   spotOrderStepBtnSpotPair: {
-    minWidth: 24,
+    minWidth: 28,
   },
   /** Total row: same side width as ± so value centers like Price/Amount */
   spotOrderTotalSideSpacer: {
-    minWidth: 24,
+    minWidth: 28,
   },
   spotOrderStepBtnTextDense: {
-    fontSize: 10,
+    fontSize: 13,
+    fontFamily: fontFamily,
   },
   input: {
     // borderWidth: 1,
@@ -4788,7 +4819,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 10,
     backgroundColor: "#EBEAE7",
-    fontWeight: "600",
+    fontWeight: "400",
     marginTop: 0,
   },
   percentButtons: {

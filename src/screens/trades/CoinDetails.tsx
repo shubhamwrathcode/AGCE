@@ -59,6 +59,7 @@ import {
   universalPaddingHorizontal,
   universalPaddingHorizontalHigh,
 } from '../../theme/dimens';
+import type {PlaceOrderProps} from '../../helper/types';
 import {
   BASE_URL,
   errorText,
@@ -76,8 +77,6 @@ import {
 import PopupModal from '../home/Model';
 import {connect} from 'socket.io-client';
 import {showError} from '../../helper/logger';
-import CoinTransactionHistory from '../home/CoinTransactionHistory';
-import {PickerSelect} from '../../shared/components/PickerSelect';
 import RBSheet from 'react-native-raw-bottom-sheet';
 
 const socket = connect(BASE_URL, {
@@ -294,14 +293,23 @@ const CoinDetails = () => {
       return;
     }
     if (skip_buy_sell) {
-      let data = {
-        base_currency_id: base_currency_id,
-        order_type: isLimit ? 'LIMIT' : 'MARKET',
-        price: price,
-        quantity: amount,
-        quote_currency_id: quote_currency_id,
+      const t = isLimit ? 'LIMIT' : 'MARKET';
+      const baseSym = String(base_currency ?? '').trim().toUpperCase();
+      const quoteSym = String(quote_currency ?? '').trim().toUpperCase();
+      const pair = baseSym && quoteSym ? `${baseSym}${quoteSym}` : '';
+      const data: PlaceOrderProps = {
+        pair,
+        type: t,
         side: isBuy ? 'BUY' : 'SELL',
+        quantity: String(amount),
       };
+      if (t === 'LIMIT') {
+        data.price = String(price);
+      }
+      if (!pair) {
+        showError('Select a trading pair');
+        return;
+      }
       dispatch(placeOrder(data, setVisible));
 
       setTimeout(() => {
@@ -353,15 +361,23 @@ const CoinDetails = () => {
     setTotal(multiply(price, qty));
   };
   const onConfirm = () => {
-    let data = {
-      base_currency_id: base_currency_id,
-      order_type: isLimit ? 'LIMIT' : 'MARKET',
-      price: price,
-      quantity: amount,
-      quote_currency_id: quote_currency_id,
+    const t = isLimit ? 'LIMIT' : 'MARKET';
+    const baseSym = String(base_currency ?? '').trim().toUpperCase();
+    const quoteSym = String(quote_currency ?? '').trim().toUpperCase();
+    const pair = baseSym && quoteSym ? `${baseSym}${quoteSym}` : '';
+    const data: PlaceOrderProps = {
+      pair,
+      type: t,
       side: isBuy ? 'BUY' : 'SELL',
-      total: total,
+      quantity: String(amount),
     };
+    if (t === 'LIMIT') {
+      data.price = String(price);
+    }
+    if (!pair) {
+      showError('Select a trading pair');
+      return;
+    }
     dispatch(placeOrder(data, setVisible));
     setTimeout(() => {
       let _data = {

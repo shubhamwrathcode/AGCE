@@ -331,18 +331,24 @@ export interface CancelOrderProps {
   order_id: string;
 }
 
+/** Body for `POST spot/v1/orders` — same shape as web `buildSpotOrderPayload`. */
 export interface PlaceOrderProps {
-  base_currency_id: string;
-  order_type: string;
-  price: string | number;
-  quantity: string;
-  quote_currency_id: string;
+  /** e.g. BTCUSDT (uppercase base + quote). Omit if `pair_id` is sent. */
+  pair?: string;
+  pair_id?: string;
+  /** LIMIT | MARKET | STOP_LIMIT | STOP_MARKET */
+  type: string;
   side: string;
-  /** Spot engine: trigger / stop reference for STOP_LIMIT / STOP_MARKET */
+  quantity: string;
+  /** Required for LIMIT / STOP_LIMIT only */
+  price?: string | number;
+  /** STOP_LIMIT / STOP_MARKET */
   stop_price?: string | number;
-  /** GTC (default) | IOC | FOK for LIMIT / STOP_LIMIT */
+  /** FOK | IOC when not GTC (LIMIT / STOP_LIMIT) */
   time_in_force?: string;
   max_slippage_percent?: number;
+  /** UI-only; not required by spot API */
+  total?: string | number;
 }
 
 export interface HistoricDataProps {
