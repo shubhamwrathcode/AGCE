@@ -1,7 +1,6 @@
 /* eslint-disable react-native/no-inline-styles */
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { View, StyleSheet, Platform, ScrollView } from "react-native";
-import { colors, lightTheme } from "../../theme/colors";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -28,7 +27,7 @@ import { IMAGE_BASE_URL } from "../../helper/Constants";
 import StakingDahboardData from "./StakingDahboardData";
 
 const CoinList = React.memo(() => {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const futuresPairs = useAppSelector((state) => state.home.futuresPairs ?? []);
   const theme = useAppSelector((state) => state.auth.theme);
@@ -41,8 +40,6 @@ const CoinList = React.memo(() => {
   const listAnimX = useSharedValue(0);
   const listAnimOpacity = useSharedValue(1);
 
-  const indicatorX = useSharedValue(0);
-  const indicatorW = useSharedValue(0);
   const tabLayoutsRef = useRef({});
 
   const tabs = useMemo(
@@ -214,18 +211,14 @@ const CoinList = React.memo(() => {
     listAnimOpacity.value = withTiming(1, { duration: 180 });
     listAnimX.value = withTiming(0, { duration: 220 });
 
-    // indicator slide
     const layout = tabLayoutsRef.current?.[String(activeTabList)];
     if (layout) {
-      indicatorX.value = withTiming(layout.x, { duration: 220 });
-      indicatorW.value = withTiming(layout.w, { duration: 220 });
-      // keep selected tab in view
       tabScrollRef.current?.scrollTo?.({
         x: Math.max(0, layout.x - 60),
         animated: true,
       });
     }
-  }, [activeTabList, indicatorX, indicatorW, listAnimOpacity, listAnimX]);
+  }, [activeTabList, listAnimOpacity, listAnimX]);
 
   const listAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -234,17 +227,10 @@ const CoinList = React.memo(() => {
     };
   });
 
-  const indicatorStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: indicatorX.value }],
-      width: indicatorW.value,
-    };
-  });
-
   return (
     <Animated.View
       entering={FadeIn.duration(600)}
-      style={[styles.container, { marginBottom: 50, }]}
+      style={[styles.container, { marginBottom: 28 }]}
     >
 
       {/* Single elevated card: Tabs + 4 items list (no scroll) + View More */}
@@ -256,33 +242,30 @@ const CoinList = React.memo(() => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabRow}
           >
-            <Animated.View pointerEvents="none" style={[styles.tabIndicator, indicatorStyle]} />
             {tabs.map((t) => {
               const active = activeTabList === t.key;
               return (
                 <TouchableOpacityView
                   key={String(t.key)}
-                  style={[
-                    styles.tabPill,
-                    active ? styles.tabPillActive : null,
-                  ]}
+                  style={styles.tabPill}
                   onPress={() => handleTabChange(t.key)}
                   activeOpacity={0.8}
                   onLayout={(e) => {
                     const { x, width } = e.nativeEvent.layout;
                     tabLayoutsRef.current[String(t.key)] = { x, w: width };
-                    // init indicator on first measure
-                    if (t.key === activeTabList && indicatorW.value === 0) {
-                      indicatorX.value = x;
-                      indicatorW.value = width;
-                    }
                   }}
                 >
                   <AppText
                     weight={SEMI_BOLD}
                     style={[
                       styles.tabLabel,
-                      { color: active ? "#111827" : "#9CA3AF" },
+                      {
+                        color: active
+                          ? isDark
+                            ? themeColors.text
+                            : "#000000"
+                          : themeColors.secondaryText,
+                      },
                     ]}
                   >
                     {t.label}
@@ -320,15 +303,17 @@ const CoinList = React.memo(() => {
               <View style={{ marginTop: 6 }}>
                 {fourItems.map((item, idx) => {
                   const sym = String(item?.base_currency || "").toUpperCase();
+                  const quote = normSym(item?.quote_currency) || "USDT";
+                  const pairLabel = sym ? `${sym}/${quote}` : "—";
                   const name = item?.base_currency_name || item?.base_currency || "—";
                   const last = item?.buy_price ?? item?.last_price ?? item?.price ?? 0;
                   const sub = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
-                  const chg = Number(item?.change_percentage) || 0;
+                  const chg = Number(item?.change_percentage ?? item?.changePercentage ?? item?.change) || 0;
                   const isUp = chg >= 0;
                   const chgText = `${Math.abs(chg).toFixed(2)}%`;
                   return (
                     <TouchableOpacityView
-                      key={`${sym}-${idx}`}
+                      key={`${sym}-${quote}-${idx}`}
                       onPress={() => handleNavigate(item)}
                       activeOpacity={0.85}
                       style={styles.row}
@@ -345,12 +330,12 @@ const CoinList = React.memo(() => {
                             style={{ width: 22, height: 22 }}
                           />
                         </View>
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
                           <AppText style={styles.coinName} numberOfLines={1}>
-                            {name}
+                            {pairLabel}
                           </AppText>
                           <AppText style={styles.coinSym} numberOfLines={1}>
-                            {sym}
+                            {name}
                           </AppText>
                         </View>
                       </View>
@@ -411,7 +396,8 @@ const HOME_HORIZONTAL_PADDING = 12;
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: HOME_HORIZONTAL_PADDING,
-    paddingVertical: universalPaddingHorizontal,
+    paddingTop: 2,
+    paddingBottom: universalPaddingHorizontal,
   },
   elevatedCard: {
     padding: 5,
@@ -433,25 +419,13 @@ const styles = StyleSheet.create({
     gap: 6,
     position: "relative",
   },
-  tabIndicator: {
-    position: "absolute",
-    left: 0,
-    bottom: 0,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: lightTheme.input,
-    zIndex: -1,
-  },
   tabPill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 5,
   },
-  tabPillActive: {
-    backgroundColor: lightTheme.input,
-  },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 14,
   },
   tableHeader: {
     flexDirection: "row",

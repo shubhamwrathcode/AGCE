@@ -2,18 +2,25 @@ import React, { useCallback, useMemo } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, Dimensions } from "react-native";
 import { AppText, FOURTEEN, TWELVE } from "../../shared";
 import FastImage from "react-native-fast-image";
-import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, starFillIcon, starIcon } from "../../helper/ImageAssets";
+import {
+  NO_NOTIFICATION_ICON,
+  NO_NOTIFICATION_ICON_LIGHT,
+  starFillIcon,
+  starIcon,
+  back_ic,
+} from "../../helper/ImageAssets";
 import { useAppSelector } from "../../store/hooks";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import { colors } from "../../theme/colors";
 import { addToFavorites } from "../../actions/homeActions";
 import { useDispatch } from "react-redux";
-import { BASE_URL, IMAGE_BASE_URL } from "../../helper/Constants";
+import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { useTheme } from "../../hooks/useTheme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const H_PAD = Math.max(14, SCREEN_WIDTH * 0.04);
-const ROW_HEIGHT = 40;
+const ROW_HEIGHT_DEFAULT = 40;
+const ROW_HEIGHT_HOME_TAB = 60;
 
 const formatInrPrice = (usdPrice) => {
   if (usdPrice == null || isNaN(usdPrice)) return "—";
@@ -21,8 +28,9 @@ const formatInrPrice = (usdPrice) => {
   return inr >= 1000 ? `${(inr / 1000).toFixed(2)}K` : `${inr.toFixed(2)}`;
 };
 
-const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite }) => {
-  const { colors: themeColors } = useTheme();
+const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, pairTypography }) => {
+  const { colors: themeColors, isDark } = useTheme();
+  const isHomeTab = pairTypography === "homeTab";
   const isFavorite = favoriteArray?.includes(item?._id);
   const isNegative = (item?.change_percentage ?? 0) < 0;
 
@@ -42,9 +50,79 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite }
       : "0%";
   const priceStr = item?.buy_price != null ? toFixedFive(item.buy_price) : "0";
   const inrStr = formatInrPrice(item?.buy_price);
-  const ticker = item?.base_currency || "—";
-  const fullName = item?.base_currency_fullname || item?.base_currency || ticker;
+  const ticker = String(item?.base_currency || "").toUpperCase() || "—";
+  const quote = String(item?.quote_currency || "").trim().toUpperCase() || "USDT";
+  const pairLabel = ticker && ticker !== "—" ? `${ticker}/${quote}` : "—";
+  const fullName = item?.base_currency_fullname || item?.base_currency_name || item?.base_currency || ticker;
   const iconUri = item?.icon_path ? IMAGE_BASE_URL + item.icon_path : null;
+
+  if (isHomeTab) {
+    const last = item?.buy_price ?? item?.last_price ?? item?.price ?? 0;
+    const sub = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
+    const chg = Number(item?.change_percentage ?? item?.changePercentage ?? item?.change) || 0;
+    const isUp = chg >= 0;
+    const chgText = `${Math.abs(chg).toFixed(2)}%`;
+    const iconBg = isDark ? themeColors.card : "#F3F4F6";
+
+    return (
+      <TouchableOpacity
+        style={[styles.row, styles.rowHomeTab, { borderBottomColor: themeColors.border }]}
+        onPress={handlePress}
+        activeOpacity={0.7}
+      >
+        <View style={styles.nameCol}>
+          <View style={styles.nameRowHomeTab}>
+            <TouchableOpacity onPress={handleAddFav} activeOpacity={0.7} style={styles.starBtnHomeTab}>
+              <FastImage
+                source={isFavorite ? starFillIcon : starIcon}
+                resizeMode="contain"
+                style={styles.starIcon}
+                tintColor={isFavorite ? colors.starColor : themeColors.secondaryText}
+              />
+            </TouchableOpacity>
+            <View style={[styles.iconCircleHomeTab, { backgroundColor: iconBg }]}>
+              {iconUri ? (
+                <FastImage source={{ uri: iconUri }} resizeMode="contain" style={styles.coinIconHomeTab} />
+              ) : (
+                <View style={[styles.coinIconHomeTab, styles.coinIconPlaceholder, { backgroundColor: themeColors.card }]} />
+              )}
+            </View>
+            <View style={styles.nameBlock}>
+              <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
+                {pairLabel}
+              </AppText>
+              <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.coinListSub, { color: themeColors.secondaryText }]}>
+                {fullName}
+              </AppText>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.priceCol}>
+          <Text numberOfLines={1} style={[styles.coinListPriceMain, { color: themeColors.text }]}>
+            {String(last)}
+          </Text>
+          <Text numberOfLines={1} style={[styles.coinListPriceSub, { color: themeColors.secondaryText }]}>
+            {String(sub)}
+          </Text>
+        </View>
+
+        <View style={styles.chgCol}>
+          <View
+            style={[
+              styles.changePillHomeTab,
+              { backgroundColor: isUp ? "#2DBE7E" : "#EF4444" },
+            ]}
+          >
+            <Text numberOfLines={1} style={styles.changeTextHomeTab}>
+              {isUp ? "▲ " : "▼ "}
+              {chgText}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <TouchableOpacity
@@ -63,22 +141,15 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite }
             />
           </TouchableOpacity>
           {iconUri ? (
-            <FastImage
-              source={{ uri: iconUri }}
-              resizeMode="cover"
-              style={styles.coinIcon}
-            />
+            <FastImage source={{ uri: iconUri }} resizeMode="cover" style={styles.coinIcon} />
           ) : (
             <View style={[styles.coinIcon, styles.coinIconPlaceholder, { backgroundColor: themeColors.card }]} />
           )}
           <View style={styles.nameBlock}>
-            <AppText numberOfLines={1} style={[styles.symbolText, { color: themeColors.text }]}>
-              {ticker}
-              <Text style={{ fontWeight: "400", color: themeColors.secondaryText, fontSize: 11.5 }}>
-                {' '}/{item?.quote_currency}
-              </Text>
+            <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.symbolText, { color: themeColors.text }]}>
+              {pairLabel}
             </AppText>
-            <AppText numberOfLines={1} style={[styles.fullName, { color: themeColors.secondaryText }]}>
+            <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.fullName, { color: themeColors.secondaryText }]}>
               {fullName}
             </AppText>
           </View>
@@ -94,10 +165,12 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite }
         </Text>
       </View>
 
-      <View style={[styles.chgPill, isNegative ? styles.chgPillRed : styles.chgPillGreen]}>
-        <Text numberOfLines={1} style={styles.chgPillText}>
-          {changeStr}
-        </Text>
+      <View style={styles.chgCol}>
+        <View style={[styles.chgPill, isNegative ? styles.chgPillRed : styles.chgPillGreen]}>
+          <Text numberOfLines={1} style={styles.chgPillText}>
+            {changeStr}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -105,15 +178,19 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite }
   return (
     prevProps.item?._id === nextProps.item?._id &&
     prevProps.item?.buy_price === nextProps.item?.buy_price &&
+    prevProps.item?.last_price === nextProps.item?.last_price &&
+    prevProps.item?.sell_price === nextProps.item?.sell_price &&
     prevProps.item?.change_percentage === nextProps.item?.change_percentage &&
-    prevProps.favoriteArray?.includes(prevProps.item?._id) === nextProps.favoriteArray?.includes(nextProps.item?._id)
+    prevProps.favoriteArray?.includes(prevProps.item?._id) === nextProps.favoriteArray?.includes(nextProps.item?._id) &&
+    prevProps.pairTypography === nextProps.pairTypography
   );
 });
 
 MarketRow.displayName = "MarketRow";
 
-const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = true }) => {
+const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = true, pairTypography }) => {
   const { colors: themeColors, isDark } = useTheme();
+  const rowHeight = pairTypography === "homeTab" ? ROW_HEIGHT_HOME_TAB : ROW_HEIGHT_DEFAULT;
   const dispatch = useDispatch();
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
 
@@ -138,29 +215,82 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
         favoriteArray={favoriteArray}
         onPress={handlePress}
         onToggleFavorite={handleAddFav}
+        pairTypography={pairTypography}
       />
     ),
-    [favoriteArray, handlePress, handleAddFav]
+    [favoriteArray, handlePress, handleAddFav, pairTypography]
   );
 
   const keyExtractor = useCallback((item, index) => item?._id || index.toString(), []);
 
-  const ListHeaderComponent = useMemo(
-    () => (
+  const ListHeaderComponent = useMemo(() => {
+    if (pairTypography === "homeTab") {
+      return (
+        <View style={[styles.tableHeader, styles.tableHeaderHomeTab, { borderBottomColor: themeColors.border }]}>
+          <AppText
+            numberOfLines={1}
+            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { flex: 1.2, color: themeColors.secondaryText }]}
+          >
+            Symbol
+          </AppText>
+          <AppText
+            numberOfLines={1}
+            style={[
+              styles.tableHeaderText,
+              styles.tableHeaderTextNoMargin,
+              { flex: 1, textAlign: "right", color: themeColors.secondaryText },
+            ]}
+          >
+            Last Price
+          </AppText>
+          <View style={styles.headerChgWrap}>
+            <View style={styles.headerChgInner}>
+              <AppText
+                numberOfLines={1}
+                style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
+              >
+                24H Change
+              </AppText>
+              <FastImage
+                source={back_ic}
+                style={{ width: 10, height: 10, transform: [{ rotate: "90deg" }] }}
+                resizeMode="contain"
+                tintColor="#9CA3AF"
+              />
+            </View>
+          </View>
+        </View>
+      );
+    }
+    return (
       <View style={[styles.tableHeader, { borderBottomColor: themeColors.border }]}>
         <View style={styles.headerCellName}>
-          <AppText style={[styles.tableHeaderText, { color: themeColors.secondaryText }]}>Pair</AppText>
+          <AppText
+            numberOfLines={1}
+            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
+          >
+            Pair
+          </AppText>
         </View>
         <View style={styles.headerCellPrice}>
-          <AppText style={[styles.tableHeaderText, { color: themeColors.secondaryText }]}>Last Price</AppText>
+          <AppText
+            numberOfLines={1}
+            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
+          >
+            Last Price
+          </AppText>
         </View>
         <View style={styles.headerCellChg}>
-          <AppText style={[styles.tableHeaderText, { color: themeColors.secondaryText }]}>24h Chg%</AppText>
+          <AppText
+            numberOfLines={1}
+            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
+          >
+            24h Chg%
+          </AppText>
         </View>
       </View>
-    ),
-    [themeColors.border, themeColors.secondaryText]
-  );
+    );
+  }, [themeColors.border, themeColors.secondaryText, pairTypography]);
 
   const ListEmptyComponent = useMemo(
     () => (
@@ -197,8 +327,8 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
         initialNumToRender={8}
         windowSize={10}
         getItemLayout={(_unused, index) => ({
-          length: ROW_HEIGHT,
-          offset: ROW_HEIGHT * index,
+          length: rowHeight,
+          offset: rowHeight * index,
           index,
         })}
       />
@@ -219,16 +349,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  tableHeaderHomeTab: {
+    paddingTop: 5,
+    paddingBottom: 4,
+  },
   tableHeaderText: {
     fontSize: 11,
     fontWeight: "600",
-    marginRight: 5
+    marginRight: 5,
+  },
+  tableHeaderTextNoMargin: {
+    marginRight: 0,
+  },
+  headerChgWrap: {
+    flex: 0.9,
+    alignItems: "flex-end",
+    minWidth: 0,
+  },
+  headerChgInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   headerCellName: {
-    flex: 1,
+    flex: 1.2,
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
+    minWidth: 0,
   },
   headerCellPrice: {
     flex: 1,
@@ -236,14 +384,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 3,
+    minWidth: 0,
   },
   headerCellChg: {
-    width: 64,
+    flex: 0.9,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 3,
-    marginLeft: 20,
+    minWidth: 0,
   },
   sortIcon: {
     width: 10,
@@ -254,10 +403,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
-    minHeight: ROW_HEIGHT,
+    minHeight: ROW_HEIGHT_DEFAULT,
+  },
+  rowHomeTab: {
+    paddingVertical: 12,
+    paddingHorizontal: 4,
   },
   nameCol: {
-    flex: 1,
+    flex: 1.2,
     minWidth: 0,
     justifyContent: "center",
   },
@@ -265,6 +418,67 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+  },
+  nameRowHomeTab: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  starBtnHomeTab: {
+    width: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  iconCircleHomeTab: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginRight: 12,
+  },
+  coinIconHomeTab: {
+    width: 22,
+    height: 22,
+  },
+  coinListPair: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  coinListSub: {
+    marginTop: 0,
+    fontSize: 10,
+  },
+  coinListPriceMain: {
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "right",
+  },
+  coinListPriceSub: {
+    marginTop: 2,
+    fontSize: 10,
+    textAlign: "right",
+  },
+  changePillHomeTab: {
+    minWidth: 70,
+    paddingHorizontal: 8,
+    height: 26,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  changeTextHomeTab: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  chgCol: {
+    flex: 0.9,
+    alignItems: "flex-end",
+    justifyContent: "center",
+    minWidth: 0,
   },
   starBtn: {
     width: 18,
@@ -290,7 +504,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   symbolText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
   },
   fullName: {
@@ -314,13 +528,13 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   chgPill: {
-    minWidth: 64,
+    minWidth: 54,
     paddingVertical: 3,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 26,
+    flexShrink: 0,
   },
   chgPillRed: {
     backgroundColor: colors.red,

@@ -226,10 +226,9 @@
 //   },
 // });
 
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useEffect, useMemo, useCallback, useRef } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
-import CustomDots from './CustomDots';
 import { useAppSelector } from '../../store/hooks';
 import NavigationService from '../../navigation/NavigationService';
 import { WALLET_SCREEN } from '../../navigation/routes';
@@ -242,10 +241,12 @@ import { lightTheme } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
 
+const CAROUSEL_AUTO_MS = 3000;
+
 const CoinSlider = () => {
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const hotPairsChart = useAppSelector((state) => state.home.hotPairsChart) ?? {};
-  const [activeIndex, setActiveIndex] = useState(0);
+  const carouselRef = useRef(null);
   const { colors: themeColors } = useTheme();
 
   const SIDE_SPACE = 12;
@@ -269,6 +270,20 @@ const CoinSlider = () => {
     }
     return out;
   }, [coinPairs, hotPairsChart]);
+
+  const slideCount = featuredCoins.length;
+
+  useEffect(() => {
+    if (slideCount <= 1) return undefined;
+    const id = setInterval(() => {
+      try {
+        carouselRef.current?.next?.({ animated: true });
+      } catch {
+        /* ignore */
+      }
+    }, CAROUSEL_AUTO_MS);
+    return () => clearInterval(id);
+  }, [slideCount]);
 
   const handlePress = useCallback((item) => {
     if (item?.base_currency && item?.quote_currency) {
@@ -337,15 +352,15 @@ const CoinSlider = () => {
   if (featuredCoins.length === 0) return null;
 
   return (
-    <View style={{ paddingHorizontal: SIDE_SPACE }}>
+    <View style={{ paddingHorizontal: SIDE_SPACE, marginBottom: -16 }}>
       <Carousel
-        loop
+        ref={carouselRef}
+        loop={slideCount > 1}
         width={ITEM_WIDTH}
         height={130}
-        autoPlay
+        autoPlay={false}
         data={featuredCoins}
-        scrollAnimationDuration={1000}
-        onSnapToItem={(index) => setActiveIndex(index)}
+        scrollAnimationDuration={600}
         renderItem={renderItem}
         mode="parallax"
         modeConfig={{
@@ -357,12 +372,6 @@ const CoinSlider = () => {
         }}
         style={{ width: '100%' }}
       />
-
-      <View style={styles.dotContainer}>
-        {featuredCoins.map((_, index) => (
-          <CustomDots key={index} index={index} activeIndex={activeIndex} />
-        ))}
-      </View>
     </View>
   );
 };
@@ -410,11 +419,6 @@ const styles = StyleSheet.create({
   pctRow: {
     alignItems: 'flex-end',
     justifyContent: 'center',
-  },
-  dotContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: -20,
   },
 });
 

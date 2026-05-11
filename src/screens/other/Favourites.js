@@ -57,8 +57,19 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
     return filterPairData.filter((item) => favoriteArray.includes(item?._id));
   }, [isLoggedIn, favoriteArray, filterPairData]);
 
+  const homeTabTypo = from === "home";
+
   const renderFavoriteRow = useCallback(({ item }) => {
     const isSelected = favouriteCoins.includes(item._id);
+    const cellStyle = theme !== "Dark" ? styles.cell : styles.cellDark;
+    const pairBaseStyle = homeTabTypo
+      ? theme !== "Dark"
+        ? styles.cellHomeTab
+        : styles.cellHomeTabDark
+      : cellStyle;
+    const quoteSize = homeTabTypo ? 10 : 12;
+    const priceSize = homeTabTypo ? 13 : 12;
+    const chgSize = homeTabTypo ? 11 : 12;
 
     return (
       <TouchableOpacity
@@ -73,9 +84,9 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
               resizeMode="contain"
               style={{ width: 16, height: 16 }}
             />
-            <AppText style={[theme !== 'Dark' ? styles.cell : styles.cellDark]}>
+            <AppText style={pairBaseStyle}>
               {item?.base_currency}
-              <Text style={{ fontWeight: "400", color: "#9D9D9D", fontSize: 12 }}>
+              <Text style={{ fontWeight: "400", color: "#9D9D9D", fontSize: quoteSize }}>
                 /{item?.quote_currency}
               </Text>
             </AppText>
@@ -84,12 +95,12 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
         </View>
 
         <View style={{ flex: 1, width: "50%", alignItems: "flex-end" }}>
-          <Text style={[theme !== 'Dark' ? styles.cell : styles.cellDark, { fontSize: 12, fontWeight: "bold" }]}>
+          <Text style={[cellStyle, { fontSize: priceSize, fontWeight: "bold" }]}>
             {toFixedFive(item.buy_price)}
           </Text>
           <Text
             style={{
-              fontSize: 12,
+              fontSize: chgSize,
               color: item?.change_percentage < 0 ? colors.red : colors.green,
             }}
           >
@@ -98,16 +109,19 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
         </View>
       </TouchableOpacity>
     );
-  }, [favouriteCoins, theme, handleUnselectCoin]);
+  }, [favouriteCoins, theme, handleUnselectCoin, homeTabTypo]);
 
-  const ListHeaderComponent = useMemo(() => (
-    <View style={styles.tableHeader}>
-      <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>Pairs/Vol</Text>
-      <Text style={[styles.tableHeaderText]}>
-        Price / 24h Change
-      </Text>
-    </View>
-  ), []);
+  const ListHeaderComponent = useMemo(
+    () => (
+      <View style={styles.tableHeader}>
+        <Text style={[styles.tableHeaderText, homeTabTypo && styles.tableHeaderTextHomeTab, { flex: 1.5 }]}>
+          Pairs/Vol
+        </Text>
+        <Text style={[styles.tableHeaderText, homeTabTypo && styles.tableHeaderTextHomeTab]}>Price / 24h Change</Text>
+      </View>
+    ),
+    [homeTabTypo]
+  );
 
   if (!isLoggedIn) {
     return (
@@ -160,6 +174,7 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
           style={from === "home" ? { width: "100%", padding: 0 } : { flex: 1, width: "100%", paddingVertical: 8, paddingHorizontal: 12 }}
           onPress={handleNavigate}
           scrollEnabled={from !== "home"}
+          pairTypography={from === "home" ? "homeTab" : undefined}
         />
       )}
     </View>
@@ -180,6 +195,9 @@ const styles = StyleSheet.create({
     color: "#9D9D9D",
     fontSize: 12,
   },
+  tableHeaderTextHomeTab: {
+    fontSize: 11,
+  },
   row: {
     flexDirection: "row",
     paddingVertical: 10,
@@ -194,6 +212,16 @@ const styles = StyleSheet.create({
   },
   cellDark: {
     fontSize: 12,
+    color: "#fff",
+    fontWeight: "700",
+  },
+  cellHomeTab: {
+    fontSize: 13,
+    color: "#000",
+    fontWeight: "700",
+  },
+  cellHomeTabDark: {
+    fontSize: 13,
     color: "#fff",
     fontWeight: "700",
   },

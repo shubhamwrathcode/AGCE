@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Carousel from "react-native-reanimated-carousel";
-import CustomDots from "./CustomDots";
+// import CustomDots from "./CustomDots";
 import { useAppSelector } from "../../store/hooks";
 import { Screen } from "../../theme/dimens";
 import {
@@ -42,43 +42,62 @@ const baseOptions = {
 const HomeSlider = () => {
   const { colors: themeColors, theme } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
+  const carouselRef = useRef(null);
   const userData = useAppSelector((state) => state.auth.userData);
   const kycVerified = userData?.kycVerified != null ? Number(userData.kycVerified) : 0;
 
-  const banners = [
-    {
-      index: 0,
-      banner_path: connectwallet,
-      title: `Complete your KYC verification to unlock all account features and ensure a seamless trading experience.`,
-      onPress: () => NavigationService.navigate(KYC_STEP_ONE_SCREEN),
-      isKyc: true,
-    },
-    {
-      index: 1,
-      banner_path: connectwallet,
-      title: `Start trading directly—buy and sell with full market access, real-time prices, and a smooth trading experience.`,
-      onPress: () => NavigationService.navigate(WALLET_SCREEN),
-    },
-    {
-      index: 2,
-      banner_path: connectwallet,
-      title: `Add funds to your wallet quickly and securely to begin trading without any delays.`,
-      onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN),
-    },
-    {
-      index: 3,
-      banner_path: connectwallet,
-      title: `Have a question or need help? Get quick assistance from our support team for any queries or concerns.`,
-      onPress: () => NavigationService.navigate('Support'),
-    },
-  ];
+  const bannerList = useMemo(() => {
+    const banners = [
+      {
+        index: 0,
+        banner_path: connectwallet,
+        title: `Complete your KYC verification to unlock all account features and ensure a seamless trading experience.`,
+        onPress: () => NavigationService.navigate(KYC_STEP_ONE_SCREEN),
+        isKyc: true,
+      },
+      {
+        index: 1,
+        banner_path: connectwallet,
+        title: `Start trading directly—buy and sell with full market access, real-time prices, and a smooth trading experience.`,
+        onPress: () => NavigationService.navigate(WALLET_SCREEN),
+      },
+      {
+        index: 2,
+        banner_path: connectwallet,
+        title: `Add funds to your wallet quickly and securely to begin trading without any delays.`,
+        onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN),
+      },
+      {
+        index: 3,
+        banner_path: connectwallet,
+        title: `Have a question or need help? Get quick assistance from our support team for any queries or concerns.`,
+        onPress: () => NavigationService.navigate("Support"),
+      },
+    ];
+    return banners
+      .filter((banner) => {
+        if (banner.isKyc) {
+          return kycVerified === 0 || kycVerified === 3;
+        }
+        return true;
+      })
+      .slice(0, 3);
+  }, [kycVerified]);
 
-  const bannerList = banners.filter((banner) => {
-    if (banner.isKyc) {
-      return kycVerified === 0 || kycVerified === 3;
-    }
-    return true;
-  }).slice(0, 3);
+  const slideCount = bannerList.length;
+
+  useEffect(() => {
+    if (slideCount <= 1) return undefined;
+    const ms = 3000;
+    const id = setInterval(() => {
+      try {
+        carouselRef.current?.next?.({ animated: true });
+      } catch {
+        /* ignore */
+      }
+    }, ms);
+    return () => clearInterval(id);
+  }, [slideCount]);
 
   const renderItem = ({ item }) => {
     return (
@@ -134,7 +153,7 @@ const HomeSlider = () => {
            }}
          >
            {(() => {
-             const total = 3;
+             const total = slideCount || 1;
              const current = Math.min(activeIndex + 1, total);
              const totalColor = current === total ? "#000" : "#9CA3AF";
              return (
@@ -171,16 +190,20 @@ const HomeSlider = () => {
           }}
         >
           <Carousel
+            ref={carouselRef}
             {...baseOptions}
             data={bannerList}
             renderItem={renderItem}
             onSnapToItem={(index) => setActiveIndex(index)}
-            autoPlay={true}
-            pagingEnabled={true}
-            autoPlayInterval={2500}
+            loop={slideCount > 1}
+            enabled
+            pagingEnabled
+            autoPlay={false}
+            scrollAnimationDuration={600}
           />
         </View>
       </View>
+      {/* Dots hidden — use corner counter on slide instead
       <View style={styles.dotContainer}>
         {bannerList?.map((data, index) => {
           return (
@@ -192,17 +215,18 @@ const HomeSlider = () => {
           );
         })}
       </View>
+      */}
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  dotContainer: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
+  // dotContainer: {
+  //   alignItems: "center",
+  //   flexDirection: "row",
+  //   justifyContent: "center",
+  //   marginBottom: 10,
+  // },
 });
 
 export default HomeSlider;
