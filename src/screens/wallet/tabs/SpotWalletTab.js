@@ -70,7 +70,7 @@ const SpotWalletTab = ({
         themeColors={themeColors}
         items={[
           { key: "deposit", label: "Deposit", variant: "deposit", onPress: onDeposit },
-          { key: "buyCrypto", label: "Buy Crypto", variant: "buyCrypto", onPress: onBuyCrypto },
+          { key: "buyCrypto", label: "Buy Now", variant: "buyCrypto", onPress: onBuyCrypto },
           { key: "transfer", label: "Transfer", variant: "transfer", onPress: onTransfer },
           { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: onWithdraw },
         ]}
@@ -79,8 +79,6 @@ const SpotWalletTab = ({
       <View
         style={{
           marginTop: 18,
-          borderWidth: 1,
-          borderColor: themeColors.border,
           borderRadius: 12,
           paddingHorizontal: 12,
           paddingVertical: 12,

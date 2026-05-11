@@ -11,6 +11,7 @@ import {
   SIXTEEN,
   TWELVE,
   THIRTEEN,
+  ELEVEN,
 } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
@@ -163,28 +164,29 @@ const LockedFeatures = () => {
   const { colors: themeColors } = useTheme();
   return (
     <View style={{ marginTop: 16 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 0 }}>
         <FastImage source={lock_ic} style={{ width: 18, height: 18, marginRight: 10 }} tintColor={themeColors.text} />
         <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
           Locked Features - Verify to Unlock
         </AppText>
       </View>
-
+ <View style={{marginTop:10}}>
       {[
         { title: "Withdrawal", desc: "Locked to prevent fraud until identity is verified.", icon: withdrawal_icon2 },
         { title: "Deposit", desc: "Locked to prevent fraud until identity is verified.", icon: deposit_icon2 },
         { title: "Trading", desc: "Verification ensures safe and legitimate transactions.", icon: tradeIcon },
         { title: "P2P", desc: "Requires verification for secure transactions.", icon: p2pIcon2 }
       ].map((item, index) => (
-        <View key={index} style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingVertical: 18, paddingHorizontal: 16 }]}>
-          <FastImage source={item.icon} style={{ width: 24, height: 24, marginRight: 16 }} tintColor={themeColors.text} />
+        <View key={index} style={[styles.kycSectionCard, { backgroundColor: themeColors.card,  flexDirection: "row", alignItems: "center",  right:5 }]}>
+          <FastImage source={item.icon}  style={{ width: 24, height: 24, marginRight: 16,opacity:0.3 }} tintColor={themeColors.text} />
           <View style={{ flex: 1 }}>
-            <AppText type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>{item.title}</AppText>
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{item.desc}</AppText>
+            <AppText type={THIRTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>{item.title}</AppText>
+            <AppText type={ELEVEN} style={{ color: themeColors.secondaryText }}>{item.desc}</AppText>
           </View>
           <FastImage source={lock_ic} style={{ width: 16, height: 16 }} tintColor={themeColors.secondaryText} />
         </View>
       ))}
+      </View>
     </View>
   );
 };
@@ -192,7 +194,7 @@ const LockedFeatures = () => {
 const UnlockedFeatures = () => {
   const { colors: themeColors } = useTheme();
   return (
-    <View style={{ marginTop: 16 }}>
+    <View style={{ marginTop: 16 ,}}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
         <AppText type={FIFTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
           Unlocked Features
@@ -205,7 +207,8 @@ const UnlockedFeatures = () => {
         { title: "Trading", desc: "Verification ensures safe and legitimate transactions.", icon: tradeIcon },
         { title: "P2P", desc: "Requires verification for secure transactions.", icon: p2p_Icon }
       ].map((item, index) => (
-        <View key={index} style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingVertical: 18, paddingHorizontal: 16 }]}>
+        <View key={index} style={[styles.kycSectionCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, 
+        borderWidth: 1, flexDirection: "row", alignItems: "center", paddingVertical: 18, paddingHorizontal: 16 }]}>
           <FastImage source={item.icon} style={{ width: 24, height: 24, marginRight: 16 }} tintColor={themeColors.text} />
           <View style={{ flex: 1 }}>
             <AppText type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>{item.title}</AppText>
@@ -688,7 +691,7 @@ const styles = StyleSheet.create({
   kycRequirementsList: { flex: 1, marginBottom: 16 },
   kycThemeIcon: { width: 100, height: 76, marginLeft: 12 },
   kycThemeIconSmall: { width: 120, height: 90, alignSelf: "center", marginTop: 12 },
-  kycSectionCard: { borderRadius: 16, padding: 14, marginBottom: 14 },
+  kycSectionCard: { borderRadius: 16, padding: 10, },
   kycSectionCardTitle: { marginBottom: 8 },
   benefitsTableWrap: {},
   benefitsTableHeader: { flexDirection: "row", marginBottom: 10, paddingBottom: 8, borderBottomWidth: 1 },

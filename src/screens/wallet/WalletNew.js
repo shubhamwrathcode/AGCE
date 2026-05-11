@@ -19,6 +19,7 @@ import {
   FOURTEEN,
   SEMI_BOLD,
   TWELVE,
+  TWENTY,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import WalletHeader from "./WalletHeader";
@@ -67,7 +68,7 @@ import {
 import { useAppSelector } from "../../store/hooks";
 import { getUserBankDetails } from "../../actions/accountActions";
 import { toFixedFive } from "../../helper/utility";
-import { ACCOUNT_SCREEN, CONVERT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN, EARING_SCREEN, TRANSFER_SCREEN, WALLET_SCREEN, WALLET_WITHDRAW_SCREEN } from "../../navigation/routes";
+import { ACCOUNT_SCREEN, CONVERT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN, EARING_SCREEN, TRANSFER_SCREEN, WALLET_HISTORY_SCREEN, WALLET_SCREEN, WALLET_WITHDRAW_SCREEN } from "../../navigation/routes";
 import WalletSkeleton from "./WalletSkeleton";
 import RBSheet from "react-native-raw-bottom-sheet";
 import DepositSheet from "../../shared/components/DepositSheet";
@@ -653,6 +654,7 @@ const WalletNew = () => {
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
+      
         {contentLoading ? (
           <WalletSkeleton />
         ) : (
@@ -668,49 +670,38 @@ const WalletNew = () => {
                 return (
                   <View style={{ marginVertical: 10, paddingHorizontal: 20 }}>
                     <View>
+                      
+                      
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                         <AppText weight={SEMI_BOLD} type={EIGHTEEN}>Assets Overview</AppText>
                       </View>
 
-                      <WalletTabQuickActions
-                        theme={theme}
-                        themeColors={themeColors}
-                        items={[
-                          { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
-                          { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN) },
-                          { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
-                        ]}
-                      />
-
                       <View
                         style={{
                           marginTop: 12,
-                          paddingVertical: 14,
-                          paddingHorizontal: 14,
-                          borderWidth: 1,
-                          borderColor: themeColors.border,
+                          paddingVertical: 0,
                           borderRadius: 14,
                           backgroundColor: themeColors.themeElevationColor,
                         }}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                           <AppText color={DISCLAIMTEXT}>Estimated Balance</AppText>
                           <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
                             <FastImage
                               source={showBalance ? eye_close_icon : eye_open_icon}
                               resizeMode="contain"
-                              style={{ width: 18, height: 18 }}
+                              style={{ width: 14, height: 14 }}
                               tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
                             />
                           </TouchableOpacity>
                         </View>
 
-                        <View style={{ marginTop: 10 }}>
+                        <View style={{ marginTop: 5 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-                            <AppText type={FIFTEEN} weight={SEMI_BOLD}>
+                            <AppText type={TWENTY} weight={SEMI_BOLD}>
                               {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5)}{" "}
                             </AppText>
-                            <AppText color={DISCLAIMTEXT}>
+                            <AppText color={DISCLAIMTEXT} style={{top:5 }}>
                               {portfolioPreferredCurrency(walletBalance)}
                             </AppText>
                           </View>
@@ -719,16 +710,30 @@ const WalletNew = () => {
                               ≈ {!showBalance ? "****" : formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5)} USD
                             </AppText>
                           </View>
-                          <TouchableOpacity
+                          {/* <TouchableOpacity
                             onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
                             style={{ marginTop: 10 }}
                           >
                             <AppText color={DISCLAIMTEXT}>
                               Deposit crypto instantly with one-click {"›"}
                             </AppText>
-                          </TouchableOpacity>
+                          </TouchableOpacity> */}
                         </View>
                       </View>
+
+
+                      <WalletTabQuickActions
+                        theme={theme}
+                        themeColors={themeColors}
+                        items={[
+                          { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
+                          { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN) },
+                          { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
+                          { key: "history", label: "History", variant: "history", onPress: () => {NavigationService.navigate("Wallet_History")}},
+                        ]}
+                      />
+
+                 
 
                       <TabView
                         navigationState={{ index: innerIndex, routes: innerRoutes }}

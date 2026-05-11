@@ -1,18 +1,21 @@
 import React from "react";
 import { TouchableOpacity, View } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppText, SEMI_BOLD, TWELVE } from "../../shared";
+import { AppText, MEDIUM, SEMI_BOLD, TWELVE } from "../../shared";
 import { colors } from "../../theme/colors";
 import {
   buyCrypto,
   earningMenuDarkIcon,
   earningMenuIcon,
   futuresIcon,
+  history,
+  historyIcon,
   newDepositDarkIcon,
   newDepositIcon,
   newWidthrawDarkIcon,
   newWidthrawIcon,
   p2pIcon,
+  swapHistory,
   swap as swapIconDark,
   swapLight as swapIconLight,
   walletTransferIcon,
@@ -31,7 +34,9 @@ function iconSourceForVariant(variant, theme) {
     case "withdraw":
       return isDark ? newWidthrawDarkIcon : newWidthrawIcon;
     case "transfer":
-      return theme !== "Dark" ? walletTransferIconLight : walletTransferIcon;
+      return theme !== "Dark" ? swapIconLight : swapIconLight;
+    case "history":
+      return history;
     case "buyCrypto":
       return buyCrypto;
     case "p2p":
@@ -54,6 +59,9 @@ function iconSourceForVariant(variant, theme) {
 const WalletTabQuickActions = ({ theme, themeColors, items }) => {
   if (!Array.isArray(items) || items.length === 0) return null;
   const isDark = theme === "Dark";
+// console.log(items,'==items');
+
+   
 
   return (
     <View
@@ -63,7 +71,7 @@ const WalletTabQuickActions = ({ theme, themeColors, items }) => {
         alignItems: "flex-start",
         flexWrap: "wrap",
         marginTop: 12,
-        gap: 10,
+        gap: 18,
       }}
     >
       {items.map((item) => {
@@ -77,7 +85,7 @@ const WalletTabQuickActions = ({ theme, themeColors, items }) => {
             activeOpacity={0.78}
             accessibilityRole="button"
             accessibilityLabel={item.label}
-            style={{ alignItems: "center", width: 64, paddingHorizontal: 2 }}
+            style={{ alignItems: "center", width: 64, paddingHorizontal: 2 ,}}
           >
             <View
               style={{
@@ -91,14 +99,14 @@ const WalletTabQuickActions = ({ theme, themeColors, items }) => {
             >
               <FastImage
                 source={src}
-                style={{ width: 20, height: 20 }}
+                style={{ width:24, height: 24 }}
                 resizeMode="contain"
                 tintColor={colors.black}
               />
             </View>
             <AppText
               type={TWELVE}
-              weight={SEMI_BOLD}
+              weight={MEDIUM}
               numberOfLines={2}
               style={{
                 marginTop: 6,

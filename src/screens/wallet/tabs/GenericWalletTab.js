@@ -69,8 +69,6 @@ const GenericWalletTab = ({
       <View
         style={{
           marginTop: 18,
-          borderWidth: 1,
-          borderColor: themeColors.border,
           borderRadius: 12,
           paddingHorizontal: 12,
           paddingVertical: 12,
