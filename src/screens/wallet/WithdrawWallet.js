@@ -10,6 +10,8 @@ import {
   Pressable,
   Dimensions,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -100,6 +102,8 @@ import { getNotificationList } from "../../actions/homeActions";
 import moment from "moment";
 import { countriesList } from "../../helper/CountriesList";
 import WithdrawCoinPickerPanel from "./WithdrawCoinPickerPanel";
+import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
+import { validateEmail } from "../../helper/utility";
 
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.9);
 const AGCE_COUNTRY_SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.48);
@@ -125,6 +129,7 @@ const ADDRESS_BOOK_TOP_EXCHANGES = [
 ];
 
 const ADDRESS_BOOK_EXCHANGE_OTHER = "__OTHER__";
+const ADDRESS_BOOK_DECLARATION_TEXT = "I declare that the information I have provided is true, accurate, and complete and that my transaction complies with AGCE Terms of Use.";
 
 
 
@@ -171,7 +176,7 @@ function getWithdrawNetworks(coin) {
       const tokenAssetId = coin.token_asset_ids?.[code] || "";
       return {
         code,
-        label: CHAIN_FULL_NAMES[code] || WITHDRAW_NETWORK_LABELS[code] || code,
+        label: coin.chain_full_names?.[code] || CHAIN_FULL_NAMES[code] || WITHDRAW_NETWORK_LABELS[code] || code,
         min: minW[code] != null ? String(minW[code]) : "—",
         max: maxW[code] != null ? String(maxW[code]) : "—",
         tokenAssetId,
@@ -280,6 +285,30 @@ const WithdrawWallet = () => {
   const [agceRecipientId, setAgceRecipientId] = useState("");
   const [agceTouched, setAgceTouched] = useState({ email: false, phone: false });
 
+  const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
+  const emailSuggestBlurTimer = useRef(null);
+
+  const clearEmailSuggestBlurTimer = () => {
+    if (emailSuggestBlurTimer.current) {
+      clearTimeout(emailSuggestBlurTimer.current);
+      emailSuggestBlurTimer.current = null;
+    }
+  };
+
+  const emailDomainSuggestions = useMemo(
+    () => (withdrawToTab === "agce_user" && agceRecipientTab === "email" ? getEmailDomainSuggestions(agceRecipientEmail) : []),
+    [withdrawToTab, agceRecipientTab, agceRecipientEmail]
+  );
+
+  const applyEmailDomain = (domain) => {
+    clearEmailSuggestBlurTimer();
+    const s = String(agceRecipientEmail || "");
+    const at = s.indexOf("@");
+    if (at < 0) return;
+    setAgceRecipientEmail(`${s.slice(0, at)}@${domain}`);
+    setEmailSuggestListVisible(false);
+  };
+
   const agceErrors = useMemo(() => {
     const err = { email: "", phone: "" };
     const email = agceRecipientEmail.trim();
@@ -319,6 +348,8 @@ const WithdrawWallet = () => {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   /** Web `withdrawAmountTouched` — inline errors only after user interacts with amount field. */
   const [withdrawAmountTouched, setWithdrawAmountTouched] = useState(false);
+  /** Web `withdrawAddressTouched` — inline errors only after user interacts with address field. */
+  const [withdrawAddressTouched, setWithdrawAddressTouched] = useState(false);
   const [availableBalance, setAvailableBalance] = useState("");
   /** Web parity: `validate-address` API + `withdrawAddressValidatedKey`. */
   const [withdrawAddressValidError, setWithdrawAddressValidError] = useState("");
@@ -328,7 +359,7 @@ const WithdrawWallet = () => {
   const [isWithdrawAddressValidating, setIsWithdrawAddressValidating] = useState(false);
   const withdrawAddressValidationReqIdRef = useRef(0);
 
-  const [isAddressVerificationReminderOpen, setIsAddressVerificationReminderOpen] = useState(false);
+  const verifyReminderSheetRef = useRef(null);
   const saveAddressSheetRef = useRef(null);
   const [saveAddrLabel, setSaveAddrLabel] = useState("");
   const [saveAddrAddress, setSaveAddrAddress] = useState("");
@@ -338,7 +369,17 @@ const WithdrawWallet = () => {
   const [saveAddrStep, setSaveAddrStep] = useState("form"); // "form" | "owner" | "wallet_type" | "exchange" | "verify_method" | "otp" | "satoshi" | "metamask"
   const [saveAddrOwnership, setSaveAddrOwnership] = useState("SELF"); // "SELF" | "OTHER"
   const [saveAddrWalletType, setSaveAddrWalletType] = useState("SELF_HOSTED"); // "SELF_HOSTED" | "EXCHANGE"
+
+  // Validation state for saveAddrAddress
+  const [saveAddrAddressTouched, setSaveAddrAddressTouched] = useState(false);
+  const [saveAddrAddressValidError, setSaveAddrAddressValidError] = useState("");
+  const [saveAddrAddressValidatedKey, setSaveAddrAddressValidatedKey] = useState("");
+  const [saveAddrAddressValidating, setSaveAddrAddressValidating] = useState(false);
+  const saveAddrValidateReqIdRef = useRef(0);
+  const saveAddrValidateDebounceTimerRef = useRef(null);
   const [saveAddrExchange, setSaveAddrExchange] = useState("");
+  const [saveAddrExchangeManual, setSaveAddrExchangeManual] = useState("");
+  const [saveAddrDeclarationAccepted, setSaveAddrDeclarationAccepted] = useState(false);
   const [saveAddrExchangeSearch, setSaveAddrExchangeSearch] = useState("");
   const [saveAddrExchangeOpen, setSaveAddrExchangeOpen] = useState(false);
   const [saveAddrProofMethod, setSaveAddrProofMethod] = useState("satoshi"); // "satoshi" | "metamask"
@@ -1022,6 +1063,7 @@ const WithdrawWallet = () => {
     setWithdrawOtpPhaseActive(false);
     setOtp("");
     setWithdrawAddress("");
+    setWithdrawAddressTouched(false);
     setWithdrawAddressValidError("");
     setWithdrawAddressValidatedKey("");
     setWithdrawAddressCheckDone(false);
@@ -1033,12 +1075,21 @@ const WithdrawWallet = () => {
 
   const handleWithdrawalAddress = (value) => {
     setWithdrawAddress(value);
+    if (!withdrawAddressTouched) setWithdrawAddressTouched(true);
     setWithdrawOtpPhaseActive(false);
     setOtp("");
     setWithdrawAddressValidError("");
     setWithdrawAddressValidatedKey("");
     setWithdrawAddressCheckDone(false);
   };
+
+  /** Web parity: `withdrawAddressInlineError` (useWithdrawPageController ~1000-1005). */
+  const withdrawAddressInlineError = useMemo(() => {
+    if (withdrawToTab !== "address") return "";
+    if (!withdrawAddressTouched) return "";
+    if (withdrawAddress.trim().length > 0) return "";
+    return "Please enter Recipient's Address";
+  }, [withdrawAddress, withdrawAddressTouched, withdrawToTab]);
 
   const validateWithdrawAddressApi = useCallback(async () => {
     const addr = String(withdrawAddress || "").trim();
@@ -1114,6 +1165,128 @@ const WithdrawWallet = () => {
 
   const validateWithdrawAddressApiRef = useRef(validateWithdrawAddressApi);
   validateWithdrawAddressApiRef.current = validateWithdrawAddressApi;
+
+  const saveAddrAddressInlineError = useMemo(() => {
+    if (!saveAddrAddressTouched) return "";
+    if (String(saveAddrAddress || "").trim().length > 0) return "";
+    return "Please enter Recipient's Address";
+  }, [saveAddrAddress, saveAddrAddressTouched]);
+
+  // --- Save Address Validation ---
+  const saveAddrTokenAssetId = useMemo(() => {
+    if (!saveAddrNetwork || !saveAddrCoinObj) return "";
+    return saveAddrCoinObj.token_asset_ids?.[saveAddrNetwork] || "";
+  }, [saveAddrNetwork, saveAddrCoinObj]);
+
+  const validateSaveAddrAddressApi = useCallback(async () => {
+    const addr = String(saveAddrAddress || "").trim();
+    const net = String(saveAddrNetwork || "").trim();
+    if (!addr || !net) return false;
+
+    const validatedKey = withdrawalAddressValidationKey(net, addr, saveAddrTokenAssetId);
+    if (validatedKey && saveAddrAddressValidatedKey === validatedKey) {
+      setSaveAddrAddressValidError("");
+      return true;
+    }
+
+    const reqId = ++saveAddrValidateReqIdRef.current;
+    setSaveAddrAddressValidating(true);
+
+    try {
+      const chainCanon = canonicalWithdrawalChainForValidateAddress(net) || net.toUpperCase();
+      const body = { address: addr, chain: chainCanon };
+      if (saveAddrTokenAssetId) body.tokenAssetId = saveAddrTokenAssetId;
+
+      let r;
+      try {
+        r = await appOperation.customer.validate_withdraw_address(body);
+      } catch {
+        r = await appOperation.post("wallet/validate-address", body, CUSTOMER_TYPE);
+      }
+      if (reqId !== saveAddrValidateReqIdRef.current) return false;
+
+      const root = r && typeof r === "object" ? r : {};
+      const inner = root.data != null && typeof root.data === "object" && !Array.isArray(root.data) ? root.data : null;
+      const data = inner || root;
+
+      const validTrue = root.valid === true || data.valid === true || (typeof data.valid === "string" && String(data.valid).toLowerCase() === "true");
+      const validFalse = root.valid === false || data.valid === false || (typeof data.valid === "string" && String(data.valid).toLowerCase() === "false");
+
+      if (validFalse) {
+        setSaveAddrAddressValidatedKey("");
+        const msg = String(data?.message || root?.message || "").trim();
+        setSaveAddrAddressValidError(msg && msg.toLowerCase() !== "ok" ? msg : `Invalid address for ${net}`);
+        return false;
+      }
+
+      const successFlag = root.success === true || data.success === true;
+      const msg = String(data?.message || root?.message || "").trim();
+      const isAlreadyWhitelisted = msg.toLowerCase().includes("already whitelisted");
+
+      const ok = (successFlag && validTrue) || validTrue === true || isAlreadyWhitelisted;
+
+      if (ok) {
+        setSaveAddrAddressValidError("");
+        setSaveAddrAddressValidatedKey(validatedKey);
+        return true;
+      }
+
+      setSaveAddrAddressValidatedKey("");
+      setSaveAddrAddressValidError(msg && msg.toLowerCase() !== "ok" ? msg : `Invalid address for ${net}`);
+      return false;
+    } catch (e) {
+      if (reqId !== saveAddrValidateReqIdRef.current) return false;
+      setSaveAddrAddressValidatedKey("");
+      const msg = String(e?.message || e?.msg || "").trim();
+      setSaveAddrAddressValidError(msg || `Invalid address for ${net}`);
+      return false;
+    } finally {
+      if (reqId === saveAddrValidateReqIdRef.current) {
+        setSaveAddrAddressValidating(false);
+      }
+    }
+  }, [saveAddrAddress, saveAddrNetwork, saveAddrTokenAssetId, saveAddrAddressValidatedKey]);
+
+  const validateSaveAddrAddressApiRef = useRef(validateSaveAddrAddressApi);
+  validateSaveAddrAddressApiRef.current = validateSaveAddrAddressApi;
+
+  useEffect(() => {
+    const addr = String(saveAddrAddress || "").trim();
+    const net = String(saveAddrNetwork || "").trim();
+    if (!addr || !net) {
+      if (saveAddrValidateDebounceTimerRef.current) {
+        clearTimeout(saveAddrValidateDebounceTimerRef.current);
+        saveAddrValidateDebounceTimerRef.current = null;
+      }
+      setSaveAddrAddressValidError("");
+      setSaveAddrAddressValidatedKey("");
+      setSaveAddrAddressValidating(false);
+      return undefined;
+    }
+
+    const validatedKey = withdrawalAddressValidationKey(net, addr, saveAddrTokenAssetId);
+    if (validatedKey && saveAddrAddressValidatedKey === validatedKey) {
+      setSaveAddrAddressValidating(false);
+      return undefined;
+    }
+
+    if (saveAddrValidateDebounceTimerRef.current) {
+      clearTimeout(saveAddrValidateDebounceTimerRef.current);
+      saveAddrValidateDebounceTimerRef.current = null;
+    }
+
+    saveAddrValidateDebounceTimerRef.current = setTimeout(() => {
+      saveAddrValidateDebounceTimerRef.current = null;
+      void validateSaveAddrAddressApiRef.current?.();
+    }, 500);
+
+    return () => {
+      if (saveAddrValidateDebounceTimerRef.current) {
+        clearTimeout(saveAddrValidateDebounceTimerRef.current);
+        saveAddrValidateDebounceTimerRef.current = null;
+      }
+    };
+  }, [saveAddrAddress, saveAddrNetwork, saveAddrTokenAssetId, saveAddrAddressValidatedKey]);
 
   useEffect(() => {
     if (withdrawToTab !== "address") {
@@ -1232,10 +1405,12 @@ const WithdrawWallet = () => {
     if (!raw || !Number.isFinite(amtNum) || amtNum <= 0) return false;
     if (chainMinWithdrawal > 0 && amtNum < chainMinWithdrawal) return false;
     if (effectiveWithdrawAvailable > 0 && amtNum > effectiveWithdrawAvailable) return false;
+    // For internal transfers (AGCE User), fee is 0 and no network is selected.
+    if (withdrawToTab === "agce_user") return true;
     const fee = parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0);
     if (fee > 0 && amtNum < fee) return false;
     return true;
-  }, [withdrawAmount, chainMinWithdrawal, effectiveWithdrawAvailable, selectedCurrency, network]);
+  }, [withdrawAmount, chainMinWithdrawal, effectiveWithdrawAvailable, selectedCurrency, network, withdrawToTab]);
 
   const handleMaxWithdrawal = useCallback(() => {
     if (!selectedCurrency || Object.keys(selectedCurrency).length === 0) return;
@@ -1263,7 +1438,8 @@ const WithdrawWallet = () => {
       showError("Please select a coin first");
       return;
     }
-    if (!network) {
+    // Web parity: network is not required for internal (AGCE User) transfers.
+    if (withdrawToTab === "address" && !network) {
       showError("Please select a network first");
       return;
     }
@@ -1445,7 +1621,7 @@ const WithdrawWallet = () => {
         });
 
         if (!withdrawalAddressIsApprovedInBook && !addressBookLoading) {
-          setIsAddressVerificationReminderOpen(true);
+          verifyReminderSheetRef.current?.open();
           return;
         }
       } else if (withdrawToTab === "agce_user") {
@@ -1473,13 +1649,10 @@ const WithdrawWallet = () => {
         return;
       }
 
-      if (withdrawToTab === "address") {
-        withdrawConfirmSheetRef.current?.open();
-        setWithdrawConfirmBusy(true);
-        setTimeout(() => setWithdrawConfirmBusy(false), 3000);
-      } else {
-        setWithdrawOtpPhaseActive(true);
-      }
+      // Web parity: both flows open the confirmation/verification sheet.
+      withdrawConfirmSheetRef.current?.open();
+      setWithdrawConfirmBusy(true);
+      setTimeout(() => setWithdrawConfirmBusy(false), 3000);
       Keyboard.dismiss();
       return;
     }
@@ -1487,15 +1660,15 @@ const WithdrawWallet = () => {
   };
 
   const handleWithdraw = () => {
-    if (withdrawToTab !== "address") {
-      showError("AGCE User withdrawal logic not fully available yet");
+    if (withdrawToTab !== "address" && withdrawToTab !== "agce_user") {
+      showError("Unknown withdrawal method");
       return;
     }
-    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0 || !withdrawAddress || !network || !withdrawAmount || !otp || !isWithdrawAddressValid) {
+    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0 || !withdrawAmount || !otp) {
       showError("Please fill all required fields");
       return;
     }
-    const fee = parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0);
+    const fee = withdrawToTab === "agce_user" ? 0 : parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0);
     const rawAmt = String(withdrawAmount || "").trim();
     const amtNum = Number.parseFloat(rawAmt.replace(/,/g, ""));
     if (
@@ -1522,10 +1695,18 @@ const WithdrawWallet = () => {
       return;
     }
 
-    const addr = String(withdrawAddress || "").trim();
-    const chainForSubmit = canonicalWithdrawalChainForValidateAddress(network) || String(network || "").trim();
     const idempotency_key = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-    const tokenFromMap = selectedCurrency?.token_asset_ids?.[network];
+    const isAgce = withdrawToTab === "agce_user";
+    let addr = withdrawAddress.trim();
+    if (isAgce) {
+      if (agceRecipientTab === "email") addr = agceRecipientEmail.trim();
+      else if (agceRecipientTab === "phone") addr = agcePhoneCountry.code + agceRecipientPhoneLocal.trim();
+      else if (agceRecipientTab === "agce") addr = agceRecipientId.trim();
+    }
+
+    const chainForSubmit = isAgce ? "" : network;
+
+    const tokenFromMap = isAgce ? null : selectedCurrency?.token_asset_ids?.[network];
     const tokenAssetId = tokenFromMap != null && String(tokenFromMap).trim() ? String(tokenFromMap).trim() : "";
 
     /** Web `submitWithdrawal` body (`withdrawService.js`): string OTP, address mirror, idempotency, optional tokenAssetId. */
@@ -1534,7 +1715,7 @@ const WithdrawWallet = () => {
       withdrawal_address: addr,
       address: addr,
       amount: withdrawAmount,
-      email_or_phone: emailId,
+      email_or_phone: emailId, // The verify-identity email
       chain: chainForSubmit,
       coinName: selectedCurrency?.short_name,
       usdt_balance: availableBalance,
@@ -1901,12 +2082,14 @@ const WithdrawWallet = () => {
     setSaveAddrStep("form");
     setSaveAddrLabel("");
     setSaveAddrCoin("USDT");
-    setWithdrawAddress("");
+    setSaveAddrAddress("");
     setSaveAddrNetwork("");
     setSaveAddrMemo("");
     setSaveAddrOwnership("SELF");
     setSaveAddrWalletType("SELF_HOSTED");
     setSaveAddrExchange("");
+    setSaveAddrExchangeManual("");
+    setSaveAddrDeclarationAccepted(false);
     setSaveAddrOtp("");
     setSaveAddrWhitelistData(null);
     setSaveAddrVerifyOptions([]);
@@ -2128,7 +2311,14 @@ const WithdrawWallet = () => {
                   placeholderTextColor={themeColors.secondaryText}
                   value={withdrawAddress}
                   onChangeText={(value) => handleWithdrawalAddress(value)}
-                  onBlur={() => void validateWithdrawAddressApiRef.current?.()}
+                  onBlur={() => {
+                    setWithdrawAddressTouched(true);
+                    if (withdrawAddrValidateDebounceTimerRef.current) {
+                      clearTimeout(withdrawAddrValidateDebounceTimerRef.current);
+                      withdrawAddrValidateDebounceTimerRef.current = null;
+                    }
+                    void validateWithdrawAddressApiRef.current?.();
+                  }}
                 />
                 <TouchableOpacity onPress={() => {
                   const next = !showAddressBook;
@@ -2141,6 +2331,22 @@ const WithdrawWallet = () => {
                   <FastImage source={user_withdarwal} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
                 </TouchableOpacity>
               </View>
+
+              {/* Web parity: address validation feedback */}
+              {withdrawAddressInlineError ? (
+                <AppText type={TWELVE} style={{ color: "#E74C3C", marginTop: 6 }}>
+                  {withdrawAddressInlineError}
+                </AppText>
+              ) : isWithdrawAddressValidating ? (
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 6 }}>
+                  <ActivityIndicator size="small" color="#E2B24C" />
+                  <AppText type={TWELVE} style={{ color: "#E2B24C" }}>Validating address...</AppText>
+                </View>
+              ) : withdrawAddressValidError ? (
+                <AppText type={TWELVE} style={{ color: "#E74C3C", marginTop: 6 }}>
+                  {withdrawAddressValidError}
+                </AppText>
+              ) : null}
 
               {showAddressBook && (
                 <View style={{
@@ -2345,16 +2551,59 @@ const WithdrawWallet = () => {
               </View>
 
               {agceRecipientTab === "email" ? (
-                <View style={{ marginTop: 10 }}>
+                <View style={[styles.emailSuggestWrap, { marginTop: 10 }]}>
                   <Input
                     placeholder="Recipient's email"
                     value={agceRecipientEmail}
                     onChangeText={setAgceRecipientEmail}
+                    onfocus={() => {
+                      clearEmailSuggestBlurTimer();
+                      setEmailSuggestListVisible(true);
+                    }}
+                    onBlur={() => {
+                      setAgceTouched(p => ({ ...p, email: true }));
+                      clearEmailSuggestBlurTimer();
+                      emailSuggestBlurTimer.current = setTimeout(() => {
+                        setEmailSuggestListVisible(false);
+                        emailSuggestBlurTimer.current = null;
+                      }, 200);
+                    }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
                     inputStyle={{ fontSize: 12 }}
+                    mainContainer={styles.emailFieldMain}
                   />
+                  {emailSuggestListVisible && emailDomainSuggestions.length > 0 ? (
+                    <View
+                      style={[
+                        styles.emailSuggestList,
+                        {
+                          backgroundColor: themeColors.input,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                    >
+                      <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        nestedScrollEnabled
+                        style={styles.emailSuggestScroll}
+                      >
+                        {emailDomainSuggestions.map((domain) => (
+                          <TouchableOpacity
+                            key={domain}
+                            style={styles.emailSuggestRow}
+                            onPress={() => applyEmailDomain(domain)}
+                          >
+                            <AppText type={FOURTEEN} style={{ color: themeColors.text }}>
+                              @{domain}
+                            </AppText>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  ) : null}
+                  {agceErrors.email ? <AppText type={TEN} style={{ color: "red", marginTop: 4 }}>{agceErrors.email}</AppText> : null}
                 </View>
               ) : null}
 
@@ -2376,6 +2625,7 @@ const WithdrawWallet = () => {
                         styles.wdAgcePhoneInput,
                         { color: themeColors.text, backgroundColor: lightTheme.input, fontSize: 12 },
                       ]}
+                      onBlur={() => setAgceTouched(p => ({ ...p, phone: true }))}
                       placeholder="Recipient's phone number"
                       placeholderTextColor={themeColors.secondaryText}
                       value={agceRecipientPhoneLocal}
@@ -2383,6 +2633,7 @@ const WithdrawWallet = () => {
                       keyboardType="phone-pad"
                     />
                   </View>
+                  {agceErrors.phone ? <AppText type={TEN} style={{ color: "red", marginTop: 4 }}>{agceErrors.phone}</AppText> : null}
                 </View>
               ) : null}
 
@@ -2392,13 +2643,14 @@ const WithdrawWallet = () => {
                     placeholder="Recipient's AGCE username or UID"
                     value={agceRecipientId}
                     onChangeText={setAgceRecipientId}
+                    onBlur={() => setAgceTouched(p => ({ ...p, email: false, phone: false }))}
                     autoCapitalize="none"
                     autoCorrect={false}
                     inputStyle={{ fontSize: 12 }}
                   />
-                  {/* <AppText type={TEN} color={themeColors.secondaryText} style={{ marginTop: 8, lineHeight: 16 }}>
+                  <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 8, lineHeight: 16 }}>
                     Payee can find AGCE ID under Top-right Avatar → Dashboard.
-                  </AppText> */}
+                  </AppText>
                 </View>
               ) : null}
 
@@ -2409,7 +2661,7 @@ const WithdrawWallet = () => {
           )}
 
           {/* Amount and Final Summary Section */}
-          {(showWithdrawContentAfterValidatedAddress || withdrawToTab === "agce_user") && Object.keys(selectedCurrency).length > 0 && (
+          {(showWithdrawContentAfterValidatedAddress || (withdrawToTab === "agce_user" && isAgceFormValid)) && Object.keys(selectedCurrency).length > 0 && (
             <View style={{ marginTop: 12, gap: 16 }}>
               <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Withdrawal Amount</AppText>
 
@@ -2432,8 +2684,7 @@ const WithdrawWallet = () => {
                   keyboardType="numeric"
                 />
                 <TouchableOpacity style={{ marginRight: 8 }} onPress={handleMaxWithdrawal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <AppText weight={<AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>{selectedCurrency.short_name}</AppText>
-                  } type={TWELVE} style={{ color: "#E2B24C" }}>MAX</AppText>
+                  <AppText weight={BOLD} type={TWELVE} style={{ color: "#E2B24C" }}>MAX</AppText>
                 </TouchableOpacity>
                 <View style={{ width: 1, height: 18, backgroundColor: isDark ? "#2A2E39" : "#E5E7EB" }} />
                 <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>{selectedCurrency.short_name}</AppText>
@@ -2465,13 +2716,30 @@ const WithdrawWallet = () => {
 
                 <View style={{ height: 1, backgroundColor: isDark ? "#2A2E39" : "#EEE", marginBottom: 10 }} />
 
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+                <View style={{ gap: 12 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{withdrawToTab === "agce_user" ? "Recipient" : "Address"}</AppText>
+                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text, flex: 1, textAlign: "right", marginLeft: 20 }}>
+                    {withdrawToTab === "agce_user" 
+                      ? (agceRecipientTab === "email" ? agceRecipientEmail : agceRecipientTab === "phone" ? (agcePhoneCountry.code + agceRecipientPhoneLocal) : agceRecipientId)
+                      : (withdrawAddress || "—")
+                    }
+                  </AppText>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{withdrawToTab === "agce_user" ? "Transfer Type" : "Network"}</AppText>
+                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>
+                    {withdrawToTab === "agce_user" ? "Internal Transfer (AGCE User)" : (WITHDRAW_NETWORK_LABELS[network] || network || "—")}
+                  </AppText>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <AppText type={TWELVE} style={{ color: themeColors.text }}>Network Fee</AppText>
                   <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>{withdrawStep3Preview.feeNum || 0} {selectedCurrency.short_name}</AppText>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <AppText type={TWELVE} style={{ color: themeColors.text }}>You will receive</AppText>
                   <AppText weight={MEDIUM} type={TWELVE} style={{ color: "#E2B24C" }}>{withdrawStep3Preview.receiveNum || 0} {selectedCurrency.short_name}</AppText>
+                </View>
                 </View>
               </View>
 
@@ -2640,34 +2908,14 @@ const WithdrawWallet = () => {
       >
         <View style={{ padding: 24 }}>
           <View style={{ alignItems: "center", marginBottom: 24 }}>
-            <View style={{
-              width: 70,
-              height: 70,
-              borderRadius: 35,
-              backgroundColor: isDark ? "#2A2E39" : "#F3F4F6",
-              justifyContent: "center",
-              alignItems: "center"
-            }}>
-              <FastImage
-                source={email_vector}
-                style={{ width: 130, height: 130 }}
-                resizeMode="contain"
-              />
-            </View>
+            <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 8 }}>Confirm Withdrawal</AppText>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textAlign: "center", lineHeight: 18 }}>
+              {withdrawToTab === "agce_user" 
+                ? "You are about to perform an internal transfer. Please ensure the recipient details are correct, as internal transfers are processed instantly."
+                : `You have chosen the ${saveAddrNetwork || network || "—"} network. Kindly verify that your withdrawal address is compatible with this network, as unsupported transfers may result in loss of funds.`
+              }
+            </AppText>
           </View>
-
-          <AppText
-            type={FOURTEEN}
-            style={{
-              color: themeColors.text,
-              textAlign: "center",
-              lineHeight: 22,
-              marginBottom: 32,
-              paddingHorizontal: 10
-            }}
-          >
-            You have chosen the <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>{saveAddrNetwork || network || "—"}</AppText> network. Kindly verify that your withdrawal address is compatible with this network, as unsupported transfers may result in loss of funds.
-          </AppText>
 
           <View style={{ flexDirection: "row", gap: 12 }}>
             <TouchableOpacity
@@ -2724,11 +2972,19 @@ const WithdrawWallet = () => {
 
           <View style={{ marginBottom: 24 }}>
             {[
-              { label: "Address", value: withdrawAddress || "—" },
-              { label: "Network", value: WITHDRAW_NETWORK_LABELS[network] || network || "—" },
+              { 
+                label: withdrawToTab === "agce_user" ? "Recipient" : "Address", 
+                value: withdrawToTab === "agce_user" 
+                  ? (agceRecipientTab === "email" ? agceRecipientEmail : agceRecipientTab === "phone" ? (agcePhoneCountry.code + agceRecipientPhoneLocal) : agceRecipientId)
+                  : (withdrawAddress || "—") 
+              },
+              { 
+                label: withdrawToTab === "agce_user" ? "Transfer Type" : "Network", 
+                value: withdrawToTab === "agce_user" ? "Internal Transfer (AGCE User)" : (WITHDRAW_NETWORK_LABELS[network] || network || "—") 
+              },
               { label: "Amount", value: `${withdrawAmount || "0"} ${coinSymbol(selectedCurrency)}` },
-              { label: "Receive", value: `${formatWithdrawAmountDisplay(parseNum(withdrawAmount, 0) - parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0))} ${coinSymbol(selectedCurrency)}` },
-              { label: "Fee", value: `${formatWithdrawAmountDisplay(parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0))} ${coinSymbol(selectedCurrency)}` }
+              { label: "Receive", value: `${formatWithdrawAmountDisplay(parseNum(withdrawAmount, 0) - (withdrawToTab === "agce_user" ? 0 : parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0)))} ${coinSymbol(selectedCurrency)}` },
+              { label: "Fee", value: `${withdrawToTab === "agce_user" ? "0" : formatWithdrawAmountDisplay(parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0))} ${coinSymbol(selectedCurrency)}` }
             ].map((item, idx) => (
               <View key={idx} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: idx < 4 ? 0.5 : 0, borderBottomColor: isDark ? themeColors.border : "#F3F4F6" }}>
                 <AppText type={TWELVE} style={{ color: themeColors.secondaryText, flex: 1 }}>{item.label}</AppText>
@@ -2740,7 +2996,12 @@ const WithdrawWallet = () => {
           <View style={{ marginBottom: 32 }}>
             <View style={{ flexDirection: "row", marginBottom: 8 }}>
               <AppText style={{ color: themeColors.secondaryText, marginRight: 8 }}>•</AppText>
-              <AppText type={TEN} style={{ color: themeColors.secondaryText, flex: 1 }}>Make Sure The Address Is Accurate And Matches The Selected Network.</AppText>
+              <AppText type={TEN} style={{ color: themeColors.secondaryText, flex: 1 }}>
+                {withdrawToTab === "agce_user" 
+                  ? "Ensure the recipient detail is correct. AGCE User transfers are instant and non-reversible."
+                  : "Make Sure The Address Is Accurate And Matches The Selected Network."
+                }
+              </AppText>
             </View>
             <View style={{ flexDirection: "row" }}>
               <AppText style={{ color: themeColors.secondaryText, marginRight: 8 }}>•</AppText>
@@ -2783,7 +3044,9 @@ const WithdrawWallet = () => {
         }}
       >
         <View style={{ padding: 24 }}>
-          <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>Security verification</AppText>
+          <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>
+            {withdrawToTab === "agce_user" && agceRecipientTab === "email" ? "Verify your email" : "Security verification"}
+          </AppText>
           <AppText type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18, marginBottom: 24 }}>
             Complete all required steps. For email or SMS, tap Send code to receive your OTP, then enter it below.
           </AppText>
@@ -2951,39 +3214,52 @@ const WithdrawWallet = () => {
         </View>
       </Modal>
 
-      {/* Verification Reminder Modal */}
-      <Modal visible={isAddressVerificationReminderOpen} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 }}>
-          <View style={{ backgroundColor: isDark ? themeColors.card : "#FFF", padding: 24, borderRadius: 12, width: "100%", maxWidth: 400 }}>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>Verification Reminder</AppText>
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 18 }}>
-              In line with compliance and travel rule obligations, we need you to register and verify this destination once before we can send funds. Complete the address certification flow a single time; approved addresses are stored in your address book and will not require repeat verification for future withdrawals to the same destination.
-            </AppText>
-            <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-              <Button
-                children="Cancel"
-                containerStyle={{ marginRight: 12, backgroundColor: "transparent", borderWidth: 1, borderColor: themeColors.border, width: 100, height: 40 }}
-                titleStyle={{ color: themeColors.text }}
-                onPress={() => setIsAddressVerificationReminderOpen(false)}
-              />
-              <Button
-                children="Verify Now"
-                containerStyle={{ width: 120, height: 40 }}
-                onPress={() => {
-                  setIsAddressVerificationReminderOpen(false);
-                  setTimeout(() => {
-                    setSaveAddrCoin(selectedCurrency?.short_name || "");
-                    setSaveAddrNetwork(network || "");
-                    setSaveAddrCoinOpen(false);
-                    setSaveAddrNetworkOpen(false);
-                    saveAddressSheetRef.current?.open();
-                  }, 300);
-                }}
-              />
-            </View>
+      {/* Verification Reminder Sheet */}
+      <RBSheet
+        ref={verifyReminderSheetRef}
+        height={300}
+        closeOnDragDown
+        closeOnPressMask
+        customStyles={{
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            backgroundColor: themeColors.background,
+          },
+          wrapper: { backgroundColor: "rgba(0,0,0,0.6)" },
+          draggableIcon: { backgroundColor: colors.textGray },
+        }}
+      >
+        <View style={{ padding: 24 }}>
+          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>Verification Reminder</AppText>
+          <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 18 }}>
+            In line with compliance and travel rule obligations, we need you to register and verify this destination once before we can send funds. Complete the address certification flow a single time; approved addresses are stored in your address book and will not require repeat verification for future withdrawals to the same destination.
+          </AppText>
+          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+            <Button
+              children="Cancel"
+              containerStyle={{ marginRight: 12, backgroundColor: "transparent", borderWidth: 1, borderColor: themeColors.border, width: 100, height: 40 }}
+              titleStyle={{ color: themeColors.text }}
+              onPress={() => verifyReminderSheetRef.current?.close()}
+            />
+            <Button
+              children="Verify Now"
+              containerStyle={{ width: 120, height: 40 }}
+              onPress={() => {
+                verifyReminderSheetRef.current?.close();
+                setTimeout(() => {
+                  setSaveAddrCoin(selectedCurrency?.short_name || "");
+                  setSaveAddrNetwork(network || "");
+                  setSaveAddrAddress(withdrawAddress || "");
+                  setSaveAddrCoinOpen(false);
+                  setSaveAddrNetworkOpen(false);
+                  saveAddressSheetRef.current?.open();
+                }, 300);
+              }}
+            />
           </View>
         </View>
-      </Modal>
+      </RBSheet>
 
       {/* Add Withdrawal Address Form Sheet */}
       <RBSheet
@@ -3009,9 +3285,11 @@ const WithdrawWallet = () => {
             <AppText type={SIXTEEN} weight={BOLD} style={{ color: themeColors.text }}>
               {saveAddrStep === "form"
                 ? "Add withdrawal address"
-                : (saveAddrStep === "verify_method" || saveAddrStep === "otp")
+                : (saveAddrStep === "verify_method")
                   ? "Verify your identity"
-                  : saveAddrStep === "satoshi"
+                  : (saveAddrStep === "otp")
+                    ? (selectedSaveAddrVerifyMethod === "email" ? "Verify your email" : selectedSaveAddrVerifyMethod === "mobile" ? "Verify your phone" : "Verify your identity")
+                  : (saveAddrStep === "satoshi" || saveAddrStep === "metamask")
                     ? "Verify withdrawal address"
                     : "Address confirmation"}
             </AppText>
@@ -3034,8 +3312,14 @@ const WithdrawWallet = () => {
               withdrawCoins={withdrawCoinsList}
               saveAddrCoinOpen={saveAddrCoinOpen}
               setSaveAddrCoinOpen={setSaveAddrCoinOpen}
-              withdrawAddress={saveAddrAddress}
-              setWithdrawAddress={setSaveAddrAddress}
+              saveAddrAddress={saveAddrAddress}
+              setSaveAddrAddress={setSaveAddrAddress}
+              saveAddrAddressTouched={saveAddrAddressTouched}
+              setSaveAddrAddressTouched={setSaveAddrAddressTouched}
+              saveAddrAddressValidating={saveAddrAddressValidating}
+              saveAddrAddressValidError={saveAddrAddressValidError}
+              saveAddrAddressInlineError={saveAddrAddressInlineError}
+              validateSaveAddrAddressApiRef={validateSaveAddrAddressApiRef}
               saveAddrNetwork={saveAddrNetwork}
               setSaveAddrNetwork={setSaveAddrNetwork}
               saveAddrNetworkOpen={saveAddrNetworkOpen}
@@ -3071,6 +3355,11 @@ const WithdrawWallet = () => {
               setSaveAddrExchangeOpen={setSaveAddrExchangeOpen}
               ADDRESS_BOOK_TOP_EXCHANGES={ADDRESS_BOOK_TOP_EXCHANGES}
               ADDRESS_BOOK_EXCHANGE_OTHER={ADDRESS_BOOK_EXCHANGE_OTHER}
+              saveAddrExchangeManual={saveAddrExchangeManual}
+              setSaveAddrExchangeManual={setSaveAddrExchangeManual}
+              saveAddrDeclarationAccepted={saveAddrDeclarationAccepted}
+              setSaveAddrDeclarationAccepted={setSaveAddrDeclarationAccepted}
+              ADDRESS_BOOK_DECLARATION_TEXT={ADDRESS_BOOK_DECLARATION_TEXT}
               upIcon={upIcon}
               downIcon={downIcon}
               checkIc={checkIc}
@@ -3114,7 +3403,7 @@ const WithdrawWallet = () => {
                 marginRight: 10,
                 backgroundColor: isDark ? "#333" : "#E5E7EB",
                 borderRadius: 100,
-                height: 50
+                height: 44
               }}
               titleStyle={{ color: isDark ? "#FFF" : "#374151", fontWeight: "600" }}
               onPress={() => {
@@ -3151,12 +3440,21 @@ const WithdrawWallet = () => {
             />
             {(() => {
               const isNextDisabled = saveAddrBusy || (
-                (saveAddrStep === "form" && (saveAddrLabel.trim().length < 4 || !saveAddrCoin || !saveAddrNetwork || !withdrawAddress.trim())) ||
+                (saveAddrStep === "form" && (
+                  saveAddrLabel.trim().length < 4 ||
+                  !saveAddrCoin ||
+                  !saveAddrNetwork ||
+                  !saveAddrAddress.trim() ||
+                  saveAddrAddressValidating ||
+                  !!saveAddrAddressValidError ||
+                  !!saveAddrAddressInlineError ||
+                  saveAddrAddressValidatedKey !== withdrawalAddressValidationKey(saveAddrNetwork, saveAddrAddress, saveAddrTokenAssetId)
+                )) ||
                 (saveAddrStep === "owner" && !saveAddrOwnership) ||
                 (saveAddrStep === "wallet_type" && !saveAddrWalletType) ||
                 (saveAddrStep === "proof_select" && !saveAddrProofMethod) ||
                 (saveAddrStep === "other_identity" && (!saveAddrBenFullName || !saveAddrBenPan || !saveAddrBenCountry || !saveAddrBenPin || !saveAddrBenAddress)) ||
-                (saveAddrStep === "exchange" && !saveAddrExchange) ||
+                (saveAddrStep === "exchange" && (!saveAddrExchange || (saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER && !saveAddrExchangeManual.trim()) || !saveAddrDeclarationAccepted)) ||
                 (saveAddrStep === "verify_method" && !selectedSaveAddrVerifyMethod) ||
                 (saveAddrStep === "otp" && saveAddrOtp.length < 6)
               );
@@ -3169,7 +3467,7 @@ const WithdrawWallet = () => {
                 else if (satoshiWhitelistAwaitingProof) buttonText = "Check again";
                 else buttonText = "I've sent the payment";
               }
-              else if (saveAddrStep === "metamask") buttonText = "Close";
+              else if (saveAddrStep === "metamask") buttonText = "Sign with MetaMask";
 
               return (
                 <Button
@@ -3180,7 +3478,7 @@ const WithdrawWallet = () => {
                     marginLeft: 10,
                     backgroundColor: isNextDisabled ? (isDark ? "#222" : "#ccc") : "#111827",
                     borderRadius: 100,
-                    height: 50,
+                    height: 44,
                     opacity: isNextDisabled ? 0.6 : 1
                   }}
                   titleStyle={{ color: isNextDisabled ? (isDark ? "#555" : "#666") : "#FFF", fontWeight: "600" }}
@@ -3379,7 +3677,7 @@ const WithdrawWallet = () => {
                           memo: saveAddrMemo,
                           ownership: saveAddrOwnership === "SELF" ? "SELF" : "OTHER",
                           wallet_type: saveAddrWalletType === "SELF_HOSTED" ? "NON_CUSTODIAL" : "CUSTODIAL",
-                          exchange: saveAddrExchange,
+                          exchange: saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? saveAddrExchangeManual.trim() : saveAddrExchange,
                           ...(saveAddrOwnership === "OTHER" ? {
                             other_person: {
                               full_name: saveAddrBenFullName.trim(),
@@ -3486,6 +3784,27 @@ const WithdrawWallet = () => {
                       } finally {
                         setSaveAddrBusy(false);
                       }
+                      return;
+                    }
+
+                    if (saveAddrStep === "metamask") {
+                      const dappUrl = "arabglobalexchange.com/wallet/withdraw"; 
+                      const metamaskDeepLink = `https://metamask.app.link/dapp/${dappUrl}`;
+                      
+                      Linking.canOpenURL(metamaskDeepLink).then(supported => {
+                        if (supported) {
+                          Linking.openURL(metamaskDeepLink);
+                        } else {
+                          // Redirect to store if not installed
+                          const storeUrl = Platform.OS === 'ios' 
+                            ? 'https://apps.apple.com/app/metamask/id1438144202' 
+                            : 'https://play.google.com/store/apps/details?id=io.metamask';
+                          Linking.openURL(storeUrl);
+                        }
+                      }).catch(() => {
+                        showError("Could not open MetaMask. Please ensure it is installed.");
+                      });
+                      return;
                     }
                   }}
                 />
@@ -3925,5 +4244,33 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  emailFieldMain: {
+    flex: 0,
+    alignSelf: "stretch",
+    width: "100%",
+    marginBottom: 0,
+  },
+  emailSuggestWrap: {
+    zIndex: 10,
+    flexDirection: "column",
+    alignItems: "stretch",
+    alignSelf: "stretch",
+    width: "100%",
+    justifyContent: "flex-start",
+  },
+  emailSuggestList: {
+    marginTop: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 8,
+    maxHeight: 220,
+    overflow: "hidden",
+  },
+  emailSuggestScroll: {
+    maxHeight: 220,
+  },
+  emailSuggestRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
 });

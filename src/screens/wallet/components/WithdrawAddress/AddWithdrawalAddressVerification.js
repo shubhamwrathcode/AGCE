@@ -1,7 +1,7 @@
 import React from "react";
 import { View, TextInput, TouchableOpacity, Clipboard, ScrollView } from "react-native";
 import { AppText, FOURTEEN, SIXTEEN, SEMI_BOLD, TWENTY, BOLD, TWELVE, MEDIUM, TEN, THIRTEEN, ELEVEN } from "../../../../shared";
-import { colors } from "../../../../theme/colors";
+import { colors, lightTheme } from "../../../../theme/colors";
 import FastImage from "react-native-fast-image";
 import { pasteImg, bitcoinIcon } from "../../../../helper/ImageAssets";
 import QRCode from "react-native-qrcode-svg";
@@ -56,9 +56,9 @@ const AddWithdrawalAddressVerification = ({
       {saveAddrStep === "otp" && (
         <View style={{ paddingVertical: 10 }}>
           <View style={{ marginBottom: 24 }}>
-            <AppText type={TWENTY} weight={BOLD} style={{ color: themeColors.text, marginBottom: 12 }}>
+            {/* <AppText type={TWENTY} weight={BOLD} style={{ color: themeColors.text, marginBottom: 12 }}>
               Verify Your Email
-            </AppText>
+            </AppText> */}
             <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
               The verification code has been sent to your email {maskedEmail}, valid for 10 minutes.
             </AppText>
@@ -101,7 +101,7 @@ const AddWithdrawalAddressVerification = ({
 
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
             <TouchableOpacity onPress={handleResendSaveAddrOtp} disabled={!saveAddrResendActive}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: saveAddrResendActive ? (isDark ? "#FFF" : "#000") : themeColors.secondaryText }}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ textDecorationLine: 'underline', color: saveAddrResendActive ? (isDark ? "#FFF" : "#000") : themeColors.secondaryText }} >
                 {saveAddrOtpTimer > 0 ? `Resend in ${saveAddrOtpTimer}s` : "Resend Code"}
               </AppText>
             </TouchableOpacity>
@@ -117,13 +117,13 @@ const AddWithdrawalAddressVerification = ({
       {saveAddrStep === "satoshi" && (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           <View style={{ marginBottom: 20 }}>
-            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 12 }}>
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 0 }}>
               To verify you own this address, please send exactly:
             </AppText>
-            <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme, textAlign: "center" }}>
-              Send exactly {saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset}
+            <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme, }}>
+              Send exactly {saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset}.
             </AppText>
-            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20, marginTop: 5 }}>
               The deposit must come from the address you are whitelisting. Send this micro-amount to your AGCE deposit address for {saveAddrWhitelistData?.proof_asset} ({saveAddrWhitelistData?.proof_chain}). Scan the QR code below or copy the address.
             </AppText>
           </View>
@@ -151,7 +151,7 @@ const AddWithdrawalAddressVerification = ({
             </View>
           ) : !satoshiDepositError && (saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address) ? (
             <View style={{
-              backgroundColor: isDark ? "#1A1D23" : "#F9FAFB",
+              backgroundColor: 'transparent',
               borderRadius: 16,
               padding: 20,
               alignItems: "center",
@@ -178,10 +178,10 @@ const AddWithdrawalAddressVerification = ({
                   backgroundColor="#FFF"
                 />
               </View>
-              <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>Scan to Deposit</AppText>
+              <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.orangeTheme }}>Scan to Deposit</AppText>
 
               <View style={{ width: "100%" }}>
-                <AppText type={TWELVE} weight={BOLD} style={{ color: themeColors.secondaryText, marginBottom: 8, letterSpacing: 0.5 }}>
+                <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8, textAlign: 'center' }}>
                   YOUR AGCE DEPOSIT ADDRESS
                 </AppText>
                 <View style={{
@@ -199,13 +199,15 @@ const AddWithdrawalAddressVerification = ({
                   <TouchableOpacity
                     onPress={handleCopyAddress}
                     style={{
-                      backgroundColor: colors.orangeTheme,
-                      paddingHorizontal: 20,
-                      paddingVertical: 10,
+                      backgroundColor: 'transparent',
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
                       borderRadius: 10,
+                      borderColor: lightTheme.input,
+                      borderWidth: 1
                     }}
                   >
-                    <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.white }}>Copy</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.black }}>Copy</AppText>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -280,19 +282,20 @@ const AddWithdrawalAddressVerification = ({
       )}
 
       {saveAddrStep === "metamask" && (
-        <View>
-          <View style={{ alignItems: "center", marginBottom: 16 }}>
-            <View style={{
-              width: 140,
-              height: 140,
-              borderRadius: 40, backgroundColor: isDark ? "#333" : "#F5F6F8", justifyContent: "center", alignItems: "center", marginBottom: 16
-            }}>
-              <FastImage source={bitcoinIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
-            </View>
-            <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text, textAlign: "center", marginBottom: 6 }}>Ownership Verification Required</AppText>
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textAlign: "center", lineHeight: 18 }}>
-              To verify this is your wallet, send exactly <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>{saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset}</AppText> on the <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>{saveAddrWhitelistData?.proof_chain}</AppText> network.
+        <View style={{ gap: 20 }}>
+          <View style={{ gap: 12 }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 22 }}>
+              Sign the verification message with MetaMask using the same wallet as the address above.
             </AppText>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 22 }}>
+              Use <AppText weight={BOLD} style={{ color: themeColors.text }}>Sign with MetaMask</AppText> to connect and sign. If the MetaMask app is not installed, you will be redirected to the app store.
+            </AppText>
+
+            {saveAddrWhitelistData?.expires_at && (
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 8 }}>
+                Expires: {moment(saveAddrWhitelistData.expires_at).format("MMMM D, YYYY, h:mm A")}
+              </AppText>
+            )}
           </View>
         </View>
       )}
