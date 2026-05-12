@@ -388,8 +388,13 @@ export default (appOperation: AppOperation) => ({
     }
     return appOperation.get('spot/v1/me/orders/open', q, undefined, CUSTOMER_TYPE);
   },
+  /** Same as web `AuthService.cancelOrder`: `DELETE /spot/v1/orders/:order_id` */
   cancel_order: (data: CancelOrderProps) =>
-    appOperation.post('spot/v1/orders/cancel', data, CUSTOMER_TYPE),
+    appOperation.delete(
+      `spot/v1/orders/${encodeURIComponent(String(data.order_id))}`,
+      null,
+      CUSTOMER_TYPE,
+    ),
   close_option_order: (data: CancelOrderProps) =>
     appOperation.post('options/cancelOrder', data, CUSTOMER_TYPE),
   place_order: (data: PlaceOrderProps) =>

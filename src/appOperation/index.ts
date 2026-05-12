@@ -92,11 +92,11 @@ export class AppOperation {
     }
 
     return new Promise((resolve, reject) => {
-      let bodyData: any = null;
+      let bodyData: any = undefined;
       if (data instanceof FormData) {
         bodyData = data;
         // Do not set Content-Type for FormData - fetch will set multipart/form-data with boundary
-      } else {
+      } else if (data != null) {
         bodyData = JSON.stringify(data);
       }
       if (url.includes('submit-kyc')) {
@@ -109,7 +109,12 @@ export class AppOperation {
         controller.abort();
       }, 30000); // 30 second timeout
 
-      fetch(uri, { method, headers, body: bodyData, signal: controller.signal })
+      const fetchInit: RequestInit = {method, headers, signal: controller.signal};
+      if (bodyData !== undefined) {
+        fetchInit.body = bodyData;
+      }
+
+      fetch(uri, fetchInit)
         .then(response => {
           clearTimeout(timeoutId);
           let status = response.status;
@@ -118,7 +123,12 @@ export class AppOperation {
               .text()
               .then(responseData => {
                 try {
-                  const jsonData: any = JSON.parse(responseData);
+                  const trimmed = String(responseData ?? '').trim();
+                  if (!trimmed) {
+                    resolve({success: true, code: status});
+                    return;
+                  }
+                  const jsonData: any = JSON.parse(trimmed);
                   resolve({ ...jsonData, code: status });
                 } catch {
                   // Some proxies/backends return HTML even on 200; surface a readable error.

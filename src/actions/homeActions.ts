@@ -283,19 +283,19 @@ export const cancelOrder =
   (data: CancelOrderProps) => async (dispatch: AppDispatch) => {
     try {
       const response: any = await appOperation.customer.cancel_order(data);
-
-      if (response.success) {
-        showSuccess(response?.message || "Order cancelled successfully");
+      // Web parity: TradePage/index.js `cancelOrder` — `if (result?.success) { … } else { alertErrorMessage(result?.message); }`
+      if (response?.success) {
+        showSuccess("Order Cancelled Successfully");
         dispatch(onCancelOrder(data.order_id));
         dispatch(getOpenOrders(0, 10));
-      } else {
-        showError(response?.message || "Failed to cancel order");
+        return {...response, success: true};
       }
-      return response;
-    } catch (e) {
+      showError(response?.message || "Failed to cancel order");
+      return {...response, success: false};
+    } catch (e: any) {
       logger(e);
       showError(e?.message || "An error occurred");
-      return { success: false, message: e?.message };
+      return {success: false, message: e?.message};
     }
   };
 

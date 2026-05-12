@@ -635,23 +635,37 @@ const TradeHistory = () => {
         </Animated.View>
       </Animated.View>
 
-      <ReactNativeModal isVisible={isCancelModalVisible} onBackdropPress={() => setIsCancelModalVisible(false)} style={{ margin: 0, justifyContent: "flex-end" }}>
+      <ReactNativeModal
+        isVisible={isCancelModalVisible}
+        onBackdropPress={() => !isCancelLoading && setIsCancelModalVisible(false)}
+        onBackButtonPress={() => !isCancelLoading && setIsCancelModalVisible(false)}
+        style={{ margin: 0, justifyContent: "flex-end" }}
+      >
         <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
           <AppText style={[styles.modalTitle, { color: themeColors.text }]} weight={fontFamilyBold}>Cancel Order</AppText>
           <AppText style={{ color: themeColors.secondaryText, textAlign: "center", marginBottom: 20 }}>Are you sure you want to cancel this order?</AppText>
           <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.modalBtn} onPress={() => setIsCancelModalVisible(false)}><AppText style={{ color: themeColors.text }}>No</AppText></TouchableOpacity>
+            <TouchableOpacity style={styles.modalBtn} disabled={isCancelLoading} onPress={() => setIsCancelModalVisible(false)}>
+              <AppText style={{ color: themeColors.text }}>No</AppText>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalBtn, { backgroundColor: colors.red }]}
+              disabled={isCancelLoading}
               onPress={async () => {
                 if (!orderToCancel) return;
-                setIsCancelLoading(true);
-                try {
-                  await dispatch(cancelOrder({ order_id: orderToCancel._id || orderToCancel.id }));
-                  setOrdersData(prev => prev.filter(o => (o._id || o.id) !== (orderToCancel._id || orderToCancel.id)));
-                } finally {
-                  setIsCancelLoading(false);
+                const orderId = orderToCancel._id || orderToCancel.id;
+                if (!orderId) {
                   setIsCancelModalVisible(false);
+                  setOrderToCancel(null);
+                  return;
+                }
+                setIsCancelLoading(true);
+                const res = await dispatch(cancelOrder({ order_id: orderId }));
+                setIsCancelLoading(false);
+                if (res?.success) {
+                  setOrdersData((prev) => prev.filter((o) => (o._id || o.id) !== orderId));
+                  setIsCancelModalVisible(false);
+                  setOrderToCancel(null);
                 }
               }}
             >

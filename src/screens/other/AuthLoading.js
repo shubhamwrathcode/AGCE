@@ -99,7 +99,10 @@ const AuthLoading = () => {
   };
 
   return (
-    <AppSafeAreaView source={theme === 'Dark' ? updatedSplashDark : splashTwo}>
+    <AppSafeAreaView
+      source={theme === 'Dark' ? updatedSplashDark : splashTwo}
+      darkStatusBarOnLightSplash={theme !== 'Dark'}
+    >
       <View style={commonStyles.center}>
         {/* Your logo or loader can go here */}
       </View>
