@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TextInput, TouchableOpacity, ScrollView } from "react-native";
-import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN } from "../../../../shared";
+import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN, BOLD } from "../../../../shared";
 import { colors } from "../../../../theme/colors";
 import FastImage from "react-native-fast-image";
 import { EMAIL, security_vector2 } from "../../../../helper/ImageAssets";
@@ -175,28 +175,53 @@ const AddWithdrawalAddressBasics = ({
               />
             </TouchableOpacity>
             {saveAddrNetworkOpen && (
-              <View style={{ marginTop: 8, backgroundColor: isDark ? "#1A1A1A" : "#F5F6F8", borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF", maxHeight: 160, minHeight: 80 }}>
+              <View style={{ marginTop: 8, backgroundColor: isDark ? "#1A1A1A" : "#F5F6F8", borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF", maxHeight: 240 }}>
                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
                   {(() => {
                     const coin = withdrawCoins.find(c => c.short_name === saveAddrCoin);
                     const nets = coin ? getWithdrawNetworksOrStaticFallback(coin) : [];
-                    return nets.map((net) => (
-                      <TouchableOpacity
-                        key={net.code}
-                        style={{ paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: isDark ? "#333" : "#EEE", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
-                        onPress={() => {
-                          setSaveAddrNetwork(net.code);
-                          setSaveAddrNetworkOpen(false);
-                        }}
-                      >
-                        <AppText type={FOURTEEN} style={{ color: themeColors.text }}>{CHAIN_FULL_NAMES[net.code] || net.code}</AppText>
-                        {saveAddrNetwork === net.code && (
-                          <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.primary, justifyContent: "center", alignItems: "center" }}>
-                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} />
+                    return nets.map((net) => {
+                      const isSelected = saveAddrNetwork === net.code;
+                      const fee = net.withdrawal_fee || "0";
+                      const arrival = net.arrival_time || "10 mins";
+
+                      return (
+                        <TouchableOpacity
+                          key={net.code}
+                          style={{
+                            paddingVertical: 14,
+                            paddingHorizontal: 16,
+                            borderBottomWidth: 1,
+                            borderBottomColor: isDark ? "#333" : "#EEE",
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            backgroundColor: isSelected ? (isDark ? "#222" : "#FFF9E6") : "transparent"
+                          }}
+                          onPress={() => {
+                            setSaveAddrNetwork(net.code);
+                            setSaveAddrNetworkOpen(false);
+                          }}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>
+                              {CHAIN_FULL_NAMES[net.code] || net.code}
+                            </AppText>
+                            <View style={{ flexDirection: "row", marginTop: 4 }}>
+                              <AppText type={TEN} style={{ color: themeColors.secondaryText }}>Fee: </AppText>
+                              <AppText type={TEN} weight={MEDIUM} style={{ color: themeColors.text }}>{fee} {saveAddrCoin}</AppText>
+                              <AppText type={TEN} style={{ color: themeColors.secondaryText, marginLeft: 12 }}>Arrival: </AppText>
+                              <AppText type={TEN} weight={MEDIUM} style={{ color: themeColors.text }}>{arrival}</AppText>
+                            </View>
                           </View>
-                        )}
-                      </TouchableOpacity>
-                    ));
+                          {isSelected && (
+                            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.buttonBg, justifyContent: "center", alignItems: "center" }}>
+                              <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor="black" />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    });
                   })()}
                 </ScrollView>
               </View>
@@ -294,16 +319,16 @@ const AddWithdrawalAddressBasics = ({
             <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>Country of residence</AppText>
             <TouchableOpacity
               onPress={() => saveAddrCountrySheetRef.current?.open()}
-              style={{ 
-                backgroundColor: isDark ? themeColors.card : "#F5F6F8", 
-                borderRadius: 8, 
-                paddingHorizontal: 16, 
-                height: 48, 
-                flexDirection: "row", 
-                alignItems: "center", 
-                justifyContent: "space-between", 
-                borderWidth: 1, 
-                borderColor: isDark ? themeColors.border : "#E8EAEF" 
+              style={{
+                backgroundColor: isDark ? themeColors.card : "#F5F6F8",
+                borderRadius: 8,
+                paddingHorizontal: 16,
+                height: 48,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderWidth: 1,
+                borderColor: isDark ? themeColors.border : "#E8EAEF"
               }}
             >
               <AppText type={FOURTEEN} style={{ color: saveAddrBenCountry ? themeColors.text : themeColors.secondaryText }}>
