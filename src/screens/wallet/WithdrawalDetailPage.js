@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, Linking, Clipboard } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { AppSafeAreaView, AppText, Toolbar, SEMI_BOLD, TWELVE, TEN, FOURTEEN, BOLD, MEDIUM, THIRTEEN, ELEVEN, Button } from "../../shared";
@@ -11,6 +11,7 @@ import NavigationService from "../../navigation/NavigationService";
 import { WITHDRAW_SCREEN, CREATE_TICKET_SCREEN, WALLET_WITHDRAW_SCREEN } from "../../navigation/routes";
 import { formatWithdrawAmountDisplay, CHAIN_FULL_NAMES, WITHDRAW_NETWORK_LABELS } from "../../helper/walletChainHelpers";
 import { showSuccess } from "../../helper/logger";
+import { useDispatch } from "react-redux";
 import { useAppSelector } from "../../store/hooks";
 import { buildCoinImageUri } from "../../helper/coinIconUrl";
 
@@ -20,8 +21,15 @@ export default function WithdrawalDetailPage() {
   const { colors: themeColors, isDark } = useTheme();
   const { item, isAddress } = route.params || {};
 
+  const dispatch = useDispatch();
   const withdrawActiveCoins = useAppSelector((state) => state.wallet.withdrawActiveCoins);
   const withdrawCoinsList = useMemo(() => (Array.isArray(withdrawActiveCoins) ? withdrawActiveCoins : []), [withdrawActiveCoins]);
+
+  useEffect(() => {
+    if (withdrawCoinsList.length === 0) {
+      dispatch(getWithdrawActiveCoins());
+    }
+  }, []);
 
   const status = isAddress ? item.statusLabel || item.status : (item.status === 1 ? "Completed" : "Pending");
 

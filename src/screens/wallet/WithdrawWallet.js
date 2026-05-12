@@ -487,8 +487,16 @@ const WithdrawWallet = () => {
   );
 
   const mainWalletFundRow = useMemo(() => {
-    if (!Array.isArray(userMainWallet) || !selectedCurrency?._id) return null;
-    return userMainWallet.find((row) => row?.currency_id === selectedCurrency._id) || null;
+    if (!Array.isArray(userMainWallet) || !selectedCurrency) return null;
+    const cid = selectedCurrency._id;
+    const sym = String(selectedCurrency.short_name || "").toUpperCase();
+    return (
+      userMainWallet.find((row) => {
+        if (cid && row?.currency_id === cid) return true;
+        if (sym && String(row?.short_name || row?.currency || "").toUpperCase() === sym) return true;
+        return false;
+      }) || null
+    );
   }, [userMainWallet, selectedCurrency]);
 
   /** Web `withdrawStep3Preview` (useWithdrawPageController) — meta row + fee / receive. */
@@ -1192,7 +1200,7 @@ const WithdrawWallet = () => {
 
   /** Web `effectiveAvailable` + `handleWithdrawMaxClick` (useWithdrawPageController). */
   const effectiveWithdrawAvailable = useMemo(
-    () => totalSpendableFromFundRow(mainWalletFundRow),
+    () => parseFloat(formatFundAvailableFromRow(mainWalletFundRow)) || 0,
     [mainWalletFundRow]
   );
 
@@ -2115,7 +2123,7 @@ const WithdrawWallet = () => {
                 }}
               >
                 <TextInput
-                  style={{ flex: 1, color: themeColors.text, fontSize: 14, fontWeight: "600", padding: 0 }}
+                  style={{ flex: 1, color: themeColors.text, fontSize: 14, fontWeight: "400", padding: 0, marginRight: 10 }}
                   placeholder="Enter Address"
                   placeholderTextColor={themeColors.secondaryText}
                   value={withdrawAddress}
@@ -2402,33 +2410,45 @@ const WithdrawWallet = () => {
 
           {/* Amount and Final Summary Section */}
           {(showWithdrawContentAfterValidatedAddress || withdrawToTab === "agce_user") && Object.keys(selectedCurrency).length > 0 && (
-            <View style={{ marginTop: 24, gap: 16 }}>
-              <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>Withdrawal Amount</AppText>
+            <View style={{ marginTop: 12, gap: 16 }}>
+              <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Withdrawal Amount</AppText>
 
-              <View style={{ height: 60, borderRadius: 16, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#1E222D" : "#F3F4F6" }}>
+              <View style={{
+                height: 42,
+                borderRadius: 16,
+                paddingHorizontal: 16,
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: isDark ? "#1E222D" : "#F3F4F6",
+                borderWidth: 1.5,
+                borderColor: isDark ? "#2A2E39" : "#E5E7EB"
+              }}>
                 <TextInput
-                  style={{ flex: 1, color: themeColors.text, fontSize: 18, fontWeight: "700", padding: 0 }}
+                  style={{ flex: 1, color: themeColors.text, fontSize: 13, fontWeight: "400", padding: 0 }}
                   placeholder={`Min ${chainMinWithdrawal || 0}`}
                   placeholderTextColor={themeColors.secondaryText}
                   value={withdrawAmount}
                   onChangeText={setWithdrawAmount}
                   keyboardType="numeric"
                 />
-                <TouchableOpacity onPress={handleMaxWithdrawal}>
-                  <AppText weight={BOLD} type={FOURTEEN} style={{ color: "#E2B24C" }}>MAX</AppText>
+                <TouchableOpacity style={{ marginRight: 8 }} onPress={handleMaxWithdrawal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <AppText weight={<AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>{selectedCurrency.short_name}</AppText>
+                  } type={TWELVE} style={{ color: "#E2B24C" }}>MAX</AppText>
                 </TouchableOpacity>
-                <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>{selectedCurrency.short_name}</AppText>
+                <View style={{ width: 1, height: 18, backgroundColor: isDark ? "#2A2E39" : "#E5E7EB" }} />
+                <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>{selectedCurrency.short_name}</AppText>
               </View>
+
 
               {withdrawAmountInlineError && (
                 <AppText weight={SEMI_BOLD} type={TEN} style={{ color: "red" }}>{withdrawAmountInlineError}</AppText>
               )}
 
-              <View style={{ padding: 20, borderRadius: 16, backgroundColor: isDark ? "#1E222D" : "#F9FAFB", borderWidth: 1, borderColor: isDark ? "#2A2E39" : "#EEE" }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+              <View style={{ padding: 10, borderRadius: 16, backgroundColor: 'transparent', borderWidth: 1, borderColor: isDark ? "#2A2E39" : "#EEE" }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
                   <View>
                     <AppText type={TWELVE} style={{ color: themeColors.text, marginBottom: 4 }}>Available Withdraw</AppText>
-                    <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{formatFundAvailableFromRow(mainWalletFundRow)} {selectedCurrency.short_name}</AppText>
+                    <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>{formatFundAvailableFromRow(mainWalletFundRow)} {selectedCurrency.short_name}</AppText>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -2439,31 +2459,31 @@ const WithdrawWallet = () => {
                         </View>
                       </TouchableOpacity>
                     </View>
-                    <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{withdrawStep3Preview.limitLeft} / {withdrawStep3Preview.limitRight}</AppText>
+                    <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>{withdrawStep3Preview.limitLeft} / {withdrawStep3Preview.limitRight}</AppText>
                   </View>
                 </View>
 
-                <View style={{ height: 1, backgroundColor: isDark ? "#2A2E39" : "#EEE", marginBottom: 16 }} />
+                <View style={{ height: 1, backgroundColor: isDark ? "#2A2E39" : "#EEE", marginBottom: 10 }} />
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                  <AppText type={FOURTEEN} style={{ color: themeColors.text }}>Network Fee</AppText>
-                  <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{withdrawStep3Preview.feeNum || 0} {selectedCurrency.short_name}</AppText>
+                  <AppText type={TWELVE} style={{ color: themeColors.text }}>Network Fee</AppText>
+                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>{withdrawStep3Preview.feeNum || 0} {selectedCurrency.short_name}</AppText>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <AppText type={FOURTEEN} style={{ color: themeColors.text }}>You will receive</AppText>
-                  <AppText weight={BOLD} type={SIXTEEN} style={{ color: "#E2B24C" }}>{withdrawStep3Preview.receiveNum || 0} {selectedCurrency.short_name}</AppText>
+                  <AppText type={TWELVE} style={{ color: themeColors.text }}>You will receive</AppText>
+                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: "#E2B24C" }}>{withdrawStep3Preview.receiveNum || 0} {selectedCurrency.short_name}</AppText>
                 </View>
               </View>
 
               <Button
                 children="Withdrawal"
-                containerStyle={{ height: 56, borderRadius: 16, backgroundColor: (!withdrawAmount || !!withdrawAmountInlineError) ? (isDark ? "#1E222D" : "#D1D5DB") : "#E2B24C" }}
+                containerStyle={{ backgroundColor: (!withdrawAmount || !!withdrawAmountInlineError) ? (isDark ? "#1E222D" : "#D1D5DB") : colors.black }}
                 textStyle={{ color: (!withdrawAmount || !!withdrawAmountInlineError) ? (isDark ? "#555" : "#9CA3AF") : "black", fontWeight: "500" }}
                 disabled={!withdrawAmount || !!withdrawAmountInlineError}
                 onPress={handleWithdrawPrimaryPress}
               />
 
-              <View style={{ padding: 16, borderRadius: 12, backgroundColor: isDark ? "#161922" : "#F5F5F5" }}>
+              <View style={{ padding: 10, borderRadius: 12, backgroundColor: isDark ? "#161922" : "#F5F5F5" }}>
                 <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
                   * Beware of scams! AGCE will never ask for personal information or private transfers via SMS or email.
                 </AppText>

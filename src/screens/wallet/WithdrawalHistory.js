@@ -102,7 +102,7 @@ const WithdrawalHistory = () => {
         key={item.id || index}
         activeOpacity={0.9}
         onPress={() => NavigationService.navigate(WITHDRAW_DETAIL_SCREEN, { item, isAddress })}
-        style={[styles.historyItem, !isLast && { borderBottomWidth: 1, borderBottomColor: lightTheme.input, paddingBottom: 20, marginBottom: 20 }]}
+        style={[styles.historyItem, !isLast && { borderBottomWidth: 1, borderBottomColor: isDark ? "#2A2E39" : "#EEE", paddingBottom: 20, marginBottom: 20 }]}
       >
         <View style={styles.dateStatusRow}>
           <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.text }}>{date}</AppText>
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tabPillActive: {
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#F3F4F6",
   },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   historyItem: {
