@@ -7,6 +7,7 @@ import { pasteImg, bitcoinIcon } from "../../../../helper/ImageAssets";
 import QRCode from "react-native-qrcode-svg";
 import { showSuccess } from "../../../../helper/logger";
 import moment from "moment";
+import NavigationService from "../../../../navigation/NavigationService";
 
 const AddWithdrawalAddressVerification = ({
   isDark,
@@ -128,82 +129,60 @@ const AddWithdrawalAddressVerification = ({
           </View>
 
           {satoshiDepositError ? (
-            <View style={{ backgroundColor: isDark ? "rgba(255,0,0,0.1)" : "#FEF2F2", padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.red, marginBottom: 20 }}>
-              <AppText type={FOURTEEN} style={{ color: colors.red }}>{satoshiDepositError}</AppText>
+            <View style={{ marginBottom: 20 }}>
+              <AppText type={THIRTEEN} style={{ color: colors.red, lineHeight: 20 }}>
+                {satoshiDepositError}{"  "}
+                <AppText
+                  type={THIRTEEN}
+                  weight={SEMI_BOLD}
+                  style={{ color: colors.orangeTheme, textDecorationLine: "underline" }}
+                  onPress={() => NavigationService.navigate("DEPOSIT_COIN_SCREEN")}
+                >
+                  Open Deposit
+                </AppText>
+              </AppText>
             </View>
           ) : null}
 
-          <View style={{
-            backgroundColor: isDark ? "#1A1D23" : "#F9FAFB",
-            borderRadius: 16,
-            padding: 20,
-            alignItems: "center",
-            borderWidth: 1,
-            borderColor: isDark ? "#333" : "#F3F4F6",
-            marginBottom: 20,
-            width: "100%"
-          }}>
-            <View style={{ 
-              backgroundColor: "#FFF", 
-              padding: 12, 
-              borderRadius: 12, 
-              marginBottom: 12, 
-              elevation: 4, 
-              shadowColor: "#000", 
-              shadowOffset: { width: 0, height: 2 }, 
-              shadowOpacity: 0.1, 
-              shadowRadius: 4 
+          {satoshiDepositLoading ? (
+            <View style={{ alignItems: "center", paddingVertical: 30 }}>
+              <View style={{ width: 20, height: 20, borderRadius: 10, borderTopWidth: 2, borderColor: colors.orangeTheme, marginBottom: 12 }} />
+              <AppText type={TWELVE} style={{ color: colors.orangeTheme }}>Loading your deposit address…</AppText>
+            </View>
+          ) : !satoshiDepositError && (saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address) ? (
+            <View style={{
+              backgroundColor: isDark ? "#1A1D23" : "#F9FAFB",
+              borderRadius: 16,
+              padding: 20,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: isDark ? "#333" : "#F3F4F6",
+              marginBottom: 20,
+              width: "100%"
             }}>
-              <QRCode 
-                value={saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "—"} 
-                size={120} 
-                color="#000" 
-                backgroundColor="#FFF" 
-              />
-            </View>
-            <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>Scan to Deposit</AppText>
-
-            {satoshiDepositLoading && (
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
-                <View style={{ width: 14, height: 14, borderRadius: 7, borderTopWidth: 2, borderColor: colors.orangeTheme, marginRight: 8 }} />
-                <AppText type={TWELVE} style={{ color: colors.orangeTheme }}>Updating address…</AppText>
-              </View>
-            )}
-
-            <View style={{ width: "100%" }}>
-              <AppText type={TWELVE} weight={BOLD} style={{ color: themeColors.secondaryText, marginBottom: 8, letterSpacing: 0.5 }}>
-                YOUR AGCE DEPOSIT ADDRESS
-              </AppText>
               <View style={{
-                flexDirection: "row",
-                backgroundColor: isDark ? "#000" : "#F3F4F6",
+                backgroundColor: "#FFF",
+                padding: 12,
                 borderRadius: 12,
-                padding: 6,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: isDark ? "#333" : "#E5E7EB"
+                marginBottom: 12,
+                elevation: 4,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4
               }}>
-                <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
-                  {saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "—"}
-                </AppText>
-                <TouchableOpacity
-                  onPress={handleCopyAddress}
-                  style={{
-                    backgroundColor: colors.orangeTheme,
-                    paddingHorizontal: 20,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                  }}
-                >
-                  <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.white }}>Copy</AppText>
-                </TouchableOpacity>
+                <QRCode
+                  value={saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "—"}
+                  size={120}
+                  color="#000"
+                  backgroundColor="#FFF"
+                />
               </View>
-            </View>
+              <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>Scan to Deposit</AppText>
 
-            {saveAddrWhitelistData?.memo && (
-              <View style={{ width: "100%", marginTop: 16 }}>
+              <View style={{ width: "100%" }}>
                 <AppText type={TWELVE} weight={BOLD} style={{ color: themeColors.secondaryText, marginBottom: 8, letterSpacing: 0.5 }}>
-                  MEMO (TAG)
+                  YOUR AGCE DEPOSIT ADDRESS
                 </AppText>
                 <View style={{
                   flexDirection: "row",
@@ -215,13 +194,10 @@ const AddWithdrawalAddressVerification = ({
                   borderColor: isDark ? "#333" : "#E5E7EB"
                 }}>
                   <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
-                    {saveAddrWhitelistData.memo}
+                    {saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "—"}
                   </AppText>
                   <TouchableOpacity
-                    onPress={() => {
-                      Clipboard.setString(saveAddrWhitelistData.memo);
-                      showSuccess("Memo copied");
-                    }}
+                    onPress={handleCopyAddress}
                     style={{
                       backgroundColor: colors.orangeTheme,
                       paddingHorizontal: 20,
@@ -233,8 +209,43 @@ const AddWithdrawalAddressVerification = ({
                   </TouchableOpacity>
                 </View>
               </View>
-            )}
-          </View>
+
+              {saveAddrWhitelistData?.memo && (
+                <View style={{ width: "100%", marginTop: 16 }}>
+                  <AppText type={TWELVE} weight={BOLD} style={{ color: themeColors.secondaryText, marginBottom: 8, letterSpacing: 0.5 }}>
+                    MEMO (TAG)
+                  </AppText>
+                  <View style={{
+                    flexDirection: "row",
+                    backgroundColor: isDark ? "#000" : "#F3F4F6",
+                    borderRadius: 12,
+                    padding: 6,
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: isDark ? "#333" : "#E5E7EB"
+                  }}>
+                    <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
+                      {saveAddrWhitelistData.memo}
+                    </AppText>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Clipboard.setString(saveAddrWhitelistData.memo);
+                        showSuccess("Memo copied");
+                      }}
+                      style={{
+                        backgroundColor: colors.orangeTheme,
+                        paddingHorizontal: 20,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                      }}
+                    >
+                      <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.white }}>Copy</AppText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          ) : null}
 
           {/* Expiry Bar */}
           <View style={{
@@ -256,8 +267,8 @@ const AddWithdrawalAddressVerification = ({
           )}
 
           {satoshiWhitelistAwaitingProof && (
-            <View style={{ backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#FFFBEB", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: isDark ? "#444" : "#FEF3C7", marginBottom: 16 }}>
-              <AppText type={THIRTEEN} weight={BOLD} style={{ color: isDark ? "#FFF" : "#92400E", marginBottom: 6 }}>Deposit not confirmed yet</AppText>
+            <View style={{ backgroundColor: "transparent", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: isDark ? "#2A2E39" : "#E5E7EB", marginBottom: 16 }}>
+              <AppText type={THIRTEEN} weight={BOLD} style={{ color: isDark ? "#FFF" : "black", marginBottom: 6 }}>Deposit not confirmed yet</AppText>
               <AppText type={ELEVEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
                 Your micro-deposit can take time to arrive and for our systems to detect it. {"\n\n"}
                 You may close this dialog and watch the entry under <AppText type={ELEVEN} weight={BOLD} style={{ color: themeColors.text }}>My Address</AppText> in your address book. When it is approved you can use it for withdrawals. Use <AppText type={ELEVEN} weight={BOLD} style={{ color: themeColors.text }}>Check again</AppText> below to ask the server once more.

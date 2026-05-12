@@ -1029,7 +1029,7 @@ const Spot = () => {
   const [orderToCancel, setOrderToCancel] = useState(null);
   const isSpotFocused = useIsFocused();
   const recentTrades = useAppSelector((state) => state.home.recentTrades);
-  
+
   const [isPriceFocused, setIsPriceFocused] = useState(false);
   const [isAmountFocused, setIsAmountFocused] = useState(false);
   const [isStopFocused, setIsStopFocused] = useState(false);
@@ -2335,43 +2335,20 @@ const Spot = () => {
   ]);
 
   const onSubmit = () => {
-    if (skip_buy_sell) {
-      const { data, orderPriceForValidation } = buildSpotOrderPayload();
-      if (!data.pair) {
-        showError("Select a trading pair");
-        return;
-      }
-      if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
-        if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) return;
-      }
-      if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType)) {
-        return;
-      }
-      dispatch(placeOrder(data, setVisible));
-    } else {
-      setIsConfirm(true);
-    }
-  };
-
-  const onConfirm = () => {
     const { data, orderPriceForValidation } = buildSpotOrderPayload();
     if (!data.pair) {
       showError("Select a trading pair");
-      setIsConfirm(false);
       return;
     }
     if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
       if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) {
-        setIsConfirm(false);
         return;
       }
     }
     if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType)) {
-      setIsConfirm(false);
       return;
     }
     dispatch(placeOrder(data, setVisible));
-    setIsConfirm(false);
   };
 
   const handleCancelOrder = (orderId) => {
@@ -3257,109 +3234,95 @@ const Spot = () => {
                   ]}
                 >
                   <View style={styles.spotOrderFieldStack}>
-                      <Animated.Text
+                    <AppText
+                      style={[
+                        styles.spotOrderInputLabel,
+                        {
+                          position: "absolute",
+                          left: 0,
+                          right: 0,
+                          textAlign: "center",
+                          top: 2,
+                          fontSize: 10,
+                          lineHeight: 13,
+                          color: themeColors.secondaryText,
+                        },
+                      ]}
+                    >
+                      Price ({quote_currency})
+                    </AppText>
+
+                    {isLimit ? (
+                      <Animated.View
                         style={[
-                          styles.spotOrderInputLabel,
+                          styles.spotOrderInputBox,
+                          styles.spotOrderInputBoxDense,
                           {
-                            position: "absolute",
-                            left: 0,
-                            right: 0,
-                            textAlign: "center",
-                            top: priceAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [11, 2],
-                            }),
-                            fontSize: priceAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [12, 10],
-                            }),
-                            lineHeight: priceAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [16, 13],
-                            }),
-                            color: themeColors.secondaryText,
+                            backgroundColor: "transparent",
+                            paddingHorizontal: 0,
+                            paddingVertical: 0,
+                            marginTop: 18,
                           },
                         ]}
                       >
-                        Price ({quote_currency})
-                      </Animated.Text>
-
-                      {isLimit ? (
-                        <Animated.View
+                        <TouchableOpacity
+                          onPress={() => handlePriceStep(-1)}
+                          style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                        >
+                          <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>−</AppText>
+                        </TouchableOpacity>
+                        <TextInput
+                          placeholder={""}
+                          placeholderTextColor={themeColors.secondaryText}
+                          selectionColor={inputSelectionColor}
+                          value={price || formatTotal(buy_price)}
+                          onChangeText={(text) => handlePriceInput(text, setPrice)}
+                          onBlur={() => {
+                            setIsPriceFocused(false);
+                            handlePriceBlur(price, setPrice);
+                          }}
+                          onFocus={() => setIsPriceFocused(true)}
+                          keyboardType="numeric"
                           style={[
-                            styles.spotOrderInputBox,
-                            styles.spotOrderInputBoxDense,
+                            styles.spotOrderInputValue,
+                            styles.spotOrderInputValueDense,
                             {
-                              backgroundColor: "transparent",
-                              paddingHorizontal: 0,
-                              paddingVertical: 0,
-                              marginTop: priceAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [16, 14],
-                              }),
+                              color: themeColors.text,
+                              textAlign: "center",
+                              textAlignVertical: "center",
+                              ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                             },
                           ]}
+                          editable
+                        />
+                        <TouchableOpacity
+                          onPress={() => handlePriceStep(1)}
+                          style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         >
-                          <TouchableOpacity
-                            onPress={() => handlePriceStep(-1)}
-                            style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
-                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          >
-                            <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>−</AppText>
-                          </TouchableOpacity>
-                          <TextInput
-                            placeholder={""}
-                            placeholderTextColor={themeColors.secondaryText}
-                            selectionColor={inputSelectionColor}
-                            value={price || formatTotal(buy_price)}
-                            onChangeText={(text) => handlePriceInput(text, setPrice)}
-                            onBlur={() => {
-                              setIsPriceFocused(false);
-                              handlePriceBlur(price, setPrice);
-                            }}
-                            onFocus={() => setIsPriceFocused(true)}
-                            keyboardType="numeric"
-                            style={[
-                              styles.spotOrderInputValue,
-                              styles.spotOrderInputValueDense,
-                              {
-                                color: themeColors.text,
-                                textAlign: "center",
-                                textAlignVertical: "center",
-                                ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
-                              },
-                            ]}
-                            editable
-                          />
-                          <TouchableOpacity
-                            onPress={() => handlePriceStep(1)}
-                            style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
-                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          >
-                            <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>+</AppText>
-                          </TouchableOpacity>
-                        </Animated.View>
-                      ) : (
-                        <Animated.View
-                          style={{
-                            width: "100%",
-                            minHeight: 23,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            marginTop: priceAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [16, 14],
-                            }),
-                          }}
-                        >
-                          <AppText style={[styles.spotOrderInputValue, styles.spotOrderInputValueDense, { color: themeColors.secondaryText }]}>
-                            ---Best Market Price---
-                          </AppText>
-                        </Animated.View>
-                      )}
-                    </View>
+                          <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>+</AppText>
+                        </TouchableOpacity>
+                      </Animated.View>
+                    ) : (
+                      <Animated.View
+                        style={{
+                          width: "100%",
+                          minHeight: 23,
+                          justifyContent: "center",
+                          alignItems: "center",
+                          marginTop: 18,
+
+                        }}
+                      >
+                        <AppText style={[styles.spotOrderInputValue, styles.spotOrderInputValueDense, { color: themeColors.secondaryText }]}>
+                          ---Best Market Price---
+                        </AppText>
+                      </Animated.View>
+                    )}
                   </View>
                 </View>
+              </View>
 
               {showStopPriceField && (
                 <View style={styles.spotOrderInputBlock}>
@@ -3414,7 +3377,7 @@ const Spot = () => {
                             paddingVertical: 0,
                             marginTop: stopAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [0, 4],
+                              outputRange: [0, 8],
                             }),
                           },
                         ]}
@@ -3465,7 +3428,7 @@ const Spot = () => {
                           <AppText
                             style={[
                               styles.spotOrderInputLabel,
-                              { color: themeColors.secondaryText, textAlign: "center" },
+                              { color: themeColors.secondaryText, textAlign: "center", fontWeight: "400" },
                             ]}
                           >
                             Stop ({quote_currency})
@@ -3529,7 +3492,7 @@ const Spot = () => {
                           paddingVertical: 0,
                           marginTop: amountAnim.interpolate({
                             inputRange: [0, 1],
-                            outputRange: [0, 8],
+                            outputRange: [0, 12],
                           }),
                         },
                       ]}
@@ -3581,7 +3544,7 @@ const Spot = () => {
                         <AppText
                           style={[
                             styles.spotOrderInputLabel,
-                            { color: themeColors.secondaryText, textAlign: "center" },
+                            { color: themeColors.secondaryText, textAlign: "center", fontWeight: "400" },
                           ]}
                         >
                           Amount ({base_currency})
@@ -3618,7 +3581,7 @@ const Spot = () => {
                         <AppText
                           style={[
                             styles.spotOrderInputLabel,
-                            { color: themeColors.secondaryText, textAlign: "center" },
+                            { color: themeColors.secondaryText, textAlign: "center", fontWeight: "400" },
                           ]}
                         >
                           Total ({quote_currency})
@@ -3663,7 +3626,7 @@ const Spot = () => {
                               minHeight: 27,
                               marginTop: amountAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [0, 12],
+                                outputRange: [0, 16],
                               }),
                             },
                           ]}
@@ -4190,134 +4153,6 @@ const Spot = () => {
           </View>
         )}
         {/* Sweet Alert Style Modal */}
-        <ReactNativeModal
-          isVisible={isConfirm}
-          animationIn="zoomIn"
-          animationOut="zoomOut"
-          backdropOpacity={0.5}
-          onBackdropPress={() => setIsConfirm(false)}
-          onBackButtonPress={() => setIsConfirm(false)}
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: themeColors.themeElevationColor,
-              borderRadius: 20,
-              padding: 25,
-              width: Dimensions.get("window").width * 0.85,
-              alignItems: "center",
-              shadowColor: "#000",
-              shadowOffset: {
-                width: 0,
-                height: 10,
-              },
-              shadowOpacity: 0.25,
-              shadowRadius: 20,
-              elevation: 10,
-            }}
-          >
-
-            <AppText
-              style={{
-                fontSize: 20,
-                fontWeight: "700",
-                color: themeColors.text,
-                textAlign: "center",
-                marginBottom: 15,
-              }}
-            >
-              Confirm Order
-            </AppText>
-
-            {/* Message */}
-            <AppText
-              style={{
-                fontSize: 15,
-                color: themeColors.secondaryText,
-                textAlign: "center",
-                marginBottom: 25,
-                lineHeight: 22,
-              }}
-            >
-              Are you sure you want to execute this order?
-            </AppText>
-
-            {/* Buttons Container */}
-            <View
-              style={{
-                flexDirection: "row",
-                width: "100%",
-                gap: 12,
-              }}
-            >
-              {/* Cancel Button */}
-              <TouchableOpacity
-                onPress={() => {
-                  setIsConfirm(false);
-                }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  paddingHorizontal: 20,
-                  borderRadius: 12,
-                  backgroundColor: themeColors.themeElevationColor,
-                  borderWidth: 1,
-                  borderColor: themeColors.themeBorderColor,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <AppText
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "600",
-                    color: themeColors.text,
-                  }}
-                >
-                  Cancel
-                </AppText>
-              </TouchableOpacity>
-
-              {/* Confirm Button */}
-              <TouchableOpacity
-                onPress={() => {
-                  setIsConfirm(false);
-                  onConfirm();
-                }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  paddingHorizontal: 20,
-                  borderRadius: 12,
-                  backgroundColor: themeColors.red,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  shadowColor: themeColors.red,
-                  shadowOffset: {
-                    width: 0,
-                    height: 4,
-                  },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 5,
-                }}
-              >
-                <AppText
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "600",
-                    color: themeColors.textOnButton,
-                  }}
-                >
-                  Confirm
-                </AppText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ReactNativeModal>
         {/* <PopupModal visible={visible} handleVisiblity={handlePopup} /> */}
         <RBSheet
           ref={rbSheetNumber}
@@ -4766,6 +4601,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     fontFamily: fontFamily,
+    fontWeight: "600",
   },
   /** Slippage: slightly larger placeholder/value than dense amount; % overlay so caret stays centered */
   spotOrderSlippageInputShell: {

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TextInput, TouchableOpacity, ScrollView } from "react-native";
-import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN, BOLD } from "../../../../shared";
+import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN, BOLD, TEN } from "../../../../shared";
 import { colors } from "../../../../theme/colors";
 import FastImage from "react-native-fast-image";
 import { EMAIL, security_vector2 } from "../../../../helper/ImageAssets";

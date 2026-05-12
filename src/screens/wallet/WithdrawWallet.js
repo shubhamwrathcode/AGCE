@@ -297,6 +297,7 @@ const WithdrawWallet = () => {
   const [satoshiWhitelistAwaitingProof, setSatoshiWhitelistAwaitingProof] = useState(false);
   const [satoshiDepositLoading, setSatoshiDepositLoading] = useState(false);
   const [satoshiDepositError, setSatoshiDepositError] = useState("");
+  const [satoshiResumeMode, setSatoshiResumeMode] = useState(false);
   const [saveAddrVerifyOptions, setSaveAddrVerifyOptions] = useState([]);
   const [selectedSaveAddrVerifyMethod, setSelectedSaveAddrVerifyMethod] = useState("");
   const [saveAddrWhitelistData, setSaveAddrWhitelistData] = useState(null);
@@ -729,6 +730,108 @@ const WithdrawWallet = () => {
       return `You are about to remove ${head}. Any in-progress verification will be cancelled.`;
     }
     return `Remove ${head} from your saved addresses?`;
+  };
+
+  /** Web parity: addressBookEntryPendingSatoshiDeposit */
+  const isPendingSatoshiDeposit = (entry) => {
+    if (!entry) return false;
+    const st = String(entry.status || "").toUpperCase().replace(/-/g, "_").trim();
+    if (!st || st === "APPROVED" || st === "REJECTED" || st === "EXPIRED") return false;
+    // Not MetaMask pending
+    const method = String(entry.whitelist_method || entry.whitelistMethod || "").toUpperCase();
+    if (method === "METAMASK") return false;
+    // Must have a pending satoshi/proof amount
+    const amt = entry.satoshi_amount ?? entry.proof_amount ?? entry.satoshiAmount ?? entry.proofAmount;
+    if (amt == null || String(amt).trim() === "") return false;
+    return true;
+  };
+
+  /** Resume satoshi whitelist flow from an existing address book entry */
+  const handleResumeSatoshiFromAddressBook = async (entry) => {
+    if (!isPendingSatoshiDeposit(entry)) return;
+    const eid = entry._id || entry.id;
+    const proofAmount = String(entry.satoshi_amount ?? entry.proof_amount ?? entry.satoshiAmount ?? entry.proofAmount ?? "").trim();
+    const proofAsset = String(entry.satoshi_asset ?? entry.proof_asset ?? entry.coin ?? entry.short_name ?? "").trim().toUpperCase();
+    const proofChain = String(entry.satoshi_chain ?? entry.proof_chain ?? entry.chain ?? "").trim().toUpperCase();
+    const shortName = String(entry.coin ?? entry.short_name ?? proofAsset ?? "").trim().toUpperCase();
+
+    // Resolve tokenAssetId
+    const coinObj = withdrawCoinsList.find(c => String(c.short_name || c.coin || "").toUpperCase() === shortName);
+    let tokenAssetId = String(entry.token_asset_id ?? entry.tokenAssetId ?? "").trim();
+    if (!tokenAssetId && coinObj) {
+      if (coinObj.token_asset_ids && proofChain) {
+        tokenAssetId = coinObj.token_asset_ids[proofChain] || coinObj.token_asset_ids[proofChain.toLowerCase()] || "";
+        if (!tokenAssetId) {
+          const fuzzyKey = Object.keys(coinObj.token_asset_ids).find(k =>
+            k.toUpperCase().includes(proofChain) || proofChain.includes(k.toUpperCase())
+          );
+          if (fuzzyKey) tokenAssetId = coinObj.token_asset_ids[fuzzyKey];
+        }
+      }
+      if (!tokenAssetId) {
+        const net = coinObj.networks?.find(n =>
+          String(n.code).toUpperCase() === proofChain ||
+          String(n.short_name || "").toUpperCase() === proofChain
+        );
+        if (net) tokenAssetId = net.tokenAssetId || net.assetId || net.id || "";
+      }
+    }
+    if (!tokenAssetId) tokenAssetId = proofChain || shortName;
+
+    // Set whitelist data and open satoshi step
+    const flowData = {
+      id: eid,
+      proof_amount: proofAmount,
+      proof_asset: proofAsset || shortName,
+      proof_chain: proofChain,
+      tokenAssetId,
+      shortName: shortName || proofAsset,
+    };
+    setSaveAddrWhitelistData(flowData);
+    setSaveAddrStep("satoshi");
+    setSatoshiDepositLoading(true);
+    setSatoshiWhitelistAwaitingProof(false);
+    setSatoshiResumeMode(true);
+    setSaveAddrLabel(entry.name || entry.label || "");
+    setSaveAddrCoin(shortName);
+    setSaveAddrAddress(entry.address || "");
+    setSaveAddrNetwork(entry.network || entry.chain || "");
+    saveAddressSheetRef.current?.open();
+
+    // Fetch deposit address
+    setSatoshiDepositError("");
+    try {
+      const addrRes = await appOperation.customer.get_and_generate_address({
+        assetId: tokenAssetId,
+        tokenAssetId: tokenAssetId,
+        short_name: shortName,
+        generate: true
+      });
+      if (addrRes?.success === false) {
+        setSatoshiDepositError(addrRes?.message || "Could not load deposit address.");
+      } else if (addrRes?.success) {
+        const dr = addrRes.data?.data || addrRes.data || {};
+        const raw = dr.deposit_address || dr.address || dr.wallet_address || dr.walletAddress || dr.depositAddress || "";
+        const mem = dr.memo || dr.tag || dr.destinationTag || dr.memoTag || "";
+        if (raw) {
+          setSaveAddrWhitelistData(prev => ({
+            ...prev,
+            deposit_address: String(raw),
+            address: String(raw),
+            memo: String(mem)
+          }));
+        } else {
+          setSatoshiDepositError("No deposit address returned.");
+        }
+      } else {
+        setSatoshiDepositError("Could not load deposit address.");
+      }
+    } catch (e) {
+      console.warn("Resume satoshi fetch failed", e);
+      setSatoshiDepositError(e?.message || "Could not load deposit address.");
+    } finally {
+      setSatoshiDepositLoading(false);
+    }
   };
 
   const fetchRecentAddresses = useCallback(async (cancelledVal = { val: false }) => {
@@ -2094,6 +2197,26 @@ const WithdrawWallet = () => {
                               <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
                                 {item.address.slice(0, 12)}...{item.address.slice(-10)}
                               </AppText>
+                              {isPendingSatoshiDeposit(item) && (
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e.stopPropagation && e.stopPropagation();
+                                    handleResumeSatoshiFromAddressBook(item);
+                                  }}
+                                  style={{
+                                    marginTop: 8,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: 8,
+                                    borderWidth: 1,
+                                    borderColor: isDark ? "#2A2E39" : "#E5E7EB",
+                                    backgroundColor: isDark ? "#1E222D" : "#F9FAFB",
+                                    alignSelf: "flex-start",
+                                  }}
+                                >
+                                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Show deposit QR & amount</AppText>
+                                </TouchableOpacity>
+                              )}
                             </TouchableOpacity>
                           );
                         })
@@ -2223,12 +2346,12 @@ const WithdrawWallet = () => {
               <View style={{ padding: 20, borderRadius: 16, backgroundColor: isDark ? "#1E222D" : "#F9FAFB", borderWidth: 1, borderColor: isDark ? "#2A2E39" : "#EEE" }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
                   <View>
-                    <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 4 }}>Available Withdraw</AppText>
+                    <AppText type={TWELVE} style={{ color: themeColors.text, marginBottom: 4 }}>Available Withdraw</AppText>
                     <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{formatFundAvailableFromRow(mainWalletFundRow)} {selectedCurrency.short_name}</AppText>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>24h remaining limit</AppText>
+                      <AppText type={TWELVE} style={{ color: themeColors.text }}>24h remaining limit</AppText>
                       <TouchableOpacity onPress={() => withdrawLimitInfoSheetRef.current?.open()}>
                         <View style={{ width: 14, height: 14, borderRadius: 7, borderWidth: 1, borderColor: themeColors.secondaryText, alignItems: "center", justifyContent: "center" }}>
                           <AppText type={TEN} style={{ color: themeColors.secondaryText, fontSize: 8 }}>i</AppText>
@@ -2242,19 +2365,19 @@ const WithdrawWallet = () => {
                 <View style={{ height: 1, backgroundColor: isDark ? "#2A2E39" : "#EEE", marginBottom: 16 }} />
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                  <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>Network Fee</AppText>
+                  <AppText type={FOURTEEN} style={{ color: themeColors.text }}>Network Fee</AppText>
                   <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{withdrawStep3Preview.feeNum || 0} {selectedCurrency.short_name}</AppText>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>You will receive</AppText>
+                  <AppText type={FOURTEEN} style={{ color: themeColors.text }}>You will receive</AppText>
                   <AppText weight={BOLD} type={SIXTEEN} style={{ color: "#E2B24C" }}>{withdrawStep3Preview.receiveNum || 0} {selectedCurrency.short_name}</AppText>
                 </View>
               </View>
 
               <Button
                 children="Withdrawal"
-                containerStyle={{ height: 56, borderRadius: 16, backgroundColor: "#E2B24C" }}
-                textStyle={{ color: "black", fontWeight: "700" }}
+                containerStyle={{ height: 56, borderRadius: 16, backgroundColor: (!withdrawAmount || !!withdrawAmountInlineError) ? (isDark ? "#1E222D" : "#D1D5DB") : "#E2B24C" }}
+                textStyle={{ color: (!withdrawAmount || !!withdrawAmountInlineError) ? (isDark ? "#555" : "#9CA3AF") : "black", fontWeight: "500" }}
                 disabled={!withdrawAmount || !!withdrawAmountInlineError}
                 onPress={handleWithdrawPrimaryPress}
               />
@@ -2907,7 +3030,12 @@ const WithdrawWallet = () => {
                 } else if (saveAddrStep === "otp") {
                   setSaveAddrStep("verify_method");
                 } else if (saveAddrStep === "satoshi" || saveAddrStep === "metamask") {
-                  setSaveAddrStep("otp");
+                  if (satoshiResumeMode) {
+                    setSatoshiResumeMode(false);
+                    saveAddressSheetRef.current?.close();
+                  } else {
+                    setSaveAddrStep("otp");
+                  }
                 }
               }}
             />
