@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TextInput, TouchableOpacity, Clipboard, ScrollView } from "react-native";
-import { AppText, FOURTEEN, SIXTEEN, SEMI_BOLD, TWENTY, BOLD, TWELVE, MEDIUM, TEN } from "../../../../shared";
+import { AppText, FOURTEEN, SIXTEEN, SEMI_BOLD, TWENTY, BOLD, TWELVE, MEDIUM, TEN, THIRTEEN, ELEVEN } from "../../../../shared";
 import { colors } from "../../../../theme/colors";
 import FastImage from "react-native-fast-image";
 import { pasteImg, bitcoinIcon } from "../../../../helper/ImageAssets";
@@ -20,7 +20,15 @@ const AddWithdrawalAddressVerification = ({
   saveAddrOtpTimer,
   saveAddrResendActive,
   handleResendSaveAddrOtp,
+  saveAddrSatoshiPolling,
+  satoshiWhitelistAwaitingProof,
+  satoshiDepositLoading,
+  satoshiDepositError,
+  handleSatoshiWhitelistSent,
+  setSatoshiDepositLoading,
+  setSaveAddrStep
 }) => {
+  console.warn("[UI] Whitelist Data::", JSON.stringify(saveAddrWhitelistData, null, 2));
   if (saveAddrStep !== "otp" && saveAddrStep !== "satoshi" && saveAddrStep !== "metamask") return null;
 
   const email = userData?.emailId || "";
@@ -37,9 +45,8 @@ const AddWithdrawalAddressVerification = ({
       console.warn("Paste failed", e);
     }
   };
-
   const handleCopyAddress = () => {
-    Clipboard.setString(saveAddrWhitelistData?.deposit_address || "");
+    Clipboard.setString(saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "");
     showSuccess("Address copied to clipboard");
   };
 
@@ -107,91 +114,173 @@ const AddWithdrawalAddressVerification = ({
       )}
 
       {saveAddrStep === "satoshi" && (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           <View style={{ marginBottom: 20 }}>
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>
-              To verify ownership of this address, send exactly:
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 12 }}>
+              To verify you own this address, please send exactly:
             </AppText>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
-              {saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset} ({saveAddrWhitelistData?.proof_chain})
+            <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme, textAlign: "center" }}>
+              Send exactly {saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset}
             </AppText>
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
               The deposit must come from the address you are whitelisting. Send this micro-amount to your AGCE deposit address for {saveAddrWhitelistData?.proof_asset} ({saveAddrWhitelistData?.proof_chain}). Scan the QR code below or copy the address.
             </AppText>
           </View>
 
-          {/* QR Code Section */}
+          {satoshiDepositError ? (
+            <View style={{ backgroundColor: isDark ? "rgba(255,0,0,0.1)" : "#FEF2F2", padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.red, marginBottom: 20 }}>
+              <AppText type={FOURTEEN} style={{ color: colors.red }}>{satoshiDepositError}</AppText>
+            </View>
+          ) : null}
+
           <View style={{
             backgroundColor: isDark ? "#1A1D23" : "#F9FAFB",
             borderRadius: 16,
-            padding: 16,
+            padding: 20,
             alignItems: "center",
             borderWidth: 1,
-            borderColor: themeColors.border,
-            marginBottom: 12
+            borderColor: isDark ? "#333" : "#F3F4F6",
+            marginBottom: 20,
+            width: "100%"
           }}>
-            <View style={{ backgroundColor: "#FFF", padding: 8, borderRadius: 12, marginBottom: 8 }}>
-              <QRCode value={saveAddrWhitelistData?.deposit_address || "0x..."} size={120} color="#000" backgroundColor="#FFF" />
+            <View style={{ 
+              backgroundColor: "#FFF", 
+              padding: 12, 
+              borderRadius: 12, 
+              marginBottom: 12, 
+              elevation: 4, 
+              shadowColor: "#000", 
+              shadowOffset: { width: 0, height: 2 }, 
+              shadowOpacity: 0.1, 
+              shadowRadius: 4 
+            }}>
+              <QRCode 
+                value={saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "—"} 
+                size={120} 
+                color="#000" 
+                backgroundColor="#FFF" 
+              />
             </View>
-            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>Scan to deposit</AppText>
+            <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>Scan to Deposit</AppText>
 
-            <View style={{ marginTop: 16, width: "100%" }}>
-              <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, textAlign: "center", marginBottom: 8, letterSpacing: 1 }}>
+            {satoshiDepositLoading && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+                <View style={{ width: 14, height: 14, borderRadius: 7, borderTopWidth: 2, borderColor: colors.orangeTheme, marginRight: 8 }} />
+                <AppText type={TWELVE} style={{ color: colors.orangeTheme }}>Updating address…</AppText>
+              </View>
+            )}
+
+            <View style={{ width: "100%" }}>
+              <AppText type={TWELVE} weight={BOLD} style={{ color: themeColors.secondaryText, marginBottom: 8, letterSpacing: 0.5 }}>
                 YOUR AGCE DEPOSIT ADDRESS
               </AppText>
               <View style={{
                 flexDirection: "row",
-                backgroundColor: isDark ? "#262A33" : "#F3F4F6",
+                backgroundColor: isDark ? "#000" : "#F3F4F6",
                 borderRadius: 12,
-                padding: 8,
-                alignItems: "center"
+                padding: 6,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: isDark ? "#333" : "#E5E7EB"
               }}>
-                <AppText type={TWELVE} style={{ color: themeColors.text, flex: 1, paddingHorizontal: 8 }} numberOfLines={1}>
-                  {saveAddrWhitelistData?.deposit_address}
+                <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
+                  {saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "—"}
                 </AppText>
                 <TouchableOpacity
                   onPress={handleCopyAddress}
                   style={{
-                    backgroundColor: "#FFF",
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: "#E5E7EB"
+                    backgroundColor: colors.orangeTheme,
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 10,
                   }}
                 >
-                  <AppText type={TWELVE} weight={MEDIUM} style={{ color: "#111827" }}>Copy</AppText>
+                  <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.white }}>Copy</AppText>
                 </TouchableOpacity>
               </View>
             </View>
+
+            {saveAddrWhitelistData?.memo && (
+              <View style={{ width: "100%", marginTop: 16 }}>
+                <AppText type={TWELVE} weight={BOLD} style={{ color: themeColors.secondaryText, marginBottom: 8, letterSpacing: 0.5 }}>
+                  MEMO (TAG)
+                </AppText>
+                <View style={{
+                  flexDirection: "row",
+                  backgroundColor: isDark ? "#000" : "#F3F4F6",
+                  borderRadius: 12,
+                  padding: 6,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: isDark ? "#333" : "#E5E7EB"
+                }}>
+                  <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
+                    {saveAddrWhitelistData.memo}
+                  </AppText>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Clipboard.setString(saveAddrWhitelistData.memo);
+                      showSuccess("Memo copied");
+                    }}
+                    style={{
+                      backgroundColor: colors.orangeTheme,
+                      paddingHorizontal: 20,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.white }}>Copy</AppText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Expiry Bar */}
           <View style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: isDark ? "#262A33" : "#F3F4F6",
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 8,
-            marginBottom: 24
+            paddingHorizontal: 4,
+            marginBottom: 20
           }}>
-            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-              🕒 You have 24 hours. Expires: {saveAddrWhitelistData?.expires_at ? moment(saveAddrWhitelistData.expires_at).format("DD MMM YYYY, HH:mm") : "—"}
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+              ⏱ You have 24 hours. Expires: {saveAddrWhitelistData?.expires_at ? moment(saveAddrWhitelistData.expires_at).format("DD MMM YYYY, HH:mm") : "—"}
             </AppText>
           </View>
+
+          {saveAddrSatoshiPolling && (
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 12, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F0F9FF", borderRadius: 12, marginBottom: 16 }}>
+              <View style={{ width: 16, height: 16, borderRadius: 8, borderTopWidth: 2, borderColor: colors.orangeTheme, marginRight: 10 }} />
+              <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: colors.orangeTheme }}>Checking with server…</AppText>
+            </View>
+          )}
+
+          {satoshiWhitelistAwaitingProof && (
+            <View style={{ backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#FFFBEB", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: isDark ? "#444" : "#FEF3C7", marginBottom: 16 }}>
+              <AppText type={THIRTEEN} weight={BOLD} style={{ color: isDark ? "#FFF" : "#92400E", marginBottom: 6 }}>Deposit not confirmed yet</AppText>
+              <AppText type={ELEVEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
+                Your micro-deposit can take time to arrive and for our systems to detect it. {"\n\n"}
+                You may close this dialog and watch the entry under <AppText type={ELEVEN} weight={BOLD} style={{ color: themeColors.text }}>My Address</AppText> in your address book. When it is approved you can use it for withdrawals. Use <AppText type={ELEVEN} weight={BOLD} style={{ color: themeColors.text }}>Check again</AppText> below to ask the server once more.
+              </AppText>
+            </View>
+          )}
+
         </ScrollView>
       )}
 
       {saveAddrStep === "metamask" && (
         <View>
-          <View style={{ alignItems: "center", marginBottom: 24 }}>
-            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: isDark ? "#333" : "#F5F6F8", justifyContent: "center", alignItems: "center", marginBottom: 16 }}>
+          <View style={{ alignItems: "center", marginBottom: 16 }}>
+            <View style={{
+              width: 140,
+              height: 140,
+              borderRadius: 40, backgroundColor: isDark ? "#333" : "#F5F6F8", justifyContent: "center", alignItems: "center", marginBottom: 16
+            }}>
               <FastImage source={bitcoinIcon} style={{ width: 40, height: 40 }} resizeMode="contain" />
             </View>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "center", marginBottom: 8 }}>MetaMask Signature Required</AppText>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, textAlign: "center" }}>
-              This network requires a MetaMask signature to prove ownership. Please use the web platform to complete this step if MetaMask is not available on your device.
+            <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text, textAlign: "center", marginBottom: 6 }}>Ownership Verification Required</AppText>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textAlign: "center", lineHeight: 18 }}>
+              To verify this is your wallet, send exactly <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>{saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset}</AppText> on the <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>{saveAddrWhitelistData?.proof_chain}</AppText> network.
             </AppText>
           </View>
         </View>

@@ -110,6 +110,8 @@ export default (appOperation: AppOperation) => ({
   /** Web parity: POST /v1/wallet/get-and-generate-address (Fireblocks tokenAssetId / assetId flow). */
   get_and_generate_address: (data: { assetId: string; tokenAssetId?: string; short_name: string; generate: boolean }) =>
     appOperation.post('wallet/get-and-generate-address', data, CUSTOMER_TYPE),
+  confirm_satoshi_address_book: (id: string) =>
+    appOperation.get(`wallet/address-book-whitelist-check/${id}`, {}, CUSTOMER_TYPE),
   /** Web parity: POST /api/v1/wallet/validate-address — body { address, chain, tokenAssetId? }. Uses `api/` prefix like web `baseWalletV1Api`. */
   validate_withdraw_address: (data: { address: string; chain: string; tokenAssetId?: string }) =>
     appOperation.post('api/v1/wallet/validate-address', data, CUSTOMER_TYPE),

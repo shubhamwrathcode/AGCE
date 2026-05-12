@@ -161,11 +161,13 @@ function getWithdrawNetworks(coin) {
   return coin.chain
     .filter((c) => isWithdrawChainActive(coin, c))
     .map((code) => {
+      const tokenAssetId = coin.token_asset_ids?.[code] || "";
       return {
         code,
         label: CHAIN_FULL_NAMES[code] || WITHDRAW_NETWORK_LABELS[code] || code,
         min: minW[code] != null ? String(minW[code]) : "—",
         max: maxW[code] != null ? String(maxW[code]) : "—",
+        tokenAssetId,
       };
     });
 }
@@ -208,6 +210,7 @@ const WithdrawWallet = () => {
     () => (Array.isArray(withdrawActiveCoins) ? withdrawActiveCoins : []),
     [withdrawActiveCoins]
   );
+
 
   const { emailId } = userData ?? "";
 
@@ -283,6 +286,10 @@ const WithdrawWallet = () => {
   const [saveAddrExchangeSearch, setSaveAddrExchangeSearch] = useState("");
   const [saveAddrExchangeOpen, setSaveAddrExchangeOpen] = useState(false);
   const [saveAddrProofMethod, setSaveAddrProofMethod] = useState("satoshi"); // "satoshi" | "metamask"
+  const [saveAddrSatoshiPolling, setSaveAddrSatoshiPolling] = useState(false);
+  const [satoshiWhitelistAwaitingProof, setSatoshiWhitelistAwaitingProof] = useState(false);
+  const [satoshiDepositLoading, setSatoshiDepositLoading] = useState(false);
+  const [satoshiDepositError, setSatoshiDepositError] = useState("");
   const [saveAddrVerifyOptions, setSaveAddrVerifyOptions] = useState([]);
   const [selectedSaveAddrVerifyMethod, setSelectedSaveAddrVerifyMethod] = useState("");
   const [saveAddrWhitelistData, setSaveAddrWhitelistData] = useState(null);
@@ -296,6 +303,17 @@ const WithdrawWallet = () => {
   const [saveAddrNetwork, setSaveAddrNetwork] = useState("");
   const [saveAddrCoinOpen, setSaveAddrCoinOpen] = useState(false);
   const [saveAddrNetworkOpen, setSaveAddrNetworkOpen] = useState(false);
+
+  const saveAddrCoinObj = useMemo(() => {
+    return withdrawCoinsList.find((c) => {
+      const sym = c.coin || c.short_name || c.symbol || "";
+      return sym.toUpperCase() === String(saveAddrCoin).toUpperCase();
+    });
+  }, [withdrawCoinsList, saveAddrCoin]);
+
+  const saveAddrNetworkOptions = useMemo(() => {
+    return getWithdrawNetworksOrStaticFallback(saveAddrCoinObj);
+  }, [saveAddrCoinObj]);
   const [addressBookEntries, setAddressBookEntries] = useState([]);
   const [addressBookLoading, setAddressBookLoading] = useState(false);
   const withdrawAddrValidateDebounceTimerRef = useRef(null);
@@ -918,6 +936,11 @@ const WithdrawWallet = () => {
       return;
     }
 
+    setDisableBtn(true);
+    setTimer(60);
+    setOtpText("Resend OTP");
+    Keyboard.dismiss();
+
     /** Web: `sendWithdrawalVerificationOtp` then `sendWithdrawOtp` fallback (`withdrawService.js`). */
     let ok = false;
     let message = "";
@@ -935,7 +958,7 @@ const WithdrawWallet = () => {
       try {
         const r2 = await appOperation.customer.user_send_otp_withdrawal({
           email_or_phone: emailId,
-          resend: disableBtn,
+          resend: true, // we are already in resend mode if timer is active or triggered
         });
         const root2 = r2 && typeof r2 === "object" ? r2 : {};
         if (root2.success === true || root2.success === 1) {
@@ -951,12 +974,48 @@ const WithdrawWallet = () => {
 
     if (ok) {
       showSuccess(message || "Verification code sent");
-      setOtpText("Resend OTP");
-      setDisableBtn(true);
-      setTimer(60);
-      Keyboard.dismiss();
     } else {
       showError(message || "Could not send verification code");
+      // If it failed immediately, maybe we should give the user another chance?
+      // But usually, 60s wait is fine.
+    }
+  };
+
+  useEffect(() => {
+    if (withdrawOtpPhaseActive) {
+      handleGetOtp();
+    }
+  }, [withdrawOtpPhaseActive]);
+
+  const handleSatoshiWhitelistSent = async () => {
+    if (!saveAddrWhitelistData?.id || saveAddrSatoshiPolling) return;
+    setSaveAddrSatoshiPolling(true);
+    try {
+      console.warn("[API] Confirming Satoshi with ID:", saveAddrWhitelistData.id);
+      const res = await appOperation.customer.confirm_satoshi_address_book(saveAddrWhitelistData.id);
+      console.warn("[API] Satoshi Confirmation Response:", JSON.stringify(res, null, 2));
+      if (res?.success) {
+        if (res.data?.status === "APPROVED") {
+          showSuccess(res.message || "Address ownership verified successfully!");
+          // Reload address book
+          const res2 = await appOperation.customer.get_wallet_address_book();
+          if (res2?.success && res2?.data) {
+            const list = Array.isArray(res2.data) ? res2.data : (res2.data.rows || res2.data.addresses || []);
+            setAddressBookEntries(list);
+          }
+          saveAddressSheetRef.current?.close();
+        } else {
+          // If not approved but success is true, it means it's still pending
+          setSatoshiWhitelistAwaitingProof(true);
+          showSuccess(res.message || "Verification is still pending. Please wait for the payment to be detected.");
+        }
+      } else {
+        showError(res?.message || "Verification not confirmed yet.");
+      }
+    } catch (e) {
+      showError(e?.message || "Verification failed");
+    } finally {
+      setSaveAddrSatoshiPolling(false);
     }
   };
 
@@ -2313,26 +2372,25 @@ const WithdrawWallet = () => {
       {/* Add Withdrawal Address Form Sheet */}
       <RBSheet
         ref={saveAddressSheetRef}
-        closeOnDragDown
-        closeOnPressBack
+        closeOnDragDown={false}
+        closeOnPressBack={false}
+        closeOnPressMask={false}
         onClose={resetAddAddressForm} // Clear form on close
-        height={(saveAddrStep === "otp" || saveAddrStep === "verify_method" || saveAddrStep === "satoshi") ? 680 : 580}
+        height={Dimensions.get("window").height * 0.85}
         customStyles={{
           container: {
             backgroundColor: themeColors.background,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            backgroundColor: themeColors.background,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
             paddingHorizontal: 24,
             paddingBottom: 24,
           },
           wrapper: { backgroundColor: "rgba(0,0,0,0.6)" },
-          draggableIcon: { backgroundColor: colors.textGray },
         }}
       >
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingTop: 10 }}>
+            <AppText type={SIXTEEN} weight={BOLD} style={{ color: themeColors.text }}>
               {saveAddrStep === "form"
                 ? "Add withdrawal address"
                 : (saveAddrStep === "verify_method" || saveAddrStep === "otp")
@@ -2342,7 +2400,7 @@ const WithdrawWallet = () => {
                     : "Address confirmation"}
             </AppText>
             <TouchableOpacity onPress={() => saveAddressSheetRef.current?.close()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <AppText type={SIXTEEN} style={{ color: themeColors.text }}>✕</AppText>
+              <AppText type={TWENTY} style={{ color: themeColors.text, fontWeight: "300" }}>✕</AppText>
             </TouchableOpacity>
           </View>
 
@@ -2418,23 +2476,30 @@ const WithdrawWallet = () => {
               saveAddrOtpTimer={saveAddrOtpTimer}
               saveAddrResendActive={saveAddrResendActive}
               handleResendSaveAddrOtp={handleResendSaveAddrOtp}
+              saveAddrSatoshiPolling={saveAddrSatoshiPolling}
+              satoshiWhitelistAwaitingProof={satoshiWhitelistAwaitingProof}
+              setSatoshiDepositLoading={setSatoshiDepositLoading}
+              setSaveAddrStep={setSaveAddrStep}
+              satoshiDepositLoading={satoshiDepositLoading}
+              satoshiDepositError={satoshiDepositError}
+              handleSatoshiWhitelistSent={handleSatoshiWhitelistSent}
               SECURITY_SHEIELD={SECURITY_SHEIELD}
               LOCKED={LOCKED}
               bitcoinIcon={bitcoinIcon}
             />
           </ScrollView>
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 16 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20, paddingBottom: 10 }}>
             <Button
               children={saveAddrStep === "form" ? "Cancel" : "Back"}
               containerStyle={{
                 flex: 1,
-                marginRight: 8,
+                marginRight: 10,
                 backgroundColor: isDark ? "#333" : "#E5E7EB",
-                borderRadius: 12,
+                borderRadius: 100,
                 height: 50
               }}
-              titleStyle={{ color: isDark ? "#FFF" : "#374151" }}
+              titleStyle={{ color: isDark ? "#FFF" : "#374151", fontWeight: "600" }}
               onPress={() => {
                 if (saveAddrStep === "form") {
                   saveAddressSheetRef.current?.close();
@@ -2476,8 +2541,13 @@ const WithdrawWallet = () => {
 
               let buttonText = "Next";
               if (saveAddrStep === "verify_method" || saveAddrStep === "proof_select" || saveAddrStep === "other_identity") buttonText = "Continue";
-              else if (saveAddrStep === "otp") buttonText = "Confirm";
-              else if (saveAddrStep === "satoshi") buttonText = "I've sent the payment";
+              else if (saveAddrStep === "otp") buttonText = "Verify";
+              else if (saveAddrStep === "satoshi") {
+                if (saveAddrSatoshiPolling) buttonText = "Checking...";
+                else if (satoshiWhitelistAwaitingProof) buttonText = "Check again";
+                else buttonText = "I've sent the payment";
+              }
+              else if (saveAddrStep === "metamask") buttonText = "Close";
 
               return (
                 <Button
@@ -2485,17 +2555,16 @@ const WithdrawWallet = () => {
                   disabled={isNextDisabled}
                   containerStyle={{
                     flex: 2,
-                    marginLeft: 8,
-                    backgroundColor: isNextDisabled ? (isDark ? "#222" : "#555") : "#111827",
-                    borderRadius: 12,
+                    marginLeft: 10,
+                    backgroundColor: isNextDisabled ? (isDark ? "#222" : "#ccc") : "#111827",
+                    borderRadius: 100,
                     height: 50,
-                    opacity: isNextDisabled ? 0.8 : 1
+                    opacity: isNextDisabled ? 0.6 : 1
                   }}
-                  titleStyle={{ color: isNextDisabled ? (isDark ? "#555" : "#AAA") : "#FFF" }}
+                  titleStyle={{ color: isNextDisabled ? (isDark ? "#555" : "#666") : "#FFF", fontWeight: "600" }}
                   onPress={async () => {
                     if (saveAddrStep === "satoshi") {
-                      showSuccess("Verification initiated. We will notify you once whitelisted.");
-                      saveAddressSheetRef.current?.close();
+                      handleSatoshiWhitelistSent();
                       return;
                     }
                     if (saveAddrStep === "form") {
@@ -2539,9 +2608,6 @@ const WithdrawWallet = () => {
                               } else if (methods.length > 0) {
                                 setSelectedSaveAddrVerifyMethod(methods[0]);
                               }
-                              // Start timer when transitioning to OTP
-                              setSaveAddrOtpTimer(60);
-                              setSaveAddrResendActive(false);
                               setSaveAddrResendActive(false);
                             } else {
                               showError(res?.message || "Could not load verification options");
@@ -2620,6 +2686,8 @@ const WithdrawWallet = () => {
 
                       if (method === "email" || method === "mobile") {
                         setSaveAddrBusy(true);
+                        setSaveAddrOtpTimer(60);
+                        setSaveAddrResendActive(false);
                         try {
                           // Try primary endpoint first (Web parity)
                           let res = await appOperation.customer.send_address_book_verification_otp({ method });
@@ -2655,7 +2723,31 @@ const WithdrawWallet = () => {
                       try {
                         const method = selectedSaveAddrVerifyMethod || (saveAddrVerifyOptions.includes("email") ? "email" : (saveAddrVerifyOptions.includes("mobile") ? "mobile" : saveAddrVerifyOptions[0])) || "email";
                         const coinObj = withdrawCoinsList.find(c => String(c.short_name).toUpperCase() === String(saveAddrCoin).toUpperCase());
-                        const tokenAssetId = coinObj?.token_asset_ids?.[saveAddrNetwork] || "";
+                        
+                        let tId = "";
+                        if (coinObj?.networks) {
+                           // Find the network object that matches the selected chain (saveAddrNetwork)
+                           const net = coinObj.networks.find(n => 
+                             String(n.code).toUpperCase() === String(saveAddrNetwork).toUpperCase() ||
+                             String(n.short_name).toUpperCase() === String(saveAddrNetwork).toUpperCase()
+                           );
+                           if (net) {
+                             tId = net.tokenAssetId || net.assetId || net.id;
+                           }
+                        }
+                        
+                        // Fallback to token_asset_ids if networks list doesn't yield an ID
+                        if (!tId && coinObj?.token_asset_ids) {
+                          const targetNet = String(saveAddrNetwork).toUpperCase();
+                          tId = coinObj.token_asset_ids[saveAddrNetwork] || coinObj.token_asset_ids[targetNet];
+                          if (!tId) {
+                            const fuzzyKey = Object.keys(coinObj.token_asset_ids).find(k => 
+                              k.toUpperCase().includes(targetNet) || targetNet.includes(k.toUpperCase())
+                            );
+                            if (fuzzyKey) tId = coinObj.token_asset_ids[fuzzyKey];
+                          }
+                        }
+                        const resolvedAssetId = tId || saveAddrNetwork;
 
                         const payload = {
                           label: saveAddrLabel,
@@ -2677,15 +2769,14 @@ const WithdrawWallet = () => {
                           } : {}),
                           verification_method: method,
                           method: saveAddrProofMethod || "SATOSHI",
-                          verification_code: String(saveAddrOtp).trim()
+                          verification_code: String(saveAddrOtp).trim(),
+                          tokenAssetId: resolvedAssetId
                         };
-                        if (tokenAssetId) {
-                          payload.tokenAssetId = tokenAssetId;
-                        }
                         console.warn("[API] Initiate Whitelist Payload:", JSON.stringify(payload, null, 2));
                         const res = await appOperation.customer.initiate_address_book_whitelist(payload);
+                        console.warn("[API] Whitelist Response:", JSON.stringify(res, null, 2));
                         if (res?.success) {
-                          const d = res.data || {};
+                          const d = res.data?.data || res.data || {};
                           if (d.status?.toUpperCase() === "APPROVED") {
                             showSuccess("Address added and verified successfully.");
                             saveAddressSheetRef.current?.close();
@@ -2695,10 +2786,69 @@ const WithdrawWallet = () => {
                               setAddressBookEntries(list);
                             }
                           } else {
-                            setSaveAddrWhitelistData(d);
+                            // Web Parity: Attach resolvedAssetId and shortName manually
+                            const flowData = {
+                              ...d,
+                              tokenAssetId: resolvedAssetId,
+                              shortName: saveAddrCoin
+                            };
+                            setSaveAddrWhitelistData(flowData);
+                            
                             const method = String(d.method || "").toUpperCase();
                             if (method === "SATOSHI") {
                               setSaveAddrStep("satoshi");
+                              setSatoshiDepositLoading(true);
+                              
+                              const coinObj = withdrawCoinsList.find(c => (c.coin || c.short_name || "").toUpperCase() === String(saveAddrCoin).toUpperCase());
+                              let finalId = resolvedAssetId;
+                              
+                              if (coinObj && d.proof_chain) {
+                                const targetNet = String(d.proof_chain).toUpperCase();
+                                // Priority 1: Check networks array for exact match or fuzzy match
+                                const net = coinObj.networks?.find(n => 
+                                  String(n.code).toUpperCase() === targetNet || 
+                                  String(n.short_name).toUpperCase() === targetNet ||
+                                  String(n.tokenAssetId || "").toUpperCase().includes(targetNet)
+                                );
+                                
+                                if (net?.tokenAssetId || net?.assetId) {
+                                  finalId = net.tokenAssetId || net.assetId;
+                                } else if (coinObj.token_asset_ids?.[d.proof_chain]) {
+                                  finalId = coinObj.token_asset_ids[d.proof_chain];
+                                } else {
+                                  finalId = coinObj.coin || coinObj.short_name || targetNet;
+                                }
+                              }
+
+                              (async () => {
+                                try {
+                                  console.warn("[DEBUG] Fetching address for:", finalId);
+                                  const addrRes = await appOperation.customer.get_and_generate_address({
+                                    assetId: finalId,
+                                    tokenAssetId: finalId,
+                                    short_name: saveAddrCoin,
+                                    generate: true
+                                  });
+                                  console.warn("[API] Satoshi Address Response:", JSON.stringify(addrRes, null, 2));
+                                  if (addrRes?.success) {
+                                    const dr = addrRes.data?.data || addrRes.data || {};
+                                    const raw = dr.deposit_address || dr.address || dr.wallet_address || dr.walletAddress || dr.depositAddress || "";
+                                    const mem = dr.memo || dr.tag || dr.destinationTag || dr.memoTag || "";
+                                    if (raw) {
+                                      setSaveAddrWhitelistData(prev => ({ 
+                                        ...prev, 
+                                        deposit_address: String(raw),
+                                        address: String(raw),
+                                        memo: String(mem)
+                                      }));
+                                    }
+                                  }
+                                } catch (e) {
+                                  console.warn("Satoshi fetch failed", e);
+                                } finally {
+                                  setSatoshiDepositLoading(false);
+                                }
+                              })();
                             } else if (method === "METAMASK") {
                               setSaveAddrStep("metamask");
                             } else {
