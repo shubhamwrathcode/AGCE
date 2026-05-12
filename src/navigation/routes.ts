@@ -138,6 +138,8 @@ export const RESET_PASSWORD_FROM_CHANGE: string = 'RESET_PASSWORD_FROM_CHANGE';
 
 /** Create a new support ticket (separate screen; list remains route name `Support`). */
 export const CREATE_TICKET_SCREEN = 'CreateTicket';
+export const WITHDRAW_HISTORY_SCREEN = 'WITHDRAW_HISTORY_SCREEN';
+export const WITHDRAW_DETAIL_SCREEN = 'WITHDRAW_DETAIL_SCREEN';
 
 
 

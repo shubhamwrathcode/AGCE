@@ -61,6 +61,7 @@ import {
   binIcon,
   REMOVE,
 } from "../../helper/ImageAssets";
+import * as routes from '../../navigation/routes';
 import NavigationService from "../../navigation/NavigationService";
 import FastImage from "react-native-fast-image";
 import { colors, lightTheme } from "../../theme/colors";
@@ -1939,7 +1940,7 @@ const WithdrawWallet = () => {
           >
             <FastImage source={INFO} resizeMode="contain" style={{ width: 18, height: 18 }} tintColor={themeColors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => NavigationService.navigate("Wallet_History")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity onPress={() => NavigationService.navigate(routes.WITHDRAW_HISTORY_SCREEN)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <FastImage source={printIcon} resizeMode="contain" style={{ width: 20, height: 17 }} tintColor={themeColors.text} />
           </TouchableOpacity>
         </View>
@@ -2498,7 +2499,7 @@ const WithdrawWallet = () => {
           onTabChange={setRecentWithdrawTab}
           history={withdrawHistory}
           internalHistory={interalWalletHistory}
-          onViewMore={() => NavigationService.navigate(SETTING_SCREEN_New, { activeTab: 1 })}
+          onViewMore={() => NavigationService.navigate(routes.WITHDRAW_HISTORY_SCREEN, { activeTab: 1 })}
           onWithdrawAgain={handleWithdrawAgainFromHistory}
           withdrawCoinsList={withdrawCoinsList}
         />

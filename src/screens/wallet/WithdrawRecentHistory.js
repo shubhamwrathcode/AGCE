@@ -14,6 +14,10 @@ import {
   WITHDRAW_NETWORK_LABELS
 } from "../../helper/walletChainHelpers";
 import { NO_NOTIFICATION_ICON, pasteImg, share_ic, shareIcon } from "../../helper/ImageAssets";
+import NavigationService from "../../navigation/NavigationService";
+import { WITHDRAW_DETAIL_SCREEN } from "../../navigation/routes";
+
+
 
 
 function withdrawStatusTone(label) {
@@ -90,7 +94,13 @@ const WithdrawRecentHistory = ({
     const txId = item.txFull || item.txDisplay || item.txid || item.txId || item.transaction_id || item.tx_id || item.tx_hash || item.transaction_hash || item.hash || item.tx;
 
     return (
-      <View key={item.id || index} style={[styles.historyItem, !isLast && { borderBottomWidth: 1, borderBottomColor: lightTheme.input, paddingBottom: 20, }]}>
+      <TouchableOpacity
+        key={item.id || index}
+        activeOpacity={0.9}
+        onPress={() => NavigationService.navigate(WITHDRAW_DETAIL_SCREEN, { item, isAddress })}
+        style={[styles.historyItem, !isLast && { borderBottomWidth: 1, borderBottomColor: lightTheme.input, paddingBottom: 20, }]}
+      >
+
 
         {/* Date and Status Row */}
         <View style={styles.dateStatusRow}>
@@ -176,8 +186,9 @@ const WithdrawRecentHistory = ({
         </View>
 
 
-      </View>
+      </TouchableOpacity>
     );
+
   };
 
   return (
@@ -185,10 +196,7 @@ const WithdrawRecentHistory = ({
       <View style={styles.header}>
         <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Withdrawal History</AppText>
         <View style={styles.headerRight}>
-          <View style={styles.hideNotices}>
-            <View style={[styles.checkbox, { borderColor: isDark ? "#5E6673" : "#D1D5DB" }]} />
-            <AppText type={ELEVEN} color={themeColors.secondaryText}>Hide error notices</AppText>
-          </View>
+
           <TouchableOpacity onPress={onViewMore}>
             <AppText type={TWELVE} color={themeColors.secondaryText}>More &gt;</AppText>
           </TouchableOpacity>

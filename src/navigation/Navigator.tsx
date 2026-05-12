@@ -43,7 +43,6 @@ import AntiPhishingCode from "../screens/settings/AntiPhishingCode";
 import ResetPassword from "../screens/settings/ResetPassword";
 import CurrencyPreference from "../screens/account/CurrencyPreference";
 import CoinDetails from "../screens/trades/CoinDetails";
-import Withdraw from "../screens/other/Withdraw";
 import WalletDetails from "../features/wallet/screens/WalletDetailsScreen";
 import WalletHistoryDetails from "../screens/wallet/WalletHistoryDetails";
 import TradeHistoryDetails from "../screens/wallet/TradeHistoryDetails";
@@ -154,6 +153,8 @@ import { useTheme } from "../hooks/useTheme";
 import AirDropScreen from "../screens/airdrop/AirDropScreen";
 import AirdropHistoryScreen from "../screens/airdrop/AirdropHistoryScreen";
 import DepositHistoryDetailScreen from "../screens/account/DepositHistoryDetailScreen";
+import WithdrawalHistory from "../screens/wallet/WithdrawalHistory";
+import WithdrawalDetailPage from "../screens/wallet/WithdrawalDetailPage";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -163,70 +164,70 @@ const P2PStack = createStackNavigator();
 const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
   return (
     <View style={customTabBarStyles.container}>
-        {state.routes.map((route: any, index: number) => {
-          const isFocused = state.index === index;
-          const onPress = () => {
-            if (route.name === routes.FUTURES_SCREEN) {
-              Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
-              return;
-            }
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
+      {state.routes.map((route: any, index: number) => {
+        const isFocused = state.index === index;
+        const onPress = () => {
+          if (route.name === routes.FUTURES_SCREEN) {
+            Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
+            return;
+          }
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
 
-          const onLongPress = () => {
-            navigation.emit({
-              type: "tabLongPress",
-              target: route.key,
-            });
-          };
+        const onLongPress = () => {
+          navigation.emit({
+            type: "tabLongPress",
+            target: route.key,
+          });
+        };
 
-          const iconByRoute: any = {
-            [routes.HOME_SCREEN]: homeIcon,
-            [routes.MARKET_SCREEN]: marketIcon,
-            [routes.TRADE_SCREEN]: tradeImg,
-            [routes.FUTURES_SCREEN]: futuresActiveIcon,
-            [routes.WALLET_SCREEN]: wallet_ic,
-          };
+        const iconByRoute: any = {
+          [routes.HOME_SCREEN]: homeIcon,
+          [routes.MARKET_SCREEN]: marketIcon,
+          [routes.TRADE_SCREEN]: tradeImg,
+          [routes.FUTURES_SCREEN]: futuresActiveIcon,
+          [routes.WALLET_SCREEN]: wallet_ic,
+        };
 
-          const labelByRoute: any = {
-            [routes.HOME_SCREEN]: "Home",
-            [routes.MARKET_SCREEN]: "Market",
-            [routes.TRADE_SCREEN]: "Trade",
-            [routes.FUTURES_SCREEN]: "Future",
-            [routes.WALLET_SCREEN]: "Wallet",
-          };
+        const labelByRoute: any = {
+          [routes.HOME_SCREEN]: "Home",
+          [routes.MARKET_SCREEN]: "Market",
+          [routes.TRADE_SCREEN]: "Trade",
+          [routes.FUTURES_SCREEN]: "Future",
+          [routes.WALLET_SCREEN]: "Wallet",
+        };
 
-          const tint = isFocused ? colors.black : "#9CA3AF";
-          const icon = iconByRoute[route.name];
-          const label = labelByRoute[route.name] ?? route.name;
+        const tint = isFocused ? colors.black : "#9CA3AF";
+        const icon = iconByRoute[route.name];
+        const label = labelByRoute[route.name] ?? route.name;
 
-          return (
-            <View key={route.key} style={customTabBarStyles.itemWrap}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityState={isFocused ? { selected: true } : {}}
-                accessibilityLabel={descriptors[route.key]?.options?.tabBarAccessibilityLabel}
-                testID={descriptors[route.key]?.options?.tabBarTestID}
-                onPress={onPress}
-                onLongPress={onLongPress}
-                style={customTabBarStyles.item}
-                activeOpacity={0.8}
-              >
-                <FastImage source={icon} style={customTabBarStyles.icon} resizeMode="contain" tintColor={tint} />
-                <AppText weight={isFocused ? BOLD : MEDIUM} type={TEN} style={[customTabBarStyles.label, { color: tint }]}>
-                  {label}
-                </AppText>
-              </TouchableOpacity>
-            </View>
-          );
-        })}
+        return (
+          <View key={route.key} style={customTabBarStyles.itemWrap}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={descriptors[route.key]?.options?.tabBarAccessibilityLabel}
+              testID={descriptors[route.key]?.options?.tabBarTestID}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              style={customTabBarStyles.item}
+              activeOpacity={0.8}
+            >
+              <FastImage source={icon} style={customTabBarStyles.icon} resizeMode="contain" tintColor={tint} />
+              <AppText weight={isFocused ? BOLD : MEDIUM} type={TEN} style={[customTabBarStyles.label, { color: tint }]}>
+                {label}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
     </View>
   );
 };
@@ -321,7 +322,6 @@ const MyAuthLoadingStack = () => {
         name={routes.CURRENCY_PREFERENCE_SCREEN}
         component={CurrencyPreference}
       />
-      <Stack.Screen name={routes.WITHDRAW_SCREEN} component={Withdraw} />
       <Stack.Screen name={routes.CONVERT_SCREEN} component={ConvertNew} />
       <Stack.Screen name={routes.COIN_DETAILS_SCREEN} component={CoinDetails} />
       <Stack.Screen
@@ -515,6 +515,14 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.RESET_PASSWORD_FROM_CHANGE}
         component={ResetPassword}
+      />
+      <Stack.Screen
+        name={routes.WITHDRAW_HISTORY_SCREEN}
+        component={WithdrawalHistory}
+      />
+      <Stack.Screen
+        name={routes.WITHDRAW_DETAIL_SCREEN}
+        component={WithdrawalDetailPage}
       />
     </Stack.Navigator>
   );
