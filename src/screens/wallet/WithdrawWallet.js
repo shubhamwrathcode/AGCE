@@ -861,7 +861,6 @@ const WithdrawWallet = () => {
     return `Remove ${head} from your saved addresses?`;
   };
 
-  /** Web parity: addressBookEntryPendingSatoshiDeposit */
   const isPendingSatoshiDeposit = (entry) => {
     if (!entry) return false;
     const st = String(entry.status || "").toUpperCase().replace(/-/g, "_").trim();
@@ -873,6 +872,18 @@ const WithdrawWallet = () => {
     const amt = entry.satoshi_amount ?? entry.proof_amount ?? entry.satoshiAmount ?? entry.proofAmount;
     if (amt == null || String(amt).trim() === "") return false;
     return true;
+  };
+
+  /** Web parity: addressBookEntryPendingMetaMaskSignature */
+  const isPendingMetaMaskSign = (entry) => {
+    if (!entry) return false;
+    const st = String(entry.status || "").toUpperCase().replace(/-/g, "_").trim();
+    if (st !== "PENDING_SIGNATURE") return false;
+    const method = String(entry.whitelist_method || entry.whitelistMethod || "").toUpperCase();
+    if (method !== "METAMASK") return false;
+    const challenge = entry.metamask_challenge ?? entry.metamaskChallenge ?? "";
+    const eid = entry._id ?? entry.id;
+    return Boolean(eid && String(challenge).trim());
   };
 
   /** Resume satoshi whitelist flow from an existing address book entry */
@@ -961,6 +972,31 @@ const WithdrawWallet = () => {
     } finally {
       setSatoshiDepositLoading(false);
     }
+  };
+
+  /** Resume MetaMask whitelist signature flow from an existing address book entry */
+  const handleResumeMetaMaskFromAddressBook = (entry) => {
+    if (!isPendingMetaMaskSign(entry)) return;
+    const eid = entry._id || entry.id;
+    const challenge = String(entry.metamask_challenge ?? entry.metamaskChallenge ?? "").trim();
+    const expiresAt = entry.metamask_expires_at ?? entry.metamaskExpiresAt ?? "";
+
+    if (expiresAt) {
+      const t = Date.parse(expiresAt);
+      if (Number.isFinite(t) && Date.now() > t) {
+        showError("This MetaMask verification window has expired. Remove the address and add it again.");
+        return;
+      }
+    }
+
+    setSaveAddrWhitelistData({
+      id: String(eid),
+      challenge,
+      expires_at: expiresAt,
+    });
+    setSaveAddrStep("metamask");
+    saveAddressSheetRef.current?.open();
+    setShowAddressBook(false);
   };
 
   const fetchRecentAddresses = useCallback(async (cancelledVal = { val: false }) => {
@@ -2510,6 +2546,26 @@ const WithdrawWallet = () => {
                                   }}
                                 >
                                   <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Show deposit QR & amount</AppText>
+                                </TouchableOpacity>
+                              )}
+                              {isPendingMetaMaskSign(item) && (
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e.stopPropagation && e.stopPropagation();
+                                    handleResumeMetaMaskFromAddressBook(item);
+                                  }}
+                                  style={{
+                                    marginTop: 8,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: 8,
+                                    borderWidth: 1,
+                                    borderColor: isDark ? "#2A2E39" : "#E5E7EB",
+                                    backgroundColor: isDark ? "#1E222D" : "#F9FAFB",
+                                    alignSelf: "flex-start",
+                                  }}
+                                >
+                                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Sign with MetaMask to complete</AppText>
                                 </TouchableOpacity>
                               )}
                             </TouchableOpacity>
