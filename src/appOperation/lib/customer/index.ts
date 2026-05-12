@@ -202,6 +202,8 @@ export default (appOperation: AppOperation) => ({
       data, 
       CUSTOMER_TYPE
     ),
+    withdrawal_address_history: () =>
+      appOperation.get('api/v1/wallet/withdrawal-address-history', undefined, undefined, CUSTOMER_TYPE),
   withdraw_inr: (data: WithdrawInrProps) =>
     appOperation.post('wallet/withdraw_inr', data, CUSTOMER_TYPE),
   kyc_verification: (data: any) =>

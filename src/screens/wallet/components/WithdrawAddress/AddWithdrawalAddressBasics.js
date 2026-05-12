@@ -37,6 +37,7 @@ const AddWithdrawalAddressBasics = ({
   saveAddrBenPin,
   setSaveAddrBenPin,
   saveAddrBenAddress,
+  saveAddrCountrySheetRef,
   setSaveAddrBenAddress,
   saveAddrVerifyOptions,
   selectedSaveAddrVerifyMethod,
@@ -292,20 +293,22 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 20 }}>
             <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>Country of residence</AppText>
             <TouchableOpacity
-              onPress={() => {
-                // In mobile we usually use a bottom sheet or modal for country selection
-                // For now let's use a simple text input or placeholder for country
-                // Ideally this would be a CountryPicker
+              onPress={() => saveAddrCountrySheetRef.current?.open()}
+              style={{ 
+                backgroundColor: isDark ? themeColors.card : "#F5F6F8", 
+                borderRadius: 8, 
+                paddingHorizontal: 16, 
+                height: 48, 
+                flexDirection: "row", 
+                alignItems: "center", 
+                justifyContent: "space-between", 
+                borderWidth: 1, 
+                borderColor: isDark ? themeColors.border : "#E8EAEF" 
               }}
-              style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}
             >
-              <TextInput
-                placeholder="Select country"
-                placeholderTextColor={themeColors.secondaryText}
-                style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
-                value={saveAddrBenCountry}
-                onChangeText={setSaveAddrBenCountry}
-              />
+              <AppText type={FOURTEEN} style={{ color: saveAddrBenCountry ? themeColors.text : themeColors.secondaryText }}>
+                {saveAddrBenCountry || "Select country"}
+              </AppText>
             </TouchableOpacity>
           </View>
 

@@ -34,6 +34,7 @@ import {
   YELLOW,
   MEDIUM,
   BOLD,
+  EIGHTEEN,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import WithdrawCoinPickerPanel from "./WithdrawCoinPickerPanel";
@@ -62,6 +63,8 @@ import {
   PASSKEY_VERIFY,
   LOCKED,
   bitcoinIcon,
+  email_vector,
+  editIcon,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import FastImage from "react-native-fast-image";
@@ -95,6 +98,7 @@ import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
 import { getNotificationList } from "../../actions/homeActions";
 import moment from "moment";
+import { countriesList } from "../../helper/CountriesList";
 
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.9);
 const AGCE_COUNTRY_SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.48);
@@ -328,6 +332,18 @@ const WithdrawWallet = () => {
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
   const networkSheetRef = useRef(null);
   const coinSheetRef = useRef(null);
+  const saveAddrCountrySheetRef = useRef(null);
+  const [isWithdrawConfirmOpen, setIsWithdrawConfirmOpen] = useState(false);
+  const [isWithdrawSummaryOpen, setIsWithdrawSummaryOpen] = useState(false);
+  const withdrawConfirmSheetRef = useRef(null);
+  const withdrawSummarySheetRef = useRef(null);
+  const withdrawSecuritySheetRef = useRef(null);
+  const [addressBookSubTab, setAddressBookSubTab] = useState("saved");
+  const [recentAddresses, setRecentAddresses] = useState([]);
+  const [recentAddressesLoading, setRecentAddressesLoading] = useState(false);
+  const [withdrawSummaryContinueBusy, setWithdrawSummaryContinueBusy] = useState(false);
+  const [isSecurityVerificationOpen, setIsSecurityVerificationOpen] = useState(false);
+  const [withdrawConfirmBusy, setWithdrawConfirmBusy] = useState(false);
   const agceCountrySheetRef = useRef(null);
   const [showWithdrawFaqModal, setShowWithdrawFaqModal] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
@@ -346,6 +362,9 @@ const WithdrawWallet = () => {
     return !(withdrawActiveCoins && withdrawActiveCoins.length > 0);
   });
 
+  const [isAddressDeleteModalOpen, setIsAddressDeleteModalOpen] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState(null);
+  const [addressDeleteBusy, setAddressDeleteBusy] = useState(false);
   const isFirstLoad = useRef(true);
   const [refreshing, setRefreshing] = useState(false);
   /** After user picks a coin from sheet, do not overwrite with default USDT. */
@@ -533,7 +552,12 @@ const WithdrawWallet = () => {
 
   useEffect(() => {
     dispatch(getWithdrawActiveCoins());
-    dispatch(getUserMainWallet("main"));
+    try {
+      dispatch(getUserMainWallet("main"));
+    } catch (e) {
+      console.warn("Initial wallet fetch failed:", e);
+    }
+    dispatch(getUserMainWallet("spot")); // Backup check for balance
     dispatch(getNotificationList());
 
     if (routeCoin && typeof routeCoin === "object" && Object.keys(routeCoin).length > 0) {
@@ -580,6 +604,29 @@ const WithdrawWallet = () => {
     fullData: item
   })) || [];
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        dispatch(getWithdrawActiveCoins()),
+        dispatch(getNotificationList()),
+        refetchAddressBook(),
+        fetchRecentAddresses(),
+        reloadWithdrawal24hUsage?.()
+      ]);
+      // Attempt to fetch wallet, but don't let it crash the whole refresh if it returns 400
+      try {
+        await dispatch(getUserMainWallet("main"));
+      } catch (e) {
+        console.warn("Withdraw Wallet Fetch Error:", e);
+      }
+    } catch (e) {
+      console.warn("Withdrawal Refresh Error:", e);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [dispatch, reloadWithdrawal24hUsage]);
+
   useEffect(() => {
     setAvailableBalance(String(totalSpendableFromFundRow(mainWalletFundRow)));
   }, [mainWalletFundRow]);
@@ -608,6 +655,126 @@ const WithdrawWallet = () => {
       }
     };
     fetchAddressBook();
+    return () => { cancelled = true; };
+  }, []);
+
+  const refetchAddressBook = async () => {
+    try {
+      setAddressBookLoading(true);
+      const res = await appOperation.customer.get_wallet_address_book();
+      if (res?.success && res?.data) {
+        const list = Array.isArray(res.data) ? res.data : (res.data.rows || res.data.addresses || []);
+        setAddressBookEntries(list);
+      }
+    } catch (err) {
+      // ignore
+    } finally {
+      setAddressBookLoading(false);
+    }
+  };
+
+  const handleConfirmDeleteAddress = async () => {
+    if (!addressToDelete) return;
+    try {
+      setAddressDeleteBusy(true);
+      const id = addressToDelete._id || addressToDelete.id;
+      const res = await appOperation.customer.delete_wallet_address_book(id);
+      if (res?.success) {
+        setIsAddressDeleteModalOpen(false);
+        setAddressToDelete(null);
+        void refetchAddressBook();
+      } else {
+        showError(res?.message || "Could not remove address");
+      }
+    } catch (err) {
+      showError("An error occurred while removing the address");
+    } finally {
+      setAddressDeleteBusy(false);
+    }
+  };
+
+  const getDeleteModalTitle = (entry) => {
+    if (!entry) return "Remove address?";
+    const st = String(entry.status || "").toUpperCase();
+    if (st === "APPROVED" || st === "ACTIVE") return "Remove whitelisted address?";
+    if (st.startsWith("PENDING")) return "Remove pending address?";
+    return "Remove saved address?";
+  };
+
+  const getDeleteModalMessage = (entry) => {
+    if (!entry) return "";
+    const label = entry.name || entry.label || "Address";
+    const coin = entry.coin || "";
+    const network = entry.network || entry.chain || "";
+    const addr = entry.address || "";
+    const shortAddr = addr ? `${addr.slice(0, 8)}...${addr.slice(-6)}` : "";
+
+    const parts = [coin, network].filter(Boolean);
+    const meta = parts.length ? parts.join(" · ") : "";
+    const head = meta ? `${label} — ${meta} — ${shortAddr}` : `${label} (${shortAddr})`;
+
+    const st = String(entry.status || "").toUpperCase();
+    if (st === "APPROVED" || st === "ACTIVE") {
+      return `You are about to remove ${head}. You will need to verify this address again before you can withdraw to it.`;
+    }
+    if (st.startsWith("PENDING")) {
+      return `You are about to remove ${head}. Any in-progress verification will be cancelled.`;
+    }
+    return `Remove ${head} from your saved addresses?`;
+  };
+
+  const fetchRecentAddresses = useCallback(async (cancelledVal = { val: false }) => {
+    try {
+      setRecentAddressesLoading(true);
+      const res = await appOperation.customer.withdrawal_address_history();
+      if (!cancelledVal.val && res?.success && res?.data) {
+        const list = Array.isArray(res.data) ? res.data : (res.data.data || []);
+        const mapped = list.map(item => ({
+          address: item.address,
+          network: item.chain || item.network,
+          coin: item.coin,
+          last_used: item.last_used_at,
+          times_used: item.times_used
+        }));
+        setRecentAddresses(mapped);
+      }
+    } catch (err) {
+      // ignore
+    } finally {
+      if (!cancelledVal.val) setRecentAddressesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const cv = { val: false };
+    fetchRecentAddresses(cv);
+    return () => { cv.val = true; };
+  }, [fetchRecentAddresses]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchRecentAddresses = async () => {
+      try {
+        setRecentAddressesLoading(true);
+        const res = await appOperation.customer.withdrawal_address_history();
+        if (!cancelled && res?.success && res?.data) {
+          const list = Array.isArray(res.data) ? res.data : (res.data.data || []);
+          const mapped = list.map(item => ({
+            address: item.address,
+            network: item.chain || item.network,
+            coin: item.coin,
+            last_used: item.last_used_at,
+            times_used: item.times_used
+          }));
+          setRecentAddresses(mapped);
+        }
+      } catch (err) {
+        // ignore
+      } finally {
+        if (!cancelled) setRecentAddressesLoading(false);
+      }
+    };
+    fetchRecentAddresses();
     return () => { cancelled = true; };
   }, []);
 
@@ -719,7 +886,10 @@ const WithdrawWallet = () => {
       }
 
       const successFlag = root.success === true || data.success === true;
-      const ok = (successFlag && validTrue) || validTrue === true;
+      const msg = String(data?.message || root?.message || "").trim();
+      const isAlreadyWhitelisted = msg.toLowerCase().includes("already whitelisted");
+
+      const ok = (successFlag && validTrue) || validTrue === true || isAlreadyWhitelisted;
 
       if (ok) {
         setWithdrawAddressValidError("");
@@ -727,7 +897,6 @@ const WithdrawWallet = () => {
         return true;
       }
       setWithdrawAddressValidatedKey("");
-      const msg = String(data?.message || root?.message || "").trim();
       setWithdrawAddressValidError(msg && msg.toLowerCase() !== "ok" ? msg : `Invalid address for ${net}`);
       return false;
     } catch (e) {
@@ -890,18 +1059,6 @@ const WithdrawWallet = () => {
     }
   }, [dispatch, isWithdrawMetaRefreshing, reloadWithdrawal24hUsage]);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([dispatch(getWithdrawActiveCoins()), dispatch(getUserMainWallet("main"))]);
-      await reloadWithdrawal24hUsage();
-    } catch (e) {
-      console.warn("Withdraw refresh failed", e);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [dispatch, reloadWithdrawal24hUsage]);
-
   const handleGetOtp = async () => {
     if (!selectedCurrency || Object.keys(selectedCurrency).length === 0) {
       showError("Please select a coin first");
@@ -1047,6 +1204,13 @@ const WithdrawWallet = () => {
     }
   };
 
+  const handleFinalWithdraw = () => {
+    withdrawConfirmSheetRef.current?.close();
+    // Transition to the summary sheet as per mobile UX
+    setTimeout(() => {
+      withdrawSummarySheetRef.current?.open();
+    }, 450);
+  };
   /** Web `WithdrawPageStep3Overlays`: first Withdrawal opens verify; OTP is not required to enable the first tap. */
   const handleWithdrawPrimaryPress = () => {
     if (!withdrawOtpPhaseActive) {
@@ -1064,16 +1228,23 @@ const WithdrawWallet = () => {
           showError("Please wait while the address is being verified");
           return;
         }
-        if (!withdrawAddress || !isWithdrawAddressValid) {
-          showError("Please enter a valid wallet address");
+
+        const isWhitelistedLocally = (withdrawAddressValidError && withdrawAddressValidError.toLowerCase().includes("whitelisted"));
+        if (!withdrawAddress || (!isWithdrawAddressValid && !isWhitelistedLocally)) {
+          showError(withdrawAddressValidError || "Please enter a valid wallet address");
           return;
         }
 
         // Address book validation check parity
-        const withdrawalAddressIsApprovedInBook = addressBookEntries.some((e) => {
-          if (e.status !== "approved" && e.status !== "active") return false;
-          return String(e.address).toLowerCase() === String(withdrawAddress).toLowerCase();
+        const normalizedInputAddr = String(withdrawAddress || "").toLowerCase().trim();
+        const withdrawalAddressIsApprovedInBook = (addressBookEntries || []).some((e) => {
+          const entryAddr = String(e.address || "").toLowerCase().trim();
+          const isMatch = entryAddr === normalizedInputAddr;
+          const status = String(e.status || "").toLowerCase();
+          const isApproved = status === "approved" || status === "active" || status === "verified";
+          return isMatch && isApproved;
         });
+
         if (!withdrawalAddressIsApprovedInBook && !addressBookLoading) {
           setIsAddressVerificationReminderOpen(true);
           return;
@@ -1084,10 +1255,12 @@ const WithdrawWallet = () => {
           return;
         }
       }
+
       if (!withdrawAmount || String(withdrawAmount).trim() === "") {
         showError("Please enter withdrawal amount");
         return;
       }
+
       if (withdrawAmountInlineError) {
         showError(withdrawAmountInlineError);
         return;
@@ -1100,7 +1273,14 @@ const WithdrawWallet = () => {
         showError("Please update email in profile section");
         return;
       }
-      setWithdrawOtpPhaseActive(true);
+
+      if (withdrawToTab === "address") {
+        withdrawConfirmSheetRef.current?.open();
+        setWithdrawConfirmBusy(true);
+        setTimeout(() => setWithdrawConfirmBusy(false), 3000);
+      } else {
+        setWithdrawOtpPhaseActive(true);
+      }
       Keyboard.dismiss();
       return;
     }
@@ -1379,6 +1559,60 @@ const WithdrawWallet = () => {
       </View>
     </RBSheet>
   );
+  const saveAddrBeneficiaryCountrySheetOnly = (
+    <RBSheet
+      ref={saveAddrCountrySheetRef}
+      height={AGCE_COUNTRY_SHEET_HEIGHT}
+      closeOnDragDown
+      closeOnPressMask
+      customStyles={{
+        container: {
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          backgroundColor: themeColors.background,
+        },
+        wrapper: { backgroundColor: "rgba(0,0,0,0.6)" },
+        draggableIcon: { backgroundColor: colors.textGray },
+      }}
+    >
+      <View style={styles.agceCountrySheetInner}>
+        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>
+          Select country
+        </AppText>
+        <ScrollView style={styles.agceCountrySheetScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          {countriesList.map((c, idx) => {
+            const countryName = c.label.split("(")[0].trim();
+            const selected = saveAddrBenCountry === countryName;
+            return (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.agceCountrySheetRow,
+                  {
+                    borderBottomWidth: idx < countriesList.length - 1 ? StyleSheet.hairlineWidth : 0,
+                    borderBottomColor: isDark ? themeColors.border : "#00000018",
+                  },
+                ]}
+                onPress={() => {
+                  setSaveAddrBenCountry(countryName);
+                  saveAddrCountrySheetRef.current?.close();
+                }}
+                activeOpacity={0.75}
+              >
+                <AppText type={FOURTEEN}>{c.flag}</AppText>
+                <AppText type={TWELVE} color={themeColors.text} style={{ marginLeft: 12, flex: 1 }}>
+                  {countryName}
+                </AppText>
+                {selected ? (
+                  <FastImage source={checkIc} style={{ width: 12, height: 12, right: 5 }} resizeMode="contain" />
+                ) : null}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </RBSheet>
+  );
 
   const withdrawLimitInfoSheetOnly = (
     <RBSheet
@@ -1447,6 +1681,10 @@ const WithdrawWallet = () => {
       </ScrollView>
     </RBSheet>
   );
+
+  useEffect(() => {
+    fetchRecentAddresses();
+  }, [fetchRecentAddresses]);
 
   useEffect(() => {
     if (saveAddrCoin && withdrawCoinsList.length > 0) {
@@ -1687,6 +1925,186 @@ const WithdrawWallet = () => {
                   Select a network for fees and address validation. You can enter the address below anytime.
                 </AppText>
               ) : null}
+
+              {/* Web Parity: Address Book / Recent Tabs UI matching screenshot */}
+              <View style={{
+                marginTop: 16,
+                backgroundColor: isDark ? themeColors.card : "#FFF",
+                borderRadius: 12,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: isDark ? themeColors.border : "#F3F4F6",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+                elevation: 2
+              }}>
+                <View style={{ flexDirection: "row", marginBottom: 16, alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => setAddressBookSubTab("recent")}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 100,
+                        backgroundColor: addressBookSubTab === "recent" ? (isDark ? "#2A2E39" : "#F3F4F6") : "transparent"
+                      }}
+                    >
+                      <AppText
+                        weight={addressBookSubTab === "recent" ? SEMI_BOLD : MEDIUM}
+                        type={TWELVE}
+                        style={{ color: addressBookSubTab === "recent" ? themeColors.text : themeColors.secondaryText }}
+                      >
+                        Recent
+                      </AppText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setAddressBookSubTab("saved")}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 100,
+                        backgroundColor: addressBookSubTab === "saved" ? (isDark ? "#2A2E39" : "#F3F4F6") : "transparent"
+                      }}
+                    >
+                      <AppText
+                        weight={addressBookSubTab === "saved" ? SEMI_BOLD : MEDIUM}
+                        type={TWELVE}
+                        style={{ color: addressBookSubTab === "saved" ? themeColors.text : themeColors.secondaryText }}
+                      >
+                        My Address
+                      </AppText>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity onPress={() => saveAddressSheetRef.current?.open()}>
+                    <FastImage
+                      source={editIcon}
+                      style={{ width: 18, height: 18 }}
+                      resizeMode="contain"
+                      tintColor={themeColors.secondaryText}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Tabs Content */}
+                {addressBookSubTab === "recent" ? (
+                  <View>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+                      <AppText type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
+                        Addresses you have withdrawn to before. Select one to fill the address field.{" "}
+                      </AppText>
+                      <TouchableOpacity onPress={() => saveAddressSheetRef.current?.open()}>
+                        <AppText weight={BOLD} type={TWELVE} style={{ color: colors.buttonBg }}>Save address</AppText>
+                      </TouchableOpacity>
+                    </View>
+                    {recentAddressesLoading ? (
+                      <ActivityIndicator size="small" color={themeColors.secondaryText} style={{ alignSelf: "flex-start" }} />
+                    ) : recentAddresses.length > 0 ? (
+                      <View style={{ gap: 10 }}>
+                        {recentAddresses.map((item, idx) => (
+                          <TouchableOpacity
+                            key={idx}
+                            onPress={() => {
+                              setWithdrawAddress(item.address);
+                              if (item.network) setNetwork(item.network);
+                              void validateWithdrawAddressApiRef.current?.();
+                            }}
+                            style={{
+                              padding: 12,
+                              borderRadius: 12,
+                              backgroundColor: isDark ? "#1E222D" : "#FFF",
+                              borderWidth: 1,
+                              borderColor: isDark ? themeColors.border : "#E5E7EB"
+                            }}
+                          >
+                            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                              <AppText weight={BOLD} type={FOURTEEN} color={themeColors.text}>{item.coin || "Recent"}</AppText>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                                <AppText type={TEN} color={themeColors.secondaryText}>{item.network || ""}</AppText>
+                              </View>
+                            </View>
+                            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 4 }}>
+                              {item.address.slice(0, 10)}...{item.address.slice(-8)}
+                            </AppText>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : (
+                      <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>No recent withdrawal addresses yet.</AppText>
+                    )}
+                  </View>
+                ) : (
+                  <View>
+                    {addressBookLoading ? (
+                      <ActivityIndicator size="small" color={themeColors.secondaryText} style={{ alignSelf: "flex-start" }} />
+                    ) : addressBookEntries.length > 0 ? (
+                      <View style={{ gap: 10 }}>
+                        {addressBookEntries.map((item, idx) => {
+                          const statusRaw = String(item.status || "").toUpperCase();
+                          const statusLabel = statusRaw.replace(/_/g, " ") || "APPROVED";
+
+                          // Web-parity status tone logic
+                          let statusColor = "#DE7520"; // pending default
+                          if (/(APPROVED|CONFIRMED|SUCCESS|DONE)/.test(statusRaw)) statusColor = "#228B22";
+                          if (/(REJECTED|FAILED|CANCEL|ERROR|EXPIRED)/.test(statusRaw)) statusColor = "#D93025";
+                          if (!statusRaw || statusRaw === "ACTIVE") {
+                            statusColor = "#228B22"; // Active is approved
+                            // Web says if !s return null, but screenshot shows APPROVED
+                          }
+
+                          return (
+                            <TouchableOpacity
+                              key={idx}
+                              onPress={() => {
+                                setWithdrawAddress(item.address);
+                                if (item.network) setNetwork(item.network);
+                                void validateWithdrawAddressApiRef.current?.();
+                              }}
+                              style={{
+                                padding: 16,
+                                borderRadius: 12,
+                                backgroundColor: isDark ? "#1E222D" : "#FFF",
+                                borderWidth: 1,
+                                borderColor: isDark ? themeColors.border : "#E5E7EB"
+                              }}
+                            >
+                              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, flex: 1 }}>
+                                  <AppText weight={BOLD} type={FOURTEEN} color={themeColors.text} numberOfLines={1}>{item.name || item.label || "Saved"}</AppText>
+                                  <AppText type={TEN} color={themeColors.secondaryText}>{item.coin || ""}</AppText>
+                                </View>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                                  <View style={{
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 2,
+                                    borderRadius: 100,
+                                    borderWidth: 1,
+                                    borderColor: isDark ? (statusColor === "#228B22" ? "#2D4B37" : "#4B3D2D") : (statusColor === "#228B22" ? "#E1F2E8" : "#FCEBD0")
+                                  }}>
+                                    <AppText weight={BOLD} type={TEN} style={{ color: statusColor }}>{statusLabel}</AppText>
+                                  </View>
+                                  <TouchableOpacity onPress={() => {
+                                    setAddressToDelete(item);
+                                    setIsAddressDeleteModalOpen(true);
+                                  }}>
+                                    <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, paddingLeft: 4 }}>×</AppText>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                              <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 4 }}>
+                                {item.address.slice(0, 10)}...{item.address.slice(-8)}
+                              </AppText>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    ) : (
+                      <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>No saved addresses yet.</AppText>
+                    )}
+                  </View>
+                )}
+              </View>
 
               <View
                 style={[
@@ -2229,9 +2647,333 @@ const WithdrawWallet = () => {
 
       </KeyBoardAware>
 
+      {/* Remove Address Confirmation Modal */}
+      <Modal
+        visible={isAddressDeleteModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsAddressDeleteModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, {
+            backgroundColor: themeColors.background,
+            padding: 24,
+            width: "90%",
+            maxWidth: 400,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: isDark ? themeColors.border : "#EEE"
+          }]}>
+            <TouchableOpacity
+              onPress={() => setIsAddressDeleteModalOpen(false)}
+              style={{ position: "absolute", right: 16, top: 16, zIndex: 10 }}
+            >
+              <AppText type={TWENTY} style={{ color: themeColors.text }}>×</AppText>
+            </TouchableOpacity>
+
+            <View style={{ alignItems: "center", marginBottom: 20 }}>
+              <View style={{
+                width: 100,
+                height: 100,
+                backgroundColor: isDark ? "#2A2E39" : "#F3F4F6",
+                borderRadius: 50,
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: 16
+              }}>
+                <FastImage
+                  source={email_vector}
+                  style={{ width: 60, height: 60 }}
+                  resizeMode="contain"
+                />
+                <View style={{
+                  position: "absolute",
+                  top: 25,
+                  backgroundColor: "#E2B24C",
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderWidth: 2,
+                  borderColor: isDark ? "#2A2E39" : "#F3F4F6"
+                }}>
+                  <AppText weight={BOLD} style={{ color: "#FFF", fontSize: 12 }}>!</AppText>
+                </View>
+              </View>
+
+              <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, textAlign: "center", marginBottom: 12 }}>
+                {getDeleteModalTitle(addressToDelete)}
+              </AppText>
+
+              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, textAlign: "left", lineHeight: 22 }}>
+                {getDeleteModalMessage(addressToDelete)}
+              </AppText>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => setIsAddressDeleteModalOpen(false)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 14,
+                  borderRadius: 100,
+                  backgroundColor: isDark ? "#2A2E39" : "#F3F4F6",
+                  alignItems: "center"
+                }}
+              >
+                <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Cancel</AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirmDeleteAddress}
+                disabled={addressDeleteBusy}
+                style={{
+                  flex: 1,
+                  paddingVertical: 14,
+                  borderRadius: 100,
+                  backgroundColor: "#1E222D",
+                  alignItems: "center"
+                }}
+              >
+                {addressDeleteBusy ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: "#FFF" }}>Remove</AppText>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {withdrawNetworkSheetOnly}
       {withdrawCoinSheetOnly}
       {withdrawAgceCountrySheetOnly}
+      {saveAddrBeneficiaryCountrySheetOnly}
+      <RBSheet
+        ref={withdrawConfirmSheetRef}
+        closeOnDragDown
+        closeOnPressMask
+        height={420}
+        customStyles={{
+          container: {
+            backgroundColor: themeColors.background,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          },
+          draggableIcon: { backgroundColor: isDark ? themeColors.border : "#DDD" },
+        }}
+      >
+        <View style={{ padding: 24 }}>
+          <View style={{ alignItems: "center", marginBottom: 24 }}>
+            <View style={{
+              width: 70,
+              height: 70,
+              borderRadius: 35,
+              backgroundColor: isDark ? "#2A2E39" : "#F3F4F6",
+              justifyContent: "center",
+              alignItems: "center"
+            }}>
+              <FastImage
+                source={email_vector}
+                style={{ width: 130, height: 130 }}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+
+          <AppText
+            type={FOURTEEN}
+            style={{
+              color: themeColors.text,
+              textAlign: "center",
+              lineHeight: 22,
+              marginBottom: 32,
+              paddingHorizontal: 10
+            }}
+          >
+            You have chosen the <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme }}>{saveAddrNetwork || network || "—"}</AppText> network. Kindly verify that your withdrawal address is compatible with this network, as unsupported transfers may result in loss of funds.
+          </AppText>
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => withdrawConfirmSheetRef.current?.close()}
+              style={{
+                flex: 1,
+                height: 48,
+                borderRadius: 100,
+                justifyContent: "center",
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: isDark ? themeColors.border : "#E5E7EB"
+              }}
+            >
+              <AppText weight={SEMI_BOLD} style={{ color: themeColors.text }}>Cancel</AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              disabled={withdrawConfirmBusy}
+              onPress={handleFinalWithdraw}
+              style={{
+                flex: 1,
+                height: 48,
+                borderRadius: 100,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "#111827"
+              }}
+            >
+              <AppText weight={SEMI_BOLD} style={{ color: "#FFF" }}>
+                {withdrawConfirmBusy ? "..." : "Confirm"}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </RBSheet>
+
+      <RBSheet
+        ref={withdrawSummarySheetRef}
+        closeOnDragDown
+        closeOnPressMask
+        height={580}
+        customStyles={{
+          container: {
+            backgroundColor: themeColors.background,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          },
+          draggableIcon: { backgroundColor: isDark ? themeColors.border : "#DDD" },
+        }}
+      >
+        <View style={{ padding: 24 }}>
+          <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 24 }}>Withdrawal</AppText>
+
+          <View style={{ marginBottom: 24 }}>
+            {[
+              { label: "Address", value: withdrawAddress || "—" },
+              { label: "Network", value: WITHDRAW_NETWORK_LABELS[network] || network || "—" },
+              { label: "Amount", value: `${withdrawAmount || "0"} ${coinSymbol(selectedCurrency)}` },
+              { label: "Receive", value: `${formatWithdrawAmountDisplay(parseNum(withdrawAmount, 0) - parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0))} ${coinSymbol(selectedCurrency)}` },
+              { label: "Fee", value: `${formatWithdrawAmountDisplay(parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0))} ${coinSymbol(selectedCurrency)}` }
+            ].map((item, idx) => (
+              <View key={idx} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: idx < 4 ? 0.5 : 0, borderBottomColor: isDark ? themeColors.border : "#F3F4F6" }}>
+                <AppText type={TWELVE} style={{ color: themeColors.secondaryText, flex: 1 }}>{item.label}</AppText>
+                <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text, flex: 2, textAlign: "right" }} numberOfLines={2}>{item.value}</AppText>
+              </View>
+            ))}
+          </View>
+
+          <View style={{ marginBottom: 32 }}>
+            <View style={{ flexDirection: "row", marginBottom: 8 }}>
+              <AppText style={{ color: themeColors.secondaryText, marginRight: 8 }}>•</AppText>
+              <AppText type={TEN} style={{ color: themeColors.secondaryText, flex: 1 }}>Make Sure The Address Is Accurate And Matches The Selected Network.</AppText>
+            </View>
+            <View style={{ flexDirection: "row" }}>
+              <AppText style={{ color: themeColors.secondaryText, marginRight: 8 }}>•</AppText>
+              <AppText type={TEN} style={{ color: themeColors.secondaryText, flex: 1 }}>Once Submitted, Transactions Cannot Be Reversed.</AppText>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              withdrawSummarySheetRef.current?.close();
+              setTimeout(() => {
+                withdrawSecuritySheetRef.current?.open();
+              }, 450);
+            }}
+            style={{
+              height: 48,
+              borderRadius: 100,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "#111827"
+            }}
+          >
+            <AppText weight={SEMI_BOLD} style={{ color: "#FFF" }}>Continue</AppText>
+          </TouchableOpacity>
+        </View>
+      </RBSheet>
+
+      <RBSheet
+        ref={withdrawSecuritySheetRef}
+        closeOnDragDown
+        closeOnPressMask
+        height={480}
+        customStyles={{
+          container: {
+            backgroundColor: themeColors.background,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          },
+          draggableIcon: { backgroundColor: isDark ? themeColors.border : "#DDD" },
+        }}
+      >
+        <View style={{ padding: 24 }}>
+          <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>Security verification</AppText>
+          <AppText type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18, marginBottom: 24 }}>
+            Complete all required steps. For email or SMS, tap Send code to receive your OTP, then enter it below.
+          </AppText>
+
+          <View style={{ marginBottom: 32 }}>
+            <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text, marginBottom: 12 }}>Email verification code</AppText>
+            <View style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: isDark ? themeColors.card : "#FFF",
+              borderWidth: 1,
+              borderColor: isDark ? themeColors.border : "#E5E7EB",
+              borderRadius: 12,
+              height: 52,
+              paddingHorizontal: 16
+            }}>
+              <TextInput
+                placeholder="Enter email code"
+                placeholderTextColor={themeColors.secondaryText}
+                value={otp}
+                onChangeText={setOtp}
+                keyboardType="numeric"
+                style={{ flex: 1, color: themeColors.text, fontSize: 14 }}
+              />
+              <TouchableOpacity
+                onPress={handleGetOtp}
+                disabled={disableBtn}
+                style={{ paddingLeft: 12 }}
+              >
+                <AppText weight={MEDIUM} type={TWELVE} style={{ color: disableBtn ? themeColors.secondaryText : "#C5A161" }}>
+                  {disableBtn ? `Resend (${timer}s)` : "Send code"}
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              withdrawSecuritySheetRef.current?.close();
+              handleWithdraw();
+            }}
+            style={{
+              height: 52,
+              borderRadius: 100,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "#777",
+              marginBottom: 24
+            }}
+          >
+            <AppText weight={SEMI_BOLD} style={{ color: "#FFF" }}>Confirm withdrawal</AppText>
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
+            <FastImage
+              source={SECURITY_SHEIELD}
+              style={{ width: 16, height: 16, marginRight: 8 }}
+              resizeMode="contain"
+              tintColor={themeColors.secondaryText}
+            />
+            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>Protected by Advanced Encryption</AppText>
+          </View>
+        </View>
+      </RBSheet>
       {withdrawLimitInfoSheetOnly}
       {networkFeeInfoSheetOnly}
 
@@ -2406,6 +3148,7 @@ const WithdrawWallet = () => {
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
             <AddWithdrawalAddressBasics
+              saveAddrCountrySheetRef={saveAddrCountrySheetRef}
               isDark={isDark}
               themeColors={themeColors}
               userData={userData}
@@ -2723,25 +3466,25 @@ const WithdrawWallet = () => {
                       try {
                         const method = selectedSaveAddrVerifyMethod || (saveAddrVerifyOptions.includes("email") ? "email" : (saveAddrVerifyOptions.includes("mobile") ? "mobile" : saveAddrVerifyOptions[0])) || "email";
                         const coinObj = withdrawCoinsList.find(c => String(c.short_name).toUpperCase() === String(saveAddrCoin).toUpperCase());
-                        
+
                         let tId = "";
                         if (coinObj?.networks) {
-                           // Find the network object that matches the selected chain (saveAddrNetwork)
-                           const net = coinObj.networks.find(n => 
-                             String(n.code).toUpperCase() === String(saveAddrNetwork).toUpperCase() ||
-                             String(n.short_name).toUpperCase() === String(saveAddrNetwork).toUpperCase()
-                           );
-                           if (net) {
-                             tId = net.tokenAssetId || net.assetId || net.id;
-                           }
+                          // Find the network object that matches the selected chain (saveAddrNetwork)
+                          const net = coinObj.networks.find(n =>
+                            String(n.code).toUpperCase() === String(saveAddrNetwork).toUpperCase() ||
+                            String(n.short_name).toUpperCase() === String(saveAddrNetwork).toUpperCase()
+                          );
+                          if (net) {
+                            tId = net.tokenAssetId || net.assetId || net.id;
+                          }
                         }
-                        
+
                         // Fallback to token_asset_ids if networks list doesn't yield an ID
                         if (!tId && coinObj?.token_asset_ids) {
                           const targetNet = String(saveAddrNetwork).toUpperCase();
                           tId = coinObj.token_asset_ids[saveAddrNetwork] || coinObj.token_asset_ids[targetNet];
                           if (!tId) {
-                            const fuzzyKey = Object.keys(coinObj.token_asset_ids).find(k => 
+                            const fuzzyKey = Object.keys(coinObj.token_asset_ids).find(k =>
                               k.toUpperCase().includes(targetNet) || targetNet.includes(k.toUpperCase())
                             );
                             if (fuzzyKey) tId = coinObj.token_asset_ids[fuzzyKey];
@@ -2793,24 +3536,24 @@ const WithdrawWallet = () => {
                               shortName: saveAddrCoin
                             };
                             setSaveAddrWhitelistData(flowData);
-                            
+
                             const method = String(d.method || "").toUpperCase();
                             if (method === "SATOSHI") {
                               setSaveAddrStep("satoshi");
                               setSatoshiDepositLoading(true);
-                              
+
                               const coinObj = withdrawCoinsList.find(c => (c.coin || c.short_name || "").toUpperCase() === String(saveAddrCoin).toUpperCase());
                               let finalId = resolvedAssetId;
-                              
+
                               if (coinObj && d.proof_chain) {
                                 const targetNet = String(d.proof_chain).toUpperCase();
                                 // Priority 1: Check networks array for exact match or fuzzy match
-                                const net = coinObj.networks?.find(n => 
-                                  String(n.code).toUpperCase() === targetNet || 
+                                const net = coinObj.networks?.find(n =>
+                                  String(n.code).toUpperCase() === targetNet ||
                                   String(n.short_name).toUpperCase() === targetNet ||
                                   String(n.tokenAssetId || "").toUpperCase().includes(targetNet)
                                 );
-                                
+
                                 if (net?.tokenAssetId || net?.assetId) {
                                   finalId = net.tokenAssetId || net.assetId;
                                 } else if (coinObj.token_asset_ids?.[d.proof_chain]) {
@@ -2835,8 +3578,8 @@ const WithdrawWallet = () => {
                                     const raw = dr.deposit_address || dr.address || dr.wallet_address || dr.walletAddress || dr.depositAddress || "";
                                     const mem = dr.memo || dr.tag || dr.destinationTag || dr.memoTag || "";
                                     if (raw) {
-                                      setSaveAddrWhitelistData(prev => ({ 
-                                        ...prev, 
+                                      setSaveAddrWhitelistData(prev => ({
+                                        ...prev,
                                         deposit_address: String(raw),
                                         address: String(raw),
                                         memo: String(mem)
