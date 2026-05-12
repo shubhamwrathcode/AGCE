@@ -436,6 +436,7 @@ export const connectwallet2 = require('../../assets/images/connectwallet2.png');
 export const connectwallet3 = require('../../assets/images/connectwallet3.png');
 export const connectwallet4 = require('../../assets/images/connectwallet4.png');
 export const connectwallet5 = require('../../assets/images/connectwallet5.png');
+export const security_vector2 = require('../../assets/images/security_vector2.png');
 
 
 

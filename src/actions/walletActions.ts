@@ -5,7 +5,7 @@ import {
   mapDepositCoinsToWithdrawCatalog,
   normalizeWithdrawCoinsResponse,
 } from '../helper/withdrawCoinsNormalize';
-import {logger, showError} from '../helper/logger';
+import {logger, showError, showSuccess} from '../helper/logger';
 import {
   GenerateAddressProps,
   WithdrawCurrencyProps,
@@ -241,10 +241,15 @@ export const getWithdrawActiveCoins = (_id?: any) => async (dispatch: AppDispatc
   try {
     let list: any[] = [];
     try {
-      const res: any = await appOperation.customer.withdrawal_coins();
+      const res: any = await appOperation.customer.withdrawal_coins_v1();
       list = normalizeWithdrawCoinsResponse(extractWithdrawCoinsList(res));
     } catch {
-      list = [];
+      try {
+        const res: any = await appOperation.customer.withdrawal_coins();
+        list = normalizeWithdrawCoinsResponse(extractWithdrawCoinsList(res));
+      } catch {
+        list = [];
+      }
     }
 
     /** DepositCoin primary route — often same backend catalog as web when `withdrawal-coins` is empty. */
@@ -644,21 +649,25 @@ export const generateAddress =
   
 
 export const withdrawCoin =
-  (data: WithdrawCurrencyProps) => async (dispatch: AppDispatch) => {
+  (data: WithdrawCurrencyProps & Record<string, unknown>) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
-      const response: any = await appOperation.customer.withdraw_currency(data);
-      // console.log('rs', response);
+      let response: any;
+      try {
+        response = await appOperation.customer.withdraw_currency_v1(data);
+      } catch {
+        response = await appOperation.customer.withdraw_currency(data);
+      }
 
       if (response.success) {
-        showError(response?.message);
+        showSuccess(String(response?.message ?? 'Withdrawal submitted'));
         NavigationService.goBack();
       } else {
         showError(response?.message);
       }
     } catch (e) {
       logger(e);
-      showError(e?.message);
+      showError((e as any)?.message);
     } finally {
       dispatch(setLoading(false));
     }

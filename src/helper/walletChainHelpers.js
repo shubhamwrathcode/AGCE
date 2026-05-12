@@ -147,3 +147,81 @@ export function canonicalWithdrawalChainForValidateAddress(uiCode) {
     };
     return map[u] || u;
 }
+
+function firstFiniteNum(...candidates) {
+    for (const v of candidates) {
+        if (v == null || v === '') continue;
+        const n = Number(v);
+        if (Number.isFinite(n)) return n;
+    }
+    return null;
+}
+
+/** Web `withdrawPageHelpers.formatWithdrawAmountDisplay` — limits / fee rows. */
+export function formatWithdrawAmountDisplay(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '—';
+    const num = Number(n);
+    const a = Math.abs(num);
+    if (a === 0) return '0';
+    if (a >= 1) return num.toLocaleString(undefined, { maximumFractionDigits: 6 });
+    return num.toLocaleString(undefined, { maximumFractionDigits: 8 });
+}
+
+/**
+ * Web `get24hWithdrawLimitDisplay` — "remaining / cap" from wallet row + coin + per-chain max.
+ */
+export function get24hWithdrawLimitDisplay(coin, chainCode, fundRow) {
+    if (!coin || !chainCode) return '— / —';
+    const maxByChain =
+        coin.max_withdrawal && chainCode && coin.max_withdrawal[chainCode] != null
+            ? Number(coin.max_withdrawal[chainCode])
+            : null;
+
+    const cap = firstFiniteNum(
+        fundRow?.daily_withdraw_limit,
+        fundRow?.limit_24h,
+        fundRow?.withdraw_24h_limit,
+        coin?.daily_withdraw_limit,
+        coin?.limit_24h,
+        maxByChain,
+    );
+    const rem = firstFiniteNum(
+        fundRow?.remaining_24h_withdraw,
+        fundRow?.remaining_24h,
+        fundRow?.daily_withdraw_remaining,
+        fundRow?.withdraw_24h_remaining,
+        coin?.remaining_24h_withdraw,
+        coin?.remaining_24h,
+        coin?.daily_withdraw_remaining,
+        chainCode && coin?.remaining_24h_by_chain && coin.remaining_24h_by_chain[chainCode],
+        cap,
+        maxByChain,
+    );
+
+    const right = cap ?? maxByChain;
+    const left = rem ?? right;
+
+    if (right == null && left == null) return '— / —';
+    if (right == null) return `${formatWithdrawAmountDisplay(left)} / —`;
+    if (left == null) return `— / ${formatWithdrawAmountDisplay(right)}`;
+    return `${formatWithdrawAmountDisplay(left)} / ${formatWithdrawAmountDisplay(right)}`;
+}
+
+/** Web `formatFundAvailable` — main wallet row: balance + locked for display / MAX. */
+export function formatFundAvailableFromRow(row) {
+    if (!row) return '0.00';
+    const bal = parseFloat(String(row.balance ?? '').replace(/,/g, '')) || 0;
+    const locked = parseFloat(String(row.locked_balance ?? '').replace(/,/g, '')) || 0;
+    const b = bal + locked;
+    if (!Number.isFinite(b)) return '0.00';
+    if (b === 0) return '0.00';
+    return b >= 1 ? b.toFixed(2) : b.toFixed(6);
+}
+
+export function totalSpendableFromFundRow(row) {
+    if (!row) return 0;
+    const bal = parseFloat(String(row.balance ?? '').replace(/,/g, '')) || 0;
+    const locked = parseFloat(String(row.locked_balance ?? '').replace(/,/g, '')) || 0;
+    const b = bal + locked;
+    return Number.isFinite(b) ? b : 0;
+}

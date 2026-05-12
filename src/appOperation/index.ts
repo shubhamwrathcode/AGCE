@@ -84,11 +84,9 @@ export class AppOperation {
       headers['Content-Type'] = 'application/json';
     }
     if (this.customerToken && type === CUSTOMER_TYPE) {
-      if (url.includes('api/v1/kyc/') && !this.customerToken.startsWith('Bearer ')) {
-        headers['Authorization'] = `Bearer ${this.customerToken}`;
-      } else {
-        headers['Authorization'] = `${this.customerToken}`;
-      }
+      const token = String(this.customerToken).trim();
+      const prefix = token.startsWith('Bearer ') ? '' : 'Bearer ';
+      headers['Authorization'] = `${prefix}${token}`;
     }
 
     return new Promise((resolve, reject) => {

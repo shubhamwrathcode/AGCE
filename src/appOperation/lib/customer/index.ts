@@ -75,6 +75,9 @@ export default (appOperation: AppOperation) => ({
     /** Same as web WithdrawPage catalog: `GET /v1/wallet/withdrawal-coins` (Bearer). */
     withdrawal_coins: () =>
       appOperation.get('wallet/withdrawal-coins', undefined, undefined, CUSTOMER_TYPE),
+    /** Web primary catalog: `GET /api/v1/wallet/withdrawal-coins` (`fetchWithdrawalCoinsV1`). */
+    withdrawal_coins_v1: () =>
+      appOperation.get('api/v1/wallet/withdrawal-coins', undefined, undefined, CUSTOMER_TYPE),
     deposit_active_coins: () =>
       appOperation.get('user/deposit-active-coins', undefined, undefined, CUSTOMER_TYPE),
     widthraw_active_coins: () =>
@@ -88,6 +91,20 @@ export default (appOperation: AppOperation) => ({
     appOperation.get('wallet/all-wallets-portfolio', undefined, undefined, CUSTOMER_TYPE),
   user_main_wallet: (id: any) =>
     appOperation.get(`wallet/user-wallet?wallet_type=${id}`, undefined, undefined, CUSTOMER_TYPE),
+  /** Web: POST /v1/security/withdrawal-otp — body `{ method: 'email' | 'mobile' }` (`sendWithdrawalVerificationOtp`). */
+  withdrawal_verification_otp: (data: { method: string }) =>
+    appOperation.post('security/withdrawal-otp', data, CUSTOMER_TYPE),
+  /** Web fallback: POST /v1/user/send-otp with `type: 'withdrawal'` (`sendWithdrawOtp` in withdrawService). */
+  user_send_otp_withdrawal: (data: { email_or_phone: string; resend: boolean }) =>
+    appOperation.post(
+      'user/send-otp',
+      {
+        email_or_phone: String(data.email_or_phone || '').trim(),
+        type: 'withdrawal',
+        resend: !!data.resend,
+      },
+      CUSTOMER_TYPE,
+    ),
   generate_address: (data: GenerateAddressProps) =>
     appOperation.put('wallet/generate-address', data, CUSTOMER_TYPE),
   /** Web parity: POST /v1/wallet/get-and-generate-address (Fireblocks tokenAssetId / assetId flow). */
@@ -96,10 +113,41 @@ export default (appOperation: AppOperation) => ({
   /** Web parity: POST /api/v1/wallet/validate-address — body { address, chain, tokenAssetId? }. Uses `api/` prefix like web `baseWalletV1Api`. */
   validate_withdraw_address: (data: { address: string; chain: string; tokenAssetId?: string }) =>
     appOperation.post('api/v1/wallet/validate-address', data, CUSTOMER_TYPE),
+  /** Web `GET /api/v1/wallet/withdrawal-24h-usage?coinName=` */
+  withdrawal_24h_usage: (coinName: string) =>
+    appOperation.get(
+      'api/v1/wallet/withdrawal-24h-usage',
+      {coinName: String(coinName || '').trim()},
+      undefined,
+      CUSTOMER_TYPE,
+    ),
   withdraw_currency: (data: any) =>
     appOperation.post('wallet/withdrawal', data, CUSTOMER_TYPE),
+  /** Web `POST /api/v1/wallet/withdrawal` (`submitWithdrawal` in withdrawService.js). */
+  withdraw_currency_v1: (data: any) =>
+    appOperation.post('api/v1/wallet/withdrawal', data, CUSTOMER_TYPE),
   withdraw_fiat_currency: (data: any) =>
     appOperation.post('wallet/withdrawal_fiat', data, CUSTOMER_TYPE),
+  // --- Address Book ---
+  get_wallet_address_book: (query?: any) =>
+    appOperation.get('api/v1/wallet/address-book', query, undefined, CUSTOMER_TYPE),
+  add_wallet_address_book: (data: any) =>
+    appOperation.post('api/v1/wallet/address-book', data, CUSTOMER_TYPE),
+  delete_wallet_address_book: (id: string) =>
+    appOperation.delete(`api/v1/wallet/address-book/${encodeURIComponent(String(id))}`, null, CUSTOMER_TYPE),
+  initiate_address_book_whitelist: (data: any) =>
+    appOperation.post('api/v1/wallet/address-book/initiate', data, CUSTOMER_TYPE),
+  fetch_address_book_verification_options: () =>
+    appOperation.get('api/v1/wallet/address-book/verification-options', undefined, undefined, CUSTOMER_TYPE),
+  send_address_book_verification_otp: (data: any) =>
+    appOperation.post('api/v1/wallet/address-book/send-otp', data, CUSTOMER_TYPE),
+  fetch_address_book_passkey_challenge: () =>
+    appOperation.post('api/v1/wallet/address-book/passkey-challenge', {}, CUSTOMER_TYPE),
+  confirm_satoshi_address_book: (id: string) =>
+    appOperation.post(`api/v1/wallet/address-book/${encodeURIComponent(String(id))}/confirm-satoshi`, {}, CUSTOMER_TYPE),
+  verify_signature_address_book: (id: string, signature: string) =>
+    appOperation.post(`api/v1/wallet/address-book/${encodeURIComponent(String(id))}/verify-signature`, { signature }, CUSTOMER_TYPE),
+  // --------------------
   particular_coin_balance: (data: { fromWallet: any; toWallet: any; currencyId: any; }) =>
     appOperation.get(`wallet/get-perticular-wallet-balance?fromWallet=${data?.fromWallet}&toWallet=${data?.toWallet}&currencyId=${data?.currencyId}`, undefined, undefined, CUSTOMER_TYPE),
   admin_bank_details: () =>

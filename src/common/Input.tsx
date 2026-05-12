@@ -7,6 +7,7 @@ import {
   View,
   ViewStyle,
   StyleProp,
+  TouchableOpacity,
 } from "react-native";
 import {
   borderWidth,
@@ -136,15 +137,25 @@ const Input = ({
             />
           </TouchableOpacityView>
         )}
-        {max && (
-          <AppText
-            style={{ color: themeColors.button, marginHorizontal: 10, fontSize: 12 }}
-            weight={SEMI_BOLD}
-            onPress={onMax}
-          >
-            MAX
+        {currency && !isOtp ? (
+          <AppText type={TWELVE} style={{ color: themeColors.text, marginRight: max ? 0 : 0 }}>
+            {currency}
           </AppText>
-        )}
+        ) : null}
+        {max && currency && !isOtp ? (
+          <AppText style={{ color: themeColors.secondaryText, marginHorizontal: 8 }}>|</AppText>
+        ) : null}
+        {max && onMax ? (
+          <TouchableOpacity
+            onPress={onMax}
+            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+            style={{ justifyContent: "center", paddingVertical: 4 }}
+          >
+            <AppText style={{ color: themeColors.button, fontSize: 12 }} weight={SEMI_BOLD}>
+              MAX
+            </AppText>
+          </TouchableOpacity>
+        ) : null}
         {isOtp && (
           <Button
             children={otpText}
@@ -153,15 +164,6 @@ const Input = ({
             onPress={onSendOtp}
             disabled={isOtpDisabled}
           />
-        )}
-        {currency && (
-          <AppText
-            // style={styles.eyeIconContainer}
-            type={TWELVE}
-            style={{ color: themeColors.text }}
-          >
-            {currency}
-          </AppText>
         )}
       </View>
     </View>
