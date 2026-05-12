@@ -3,6 +3,25 @@
  * Aligns with web: DepositPage (deposit_status), WithdrawPage (withdrawal_status).
  */
 
+export const CHAIN_FULL_NAMES = {
+    ERC20: "Ethereum (ERC20)",
+    BEP20: "BNB Smart Chain (BEP20)",
+    TRC20: "Tron (TRC20)",
+    POLYGON: "Polygon",
+    SOLANA: "Solana",
+    BTC: "Bitcoin",
+};
+
+export const WITHDRAW_NETWORK_LABELS = {
+    BEP20: "BNB Smart Chain (bsc)",
+    ERC20: "Ethereum (ETH)",
+    TRC20: "Tron (TRC20)",
+    POLYGON: "Polygon (MATIC)",
+    BTC: "Bitcoin (BTC)",
+    SOLANA: "Solana (SOL)",
+};
+
+
 export function networkKeysFromChain(chain) {
     if (chain == null) return [];
     if (Array.isArray(chain)) {

@@ -37,20 +37,13 @@ import {
   EIGHTEEN,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
-import WithdrawCoinPickerPanel from "./WithdrawCoinPickerPanel";
+import WithdrawRecentHistory from "./WithdrawRecentHistory";
 import Accordion from "react-native-collapsible/Accordion";
 import {
-  loginDarkBg,
   back_ic,
-  BACK_ICON,
-  copyIcon,
-  disclaimerIcon,
   moreOption,
   printIcon,
   INFO,
-  swapNetwork,
-  qrCodeIcon,
-  rectangleIcon,
   upIcon,
   downIcon,
   searchIcon,
@@ -84,6 +77,8 @@ import {
   getWithdrawActiveCoins,
   getUserMainWallet,
   withdrawCoin,
+  verifyWithdraw,
+  getInteralWalletHistory,
 } from "../../actions/walletActions";
 import { showError, showSuccess } from "../../helper/logger";
 import {
@@ -95,12 +90,15 @@ import {
   formatWithdrawAmountDisplay,
   formatFundAvailableFromRow,
   totalSpendableFromFundRow,
+  CHAIN_FULL_NAMES,
+  WITHDRAW_NETWORK_LABELS
 } from "../../helper/walletChainHelpers";
 import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
 import { getNotificationList } from "../../actions/homeActions";
 import moment from "moment";
 import { countriesList } from "../../helper/CountriesList";
+import WithdrawCoinPickerPanel from "./WithdrawCoinPickerPanel";
 
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.9);
 const AGCE_COUNTRY_SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.48);
@@ -127,23 +125,25 @@ const ADDRESS_BOOK_TOP_EXCHANGES = [
 
 const ADDRESS_BOOK_EXCHANGE_OTHER = "__OTHER__";
 
-const CHAIN_FULL_NAMES = {
-  ERC20: "Ethereum (ERC20)",
-  BEP20: "BNB Smart Chain (BEP20)",
-  TRC20: "Tron (TRC20)",
-  POLYGON: "Polygon",
-  SOLANA: "Solana",
-  BTC: "Bitcoin",
-};
 
-const WITHDRAW_NETWORK_LABELS = {
-  BEP20: "BNB Smart Chain (bsc)",
-  ERC20: "Ethereum (ETH)",
-  TRC20: "Tron (TRC20)",
-  POLYGON: "Polygon (MATIC)",
-  BTC: "Bitcoin (BTC)",
-  SOLANA: "Solana (SOL)",
-};
+
+const TRENDING_COIN_SYMBOLS = [
+  "BTC",
+  "ETH",
+  "BNB",
+  "USDT",
+  "USDC",
+  "XRP",
+  "SOL",
+  "DOGE",
+  "MATIC",
+  "DOT",
+  "LTC",
+  "TRX",
+  "SHIB",
+  "ADA",
+  "BUSD",
+];
 
 function coinSymbol(coin) {
   return String(
@@ -207,15 +207,63 @@ const WithdrawWallet = () => {
   const dispatch = useDispatch();
   const route = useRoute();
   const { colors: themeColors, isDark } = useTheme();
+  const scrollViewRef = useRef(null);
   const routeCoin = route?.params?.data;
   const userData = useAppSelector((state) => state.auth.userData);
   const userMainWallet = useAppSelector((state) => state.wallet.userMainWallet);
   const withdrawActiveCoins = useAppSelector((state) => state.wallet.withdrawActiveCoins);
+  const withdrawHistory = useAppSelector((state) => state.wallet.withdrawHistory);
+  const interalWalletHistory = useAppSelector((state) => state.wallet.interalWalletHistory);
+
+  const [recentWithdrawTab, setRecentWithdrawTab] = useState("address"); // "address" | "agce"
+
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(verifyWithdraw({}));
+      dispatch(getInteralWalletHistory(0, 10));
+    }, [dispatch])
+  );
 
   const withdrawCoinsList = useMemo(
     () => (Array.isArray(withdrawActiveCoins) ? withdrawActiveCoins : []),
     [withdrawActiveCoins]
   );
+
+  /** Web parity: `trendingWithdrawCoins` (useWithdrawPageController). */
+  const trendingWithdrawCoins = useMemo(() => {
+    if (!withdrawCoinsList.length) return [];
+    const bySym = new Map();
+    for (const c of withdrawCoinsList) {
+      const sym = coinSymbol(c).toUpperCase();
+      if (!sym || sym === "—") continue;
+      if (!bySym.has(sym)) bySym.set(sym, c);
+    }
+    const list = [];
+    for (const sym of TRENDING_COIN_SYMBOLS) {
+      const c = bySym.get(sym);
+      if (c) list.push(c);
+    }
+    return list;
+  }, [withdrawCoinsList]);
+
+  /** Web parity: `coinModalDisplay` (useWithdrawPageController). */
+  const coinModalDisplay = useMemo(() => {
+    if (!trendingWithdrawCoins.length) return withdrawCoinsList;
+    const trendSet = new Set(
+      trendingWithdrawCoins.map((c) => coinSymbol(c).toUpperCase()).filter(Boolean)
+    );
+    return [
+      ...trendingWithdrawCoins,
+      ...withdrawCoinsList.filter((c) => !trendSet.has(coinSymbol(c).toUpperCase())),
+    ];
+  }, [withdrawCoinsList, trendingWithdrawCoins]);
+
+  /** Web parity: `coinQuickPickDisplay` (useWithdrawPageController ~856-862). */
+  const coinQuickPickDisplay = useMemo(() => {
+    if (!withdrawCoinsList.length) return [];
+    // Mobile main screen has no active search query for this list.
+    return coinModalDisplay.slice(0, 5);
+  }, [withdrawCoinsList, coinModalDisplay]);
 
 
   const { emailId } = userData ?? "";
@@ -681,6 +729,37 @@ const WithdrawWallet = () => {
       setAddressBookLoading(false);
     }
   };
+
+  const handleWithdrawAgainFromHistory = useCallback(
+    (item) => {
+      if (!item) return;
+      const isAddress = recentWithdrawTab === "address";
+      const coinSym = isAddress ? item.currency : item.short_name || item.currency;
+      const coinObj = withdrawCoinsList.find(
+        (c) => coinSymbol(c).toUpperCase() === String(coinSym).toUpperCase()
+      );
+
+      if (coinObj) {
+        handleSelectCurrency(coinObj);
+        if (isAddress) {
+          setWithdrawToTab("address");
+          setWithdrawAddress(item.addressFull || item.address || "");
+          const net = item.network || item.chain;
+          if (net) {
+            setNetwork(net);
+          }
+        } else {
+          setWithdrawToTab("agce_user");
+          // Pre-fill AGCE recipient if possible
+          if (item.to_user_id) {
+            setAgceUserId(item.to_user_id);
+          }
+        }
+      }
+      scrollViewRef.current?.scrollToPosition(0, 0, true);
+    },
+    [recentWithdrawTab, withdrawCoinsList, handleSelectCurrency]
+  );
 
   const handleConfirmDeleteAddress = async () => {
     if (!addressToDelete) return;
@@ -1867,6 +1946,7 @@ const WithdrawWallet = () => {
       </View>
 
       <KeyBoardAware
+        ref={scrollViewRef}
         style={{ flex: 1 }}
         containerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}
@@ -1921,11 +2001,11 @@ const WithdrawWallet = () => {
                 Select a coin
               </AppText>
             )}
-            <FastImage source={downIcon} style={{ width: 12, height: 12, marginLeft: 8 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+            <FastImage source={downIcon} style={{ width: 10, height: 10, marginLeft: 8 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
           </TouchableOpacity>
-          {withdrawCoinsList.length > 0 ? (
+          {coinQuickPickDisplay.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.wdChipsRow}>
-              {withdrawCoinsList.slice(0, 10).map((coin, ix) => {
+              {coinQuickPickDisplay.map((coin, ix) => {
                 const chipIconUri = buildCoinImageUri(coin);
                 const isSel =
                   (selectedCurrency?._id != null && coin?._id != null && String(selectedCurrency._id) === String(coin._id)) ||
@@ -1936,8 +2016,8 @@ const WithdrawWallet = () => {
                     style={[
                       styles.wdChip,
                       {
-                        borderColor: isSel ? colors.buttonBg : (isDark ? themeColors.border : "#EEE"),
-                        backgroundColor: isSel ? (isDark ? "#2A2A2A" : "#FFF9E6") : "transparent",
+                        borderColor: lightTheme.input,
+                        backgroundColor: isSel ? lightTheme.input : "transparent",
                       },
                     ]}
                     onPress={() => handleSelectCurrency(coin)}
@@ -2014,7 +2094,7 @@ const WithdrawWallet = () => {
                   opacity: activeWithdrawChains.length === 0 ? 0.6 : 1
                 }}
               >
-                <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text }}>
+                <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: network ? colors.black : colors.placeholderColor }}>
                   {network ? String(network).toUpperCase() : "Select Network"}
                 </AppText>
                 <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
@@ -2049,7 +2129,7 @@ const WithdrawWallet = () => {
                     void refetchAddressBook();
                   }
                 }}>
-                  <FastImage source={user_withdarwal} style={{ width: 24, height: 24 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                  <FastImage source={user_withdarwal} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
                 </TouchableOpacity>
               </View>
 
@@ -2413,6 +2493,16 @@ const WithdrawWallet = () => {
           </View>
         )}
 
+        <WithdrawRecentHistory
+          activeTab={recentWithdrawTab}
+          onTabChange={setRecentWithdrawTab}
+          history={withdrawHistory}
+          internalHistory={interalWalletHistory}
+          onViewMore={() => NavigationService.navigate(SETTING_SCREEN_New, { activeTab: 1 })}
+          onWithdrawAgain={handleWithdrawAgainFromHistory}
+          withdrawCoinsList={withdrawCoinsList}
+        />
+
       </KeyBoardAware>
 
       {/* Remove Address Confirmation Sheet */}
@@ -2509,7 +2599,6 @@ const WithdrawWallet = () => {
           </View>
         </View>
       </RBSheet>
-
       {withdrawNetworkSheetOnly}
       {withdrawCoinSheetOnly}
       {withdrawAgceCountrySheetOnly}
