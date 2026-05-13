@@ -155,6 +155,7 @@ import AirdropHistoryScreen from "../screens/airdrop/AirdropHistoryScreen";
 import DepositHistoryDetailScreen from "../screens/account/DepositHistoryDetailScreen";
 import WithdrawalHistory from "../screens/wallet/WithdrawalHistory";
 import WithdrawalDetailPage from "../screens/wallet/WithdrawalDetailPage";
+import SelectCoin from "../screens/wallet/Withdrawal/SelectCoin";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -523,6 +524,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.WITHDRAW_DETAIL_SCREEN}
         component={WithdrawalDetailPage}
+      />
+      <Stack.Screen
+        name={routes.SELECT_COIN_SCREEN}
+        component={SelectCoin}
       />
     </Stack.Navigator>
   );

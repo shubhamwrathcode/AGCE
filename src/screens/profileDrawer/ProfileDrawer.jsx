@@ -132,6 +132,7 @@ import {
   TWO_FACTOR_AUTHENTICATION,
   AIRDROP_HISTORY_SCREEN,
   WALLET_WITHDRAW_SCREEN,
+  SELECT_COIN_SCREEN,
   REFERRAL_LIST,
   NAVIGATION_BOTTOM_TAB_STACK,
   TRADE_SCREEN,
@@ -336,7 +337,7 @@ const getPopularMenuItems = (theme) => [
     id: "p3",
     title: "Withdrawal",
     icon: newWidthrawIcon,
-    onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN),
+    onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN),
   },
   {
     id: "p4",
