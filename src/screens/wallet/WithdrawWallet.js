@@ -60,6 +60,7 @@ import {
   editIcon,
   binIcon,
   REMOVE,
+  down_arrow,
 } from "../../helper/ImageAssets";
 import * as routes from '../../navigation/routes';
 import NavigationService from "../../navigation/NavigationService";
@@ -2350,7 +2351,7 @@ const WithdrawWallet = () => {
                 <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: network ? colors.black : colors.placeholderColor }}>
                   {network ? String(network).toUpperCase() : "Select Network"}
                 </AppText>
-                <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                <FastImage source={down_arrow} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
               </TouchableOpacity>
 
               {/* Address Input */}

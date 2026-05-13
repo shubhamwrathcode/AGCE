@@ -156,6 +156,7 @@ import DepositHistoryDetailScreen from "../screens/account/DepositHistoryDetailS
 import WithdrawalHistory from "../screens/wallet/WithdrawalHistory";
 import WithdrawalDetailPage from "../screens/wallet/WithdrawalDetailPage";
 import SelectCoin from "../screens/wallet/Withdrawal/SelectCoin";
+import WithdrawForm from "../screens/wallet/Withdrawal/WithdrawForm";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -447,6 +448,8 @@ const MyAuthLoadingStack = () => {
         component={DepositWallet}
       />
       <Stack.Screen name={routes.DEPOSIT_COIN_SCREEN} component={DepositCoin} />
+      <Stack.Screen name={routes.SELECT_COIN_SCREEN} component={SelectCoin} options={options} />
+      <Stack.Screen name={routes.WITHDRAW_FORM_SCREEN} component={WithdrawForm} options={options} />
       <Stack.Screen
         name={routes.WALLET_WITHDRAW_SCREEN}
         component={WithdrawWallet}
@@ -524,10 +527,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.WITHDRAW_DETAIL_SCREEN}
         component={WithdrawalDetailPage}
-      />
-      <Stack.Screen
-        name={routes.SELECT_COIN_SCREEN}
-        component={SelectCoin}
       />
     </Stack.Navigator>
   );

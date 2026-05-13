@@ -319,7 +319,7 @@ const SelectCoin = () => {
             else showError("No active withdrawal network for this coin");
             return;
           }
-          NavigationService.navigate("WALLET_WITHDRAW_SCREEN", { data: item });
+          NavigationService.navigate("WITHDRAW_FORM_SCREEN", { data: item });
         }}
       >
         <FastImage source={iconUri ? { uri: iconUri } : null} style={styles.coinIcon} resizeMode="cover" />
