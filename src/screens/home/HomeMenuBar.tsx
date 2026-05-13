@@ -24,6 +24,7 @@ import NavigationService from "../../navigation/NavigationService";
 import { MORE_MENU_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { checkValue } from "../../helper/utility";
+import { colors } from "../../theme/colors";
 
 const showComingSoonToast = () =>
   Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
@@ -67,8 +68,8 @@ const MenuItem = React.memo(({ item, index }: any) => {
           style={[
             item?.id === "6" ? styles.iconWrapMore : styles.iconWrap,
             {
-              backgroundColor: isDark ? ICON_TILE_GREY_DARK : ICON_TILE_GREY_LIGHT,
-              borderRadius:20
+              backgroundColor: colors.iconBgColor,
+              borderRadius: 20
             },
           ]}
         >
@@ -175,12 +176,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   icon: {
-    height: 18,
-    width: 18,
+    height: 20,
+    width: 20,
   },
   iconMore: {
-    height: 18,
-    width: 18,
+    height: 20,
+    width: 20,
   },
   iconWrap: {
     height: 36,
@@ -190,7 +191,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    
+
   },
   iconWrapMore: {
     height: 36,
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    
+
   },
   singleItem: {
     alignItems: "center",

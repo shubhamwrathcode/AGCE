@@ -2383,17 +2383,6 @@ const Spot = () => {
     });
   };
 
-  const handlePopup = (theme) => {
-    setVisible(false);
-  };
-
-  // helpers
-  const toFinite = (v) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-
   const normalizePairSymbol = useCallback((v) => {
     if (v == null) return "";
     const s = String(v).trim();
@@ -3077,7 +3066,7 @@ const Spot = () => {
   }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.white }}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}

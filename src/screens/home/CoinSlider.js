@@ -86,7 +86,7 @@
 // const styles = StyleSheet.create({
 //   wrapper: {
 //     paddingVertical: 10,
-   
+
 //   },
 //   scrollContainer: {
 //     paddingHorizontal: 10,
@@ -209,7 +209,7 @@
 //           );
 //         })}
 //       </View>
-    
+
 //     </View>
 //   );
 // };
@@ -237,7 +237,7 @@ import { IMAGE_BASE_URL } from '../../helper/Constants';
 import MiniSparkline from '../../shared/components/MiniSparkline';
 import { AppText, BOLD, FOURTEEN, NINE, SEMI_BOLD, TEN, TWELVE } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
-import { lightTheme } from '../../theme/colors';
+import { colors, lightTheme } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -250,7 +250,7 @@ const CoinSlider = () => {
   const { colors: themeColors } = useTheme();
 
   const SIDE_SPACE = 12;
-  const ITEM_WIDTH = width / 2 - SIDE_SPACE ;
+  const ITEM_WIDTH = width / 2 - SIDE_SPACE;
 
   // Same as Market: preferred coins BTC, ETH, BNB with chart_data
   const featuredCoins = useMemo(() => {
@@ -308,13 +308,13 @@ const CoinSlider = () => {
 
     return (
       <View style={styles.cardWrapper}>
-        <View style={[styles.card, { backgroundColor: lightTheme.input}]}>
+        <View style={[styles.card, { backgroundColor: colors.iconBgColor }]}>
           <View style={styles.topRow}>
-              <FastImage
-                source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
-                resizeMode="contain"
-                style={styles.coinIcon}
-              />
+            <FastImage
+              source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
+              resizeMode="contain"
+              style={styles.coinIcon}
+            />
             <View style={styles.sparkWrap}>
               <MiniSparkline
                 chartData={item?.chart_data}

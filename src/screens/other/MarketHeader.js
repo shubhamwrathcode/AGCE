@@ -98,10 +98,10 @@ const MarketHeader = ({
   }, [activeTab, animateUnderlineTo]);
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.wrapper, { backgroundColor: colors.white }]}>
       {/* Search bar - full width, reference style */}
       {showSearch && (
-        <View style={[styles.searchBar, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 0.8 }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.iconBgColor, borderColor: lightTheme.input, borderWidth: 0.8 }]}>
           <FastImage
             source={searchIcon}
             resizeMode="contain"
@@ -109,7 +109,7 @@ const MarketHeader = ({
             tintColor={placeholderColor}
           />
           <TextInput
-            style={[styles.searchInput, { color: textColor,fontSize:12 }]}
+            style={[styles.searchInput, { color: textColor, fontSize: 12 }]}
             placeholder="Search Coin Pairs"
             placeholderTextColor={placeholderColor}
             value={search}
@@ -189,29 +189,29 @@ const MarketHeader = ({
           {(Array.isArray(subTabItems) && subTabItems.length > 0
             ? subTabItems
             : ["All", ...(Array.isArray(subCategories) ? subCategories : [])].map((k) => ({
-                key: k,
-                label: formatSubCategoryLabel(k),
-              }))).map((it) => {
-            const isActive = activeSubCategory === it.key;
-            return (
-              <TouchableOpacity
-                key={it.key}
-                activeOpacity={0.85}
-                onPress={() => onSubCategoryChange?.(it.key)}
-                style={[
-                  styles.subTabChip,
-                  {
-                    backgroundColor: isActive ? lightTheme.input : "transparent",
-                    borderColor: isActive ? themeColors.border : "transparent",
-                  },
-                ]}
-              >
-                <AppText style={[styles.subTabText, { color: isActive ? themeColors.text : themeColors.secondaryText }]}>
-                  {it.label}
-                </AppText>
-              </TouchableOpacity>
-            );
-          })}
+              key: k,
+              label: formatSubCategoryLabel(k),
+            }))).map((it) => {
+              const isActive = activeSubCategory === it.key;
+              return (
+                <TouchableOpacity
+                  key={it.key}
+                  activeOpacity={0.85}
+                  onPress={() => onSubCategoryChange?.(it.key)}
+                  style={[
+                    styles.subTabChip,
+                    {
+                      backgroundColor: isActive ? lightTheme.input : "transparent",
+                      borderColor: isActive ? themeColors.border : "transparent",
+                    },
+                  ]}
+                >
+                  <AppText style={[styles.subTabText, { color: isActive ? themeColors.text : themeColors.secondaryText }]}>
+                    {it.label}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
         </ScrollView>
       )}
     </View>

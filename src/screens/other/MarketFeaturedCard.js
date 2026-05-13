@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, Platform, Dimensions } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, SEMI_BOLD, TEN, FOURTEEN, FIFTEEN } from "../../shared";
-import { colors } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { BASE_URL, IMAGE_BASE_URL } from "../../helper/Constants";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
@@ -38,10 +38,10 @@ const MarketFeaturedCard = ({ data, chartData, chartId, onPress }) => {
   return (
     <TouchableOpacityView
       style={[
-        styles.container, 
-        { 
-          backgroundColor: themeColors.card, 
-          borderColor: themeColors.border 
+        styles.container,
+        {
+          backgroundColor: colors.iconBgColor,
+          borderColor: lightTheme.input
         }
       ]}
       activeOpacity={0.7}
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     ...(Platform.OS === "ios"
       ? { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 }
-      : { elevation: 1 }),
+      : { elevation: 0.5 }),
   },
   topRow: {
     flexDirection: "row",

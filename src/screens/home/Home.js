@@ -158,7 +158,7 @@ const Home = () => {
 
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
+    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
       <ScrollView
         style={[authStyles.mainContainer, commonStyles.zeroPadding]}
         contentContainerStyle={{
@@ -180,7 +180,7 @@ const Home = () => {
             style={[
               styles.homeSearchBar,
               {
-                backgroundColor: isDark ? themeColors.input : lightTheme.input,
+                backgroundColor: colors.iconBgColor,
                 borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
                 borderColor: themeColors.border,
               },
@@ -201,17 +201,17 @@ const Home = () => {
           </TouchableOpacity>
         </View>
 
-        {(kycVerified === 0 || kycVerified === 3) && (
+        {(kycVerified !== 0 || kycVerified === 3) && (
           <View
             style={{
-              backgroundColor: themeColors.card,
+              backgroundColor: colors.iconBgColor,
               marginHorizontal: 12,
               height: 160,
               padding: 10,
               borderRadius: 6,
               marginVertical: 10,
-              borderWidth: 1,
-              borderColor: themeColors.border,
+              borderWidth: 0.5,
+              borderColor: lightTheme.input,
             }}
           >
             <View
@@ -260,7 +260,7 @@ const Home = () => {
         <View>
           {showCoinSkeleton ? <CoinListSkeleton /> : <CoinList />}
         </View>
-       
+
 
       </ScrollView>
     </AppSafeAreaView>

@@ -118,7 +118,7 @@ const HomeSlider = () => {
       const totalColor = current === total ? "#000" : "#9CA3AF";
 
       return (
-        <View style={styles.slideOuter}>
+        <View style={[styles.slideOuter, { backgroundColor: colors.iconBgColor }]}>
           <TouchableOpacity
             style={styles.slideInner}
             onPress={item?.onPress}

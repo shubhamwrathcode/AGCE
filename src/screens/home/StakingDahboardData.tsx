@@ -3,16 +3,16 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, SEMI_BOLD } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
-import { lightTheme } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import { static_coin, static_coin1, static_coin2 } from "../../helper/ImageAssets";
 
 const StakingDahboardData = () => {
   const { colors: themeColors } = useTheme();
 
   return (
-    <View style={{ paddingHorizontal: 12,  }}>
+    <View style={{ paddingHorizontal: 12, }}>
       <View style={styles.earnGrid}>
-        <TouchableOpacity activeOpacity={0.9} style={[styles.earnCardBig, { backgroundColor: lightTheme.input }]}>
+        <TouchableOpacity activeOpacity={0.9} style={[styles.earnCardBig, { backgroundColor: colors.iconBgColor }]}>
           <FastImage source={static_coin} style={{ width: 30, height: 30, borderRadius: 10 }} />
           <AppText numberOfLines={1} style={[styles.earnTitleBig, { color: themeColors.text }]}>
             BYUSDT
@@ -26,7 +26,7 @@ const StakingDahboardData = () => {
         </TouchableOpacity>
 
         <View style={styles.earnRightCol}>
-          <TouchableOpacity activeOpacity={0.9} style={[styles.earnCardSmall, { backgroundColor: lightTheme.input }]}>
+          <TouchableOpacity activeOpacity={0.9} style={[styles.earnCardSmall, { backgroundColor: colors.iconBgColor }]}>
             <View style={styles.earnSmallTop}>
               <FastImage source={static_coin1} style={{ width: 25, height: 25, borderRadius: 10 }} />
               <AppText style={[styles.earnTag, { color: themeColors.secondaryText }]}>Easy Earn</AppText>
@@ -41,7 +41,7 @@ const StakingDahboardData = () => {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.9} style={[styles.earnCardSmall, { backgroundColor: lightTheme.input }]}>
+          <TouchableOpacity activeOpacity={0.9} style={[styles.earnCardSmall, { backgroundColor: colors.iconBgColor }]}>
             <View style={styles.earnSmallTop}>
               <FastImage source={static_coin2} style={{ width: 25, height: 25, borderRadius: 10 }} />
               <AppText style={[styles.earnTag, { color: themeColors.secondaryText }]}>Easy Earn</AppText>

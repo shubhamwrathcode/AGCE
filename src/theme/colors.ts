@@ -1,5 +1,6 @@
 export const colors = {
-  orangeTheme:"#d1aa67",
+  iconBgColor: "#F7F7F7",
+  orangeTheme: "#d1aa67",
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
@@ -78,7 +79,7 @@ export const colors = {
   buyButtonColor: "#00C076",
   sellButtonColor: "#ED4E4E",
   blueThemeColor: '#1e56f5',
-  starColor:"#ffc108"
+  starColor: "#ffc108"
 };
 
 /** Light canvas: not pure #fff so the app reads distinct from the cloned template. */
