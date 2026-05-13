@@ -201,7 +201,7 @@ const Home = () => {
           </TouchableOpacity>
         </View>
 
-        {(kycVerified !== 0 || kycVerified === 3) && (
+        {(kycVerified === 0 || kycVerified === 3) && (
           <View
             style={{
               backgroundColor: colors.iconBgColor,

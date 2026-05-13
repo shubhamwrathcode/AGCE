@@ -355,6 +355,7 @@ const WithdrawWallet = () => {
   /** After an API validate attempt for current input (avoids “invalid” flash during debounce). */
   const [withdrawAddressCheckDone, setWithdrawAddressCheckDone] = useState(false);
   const [isWithdrawAddressValidating, setIsWithdrawAddressValidating] = useState(false);
+  const [isWithdrawAddressValidated, setIsWithdrawAddressValidated] = useState(false);
   const withdrawAddressValidationReqIdRef = useRef(0);
 
   const verifyReminderSheetRef = useRef(null);
@@ -513,6 +514,7 @@ const WithdrawWallet = () => {
     setWithdrawAddressValidError("");
     setWithdrawAddressValidatedKey("");
     setWithdrawAddressCheckDone(false);
+    setIsWithdrawAddressValidated(false);
     networkSheetRef.current?.close();
   }, []);
 
@@ -596,7 +598,7 @@ const WithdrawWallet = () => {
     if (!selectedCurrency || Object.keys(selectedCurrency).length === 0 || !network) return "";
     const fromMap = selectedCurrency?.token_asset_ids?.[network];
     if (fromMap != null && String(fromMap).trim()) return String(fromMap).trim();
-    return "";
+    return network;
   }, [selectedCurrency, network]);
 
   const currentWithdrawAddressValidationKey = useMemo(() => {
@@ -616,19 +618,9 @@ const WithdrawWallet = () => {
    * Hide while verifying, on any validation error, or before a completed check (checkDone).
    */
   const showWithdrawContentAfterValidatedAddress = useMemo(() => {
-    if (!currentWithdrawAddressValidationKey) return false;
-    if (isWithdrawAddressValidating) return false;
-    if (!withdrawAddressCheckDone) return false;
-    if (String(withdrawAddressValidError || "").trim().length > 0) return false;
-    if (withdrawAddressValidatedKey !== currentWithdrawAddressValidationKey) return false;
-    return true;
-  }, [
-    currentWithdrawAddressValidationKey,
-    withdrawAddressValidatedKey,
-    withdrawAddressValidError,
-    isWithdrawAddressValidating,
-    withdrawAddressCheckDone,
-  ]);
+    if (!withdrawAddress.trim() || !network) return false;
+    return isWithdrawAddressValidated && !withdrawAddressValidError;
+  }, [withdrawAddress, network, isWithdrawAddressValidated, withdrawAddressValidError]);
 
 
   useEffect(() => {
@@ -1144,6 +1136,7 @@ const WithdrawWallet = () => {
     setWithdrawAddressValidError("");
     setWithdrawAddressValidatedKey("");
     setWithdrawAddressCheckDone(false);
+    setIsWithdrawAddressValidated(false);
   };
 
   /** Web parity: `withdrawAddressInlineError` (useWithdrawPageController ~1000-1005). */
@@ -1207,14 +1200,17 @@ const WithdrawWallet = () => {
       if (ok) {
         setWithdrawAddressValidError("");
         setWithdrawAddressValidatedKey(validatedKey);
+        setIsWithdrawAddressValidated(true);
         return true;
       }
       setWithdrawAddressValidatedKey("");
+      setIsWithdrawAddressValidated(false);
       setWithdrawAddressValidError(msg && msg.toLowerCase() !== "ok" ? msg : `Invalid address for ${net}`);
       return false;
     } catch (e) {
       if (reqId !== withdrawAddressValidationReqIdRef.current) return false;
       setWithdrawAddressValidatedKey("");
+      setIsWithdrawAddressValidated(false);
       const msg = String(e?.message || e?.msg || "").trim();
       setWithdrawAddressValidError(msg || `Invalid address for ${net}`);
       return false;
@@ -2485,6 +2481,7 @@ const WithdrawWallet = () => {
                             onPress={() => {
                               setWithdrawAddress(item.address);
                               if (item.network) setNetwork(item.network);
+                              setIsWithdrawAddressValidated(true);
                               setShowAddressBook(false);
                             }}
                             style={{
@@ -2524,7 +2521,6 @@ const WithdrawWallet = () => {
                       ) : addressBookEntries.length > 0 ? (
                         addressBookEntries.map((item, idx) => {
                           const statusRaw = String(item.status || "").toUpperCase();
-                          console.log(item, '===item===')
                           const isApproved = /(APPROVED|ACTIVE|CONFIRMED)/.test(statusRaw);
                           return (
                             <TouchableOpacity
@@ -2532,6 +2528,7 @@ const WithdrawWallet = () => {
                               onPress={() => {
                                 setWithdrawAddress(item.address);
                                 if (item.network) setNetwork(item.network);
+                                setIsWithdrawAddressValidated(true);
                                 setShowAddressBook(false);
                               }}
                               style={{

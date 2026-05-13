@@ -15,6 +15,7 @@ import { getUserProfile } from "./actions/accountActions";
 import NavigationService from "./navigation/NavigationService";
 import { KYC_STATUS_SCREEN } from "./navigation/routes";
 import { CHART_WEB_BASE_URL } from "./helper/Constants";
+import { colors } from "./theme/colors";
 
 /** `returnUrl` from `createKycSession` is `agce://kyc_return`. Also accept web success path if OS delivers it via universal links. */
 function isKycFlowReturnUrl(url: string | null | undefined): boolean {
@@ -87,7 +88,7 @@ const MainApp = () => {
   return (
     <SafeAreaProvider>
       <StatusBar
-        backgroundColor={themeColors.background}
+        backgroundColor={colors.white}
         barStyle={isDark ? "light-content" : "dark-content"}
         translucent={false}
       />
