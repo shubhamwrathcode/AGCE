@@ -547,7 +547,7 @@ const WithdrawWallet = () => {
   const withdrawStep3Preview = useMemo(() => {
     const isAgce = withdrawToTab === "agce_user";
     const sym = selectedCurrency?.short_name || "—";
-    
+
     // Web logic parity: if no currency or network (or internal transfer which has no network), return nulls
     if (!selectedCurrency || (!isAgce && (!network || network === "" || network === "Select Network"))) {
       return {
@@ -564,14 +564,14 @@ const WithdrawWallet = () => {
     const netCode = !isAgce ? String(network).toUpperCase() : "Internal";
     const feeNum = isAgce ? 0 : (Number.isFinite(chainWithdrawalFee) ? chainWithdrawalFee : null);
     const amt = parseFloat(String(withdrawAmount || "").replace(/,/g, ""));
-    
+
     // For AGCE, receive is just the amount, fee is 0. 
     // Wait! Let's check if web shows 0 or - for AGCE.
     // If the user says "eject match", and web's preview returns null when network is "Select Network", 
     // then for AGCE (where network is usually "Select Network" on web), it should be null.
-    
-    const receiveNum = isAgce 
-      ? (Number.isFinite(amt) && amt > 0 ? amt : null) 
+
+    const receiveNum = isAgce
+      ? (Number.isFinite(amt) && amt > 0 ? amt : null)
       : (feeNum != null && Number.isFinite(amt) && amt > 0 ? Math.max(0, amt - feeNum) : null);
 
     const netMax = parseNum(valueForChain(selectedCurrency, "max_withdrawal", network), NaN);
@@ -3073,30 +3073,30 @@ const WithdrawWallet = () => {
                 label: "Network",
                 value: (selectedCurrency?.chain_full_names?.[network] || selectedCurrency?._chain_full_name?.[network] || WITHDRAW_NETWORK_LABELS[String(network || "").toUpperCase()] || network || "—")
               },
-              { 
-                label: "Amount", 
-                value: `${(withdrawAmount || "").trim() || "—"} ${selectedCurrency?.short_name || "—"}` 
+              {
+                label: "Amount",
+                value: `${(withdrawAmount || "").trim() || "—"} ${selectedCurrency?.short_name || "—"}`
               },
-              { 
-                label: "Receive", 
-                value: withdrawStep3Preview.receiveNum != null 
-                  ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.receiveNum)} ${String(selectedCurrency?.short_name || "—").toUpperCase()}` 
+              {
+                label: "Receive",
+                value: withdrawStep3Preview.receiveNum != null
+                  ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.receiveNum)} ${String(selectedCurrency?.short_name || "—").toUpperCase()}`
                   : `— ${String(selectedCurrency?.short_name || "—").toUpperCase()}`
               },
-              { 
-                label: "Fee", 
-                value: withdrawStep3Preview.feeNum != null 
-                  ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.feeNum)} ${String(selectedCurrency?.short_name || "—").toUpperCase()}` 
+              {
+                label: "Fee",
+                value: withdrawStep3Preview.feeNum != null
+                  ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.feeNum)} ${String(selectedCurrency?.short_name || "—").toUpperCase()}`
                   : `— ${String(selectedCurrency?.short_name || "—").toUpperCase()}`
               }
             ].map((item, idx) => (
-              <View key={idx} style={{ 
-                flexDirection: "row", 
-                justifyContent: "space-between", 
-                paddingVertical: 14, 
-                borderBottomWidth: idx < 4 ? 0.5 : 0, 
+              <View key={idx} style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                paddingVertical: 14,
+                borderBottomWidth: idx < 4 ? 0.5 : 0,
                 borderBottomColor: isDark ? themeColors.border : "#F3F4F6",
-                alignItems: "flex-start" 
+                alignItems: "flex-start"
               }}>
                 <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginTop: 1 }}>{item.label}</AppText>
                 <View style={{ flex: 1, marginLeft: 32 }}>
@@ -3162,7 +3162,7 @@ const WithdrawWallet = () => {
           </AppText>
 
           {/* Verification Summary Parity */}
-          <View style={{
+          {/* <View style={{
             padding: 12,
             borderRadius: 12,
             backgroundColor: isDark ? themeColors.card : "#F9FAFB",
@@ -3182,7 +3182,7 @@ const WithdrawWallet = () => {
                 {(withdrawAmount || "").trim() || "—"} {selectedCurrency?.short_name || "—"}
               </AppText>
             </View>
-          </View>
+          </View> */}
 
           <View style={{ marginBottom: 32 }}>
             <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text, marginBottom: 12 }}>Email verification code</AppText>
