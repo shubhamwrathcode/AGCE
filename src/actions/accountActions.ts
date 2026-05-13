@@ -1169,9 +1169,35 @@ export const getPasskeyRegistrationOptions = () => async (dispatch: AppDispatch)
       showError(response?.message || 'Failed to get registration options');
       return null;
     }
-    // Same as web: optionsResult.data (unwrap publicKey if backend wraps it)
     const data = response.data;
     const options = data?.publicKey ?? data;
+
+    // Normalization to ensure base64url strings for all binary-like fields
+    if (options.challenge && typeof options.challenge === 'string') {
+      options.challenge = toBase64URL(options.challenge.replace(/-/g, '+').replace(/_/g, '/'));
+    }
+    if (options.user?.id && typeof options.user.id === 'string') {
+      options.user.id = toBase64URL(options.user.id.replace(/-/g, '+').replace(/_/g, '/'));
+    }
+    if (Array.isArray(options.excludeCredentials)) {
+      options.excludeCredentials = options.excludeCredentials.map((c: any) => ({
+        ...c,
+        id: typeof c.id === 'string' ? toBase64URL(c.id.replace(/-/g, '+').replace(/_/g, '/')) : c.id,
+      }));
+    }
+    if (Array.isArray(options.pubKeyCredParams)) {
+      options.pubKeyCredParams = options.pubKeyCredParams.map((p: any) => ({
+        ...p,
+        type: p.type || 'public-key',
+        alg: p.alg || -7, // ES256
+      }));
+    }
+
+    // Ensure rpId is present at top level if needed by the library
+    if (options.rp?.id && !options.rpId) {
+      options.rpId = options.rp.id;
+    }
+
     return options;
   } catch (e: any) {
     logger(e);

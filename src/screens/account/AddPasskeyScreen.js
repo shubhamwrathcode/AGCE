@@ -193,10 +193,26 @@ const AddPasskeyScreen = () => {
     }
 
     const registrationOptions = await dispatch(getPasskeyRegistrationOptions());
+    console.log('[Passkey] registrationOptions for Passkey.create:', JSON.stringify(registrationOptions, null, 2));
     if (!registrationOptions) return;
 
     try {
-      const passkeyResponse = await Passkey.create(registrationOptions);
+      const request = {
+        challenge: registrationOptions.challenge,
+        rp: registrationOptions.rp,
+        user: registrationOptions.user,
+        pubKeyCredParams: registrationOptions.pubKeyCredParams || [
+          { alg: -7, type: 'public-key' }, // ES256 (Most compatible)
+          { alg: -257, type: 'public-key' }, // RS256
+        ],
+        // Letting the OS decide the best authenticator and resident key settings
+        timeout: 60000,
+        attestation: 'none',
+        rpId: registrationOptions.rpId || registrationOptions.rp?.id,
+      };
+
+      console.log('[Passkey] Calling Passkey.create with:', JSON.stringify(request, null, 2));
+      const passkeyResponse = await Passkey.create(request);
       if (passkeyResponse) {
         const verified = await dispatch(verifyPasskeyRegistration(passkeyResponse, passkeyName || 'Mobile Passkey'));
         if (verified) {
@@ -206,8 +222,9 @@ const AddPasskeyScreen = () => {
         }
       }
     } catch (error) {
+      console.error('[Passkey] Registration error:', error);
       if (error.message !== 'User cancelled the operation') {
-        showError('Passkey registration failed');
+        showError(`Passkey registration failed: ${error.message || 'Unknown error'}`);
       }
     }
   };

@@ -376,7 +376,7 @@ const getSecurityVerificationItems = (theme) => [
     id: "sv1",
     title: "Two-factor",
     icon: theme !== "Dark" ? lockLight : lock,
-    onPress: showComingSoonToast,
+    onPress: () => NavigationService.navigate(TWO_FACTOR_AUTHENTICATION),
   },
 ];
 
