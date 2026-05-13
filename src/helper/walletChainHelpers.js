@@ -19,6 +19,8 @@ export const WITHDRAW_NETWORK_LABELS = {
     POLYGON: "Polygon (MATIC)",
     BTC: "Bitcoin (BTC)",
     SOLANA: "Solana (SOL)",
+    ARBITRUM: "Arbitrum One",
+    BASE: "Base",
 };
 
 

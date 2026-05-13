@@ -23,8 +23,8 @@ export const IMAGE_BASE_URL = 'https://backend.demoexchange.wrathcode.com/';
 // For passkey testing with backend on localhost:5001 use one of:
 // 'http://localhost:5001/' (same machine) | 'http://10.0.2.2:5001/' (Android emulator) | 'http://<your-ip>:5001/' (device)
 
-/** Passkey RP ID. Must match the domain that serves /.well-known/assetlinks.json (required on Android). Use zillion.wrathcode.com - backend sends this and assetlinks.json is hosted there. */
-export const PASSKEY_RP_ID = 'zillion.wrathcode.com';
+/** Passkey RP ID. Must match the domain that serves /.well-known/assetlinks.json (required on Android). */
+export const PASSKEY_RP_ID = 'agce.wrathcode.com';
 
 export const placeHolderText = {
   userName: 'Phone Number',
