@@ -360,7 +360,7 @@ const getPopularMenuItems = (theme) => [
   {
     id: "p7",
     title: "Soft Staking",
-    icon: stakingDrawer ,
+    icon: stakingDrawer,
     onPress: showComingSoonToast,
   },
 ];
@@ -469,7 +469,7 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
         width: PROFILE_GRID_ICON_WRAP,
         height: PROFILE_GRID_ICON_WRAP,
         borderRadius: PROFILE_GRID_ICON_WRAP / 2,
-        backgroundColor: isDark ? "#2B2D33" : "#EFEFF1",
+        backgroundColor: '#F7F7F7',
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -482,7 +482,7 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
       />
     </View>
     <AppText
-    weight={SEMI_BOLD}
+      weight={SEMI_BOLD}
       numberOfLines={2}
       style={{
         marginTop: 8,
@@ -805,7 +805,7 @@ const ProfileDrawer = () => {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: paperBg }]}>
+    <View style={[styles.container, { backgroundColor: 'white' }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -826,10 +826,10 @@ const ProfileDrawer = () => {
               <FastImage source={scanner} resizeMode="contain" style={{ width: 20, height: 20 }} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => NavigationService.navigate(SETTING_SCREEN_New)} hitSlop={8}>
-            <FastImage source={setting_icon} resizeMode="contain" style={{ width: 20, height: 20 }}  />
+              <FastImage source={setting_icon} resizeMode="contain" style={{ width: 20, height: 20 }} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => NavigationService.navigate("Support")} hitSlop={8}>
-              <FastImage source={headPhoneIcon} resizeMode="contain" style={{ width: 20, height: 20 }}  />
+              <FastImage source={headPhoneIcon} resizeMode="contain" style={{ width: 20, height: 20 }} />
             </TouchableOpacity>
           </View>
         </View>
@@ -846,7 +846,7 @@ const ProfileDrawer = () => {
               overflow: "hidden",
               borderWidth: 1,
               borderColor: colors.disclaimDarText,
-              bottom:5
+              bottom: 5
             }}
           >
             <FastImage
@@ -912,11 +912,11 @@ const ProfileDrawer = () => {
             accessibilityRole="button"
             accessibilityLabel="Log out"
           >
-            <FastImage source={logoutIcon} style={{ width: 22, height: 22,right:15 }} resizeMode="contain" />
+            <FastImage source={logoutIcon} style={{ width: 22, height: 22, right: 15 }} resizeMode="contain" />
           </TouchableOpacity>
         </View>
 
-      
+
 
         <TouchableOpacity
           activeOpacity={0.9}
@@ -933,7 +933,7 @@ const ProfileDrawer = () => {
               Referral Program
             </AppText>
             <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginTop: 6, lineHeight: 18 }}>
-             { `Refer friends to earn a 35% \n commission`}
+              {`Refer friends to earn a 35% \n commission`}
             </AppText>
           </View>
           <View style={styles.referralArtWrap}>
@@ -965,7 +965,7 @@ const ProfileDrawer = () => {
           <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
             Shortcut
           </AppText>
-         
+
         </View>
 
         <View style={[styles.profileIconGrid, { marginTop: 14 }]}>

@@ -56,11 +56,14 @@ const AddWithdrawalAddressVerification = ({
       {saveAddrStep === "otp" && (
         <View style={{ paddingVertical: 10 }}>
           <View style={{ marginBottom: 24 }}>
-            {/* <AppText type={TWENTY} weight={BOLD} style={{ color: themeColors.text, marginBottom: 12 }}>
-              Verify Your Email
-            </AppText> */}
+
             <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
-              The verification code has been sent to your email {maskedEmail}, valid for 10 minutes.
+              {selectedSaveAddrVerifyMethod === "google_authenticator"
+                ? "Enter the 6-digit code from your authenticator app."
+                : selectedSaveAddrVerifyMethod === "mobile"
+                  ? `The verification code has been sent to your phone, valid for 10 minutes.`
+                  : `The verification code has been sent to your email ${maskedEmail}, valid for 10 minutes.`
+              }
             </AppText>
           </View>
 
@@ -101,7 +104,7 @@ const AddWithdrawalAddressVerification = ({
 
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
             <TouchableOpacity onPress={handleResendSaveAddrOtp} disabled={!saveAddrResendActive}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ textDecorationLine: 'underline', color: saveAddrResendActive ? (isDark ? "#FFF" : "#000") : themeColors.secondaryText }} >
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ textDecorationLine: saveAddrResendActive ? 'underline' : 'none', color: saveAddrResendActive ? (isDark ? "#FFF" : "#000") : themeColors.secondaryText }} >
                 {saveAddrOtpTimer > 0 ? `Resend in ${saveAddrOtpTimer}s` : "Resend Code"}
               </AppText>
             </TouchableOpacity>
@@ -235,13 +238,15 @@ const AddWithdrawalAddressVerification = ({
                         showSuccess("Memo copied");
                       }}
                       style={{
-                        backgroundColor: colors.orangeTheme,
-                        paddingHorizontal: 20,
-                        paddingVertical: 10,
+                        backgroundColor: 'transparent',
+                        paddingHorizontal: 10,
+                        paddingVertical: 8,
                         borderRadius: 10,
+                        borderColor: lightTheme.input,
+                        borderWidth: 1
                       }}
                     >
-                      <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.white }}>Copy</AppText>
+                      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.black }}>Copy</AppText>
                     </TouchableOpacity>
                   </View>
                 </View>

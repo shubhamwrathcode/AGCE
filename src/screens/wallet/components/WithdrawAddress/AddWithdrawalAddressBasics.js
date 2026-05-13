@@ -169,7 +169,7 @@ const AddWithdrawalAddressBasics = ({
               height: 48, justifyContent: "center", borderWidth: 1, borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? "#EF4444" : (isDark ? themeColors.border : "#E8EAEF")
             }}>
               <TextInput
-                placeholder="Enter or paste address"
+                placeholder="Enter wallet address"
                 placeholderTextColor={themeColors.secondaryText}
                 style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
                 value={saveAddrAddress}

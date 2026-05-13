@@ -655,8 +655,19 @@ export const withdrawCoin =
       let response: any;
       try {
         response = await appOperation.customer.withdraw_currency_v1(data);
-      } catch {
-        response = await appOperation.customer.withdraw_currency(data);
+      } catch (err: any) {
+        // If v1 returns a specific error (like Passkey required), do NOT fallback.
+        // v1 is the modern endpoint; fallback is only for when v1 doesn't exist (404).
+        if (err?.code !== 404 && err?.code !== 405) {
+          showError(err?.message || "Withdrawal failed");
+          return;
+        }
+        try {
+          response = await appOperation.customer.withdraw_currency(data);
+        } catch (err2: any) {
+          showError(err2?.message || "Withdrawal failed");
+          return;
+        }
       }
 
       if (response.success) {

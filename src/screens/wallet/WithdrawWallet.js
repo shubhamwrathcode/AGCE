@@ -14,8 +14,6 @@ import {
   Platform,
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-
 import {
   AppSafeAreaView,
   AppText,
@@ -421,6 +419,7 @@ const WithdrawWallet = () => {
   const [otpText, setOtpText] = useState("Get OTP");
   const [disableBtn, setDisableBtn] = useState(false);
   const [timer, setTimer] = useState(0);
+
   /** Web: OTP is not on the amount step; it appears after tapping Withdrawal (confirm / verify flow). */
   const [withdrawOtpPhaseActive, setWithdrawOtpPhaseActive] = useState(false);
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
@@ -604,6 +603,7 @@ const WithdrawWallet = () => {
     isWithdrawAddressValidating,
     withdrawAddressCheckDone,
   ]);
+
 
   useEffect(() => {
     if (!showWithdrawContentAfterValidatedAddress) {
@@ -818,6 +818,7 @@ const WithdrawWallet = () => {
       const id = addressToDelete._id || addressToDelete.id;
       const res = await appOperation.customer.delete_wallet_address_book(id);
       if (res?.success) {
+        showSuccess(res?.message || "Address removed");
         addressDeleteSheetRef.current?.close();
         setAddressToDelete(null);
         void refetchAddressBook();
@@ -1549,6 +1550,8 @@ const WithdrawWallet = () => {
     }
   };
 
+
+
   useEffect(() => {
     if (withdrawOtpPhaseActive) {
       handleGetOtp();
@@ -1747,22 +1750,22 @@ const WithdrawWallet = () => {
 
     /** Web `submitWithdrawal` body (`withdrawService.js`): string OTP, address mirror, idempotency, optional tokenAssetId. */
     let data = {
-      verification_code: String(otp ?? "").trim(),
+      email_code: String(otp ?? "").trim(), // Web uses email_code for the email OTP
       withdrawal_address: addr,
       address: addr,
-      amount: withdrawAmount,
+      amount: amtNum, // Web sends amount as a float
       email_or_phone: emailId, // The verify-identity email
       chain: chainForSubmit,
       coinName: selectedCurrency?.short_name,
       usdt_balance: availableBalance,
       idempotency_key,
+      tokenAssetId: tokenAssetId || chainForSubmit, // Web fallback
     };
-    if (tokenAssetId) {
-      data.tokenAssetId = tokenAssetId;
-    }
     Keyboard.dismiss();
     dispatch(withdrawCoin(data));
   };
+
+
 
   const _updateAnnouncementSections = (activeSections) => {
     setActiveAnnouncementSections(activeSections);
@@ -2415,7 +2418,8 @@ const WithdrawWallet = () => {
                           backgroundColor: addressBookSubTab === "saved" ? (isDark ? "#2A2E39" : "#F3F4F6") : "transparent"
                         }}
                       >
-                        <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: addressBookSubTab === "saved" ? themeColors.text : themeColors.secondaryText }}>My Address</AppText>
+                        <AppText weight={SEMI_BOLD} type={FOURTEEN}
+                          style={{ color: addressBookSubTab === "saved" ? themeColors.text : themeColors.secondaryText }}>My Address</AppText>
                       </TouchableOpacity>
                     </View>
 
@@ -2494,6 +2498,7 @@ const WithdrawWallet = () => {
                       ) : addressBookEntries.length > 0 ? (
                         addressBookEntries.map((item, idx) => {
                           const statusRaw = String(item.status || "").toUpperCase();
+                          console.log(item, '===item===')
                           const isApproved = /(APPROVED|ACTIVE|CONFIRMED)/.test(statusRaw);
                           return (
                             <TouchableOpacity
@@ -2513,10 +2518,15 @@ const WithdrawWallet = () => {
                             >
                               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                                 <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{item.name || item.label || "Saved"}</AppText>
+
                                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                                  <AppText weight={MEDIUM} type={TEN} style={{ color: themeColors.text }}>{item.chain}</AppText>
+
                                   <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 100, borderWidth: 1, borderColor: isApproved ? (isDark ? "#2D4B37" : "#E1F2E8") : (isDark ? "#4B3D2D" : "#FCEBD0") }}>
                                     <AppText weight={BOLD} type={EIGHT} style={{ color: isApproved ? "#228B22" : "#DE7520" }}>{statusRaw || "APPROVED"}</AppText>
+
                                   </View>
+
                                   <TouchableOpacity onPress={() => {
                                     setAddressToDelete(item);
                                     setTimeout(() => addressDeleteSheetRef.current?.open(), 0);
@@ -2773,29 +2783,29 @@ const WithdrawWallet = () => {
                 <View style={{ height: 1, backgroundColor: isDark ? "#2A2E39" : "#EEE", marginBottom: 10 }} />
 
                 <View style={{ gap: 12 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{withdrawToTab === "agce_user" ? "Recipient" : "Address"}</AppText>
-                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text, flex: 1, textAlign: "right", marginLeft: 20 }}>
-                    {withdrawToTab === "agce_user" 
-                      ? (agceRecipientTab === "email" ? agceRecipientEmail : agceRecipientTab === "phone" ? (agcePhoneCountry.code + agceRecipientPhoneLocal) : agceRecipientId)
-                      : (withdrawAddress || "—")
-                    }
-                  </AppText>
-                </View>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{withdrawToTab === "agce_user" ? "Transfer Type" : "Network"}</AppText>
-                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>
-                    {withdrawToTab === "agce_user" ? "Internal Transfer (AGCE User)" : (WITHDRAW_NETWORK_LABELS[network] || network || "—")}
-                  </AppText>
-                </View>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <AppText type={TWELVE} style={{ color: themeColors.text }}>Network Fee</AppText>
-                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>{withdrawStep3Preview.feeNum || 0} {selectedCurrency.short_name}</AppText>
-                </View>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <AppText type={TWELVE} style={{ color: themeColors.text }}>You will receive</AppText>
-                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: "#E2B24C" }}>{withdrawStep3Preview.receiveNum || 0} {selectedCurrency.short_name}</AppText>
-                </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{withdrawToTab === "agce_user" ? "Recipient" : "Address"}</AppText>
+                    <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text, flex: 1, textAlign: "right", marginLeft: 20 }}>
+                      {withdrawToTab === "agce_user"
+                        ? (agceRecipientTab === "email" ? agceRecipientEmail : agceRecipientTab === "phone" ? (agcePhoneCountry.code + agceRecipientPhoneLocal) : agceRecipientId)
+                        : (withdrawAddress || "—")
+                      }
+                    </AppText>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{withdrawToTab === "agce_user" ? "Transfer Type" : "Network"}</AppText>
+                    <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>
+                      {withdrawToTab === "agce_user" ? "Internal Transfer (AGCE User)" : (WITHDRAW_NETWORK_LABELS[network] || network || "—")}
+                    </AppText>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <AppText type={TWELVE} style={{ color: themeColors.text }}>Network Fee</AppText>
+                    <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>{withdrawStep3Preview.feeNum || 0} {selectedCurrency.short_name}</AppText>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <AppText type={TWELVE} style={{ color: themeColors.text }}>You will receive</AppText>
+                    <AppText weight={MEDIUM} type={TWELVE} style={{ color: "#E2B24C" }}>{withdrawStep3Preview.receiveNum || 0} {selectedCurrency.short_name}</AppText>
+                  </View>
                 </View>
               </View>
 
@@ -2965,8 +2975,9 @@ const WithdrawWallet = () => {
         <View style={{ padding: 24 }}>
           <View style={{ alignItems: "center", marginBottom: 24 }}>
             <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 8 }}>Confirm Withdrawal</AppText>
+            {/* <FastImage source={EMAIL_VERIFY} /> */}
             <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textAlign: "center", lineHeight: 18 }}>
-              {withdrawToTab === "agce_user" 
+              {withdrawToTab === "agce_user"
                 ? "You are about to perform an internal transfer. Please ensure the recipient details are correct, as internal transfers are processed instantly."
                 : `You have chosen the ${saveAddrNetwork || network || "—"} network. Kindly verify that your withdrawal address is compatible with this network, as unsupported transfers may result in loss of funds.`
               }
@@ -3028,15 +3039,15 @@ const WithdrawWallet = () => {
 
           <View style={{ marginBottom: 24 }}>
             {[
-              { 
-                label: withdrawToTab === "agce_user" ? "Recipient" : "Address", 
-                value: withdrawToTab === "agce_user" 
+              {
+                label: withdrawToTab === "agce_user" ? "Recipient" : "Address",
+                value: withdrawToTab === "agce_user"
                   ? (agceRecipientTab === "email" ? agceRecipientEmail : agceRecipientTab === "phone" ? (agcePhoneCountry.code + agceRecipientPhoneLocal) : agceRecipientId)
-                  : (withdrawAddress || "—") 
+                  : (withdrawAddress || "—")
               },
-              { 
-                label: withdrawToTab === "agce_user" ? "Transfer Type" : "Network", 
-                value: withdrawToTab === "agce_user" ? "Internal Transfer (AGCE User)" : (WITHDRAW_NETWORK_LABELS[network] || network || "—") 
+              {
+                label: withdrawToTab === "agce_user" ? "Transfer Type" : "Network",
+                value: withdrawToTab === "agce_user" ? "Internal Transfer (AGCE User)" : (WITHDRAW_NETWORK_LABELS[network] || network || "—")
               },
               { label: "Amount", value: `${withdrawAmount || "0"} ${coinSymbol(selectedCurrency)}` },
               { label: "Receive", value: `${formatWithdrawAmountDisplay(parseNum(withdrawAmount, 0) - (withdrawToTab === "agce_user" ? 0 : parseNum(valueForChain(selectedCurrency, "withdrawal_fee", network), 0)))} ${coinSymbol(selectedCurrency)}` },
@@ -3053,7 +3064,7 @@ const WithdrawWallet = () => {
             <View style={{ flexDirection: "row", marginBottom: 8 }}>
               <AppText style={{ color: themeColors.secondaryText, marginRight: 8 }}>•</AppText>
               <AppText type={TEN} style={{ color: themeColors.secondaryText, flex: 1 }}>
-                {withdrawToTab === "agce_user" 
+                {withdrawToTab === "agce_user"
                   ? "Ensure the recipient detail is correct. AGCE User transfers are instant and non-reversible."
                   : "Make Sure The Address Is Accurate And Matches The Selected Network."
                 }
@@ -3140,6 +3151,7 @@ const WithdrawWallet = () => {
           </View>
 
           <TouchableOpacity
+            disabled={otp.length !== 6}
             onPress={() => {
               withdrawSecuritySheetRef.current?.close();
               handleWithdraw();
@@ -3149,7 +3161,7 @@ const WithdrawWallet = () => {
               borderRadius: 100,
               justifyContent: "center",
               alignItems: "center",
-              backgroundColor: "#777",
+              backgroundColor: otp.length === 6 ? colors.black : "#777",
               marginBottom: 24
             }}
           >
@@ -3167,6 +3179,8 @@ const WithdrawWallet = () => {
           </View>
         </View>
       </RBSheet>
+
+
       {withdrawLimitInfoSheetOnly}
       {networkFeeInfoSheetOnly}
 
@@ -3345,9 +3359,9 @@ const WithdrawWallet = () => {
                   ? "Verify your identity"
                   : (saveAddrStep === "otp")
                     ? (selectedSaveAddrVerifyMethod === "email" ? "Verify your email" : selectedSaveAddrVerifyMethod === "mobile" ? "Verify your phone" : "Verify your identity")
-                  : (saveAddrStep === "satoshi" || saveAddrStep === "metamask")
-                    ? "Verify withdrawal address"
-                    : "Address confirmation"}
+                    : (saveAddrStep === "satoshi" || saveAddrStep === "metamask")
+                      ? "Verify withdrawal address"
+                      : "Address confirmation"}
             </AppText>
             <TouchableOpacity onPress={() => saveAddressSheetRef.current?.close()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <AppText type={TWENTY} style={{ color: themeColors.text, fontWeight: "300" }}>✕</AppText>
@@ -3733,7 +3747,7 @@ const WithdrawWallet = () => {
                           memo: saveAddrMemo,
                           ownership: saveAddrOwnership === "SELF" ? "SELF" : "OTHER",
                           wallet_type: saveAddrWalletType === "SELF_HOSTED" ? "NON_CUSTODIAL" : "CUSTODIAL",
-                          exchange: saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? saveAddrExchangeManual.trim() : saveAddrExchange,
+                          exchange_name: saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? saveAddrExchangeManual.trim() : saveAddrExchange,
                           ...(saveAddrOwnership === "OTHER" ? {
                             other_person: {
                               full_name: saveAddrBenFullName.trim(),
@@ -3844,16 +3858,16 @@ const WithdrawWallet = () => {
                     }
 
                     if (saveAddrStep === "metamask") {
-                      const dappUrl = "arabglobalexchange.com/wallet/withdraw"; 
+                      const dappUrl = "arabglobalexchange.com/wallet/withdraw";
                       const metamaskDeepLink = `https://metamask.app.link/dapp/${dappUrl}`;
-                      
+
                       Linking.canOpenURL(metamaskDeepLink).then(supported => {
                         if (supported) {
                           Linking.openURL(metamaskDeepLink);
                         } else {
                           // Redirect to store if not installed
-                          const storeUrl = Platform.OS === 'ios' 
-                            ? 'https://apps.apple.com/app/metamask/id1438144202' 
+                          const storeUrl = Platform.OS === 'ios'
+                            ? 'https://apps.apple.com/app/metamask/id1438144202'
                             : 'https://play.google.com/store/apps/details?id=io.metamask';
                           Linking.openURL(storeUrl);
                         }
