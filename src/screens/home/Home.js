@@ -230,7 +230,7 @@ const Home = () => {
             style={[
               styles.homeSearchBar,
               {
-                backgroundColor: colors.iconBgColor,
+                backgroundColor: '#F7F7F7',
                 borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
                 borderColor: themeColors.border,
               },
@@ -347,18 +347,18 @@ const Home = () => {
           </View>
         )}
 
-        <View>
+        <View style={{ right: 10 }}>
           <HomeMenuBar />
         </View>
 
-        <View style={{ marginTop: 10 }}>
+        <View style={{ marginTop: 12 }}>
           {sliderReady ? <HomeSlider theme={theme} /> : <HomeSliderSkeleton />}
         </View>
 
-        <View>
+        <View style={{ marginTop: 12 }}>
           {showCoinSkeleton ? <CoinSliderSkeleton /> : <CoinSlider />}
         </View>
-        <View>
+        <View style={{ marginTop: 12 }}>
           {showCoinSkeleton ? <CoinListSkeleton /> : <CoinList />}
         </View>
 

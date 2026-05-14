@@ -15,23 +15,16 @@ import {
   Alert,
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
-
 import FastImage from "react-native-fast-image";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
-
-
 import moment from "moment";
-import { validateEmail } from "../../helper/utility";
 import KeyBoardAware from "../../../common/KeyboardAware";
-import WithdrawRecentHistory from "../WithdrawRecentHistory";
-import { routes } from "../../../helper/dummydata";
 import NavigationService from "../../../navigation/NavigationService";
 import AddWithdrawalAddressBasics from "../components/WithdrawAddress/AddWithdrawalAddressBasics";
 import AddWithdrawalAddressVerification from "../components/WithdrawAddress/AddWithdrawalAddressVerification";
 import WithdrawAddressBookModal from "../components/WithdrawAddress/WithdrawAddressBookModal";
-
 import { canonicalWithdrawalChainForValidateAddress, CHAIN_FULL_NAMES, formatFundAvailableFromRow, formatWithdrawAmountDisplay, getActiveWithdrawChainKeys, networkKeysFromChain, parseNum, totalSpendableFromFundRow, valueForChain, WITHDRAW_NETWORK_LABELS } from "../../../helper/walletChainHelpers";
 import { useTheme } from "../../../hooks/useTheme";
 import { useAppSelector } from "../../../store/hooks";
@@ -172,7 +165,7 @@ const WithdrawForm = () => {
       dispatch(verifyWithdraw({}));
       dispatch(getInteralWalletHistory(0, 10));
 
-      if (userData && userData.kycVerified !== 1) {
+      if (userData && Number(userData.kycVerified) !== 2) {
         setShowKycModal(true);
       }
     }, [dispatch, userData])

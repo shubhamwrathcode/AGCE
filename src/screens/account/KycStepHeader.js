@@ -3,19 +3,24 @@ import { View, TouchableOpacity, StyleSheet } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, FIFTEEN, SEMI_BOLD, SIXTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
-import { back_ic } from "../../helper/ImageAssets";
+import { back_ic, headPhoneIcon, INFO } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 
 const BACK_ICON_SIZE = 18;
+const INFO_ICON_SIZE = 22;
 
-const KycStepHeader = ({ title, theme = "Dark", onBackPress }) => {
+const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress }) => {
   const isDark = theme === "Dark";
   const textColor = isDark ? colors.white : colors.black;
   const onPress = onBackPress ?? (() => NavigationService.goBack());
 
   return (
     <View style={styles.headerRow}>
-      <TouchableOpacity onPress={onPress} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+      <TouchableOpacity
+        onPress={onPress}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={styles.actionBtn}
+      >
         <FastImage
           source={back_ic}
           resizeMode="contain"
@@ -23,15 +28,33 @@ const KycStepHeader = ({ title, theme = "Dark", onBackPress }) => {
           tintColor={textColor}
         />
       </TouchableOpacity>
+
       <AppText
         type={SIXTEEN}
         weight={SEMI_BOLD}
         style={[styles.headerTitle, { color: textColor }]}
-        numberOfLines={2}
+        numberOfLines={1}
       >
         {title}
       </AppText>
-      <View style={[styles.placeholder, { width: BACK_ICON_SIZE, height: BACK_ICON_SIZE }]} />
+
+      <TouchableOpacity
+        onPress={onInfoPress}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={[styles.actionBtn, { alignItems: 'flex-end' }]}
+        disabled={!onInfoPress}
+      >
+        {onInfoPress ? (
+          <FastImage
+            source={INFO}
+            resizeMode="contain"
+            style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }}
+            tintColor={textColor}
+          />
+        ) : (
+          <View style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }} />
+        )}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -42,9 +65,16 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 16,
+    height: 60,
+  },
+  actionBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
   },
   backIcon: {},
   headerTitle: {
@@ -52,5 +82,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginHorizontal: 8,
   },
-  placeholder: {},
 });

@@ -19,6 +19,7 @@ import {
   wallet_ic,
   spotIcon,
   earningAsset1,
+  lockLight,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import { MORE_MENU_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
@@ -28,10 +29,6 @@ import { colors } from "../../theme/colors";
 
 const showComingSoonToast = () =>
   Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
-
-/** Grey tile behind each menu icon (square behind icon only). */
-const ICON_TILE_GREY_LIGHT = "#EAEDF0";
-const ICON_TILE_GREY_DARK = "#EAEDF0";
 
 // ✅ Separate component for menu item to use hooks properly
 const MenuItem = React.memo(({ item, index }: any) => {
@@ -123,18 +120,12 @@ const HomeMenuBar = () => {
       icon: earningAsset1,
       onPress: showComingSoonToast,
     },
-    // {
-    //   id: "7",
-    //   title: "Referral",
-    //   icon: newHubIcon,
-    //   onPress: showComingSoonToast,
-    // },
-    // {
-    //   id: "6",
-    //   title: checkValue(languages?.more),
-    //   icon: moreOption,
-    //   onPress: () => NavigationService.navigate(MORE_MENU_SCREEN),
-    // },
+    {
+      id: "6",
+      title: "Security",
+      icon: lockLight,
+      onPress: showComingSoonToast,
+    },
 
   ];
 
@@ -206,7 +197,7 @@ const styles = StyleSheet.create({
   },
   singleItem: {
     alignItems: "center",
-    width: (Width - 40) / 4.6,
+    width: (Width - 40) / 4.9,
 
   },
   itemSeparator: {

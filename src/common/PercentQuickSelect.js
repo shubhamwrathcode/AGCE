@@ -57,9 +57,9 @@ const PercentQuickSelect = ({
   const barLength = Math.max(0, (trackWidth || 0) - 2 * BAR_INSET);
   const fillWidth =
     trackWidth &&
-    !Number.isNaN(effectiveActive) &&
-    effectiveActive >= 0 &&
-    effectiveActive <= 100
+      !Number.isNaN(effectiveActive) &&
+      effectiveActive >= 0 &&
+      effectiveActive <= 100
       ? (effectiveActive / 100) * barLength
       : 0;
 

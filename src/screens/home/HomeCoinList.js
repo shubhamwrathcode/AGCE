@@ -59,6 +59,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
           gap: 10,
           alignItems: "center",
           marginBottom: 15,
+          marginHorizontal: 10
         }}
         onPress={() => NavigationService.navigate(NOTIFICATION_SCREEN)}
         activeOpacity={0.7}
@@ -135,10 +136,10 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
           justifyContent: "space-between",
           alignItems: "center",
           marginVertical: 15,
-          paddingHorizontal:5
+          paddingHorizontal: 5
         }}
       >
-        <View style={{ flexDirection: "row", gap: 7, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", gap: 7, alignItems: "center", paddingHorizontal: 5 }}>
           <FastImage
             source={bell_ic}
             resizeMode="contain"
@@ -156,6 +157,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
             gap: 0,
             alignItems: "center",
             marginBottom: 7,
+            right: 8
           }}
         >
           <AppText
@@ -178,7 +180,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
           />
         </View>
       </View>
-      <View>
+      <View style={{ bottom: 5 }}>
         <FlatList
           data={notificationRows}
           renderItem={renderItem}

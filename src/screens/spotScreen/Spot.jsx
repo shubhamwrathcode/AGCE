@@ -3177,31 +3177,33 @@ const Spot = () => {
                   style={[
                     styles.dropdown,
                     {
-                      backgroundColor: themeColors.input,
+                      backgroundColor: colors.iconBgColor,
                       flex: 1,
-                      borderRadius: 8,
-                      borderWidth: StyleSheet.hairlineWidth,
-                      borderColor: themeColors.themeBorderColor,
+                      borderRadius: 10,
+                      borderWidth: 0,
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
                     },
                   ]}
                   onPress={() => rbSheetlimit?.current?.open()}
                 >
-                  <FastImage
-                    source={INFO}
-                    style={{ height: 12, width: 12 }}
-                    resizeMode="contain"
-                    tintColor={themeColors.secondaryText}
-                  />
                   <AppText
-                    style={[styles.dropdownText, { color: themeColors.text, flex: 1, textAlign: "center" }]}
-                    numberOfLines={1}
+                    weight={MEDIUM}
+                    style={{ color: themeColors.text, fontSize: 16 }}
                   >
                     {numberSelectLimit}
                   </AppText>
                   <FastImage
+                    source={INFO}
+                    style={{ height: 14, width: 14, marginLeft: 6 }}
+                    resizeMode="contain"
+                    tintColor={themeColors.secondaryText}
+                  />
+                  <View style={{ flex: 1 }} />
+                  <FastImage
                     source={downIcon}
                     resizeMode="contain"
-                    style={{ width: 9, height: 9 }}
+                    style={{ width: 10, height: 10 }}
                     tintColor={themeColors.secondaryText}
                   />
                 </TouchableOpacity>
@@ -3214,10 +3216,8 @@ const Spot = () => {
                 <View
                   style={[
                     styles.spotOrderFieldCard,
-                    styles.spotOrderFieldCardDense,
-                    styles.spotOrderFieldCardPrice,
                     {
-                      backgroundColor: themeColors.input,
+                      backgroundColor: colors.iconBgColor,
                       borderColor: themeColors.themeBorderColor,
                     },
                   ]}
@@ -3227,14 +3227,10 @@ const Spot = () => {
                       style={[
                         styles.spotOrderInputLabel,
                         {
-                          position: "absolute",
-                          left: 0,
-                          right: 0,
-                          textAlign: "center",
-                          top: 2,
-                          fontSize: 10,
-                          lineHeight: 13,
-                          color: themeColors.secondaryText,
+                          color: "#8E8E93",
+                          fontSize: 11,
+                          fontWeight: "500",
+                          marginBottom: 2
                         },
                       ]}
                     >
@@ -3242,7 +3238,7 @@ const Spot = () => {
                     </AppText>
 
                     {isLimit ? (
-                      <Animated.View
+                      <View
                         style={[
                           styles.spotOrderInputBox,
                           styles.spotOrderInputBoxDense,
@@ -3250,17 +3246,10 @@ const Spot = () => {
                             backgroundColor: "transparent",
                             paddingHorizontal: 0,
                             paddingVertical: 0,
-                            marginTop: 18,
+                            marginTop: 2,
                           },
                         ]}
                       >
-                        <TouchableOpacity
-                          onPress={() => handlePriceStep(-1)}
-                          style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                        >
-                          <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>−</AppText>
-                        </TouchableOpacity>
                         <TextInput
                           placeholder={""}
                           placeholderTextColor={themeColors.secondaryText}
@@ -3278,21 +3267,16 @@ const Spot = () => {
                             styles.spotOrderInputValueDense,
                             {
                               color: themeColors.text,
-                              textAlign: "center",
+                              textAlign: "left",
+                              fontSize: 18,
+                              fontWeight: "600",
                               textAlignVertical: "center",
                               ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                             },
                           ]}
                           editable
                         />
-                        <TouchableOpacity
-                          onPress={() => handlePriceStep(1)}
-                          style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                        >
-                          <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>+</AppText>
-                        </TouchableOpacity>
-                      </Animated.View>
+                      </View>
                     ) : (
                       <Animated.View
                         style={{
@@ -3300,12 +3284,12 @@ const Spot = () => {
                           minHeight: 23,
                           justifyContent: "center",
                           alignItems: "center",
-                          marginTop: 18,
+                          marginTop: 2,
 
                         }}
                       >
-                        <AppText style={[styles.spotOrderInputValue, styles.spotOrderInputValueDense, { color: themeColors.secondaryText }]}>
-                          ---Best Market Price---
+                        <AppText style={[styles.spotOrderInputValue, { color: "#8E8E93", fontSize: 13, textAlign: 'left', marginTop: 4 }]}>
+                          Best Market Price
                         </AppText>
                       </Animated.View>
                     )}
@@ -3318,45 +3302,27 @@ const Spot = () => {
                   <View
                     style={[
                       styles.spotOrderFieldCard,
-                      isStopFocused || String(stopPrice ?? "").trim() !== ""
-                        ? styles.spotOrderFieldCardDense
-                        : styles.spotOrderFieldCardTight,
                       {
-                        backgroundColor: themeColors.input,
+                        backgroundColor: colors.iconBgColor,
                         borderColor: themeColors.themeBorderColor,
                       },
                     ]}
                   >
                     <View style={styles.spotOrderFieldStack}>
-                      {isStopFocused || String(stopPrice ?? "").trim() !== "" ? (
-                        <Animated.Text
-                          style={[
-                            styles.spotOrderInputLabel,
-                            {
-                              position: "absolute",
-                              left: 0,
-                              right: 0,
-                              textAlign: "center",
-                              top: stopAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [11, 2],
-                              }),
-                              fontSize: stopAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [12, 10],
-                              }),
-                              lineHeight: stopAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [16, 13],
-                              }),
-                              color: themeColors.secondaryText,
-                            },
-                          ]}
-                        >
-                          Stop ({quote_currency})
-                        </Animated.Text>
-                      ) : null}
-                      <Animated.View
+                      <AppText
+                        style={[
+                          styles.spotOrderInputLabel,
+                          {
+                            color: "#8E8E93",
+                            fontSize: 11,
+                            fontWeight: "500",
+                            marginBottom: 2
+                          },
+                        ]}
+                      >
+                        Stop ({quote_currency})
+                      </AppText>
+                      <View
                         style={[
                           styles.spotOrderInputBox,
                           styles.spotOrderInputBoxDense,
@@ -3364,20 +3330,10 @@ const Spot = () => {
                             backgroundColor: "transparent",
                             paddingHorizontal: 0,
                             paddingVertical: 0,
-                            marginTop: stopAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, 8],
-                            }),
+                            marginTop: 2,
                           },
                         ]}
                       >
-                        <TouchableOpacity
-                          onPress={() => handleStopPriceStep(-1)}
-                          style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                        >
-                          <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>−</AppText>
-                        </TouchableOpacity>
                         <TextInput
                           placeholder={""}
                           placeholderTextColor={themeColors.secondaryText}
@@ -3392,38 +3348,17 @@ const Spot = () => {
                           keyboardType="numeric"
                           style={[
                             styles.spotOrderInputValue,
-                            styles.spotOrderInputValueDense,
                             {
-                              color:
-                                !isStopFocused && String(stopPrice ?? "").trim() === ""
-                                  ? "transparent"
-                                  : themeColors.text,
-                              textAlign: "center",
+                              color: themeColors.text,
+                              textAlign: "left",
+                              fontSize: 18,
+                              fontWeight: "600",
                               textAlignVertical: "center",
                               ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                             },
                           ]}
                         />
-                        <TouchableOpacity
-                          onPress={() => handleStopPriceStep(1)}
-                          style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                        >
-                          <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>+</AppText>
-                        </TouchableOpacity>
-                      </Animated.View>
-                      {!isStopFocused && String(stopPrice ?? "").trim() === "" ? (
-                        <View pointerEvents="none" style={styles.spotOrderAmountEmptyOverlay}>
-                          <AppText
-                            style={[
-                              styles.spotOrderInputLabel,
-                              { color: themeColors.secondaryText, textAlign: "center", fontWeight: "400" },
-                            ]}
-                          >
-                            Stop ({quote_currency})
-                          </AppText>
-                        </View>
-                      ) : null}
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -3433,45 +3368,27 @@ const Spot = () => {
                 <View
                   style={[
                     styles.spotOrderFieldCard,
-                    isAmountFocused || String(amount ?? "").trim() !== ""
-                      ? styles.spotOrderFieldCardDense
-                      : styles.spotOrderFieldCardTight,
                     {
-                      backgroundColor: themeColors.input,
+                      backgroundColor: colors.iconBgColor,
                       borderColor: themeColors.themeBorderColor,
                     },
                   ]}
                 >
                   <View style={styles.spotOrderFieldStack}>
-                    {isAmountFocused || String(amount ?? "").trim() !== "" ? (
-                      <Animated.Text
-                        style={[
-                          styles.spotOrderInputLabel,
-                          {
-                            position: "absolute",
-                            left: 0,
-                            right: 0,
-                            textAlign: "center",
-                            top: amountAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [11, 2],
-                            }),
-                            fontSize: amountAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [12, 10],
-                            }),
-                            lineHeight: amountAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [16, 13],
-                            }),
-                            color: themeColors.secondaryText,
-                          },
-                        ]}
-                      >
-                        Amount ({base_currency})
-                      </Animated.Text>
-                    ) : null}
-                    <Animated.View
+                    <AppText
+                      style={[
+                        styles.spotOrderInputLabel,
+                        {
+                          color: "#8E8E93",
+                          fontSize: 11,
+                          fontWeight: "500",
+                          marginBottom: 2
+                        },
+                      ]}
+                    >
+                      Amount ({base_currency})
+                    </AppText>
+                    <View
                       style={[
                         styles.spotOrderInputBox,
                         styles.spotOrderInputBoxDense,
@@ -3479,20 +3396,10 @@ const Spot = () => {
                           backgroundColor: "transparent",
                           paddingHorizontal: 0,
                           paddingVertical: 0,
-                          marginTop: amountAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, 12],
-                          }),
+                          marginTop: 4,
                         },
                       ]}
                     >
-                      <TouchableOpacity
-                        onPress={() => handleAmountStep(-1)}
-                        style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
-                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                      >
-                        <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>−</AppText>
-                      </TouchableOpacity>
                       <TextInput
                         ref={amountInputRef}
                         placeholder={""}
@@ -3508,38 +3415,17 @@ const Spot = () => {
                         keyboardType="numeric"
                         style={[
                           styles.spotOrderInputValue,
-                          styles.spotOrderInputValueDense,
                           {
-                            color:
-                              !isAmountFocused && String(amount ?? "").trim() === ""
-                                ? "transparent"
-                                : themeColors.text,
-                            textAlign: "center",
+                            color: themeColors.text,
+                            textAlign: "left",
+                            fontSize: 18,
+                            fontWeight: "600",
                             textAlignVertical: "center",
                             ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                           },
                         ]}
                       />
-                      <TouchableOpacity
-                        onPress={() => handleAmountStep(1)}
-                        style={[styles.spotOrderStepBtn, styles.spotOrderStepBtnSpotPair]}
-                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                      >
-                        <AppText style={[styles.spotOrderStepBtnText, styles.spotOrderStepBtnTextDense, { color: themeColors.secondaryText }]}>+</AppText>
-                      </TouchableOpacity>
-                    </Animated.View>
-                    {!isAmountFocused && String(amount ?? "").trim() === "" ? (
-                      <View pointerEvents="none" style={styles.spotOrderAmountEmptyOverlay}>
-                        <AppText
-                          style={[
-                            styles.spotOrderInputLabel,
-                            { color: themeColors.secondaryText, textAlign: "center", fontWeight: "400" },
-                          ]}
-                        >
-                          Amount ({base_currency})
-                        </AppText>
-                      </View>
-                    ) : null}
+                    </View>
                   </View>
                 </View>
               </View>
@@ -3556,95 +3442,62 @@ const Spot = () => {
                   <View
                     style={[
                       styles.spotOrderFieldCard,
-                      String(amount ?? "").trim() !== ""
-                        ? styles.spotOrderFieldCardDense
-                        : styles.spotOrderFieldCardTight,
                       {
-                        backgroundColor: themeColors.input,
+                        backgroundColor: colors.iconBgColor,
                         borderColor: themeColors.themeBorderColor,
                       },
                     ]}
                   >
-                    {String(amount ?? "").trim() === "" ? (
-                      <View style={styles.spotOrderTotalEmptyInner}>
-                        <AppText
+                    <View style={styles.spotOrderFieldStack}>
+                      <AppText
+                        style={[
+                          styles.spotOrderInputLabel,
+                          {
+                            color: "#8E8E93",
+                            fontSize: 11,
+                            fontWeight: "500",
+                            marginBottom: 2
+                          },
+                        ]}
+                      >
+                        Total ({quote_currency})
+                      </AppText>
+                      <View
+                        style={[
+                          styles.spotOrderInputBox,
+                          styles.spotOrderInputBoxDense,
+                          {
+                            backgroundColor: "transparent",
+                            paddingHorizontal: 0,
+                            paddingVertical: 0,
+                            minHeight: 22,
+                            marginTop: 2,
+                          },
+                        ]}
+                      >
+                        <TextInput
+                          placeholder={""}
+                          placeholderTextColor={themeColors.secondaryText}
+                          selectionColor={inputSelectionColor}
+                          value={amount ? formatTotal(totalDisplayValue) : ""}
+                          keyboardType="numeric"
                           style={[
-                            styles.spotOrderInputLabel,
-                            { color: themeColors.secondaryText, textAlign: "center", fontWeight: "400" },
-                          ]}
-                        >
-                          Total ({quote_currency})
-                        </AppText>
-                      </View>
-                    ) : (
-                      <View style={styles.spotOrderFieldStack}>
-                        <Animated.Text
-                          style={[
-                            styles.spotOrderInputLabel,
+                            styles.spotOrderInputValue,
                             {
-                              position: "absolute",
-                              left: 0,
-                              right: 0,
-                              textAlign: "center",
-                              top: amountAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [11, 2],
-                              }),
-                              fontSize: amountAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [12, 10],
-                              }),
-                              lineHeight: amountAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [16, 13],
-                              }),
-                              color: themeColors.secondaryText,
-                            },
-                          ]}
-                        >
-                          Total ({quote_currency})
-                        </Animated.Text>
-                        <Animated.View
-                          style={[
-                            styles.spotOrderInputBox,
-                            styles.spotOrderInputBoxDense,
-                            {
-                              backgroundColor: "transparent",
-                              paddingHorizontal: 0,
+                              flex: 1,
+                              color: themeColors.text,
+                              textAlign: "left",
+                              fontSize: 18,
+                              fontWeight: "600",
+                              textAlignVertical: "center",
                               paddingVertical: 0,
-                              minHeight: 27,
-                              marginTop: amountAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, 16],
-                              }),
+                              ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                             },
                           ]}
-                        >
-                          <View style={styles.spotOrderTotalSideSpacer} />
-                          <TextInput
-                            placeholder={""}
-                            placeholderTextColor={themeColors.secondaryText}
-                            selectionColor={inputSelectionColor}
-                            value={amount ? formatTotal(totalDisplayValue) : ""}
-                            keyboardType="numeric"
-                            style={[
-                              styles.spotOrderInputValue,
-                              styles.spotOrderInputValueDense,
-                              {
-                                flex: 1,
-                                color: themeColors.text,
-                                textAlign: "center",
-                                textAlignVertical: "center",
-                                paddingVertical: 0,
-                                ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
-                              },
-                            ]}
-                            editable={false}
-                          />
-                          <View style={styles.spotOrderTotalSideSpacer} />
-                        </Animated.View>
+                          editable={false}
+                        />
                       </View>
-                    )}
+                    </View>
                   </View>
                 </View>
               ) : null}
@@ -3715,9 +3568,9 @@ const Spot = () => {
                     <View
                       style={[
                         styles.spotOrderFieldCard,
-                        styles.spotOrderFieldCardDense,
+
                         {
-                          backgroundColor: themeColors.input,
+                          backgroundColor: colors.iconBgColor,
                           borderColor: themeColors.themeBorderColor,
                         },
                       ]}
@@ -4496,10 +4349,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "stretch",
     paddingVertical: 2,
-    paddingHorizontal: 3,
-    minHeight: 40,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 0,
     overflow: "visible",
   },
   /** Inner: label + row treated as one block (centered inside spotOrderFieldCard). */
@@ -4511,12 +4364,13 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   spotOrderInputLabel: {
-    fontSize: 13,
+    fontSize: 10,
     fontFamily: fontFamilySemiBold,
-    fontWeight: "600",
-    textAlign: "center",
+    fontWeight: "500",
+    textAlign: "left",
+    marginLeft: 0,
     marginBottom: 0,
-    lineHeight: 17,
+    lineHeight: 14,
   },
   spotOrderInputBox: {
     flexDirection: "row",

@@ -9,12 +9,13 @@ import {
 } from "react-native";
 import { searchIcon } from "../../helper/ImageAssets";
 import { TouchableOpacity } from "react-native-gesture-handler";
-import { AppText, FOURTEEN, SEMI_BOLD } from "../../shared";
+import { AppText, FOURTEEN, MEDIUM, SEMI_BOLD, SIXTEEN, THIRTEEN } from "../../shared";
 import FastImage from "react-native-fast-image";
 import { colors, lightTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import { SEARCH_SCREEN } from "../../navigation/routes";
 import { useTheme } from "../../hooks/useTheme";
+import { fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const H_PAD = Math.max(14, SCREEN_WIDTH * 0.04);
@@ -101,7 +102,7 @@ const MarketHeader = ({
     <View style={[styles.wrapper, { backgroundColor: colors.white }]}>
       {/* Search bar - full width, reference style */}
       {showSearch && (
-        <View style={[styles.searchBar, { backgroundColor: colors.iconBgColor, borderColor: lightTheme.input, borderWidth: 0.8 }]}>
+        <View style={[styles.searchBar, { backgroundColor: '#F4F4F4', borderColor: 'transparent', borderWidth: 0.8 }]}>
           <FastImage
             source={searchIcon}
             resizeMode="contain"
@@ -109,8 +110,8 @@ const MarketHeader = ({
             tintColor={placeholderColor}
           />
           <TextInput
-            style={[styles.searchInput, { color: textColor, fontSize: 12 }]}
-            placeholder="Search Coin Pairs"
+            style={[styles.searchInput, { color: textColor, fontSize: 14, fontWeight: '500' }]}
+            placeholder="Search Coins"
             placeholderTextColor={placeholderColor}
             value={search}
             onChangeText={onSearchChange}
@@ -159,6 +160,7 @@ const MarketHeader = ({
                   tabLayoutsRef.current[key] = e.nativeEvent.layout;
                   if (key === activeTab) animateUnderlineTo(key, false);
                 }}
+                style={{ right: 5 }}
               >
                 <TouchableOpacity onPress={() => setActiveTab(key)} style={[styles.tab, isActive && styles.tabActive]} activeOpacity={0.8}>
                   <AppText
@@ -201,12 +203,12 @@ const MarketHeader = ({
                   style={[
                     styles.subTabChip,
                     {
-                      backgroundColor: isActive ? lightTheme.input : "transparent",
-                      borderColor: isActive ? themeColors.border : "transparent",
+                      backgroundColor: isActive ? '#F4F4F4' : "transparent",
+                      borderColor: "transparent",
                     },
                   ]}
                 >
-                  <AppText style={[styles.subTabText, { color: isActive ? themeColors.text : themeColors.secondaryText }]}>
+                  <AppText weight={MEDIUM} type={THIRTEEN} style={[styles.subTabText, { color: isActive ? themeColors.text : '#84888C' }]}>
                     {it.label}
                   </AppText>
                 </TouchableOpacity>
@@ -227,7 +229,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 8,
+    borderRadius: 5,
     paddingVertical: 6,
     paddingHorizontal: 10,
     marginBottom: 10,
@@ -241,12 +243,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     paddingVertical: 0,
+    fontFamily: fontFamilySemiBold,
   },
   searchPlaceholder: {
     fontSize: 14,
   },
   tabsRow: {
     maxHeight: 44,
+    borderBottomWidth: 0.7,
+    borderBottomColor: lightTheme.input,
   },
   tabsScroll: {
     flexDirection: "row",
@@ -264,7 +269,6 @@ const styles = StyleSheet.create({
   },
   tabActive: {},
   tabLabel: {
-    fontSize: 12.5,
   },
   tabLabelActive: {
     fontWeight: "700",
@@ -283,7 +287,7 @@ const styles = StyleSheet.create({
   subTabsScroll: {
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 14,
+    paddingRight: 12,
   },
   subTabChip: {
     borderRadius: 8,
@@ -292,8 +296,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   subTabText: {
-    fontSize: 11,
-    fontWeight: "600",
   },
 });
 

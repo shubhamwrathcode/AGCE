@@ -439,6 +439,16 @@ export const connectwallet5 = require('../../assets/images/connectwallet5.png');
 export const security_vector2 = require('../../assets/images/security_vector2.png');
 export const email_vector = require('../../assets/images/email_vector.png');
 export const down_arrow = require('../../assets/images/down_arrow.png');
+export const identity_verification = require('../../assets/images/identity_verification.png');
+export const newLock = require('../../assets/images/newLock.png');
+export const failed = require('../../assets/images/failed.png');
+export const bonus_image = require('../../assets/images/bonus_image.png');
+export const verify_lock = require('../../assets/images/verify_lock.png');
+export const pending_kyc = require('../../assets/images/pending_kyc.png');
+export const kyc_complete = require('../../assets/images/kyc_complete.png');
+export const verified_kyc = require('../../assets/images/verified_kyc.png');
+
+
 
 
 

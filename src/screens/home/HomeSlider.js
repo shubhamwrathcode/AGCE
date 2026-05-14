@@ -32,7 +32,7 @@ const HomeSlider = () => {
   const userData = useAppSelector((state) => state.auth.userData);
   const kycVerified = userData?.kycVerified != null ? Number(userData.kycVerified) : 0;
 
-  const carouselWidth = useMemo(() => Screen.Width - 20, []);
+  const carouselWidth = useMemo(() => Screen.Width - 30, []);
 
   const baseOptions = useMemo(
     () => ({
@@ -118,7 +118,7 @@ const HomeSlider = () => {
       const totalColor = current === total ? "#000" : "#9CA3AF";
 
       return (
-        <View style={[styles.slideOuter, { backgroundColor: colors.iconBgColor }]}>
+        <View style={[styles.slideOuter, { backgroundColor: '#F7F7F7' }]}>
           <TouchableOpacity
             style={styles.slideInner}
             onPress={item?.onPress}

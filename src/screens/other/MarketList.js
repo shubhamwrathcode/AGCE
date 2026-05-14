@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, Dimensions } from "react-native";
-import { AppText, FOURTEEN, SEMI_BOLD, TWELVE } from "../../shared";
+import { AppText, BOLD, ELEVEN, FOURTEEN, MEDIUM, SEMI_BOLD, TEN, THIRTEEN, TWELVE } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
   NO_NOTIFICATION_ICON,
@@ -16,6 +16,7 @@ import { addToFavorites } from "../../actions/homeActions";
 import { useDispatch } from "react-redux";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { useTheme } from "../../hooks/useTheme";
+import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const H_PAD = Math.max(14, SCREEN_WIDTH * 0.04);
@@ -34,14 +35,6 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
   const isFavorite = favoriteArray?.includes(item?._id);
   const isNegative = (item?.change_percentage ?? 0) < 0;
 
-  const handleAddFav = useCallback(
-    (e) => {
-      e?.stopPropagation?.();
-      onToggleFavorite(item?._id);
-    },
-    [item?._id, onToggleFavorite]
-  );
-
   const handlePress = useCallback(() => onPress(item), [item, onPress]);
 
   const changeStr =
@@ -49,7 +42,8 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
       ? (item.change_percentage >= 0 ? "+" : "") + toFixedThree(item.change_percentage) + "%"
       : "0%";
   const priceStr = item?.buy_price != null ? toFixedFive(item.buy_price) : "0";
-  const inrStr = formatInrPrice(item?.buy_price);
+  const subPrice = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
+  const subPriceStr = subPrice != null ? `$${String(subPrice)}` : "—";
   const ticker = String(item?.base_currency || "").toUpperCase() || "—";
   const quote = String(item?.quote_currency || "").trim().toUpperCase() || "USDT";
   const pairLabel = ticker && ticker !== "—" ? `${ticker}/${quote}` : "—";
@@ -72,7 +66,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
       >
         <View style={styles.nameCol}>
           <View style={styles.nameRowHomeTab}>
-            {!hideStar && (
+            {/* {!hideStar && (
               <TouchableOpacity onPress={handleAddFav} activeOpacity={0.7} style={styles.starBtnHomeTab}>
                 <FastImage
                   source={isFavorite ? starFillIcon : starIcon}
@@ -81,7 +75,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
                   tintColor={isFavorite ? colors.starColor : themeColors.secondaryText}
                 />
               </TouchableOpacity>
-            )}
+            )} */}
             <View style={[styles.iconCircleHomeTab, {}]}>
               {iconUri ? (
                 <FastImage source={{ uri: iconUri }} resizeMode="contain" style={styles.coinIconHomeTab} />
@@ -90,10 +84,10 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
               )}
             </View>
             <View style={styles.nameBlock}>
-              <AppText numberOfLines={1} weight={SEMI_BOLD} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
+              <AppText numberOfLines={1} weight={SEMI_BOLD} type={THIRTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
                 {fullName}
               </AppText>
-              <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.coinListSub, { color: themeColors.secondaryText }]}>
+              <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
                 {ticker}
               </AppText>
             </View>
@@ -101,12 +95,12 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
         </View>
 
         <View style={styles.priceCol}>
-          <AppText numberOfLines={1} weight={SEMI_BOLD} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} type={THIRTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
             {String(last)}
           </AppText>
-          <Text numberOfLines={1} style={[styles.coinListPriceSub, { color: themeColors.secondaryText }]}>
-            $ {String(sub)}
-          </Text>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} type={TWELVE} style={[styles.coinListPriceSub, { color: '#9CA3AF' }]}>
+            ${String(sub)}
+          </AppText>
         </View>
 
         <View style={styles.chgCol}>
@@ -134,7 +128,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
     >
       <View style={styles.nameCol}>
         <View style={styles.nameRow}>
-          {!hideStar && (
+          {/* {!hideStar && (
             <TouchableOpacity onPress={handleAddFav} activeOpacity={0.7} style={styles.starBtn}>
               <FastImage
                 source={isFavorite ? starFillIcon : starIcon}
@@ -143,30 +137,30 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
                 tintColor={isFavorite ? colors.starColor : themeColors.secondaryText}
               />
             </TouchableOpacity>
-          )}
+          )} */}
           {iconUri ? (
             <FastImage source={{ uri: iconUri }} resizeMode="cover" style={styles.coinIcon} />
           ) : (
             <View style={[styles.coinIcon, styles.coinIconPlaceholder, { backgroundColor: themeColors.card }]} />
           )}
           <View style={styles.nameBlock}>
-            <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.symbolText, { color: themeColors.text }]}>
-              {pairLabel}
-            </AppText>
-            <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.fullName, { color: themeColors.secondaryText }]}>
+            <AppText numberOfLines={1} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text, fontFamily: fontFamilySemiBold }]}>
               {fullName}
+            </AppText>
+            <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
+              {ticker}
             </AppText>
           </View>
         </View>
       </View>
 
       <View style={styles.priceCol}>
-        <Text numberOfLines={1} style={[styles.lastPrice, { color: themeColors.text }]}>
+        <Text numberOfLines={1} type={THIRTEEN} style={[styles.lastPrice, { color: themeColors.text, fontFamily: fontFamilySemiBold }]}>
           {priceStr}
         </Text>
-        <Text numberOfLines={1} style={[styles.inrPrice, { color: themeColors.secondaryText }]}>
-          {inrStr}
-        </Text>
+        <AppText numberOfLines={1} type={TWELVE} weight={MEDIUM} style={[styles.inrPrice, { color: themeColors.secondaryText, }]}>
+          {subPriceStr}
+        </AppText>
       </View>
 
       <View style={styles.chgCol}>
@@ -232,10 +226,11 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
   const ListHeaderComponent = useMemo(() => {
     if (pairTypography === "homeTab") {
       return (
-        <View style={[styles.tableHeader, styles.tableHeaderHomeTab, { borderBottomColor: "transparent" }]}>
+        <View style={[styles.tableHeader, styles.tableHeaderHomeTab, { borderBottomColor: "transparent", }]}>
           <AppText
             numberOfLines={1}
-            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { flex: 1.2, color: themeColors.secondaryText }]}
+            weight={MEDIUM}
+            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { flex: 1.2, color: '#9CA3AF', left: 6 }]}
           >
             Symbol
           </AppText>
@@ -257,27 +252,55 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
               >
                 24H Change
               </AppText>
-              <FastImage
-                source={back_ic}
-                style={{ width: 10, height: 10, transform: [{ rotate: "90deg" }] }}
-                resizeMode="contain"
-                tintColor="#9CA3AF"
-              />
+              <View style={{ flexDirection: "column", alignItems: "center", marginLeft: 4 }}>
+                <FastImage
+                  source={back_ic}
+                  style={{ width: 7, height: 7, transform: [{ rotate: "90deg" }], marginBottom: -3 }}
+                  resizeMode="contain"
+                  tintColor="#9CA3AF"
+                />
+                <FastImage
+                  source={back_ic}
+                  style={{ width: 7, height: 7, transform: [{ rotate: "270deg" }], marginTop: 3 }}
+                  resizeMode="contain"
+                  tintColor="#9CA3AF"
+                />
+              </View>
             </View>
           </View>
         </View>
       );
     }
     return (
-      <View style={[styles.tableHeader, { borderBottomColor: themeColors.border }]}>
+      <View style={[styles.tableHeader, { borderBottomColor: 'transparent' }]}>
         <View style={styles.headerCellName}>
-          <AppText
-            numberOfLines={1}
-            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
-          >
-            Pair
-          </AppText>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <AppText
+              numberOfLines={1}
+              style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
+            >
+              Name
+            </AppText>
+            <View style={{ flexDirection: "column", alignItems: "center", marginLeft: 2 }}>
+              <FastImage source={back_ic} style={{ width: 6, height: 6, transform: [{ rotate: "90deg" }], marginBottom: -2 }} resizeMode="contain" tintColor="#9CA3AF" />
+              <FastImage source={back_ic} style={{ width: 6, height: 6, transform: [{ rotate: "270deg" }], marginTop: 2 }} resizeMode="contain" tintColor="#9CA3AF" />
+            </View>
+          </View>
+          <AppText style={{ color: themeColors.secondaryText, marginHorizontal: 2 }}>/</AppText>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <AppText
+              numberOfLines={1}
+              style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
+            >
+              Vol
+            </AppText>
+            <View style={{ flexDirection: "column", alignItems: "center", marginLeft: 2 }}>
+              <FastImage source={back_ic} style={{ width: 6, height: 6, transform: [{ rotate: "90deg" }], marginBottom: -2 }} resizeMode="contain" tintColor="#9CA3AF" />
+              <FastImage source={back_ic} style={{ width: 6, height: 6, transform: [{ rotate: "270deg" }], marginTop: 2 }} resizeMode="contain" tintColor="#9CA3AF" />
+            </View>
+          </View>
         </View>
+
         <View style={styles.headerCellPrice}>
           <AppText
             numberOfLines={1}
@@ -285,14 +308,23 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
           >
             Last Price
           </AppText>
+          <View style={{ flexDirection: "column", alignItems: "center", marginLeft: 3 }}>
+            <FastImage source={back_ic} style={{ width: 6, height: 6, transform: [{ rotate: "90deg" }], marginBottom: -2 }} resizeMode="contain" tintColor="#9CA3AF" />
+            <FastImage source={back_ic} style={{ width: 6, height: 6, transform: [{ rotate: "270deg" }], marginTop: 2 }} resizeMode="contain" tintColor="#9CA3AF" />
+          </View>
         </View>
+
         <View style={styles.headerCellChg}>
           <AppText
             numberOfLines={1}
-            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
+            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText, }]}
           >
-            24h Chg%
+            24h Change
           </AppText>
+          <View style={{ flexDirection: "column", alignItems: "center", marginLeft: 3 }}>
+            <FastImage source={back_ic} style={{ width: 6, height: 6, transform: [{ rotate: "90deg" }], marginBottom: -2 }} resizeMode="contain" tintColor="#9CA3AF" />
+            <FastImage source={back_ic} style={{ width: 6, height: 6, transform: [{ rotate: "270deg" }], marginTop: 2 }} resizeMode="contain" tintColor="#9CA3AF" />
+          </View>
         </View>
       </View>
     );
@@ -332,6 +364,7 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
         maxToRenderPerBatch={10}
         initialNumToRender={8}
         windowSize={10}
+        contentContainerStyle={{ paddingBottom: pairTypography === "homeTab" ? 0 : 100 }}
         getItemLayout={(_unused, index) => ({
           length: rowHeight,
           offset: rowHeight * index,
@@ -361,7 +394,7 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   tableHeaderText: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#9CA3AF",
     marginRight: 5,
   },
@@ -394,12 +427,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   headerCellChg: {
-    flex: 0.9,
+    flex: 0.8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 3,
     minWidth: 0,
+    left: 4
   },
   sortIcon: {
     width: 10,
@@ -410,6 +444,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center",
     minHeight: ROW_HEIGHT_DEFAULT,
+    marginTop: 5
   },
   rowHomeTab: {
     paddingVertical: 6,
@@ -450,12 +485,10 @@ const styles = StyleSheet.create({
     borderRadius: 11,
   },
   coinListPair: {
-    fontSize: 12,
-    fontWeight: "600",
   },
   coinListSub: {
     marginTop: 0,
-    fontSize: 10,
+    fontSize: 12,
   },
   coinListPriceMain: {
     fontSize: 12,
@@ -464,24 +497,23 @@ const styles = StyleSheet.create({
   },
   coinListPriceSub: {
     marginTop: 0,
-    fontSize: 10,
     textAlign: "right",
   },
   changePillHomeTab: {
-    minWidth: 52,
-    paddingHorizontal: 6,
+    minWidth: 50,
+    paddingHorizontal: 4,
     height: 22,
-    borderRadius: 5,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
   },
   changeTextHomeTab: {
     color: "#FFFFFF",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
   },
   chgCol: {
-    flex: 0.75,
+    flex: 0.8,
     alignItems: "flex-end",
     justifyContent: "center",
     minWidth: 0,
@@ -497,8 +529,8 @@ const styles = StyleSheet.create({
     height: 11,
   },
   coinIcon: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     borderRadius: 12,
     overflow: "hidden",
   },
@@ -524,20 +556,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   lastPrice: {
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
   },
   inrPrice: {
-    fontSize: 11,
     marginTop: 1,
     textAlign: "right",
   },
   chgPill: {
-    minWidth: 54,
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    borderRadius: 5,
+    minWidth: 50,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -549,7 +578,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.green,
   },
   chgPillText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.white,
   },

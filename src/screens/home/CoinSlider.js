@@ -249,8 +249,9 @@ const CoinSlider = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { colors: themeColors } = useTheme();
 
-  const SIDE_SPACE = 12;
-  const ITEM_WIDTH = width / 2.8;
+  const SIDE_SPACE = 10;
+  const GAP = 10;
+  const ITEM_WIDTH = (width - (SIDE_SPACE * 2) - (GAP * 2)) / 2.5;
 
   // Same as Market: preferred coins BTC, ETH, BNB with chart_data
   // Same as Market: preferred coins BTC, ETH, BNB with chart_data
@@ -287,7 +288,7 @@ const CoinSlider = () => {
     // Initial scroll to middle set
     setTimeout(() => {
       scrollRef.current?.scrollTo({
-        x: slideCount * (ITEM_WIDTH + 8),
+        x: slideCount * (ITEM_WIDTH + GAP),
         animated: false,
       });
       setCurrentIndex(slideCount);
@@ -300,14 +301,14 @@ const CoinSlider = () => {
         // If we reach near the end of the tripled list, jump back to the middle set
         if (next >= slideCount * 2) {
           scrollRef.current?.scrollTo({
-            x: (slideCount - 1) * (ITEM_WIDTH + 8),
+            x: (slideCount - 1) * (ITEM_WIDTH + GAP),
             animated: false,
           });
           next = slideCount;
         }
 
         scrollRef.current?.scrollTo({
-          x: next * (ITEM_WIDTH + 8),
+          x: next * (ITEM_WIDTH + GAP),
           animated: true,
         });
         return next;
@@ -319,7 +320,7 @@ const CoinSlider = () => {
 
   const onScroll = (event) => {
     const x = event.nativeEvent.contentOffset.x;
-    const index = Math.round(x / (ITEM_WIDTH + 8));
+    const index = Math.round(x / (ITEM_WIDTH + GAP));
     if (index !== currentIndex) {
       setCurrentIndex(index);
     }
@@ -347,8 +348,8 @@ const CoinSlider = () => {
     const priceStr = `$ ${formatInr(item?.buy_price)}`;
 
     return (
-      <View style={styles.cardWrapper}>
-        <View style={[styles.card, { backgroundColor: colors.iconBgColor, width: ITEM_WIDTH }]}>
+      <View style={{ marginHorizontal: GAP / 2, }}>
+        <View style={[styles.card, { backgroundColor: '#F7F7F7', width: ITEM_WIDTH }]}>
           <View style={styles.topRow}>
             <FastImage
               source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
@@ -399,7 +400,7 @@ const CoinSlider = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingLeft: SIDE_SPACE, paddingRight: SIDE_SPACE }}
         decelerationRate="fast"
-        snapToInterval={ITEM_WIDTH + 8}
+        snapToInterval={ITEM_WIDTH + GAP}
         onScroll={onScroll}
         scrollEventThrottle={16}
       >
@@ -415,7 +416,7 @@ const CoinSlider = () => {
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    marginHorizontal: 4,
+
   },
   card: {
     borderRadius: 5,

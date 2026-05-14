@@ -10,7 +10,7 @@ const StakingDahboardData = () => {
   const { colors: themeColors } = useTheme();
 
   return (
-    <View style={{ paddingHorizontal: 12, }}>
+    <View style={{ paddingHorizontal: 12, bottom: 5 }}>
       <View style={styles.earnGrid}>
         <TouchableOpacity activeOpacity={0.9} style={[styles.earnCardBig, { backgroundColor: colors.iconBgColor }]}>
           <FastImage source={static_coin} style={{ width: 28, height: 28, borderRadius: 10 }} />

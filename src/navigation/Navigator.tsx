@@ -206,11 +206,11 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
           [routes.WALLET_SCREEN]: "Wallet",
         };
 
-        const tint = isFocused ? colors.black : "#9CA3AF";
+        const tint = isFocused ? colors.black : "#8E8E93";
         const icon = iconByRoute[route.name];
         const label = labelByRoute[route.name] ?? route.name;
 
-        const bg = "rgba(255, 255, 255, 0.85)";
+        const bg = "rgba(255, 255, 255, 0.98)";
 
         return (
           <View key={route.key} style={[customTabBarStyles.itemWrap, { backgroundColor: bg }]}>
@@ -798,7 +798,7 @@ const customTabBarStyles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === "ios" ? 74 : 62,
+    height: Platform.OS === "ios" ? 68 : 56,
     backgroundColor: "transparent",
     overflow: "hidden",
     flexDirection: "row",

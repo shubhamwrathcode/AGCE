@@ -290,7 +290,6 @@ const Market = () => {
     <AppSafeAreaView style={{ backgroundColor: colors.white }}>
       <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
         {/* Featured cards – Carousel (same as Home CoinSlider) */}
-
         <MarketHeader
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -303,7 +302,7 @@ const Market = () => {
           activeSubCategory={activeTab === "ALPHA" ? alphaSubTab : spotSubCategory}
           onSubCategoryChange={activeTab === "ALPHA" ? setAlphaSubTab : setSpotSubCategory}
         />
-        {featuredCoins?.length > 0 && (
+        {/* {featuredCoins?.length > 0 && (
           <View style={styles.carouselWrap}>
             <Carousel
               loop
@@ -334,7 +333,7 @@ const Market = () => {
               ))}
             </View>
           </View>
-        )}
+        )} */}
         {contentLoading ? (
           <MarketSkeleton />
         ) : (

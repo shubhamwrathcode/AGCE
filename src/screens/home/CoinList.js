@@ -191,13 +191,7 @@ const CoinList = React.memo(() => {
     NavigationService.navigate(MARKET_SCREEN, { tab });
   }, [activeTabList]);
 
-  const handleFuturesNavigate = useCallback((item) => {
-    // Pre-set the selected pair in Redux BEFORE navigating.
-    // Same pattern as Spot: prevents the async gap where the old pair
-    // would still be restored from Redux when Futures screen focuses.
-    dispatch(setFuturesSelectedPair(item));
-    NavigationService.navigate(FUTURES_SCREEN, { pair: item });
-  }, [dispatch]);
+
 
   // animate list swipe + move selected indicator
   useEffect(() => {
@@ -257,15 +251,14 @@ const CoinList = React.memo(() => {
                 >
                   <AppText
                     weight={MEDIUM}
-                    type={13}
                     style={[
-                      styles.tabLabel,
                       {
+                        fontSize: 14,
                         color: active
                           ? isDark
                             ? themeColors.text
-                            : "#000000"
-                          : themeColors.secondaryText,
+                            : "#070808"
+                          : '#84888C',
                       },
                     ]}
                   >
@@ -351,9 +344,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 5,
   },
-  tabLabel: {
-    fontWeight: '600'
-  },
+
   tableHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -422,6 +413,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     alignItems: "center",
     paddingVertical: 10,
+    bottom: 10
   },
   viewMoreText: {
     fontSize: 13,

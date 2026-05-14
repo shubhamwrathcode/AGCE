@@ -3,7 +3,7 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native
 import FastImage from "react-native-fast-image";
 import { useDispatch } from "react-redux";
 
-import { AppText, Button, FOURTEEN, TWELVE } from "../../shared";
+import { AppText, BOLD, Button, FOURTEEN, SEMI_BOLD, TWELVE } from "../../shared";
 import { coinActive, coinInActive } from "../../helper/ImageAssets";
 import { addToFavorites } from "../../actions/homeActions";
 import { useAppSelector } from "../../store/hooks";
@@ -73,40 +73,40 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
 
     return (
       <TouchableOpacity
-        style={[styles.row, { borderColor: theme !== "Dark" ? "#eee" : "#595959" }]}
+        style={[styles.row, { borderBottomColor: theme !== "Dark" ? "#F3F4F6" : "#2A2E39", borderBottomWidth: 1 }]}
         onPress={() => handleUnselectCoin(item._id)}
         activeOpacity={0.7}
       >
-        <View style={{ width: "50%" }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <FastImage
-              source={isSelected ? coinActive : coinInActive}
-              resizeMode="contain"
-              style={{ width: 16, height: 16 }}
-            />
-            <View>
-              <AppText style={pairBaseStyle}>
-                {item?.base_currency_fullname || item?.base_currency_name || item?.base_currency}
-              </AppText>
-              <Text style={styles.vol}>
-                {item?.base_currency}
-              </Text>
-            </View>
+        <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+          <FastImage
+            source={isSelected ? coinActive : coinInActive}
+            resizeMode="contain"
+            style={{ width: 20, height: 20, marginRight: 12 }}
+          />
+          <View>
+            <AppText weight={SEMI_BOLD} style={[pairBaseStyle, { fontSize: 13 }]}>
+              {item?.base_currency_fullname || item?.base_currency_name || item?.base_currency}
+            </AppText>
+            <AppText style={styles.vol}>
+              {item?.base_currency}
+            </AppText>
           </View>
         </View>
 
-        <View style={{ flex: 1, width: "50%", alignItems: "flex-end" }}>
-          <Text style={[cellStyle, { fontSize: priceSize, fontWeight: "bold" }]}>
+        <View style={{ alignItems: "flex-end" }}>
+          <AppText weight="bold" style={[cellStyle, { fontSize: priceSize }]}>
             {toFixedFive(item.buy_price)}
-          </Text>
-          <Text
+          </AppText>
+          <AppText
+            weight="medium"
             style={{
               fontSize: chgSize,
+              marginTop: 2,
               color: item?.change_percentage < 0 ? colors.red : colors.green,
             }}
           >
-            {item?.change_percentage > 0 && '+'}{toFixedFive(item?.change_percentage)}
-          </Text>
+            {item?.change_percentage > 0 && '+'}{toFixedThree(item?.change_percentage)}%
+          </AppText>
         </View>
       </TouchableOpacity>
     );
@@ -115,10 +115,10 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
   const ListHeaderComponent = useMemo(
     () => (
       <View style={styles.tableHeader}>
-        <Text style={[styles.tableHeaderText, homeTabTypo && styles.tableHeaderTextHomeTab, { flex: 1.5 }]}>
+        <AppText style={[styles.tableHeaderText, homeTabTypo && styles.tableHeaderTextHomeTab, { flex: 1 }]}>
           Pairs/Vol
-        </Text>
-        <Text style={[styles.tableHeaderText, homeTabTypo && styles.tableHeaderTextHomeTab]}>Price / 24h Change</Text>
+        </AppText>
+        <AppText style={[styles.tableHeaderText, homeTabTypo && styles.tableHeaderTextHomeTab, { textAlign: 'right' }]}>Price / 24h Change</AppText>
       </View>
     ),
     [homeTabTypo]
@@ -127,17 +127,17 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
   if (!isLoggedIn) {
     return (
       <View style={[style, styles.emptyWrap]}>
-        <AppText type={FOURTEEN} style={{ color: colors.disabledText, textAlign: "center" }}>
-          No results.... Go to{" "}
+        <AppText type={FOURTEEN} style={{ color: colors.disabledText, textAlign: "center", lineHeight: 22 }}>
+          No results found. Please{" "}
           <AppText
             type={FOURTEEN}
             weight="bold"
-            color={colors.buttonBg}
+            style={{ color: colors.buttonBg }}
             onPress={() => NavigationService.navigate(LOGIN_SCREEN)}
           >
             Sign in
           </AppText>
-          {" "}and add your favorite coins from Spot.
+          {" "}to manage and view your favorite coins from Spot.
         </AppText>
       </View>
     );
@@ -148,19 +148,18 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
   return (
     <View style={style}>
       {(!favoriteArray || favoriteArray?.length === 0) ? (
-        <>
-          <View style={from === "home" ? { padding: 0 } : { padding: 16 }}>
-            <FlatList
-              data={(filterPairData?.slice(0, 5) || []).filter((item) => item?._id)}
-              keyExtractor={(item) => item._id}
-              renderItem={renderFavoriteRow}
-              ListHeaderComponent={ListHeaderComponent}
-              scrollEnabled={false}
-            />
-          </View>
+        <View style={{ paddingHorizontal: from === "home" ? 4 : 16 }}>
+          <FlatList
+            data={(filterPairData?.slice(0, 5) || []).filter((item) => item?._id)}
+            keyExtractor={(item) => item._id}
+            renderItem={renderFavoriteRow}
+            ListHeaderComponent={ListHeaderComponent}
+            scrollEnabled={false}
+            contentContainerStyle={{ paddingBottom: 10 }}
+          />
           <Button
             children="+ Add to Favourites"
-            containerStyle={{ marginVertical: 12 }}
+            containerStyle={{ marginVertical: 16, height: 50, borderRadius: 25 }}
             disabled={favouriteCoins.length === 0}
             onPress={() => {
               favouriteCoins.forEach((id) => {
@@ -168,16 +167,16 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
               });
             }}
           />
-        </>
+        </View>
       ) : (
-          <MarketList
-            filterData={from === "home" ? favFilteredData?.slice(0, 5) : favFilteredData}
-            style={from === "home" ? { width: "100%", padding: 0 } : { flex: 1, width: "100%", paddingVertical: 8, paddingHorizontal: 12 }}
-            onPress={handleNavigate}
-            scrollEnabled={from !== "home"}
-            pairTypography={from === "home" ? "homeTab" : undefined}
-            hideStar={from === "home" ? false : false}
-          />
+        <MarketList
+          filterData={from === "home" ? favFilteredData?.slice(0, 5) : favFilteredData}
+          style={from === "home" ? { width: "100%", padding: 0 } : { flex: 1, width: "100%", paddingVertical: 8, paddingHorizontal: 12 }}
+          onPress={handleNavigate}
+          scrollEnabled={from !== "home"}
+          pairTypography={from === "home" ? "homeTab" : undefined}
+          hideStar={from === "home" ? false : false}
+        />
       )}
     </View>
   );
@@ -188,49 +187,44 @@ export default Favourites;
 const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: "row",
-    borderColor: "#ccc",
-    paddingTop: 2,
-    paddingBottom: 2,
-    marginBottom: 6,
+    paddingVertical: 8,
+    borderBottomWidth: 0,
+    paddingHorizontal: 5
   },
   tableHeaderText: {
-    fontWeight: "bold",
-    color: "#9D9D9D",
-    fontSize: 12,
+    color: "#9CA3AF",
+    fontSize: 11,
+    fontWeight: "500",
   },
   tableHeaderTextHomeTab: {
-    fontSize: 10,
+    fontSize: 11,
   },
   row: {
     flexDirection: "row",
-    paddingVertical: 10,
+    paddingVertical: 12,
     justifyContent: "space-between",
-    minHeight: 46,
+    alignItems: "center",
+    paddingHorizontal: 5
   },
   cell: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#000",
-    fontWeight: "700",
   },
   cellDark: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#fff",
-    fontWeight: "700",
   },
   cellHomeTab: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#000",
-    fontWeight: "700",
   },
   cellHomeTabDark: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#fff",
-    fontWeight: "700",
   },
   vol: {
-    fontSize: 13,
-    color: "#9D9D9D",
-    marginLeft: 20,
+    fontSize: 11,
+    color: "#9CA3AF",
     marginTop: 2,
   },
   emptyWrap: {

@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   tabName: {
-    fontSize: 13.5,
+    fontSize: 15.5,
     textAlign: 'center',
   },
 });
