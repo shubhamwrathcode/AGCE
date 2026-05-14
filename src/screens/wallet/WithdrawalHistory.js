@@ -102,7 +102,13 @@ const WithdrawalHistory = () => {
         key={item.id || index}
         activeOpacity={0.9}
         onPress={() => NavigationService.navigate(WITHDRAW_DETAIL_SCREEN, { item, isAddress })}
-        style={[styles.historyItem, !isLast && { borderBottomWidth: 1, borderBottomColor: isDark ? "#2A2E39" : "#EEE", paddingBottom: 20, marginBottom: 20 }]}
+        style={[
+          styles.historyItem,
+          {
+            backgroundColor: 'transparent',
+            borderColor: lightTheme.input
+          }
+        ]}
       >
         <View style={styles.dateStatusRow}>
           <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.text }}>{date}</AppText>
@@ -170,15 +176,18 @@ const WithdrawalHistory = () => {
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           onPress={() => setActiveTab("address")}
-          style={[styles.tabPill, activeTab === "address" && styles.tabPillActive]}
+          style={[styles.tabPill]}
         >
-          <AppText weight={activeTab === "address" ? SEMI_BOLD : MEDIUM} type={FOURTEEN} style={{ color: activeTab === "address" ? themeColors.text : themeColors.secondaryText }}>Address</AppText>
+          <AppText weight={activeTab === "address" ? SEMI_BOLD : MEDIUM} type={FOURTEEN}
+            style={{ color: activeTab === "address" ? themeColors.text : themeColors.secondaryText }}>Address</AppText>
+          {activeTab === "address" && <View style={styles.activeIndicator} />}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setActiveTab("agce")}
-          style={[styles.tabPill, activeTab === "agce" && styles.tabPillActive]}
+          style={[styles.tabPill]}
         >
           <AppText weight={activeTab === "agce" ? SEMI_BOLD : MEDIUM} type={FOURTEEN} style={{ color: activeTab === "agce" ? themeColors.text : themeColors.secondaryText }}>AGCE user</AppText>
+          {activeTab === "agce" && <View style={styles.activeIndicator} />}
         </TouchableOpacity>
       </View>
 
@@ -211,24 +220,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 10,
     marginTop: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E5E7EB",
   },
   tabPill: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
-  tabPillActive: {
-    backgroundColor: "#F3F4F6",
+  activeIndicator: {
+    position: "absolute",
+    bottom: 0,
+    width: 30,
+    height: 3,
+    backgroundColor: colors.black,
+    borderRadius: 2,
   },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   historyItem: {
-    paddingBottom: 10,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
+    borderBottomWidth: 1,
   },
   dateStatusRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -236,7 +257,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   detailsContainer: {
-    gap: 14,
+    gap: 8,
   },
   detailRow: {
     flexDirection: "row",
