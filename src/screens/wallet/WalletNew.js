@@ -654,7 +654,7 @@ const WalletNew = () => {
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
-      
+
         {contentLoading ? (
           <WalletSkeleton />
         ) : (
@@ -670,8 +670,8 @@ const WalletNew = () => {
                 return (
                   <View style={{ marginVertical: 10, paddingHorizontal: 20 }}>
                     <View>
-                      
-                      
+
+
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                         <AppText weight={SEMI_BOLD} type={EIGHTEEN}>Assets Overview</AppText>
                       </View>
@@ -688,7 +688,7 @@ const WalletNew = () => {
                           <AppText color={DISCLAIMTEXT}>Estimated Balance</AppText>
                           <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
                             <FastImage
-                              source={showBalance ? eye_close_icon : eye_open_icon}
+                              source={!showBalance ? eye_close_icon : eye_open_icon}
                               resizeMode="contain"
                               style={{ width: 14, height: 14 }}
                               tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
@@ -701,7 +701,7 @@ const WalletNew = () => {
                             <AppText type={TWENTY} weight={SEMI_BOLD}>
                               {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5)}{" "}
                             </AppText>
-                            <AppText color={DISCLAIMTEXT} style={{top:5 }}>
+                            <AppText color={DISCLAIMTEXT} style={{ top: 5 }}>
                               {portfolioPreferredCurrency(walletBalance)}
                             </AppText>
                           </View>
@@ -729,11 +729,11 @@ const WalletNew = () => {
                           { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
                           { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN) },
                           { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
-                          { key: "history", label: "History", variant: "history", onPress: () => {NavigationService.navigate("Wallet_History")}},
+                          { key: "history", label: "History", variant: "history", onPress: () => { NavigationService.navigate("Wallet_History") } },
                         ]}
                       />
 
-                 
+
 
                       <TabView
                         navigationState={{ index: innerIndex, routes: innerRoutes }}
@@ -885,12 +885,12 @@ const WalletNew = () => {
                                 }}
                                 ListEmptyComponent={() => (
                                   <View style={{ alignItems: "center", marginTop: 60, gap: 10 }}>
-                                    <FastImage source={NO_NOTIFICATION_ICON} style={{width:80,height:80}} resizeMode="contain"/>
-                                    <View style={{flexDirection:'row',marginTop:10,alignItems:"center"}}>
-                                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{}} color={colors.buttonBg} onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}>
-                                      Deposit Now{' '}
-                                    </AppText>
-                                    <FastImage source={share_ic} style={{width:10,height:10,bottom:1}} resizeMode="contain" tintColor={colors.black}/>
+                                    <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 80, height: 80 }} resizeMode="contain" />
+                                    <View style={{ flexDirection: 'row', marginTop: 10, alignItems: "center" }}>
+                                      <AppText type={TWELVE} weight={SEMI_BOLD} style={{}} color={colors.buttonBg} onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}>
+                                        Deposit Now{' '}
+                                      </AppText>
+                                      <FastImage source={share_ic} style={{ width: 10, height: 10, bottom: 1 }} resizeMode="contain" tintColor={colors.black} />
                                     </View>
                                   </View>
                                 )}

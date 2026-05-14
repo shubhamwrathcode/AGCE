@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppText, SEMI_BOLD } from "../../shared";
+import { AppText, MEDIUM, SEMI_BOLD } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
 import { colors, lightTheme } from "../../theme/colors";
 import { static_coin, static_coin1, static_coin2 } from "../../helper/ImageAssets";
@@ -13,8 +13,8 @@ const StakingDahboardData = () => {
     <View style={{ paddingHorizontal: 12, }}>
       <View style={styles.earnGrid}>
         <TouchableOpacity activeOpacity={0.9} style={[styles.earnCardBig, { backgroundColor: colors.iconBgColor }]}>
-          <FastImage source={static_coin} style={{ width: 30, height: 30, borderRadius: 10 }} />
-          <AppText numberOfLines={1} style={[styles.earnTitleBig, { color: themeColors.text }]}>
+          <FastImage source={static_coin} style={{ width: 28, height: 28, borderRadius: 10 }} />
+          <AppText numberOfLines={1} weight={SEMI_BOLD} style={[styles.earnTitleBig, { color: themeColors.text }]}>
             BYUSDT
           </AppText>
           <AppText numberOfLines={1} style={[styles.earnSubBig, { color: themeColors.secondaryText }]}>
@@ -64,38 +64,35 @@ const StakingDahboardData = () => {
 const styles = StyleSheet.create({
   earnGrid: {
     flexDirection: "row",
-    gap: 10,
+    gap: 5,
   },
   earnCardBig: {
     flex: 1,
-    minHeight: 128,
+    minHeight: 70,
     borderRadius: 5,
-    padding: 10,
-    justifyContent: "flex-start",
+    padding: 8,
+    justifyContent: "space-between",
     overflow: "hidden",
   },
   earnRightCol: {
     flex: 1,
-    gap: 10,
+    gap: 8,
   },
   earnCardSmall: {
     borderRadius: 5,
-    padding: 8,
-    minHeight: 58,
+    padding: 6,
+    minHeight: 43,
     justifyContent: "space-between",
     overflow: "hidden",
   },
   earnTitleBig: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 14,
     marginTop: 4,
     flexShrink: 1,
   },
   earnSubBig: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-    flexShrink: 1,
+    fontSize: 10,
+    bottom: 4
   },
   earnPctBig: {
     fontSize: 13,
@@ -118,12 +115,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   earnNameSm: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     flexShrink: 1,
   },
   earnPctSm: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     flexShrink: 0,
   },

@@ -7,7 +7,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
-import { AppText, ELEVEN } from "../../shared";
+import { AppText, ELEVEN, TEN } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
 const Width = Dimensions.get("window").width;
 import Toast from "react-native-simple-toast";
@@ -69,7 +69,7 @@ const MenuItem = React.memo(({ item, index }: any) => {
             item?.id === "6" ? styles.iconWrapMore : styles.iconWrap,
             {
               backgroundColor: colors.iconBgColor,
-              borderRadius: 20
+              borderRadius: 20,
             },
           ]}
         >
@@ -80,7 +80,7 @@ const MenuItem = React.memo(({ item, index }: any) => {
             style={item?.id === "6" ? styles.iconMore : styles.icon}
           />
         </View>
-        <AppText style={{ color: themeColors.text }} type={ELEVEN}>
+        <AppText style={{ color: themeColors.text }} type={TEN}>
           {item?.title}
         </AppText>
       </TouchableOpacityView>
@@ -123,12 +123,12 @@ const HomeMenuBar = () => {
       icon: earningAsset1,
       onPress: showComingSoonToast,
     },
-    {
-      id: "7",
-      title: "Referral",
-      icon: newHubIcon,
-      onPress: showComingSoonToast,
-    },
+    // {
+    //   id: "7",
+    //   title: "Referral",
+    //   icon: newHubIcon,
+    //   onPress: showComingSoonToast,
+    // },
     // {
     //   id: "6",
     //   title: checkValue(languages?.more),
@@ -162,8 +162,9 @@ const styles = StyleSheet.create({
   menuBarBackground: {
     width: "100%",
     borderRadius: 8,
-    paddingVertical: 12,
-    marginBottom: 10,
+    paddingTop: 8,
+    paddingBottom: 4,
+    marginBottom: 0,
   },
   container: {
     width: "100%",
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
   },
   singleItem: {
     alignItems: "center",
-    width: (Width - 40) / 5,
+    width: (Width - 40) / 4.6,
 
   },
   itemSeparator: {

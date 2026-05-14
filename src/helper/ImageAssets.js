@@ -113,7 +113,7 @@ export const DOWN_ARROW = require('../../assets/images/downArrow.png');
 export const Down_Imgs = require('../../assets/images/downImgs.png');
 export const appBg = require('../../assets/images/appBg.png');
 export const splash = require('../../assets/images/updatedSplash.png');
-export const zillionLogo = require('../../assets/images/zillionLogo.png');
+export const agceLogoName = require('../../assets/images/agceLogoName.png');
 export const eye_close = require('../../assets/images/eye_close.png');
 export const tick = require('../../assets/images/tick.png');
 export const captchaIcon = require('../../assets/images/captchaIcon.png');
@@ -439,6 +439,7 @@ export const connectwallet5 = require('../../assets/images/connectwallet5.png');
 export const security_vector2 = require('../../assets/images/security_vector2.png');
 export const email_vector = require('../../assets/images/email_vector.png');
 export const down_arrow = require('../../assets/images/down_arrow.png');
+
 
 
 

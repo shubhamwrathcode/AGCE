@@ -263,7 +263,7 @@ const Home = () => {
                 <AppText color={DISCLAIMTEXT}>Estimated Balance</AppText>
                 <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
                   <FastImage
-                    source={showBalance ? eye_close_icon : eye_open_icon}
+                    source={!showBalance ? eye_close_icon : eye_open_icon}
                     resizeMode="contain"
                     style={{ width: 14, height: 14 }}
                     tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
@@ -351,7 +351,7 @@ const Home = () => {
           <HomeMenuBar />
         </View>
 
-        <View>
+        <View style={{ marginTop: 10 }}>
           {sliderReady ? <HomeSlider theme={theme} /> : <HomeSliderSkeleton />}
         </View>
 

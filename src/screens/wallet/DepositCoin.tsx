@@ -51,7 +51,7 @@ import NavigationService from '../../navigation/NavigationService';
 import { buildCoinImageUri } from '../../helper/coinIconUrl';
 import { colors, lightTheme } from '../../theme/colors';
 import { useTheme } from '../../hooks/useTheme';
-import {universalPaddingHorizontalHigh } from '../../theme/dimens';
+import { universalPaddingHorizontalHigh } from '../../theme/dimens';
 import {
     getDepositActiveCoins,
     verifyDeposit,
@@ -259,9 +259,9 @@ const resolveExplorerUrl = (explorer: any, kind: 'address' | 'tx', value: string
         kind === 'address'
             ? pickExplorerHref(ex.address) || pickExplorerHref(ex.address_url) || pickExplorerHref(ex.account)
             : pickExplorerHref(ex.tx) ||
-              pickExplorerHref(ex.transaction) ||
-              pickExplorerHref(ex.tx_hash_url) ||
-              pickExplorerHref(ex.txUrl);
+            pickExplorerHref(ex.transaction) ||
+            pickExplorerHref(ex.tx_hash_url) ||
+            pickExplorerHref(ex.txUrl);
     if (!tpl || !value || value === '—') return null;
     if (/\{address\}/i.test(tpl) && kind === 'address') return tpl.replace(/\{address\}/gi, encodeURIComponent(value));
     if ((/\{txid\}/i.test(tpl) || /\{txhash\}/i.test(tpl)) && kind === 'tx') {
@@ -537,7 +537,7 @@ const DepositCoin = () => {
                     cancelled = true;
                 };
             }
-            
+
             if (isFirstLoad.current) {
                 if (!depositActiveCoins || depositActiveCoins.length === 0) {
                     setSelectCoinListLoading(true);
@@ -870,11 +870,11 @@ const DepositCoin = () => {
             // If it fails (older backend), fallback to legacy PUT `wallet/generate-address`.
             const res: any = tokenAssetId
                 ? await appOperation.customer.get_and_generate_address({
-                      assetId: tokenAssetId,
-                      tokenAssetId,
-                      short_name: sym,
-                      generate: !!generate,
-                  })
+                    assetId: tokenAssetId,
+                    tokenAssetId,
+                    short_name: sym,
+                    generate: !!generate,
+                })
                 : null;
 
             if (res?.success) {
@@ -1027,10 +1027,10 @@ const DepositCoin = () => {
             statusLabel === 'COMPLETED'
                 ? 'success'
                 : statusLabel === 'FAILED'
-                ? 'danger'
-                : statusLabel === 'PENDING'
-                ? 'pending'
-                : 'neutral';
+                    ? 'danger'
+                    : statusLabel === 'PENDING'
+                        ? 'pending'
+                        : 'neutral';
 
         const dateStr = moment(item?.createdAt || item?.updatedAt).isValid()
             ? moment(item?.createdAt || item?.updatedAt).format('DD/MM/YYYY, HH:mm:ss')
@@ -1053,19 +1053,19 @@ const DepositCoin = () => {
             statusTone === 'success'
                 ? 'rgba(20, 184, 166, 0.12)'
                 : statusTone === 'danger'
-                ? 'rgba(239, 68, 68, 0.10)'
-                : statusTone === 'pending'
-                ? 'rgba(245, 158, 11, 0.12)'
-                : 'rgba(148, 163, 184, 0.12)';
+                    ? 'rgba(239, 68, 68, 0.10)'
+                    : statusTone === 'pending'
+                        ? 'rgba(245, 158, 11, 0.12)'
+                        : 'rgba(148, 163, 184, 0.12)';
 
         const pillText =
             statusTone === 'success'
                 ? '#16A34A'
                 : statusTone === 'danger'
-                ? '#DC2626'
-                : statusTone === 'pending'
-                ? '#B45309'
-                : themeColors.secondaryText;
+                    ? '#DC2626'
+                    : statusTone === 'pending'
+                        ? '#B45309'
+                        : themeColors.secondaryText;
 
         const openUrl = async (url: string | null) => {
             if (!url) return;
@@ -1250,42 +1250,42 @@ const DepositCoin = () => {
                             {recentDepositCoinsForList.map((item: any) => {
                                 const chipIconUri = buildCoinImageUri(item);
                                 return (
-                                <TouchableOpacity
-                                    key={String(item._id)}
-                                    style={[
-                                        styles.depositRecentChip,
-                                        {
-                                            backgroundColor: isDark
-                                                ? themeColors.border
-                                                : '#F0F0F0',
-                                            borderColor: isDark ? themeColors.border : '#EEE',
-                                        },
-                                    ]}
-                                    onPress={() => openNetworkSheetForCoin(item)}
-                                    activeOpacity={0.7}
-                                >
-                                    {chipIconUri ? (
-                                        <FastImage
-                                            source={{ uri: chipIconUri }}
-                                            style={styles.depositRecentChipIcon}
-                                            resizeMode="cover"
-                                        />
-                                    ) : (
-                                        <View
-                                            style={[
-                                                styles.depositRecentChipIcon,
-                                                { backgroundColor: colors.textGray, opacity: 0.25 },
-                                            ]}
-                                        />
-                                    )}
-                                    <AppText
-                                        type={ELEVEN}
-                                        weight={SEMI_BOLD}
-                                        style={{ color: themeColors.text }}
+                                    <TouchableOpacity
+                                        key={String(item._id)}
+                                        style={[
+                                            styles.depositRecentChip,
+                                            {
+                                                backgroundColor: isDark
+                                                    ? themeColors.border
+                                                    : '#F0F0F0',
+                                                borderColor: isDark ? themeColors.border : '#EEE',
+                                            },
+                                        ]}
+                                        onPress={() => openNetworkSheetForCoin(item)}
+                                        activeOpacity={0.7}
                                     >
-                                        {item.short_name}
-                                    </AppText>
-                                </TouchableOpacity>
+                                        {chipIconUri ? (
+                                            <FastImage
+                                                source={{ uri: chipIconUri }}
+                                                style={styles.depositRecentChipIcon}
+                                                resizeMode="cover"
+                                            />
+                                        ) : (
+                                            <View
+                                                style={[
+                                                    styles.depositRecentChipIcon,
+                                                    { backgroundColor: colors.textGray, opacity: 0.25 },
+                                                ]}
+                                            />
+                                        )}
+                                        <AppText
+                                            type={ELEVEN}
+                                            weight={SEMI_BOLD}
+                                            style={{ color: themeColors.text }}
+                                        >
+                                            {item.short_name}
+                                        </AppText>
+                                    </TouchableOpacity>
                                 );
                             })}
                         </ScrollView>
@@ -1455,7 +1455,7 @@ const DepositCoin = () => {
                                 extraData={isDark}
                                 ListEmptyComponent={
                                     mainListCoins.length === 0 &&
-                                    trendingDepositCoins.length === 0 ? (
+                                        trendingDepositCoins.length === 0 ? (
                                         <View style={styles.emptyContainer}>
                                             <AppText type={THIRTEEN} color={colors.textGray}>
                                                 No coins found
@@ -1563,7 +1563,7 @@ const DepositCoin = () => {
                                                 Network
                                             </AppText>
                                         </View>
-                                <View style={styles.depositNetworkRow}>
+                                        <View style={styles.depositNetworkRow}>
                                             <View style={{ flex: 1 }}>
                                                 <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>
                                                     {String(selectedNetwork || '').toUpperCase()}
@@ -1586,7 +1586,7 @@ const DepositCoin = () => {
                                                 <FastImage
                                                     source={swapNetwork}
                                                     resizeMode="contain"
-                                                    style={{ width: 30, height: 30,bottom:5 }}
+                                                    style={{ width: 30, height: 30, bottom: 5 }}
                                                 />
                                             </TouchableOpacity>
                                         </View>
@@ -1594,7 +1594,7 @@ const DepositCoin = () => {
 
                                     <View style={[styles.depositInfoCard, { borderColor: isDark ? themeColors.border : '#EEE' }]}>
                                         <TouchableOpacity
-                                        disabled={true}
+                                            disabled={true}
                                             style={styles.depositAddressHeadRow}
                                             onPress={() => setShowMoreDetailsModal(true)}
                                             activeOpacity={0.7}
@@ -1602,7 +1602,7 @@ const DepositCoin = () => {
                                             <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
                                                 Deposit Address
                                             </AppText>
-                                           
+
                                         </TouchableOpacity>
                                         <View style={styles.depositAddressRow}>
                                             <AppText
@@ -1664,7 +1664,7 @@ const DepositCoin = () => {
                                                         width: 15,
                                                         height: 15,
                                                         opacity: depositMemo && String(depositMemo).trim() ? 1 : 1.35,
-                                                        bottom:5
+                                                        bottom: 5
                                                     }}
                                                     resizeMode="contain"
                                                     tintColor={themeColors.secondaryText}
@@ -1706,22 +1706,22 @@ const DepositCoin = () => {
                                                     </AppText>
                                                 </View>
                                             </View>
-                                           
+
                                         </View>
 
                                         <View style={styles.depositEmptyDivider} />
 
                                         <View style={styles.depositEmptyNetworkBlock}>
                                             <View style={{}}>
-                                            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
-                                                Network
-                                            </AppText>
-                                            <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginTop: 6 }}>
-                                                {String(selectedNetwork || '').toUpperCase() || '—'}
-                                            </AppText>
-                                            <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
-                                                {depositNetworkDisplay || '—'}
-                                            </AppText>
+                                                <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                                                    Network
+                                                </AppText>
+                                                <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginTop: 6 }}>
+                                                    {String(selectedNetwork || '').toUpperCase() || '—'}
+                                                </AppText>
+                                                <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
+                                                    {depositNetworkDisplay || '—'}
+                                                </AppText>
                                             </View>
 
                                             <TouchableOpacity
@@ -1730,7 +1730,7 @@ const DepositCoin = () => {
                                                     setCoinForNetworkSheet(selectedCurrency);
                                                     setTimeout(() => networkSheetRef.current?.open(), 0);
                                                 }}
-                                                style={{right:10}}
+                                                style={{ right: 10 }}
                                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                             >
                                                 <FastImage
@@ -1739,14 +1739,14 @@ const DepositCoin = () => {
                                                     style={{ width: 26, height: 26 }}
                                                 />
                                             </TouchableOpacity>
-                                            
+
                                         </View>
                                     </View>
 
                                     <AppText
                                         weight={SEMI_BOLD}
                                         type={FOURTEEN}
-                                        style={[styles.depositEmptyTitle, { color: themeColors.text,marginLeft:5 }]}
+                                        style={[styles.depositEmptyTitle, { color: themeColors.text, marginLeft: 5 }]}
                                     >
                                         Deposit Address
                                     </AppText>
@@ -1807,54 +1807,54 @@ const DepositCoin = () => {
                             )}
 
                             {/* Recent Deposits Section */}
-                            {!resolvingDepositAddress && (
-                            <View style={styles.recentDepositsSection}>
-                                <View style={styles.recentDepositsHeader}>
-                                    <View style={styles.recentDepositsTitleRow}>
-                                        <AppText weight={SEMI_BOLD} type={FIFTEEN} style={styles.sectionTitle}>
-                                            Recent Deposits
-                                        </AppText>
-                                        {loadingDeposit && (
-                                            <View style={styles.loadingIndicator}>
-                                                <AppText type={TEN} color={colors.textGray}>
-                                                    Syncing recent deposits
-                                                </AppText>
-                                                <ActivityIndicator
-                                                    size="small"
-                                                    color={YELLOW}
-                                                    style={{ marginLeft: 5 }}
-                                                />
-                                            </View>
-                                        )}
+                            {/* {!resolvingDepositAddress && (
+                                <View style={styles.recentDepositsSection}>
+                                    <View style={styles.recentDepositsHeader}>
+                                        <View style={styles.recentDepositsTitleRow}>
+                                            <AppText weight={SEMI_BOLD} type={FIFTEEN} style={styles.sectionTitle}>
+                                                Recent Deposits
+                                            </AppText>
+                                            {loadingDeposit && (
+                                                <View style={styles.loadingIndicator}>
+                                                    <AppText type={TEN} color={colors.textGray}>
+                                                        Syncing recent deposits
+                                                    </AppText>
+                                                    <ActivityIndicator
+                                                        size="small"
+                                                        color={YELLOW}
+                                                        style={{ marginLeft: 5 }}
+                                                    />
+                                                </View>
+                                            )}
+                                        </View>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                NavigationService.navigate("Wallet_History")
+                                            }}
+                                        >
+                                            <AppText type={FOURTEEN} color={YELLOW}>
+                                                More &gt;
+                                            </AppText>
+                                        </TouchableOpacity>
                                     </View>
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            NavigationService.navigate("Wallet_History")
-                                        }}
-                                    >
-                                        <AppText type={FOURTEEN} color={YELLOW}>
-                                            More &gt;
-                                        </AppText>
-                                    </TouchableOpacity>
-                                </View>
 
-                                {recentDepositHistory && recentDepositHistory.length > 0 ? (
-                                    <View>
-                                        {recentDepositHistory.map((item, index) => (
-                                            <View key={item?._id || index.toString()}>
-                                                {renderDepositHistoryItem({ item })}
-                                            </View>
-                                        ))}
-                                    </View>
-                                ) : (
-                                    <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 120, height: 80, alignSelf: 'center' }}
-                                        resizeMode='contain' />
-                                )}
-                            </View>
-                            )}
+                                    {recentDepositHistory && recentDepositHistory.length > 0 ? (
+                                        <View>
+                                            {recentDepositHistory.map((item, index) => (
+                                                <View key={item?._id || index.toString()}>
+                                                    {renderDepositHistoryItem({ item })}
+                                                </View>
+                                            ))}
+                                        </View>
+                                    ) : (
+                                        <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 120, height: 80, alignSelf: 'center' }}
+                                            resizeMode='contain' />
+                                    )}
+                                </View>
+                            )} */}
                         </ScrollView>
 
-                       
+
                     </View>
                 </KeyBoardAware>
             )}
@@ -1943,7 +1943,7 @@ const DepositCoin = () => {
                     <View style={styles.networkSheetNotice}>
                         <FastImage source={INFO} style={styles.networkSheetNoticeIcon} resizeMode="contain" tintColor={colors.textGray} />
                         <AppText type={TEN} color={colors.textGray} style={{ flex: 1, lineHeight: 16 }}>
-                        Ensure that the selected deposit network is the same as the network. Otherwise, you'll not be able to withdraw later. Want help to choose a network?
+                            Ensure that the selected deposit network is the same as the network. Otherwise, you'll not be able to withdraw later. Want help to choose a network?
                         </AppText>
                     </View>
                 </View>
@@ -2405,8 +2405,8 @@ const styles = StyleSheet.create({
     },
     depositQrCenter: {
         alignItems: 'center',
-        marginTop: 18,
-        marginBottom: 18,
+        marginTop: 10,
+        marginBottom: 10,
     },
     depositQrCard: {
         backgroundColor: '#FFFFFF',
@@ -2425,7 +2425,7 @@ const styles = StyleSheet.create({
     depositEmptyTitle: {
         alignSelf: 'flex-start',
         marginBottom: 10,
-        marginTop:10
+        marginTop: 10
     },
     depositEmptyBtn: {
         width: '100%',
@@ -2433,6 +2433,7 @@ const styles = StyleSheet.create({
         height: 44,
         maxWidth: 320,
         alignSelf: 'center',
+        marginTop: 10
     },
     depositEmptyCardTopRow: {
         flexDirection: 'row',
@@ -2461,25 +2462,25 @@ const styles = StyleSheet.create({
     },
     depositEmptyDivider: {
         height: 1,
-        backgroundColor: colors.inputBorder,
+        backgroundColor: lightTheme.input,
         opacity: 0.5,
         marginTop: 10,
         marginBottom: 10,
     },
     depositEmptyNetworkBlock: {
         width: '100%',
-        flexDirection:"row",
-        justifyContent:"space-between",alignItems:"center"
+        flexDirection: "row",
+        justifyContent: "space-between", alignItems: "center"
     },
     depositInfoCard: {
         borderWidth: 1,
         borderRadius: 12,
-        paddingHorizontal: 12,
+        paddingHorizontal: 10,
         paddingVertical: 5,
-        marginBottom: 10,
- width:"100%",
- marginTop:15,
- backgroundColor:'transparent'
+        marginBottom: 8,
+        width: "100%",
+        marginTop: 8,
+        backgroundColor: 'transparent'
     },
     depositInfoRowHead: {
         marginBottom: 6,
@@ -2507,7 +2508,7 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         alignItems: 'center',
         justifyContent: 'center',
-        bottom:5
+        bottom: 5
     },
     depositMoreDetailsCenter: {
         alignItems: 'center',
@@ -2661,8 +2662,8 @@ const styles = StyleSheet.create({
     faqScrollContent: { paddingBottom: 8 },
     faqItemInner: {
         paddingVertical: 12,
-        borderBottomWidth: 0.3,
-        borderColor: colors.inputBorder
+        borderBottomWidth: 1,
+        borderBottomColor: colors.iconBgColor
     },
     faqItemInnerLast: { borderBottomWidth: 0 },
     faqQuestionRow: {
@@ -2842,7 +2843,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor:lightTheme.inputBorder,
+        borderBottomColor: lightTheme.inputBorder,
         minHeight: 44,
     },
     modalLabel: {

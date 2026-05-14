@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import FastImage from "react-native-fast-image";
 import {
+  agceLogoName,
   APP_LOGO,
   bell_ic,
   defaultPic,
@@ -45,10 +46,10 @@ const HeaderTop = () => {
     () => resolveProfileSource(userData, defaultPic),
     [userData],
   );
-  
+
 
   return (
-    <View style={[styles.headerBar, ]}>
+    <View style={[styles.headerBar,]}>
       <View style={styles.sideSlot}>
         <TouchableOpacity
           onPress={() => NavigationService.navigate("ProfileDrawer")}
@@ -65,17 +66,17 @@ const HeaderTop = () => {
 
       <View style={styles.brandCenter}>
         <FastImage
-          source={APP_LOGO}
+          source={agceLogoName}
           resizeMode="contain"
           style={styles.brandLogo}
         />
-        <AppText
+        {/* <AppText
           weight={BOLD}
           type={SIXTEEN}
           style={[styles.brandTitle, { color: titleColor }]}
         >
           AGCE
-        </AppText>
+        </AppText> */}
       </View>
 
       <View style={[styles.sideSlot, styles.sideRight]}>
@@ -94,13 +95,13 @@ const HeaderTop = () => {
           onPress={() => NavigationService.navigate(NOTIFICATION_SCREEN)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-            <FastImage
+          <FastImage
             source={bell_ic}
             tintColor={iconTint}
             resizeMode="contain"
             style={styles.actionIcon}
           />
-          
+
         </TouchableOpacity>
       </View>
     </View>
@@ -132,9 +133,9 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 20,
     overflow: "hidden",
-    alignItems:"center",
-    justifyContent:"center",
-    backgroundColor:lightTheme.input
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: lightTheme.input
   },
   avatar: {
     width: 40,
@@ -146,11 +147,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    right:10
+    right: 10
   },
   brandLogo: {
-    width: 28,
-    height: 28,
+    width: 100,
+    height: 50,
   },
   brandTitle: {
     letterSpacing: 0.5,

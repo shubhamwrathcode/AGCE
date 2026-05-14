@@ -13,7 +13,7 @@ import {
   connectwallet5,
 } from "../../helper/ImageAssets";
 import FastImage from "react-native-fast-image";
-import { AppText, ELEVEN, SEMI_BOLD, TEN, TWELVE } from "../../shared";
+import { AppText, ELEVEN, MEDIUM, NINE, SEMI_BOLD, TEN, TWELVE } from "../../shared";
 import { colors, lightTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import {
@@ -22,7 +22,7 @@ import {
   WALLET_SCREEN,
 } from "../../navigation/routes";
 
-const SLIDER_HEIGHT = 110;
+const SLIDER_HEIGHT = 78;
 const AUTO_PLAY_MS = 3600;
 const SCROLL_MS = 420;
 
@@ -32,7 +32,7 @@ const HomeSlider = () => {
   const userData = useAppSelector((state) => state.auth.userData);
   const kycVerified = userData?.kycVerified != null ? Number(userData.kycVerified) : 0;
 
-  const carouselWidth = useMemo(() => Screen.Width - 32, []);
+  const carouselWidth = useMemo(() => Screen.Width - 20, []);
 
   const baseOptions = useMemo(
     () => ({
@@ -131,13 +131,13 @@ const HomeSlider = () => {
             />
 
             <View style={styles.textBlock}>
-              <AppText type={ELEVEN} style={{ color: colors.lightGrey }} numberOfLines={1}>
+              <AppText type={TEN} style={{ color: colors.lightGrey }} numberOfLines={1}>
                 Events
               </AppText>
-              <AppText weight={SEMI_BOLD} type={TWELVE} numberOfLines={2} style={styles.titleText}>
+              <AppText type={TWELVE} weight={SEMI_BOLD} numberOfLines={2} style={styles.titleText}>
                 {item?.title}
               </AppText>
-              <AppText type={TEN} numberOfLines={1}>
+              <AppText type={NINE} numberOfLines={1}>
                 Explore now →
               </AppText>
             </View>
@@ -226,8 +226,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   bannerImage: {
-    width: 80,
-    height: 80,
+    width: 65,
+    height: 65,
   },
   textBlock: {
     flex: 1,

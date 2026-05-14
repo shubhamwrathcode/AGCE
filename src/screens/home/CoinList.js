@@ -256,7 +256,8 @@ const CoinList = React.memo(() => {
                   }}
                 >
                   <AppText
-                    weight={SEMI_BOLD}
+                    weight={MEDIUM}
+                    type={13}
                     style={[
                       styles.tabLabel,
                       {
@@ -278,94 +279,20 @@ const CoinList = React.memo(() => {
         </Animated.View>
 
         <View style={styles.listWrap}>
-          {activeTabList === 0 ? null : (
-            <View style={styles.tableHeader}>
-              <AppText style={[styles.tableHeaderText, { flex: 1.2 }]}>Symbol</AppText>
-              <AppText style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>Last Price</AppText>
-              <View style={{ flex: 0.9, alignItems: "flex-end" }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <AppText style={styles.tableHeaderText}>24H Change</AppText>
-                  <FastImage
-                    source={back_ic}
-                    style={{ width: 10, height: 10, transform: [{ rotate: "90deg" }] }}
-                    resizeMode="contain"
-                    tintColor={"#9CA3AF"}
-                  />
-                </View>
-              </View>
-            </View>
-          )}
+          {activeTabList === 0 ? null : null}
 
           <Animated.View style={listAnimatedStyle}>
             {activeTabList === 0 ? (
               <Favourites coinPairs={filterData} onPress={handleNavigate} from="home" />
             ) : (
-              <View style={{ marginTop: 6 }}>
-                {fourItems.map((item, idx) => {
-                  const sym = String(item?.base_currency || "").toUpperCase();
-                  const quote = normSym(item?.quote_currency) || "USDT";
-                  const pairLabel = sym ? `${sym}/${quote}` : "—";
-                  const name = item?.base_currency_name || item?.base_currency || "—";
-                  const last = item?.buy_price ?? item?.last_price ?? item?.price ?? 0;
-                  const sub = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
-                  const chg = Number(item?.change_percentage ?? item?.changePercentage ?? item?.change) || 0;
-                  const isUp = chg >= 0;
-                  const chgText = `${Math.abs(chg).toFixed(2)}%`;
-                  return (
-                    <TouchableOpacityView
-                      key={`${sym}-${quote}-${idx}`}
-                      onPress={() => handleNavigate(item)}
-                      activeOpacity={0.85}
-                      style={styles.row}
-                    >
-                      <View style={[styles.colSymbol, { flex: 1.2 }]}>
-                        <View style={styles.iconCircle}>
-                          <FastImage
-                            source={
-                              item?.icon_path
-                                ? { uri: IMAGE_BASE_URL + item.icon_path }
-                                : undefined
-                            }
-                            resizeMode="contain"
-                            style={{ width: 22, height: 22 }}
-                          />
-                        </View>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <AppText style={styles.coinName} numberOfLines={1}>
-                            {pairLabel}
-                          </AppText>
-                          <AppText style={styles.coinSym} numberOfLines={1}>
-                            {name}
-                          </AppText>
-                        </View>
-                      </View>
-
-                      <View style={{ flex: 1, alignItems: "flex-end" }}>
-                        <AppText style={styles.priceMain} numberOfLines={1}>
-                          {String(last)}
-                        </AppText>
-                        <AppText style={styles.priceSub} numberOfLines={1}>
-                          {String(sub)}
-                        </AppText>
-                      </View>
-
-                      <View style={{ flex: 0.9, alignItems: "flex-end" }}>
-                        <View
-                          style={[
-                            styles.changePill,
-                            { backgroundColor: isUp ? "#2DBE7E" : "#EF4444" },
-                          ]}
-                        >
-                          <AppText style={styles.changeText} numberOfLines={1}>
-                            {isUp ? "▲ " : "▼ "}
-                            {chgText}
-                          </AppText>
-                        </View>
-                      </View>
-                    </TouchableOpacityView>
-                  );
-                })}
-              </View>
+              <MarketList
+                filterData={fourItems}
+                onPress={handleNavigate}
+                scrollEnabled={false}
+                pairTypography="homeTab"
+                hideStar={true}
+                style={styles.marketListFixed}
+              />
             )}
           </Animated.View>
         </View>
@@ -395,18 +322,18 @@ const HOME_HORIZONTAL_PADDING = 12;
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: HOME_HORIZONTAL_PADDING,
-    paddingTop: 2,
+    paddingHorizontal: 7,
+    paddingTop: 0,
     paddingBottom: universalPaddingHorizontal,
   },
   elevatedCard: {
-    padding: 5,
-    paddingTop: 10,
+    padding: 2,
+    paddingTop: 4,
     overflow: "visible",
 
   },
   listWrap: {
-    marginTop: 6,
+    marginTop: 0,
     minHeight: 275, // Stabilize height to prevent the "felta hua" shadow expansion artifact on load
   },
   marketListFixed: {
@@ -425,7 +352,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   tabLabel: {
-    fontSize: 14,
+    fontWeight: '600'
   },
   tableHeader: {
     flexDirection: "row",
@@ -440,7 +367,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    // paddingVertical: 4,
     paddingHorizontal: 4,
   },
   colSymbol: {

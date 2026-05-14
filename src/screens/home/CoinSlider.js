@@ -226,9 +226,8 @@
 //   },
 // });
 
-import React, { useEffect, useMemo, useCallback, useRef } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
-import Carousel from 'react-native-reanimated-carousel';
+import React, { useEffect, useMemo, useCallback, useRef, useState } from 'react';
+import { Dimensions, StyleSheet, View, ScrollView } from 'react-native';
 import { useAppSelector } from '../../store/hooks';
 import NavigationService from '../../navigation/NavigationService';
 import { WALLET_SCREEN } from '../../navigation/routes';
@@ -246,12 +245,14 @@ const CAROUSEL_AUTO_MS = 3000;
 const CoinSlider = () => {
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const hotPairsChart = useAppSelector((state) => state.home.hotPairsChart) ?? {};
-  const carouselRef = useRef(null);
+  const scrollRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const { colors: themeColors } = useTheme();
 
   const SIDE_SPACE = 12;
-  const ITEM_WIDTH = width / 2 - SIDE_SPACE;
+  const ITEM_WIDTH = width / 2.8;
 
+  // Same as Market: preferred coins BTC, ETH, BNB with chart_data
   // Same as Market: preferred coins BTC, ETH, BNB with chart_data
   const featuredCoins = useMemo(() => {
     if (!coinPairs || coinPairs.length === 0) return [];
@@ -271,19 +272,58 @@ const CoinSlider = () => {
     return out;
   }, [coinPairs, hotPairsChart]);
 
+  const loopCoins = useMemo(() => {
+    if (featuredCoins.length === 0) return [];
+    // Triple the data for seamless infinite looping
+    return [...featuredCoins, ...featuredCoins, ...featuredCoins];
+  }, [featuredCoins]);
+
   const slideCount = featuredCoins.length;
+  const totalCount = loopCoins.length;
 
   useEffect(() => {
     if (slideCount <= 1) return undefined;
-    const id = setInterval(() => {
-      try {
-        carouselRef.current?.next?.({ animated: true });
-      } catch {
-        /* ignore */
-      }
+
+    // Initial scroll to middle set
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        x: slideCount * (ITEM_WIDTH + 8),
+        animated: false,
+      });
+      setCurrentIndex(slideCount);
+    }, 100);
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => {
+        let next = prev + 1;
+
+        // If we reach near the end of the tripled list, jump back to the middle set
+        if (next >= slideCount * 2) {
+          scrollRef.current?.scrollTo({
+            x: (slideCount - 1) * (ITEM_WIDTH + 8),
+            animated: false,
+          });
+          next = slideCount;
+        }
+
+        scrollRef.current?.scrollTo({
+          x: next * (ITEM_WIDTH + 8),
+          animated: true,
+        });
+        return next;
+      });
     }, CAROUSEL_AUTO_MS);
-    return () => clearInterval(id);
-  }, [slideCount]);
+
+    return () => clearInterval(interval);
+  }, [slideCount, ITEM_WIDTH]);
+
+  const onScroll = (event) => {
+    const x = event.nativeEvent.contentOffset.x;
+    const index = Math.round(x / (ITEM_WIDTH + 8));
+    if (index !== currentIndex) {
+      setCurrentIndex(index);
+    }
+  };
 
   const handlePress = useCallback((item) => {
     if (item?.base_currency && item?.quote_currency) {
@@ -304,11 +344,11 @@ const CoinSlider = () => {
     const change = Number(item?.change_percentage) || 0;
     const isPositive = change >= 0;
     const pctStr = `${Math.abs(change).toFixed(1)}%`;
-    const priceStr = `INR ${formatInr(item?.buy_price)}`;
+    const priceStr = `$ ${formatInr(item?.buy_price)}`;
 
     return (
       <View style={styles.cardWrapper}>
-        <View style={[styles.card, { backgroundColor: colors.iconBgColor }]}>
+        <View style={[styles.card, { backgroundColor: colors.iconBgColor, width: ITEM_WIDTH }]}>
           <View style={styles.topRow}>
             <FastImage
               source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
@@ -319,8 +359,8 @@ const CoinSlider = () => {
               <MiniSparkline
                 chartData={item?.chart_data}
                 isPositive={isPositive}
-                width={72}
-                height={26}
+                width={50}
+                height={20}
                 chartId={`home-mini-${index}`}
                 fallbackPrice={Number(item?.buy_price) || 100}
               />
@@ -328,20 +368,20 @@ const CoinSlider = () => {
           </View>
 
           <View style={styles.midRow}>
-            <AppText weight={BOLD} type={TWELVE} numberOfLines={1} style={{ color: themeColors.text }}>
+            <AppText weight={SEMI_BOLD} type={TEN} numberOfLines={1} style={{ color: themeColors.text, flexShrink: 1 }}>
               {coinName}{' '}
               <AppText type={NINE} style={{ color: '#9CA3AF' }}>
                 {sym}
               </AppText>
             </AppText>
             <View style={styles.pctRow}>
-              <AppText type={TEN} style={{ color: isPositive ? '#10B981' : '#EF4444' }}>
-                {isPositive ? '▲' : '▼'} {pctStr}
+              <AppText style={{ fontSize: 8, color: isPositive ? '#10B981' : '#EF4444' }} numberOfLines={1}>
+                {isPositive ? '▲' : '▼'}{pctStr}
               </AppText>
             </View>
           </View>
 
-          <AppText weight={SEMI_BOLD} type={TWELVE} numberOfLines={1} style={{ color: '#111827', marginTop: 6 }}>
+          <AppText weight={SEMI_BOLD} type={TEN} numberOfLines={1} style={{ color: '#111827', marginTop: 2 }}>
             {priceStr}
           </AppText>
         </View>
@@ -352,38 +392,35 @@ const CoinSlider = () => {
   if (featuredCoins.length === 0) return null;
 
   return (
-    <View style={{ paddingHorizontal: SIDE_SPACE, marginBottom: -16 }}>
-      <Carousel
-        ref={carouselRef}
-        loop={slideCount > 1}
-        width={ITEM_WIDTH}
-        height={130}
-        autoPlay={false}
-        data={featuredCoins}
-        scrollAnimationDuration={600}
-        renderItem={renderItem}
-        mode="parallax"
-        modeConfig={{
-          parallaxScrollingScale: 1,
-          parallaxScrollingOffset: 0,
-        }}
-        panGestureHandlerProps={{
-          activeOffsetX: [-10, 10],
-        }}
-        style={{ width: '100%' }}
-      />
+    <View style={{ marginBottom: 0 }}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingLeft: SIDE_SPACE, paddingRight: SIDE_SPACE }}
+        decelerationRate="fast"
+        snapToInterval={ITEM_WIDTH + 8}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
+        {loopCoins.map((item, index) => (
+          <View key={`${item.id || index}-${index}`}>
+            {renderItem({ item, index })}
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    marginHorizontal: 5,
+    marginHorizontal: 4,
   },
   card: {
     borderRadius: 5,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     justifyContent: 'flex-start',
   },
   topRow: {
@@ -392,25 +429,24 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   iconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   coinIcon: {
-    width: 26,
-    height: 26,
+    width: 19,
+    height: 19,
   },
   sparkWrap: {
-    width: 78,
-    height: 30,
+    width: 60,
+    height: 25,
     alignItems: 'flex-end',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   midRow: {
-    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

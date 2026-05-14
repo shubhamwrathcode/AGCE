@@ -210,8 +210,10 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
         const icon = iconByRoute[route.name];
         const label = labelByRoute[route.name] ?? route.name;
 
+        const bg = "rgba(255, 255, 255, 0.85)";
+
         return (
-          <View key={route.key} style={customTabBarStyles.itemWrap}>
+          <View key={route.key} style={[customTabBarStyles.itemWrap, { backgroundColor: bg }]}>
             <TouchableOpacity
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
@@ -792,8 +794,12 @@ const bottomTabStyles = StyleSheet.create({
 
 const customTabBarStyles = StyleSheet.create({
   container: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     height: Platform.OS === "ios" ? 74 : 62,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
     overflow: "hidden",
     flexDirection: "row",
     alignItems: "center",

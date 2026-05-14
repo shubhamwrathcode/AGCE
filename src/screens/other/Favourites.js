@@ -84,14 +84,15 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
               resizeMode="contain"
               style={{ width: 16, height: 16 }}
             />
-            <AppText style={pairBaseStyle}>
-              {item?.base_currency}
-              <Text style={{ fontWeight: "400", color: "#9D9D9D", fontSize: quoteSize }}>
-                /{item?.quote_currency}
+            <View>
+              <AppText style={pairBaseStyle}>
+                {item?.base_currency_fullname || item?.base_currency_name || item?.base_currency}
+              </AppText>
+              <Text style={styles.vol}>
+                {item?.base_currency}
               </Text>
-            </AppText>
+            </View>
           </View>
-          <Text style={styles.vol}>{toFixedThree(item?.volume)}</Text>
         </View>
 
         <View style={{ flex: 1, width: "50%", alignItems: "flex-end" }}>
@@ -169,13 +170,14 @@ const Favourites = ({ coinPairs, style, from, search = "", isLoggedIn = true, su
           />
         </>
       ) : (
-        <MarketList
-          filterData={from === "home" ? favFilteredData?.slice(0, 5) : favFilteredData}
-          style={from === "home" ? { width: "100%", padding: 0 } : { flex: 1, width: "100%", paddingVertical: 8, paddingHorizontal: 12 }}
-          onPress={handleNavigate}
-          scrollEnabled={from !== "home"}
-          pairTypography={from === "home" ? "homeTab" : undefined}
-        />
+          <MarketList
+            filterData={from === "home" ? favFilteredData?.slice(0, 5) : favFilteredData}
+            style={from === "home" ? { width: "100%", padding: 0 } : { flex: 1, width: "100%", paddingVertical: 8, paddingHorizontal: 12 }}
+            onPress={handleNavigate}
+            scrollEnabled={from !== "home"}
+            pairTypography={from === "home" ? "homeTab" : undefined}
+            hideStar={from === "home" ? false : false}
+          />
       )}
     </View>
   );
@@ -187,7 +189,8 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: "row",
     borderColor: "#ccc",
-    paddingBottom: 6,
+    paddingTop: 2,
+    paddingBottom: 2,
     marginBottom: 6,
   },
   tableHeaderText: {
@@ -196,12 +199,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   tableHeaderTextHomeTab: {
-    fontSize: 11,
+    fontSize: 10,
   },
   row: {
     flexDirection: "row",
     paddingVertical: 10,
-    borderBottomWidth: 0.5,
     justifyContent: "space-between",
     minHeight: 46,
   },
@@ -216,12 +218,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   cellHomeTab: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#000",
     fontWeight: "700",
   },
   cellHomeTabDark: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#fff",
     fontWeight: "700",
   },
