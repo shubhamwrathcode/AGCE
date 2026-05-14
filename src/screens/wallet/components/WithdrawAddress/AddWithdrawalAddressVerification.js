@@ -57,7 +57,7 @@ const AddWithdrawalAddressVerification = ({
         <View style={{ paddingVertical: 10 }}>
           <View style={{ marginBottom: 24 }}>
 
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
               {selectedSaveAddrVerifyMethod === "google_authenticator"
                 ? "Enter the 6-digit code from your authenticator app."
                 : selectedSaveAddrVerifyMethod === "mobile"
@@ -120,24 +120,24 @@ const AddWithdrawalAddressVerification = ({
       {saveAddrStep === "satoshi" && (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           <View style={{ marginBottom: 20 }}>
-            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 0 }}>
+            <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 0 }}>
               To verify you own this address, please send exactly:
             </AppText>
-            <AppText type={TWELVE} weight={BOLD} style={{ color: colors.orangeTheme, }}>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.black, }}>
               Send exactly {saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset}.
             </AppText>
-            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20, marginTop: 5 }}>
+            <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, lineHeight: 18, marginTop: 5 }}>
               The deposit must come from the address you are whitelisting. Send this micro-amount to your AGCE deposit address for {saveAddrWhitelistData?.proof_asset} ({saveAddrWhitelistData?.proof_chain}). Scan the QR code below or copy the address.
             </AppText>
           </View>
 
           {satoshiDepositError ? (
             <View style={{ marginBottom: 20 }}>
-              <AppText type={THIRTEEN} style={{ color: colors.red, lineHeight: 20 }}>
+              <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.red, lineHeight: 20 }}>
                 {satoshiDepositError}{"  "}
                 <AppText
-                  type={THIRTEEN}
-                  weight={SEMI_BOLD}
+                  type={TWELVE}
+                  weight={MEDIUM}
                   style={{ color: colors.orangeTheme, textDecorationLine: "underline" }}
                   onPress={() => NavigationService.navigate("DEPOSIT_COIN_SCREEN")}
                 >
@@ -150,7 +150,7 @@ const AddWithdrawalAddressVerification = ({
           {satoshiDepositLoading ? (
             <View style={{ alignItems: "center", paddingVertical: 30 }}>
               <View style={{ width: 20, height: 20, borderRadius: 10, borderTopWidth: 2, borderColor: colors.orangeTheme, marginBottom: 12 }} />
-              <AppText type={TWELVE} style={{ color: colors.orangeTheme }}>Loading your deposit address…</AppText>
+              <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.orangeTheme }}>Loading your deposit address…</AppText>
             </View>
           ) : !satoshiDepositError && (saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address) ? (
             <View style={{
@@ -261,7 +261,7 @@ const AddWithdrawalAddressVerification = ({
             paddingHorizontal: 4,
             marginBottom: 20
           }}>
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+            <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
               ⏱ You have 24 hours. Expires: {saveAddrWhitelistData?.expires_at ? moment(saveAddrWhitelistData.expires_at).format("DD MMM YYYY, HH:mm") : "—"}
             </AppText>
           </View>
@@ -289,10 +289,10 @@ const AddWithdrawalAddressVerification = ({
       {saveAddrStep === "metamask" && (
         <View style={{ gap: 20 }}>
           <View style={{ gap: 12 }}>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 22 }}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
               Sign the verification message with MetaMask using the same wallet as the address above.
             </AppText>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 22 }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
               Use <AppText weight={BOLD} style={{ color: themeColors.text }}>Sign with MetaMask</AppText> to connect and sign. If the MetaMask app is not installed, you will be redirected to the app store.
             </AppText>
 

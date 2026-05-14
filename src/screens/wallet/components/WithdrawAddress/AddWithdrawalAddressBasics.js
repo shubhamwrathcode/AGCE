@@ -4,6 +4,7 @@ import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN, BOLD, 
 import { colors, lightTheme } from "../../../../theme/colors";
 import FastImage from "react-native-fast-image";
 import { EMAIL, security_vector2 } from "../../../../helper/ImageAssets";
+import { buildCoinImageUri } from "../../../../helper/coinIconUrl";
 
 const AddWithdrawalAddressBasics = ({
   isDark,
@@ -94,7 +95,7 @@ const AddWithdrawalAddressBasics = ({
       {saveAddrStep === "form" && (
         <View>
           <View style={{ marginBottom: 16 }}>
-            <AppText type={TWELVE} style={{ color: colors.black, marginBottom: 8 }}>Label</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Label</AppText>
             <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
               <TextInput
                 placeholder="4-20 characters"
@@ -107,7 +108,7 @@ const AddWithdrawalAddressBasics = ({
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <AppText type={TWELVE} style={{ color: colors.black, marginBottom: 8 }}>Coin</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Coin</AppText>
             <TouchableOpacity
               onPress={() => {
                 setSaveAddrNetworkOpen(false);
@@ -118,9 +119,21 @@ const AddWithdrawalAddressBasics = ({
                 height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF"
               }}
             >
-              <AppText type={FOURTEEN} style={{ color: saveAddrCoin ? themeColors.text : themeColors.secondaryText }}>
-                {saveAddrCoin ? saveAddrCoin : "Select Coin"}
-              </AppText>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                {(() => {
+                  const coinObj = withdrawCoins.find(c => c.short_name === saveAddrCoin);
+                  const uri = buildCoinImageUri(coinObj);
+                  return uri ? (
+                    <FastImage
+                      source={{ uri }}
+                      style={{ width: 20, height: 20, marginRight: 8, borderRadius: 10 }}
+                    />
+                  ) : null;
+                })()}
+                <AppText type={FOURTEEN} style={{ color: saveAddrCoin ? themeColors.text : themeColors.secondaryText }}>
+                  {saveAddrCoin ? saveAddrCoin : "Select Coin"}
+                </AppText>
+              </View>
               <FastImage
                 source={saveAddrCoinOpen ? upIcon : downIcon}
                 style={{ width: 12, height: 12 }}
@@ -149,11 +162,15 @@ const AddWithdrawalAddressBasics = ({
                         else setSaveAddrNetwork("");
                       }}
                     >
-                      <AppText type={FOURTEEN} style={{ color: themeColors.text }}>{item.short_name}</AppText>
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <FastImage
+                          source={{ uri: buildCoinImageUri(item) }}
+                          style={{ width: 22, height: 22, marginRight: 10, borderRadius: 11 }}
+                        />
+                        <AppText type={FOURTEEN} style={{ color: themeColors.text }}>{item.short_name}</AppText>
+                      </View>
                       {saveAddrCoin === item.short_name && (
-                        <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.primary, justifyContent: "center", alignItems: "center" }}>
-                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} />
-                        </View>
+                        <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor="black" />
                       )}
                     </TouchableOpacity>
                   ))}
@@ -163,39 +180,7 @@ const AddWithdrawalAddressBasics = ({
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <AppText type={TWELVE} style={{ color: colors.black, marginBottom: 8 }}>Address</AppText>
-            <View style={{
-              backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16,
-              height: 48, justifyContent: "center", borderWidth: 1, borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? "#EF4444" : (isDark ? themeColors.border : "#E8EAEF")
-            }}>
-              <TextInput
-                placeholder="Enter wallet address"
-                placeholderTextColor={themeColors.secondaryText}
-                style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
-                value={saveAddrAddress}
-                onChangeText={(value) => {
-                  setSaveAddrAddress(value);
-                  if (!saveAddrAddressTouched) setSaveAddrAddressTouched(true);
-                }}
-                onBlur={() => {
-                  setSaveAddrAddressTouched(true);
-                  validateSaveAddrAddressApiRef.current?.();
-                }}
-              />
-            </View>
-            {!!saveAddrAddressInlineError && !saveAddrAddressValidating && !saveAddrAddressValidError && (
-              <AppText type={ELEVEN} style={{ color: "#EF4444", marginTop: 4 }}>{saveAddrAddressInlineError}</AppText>
-            )}
-            {saveAddrAddressValidating && (
-              <AppText type={ELEVEN} style={{ color: "#E2B24C", marginTop: 4 }}>Validating address...</AppText>
-            )}
-            {!!saveAddrAddressValidError && !saveAddrAddressValidating && (
-              <AppText type={ELEVEN} style={{ color: "#EF4444", marginTop: 4 }}>{saveAddrAddressValidError}</AppText>
-            )}
-          </View>
-
-          <View style={{ marginBottom: 16 }}>
-            <AppText type={TWELVE} style={{ color: colors.black, marginBottom: 8 }}>Network</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Network</AppText>
             <TouchableOpacity
               onPress={() => {
                 setSaveAddrCoinOpen(false);
@@ -243,14 +228,14 @@ const AddWithdrawalAddressBasics = ({
                           }}
                         >
                           <View style={{ flex: 1 }}>
-                            <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>
+                            <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text }}>
                               {net.label || CHAIN_FULL_NAMES[net.code] || net.code}
                             </AppText>
                             <View style={{ flexDirection: "row", marginTop: 4 }}>
-                              <AppText type={TEN} style={{ color: themeColors.secondaryText }}>Fee: </AppText>
-                              <AppText type={TEN} style={{ color: themeColors.text }}>{fee} {saveAddrCoin}</AppText>
-                              <AppText type={TEN} style={{ color: themeColors.secondaryText, marginLeft: 12 }}>Arrival: </AppText>
-                              <AppText type={TEN} style={{ color: themeColors.text }}>{arrival}</AppText>
+                              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Fee: </AppText>
+                              <AppText type={TWELVE} style={{ color: themeColors.text }}>{fee} {saveAddrCoin}</AppText>
+                              <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginLeft: 12 }}>Arrival: </AppText>
+                              <AppText type={TWELVE} style={{ color: themeColors.text }}>{arrival}</AppText>
                             </View>
                           </View>
                           {isSelected && (
@@ -268,7 +253,39 @@ const AddWithdrawalAddressBasics = ({
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <AppText type={TWELVE} style={{ color: colors.black, marginBottom: 8 }}>Memo (Optional)</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Address</AppText>
+            <View style={{
+              backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16,
+              height: 48, justifyContent: "center", borderWidth: 1, borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? "#EF4444" : (isDark ? themeColors.border : "#E8EAEF")
+            }}>
+              <TextInput
+                placeholder="Enter wallet address"
+                placeholderTextColor={themeColors.secondaryText}
+                style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
+                value={saveAddrAddress}
+                onChangeText={(value) => {
+                  setSaveAddrAddress(value);
+                  if (!saveAddrAddressTouched) setSaveAddrAddressTouched(true);
+                }}
+                onBlur={() => {
+                  setSaveAddrAddressTouched(true);
+                  validateSaveAddrAddressApiRef.current?.();
+                }}
+              />
+            </View>
+            {!!saveAddrAddressInlineError && !saveAddrAddressValidating && !saveAddrAddressValidError && (
+              <AppText type={ELEVEN} style={{ color: "#EF4444", marginTop: 4 }}>{saveAddrAddressInlineError}</AppText>
+            )}
+            {saveAddrAddressValidating && (
+              <AppText type={ELEVEN} style={{ color: "#E2B24C", marginTop: 4 }}>Validating address...</AppText>
+            )}
+            {!!saveAddrAddressValidError && !saveAddrAddressValidating && (
+              <AppText type={ELEVEN} style={{ color: "#EF4444", marginTop: 4 }}>{saveAddrAddressValidError}</AppText>
+            )}
+          </View>
+
+          <View style={{ marginBottom: 16 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Memo (Optional)</AppText>
             <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
               <TextInput
                 placeholder="e.g. XRP destination tag"
@@ -290,7 +307,7 @@ const AddWithdrawalAddressBasics = ({
               Please provide the details of the address owner (the person you are transacting with). These details will be used to comply with regulatory requirements when transacting with this address.
             </AppText>
 
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 16 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
               Who does this address belong to?
             </AppText>
 
@@ -333,7 +350,7 @@ const AddWithdrawalAddressBasics = ({
             </AppText>
 
             <View style={{ marginBottom: 20 }}>
-              <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>Full legal name</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full legal name</AppText>
               <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
                 <TextInput
                   placeholder="Enter full legal name"
@@ -346,7 +363,7 @@ const AddWithdrawalAddressBasics = ({
             </View>
 
             <View style={{ marginBottom: 20 }}>
-              <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>PAN or National ID</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PAN or National ID</AppText>
               <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
                 <TextInput
                   placeholder="Enter PAN or National ID"
@@ -359,7 +376,7 @@ const AddWithdrawalAddressBasics = ({
             </View>
 
             <View style={{ marginBottom: 20 }}>
-              <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>Country of residence</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Country of residence</AppText>
               <TouchableOpacity
                 onPress={() => saveAddrCountrySheetRef.current?.open()}
                 style={{
@@ -381,7 +398,7 @@ const AddWithdrawalAddressBasics = ({
             </View>
 
             <View style={{ marginBottom: 20 }}>
-              <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>PIN / Postal code</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PIN / Postal code</AppText>
               <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
                 <TextInput
                   placeholder="Enter PIN or Postal code"
@@ -394,7 +411,7 @@ const AddWithdrawalAddressBasics = ({
             </View>
 
             <View style={{ marginBottom: 20 }}>
-              <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>Full residential address</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full residential address</AppText>
               <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, minHeight: 80, paddingTop: 12, borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
                 <TextInput
                   placeholder="Enter address"
@@ -419,7 +436,7 @@ const AddWithdrawalAddressBasics = ({
               Choose whether this withdrawal address is controlled in your own wallet or by an exchange / virtual asset service provider.
             </AppText>
 
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 16 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
               Address type
             </AppText>
 
@@ -461,7 +478,7 @@ const AddWithdrawalAddressBasics = ({
               Verification method for your self-hosted wallet (same address entered above).
             </AppText>
 
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 16 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
               Verification method
             </AppText>
 
@@ -501,7 +518,7 @@ const AddWithdrawalAddressBasics = ({
             <View style={{ gap: 0 }}>
               <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Select the exchange hosting this address, or choose Other to enter the institution name manually.</AppText>
             </View>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, top: 10, left: 3 }}>Exchange name</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, top: 10, left: 3 }}>Exchange name</AppText>
             <TouchableOpacity
               onPress={() => setSaveAddrExchangeOpen(!saveAddrExchangeOpen)}
               style={{
@@ -550,7 +567,7 @@ const AddWithdrawalAddressBasics = ({
                         borderBottomColor: lightTheme.input
                       }}
                     >
-                      <AppText type={THIRTEEN} style={{ color: colors.black }}>{e.label}</AppText>
+                      <AppText type={FIFTEEN} style={{ color: colors.black }}>{e.label}</AppText>
                       {saveAddrExchange === e.value && <FastImage source={checkIc} style={{ width: 14, height: 14 }} tintColor="black" />}
                     </TouchableOpacity>
                   ))}
@@ -560,7 +577,7 @@ const AddWithdrawalAddressBasics = ({
 
             {saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER && (
               <View style={{ gap: 8 }}>
-                <AppText type={FOURTEEN} style={{ color: themeColors.text, top: 3 }}>Enter name manually</AppText>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, top: 3 }}>Enter name manually</AppText>
                 <Input
                   placeholder="Exchange or VASP name"
                   value={saveAddrExchangeManual}

@@ -855,7 +855,7 @@ const WithdrawWallet = () => {
     if (!entry) return "Remove address?";
     const st = String(entry.status || "").toUpperCase();
     if (st === "APPROVED" || st === "ACTIVE") return "Remove whitelisted address?";
-    if (st.startsWith("PENDING")) return "Remove pending address?";
+    if (st.startsWith("PENDING")) return "Remove whitelisted address?";
     return "Remove saved address?";
   };
 
