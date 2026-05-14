@@ -68,26 +68,6 @@ const ADDRESS_BOOK_TOP_EXCHANGES = [
 const ADDRESS_BOOK_EXCHANGE_OTHER = "__OTHER__";
 const ADDRESS_BOOK_DECLARATION_TEXT = "I declare that the information I have provided is true, accurate, and complete and that my transaction complies with AGCE Terms of Use.";
 
-
-
-const TRENDING_COIN_SYMBOLS = [
-  "BTC",
-  "ETH",
-  "BNB",
-  "USDT",
-  "USDC",
-  "XRP",
-  "SOL",
-  "DOGE",
-  "MATIC",
-  "DOT",
-  "LTC",
-  "TRX",
-  "SHIB",
-  "ADA",
-  "BUSD",
-];
-
 function coinSymbol(coin) {
   return String(
     coin?.short_name || coin?.symbol || coin?.name || coin?.coin || coin?.currency || coin?.token || ""
@@ -155,10 +135,6 @@ const WithdrawForm = () => {
   const userData = useAppSelector((state) => state.auth.userData);
   const userMainWallet = useAppSelector((state) => state.wallet.userMainWallet);
   const withdrawActiveCoins = useAppSelector((state) => state.wallet.withdrawActiveCoins);
-  const withdrawHistory = useAppSelector((state) => state.wallet.withdrawHistory);
-  const interalWalletHistory = useAppSelector((state) => state.wallet.interalWalletHistory);
-
-  const [recentWithdrawTab, setRecentWithdrawTab] = useState("address"); // "address" | "agce"
 
   useFocusEffect(
     useCallback(() => {
@@ -190,6 +166,8 @@ const WithdrawForm = () => {
   const [agceRecipientPhoneLocal, setAgceRecipientPhoneLocal] = useState("");
   const [agcePhoneCountry, setAgcePhoneCountry] = useState(() => AGCE_PHONE_COUNTRIES[0]);
   const [agceRecipientId, setAgceRecipientId] = useState("");
+  const [confirmSheetHeight, setConfirmSheetHeight] = useState(320);
+  const [agceCountrySheetHeight, setAgceCountrySheetHeight] = useState(450);
   const [agceTouched, setAgceTouched] = useState({ email: false, phone: false });
 
   const [showKycModal, setShowKycModal] = useState(false);
@@ -2665,21 +2643,30 @@ const WithdrawForm = () => {
         ref={withdrawConfirmSheetRef}
         closeOnDragDown
         closeOnPressMask
-        height={420}
+        height={confirmSheetHeight}
         customStyles={{
           container: {
             backgroundColor: themeColors.background,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
           },
           draggableIcon: { backgroundColor: isDark ? themeColors.border : "#DDD" },
         }}
       >
-        <View style={{ padding: 24 }}>
-          <View style={{ alignItems: "center", marginBottom: 24 }}>
-            <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 8 }}>Confirm Withdrawal</AppText>
-            {/* <FastImage source={EMAIL_VERIFY} /> */}
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textAlign: "center", lineHeight: 18 }}>
+        <View
+          onLayout={(e) => {
+            const { height } = e.nativeEvent.layout;
+            if (height > 0) {
+              setConfirmSheetHeight(height + 40); // 40 for draggable icon and padding
+            }
+          }}
+          style={{ padding: 24, paddingBottom: 32 }}
+        >
+          <View style={{ alignItems: "center", marginBottom: 32 }}>
+            <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>
+              Confirm Withdrawal
+            </AppText>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textAlign: "center", lineHeight: 20 }}>
               {withdrawToTab === "agce_user"
                 ? "You are about to perform an internal transfer. Please ensure the recipient details are correct, as internal transfers are processed instantly."
                 : `You have chosen the ${saveAddrNetwork || network || "—"} network. Kindly verify that your withdrawal address is compatible with this network, as unsupported transfers may result in loss of funds.`
@@ -2692,8 +2679,8 @@ const WithdrawForm = () => {
               onPress={() => withdrawConfirmSheetRef.current?.close()}
               style={{
                 flex: 1,
-                height: 48,
-                borderRadius: 100,
+                height: 52,
+                borderRadius: 12,
                 justifyContent: "center",
                 alignItems: "center",
                 borderWidth: 1,
@@ -2708,11 +2695,11 @@ const WithdrawForm = () => {
               onPress={handleFinalWithdraw}
               style={{
                 flex: 1,
-                height: 48,
-                borderRadius: 100,
+                height: 52,
+                borderRadius: 12,
                 justifyContent: "center",
                 alignItems: "center",
-                backgroundColor: "#111827"
+                backgroundColor: themeColors.button
               }}
             >
               <AppText weight={SEMI_BOLD} style={{ color: "#FFF" }}>

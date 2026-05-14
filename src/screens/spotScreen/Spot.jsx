@@ -1037,6 +1037,7 @@ const Spot = () => {
   const priceAnim = useRef(new Animated.Value(0)).current;
   const amountAnim = useRef(new Animated.Value(0)).current;
   const stopAnim = useRef(new Animated.Value(0)).current;
+  const totalAnim = useRef(new Animated.Value(0)).current;
   const amountInputRef = useRef(null);
 
   /** Must run before setAmount so next render’s Animated styles already see 1 (fixes +/− without focus overlap). */
@@ -1053,13 +1054,7 @@ const Spot = () => {
   }, []);
 
   useEffect(() => {
-    const priceFilled = String(price ?? "").trim() !== "";
-    const buyFilled = buy_price != null && String(buy_price).trim() !== "";
-    Animated.timing(priceAnim, {
-      toValue: isPriceFocused || priceFilled || buyFilled ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
+    // Price label is now static as requested by the user.
   }, [isPriceFocused, price, buy_price]);
 
   useLayoutEffect(() => {
@@ -1103,6 +1098,15 @@ const Spot = () => {
       useNativeDriver: false,
     }).start();
   }, [stopPrice, isStopFocused]);
+
+  useEffect(() => {
+    const totalFilled = amount && String(totalDisplayValue ?? "").trim() !== "";
+    Animated.timing(totalAnim, {
+      toValue: totalFilled ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [amount, totalDisplayValue]);
 
   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
@@ -3174,22 +3178,24 @@ const Spot = () => {
 
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => rbSheetlimit.current.open()}
                   style={[
                     styles.dropdown,
                     {
-                      backgroundColor: colors.iconBgColor,
+                      backgroundColor: lightTheme.input,
                       flex: 1,
                       borderRadius: 10,
                       borderWidth: 0,
-                      paddingVertical: 8,
+                      marginBottom: 8,
+                      paddingVertical: 6,
                       paddingHorizontal: 12,
                     },
                   ]}
-                  onPress={() => rbSheetlimit?.current?.open()}
                 >
                   <AppText
                     weight={MEDIUM}
-                    style={{ color: themeColors.text, fontSize: 16 }}
+                    style={{ color: themeColors.text, fontSize: 14 }}
                   >
                     {numberSelectLimit}
                   </AppText>
@@ -3217,25 +3223,30 @@ const Spot = () => {
                   style={[
                     styles.spotOrderFieldCard,
                     {
-                      backgroundColor: colors.iconBgColor,
-                      borderColor: themeColors.themeBorderColor,
+                      backgroundColor: lightTheme.input,
+                      borderWidth: 0,
                     },
                   ]}
                 >
                   <View style={styles.spotOrderFieldStack}>
-                    <AppText
-                      style={[
-                        styles.spotOrderInputLabel,
-                        {
-                          color: "#8E8E93",
-                          fontSize: 11,
-                          fontWeight: "500",
-                          marginBottom: 2
-                        },
-                      ]}
+                    <View
+                      pointerEvents="none"
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: 2,
+                      }}
                     >
-                      Price ({quote_currency})
-                    </AppText>
+                      <AppText
+                        style={{
+                          color: "#8E8E93",
+                          fontSize: 10,
+                          fontWeight: "500",
+                        }}
+                      >
+                        Price ({quote_currency})
+                      </AppText>
+                    </View>
 
                     {isLimit ? (
                       <View
@@ -3264,13 +3275,13 @@ const Spot = () => {
                           keyboardType="numeric"
                           style={[
                             styles.spotOrderInputValue,
-                            styles.spotOrderInputValueDense,
                             {
                               color: themeColors.text,
                               textAlign: "left",
-                              fontSize: 18,
+                              fontSize: 13,
                               fontWeight: "600",
-                              textAlignVertical: "center",
+                              paddingVertical: 0,
+                              marginTop: 8,
                               ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                             },
                           ]}
@@ -3278,20 +3289,31 @@ const Spot = () => {
                         />
                       </View>
                     ) : (
-                      <Animated.View
+                      <View
                         style={{
                           width: "100%",
                           minHeight: 23,
                           justifyContent: "center",
-                          alignItems: "center",
-                          marginTop: 2,
-
+                          alignItems: "flex-start",
+                          marginTop: 0,
                         }}
                       >
-                        <AppText style={[styles.spotOrderInputValue, { color: "#8E8E93", fontSize: 13, textAlign: 'left', marginTop: 4 }]}>
+                        <AppText
+                          style={[
+                            styles.spotOrderInputValue,
+                            {
+                              flex: 0,
+                              color: "#8E8E93",
+                              fontSize: 12,
+                              textAlign: "left",
+                              alignSelf: "flex-start",
+                              marginTop: 8,
+                            },
+                          ]}
+                        >
                           Best Market Price
                         </AppText>
-                      </Animated.View>
+                      </View>
                     )}
                   </View>
                 </View>
@@ -3303,25 +3325,36 @@ const Spot = () => {
                     style={[
                       styles.spotOrderFieldCard,
                       {
-                        backgroundColor: colors.iconBgColor,
-                        borderColor: themeColors.themeBorderColor,
+                        backgroundColor: lightTheme.input,
+                        borderWidth: 0,
                       },
                     ]}
                   >
                     <View style={styles.spotOrderFieldStack}>
-                      <AppText
-                        style={[
-                          styles.spotOrderInputLabel,
-                          {
-                            color: "#8E8E93",
-                            fontSize: 11,
-                            fontWeight: "500",
-                            marginBottom: 2
-                          },
-                        ]}
+                      <Animated.View
+                        pointerEvents="none"
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          top: stopAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [10, 2],
+                          }),
+                        }}
                       >
-                        Stop ({quote_currency})
-                      </AppText>
+                        <Animated.Text
+                          style={{
+                            color: "#8E8E93",
+                            fontSize: stopAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [12, 10],
+                            }),
+                            fontWeight: "500",
+                          }}
+                        >
+                          Stop ({quote_currency})
+                        </Animated.Text>
+                      </Animated.View>
                       <View
                         style={[
                           styles.spotOrderInputBox,
@@ -3351,9 +3384,10 @@ const Spot = () => {
                             {
                               color: themeColors.text,
                               textAlign: "left",
-                              fontSize: 18,
+                              fontSize: 13,
                               fontWeight: "600",
-                              textAlignVertical: "center",
+                              paddingVertical: 0,
+                              marginTop: 8,
                               ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                             },
                           ]}
@@ -3369,25 +3403,36 @@ const Spot = () => {
                   style={[
                     styles.spotOrderFieldCard,
                     {
-                      backgroundColor: colors.iconBgColor,
-                      borderColor: themeColors.themeBorderColor,
+                      backgroundColor: lightTheme.input,
+                      borderWidth: 0,
                     },
                   ]}
                 >
                   <View style={styles.spotOrderFieldStack}>
-                    <AppText
-                      style={[
-                        styles.spotOrderInputLabel,
-                        {
-                          color: "#8E8E93",
-                          fontSize: 11,
-                          fontWeight: "500",
-                          marginBottom: 2
-                        },
-                      ]}
+                    <Animated.View
+                      pointerEvents="none"
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: amountAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [10, 2],
+                        }),
+                      }}
                     >
-                      Amount ({base_currency})
-                    </AppText>
+                      <Animated.Text
+                        style={{
+                          color: "#8E8E93",
+                          fontSize: amountAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [12, 10],
+                          }),
+                          fontWeight: "500",
+                        }}
+                      >
+                        Amount ({base_currency})
+                      </Animated.Text>
+                    </Animated.View>
                     <View
                       style={[
                         styles.spotOrderInputBox,
@@ -3418,9 +3463,10 @@ const Spot = () => {
                           {
                             color: themeColors.text,
                             textAlign: "left",
-                            fontSize: 18,
+                            fontSize: 13,
                             fontWeight: "600",
-                            textAlignVertical: "center",
+                            paddingVertical: 0,
+                            marginTop: 8,
                             ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                           },
                         ]}
@@ -3443,25 +3489,36 @@ const Spot = () => {
                     style={[
                       styles.spotOrderFieldCard,
                       {
-                        backgroundColor: colors.iconBgColor,
-                        borderColor: themeColors.themeBorderColor,
+                        backgroundColor: lightTheme.input,
+                        borderWidth: 0,
                       },
                     ]}
                   >
                     <View style={styles.spotOrderFieldStack}>
-                      <AppText
-                        style={[
-                          styles.spotOrderInputLabel,
-                          {
-                            color: "#8E8E93",
-                            fontSize: 11,
-                            fontWeight: "500",
-                            marginBottom: 2
-                          },
-                        ]}
+                      <Animated.View
+                        pointerEvents="none"
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          top: totalAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [10, 2],
+                          }),
+                        }}
                       >
-                        Total ({quote_currency})
-                      </AppText>
+                        <Animated.Text
+                          style={{
+                            color: "#8E8E93",
+                            fontSize: totalAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [12, 10],
+                            }),
+                            fontWeight: "500",
+                          }}
+                        >
+                          Total ({quote_currency})
+                        </Animated.Text>
+                      </Animated.View>
                       <View
                         style={[
                           styles.spotOrderInputBox,
@@ -3487,10 +3544,10 @@ const Spot = () => {
                               flex: 1,
                               color: themeColors.text,
                               textAlign: "left",
-                              fontSize: 18,
+                              fontSize: 13,
                               fontWeight: "600",
-                              textAlignVertical: "center",
                               paddingVertical: 0,
+                              marginTop: 8,
                               ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                             },
                           ]}
@@ -4350,18 +4407,19 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     paddingVertical: 2,
     paddingHorizontal: 12,
-    minHeight: 44,
-    borderRadius: 10,
+    minHeight: 40,
+    borderRadius: 8,
     borderWidth: 0,
     overflow: "visible",
   },
   /** Inner: label + row treated as one block (centered inside spotOrderFieldCard). */
   spotOrderFieldStack: {
     width: "100%",
+    height: 36,
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "stretch",
-    overflow: "visible",
+    position: "relative",
   },
   spotOrderInputLabel: {
     fontSize: 10,

@@ -2544,7 +2544,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   obTabsLeftScroll: {
-    flex:1,
+    flex: 1,
     minWidth: 0,
     marginRight: 8,
   },
