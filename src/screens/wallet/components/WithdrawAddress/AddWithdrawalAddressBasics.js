@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TextInput, TouchableOpacity, ScrollView } from "react-native";
-import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN, BOLD, TEN, ELEVEN, Input } from "../../../../shared";
+import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN, BOLD, TEN, ELEVEN, Input, FIFTEEN } from "../../../../shared";
 import { colors, lightTheme } from "../../../../theme/colors";
 import FastImage from "react-native-fast-image";
 import { EMAIL, security_vector2 } from "../../../../helper/ImageAssets";
@@ -303,7 +303,7 @@ const AddWithdrawalAddressBasics = ({
       {
         saveAddrStep === "owner" && (
           <View>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 16, lineHeight: 20 }}>
               Please provide the details of the address owner (the person you are transacting with). These details will be used to comply with regulatory requirements when transacting with this address.
             </AppText>
 
@@ -567,7 +567,7 @@ const AddWithdrawalAddressBasics = ({
                         borderBottomColor: lightTheme.input
                       }}
                     >
-                      <AppText type={FIFTEEN} style={{ color: colors.black }}>{e.label}</AppText>
+                      <AppText type={THIRTEEN} style={{ color: colors.black }}>{e.label}</AppText>
                       {saveAddrExchange === e.value && <FastImage source={checkIc} style={{ width: 14, height: 14 }} tintColor="black" />}
                     </TouchableOpacity>
                   ))}
@@ -599,8 +599,8 @@ const AddWithdrawalAddressBasics = ({
               style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginTop: 12 }}
             >
               <View style={{
-                width: 20,
-                height: 20,
+                width: 18,
+                height: 18,
                 borderRadius: 4,
                 borderWidth: 1.5,
                 backgroundColor: saveAddrDeclarationAccepted ? "black" : "transparent",
@@ -608,7 +608,7 @@ const AddWithdrawalAddressBasics = ({
                 alignItems: "center",
                 marginTop: 2
               }}>
-                {saveAddrDeclarationAccepted && <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor="white" />}
+                {saveAddrDeclarationAccepted && <FastImage source={checkIc} style={{ width: 11, height: 11 }} tintColor="white" />}
               </View>
               <AppText type={TWELVE} style={{ color: themeColors.secondaryText, flex: 1, lineHeight: 18 }}>
                 {ADDRESS_BOOK_DECLARATION_TEXT}
@@ -620,12 +620,7 @@ const AddWithdrawalAddressBasics = ({
 
       {
         saveAddrStep === "verify_method" && (
-          <View style={{ alignItems: "center" }}>
-            <FastImage
-              source={security_vector2}
-              style={{ width: 140, height: 140, marginBottom: 0 }}
-              resizeMode="contain"
-            />
+          <View style={{ alignItems: "center", bottom: 20 }}>
 
             <View style={{ width: "100%", alignItems: "flex-start" }}>
               <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 0 }}>

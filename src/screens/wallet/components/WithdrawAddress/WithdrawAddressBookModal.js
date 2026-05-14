@@ -191,11 +191,11 @@ export default function WithdrawAddressBookModal({
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <FastImage
+            {/* <FastImage
               source={coinIcon}
               style={styles.coinIcon}
               resizeMode="contain"
-            />
+            /> */}
             <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginLeft: 8 }}>
               Address Book
             </AppText>

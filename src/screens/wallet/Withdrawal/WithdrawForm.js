@@ -958,29 +958,19 @@ const WithdrawForm = () => {
   }, [timer]);
 
   const handleOpenSaveAddressSheet = (item = null) => {
+    resetAddAddressForm(); // Ensure everything is fresh
     if (item && typeof item === "object") {
       setSaveAddrLabel(item.name || item.label || "");
       setSaveAddrCoin(item.coin || "");
       setSaveAddrAddress(item.address || "");
       setSaveAddrNetwork(item.network || item.chain || "");
-      // Optional: Set memo if present
       if (item.memo) setSaveAddrMemo(item.memo);
     } else {
       const coinSym = selectedCurrency?.short_name || "USDT";
       setSaveAddrCoin(coinSym);
       setSaveAddrAddress("");
-
-      // Pre-fill network if it's valid for this coin
-      const keys = getActiveWithdrawChainKeys(selectedCurrency);
-      if (network && keys.includes(network)) {
-        setSaveAddrNetwork(network);
-      } else if (keys.length === 1) {
-        setSaveAddrNetwork(keys[0]);
-      } else {
-        setSaveAddrNetwork("");
-      }
+      setSaveAddrNetwork(""); // Always start fresh for a new manual entry
     }
-
     saveAddressSheetRef.current?.open();
   };
 
@@ -2023,7 +2013,7 @@ const WithdrawForm = () => {
   const resetAddAddressForm = () => {
     setSaveAddrStep("form");
     setSaveAddrLabel("");
-    setSaveAddrCoin("USDT");
+    setSaveAddrCoin(selectedCurrency?.short_name || "USDT");
     setSaveAddrAddress("");
     setSaveAddrNetwork("");
     setSaveAddrMemo("");
@@ -2038,6 +2028,27 @@ const WithdrawForm = () => {
     setSelectedSaveAddrVerifyMethod("");
     setSaveAddrOtpTimer(0);
     setSaveAddrResendActive(false);
+
+    // Missing fields previously left out of reset
+    setSaveAddrBenFullName("");
+    setSaveAddrBenPan("");
+    setSaveAddrBenCountry("");
+    setSaveAddrBenPin("");
+    setSaveAddrBenAddress("");
+    setSaveAddrProofMethod("satoshi");
+    setSaveAddrExchangeSearch("");
+    setSaveAddrExchangeOpen(false);
+    setSaveAddrCoinOpen(false);
+    setSaveAddrNetworkOpen(false);
+    setSaveAddrAddressTouched(false);
+    setSaveAddrAddressValidError("");
+    setSaveAddrAddressValidatedKey("");
+    setSaveAddrAddressValidating(false);
+    setSaveAddrBusy(false);
+    setSatoshiDepositError("");
+    setSatoshiDepositLoading(false);
+    setSatoshiWhitelistAwaitingProof(false);
+    setSatoshiResumeMode(false);
   };
 
   // Timer for Address Book OTP
@@ -2378,7 +2389,7 @@ const WithdrawForm = () => {
               }}>
                 <TextInput
                   style={{ flex: 1, color: themeColors.text, fontSize: 14, fontWeight: "400", padding: 0 }}
-                  placeholder={`Enter Amount`}
+                  placeholder={`Minimal ${chainMinWithdrawal}`}
                   placeholderTextColor={themeColors.secondaryText}
                   value={withdrawAmount}
                   onChangeText={setWithdrawAmount}
@@ -3071,24 +3082,33 @@ const WithdrawForm = () => {
         closeOnPressBack={false}
         closeOnPressMask={false}
         onClose={resetAddAddressForm} // Clear form on close
-        height={
-          (saveAddrStep === "owner" || saveAddrStep === "wallet_type" || saveAddrStep === "proof_select" || saveAddrStep === "verify_method" || saveAddrStep === "exchange" || saveAddrStep === "otp")
-            ? Dimensions.get("window").height * 0.5
-            : Dimensions.get("window").height * 0.85
-        }
+        height={Dimensions.get("window").height * 0.85}
         customStyles={{
           container: {
+            backgroundColor: "transparent",
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+          },
+          wrapper: { backgroundColor: "rgba(0,0,0,0.6)" },
+          draggableIcon: { display: "none" }
+        }}
+      >
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <View style={{
             backgroundColor: themeColors.background,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             paddingHorizontal: 24,
+            paddingTop: 10,
             paddingBottom: 24,
-          },
-          wrapper: { backgroundColor: "rgba(0,0,0,0.6)" },
-          draggableIcon: { backgroundColor: isDark ? "#333" : "#CCC", width: 40, marginTop: 10 }
-        }}
-      >
-        <View style={{ flex: 1 }}>
+            height: (saveAddrStep === "owner" || saveAddrStep === "wallet_type" || saveAddrStep === "proof_select" || saveAddrStep === "otp")
+              ? 380
+              : (saveAddrStep === "verify_method")
+                ? 420
+                : (saveAddrStep === "exchange")
+                  ? 520
+                  : Dimensions.get("window").height * 0.85
+          }}>
           <View style={{ flexDirection: "row", marginBottom: 20, paddingTop: 10 }}>
             <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: 'center' }}>
               {saveAddrStep === "form"
@@ -3103,7 +3123,7 @@ const WithdrawForm = () => {
             </AppText>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
             <AddWithdrawalAddressBasics
               saveAddrCountrySheetRef={saveAddrCountrySheetRef}
               isDark={isDark}
@@ -3424,6 +3444,7 @@ const WithdrawForm = () => {
 
                           if (res?.success) {
                             showSuccess(res.message || "Verification code sent");
+                            setSaveAddrOtp(""); // Ensure field is empty for new code
                             setSaveAddrStep("otp");
                           } else {
                             showError(res?.message || "Could not send verification code");
@@ -3434,6 +3455,7 @@ const WithdrawForm = () => {
                           setSaveAddrBusy(false);
                         }
                       } else {
+                        setSaveAddrOtp(""); // Ensure field is empty
                         setSaveAddrStep("otp");
                       }
                       return;
@@ -3617,7 +3639,8 @@ const WithdrawForm = () => {
             })()}
           </View>
         </View>
-      </RBSheet>
+      </View>
+    </RBSheet>
 
     </AppSafeAreaView>
   );
