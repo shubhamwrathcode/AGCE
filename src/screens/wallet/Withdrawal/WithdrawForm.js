@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  Alert,
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
 
@@ -37,7 +38,7 @@ import { useAppSelector } from "../../../store/hooks";
 import { getInteralWalletHistory, getUserMainWallet, getWithdrawActiveCoins, verifyWithdraw, withdrawCoin } from "../../../actions/walletActions";
 import { getEmailDomainSuggestions } from "../../../helper/emailDomainSuggest";
 import { buildCoinImageUri } from "../../../helper/coinIconUrl";
-import { ARROW_REVERSE, back_ic, bitcoinIcon, checkIc, down_arrow, downIcon, editIcon, email_vector, EMAIL_VERIFY, GOOGLE_VERIFY, INFO, LOCKED, PASSKEY_VERIFY, PHONE_VERIFY, printIcon, Refresh, REMOVE, right_ic, searchIcon, SECURITY_SHEIELD, upIcon, user_withdarwal } from "../../../helper/ImageAssets";
+import { account_restrictions, ARROW_REVERSE, back_ic, bitcoinIcon, checkIc, down_arrow, downIcon, editIcon, email_vector, EMAIL_VERIFY, GOOGLE_VERIFY, INFO, LOCKED, PASSKEY_VERIFY, PHONE_VERIFY, printIcon, Refresh, REMOVE, right_ic, searchIcon, SECURITY_SHEIELD, upIcon, user_withdarwal } from "../../../helper/ImageAssets";
 import { showError, showSuccess } from "../../../helper/logger";
 import { getNotificationList } from "../../../actions/homeActions";
 import { appOperation } from "../../../appOperation";
@@ -46,7 +47,7 @@ import { AppSafeAreaView, AppText, BOLD, Button, DISCLAIMTEXT, EIGHT, EIGHTEEN, 
 import { colors, lightTheme } from "../../../theme/colors";
 import { countriesList } from "../../../helper/CountriesList";
 import Accordion from "react-native-collapsible/Accordion";
-import { NOTIFICATION_SCREEN, WITHDRAW_HISTORY_SCREEN } from "../../../navigation/routes";
+import { NOTIFICATION_SCREEN, WITHDRAW_HISTORY_SCREEN, KYC_STATUS_SCREEN } from "../../../navigation/routes";
 
 const SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.9);
 const AGCE_COUNTRY_SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.48);
@@ -170,7 +171,11 @@ const WithdrawForm = () => {
     useCallback(() => {
       dispatch(verifyWithdraw({}));
       dispatch(getInteralWalletHistory(0, 10));
-    }, [dispatch])
+
+      if (userData && userData.kycVerified !== 1) {
+        setShowKycModal(true);
+      }
+    }, [dispatch, userData])
   );
 
   const withdrawCoinsList = useMemo(
@@ -194,6 +199,7 @@ const WithdrawForm = () => {
   const [agceRecipientId, setAgceRecipientId] = useState("");
   const [agceTouched, setAgceTouched] = useState({ email: false, phone: false });
 
+  const [showKycModal, setShowKycModal] = useState(false);
   const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
   const emailSuggestBlurTimer = useRef(null);
 
@@ -3109,538 +3115,604 @@ const WithdrawForm = () => {
                   ? 520
                   : Dimensions.get("window").height * 0.85
           }}>
-          <View style={{ flexDirection: "row", marginBottom: 20, paddingTop: 10 }}>
-            <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: 'center' }}>
-              {saveAddrStep === "form"
-                ? "Add withdrawal address"
-                : (saveAddrStep === "verify_method")
-                  ? "Verify your identity"
-                  : (saveAddrStep === "otp")
-                    ? (selectedSaveAddrVerifyMethod === "email" ? "Verify your email" : selectedSaveAddrVerifyMethod === "mobile" ? "Verify your phone" : "Verify your identity")
-                    : (saveAddrStep === "satoshi" || saveAddrStep === "metamask")
-                      ? "Verify withdrawal address"
-                      : "Address confirmation"}
-            </AppText>
-          </View>
+            <View style={{ flexDirection: "row", marginBottom: 20, paddingTop: 10 }}>
+              <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: 'center' }}>
+                {saveAddrStep === "form"
+                  ? "Add withdrawal address"
+                  : (saveAddrStep === "verify_method")
+                    ? "Verify your identity"
+                    : (saveAddrStep === "otp")
+                      ? (selectedSaveAddrVerifyMethod === "email" ? "Verify your email" : selectedSaveAddrVerifyMethod === "mobile" ? "Verify your phone" : "Verify your identity")
+                      : (saveAddrStep === "satoshi" || saveAddrStep === "metamask")
+                        ? "Verify withdrawal address"
+                        : "Address confirmation"}
+              </AppText>
+            </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
-            <AddWithdrawalAddressBasics
-              saveAddrCountrySheetRef={saveAddrCountrySheetRef}
-              isDark={isDark}
-              themeColors={themeColors}
-              userData={userData}
-              saveAddrStep={saveAddrStep}
-              saveAddrLabel={saveAddrLabel}
-              setSaveAddrLabel={setSaveAddrLabel}
-              saveAddrCoin={saveAddrCoin}
-              setSaveAddrCoin={setSaveAddrCoin}
-              withdrawCoins={withdrawCoinsList}
-              saveAddrCoinOpen={saveAddrCoinOpen}
-              setSaveAddrCoinOpen={setSaveAddrCoinOpen}
-              saveAddrAddress={saveAddrAddress}
-              setSaveAddrAddress={setSaveAddrAddress}
-              saveAddrAddressTouched={saveAddrAddressTouched}
-              setSaveAddrAddressTouched={setSaveAddrAddressTouched}
-              saveAddrAddressValidating={saveAddrAddressValidating}
-              saveAddrAddressValidError={saveAddrAddressValidError}
-              saveAddrAddressInlineError={saveAddrAddressInlineError}
-              validateSaveAddrAddressApiRef={validateSaveAddrAddressApiRef}
-              saveAddrNetwork={saveAddrNetwork}
-              setSaveAddrNetwork={setSaveAddrNetwork}
-              saveAddrNetworkOpen={saveAddrNetworkOpen}
-              setSaveAddrNetworkOpen={setSaveAddrNetworkOpen}
-              CHAIN_FULL_NAMES={CHAIN_FULL_NAMES}
-              saveAddrMemo={saveAddrMemo}
-              setSaveAddrMemo={setSaveAddrMemo}
-              saveAddrProofMethod={saveAddrProofMethod}
-              setSaveAddrProofMethod={setSaveAddrProofMethod}
-              saveAddrBenFullName={saveAddrBenFullName}
-              setSaveAddrBenFullName={setSaveAddrBenFullName}
-              saveAddrBenPan={saveAddrBenPan}
-              setSaveAddrBenPan={setSaveAddrBenPan}
-              saveAddrBenCountry={saveAddrBenCountry}
-              setSaveAddrBenCountry={setSaveAddrBenCountry}
-              saveAddrBenPin={saveAddrBenPin}
-              setSaveAddrBenPin={setSaveAddrBenPin}
-              saveAddrBenAddress={saveAddrBenAddress}
-              setSaveAddrBenAddress={setSaveAddrBenAddress}
-              saveAddrVerifyOptions={saveAddrVerifyOptions}
-              selectedSaveAddrVerifyMethod={selectedSaveAddrVerifyMethod}
-              setSelectedSaveAddrVerifyMethod={setSelectedSaveAddrVerifyMethod}
-              getWithdrawNetworksOrStaticFallback={getWithdrawNetworksOrStaticFallback}
-              saveAddrOwnership={saveAddrOwnership}
-              setSaveAddrOwnership={setSaveAddrOwnership}
-              saveAddrWalletType={saveAddrWalletType}
-              setSaveAddrWalletType={setSaveAddrWalletType}
-              saveAddrExchange={saveAddrExchange}
-              setSaveAddrExchange={setSaveAddrExchange}
-              saveAddrExchangeSearch={saveAddrExchangeSearch}
-              setSaveAddrExchangeSearch={setSaveAddrExchangeSearch}
-              saveAddrExchangeOpen={saveAddrExchangeOpen}
-              setSaveAddrExchangeOpen={setSaveAddrExchangeOpen}
-              ADDRESS_BOOK_TOP_EXCHANGES={ADDRESS_BOOK_TOP_EXCHANGES}
-              ADDRESS_BOOK_EXCHANGE_OTHER={ADDRESS_BOOK_EXCHANGE_OTHER}
-              saveAddrExchangeManual={saveAddrExchangeManual}
-              setSaveAddrExchangeManual={setSaveAddrExchangeManual}
-              saveAddrDeclarationAccepted={saveAddrDeclarationAccepted}
-              setSaveAddrDeclarationAccepted={setSaveAddrDeclarationAccepted}
-              ADDRESS_BOOK_DECLARATION_TEXT={ADDRESS_BOOK_DECLARATION_TEXT}
-              upIcon={upIcon}
-              downIcon={downIcon}
-              checkIc={checkIc}
-              SECURITY_SHEIELD={SECURITY_SHEIELD}
-              EMAIL_VERIFY={EMAIL_VERIFY}
-              PHONE_VERIFY={PHONE_VERIFY}
-              GOOGLE_VERIFY={GOOGLE_VERIFY}
-              PASSKEY_VERIFY={PASSKEY_VERIFY}
-            />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+              <AddWithdrawalAddressBasics
+                saveAddrCountrySheetRef={saveAddrCountrySheetRef}
+                isDark={isDark}
+                themeColors={themeColors}
+                userData={userData}
+                saveAddrStep={saveAddrStep}
+                saveAddrLabel={saveAddrLabel}
+                setSaveAddrLabel={setSaveAddrLabel}
+                saveAddrCoin={saveAddrCoin}
+                setSaveAddrCoin={setSaveAddrCoin}
+                withdrawCoins={withdrawCoinsList}
+                saveAddrCoinOpen={saveAddrCoinOpen}
+                setSaveAddrCoinOpen={setSaveAddrCoinOpen}
+                saveAddrAddress={saveAddrAddress}
+                setSaveAddrAddress={setSaveAddrAddress}
+                saveAddrAddressTouched={saveAddrAddressTouched}
+                setSaveAddrAddressTouched={setSaveAddrAddressTouched}
+                saveAddrAddressValidating={saveAddrAddressValidating}
+                saveAddrAddressValidError={saveAddrAddressValidError}
+                saveAddrAddressInlineError={saveAddrAddressInlineError}
+                validateSaveAddrAddressApiRef={validateSaveAddrAddressApiRef}
+                saveAddrNetwork={saveAddrNetwork}
+                setSaveAddrNetwork={setSaveAddrNetwork}
+                saveAddrNetworkOpen={saveAddrNetworkOpen}
+                setSaveAddrNetworkOpen={setSaveAddrNetworkOpen}
+                CHAIN_FULL_NAMES={CHAIN_FULL_NAMES}
+                saveAddrMemo={saveAddrMemo}
+                setSaveAddrMemo={setSaveAddrMemo}
+                saveAddrProofMethod={saveAddrProofMethod}
+                setSaveAddrProofMethod={setSaveAddrProofMethod}
+                saveAddrBenFullName={saveAddrBenFullName}
+                setSaveAddrBenFullName={setSaveAddrBenFullName}
+                saveAddrBenPan={saveAddrBenPan}
+                setSaveAddrBenPan={setSaveAddrBenPan}
+                saveAddrBenCountry={saveAddrBenCountry}
+                setSaveAddrBenCountry={setSaveAddrBenCountry}
+                saveAddrBenPin={saveAddrBenPin}
+                setSaveAddrBenPin={setSaveAddrBenPin}
+                saveAddrBenAddress={saveAddrBenAddress}
+                setSaveAddrBenAddress={setSaveAddrBenAddress}
+                saveAddrVerifyOptions={saveAddrVerifyOptions}
+                selectedSaveAddrVerifyMethod={selectedSaveAddrVerifyMethod}
+                setSelectedSaveAddrVerifyMethod={setSelectedSaveAddrVerifyMethod}
+                getWithdrawNetworksOrStaticFallback={getWithdrawNetworksOrStaticFallback}
+                saveAddrOwnership={saveAddrOwnership}
+                setSaveAddrOwnership={setSaveAddrOwnership}
+                saveAddrWalletType={saveAddrWalletType}
+                setSaveAddrWalletType={setSaveAddrWalletType}
+                saveAddrExchange={saveAddrExchange}
+                setSaveAddrExchange={setSaveAddrExchange}
+                saveAddrExchangeSearch={saveAddrExchangeSearch}
+                setSaveAddrExchangeSearch={setSaveAddrExchangeSearch}
+                saveAddrExchangeOpen={saveAddrExchangeOpen}
+                setSaveAddrExchangeOpen={setSaveAddrExchangeOpen}
+                ADDRESS_BOOK_TOP_EXCHANGES={ADDRESS_BOOK_TOP_EXCHANGES}
+                ADDRESS_BOOK_EXCHANGE_OTHER={ADDRESS_BOOK_EXCHANGE_OTHER}
+                saveAddrExchangeManual={saveAddrExchangeManual}
+                setSaveAddrExchangeManual={setSaveAddrExchangeManual}
+                saveAddrDeclarationAccepted={saveAddrDeclarationAccepted}
+                setSaveAddrDeclarationAccepted={setSaveAddrDeclarationAccepted}
+                ADDRESS_BOOK_DECLARATION_TEXT={ADDRESS_BOOK_DECLARATION_TEXT}
+                upIcon={upIcon}
+                downIcon={downIcon}
+                checkIc={checkIc}
+                SECURITY_SHEIELD={SECURITY_SHEIELD}
+                EMAIL_VERIFY={EMAIL_VERIFY}
+                PHONE_VERIFY={PHONE_VERIFY}
+                GOOGLE_VERIFY={GOOGLE_VERIFY}
+                PASSKEY_VERIFY={PASSKEY_VERIFY}
+              />
 
-            <AddWithdrawalAddressVerification
-              isDark={isDark}
-              themeColors={themeColors}
-              saveAddrStep={saveAddrStep}
-              selectedSaveAddrVerifyMethod={selectedSaveAddrVerifyMethod}
-              saveAddrOtp={saveAddrOtp}
-              setSaveAddrOtp={setSaveAddrOtp}
-              saveAddrWhitelistData={saveAddrWhitelistData}
-              userData={userData}
-              saveAddrOtpTimer={saveAddrOtpTimer}
-              saveAddrResendActive={saveAddrResendActive}
-              handleResendSaveAddrOtp={handleResendSaveAddrOtp}
-              saveAddrSatoshiPolling={saveAddrSatoshiPolling}
-              satoshiWhitelistAwaitingProof={satoshiWhitelistAwaitingProof}
-              setSatoshiDepositLoading={setSatoshiDepositLoading}
-              setSaveAddrStep={setSaveAddrStep}
-              satoshiDepositLoading={satoshiDepositLoading}
-              satoshiDepositError={satoshiDepositError}
-              handleSatoshiWhitelistSent={handleSatoshiWhitelistSent}
-              SECURITY_SHEIELD={SECURITY_SHEIELD}
-              LOCKED={LOCKED}
-              bitcoinIcon={bitcoinIcon}
-            />
-          </ScrollView>
+              <AddWithdrawalAddressVerification
+                isDark={isDark}
+                themeColors={themeColors}
+                saveAddrStep={saveAddrStep}
+                selectedSaveAddrVerifyMethod={selectedSaveAddrVerifyMethod}
+                saveAddrOtp={saveAddrOtp}
+                setSaveAddrOtp={setSaveAddrOtp}
+                saveAddrWhitelistData={saveAddrWhitelistData}
+                userData={userData}
+                saveAddrOtpTimer={saveAddrOtpTimer}
+                saveAddrResendActive={saveAddrResendActive}
+                handleResendSaveAddrOtp={handleResendSaveAddrOtp}
+                saveAddrSatoshiPolling={saveAddrSatoshiPolling}
+                satoshiWhitelistAwaitingProof={satoshiWhitelistAwaitingProof}
+                setSatoshiDepositLoading={setSatoshiDepositLoading}
+                setSaveAddrStep={setSaveAddrStep}
+                satoshiDepositLoading={satoshiDepositLoading}
+                satoshiDepositError={satoshiDepositError}
+                handleSatoshiWhitelistSent={handleSatoshiWhitelistSent}
+                SECURITY_SHEIELD={SECURITY_SHEIELD}
+                LOCKED={LOCKED}
+                bitcoinIcon={bitcoinIcon}
+              />
+            </ScrollView>
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20, paddingBottom: 10 }}>
-            <Button
-              children={saveAddrStep === "form" ? "Cancel" : "Back"}
-              containerStyle={{
-                flex: 1,
-                marginRight: 10,
-                backgroundColor: isDark ? "#333" : "#E5E7EB",
-                borderRadius: 100,
-                height: 44
-              }}
-              titleStyle={{ color: isDark ? "#FFF" : "#374151", fontWeight: "600", fontSize: 13 }}
-              onPress={() => {
-                if (saveAddrStep === "form") {
-                  saveAddressSheetRef.current?.close();
-                } else if (saveAddrStep === "owner") {
-                  setSaveAddrStep("form");
-                } else if (saveAddrStep === "other_identity") {
-                  setSaveAddrStep("owner");
-                } else if (saveAddrStep === "wallet_type") {
-                  if (saveAddrOwnership === "SELF") setSaveAddrStep("owner");
-                  else setSaveAddrStep("other_identity");
-                } else if (saveAddrStep === "exchange") {
-                  setSaveAddrStep("wallet_type");
-                } else if (saveAddrStep === "proof_select") {
-                  setSaveAddrStep("wallet_type");
-                } else if (saveAddrStep === "verify_method") {
-                  if (saveAddrWalletType === "EXCHANGE") setSaveAddrStep("exchange");
-                  else {
-                    if (saveAddrOwnership === "SELF") setSaveAddrStep("proof_select");
-                    else setSaveAddrStep("wallet_type");
-                  }
-                } else if (saveAddrStep === "otp") {
-                  setSaveAddrStep("verify_method");
-                } else if (saveAddrStep === "satoshi" || saveAddrStep === "metamask") {
-                  if (satoshiResumeMode) {
-                    setSatoshiResumeMode(false);
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20, paddingBottom: 10 }}>
+              <Button
+                children={saveAddrStep === "form" ? "Cancel" : "Back"}
+                containerStyle={{
+                  flex: 1,
+                  marginRight: 10,
+                  backgroundColor: isDark ? "#333" : "#E5E7EB",
+                  borderRadius: 100,
+                  height: 44
+                }}
+                titleStyle={{ color: isDark ? "#FFF" : "#374151", fontWeight: "600", fontSize: 13 }}
+                onPress={() => {
+                  if (saveAddrStep === "form") {
                     saveAddressSheetRef.current?.close();
-                  } else {
-                    setSaveAddrStep("otp");
+                  } else if (saveAddrStep === "owner") {
+                    setSaveAddrStep("form");
+                  } else if (saveAddrStep === "other_identity") {
+                    setSaveAddrStep("owner");
+                  } else if (saveAddrStep === "wallet_type") {
+                    if (saveAddrOwnership === "SELF") setSaveAddrStep("owner");
+                    else setSaveAddrStep("other_identity");
+                  } else if (saveAddrStep === "exchange") {
+                    setSaveAddrStep("wallet_type");
+                  } else if (saveAddrStep === "proof_select") {
+                    setSaveAddrStep("wallet_type");
+                  } else if (saveAddrStep === "verify_method") {
+                    if (saveAddrWalletType === "EXCHANGE") setSaveAddrStep("exchange");
+                    else {
+                      if (saveAddrOwnership === "SELF") setSaveAddrStep("proof_select");
+                      else setSaveAddrStep("wallet_type");
+                    }
+                  } else if (saveAddrStep === "otp") {
+                    setSaveAddrStep("verify_method");
+                  } else if (saveAddrStep === "satoshi" || saveAddrStep === "metamask") {
+                    if (satoshiResumeMode) {
+                      setSatoshiResumeMode(false);
+                      saveAddressSheetRef.current?.close();
+                    } else {
+                      setSaveAddrStep("otp");
+                    }
                   }
+                }}
+              />
+              {(() => {
+                const isNextDisabled = saveAddrBusy || (
+                  (saveAddrStep === "form" && (
+                    saveAddrLabel.trim().length < 4 ||
+                    !saveAddrCoin ||
+                    !saveAddrNetwork ||
+                    !saveAddrAddress.trim() ||
+                    saveAddrAddressValidating ||
+                    !!saveAddrAddressValidError ||
+                    !!saveAddrAddressInlineError ||
+                    saveAddrAddressValidatedKey !== withdrawalAddressValidationKey(saveAddrNetwork, saveAddrAddress, saveAddrTokenAssetId)
+                  )) ||
+                  (saveAddrStep === "owner" && !saveAddrOwnership) ||
+                  (saveAddrStep === "wallet_type" && !saveAddrWalletType) ||
+                  (saveAddrStep === "proof_select" && !saveAddrProofMethod) ||
+                  (saveAddrStep === "other_identity" && (!saveAddrBenFullName || !saveAddrBenPan || !saveAddrBenCountry || !saveAddrBenPin || !saveAddrBenAddress)) ||
+                  (saveAddrStep === "exchange" && (!saveAddrExchange || (saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER && !saveAddrExchangeManual.trim()) || !saveAddrDeclarationAccepted)) ||
+                  (saveAddrStep === "verify_method" && !selectedSaveAddrVerifyMethod) ||
+                  (saveAddrStep === "otp" && saveAddrOtp.length < 6)
+                );
+
+                let buttonText = "Next";
+                if (saveAddrStep === "verify_method" || saveAddrStep === "proof_select" || saveAddrStep === "other_identity") buttonText = "Continue";
+                else if (saveAddrStep === "otp") buttonText = "Verify";
+                else if (saveAddrStep === "satoshi") {
+                  if (saveAddrSatoshiPolling) buttonText = "Checking...";
+                  else if (satoshiWhitelistAwaitingProof) buttonText = "Check again";
+                  else buttonText = "I've sent the payment";
                 }
-              }}
-            />
-            {(() => {
-              const isNextDisabled = saveAddrBusy || (
-                (saveAddrStep === "form" && (
-                  saveAddrLabel.trim().length < 4 ||
-                  !saveAddrCoin ||
-                  !saveAddrNetwork ||
-                  !saveAddrAddress.trim() ||
-                  saveAddrAddressValidating ||
-                  !!saveAddrAddressValidError ||
-                  !!saveAddrAddressInlineError ||
-                  saveAddrAddressValidatedKey !== withdrawalAddressValidationKey(saveAddrNetwork, saveAddrAddress, saveAddrTokenAssetId)
-                )) ||
-                (saveAddrStep === "owner" && !saveAddrOwnership) ||
-                (saveAddrStep === "wallet_type" && !saveAddrWalletType) ||
-                (saveAddrStep === "proof_select" && !saveAddrProofMethod) ||
-                (saveAddrStep === "other_identity" && (!saveAddrBenFullName || !saveAddrBenPan || !saveAddrBenCountry || !saveAddrBenPin || !saveAddrBenAddress)) ||
-                (saveAddrStep === "exchange" && (!saveAddrExchange || (saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER && !saveAddrExchangeManual.trim()) || !saveAddrDeclarationAccepted)) ||
-                (saveAddrStep === "verify_method" && !selectedSaveAddrVerifyMethod) ||
-                (saveAddrStep === "otp" && saveAddrOtp.length < 6)
-              );
+                else if (saveAddrStep === "metamask") buttonText = "Sign with MetaMask";
 
-              let buttonText = "Next";
-              if (saveAddrStep === "verify_method" || saveAddrStep === "proof_select" || saveAddrStep === "other_identity") buttonText = "Continue";
-              else if (saveAddrStep === "otp") buttonText = "Verify";
-              else if (saveAddrStep === "satoshi") {
-                if (saveAddrSatoshiPolling) buttonText = "Checking...";
-                else if (satoshiWhitelistAwaitingProof) buttonText = "Check again";
-                else buttonText = "I've sent the payment";
-              }
-              else if (saveAddrStep === "metamask") buttonText = "Sign with MetaMask";
-
-              return (
-                <Button
-                  children={saveAddrBusy ? "..." : buttonText}
-                  disabled={isNextDisabled}
-                  containerStyle={{
-                    flex: 1,
-                    marginLeft: 10,
-                    backgroundColor: isNextDisabled ? (isDark ? "#222" : "#ccc") : "#111827",
-                    borderRadius: 100,
-                    height: 44,
-                    opacity: isNextDisabled ? 0.6 : 1
-                  }}
-                  titleStyle={{ color: isNextDisabled ? (isDark ? "#555" : "#666") : "#FFF", fontWeight: "600" }}
-                  onPress={async () => {
-                    if (saveAddrStep === "satoshi") {
-                      handleSatoshiWhitelistSent();
-                      return;
-                    }
-                    if (saveAddrStep === "form") {
-                      setSaveAddrStep("owner");
-                      return;
-                    }
-
-                    if (saveAddrStep === "owner") {
-                      if (saveAddrOwnership === "SELF") setSaveAddrStep("wallet_type");
-                      else setSaveAddrStep("other_identity");
-                      return;
-                    }
-
-                    if (saveAddrStep === "other_identity") {
-                      setSaveAddrStep("wallet_type");
-                      return;
-                    }
-
-                    if (saveAddrStep === "wallet_type") {
-                      if (saveAddrWalletType === "EXCHANGE") {
-                        setSaveAddrStep("exchange");
-                      } else {
-                        if (saveAddrOwnership === "SELF") setSaveAddrStep("proof_select");
-                        else {
-                          // For OTHER, self-hosted goes directly to verify_account in web?
-                          // Actually, web goes to VERIFY_ACCOUNT.
-                          setSaveAddrBusy(true);
-                          try {
-                            const res = await appOperation.customer.fetch_address_book_verification_options();
-                            if (res?.success) {
-                              const rawMethods = res?.data?.available_methods || [];
-                              const methods = rawMethods.map(m => String(m).toLowerCase());
-                              const rec = String(res?.data?.recommended || "").toLowerCase();
-
-                              setSaveAddrVerifyOptions(methods);
-                              setSaveAddrStep("verify_method");
-                              if (methods.includes("email")) {
-                                setSelectedSaveAddrVerifyMethod("email");
-                              } else if (rec && methods.includes(rec)) {
-                                setSelectedSaveAddrVerifyMethod(rec);
-                              } else if (methods.length > 0) {
-                                setSelectedSaveAddrVerifyMethod(methods[0]);
-                              }
-                              setSaveAddrResendActive(false);
-                            } else {
-                              showError(res?.message || "Could not load verification options");
-                            }
-                          } catch (e) {
-                            showError("Error loading verification options");
-                          } finally {
-                            setSaveAddrBusy(false);
-                          }
-                        }
-                      }
-                      return;
-                    }
-
-                    if (saveAddrStep === "proof_select") {
-                      setSaveAddrBusy(true);
-                      try {
-                        const res = await appOperation.customer.fetch_address_book_verification_options();
-                        if (res?.success) {
-                          const methods = res.data?.available_methods || [];
-                          const rec = res.data?.recommended;
-                          setSaveAddrVerifyOptions(methods);
-                          setSaveAddrStep("verify_method");
-                          if (methods.includes("email")) {
-                            setSelectedSaveAddrVerifyMethod("email");
-                          } else if (rec && methods.includes(rec)) {
-                            setSelectedSaveAddrVerifyMethod(rec);
-                          } else if (methods.length > 0) {
-                            setSelectedSaveAddrVerifyMethod(methods[0]);
-                          }
-                        } else {
-                          showError(res?.message || "Could not load verification options");
-                        }
-                      } catch (e) {
-                        showError("Error loading verification options");
-                      } finally {
-                        setSaveAddrBusy(false);
-                      }
-                      return;
-                    }
-
-                    if (saveAddrStep === "exchange") {
-                      if (!saveAddrExchange) {
-                        showError("Please select an exchange");
+                return (
+                  <Button
+                    children={saveAddrBusy ? "..." : buttonText}
+                    disabled={isNextDisabled}
+                    containerStyle={{
+                      flex: 1,
+                      marginLeft: 10,
+                      backgroundColor: isNextDisabled ? (isDark ? "#222" : "#ccc") : "#111827",
+                      borderRadius: 100,
+                      height: 44,
+                      opacity: isNextDisabled ? 0.6 : 1
+                    }}
+                    titleStyle={{ color: isNextDisabled ? (isDark ? "#555" : "#666") : "#FFF", fontWeight: "600" }}
+                    onPress={async () => {
+                      if (saveAddrStep === "satoshi") {
+                        handleSatoshiWhitelistSent();
                         return;
                       }
-                      setSaveAddrBusy(true);
-                      try {
-                        const res = await appOperation.customer.fetch_address_book_verification_options();
-                        if (res?.success) {
-                          const methods = res.data?.available_methods || [];
-                          const rec = res.data?.recommended;
-                          setSaveAddrVerifyOptions(methods);
-                          setSaveAddrStep("verify_method");
-                          if (methods.includes("email")) {
-                            setSelectedSaveAddrVerifyMethod("email");
-                          } else if (rec && methods.includes(rec)) {
-                            setSelectedSaveAddrVerifyMethod(rec);
-                          } else if (methods.length > 0) {
-                            setSelectedSaveAddrVerifyMethod(methods[0]);
-                          }
-                        } else {
-                          showError(res?.message || "Could not load verification options");
-                        }
-                      } catch (e) {
-                        showError("Error loading verification options");
-                      } finally {
-                        setSaveAddrBusy(false);
+                      if (saveAddrStep === "form") {
+                        setSaveAddrStep("owner");
+                        return;
                       }
-                      return;
-                    }
 
-                    if (saveAddrStep === "verify_method") {
-                      let method = selectedSaveAddrVerifyMethod || (saveAddrVerifyOptions.includes("email") ? "email" : (saveAddrVerifyOptions.includes("mobile") ? "mobile" : saveAddrVerifyOptions[0]));
-                      if (!method) method = "email"; // Hard fallback
+                      if (saveAddrStep === "owner") {
+                        if (saveAddrOwnership === "SELF") setSaveAddrStep("wallet_type");
+                        else setSaveAddrStep("other_identity");
+                        return;
+                      }
 
-                      if (method === "email" || method === "mobile") {
-                        setSaveAddrBusy(true);
-                        setSaveAddrOtpTimer(60);
-                        setSaveAddrResendActive(false);
-                        try {
-                          // Try primary endpoint first (Web parity)
-                          let res = await appOperation.customer.send_address_book_verification_otp({ method });
+                      if (saveAddrStep === "other_identity") {
+                        setSaveAddrStep("wallet_type");
+                        return;
+                      }
 
-                          // Fallback to security OTP if primary fails
-                          if (!res?.success) {
-                            res = await appOperation.customer.withdrawal_verification_otp({ method });
+                      if (saveAddrStep === "wallet_type") {
+                        if (saveAddrWalletType === "EXCHANGE") {
+                          setSaveAddrStep("exchange");
+                        } else {
+                          if (saveAddrOwnership === "SELF") setSaveAddrStep("proof_select");
+                          else {
+                            // For OTHER, self-hosted goes directly to verify_account in web?
+                            // Actually, web goes to VERIFY_ACCOUNT.
+                            setSaveAddrBusy(true);
+                            try {
+                              const res = await appOperation.customer.fetch_address_book_verification_options();
+                              if (res?.success) {
+                                const rawMethods = res?.data?.available_methods || [];
+                                const methods = rawMethods.map(m => String(m).toLowerCase());
+                                const rec = String(res?.data?.recommended || "").toLowerCase();
+
+                                setSaveAddrVerifyOptions(methods);
+                                setSaveAddrStep("verify_method");
+                                if (methods.includes("email")) {
+                                  setSelectedSaveAddrVerifyMethod("email");
+                                } else if (rec && methods.includes(rec)) {
+                                  setSelectedSaveAddrVerifyMethod(rec);
+                                } else if (methods.length > 0) {
+                                  setSelectedSaveAddrVerifyMethod(methods[0]);
+                                }
+                                setSaveAddrResendActive(false);
+                              } else {
+                                showError(res?.message || "Could not load verification options");
+                              }
+                            } catch (e) {
+                              showError("Error loading verification options");
+                            } finally {
+                              setSaveAddrBusy(false);
+                            }
                           }
+                        }
+                        return;
+                      }
 
+                      if (saveAddrStep === "proof_select") {
+                        setSaveAddrBusy(true);
+                        try {
+                          const res = await appOperation.customer.fetch_address_book_verification_options();
                           if (res?.success) {
-                            showSuccess(res.message || "Verification code sent");
-                            setSaveAddrOtp(""); // Ensure field is empty for new code
-                            setSaveAddrStep("otp");
+                            const methods = res.data?.available_methods || [];
+                            const rec = res.data?.recommended;
+                            setSaveAddrVerifyOptions(methods);
+                            setSaveAddrStep("verify_method");
+                            if (methods.includes("email")) {
+                              setSelectedSaveAddrVerifyMethod("email");
+                            } else if (rec && methods.includes(rec)) {
+                              setSelectedSaveAddrVerifyMethod(rec);
+                            } else if (methods.length > 0) {
+                              setSelectedSaveAddrVerifyMethod(methods[0]);
+                            }
                           } else {
-                            showError(res?.message || "Could not send verification code");
+                            showError(res?.message || "Could not load verification options");
                           }
                         } catch (e) {
-                          showError("Error sending verification code");
+                          showError("Error loading verification options");
                         } finally {
                           setSaveAddrBusy(false);
                         }
-                      } else {
-                        setSaveAddrOtp(""); // Ensure field is empty
-                        setSaveAddrStep("otp");
-                      }
-                      return;
-                    }
-
-                    if (saveAddrStep === "otp") {
-                      if (!saveAddrOtp.trim()) {
-                        showError("Please enter verification code");
                         return;
                       }
-                      setSaveAddrBusy(true);
-                      try {
-                        const method = selectedSaveAddrVerifyMethod || (saveAddrVerifyOptions.includes("email") ? "email" : (saveAddrVerifyOptions.includes("mobile") ? "mobile" : saveAddrVerifyOptions[0])) || "email";
-                        const coinObj = withdrawCoinsList.find(c => String(c.short_name).toUpperCase() === String(saveAddrCoin).toUpperCase());
 
-                        let tId = "";
-                        if (coinObj?.networks) {
-                          // Find the network object that matches the selected chain (saveAddrNetwork)
-                          const net = coinObj.networks.find(n =>
-                            String(n.code).toUpperCase() === String(saveAddrNetwork).toUpperCase() ||
-                            String(n.short_name).toUpperCase() === String(saveAddrNetwork).toUpperCase()
-                          );
-                          if (net) {
-                            tId = net.tokenAssetId || net.assetId || net.id;
-                          }
+                      if (saveAddrStep === "exchange") {
+                        if (!saveAddrExchange) {
+                          showError("Please select an exchange");
+                          return;
                         }
-
-                        // Fallback to token_asset_ids if networks list doesn't yield an ID
-                        if (!tId && coinObj?.token_asset_ids) {
-                          const targetNet = String(saveAddrNetwork).toUpperCase();
-                          tId = coinObj.token_asset_ids[saveAddrNetwork] || coinObj.token_asset_ids[targetNet];
-                          if (!tId) {
-                            const fuzzyKey = Object.keys(coinObj.token_asset_ids).find(k =>
-                              k.toUpperCase().includes(targetNet) || targetNet.includes(k.toUpperCase())
-                            );
-                            if (fuzzyKey) tId = coinObj.token_asset_ids[fuzzyKey];
-                          }
-                        }
-                        const resolvedAssetId = tId || saveAddrNetwork;
-
-                        const payload = {
-                          label: saveAddrLabel,
-                          coin: saveAddrCoin,
-                          chain: canonicalWithdrawalChainForValidateAddress(saveAddrNetwork),
-                          address: saveAddrAddress,
-                          memo: saveAddrMemo,
-                          ownership: saveAddrOwnership === "SELF" ? "SELF" : "OTHER",
-                          wallet_type: saveAddrWalletType === "SELF_HOSTED" ? "NON_CUSTODIAL" : "CUSTODIAL",
-                          exchange_name: saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? saveAddrExchangeManual.trim() : saveAddrExchange,
-                          ...(saveAddrOwnership === "OTHER" ? {
-                            other_person: {
-                              full_name: saveAddrBenFullName.trim(),
-                              national_id: saveAddrBenPan.trim(),
-                              country: saveAddrBenCountry.trim(),
-                              pincode: saveAddrBenPin.trim(),
-                              full_address: saveAddrBenAddress.trim(),
-                            }
-                          } : {}),
-                          verification_method: method,
-                          method: saveAddrProofMethod || "SATOSHI",
-                          verification_code: String(saveAddrOtp).trim(),
-                          tokenAssetId: resolvedAssetId
-                        };
-                        console.warn("[API] Initiate Whitelist Payload:", JSON.stringify(payload, null, 2));
-                        const res = await appOperation.customer.initiate_address_book_whitelist(payload);
-                        console.warn("[API] Whitelist Response:", JSON.stringify(res, null, 2));
-                        if (res?.success) {
-                          const d = res.data?.data || res.data || {};
-                          if (d.status?.toUpperCase() === "APPROVED") {
-                            showSuccess("Address added and verified successfully.");
-                            saveAddressSheetRef.current?.close();
-                            const res2 = await appOperation.customer.get_wallet_address_book();
-                            if (res2?.success && res2?.data) {
-                              const list = Array.isArray(res2.data) ? res2.data : (res2.data.rows || res2.data.addresses || []);
-                              setAddressBookEntries(list);
+                        setSaveAddrBusy(true);
+                        try {
+                          const res = await appOperation.customer.fetch_address_book_verification_options();
+                          if (res?.success) {
+                            const methods = res.data?.available_methods || [];
+                            const rec = res.data?.recommended;
+                            setSaveAddrVerifyOptions(methods);
+                            setSaveAddrStep("verify_method");
+                            if (methods.includes("email")) {
+                              setSelectedSaveAddrVerifyMethod("email");
+                            } else if (rec && methods.includes(rec)) {
+                              setSelectedSaveAddrVerifyMethod(rec);
+                            } else if (methods.length > 0) {
+                              setSelectedSaveAddrVerifyMethod(methods[0]);
                             }
                           } else {
-                            // Web Parity: Attach resolvedAssetId and shortName manually
-                            const flowData = {
-                              ...d,
-                              tokenAssetId: resolvedAssetId,
-                              shortName: saveAddrCoin
-                            };
-                            setSaveAddrWhitelistData(flowData);
+                            showError(res?.message || "Could not load verification options");
+                          }
+                        } catch (e) {
+                          showError("Error loading verification options");
+                        } finally {
+                          setSaveAddrBusy(false);
+                        }
+                        return;
+                      }
 
-                            const method = String(d.method || "").toUpperCase();
-                            if (method === "SATOSHI") {
-                              setSaveAddrStep("satoshi");
-                              setSatoshiDepositLoading(true);
+                      if (saveAddrStep === "verify_method") {
+                        let method = selectedSaveAddrVerifyMethod || (saveAddrVerifyOptions.includes("email") ? "email" : (saveAddrVerifyOptions.includes("mobile") ? "mobile" : saveAddrVerifyOptions[0]));
+                        if (!method) method = "email"; // Hard fallback
 
-                              const coinObj = withdrawCoinsList.find(c => (c.coin || c.short_name || "").toUpperCase() === String(saveAddrCoin).toUpperCase());
-                              let finalId = resolvedAssetId;
+                        if (method === "email" || method === "mobile") {
+                          setSaveAddrBusy(true);
+                          setSaveAddrOtpTimer(60);
+                          setSaveAddrResendActive(false);
+                          try {
+                            // Try primary endpoint first (Web parity)
+                            let res = await appOperation.customer.send_address_book_verification_otp({ method });
 
-                              if (coinObj && d.proof_chain) {
-                                const targetNet = String(d.proof_chain).toUpperCase();
-                                // Priority 1: Check networks array for exact match or fuzzy match
-                                const net = coinObj.networks?.find(n =>
-                                  String(n.code).toUpperCase() === targetNet ||
-                                  String(n.short_name).toUpperCase() === targetNet ||
-                                  String(n.tokenAssetId || "").toUpperCase().includes(targetNet)
-                                );
-
-                                if (net?.tokenAssetId || net?.assetId) {
-                                  finalId = net.tokenAssetId || net.assetId;
-                                } else if (coinObj.token_asset_ids?.[d.proof_chain]) {
-                                  finalId = coinObj.token_asset_ids[d.proof_chain];
-                                } else {
-                                  finalId = coinObj.coin || coinObj.short_name || targetNet;
-                                }
-                              }
-
-                              (async () => {
-                                try {
-                                  console.warn("[DEBUG] Fetching address for:", finalId);
-                                  const addrRes = await appOperation.customer.get_and_generate_address({
-                                    assetId: finalId,
-                                    tokenAssetId: finalId,
-                                    short_name: saveAddrCoin,
-                                    generate: true
-                                  });
-                                  console.warn("[API] Satoshi Address Response:", JSON.stringify(addrRes, null, 2));
-                                  if (addrRes?.success) {
-                                    const dr = addrRes.data?.data || addrRes.data || {};
-                                    const raw = dr.deposit_address || dr.address || dr.wallet_address || dr.walletAddress || dr.depositAddress || "";
-                                    const mem = dr.memo || dr.tag || dr.destinationTag || dr.memoTag || "";
-                                    if (raw) {
-                                      setSaveAddrWhitelistData(prev => ({
-                                        ...prev,
-                                        deposit_address: String(raw),
-                                        address: String(raw),
-                                        memo: String(mem)
-                                      }));
-                                    }
-                                  }
-                                } catch (e) {
-                                  console.warn("Satoshi fetch failed", e);
-                                } finally {
-                                  setSatoshiDepositLoading(false);
-                                }
-                              })();
-                            } else if (method === "METAMASK") {
-                              setSaveAddrStep("metamask");
-                            } else {
-                              showSuccess("Address verification initiated.");
-                              saveAddressSheetRef.current?.close();
+                            // Fallback to security OTP if primary fails
+                            if (!res?.success) {
+                              res = await appOperation.customer.withdrawal_verification_otp({ method });
                             }
+
+                            if (res?.success) {
+                              showSuccess(res.message || "Verification code sent");
+                              setSaveAddrOtp(""); // Ensure field is empty for new code
+                              setSaveAddrStep("otp");
+                            } else {
+                              showError(res?.message || "Could not send verification code");
+                            }
+                          } catch (e) {
+                            showError("Error sending verification code");
+                          } finally {
+                            setSaveAddrBusy(false);
                           }
                         } else {
-                          showError(res?.message || "Verification failed");
+                          setSaveAddrOtp(""); // Ensure field is empty
+                          setSaveAddrStep("otp");
                         }
-                      } catch (e) {
-                        showError(e?.message || "Error saving address");
-                      } finally {
-                        setSaveAddrBusy(false);
+                        return;
                       }
-                      return;
-                    }
 
-                    if (saveAddrStep === "metamask") {
-                      const dappUrl = "arabglobalexchange.com/wallet/withdraw";
-                      const metamaskDeepLink = `https://metamask.app.link/dapp/${dappUrl}`;
-
-                      Linking.canOpenURL(metamaskDeepLink).then(supported => {
-                        if (supported) {
-                          Linking.openURL(metamaskDeepLink);
-                        } else {
-                          // Redirect to store if not installed
-                          const storeUrl = Platform.OS === 'ios'
-                            ? 'https://apps.apple.com/app/metamask/id1438144202'
-                            : 'https://play.google.com/store/apps/details?id=io.metamask';
-                          Linking.openURL(storeUrl);
+                      if (saveAddrStep === "otp") {
+                        if (!saveAddrOtp.trim()) {
+                          showError("Please enter verification code");
+                          return;
                         }
-                      }).catch(() => {
-                        showError("Could not open MetaMask. Please ensure it is installed.");
-                      });
-                      return;
-                    }
-                  }}
-                />
-              );
-            })()}
+                        setSaveAddrBusy(true);
+                        try {
+                          const method = selectedSaveAddrVerifyMethod || (saveAddrVerifyOptions.includes("email") ? "email" : (saveAddrVerifyOptions.includes("mobile") ? "mobile" : saveAddrVerifyOptions[0])) || "email";
+                          const coinObj = withdrawCoinsList.find(c => String(c.short_name).toUpperCase() === String(saveAddrCoin).toUpperCase());
+
+                          let tId = "";
+                          if (coinObj?.networks) {
+                            // Find the network object that matches the selected chain (saveAddrNetwork)
+                            const net = coinObj.networks.find(n =>
+                              String(n.code).toUpperCase() === String(saveAddrNetwork).toUpperCase() ||
+                              String(n.short_name).toUpperCase() === String(saveAddrNetwork).toUpperCase()
+                            );
+                            if (net) {
+                              tId = net.tokenAssetId || net.assetId || net.id;
+                            }
+                          }
+
+                          // Fallback to token_asset_ids if networks list doesn't yield an ID
+                          if (!tId && coinObj?.token_asset_ids) {
+                            const targetNet = String(saveAddrNetwork).toUpperCase();
+                            tId = coinObj.token_asset_ids[saveAddrNetwork] || coinObj.token_asset_ids[targetNet];
+                            if (!tId) {
+                              const fuzzyKey = Object.keys(coinObj.token_asset_ids).find(k =>
+                                k.toUpperCase().includes(targetNet) || targetNet.includes(k.toUpperCase())
+                              );
+                              if (fuzzyKey) tId = coinObj.token_asset_ids[fuzzyKey];
+                            }
+                          }
+                          const resolvedAssetId = tId || saveAddrNetwork;
+
+                          const payload = {
+                            label: saveAddrLabel,
+                            coin: saveAddrCoin,
+                            chain: canonicalWithdrawalChainForValidateAddress(saveAddrNetwork),
+                            address: saveAddrAddress,
+                            memo: saveAddrMemo,
+                            ownership: saveAddrOwnership === "SELF" ? "SELF" : "OTHER",
+                            wallet_type: saveAddrWalletType === "SELF_HOSTED" ? "NON_CUSTODIAL" : "CUSTODIAL",
+                            exchange_name: saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? saveAddrExchangeManual.trim() : saveAddrExchange,
+                            ...(saveAddrOwnership === "OTHER" ? {
+                              other_person: {
+                                full_name: saveAddrBenFullName.trim(),
+                                national_id: saveAddrBenPan.trim(),
+                                country: saveAddrBenCountry.trim(),
+                                pincode: saveAddrBenPin.trim(),
+                                full_address: saveAddrBenAddress.trim(),
+                              }
+                            } : {}),
+                            verification_method: method,
+                            method: saveAddrProofMethod || "SATOSHI",
+                            verification_code: String(saveAddrOtp).trim(),
+                            tokenAssetId: resolvedAssetId
+                          };
+                          console.warn("[API] Initiate Whitelist Payload:", JSON.stringify(payload, null, 2));
+                          const res = await appOperation.customer.initiate_address_book_whitelist(payload);
+                          console.warn("[API] Whitelist Response:", JSON.stringify(res, null, 2));
+                          if (res?.success) {
+                            const d = res.data?.data || res.data || {};
+                            if (d.status?.toUpperCase() === "APPROVED") {
+                              showSuccess("Address added and verified successfully.");
+                              saveAddressSheetRef.current?.close();
+                              const res2 = await appOperation.customer.get_wallet_address_book();
+                              if (res2?.success && res2?.data) {
+                                const list = Array.isArray(res2.data) ? res2.data : (res2.data.rows || res2.data.addresses || []);
+                                setAddressBookEntries(list);
+                              }
+                            } else {
+                              // Web Parity: Attach resolvedAssetId and shortName manually
+                              const flowData = {
+                                ...d,
+                                tokenAssetId: resolvedAssetId,
+                                shortName: saveAddrCoin
+                              };
+                              setSaveAddrWhitelistData(flowData);
+
+                              const method = String(d.method || "").toUpperCase();
+                              if (method === "SATOSHI") {
+                                setSaveAddrStep("satoshi");
+                                setSatoshiDepositLoading(true);
+
+                                const coinObj = withdrawCoinsList.find(c => (c.coin || c.short_name || "").toUpperCase() === String(saveAddrCoin).toUpperCase());
+                                let finalId = resolvedAssetId;
+
+                                if (coinObj && d.proof_chain) {
+                                  const targetNet = String(d.proof_chain).toUpperCase();
+                                  // Priority 1: Check networks array for exact match or fuzzy match
+                                  const net = coinObj.networks?.find(n =>
+                                    String(n.code).toUpperCase() === targetNet ||
+                                    String(n.short_name).toUpperCase() === targetNet ||
+                                    String(n.tokenAssetId || "").toUpperCase().includes(targetNet)
+                                  );
+
+                                  if (net?.tokenAssetId || net?.assetId) {
+                                    finalId = net.tokenAssetId || net.assetId;
+                                  } else if (coinObj.token_asset_ids?.[d.proof_chain]) {
+                                    finalId = coinObj.token_asset_ids[d.proof_chain];
+                                  } else {
+                                    finalId = coinObj.coin || coinObj.short_name || targetNet;
+                                  }
+                                }
+
+                                (async () => {
+                                  try {
+                                    console.warn("[DEBUG] Fetching address for:", finalId);
+                                    const addrRes = await appOperation.customer.get_and_generate_address({
+                                      assetId: finalId,
+                                      tokenAssetId: finalId,
+                                      short_name: saveAddrCoin,
+                                      generate: true
+                                    });
+                                    console.warn("[API] Satoshi Address Response:", JSON.stringify(addrRes, null, 2));
+                                    if (addrRes?.success) {
+                                      const dr = addrRes.data?.data || addrRes.data || {};
+                                      const raw = dr.deposit_address || dr.address || dr.wallet_address || dr.walletAddress || dr.depositAddress || "";
+                                      const mem = dr.memo || dr.tag || dr.destinationTag || dr.memoTag || "";
+                                      if (raw) {
+                                        setSaveAddrWhitelistData(prev => ({
+                                          ...prev,
+                                          deposit_address: String(raw),
+                                          address: String(raw),
+                                          memo: String(mem)
+                                        }));
+                                      }
+                                    }
+                                  } catch (e) {
+                                    console.warn("Satoshi fetch failed", e);
+                                  } finally {
+                                    setSatoshiDepositLoading(false);
+                                  }
+                                })();
+                              } else if (method === "METAMASK") {
+                                setSaveAddrStep("metamask");
+                              } else {
+                                showSuccess("Address verification initiated.");
+                                saveAddressSheetRef.current?.close();
+                              }
+                            }
+                          } else {
+                            showError(res?.message || "Verification failed");
+                          }
+                        } catch (e) {
+                          showError(e?.message || "Error saving address");
+                        } finally {
+                          setSaveAddrBusy(false);
+                        }
+                        return;
+                      }
+
+                      if (saveAddrStep === "metamask") {
+                        const dappUrl = "arabglobalexchange.com/wallet/withdraw";
+                        const metamaskDeepLink = `https://metamask.app.link/dapp/${dappUrl}`;
+
+                        Linking.canOpenURL(metamaskDeepLink).then(supported => {
+                          if (supported) {
+                            Linking.openURL(metamaskDeepLink);
+                          } else {
+                            // Redirect to store if not installed
+                            const storeUrl = Platform.OS === 'ios'
+                              ? 'https://apps.apple.com/app/metamask/id1438144202'
+                              : 'https://play.google.com/store/apps/details?id=io.metamask';
+                            Linking.openURL(storeUrl);
+                          }
+                        }).catch(() => {
+                          showError("Could not open MetaMask. Please ensure it is installed.");
+                        });
+                      }
+                    }}
+                  />
+                );
+              })()}
+            </View>
           </View>
         </View>
-      </View>
-    </RBSheet>
+      </RBSheet>
+
+      {/* KYC Mandatory Modal - Redesigned to match reference */}
+      <Modal
+        visible={showKycModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 20 }}>
+          <View style={{
+            backgroundColor: themeColors.background,
+            width: "100%",
+            borderRadius: 10,
+            padding: 10,
+            alignItems: "center",
+            position: "relative",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.1,
+            shadowRadius: 20,
+            elevation: 10,
+          }}>
+            {/* Close Button */}
+            <TouchableOpacity
+              onPress={() => {
+                setShowKycModal(false);
+                NavigationService.goBack();
+              }}
+              style={{ position: "absolute", right: 20, top: 20, zIndex: 10 }}
+            >
+              <AppText type={TWENTY} style={{ color: themeColors.text }}>✕</AppText>
+            </TouchableOpacity>
+
+            {/* Illustration */}
+            <FastImage
+              source={account_restrictions}
+              style={{ width: 150, height: 150, marginBottom: 10 }}
+              resizeMode="contain"
+            />
+
+            <AppText type={FIFTEEN} weight={BOLD} style={{ color: themeColors.text, textAlign: "center", marginBottom: 12 }}>
+              Identity verification required
+            </AppText>
+
+            <AppText type={FOURTEEN} color={themeColors.secondaryText} style={{ textAlign: "center", lineHeight: 22, marginBottom: 32, paddingHorizontal: 10 }}>
+              To withdraw crypto you must complete identity verification (KYC). Use the button below to open Identification in your profile. When your KYC status is verified, you can complete your withdrawal here.
+            </AppText>
+
+            <TouchableOpacity
+              onPress={() => {
+                setShowKycModal(false);
+                NavigationService.navigate(KYC_STATUS_SCREEN);
+              }}
+              style={{
+                backgroundColor: "#22252D",
+                height: 56,
+                borderRadius: 28,
+                justifyContent: "center",
+                alignItems: "center",
+                width: "90%"
+              }}
+            >
+              <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: colors.white }}>Verify now</AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
     </AppSafeAreaView>
   );

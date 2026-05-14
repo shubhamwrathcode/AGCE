@@ -5,12 +5,14 @@ import {
   AppText,
   BOLD,
   Button,
+  DISCLAIMTEXT,
   EIGHTEEN,
   ELEVEN,
   Header,
   MEDIUM,
   SEMI_BOLD,
   TWELVE,
+  TWENTY,
   WHITE,
   YELLOW,
 } from "../../shared";
@@ -47,6 +49,8 @@ import {
   static_coin,
   static_coin1,
   static_coin2,
+  eye_close_icon,
+  eye_open_icon,
 } from "../../helper/ImageAssets";
 import {
   getBannerList,
@@ -68,12 +72,13 @@ import {
   getUserWallet,
   getWalletHistory,
   getWalletType,
+  getAllWalletsPortfolio,
 } from "../../actions/walletActions";
 import { getVersion } from "react-native-device-info";
 import { setLoading } from "../../slices/authSlice";
 import HeaderTop from "../../shared/components/HeaderTop";
 import FastImage from "react-native-fast-image";
-import { KYC_STATUS_SCREEN, SEARCH_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
+import { KYC_STATUS_SCREEN, SEARCH_SCREEN, WALLET_SCREEN, DEPOSIT_COIN_SCREEN } from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
 import { colors, lightTheme } from "../../theme/colors";
 import { SocketContext } from "../../SocketProvider";
@@ -90,6 +95,50 @@ const Home = () => {
   const userData = useAppSelector((state) => state.auth.userData);
   const { kycVerified } = userData ?? "";
   const [CheckCurrent, setCheckCurrent] = useState(getVersion());
+  const [showBalance, setShowBalance] = useState(true);
+
+  const walletBalance = useAppSelector((state) => state.wallet.walletBalance);
+
+  const formatEstimateHeader = useCallback((value, decimals = 2) => {
+    if (value === undefined || value === null || value === "") return "—";
+    const num = Number(value);
+    if (!Number.isFinite(num)) return "—";
+    return String(parseFloat(num.toFixed(decimals)));
+  }, []);
+
+  const portfolioUsdtEstimate = useCallback((p) => {
+    if (!p || typeof p !== "object") return undefined;
+    return (
+      p.estimated_total_usdt ??
+      p.dollarPrice ??
+      p.estimatedTotalUsdt ??
+      p.estimated_total ??
+      p.total_usdt
+    );
+  }, []);
+
+  const portfolioPreferredCurrency = useCallback((p) => {
+    if (!p || typeof p !== "object") return "USD";
+    return (
+      p.currency_prefrence ??
+      p.currency_preference ??
+      p.preferred_currency ??
+      p.Currency ??
+      "USD"
+    );
+  }, []);
+
+  const portfolioPreferredAmount = useCallback((p) => {
+    if (!p || typeof p !== "object") return undefined;
+    const cur = portfolioPreferredCurrency(p);
+    const byKey = cur && Object.prototype.hasOwnProperty.call(p, cur) ? p[cur] : undefined;
+    const pref =
+      p.estimated_total_preferred ??
+      p.estimatedTotalPreferred ??
+      p.currencyPrice ??
+      byKey;
+    return pref != null && pref !== "" ? pref : portfolioUsdtEstimate(p);
+  }, [portfolioPreferredCurrency, portfolioUsdtEstimate]);
 
   const socketContextVars = useContext(SocketContext) || {};
   const { subscribeToMarket, unsubscribeFromMarket } = socketContextVars;
@@ -131,6 +180,7 @@ const Home = () => {
     dispatch(getUserOptionsWallet("options"));
     dispatch(getFavoriteArray());
     dispatch(getNotificationList());
+    dispatch(getAllWalletsPortfolio({ useGlobalLoader: false }));
   }, [dispatch]);
 
   useEffect(() => {
@@ -199,6 +249,57 @@ const Home = () => {
               🔥 Trade Smart. Grow Faster.
             </AppText>
           </TouchableOpacity>
+          <View
+            style={{
+              marginTop: 12,
+              paddingHorizontal: 20,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <AppText color={DISCLAIMTEXT}>Estimated Balance</AppText>
+                <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
+                  <FastImage
+                    source={showBalance ? eye_close_icon : eye_open_icon}
+                    resizeMode="contain"
+                    style={{ width: 14, height: 14 }}
+                    tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ marginTop: 5 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+                  <AppText type={TWENTY} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                    {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5)}{" "}
+                  </AppText>
+                  <AppText color={DISCLAIMTEXT} style={{ top: 5 }}>
+                    {portfolioPreferredCurrency(walletBalance)}
+                  </AppText>
+                </View>
+                <View style={{ marginTop: 6 }}>
+                  <AppText color={DISCLAIMTEXT}>
+                    ≈ {!showBalance ? "****" : formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5)} USD
+                  </AppText>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
+              style={{
+                backgroundColor: '#303236',
+                paddingHorizontal: 20,
+                paddingVertical: 8,
+                borderRadius: 20,
+              }}
+            >
+              <AppText weight={SEMI_BOLD} style={{ color: colors.white }}>Deposit</AppText>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {(kycVerified === 0 || kycVerified === 3) && (
