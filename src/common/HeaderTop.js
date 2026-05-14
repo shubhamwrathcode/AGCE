@@ -56,8 +56,8 @@ const HeaderTop = () => {
           style={[styles.avatarContainer, { borderColor: themeColors.border }]}
         >
           <FastImage
-            source={avatarSource}
-            defaultSource={defaultPic}
+            source={defaultPic}
+            // defaultSource={defaultPic}
             resizeMode="cover"
             style={styles.avatar}
           />
