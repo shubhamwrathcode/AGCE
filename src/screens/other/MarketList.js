@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, Dimensions } from "react-native";
-import { AppText, BOLD, ELEVEN, FOURTEEN, MEDIUM, SEMI_BOLD, TEN, THIRTEEN, TWELVE } from "../../shared";
+import { AppText, BOLD, ELEVEN, FOURTEEN, MEDIUM, NORMAL, SEMI_BOLD, TEN, THIRTEEN, TWELVE } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
   NO_NOTIFICATION_ICON,
@@ -66,8 +66,8 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
       >
         <View style={styles.nameCol}>
           <View style={styles.nameRowHomeTab}>
-            {/* {!hideStar && (
-              <TouchableOpacity onPress={handleAddFav} activeOpacity={0.7} style={styles.starBtnHomeTab}>
+            {!hideStar && (
+              <TouchableOpacity onPress={() => onToggleFavorite(item?._id)} activeOpacity={0.7} style={styles.starBtnHomeTab}>
                 <FastImage
                   source={isFavorite ? starFillIcon : starIcon}
                   resizeMode="contain"
@@ -75,7 +75,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
                   tintColor={isFavorite ? colors.starColor : themeColors.secondaryText}
                 />
               </TouchableOpacity>
-            )} */}
+            )}
             <View style={[styles.iconCircleHomeTab, {}]}>
               {iconUri ? (
                 <FastImage source={{ uri: iconUri }} resizeMode="contain" style={styles.coinIconHomeTab} />
@@ -84,10 +84,10 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
               )}
             </View>
             <View style={styles.nameBlock}>
-              <AppText numberOfLines={1} weight={SEMI_BOLD} type={THIRTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
+              <AppText numberOfLines={1} weight={SEMI_BOLD} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
                 {fullName}
               </AppText>
-              <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
+              <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
                 {ticker}
               </AppText>
             </View>
@@ -95,10 +95,10 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
         </View>
 
         <View style={styles.priceCol}>
-          <AppText numberOfLines={1} weight={SEMI_BOLD} type={THIRTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} type={TWELVE} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
             {String(last)}
           </AppText>
-          <AppText numberOfLines={1} weight={SEMI_BOLD} type={TWELVE} style={[styles.coinListPriceSub, { color: '#9CA3AF' }]}>
+          <AppText numberOfLines={1} weight={MEDIUM} type={TEN} style={[styles.coinListPriceSub, { color: '#9CA3AF' }]}>
             ${String(sub)}
           </AppText>
         </View>
@@ -128,8 +128,8 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
     >
       <View style={styles.nameCol}>
         <View style={styles.nameRow}>
-          {/* {!hideStar && (
-            <TouchableOpacity onPress={handleAddFav} activeOpacity={0.7} style={styles.starBtn}>
+          {!hideStar && (
+            <TouchableOpacity onPress={() => onToggleFavorite(item?._id)} activeOpacity={0.7} style={styles.starBtn}>
               <FastImage
                 source={isFavorite ? starFillIcon : starIcon}
                 resizeMode="contain"
@@ -137,17 +137,17 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
                 tintColor={isFavorite ? colors.starColor : themeColors.secondaryText}
               />
             </TouchableOpacity>
-          )} */}
+          )}
           {iconUri ? (
             <FastImage source={{ uri: iconUri }} resizeMode="cover" style={styles.coinIcon} />
           ) : (
             <View style={[styles.coinIcon, styles.coinIconPlaceholder, { backgroundColor: themeColors.card }]} />
           )}
           <View style={styles.nameBlock}>
-            <AppText numberOfLines={1} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text, fontFamily: fontFamilySemiBold }]}>
+            <AppText numberOfLines={1} weight={SEMI_BOLD} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
               {fullName}
             </AppText>
-            <AppText numberOfLines={1} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
+            <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
               {ticker}
             </AppText>
           </View>
@@ -155,10 +155,10 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
       </View>
 
       <View style={styles.priceCol}>
-        <Text numberOfLines={1} type={THIRTEEN} style={[styles.lastPrice, { color: themeColors.text, fontFamily: fontFamilySemiBold }]}>
+        <AppText numberOfLines={1} weight={SEMI_BOLD} type={TWELVE} style={[styles.lastPrice, { color: themeColors.text }]}>
           {priceStr}
-        </Text>
-        <AppText numberOfLines={1} type={TWELVE} weight={MEDIUM} style={[styles.inrPrice, { color: themeColors.secondaryText, }]}>
+        </AppText>
+        <AppText numberOfLines={1} type={TEN} weight={MEDIUM} style={[styles.inrPrice, { color: themeColors.secondaryText, }]}>
           {subPriceStr}
         </AppText>
       </View>
@@ -187,17 +187,20 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
 
 MarketRow.displayName = "MarketRow";
 
-const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = true, pairTypography, hideStar = false }) => {
+const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = true, pairTypography, hideStar = false, favoriteArray: propsFavoriteArray, onToggleFavorite }) => {
   const { colors: themeColors, isDark } = useTheme();
   const rowHeight = pairTypography === "homeTab" ? ROW_HEIGHT_HOME_TAB : ROW_HEIGHT_DEFAULT;
   const dispatch = useDispatch();
-  const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
+  const favoriteArrayFromRedux = useAppSelector((state) => state.home.favoriteArray);
+  const favoriteArray = propsFavoriteArray || favoriteArrayFromRedux;
 
   const handleAddFav = useCallback(
     (id) => {
-      dispatch(addToFavorites({ pair_id: id }));
+      if (onToggleFavorite) {
+        onToggleFavorite(id);
+      }
     },
-    [dispatch]
+    [onToggleFavorite]
   );
 
   const handlePress = useCallback(
@@ -228,18 +231,19 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
       return (
         <View style={[styles.tableHeader, styles.tableHeaderHomeTab, { borderBottomColor: "transparent", }]}>
           <AppText
-            numberOfLines={1}
             weight={MEDIUM}
-            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { flex: 1.2, color: '#9CA3AF', left: 6 }]}
+            numberOfLines={1}
+            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { flex: 1.2, color: '#9CA3AF', left: 0 }]}
           >
             Symbol
           </AppText>
           <AppText
+            weight={MEDIUM}
             numberOfLines={1}
             style={[
               styles.tableHeaderText,
               styles.tableHeaderTextNoMargin,
-              { flex: 1, textAlign: "right", color: themeColors.secondaryText },
+              { flex: 1, textAlign: "right", color: '#9CA3AF' },
             ]}
           >
             Last Price
@@ -247,8 +251,9 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
           <View style={styles.headerChgWrap}>
             <View style={styles.headerChgInner}>
               <AppText
+                weight={MEDIUM}
                 numberOfLines={1}
-                style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
+                style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: '#9CA3AF' }]}
               >
                 24H Change
               </AppText>
@@ -276,6 +281,7 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
         <View style={styles.headerCellName}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <AppText
+              weight={MEDIUM}
               numberOfLines={1}
               style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { color: themeColors.secondaryText }]}
             >
@@ -383,7 +389,7 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: "row",
     paddingVertical: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
     marginBottom: 2,
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -394,7 +400,7 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   tableHeaderText: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#9CA3AF",
     marginRight: 5,
   },
@@ -402,7 +408,7 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   headerChgWrap: {
-    flex: 0.9,
+    flex: 1,
     alignItems: "flex-end",
     minWidth: 0,
   },
@@ -442,6 +448,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: "center",
     minHeight: ROW_HEIGHT_DEFAULT,
     marginTop: 5
@@ -480,15 +487,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   coinIconHomeTab: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 30,
+    height: 30,
+    borderRadius: 21,
   },
   coinListPair: {
   },
   coinListSub: {
     marginTop: 0,
-    fontSize: 12,
+    fontSize: 11,
   },
   coinListPriceMain: {
     fontSize: 12,
@@ -500,16 +507,16 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   changePillHomeTab: {
-    minWidth: 50,
-    paddingHorizontal: 4,
-    height: 22,
-    borderRadius: 4,
+    minWidth: 56,
+    paddingHorizontal: 5,
+    height: 24,
+    borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
   },
   changeTextHomeTab: {
     color: "#FFFFFF",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
   },
   chgCol: {
@@ -529,9 +536,9 @@ const styles = StyleSheet.create({
     height: 11,
   },
   coinIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 12,
+    width: 33,
+    height: 33,
+    borderRadius: 16.5,
     overflow: "hidden",
   },
   coinIconPlaceholder: {
@@ -540,13 +547,13 @@ const styles = StyleSheet.create({
   nameBlock: {
     flex: 1,
     minWidth: 0,
+    left: 5
   },
   symbolText: {
     fontSize: 12,
     fontWeight: "700",
   },
   fullName: {
-    fontSize: 10,
     marginTop: 1,
   },
   priceCol: {
@@ -587,8 +594,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 2,
     paddingBottom: 4,
-    paddingLeft: 4,
-    paddingRight: H_PAD,
   },
   emptyWrap: {
     alignItems: "center",

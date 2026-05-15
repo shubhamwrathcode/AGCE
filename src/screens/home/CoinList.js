@@ -156,12 +156,12 @@ const CoinList = React.memo(() => {
   }, [spotUsdtPairs, activeTabList, pairVolumeNumber, HOT_BASE_ORDER, pickPairForBase, pairListingTimeMs, spotChangeNumber]);
 
   const fourItems = useMemo(
-    () => (Array.isArray(filterData) ? filterData.slice(0, 5) : []),
+    () => (Array.isArray(filterData) ? filterData.slice(0, 10) : []),
     [filterData]
   );
 
   const futuresFive = useMemo(
-    () => (Array.isArray(futuresPairs) ? futuresPairs.slice(0, 5) : []),
+    () => (Array.isArray(futuresPairs) ? futuresPairs.slice(0, 10) : []),
     [futuresPairs]
   );
 
@@ -271,7 +271,7 @@ const CoinList = React.memo(() => {
           </ScrollView>
         </Animated.View>
 
-        <View style={styles.listWrap}>
+        <View style={[styles.listWrap, { minHeight: activeTabList === 0 ? 100 : 275 }]}>
           {activeTabList === 0 ? null : null}
 
           <Animated.View style={listAnimatedStyle}>
@@ -290,16 +290,19 @@ const CoinList = React.memo(() => {
           </Animated.View>
         </View>
 
-        <TouchableOpacityView
-          style={styles.viewMoreRow}
-          onPress={handleViewMore}
-          activeOpacity={0.7}
-        >
-          <AppText style={[styles.viewMoreText, { color: themeColors.text }]}>
-            More →
-          </AppText>
-        </TouchableOpacityView>
+        {activeTabList !== 0 && (
+          <TouchableOpacityView
+            style={styles.viewMoreRow}
+            onPress={handleViewMore}
+            activeOpacity={0.7}
+          >
+            <AppText style={[styles.viewMoreText, { color: themeColors.text }]}>
+              More →
+            </AppText>
+          </TouchableOpacityView>
+        )}
       </View>
+      {activeTabList === 0 && <View style={{ height: 20 }} />}
       <StakingDahboardData />
 
       <Animated.View entering={FadeIn.duration(600).delay(200)}>
@@ -315,7 +318,7 @@ const HOME_HORIZONTAL_PADDING = 12;
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 7,
+    paddingHorizontal: 12,
     paddingTop: 0,
     paddingBottom: universalPaddingHorizontal,
   },
@@ -340,7 +343,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   tabPill: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 5,
     paddingVertical: 6,
     borderRadius: 5,
   },
@@ -416,7 +419,7 @@ const styles = StyleSheet.create({
     bottom: 10
   },
   viewMoreText: {
-    fontSize: 13,
+    fontSize: 11,
   },
 });
 

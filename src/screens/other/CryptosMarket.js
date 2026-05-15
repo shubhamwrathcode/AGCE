@@ -7,7 +7,7 @@ import { WALLET_SCREEN } from "../../navigation/routes";
 // Web "Cryptos" tab is a coins view (not strictly pairs).
 // We approximate it on mobile by collapsing spot pairs into one row per base currency,
 // preferring the USDT pair (else highest-volume pair).
-const CryptosMarket = ({ coinPairs, search = "", subCategory = "All" }) => {
+const CryptosMarket = ({ coinPairs, search = "", subCategory = "All", hideStar = true, favoriteArray, onToggleFavorite }) => {
   const rows = useMemo(() => {
     const list = Array.isArray(coinPairs) ? coinPairs : [];
     if (list.length === 0) return [];
@@ -58,7 +58,7 @@ const CryptosMarket = ({ coinPairs, search = "", subCategory = "All" }) => {
 
   return (
     <View style={{ flex: 1, minHeight: 0, marginTop: 4, paddingBottom: 12 }}>
-      <MarketList filterData={rows} onPress={handleNavigate} />
+      <MarketList filterData={rows} onPress={handleNavigate} hideStar={hideStar} favoriteArray={favoriteArray} onToggleFavorite={onToggleFavorite} />
     </View>
   );
 };

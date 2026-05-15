@@ -77,7 +77,7 @@ const MenuItem = React.memo(({ item, index }: any) => {
             style={item?.id === "6" ? styles.iconMore : styles.icon}
           />
         </View>
-        <AppText style={{ color: themeColors.text }} type={TEN}>
+        <AppText style={{ color: themeColors.text }} type={ELEVEN}>
           {item?.title}
         </AppText>
       </TouchableOpacityView>
@@ -168,16 +168,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   icon: {
-    height: 20,
-    width: 20,
+    height: 22,
+    width: 22
   },
   iconMore: {
-    height: 20,
-    width: 20,
+    height: 22,
+    width: 22,
   },
   iconWrap: {
-    height: 36,
-    width: 36,
+    height: 42,
+    width: 42,
     borderRadius: 5,
     marginBottom: 8,
     alignItems: "center",
@@ -186,8 +186,8 @@ const styles = StyleSheet.create({
 
   },
   iconWrapMore: {
-    height: 36,
-    width: 36,
+    height: 42,
+    width: 42,
     borderRadius: 10,
     marginBottom: 10,
     alignItems: "center",
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   singleItem: {
     alignItems: "center",
-    width: (Width - 40) / 4.9,
+    width: (Width - 40) / 4.8,
 
   },
   itemSeparator: {

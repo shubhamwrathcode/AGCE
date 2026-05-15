@@ -447,6 +447,7 @@ export const verify_lock = require('../../assets/images/verify_lock.png');
 export const pending_kyc = require('../../assets/images/pending_kyc.png');
 export const kyc_complete = require('../../assets/images/kyc_complete.png');
 export const verified_kyc = require('../../assets/images/verified_kyc.png');
+export const favCheck = require('../../assets/images/favCheck.png');
 
 
 

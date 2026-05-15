@@ -13,7 +13,7 @@ import {
   connectwallet5,
 } from "../../helper/ImageAssets";
 import FastImage from "react-native-fast-image";
-import { AppText, ELEVEN, MEDIUM, NINE, SEMI_BOLD, TEN, TWELVE } from "../../shared";
+import { AppText, ELEVEN, FOURTEEN, MEDIUM, NINE, SEMI_BOLD, TEN, TWELVE } from "../../shared";
 import { colors, lightTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import {
@@ -22,7 +22,7 @@ import {
   WALLET_SCREEN,
 } from "../../navigation/routes";
 
-const SLIDER_HEIGHT = 78;
+const SLIDER_HEIGHT = 84;
 const AUTO_PLAY_MS = 3600;
 const SCROLL_MS = 420;
 
@@ -131,10 +131,10 @@ const HomeSlider = () => {
             />
 
             <View style={styles.textBlock}>
-              <AppText type={TEN} style={{ color: colors.lightGrey }} numberOfLines={1}>
+              <AppText type={ELEVEN} weight={MEDIUM} style={{ color: '#9ca3af' }} numberOfLines={1}>
                 Events
               </AppText>
-              <AppText type={TWELVE} weight={SEMI_BOLD} numberOfLines={2} style={styles.titleText}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} numberOfLines={2} style={styles.titleText}>
                 {item?.title}
               </AppText>
               <AppText type={NINE} numberOfLines={1}>
@@ -226,8 +226,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   bannerImage: {
-    width: 65,
-    height: 65,
+    width: 77,
+    height: 77,
   },
   textBlock: {
     flex: 1,
@@ -239,8 +239,8 @@ const styles = StyleSheet.create({
   },
   counterBadge: {
     position: "absolute",
-    right: 12,
-    bottom: 10,
+    right: 0,
+    bottom: 6,
     minWidth: 40,
     borderRadius: 5,
     backgroundColor: "#E5E7EB",

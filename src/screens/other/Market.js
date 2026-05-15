@@ -7,6 +7,7 @@ import Favourites from "./Favourites";
 import SpotMarket from "./SpotMarket";
 import FuturesMarket from "./FuturesMarket";
 import CryptosMarket from "./CryptosMarket";
+import AlphaMarket from "./AlphaMarket";
 import MarketPlaceholder from "./MarketPlaceholder";
 import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
@@ -227,7 +228,7 @@ const Market = () => {
     activeTab === "USD_M_FUTURES" ||
     activeTab === "ALPHA";
 
-  const showSubTabs = activeTab === "Favorites" || activeTab === "Spot" || activeTab === "Cryptos" || activeTab === "ALPHA";
+  const showSubTabs = activeTab === "Spot" || activeTab === "Cryptos" || activeTab === "ALPHA";
 
   const alphaSubTabs = useMemo(
     () => [
@@ -350,12 +351,12 @@ const Market = () => {
               )}
               {activeTab === "Spot" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} />}
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={true} />}
                 </View>
               )}
               {activeTab === "Cryptos" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} />}
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={true} />}
                 </View>
               )}
               {activeTab === "USD_M_FUTURES" && (
@@ -382,7 +383,7 @@ const Market = () => {
 
               {activeTab === "ALPHA" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} />}
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <AlphaMarket coinPairs={coinPairs} search={search} />}
                 </View>
               )}
             </Animated.View>

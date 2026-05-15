@@ -9,6 +9,7 @@ import {
 import {
   AppText,
   BLACK,
+  ELEVEN,
   FOURTEEN,
   SEMI_BOLD,
   SIXTEEN,
@@ -147,7 +148,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
             tintColor={theme === "Dark" ? colors.white : colors.black}
           />
           <AppText color={BLACK} weight={SEMI_BOLD} type={THIRTEEN}>
-            Notifications
+            News
           </AppText>
         </View>
 
@@ -162,7 +163,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
         >
           <AppText
             color={colors.white}
-            type={THIRTEEN}
+            type={ELEVEN}
             onPress={() => NavigationService.navigate(NOTIFICATION_SCREEN)}
           >
             {`More`}{" "}

@@ -244,6 +244,8 @@ const Home = () => {
             />
             <AppText
               numberOfLines={1}
+              type={TWELVE}
+              weight={MEDIUM}
               style={[styles.homeSearchPlaceholder, { color: themeColors.secondaryText }]}
             >
               🔥 Trade Smart. Grow Faster.
@@ -307,7 +309,7 @@ const Home = () => {
             style={{
               backgroundColor: colors.iconBgColor,
               marginHorizontal: 12,
-              height: 160,
+              height: 188,
               padding: 10,
               borderRadius: 6,
               marginVertical: 10,
@@ -325,14 +327,14 @@ const Home = () => {
             >
               <FastImage
                 source={verificationImage}
-                style={{ width: 70, height: 70 }}
+                style={{ width: 104, height: 104 }}
                 resizeMode="contain"
               />
-              <View style={{ width: "70%" }}>
-                <AppText style={{ color: themeColors.button }} type={EIGHTEEN}>
+              <View style={{ width: "70%", bottom: 20, marginLeft: 5 }}>
+                <AppText style={{ color: themeColors.button }} type={EIGHTEEN} weight={SEMI_BOLD}>
                   Verification
                 </AppText>
-                <AppText style={{ color: themeColors.secondaryText }} type={ELEVEN}>
+                <AppText style={{ color: themeColors.secondaryText }} type={TWELVE}>
                   Verify your identity to secure your
                   account and unlock deposit/trading
                   access.
@@ -342,7 +344,7 @@ const Home = () => {
             <Button
               onPress={() => NavigationService.navigate(KYC_STATUS_SCREEN)}
               children="Verify Now"
-              containerStyle={{ width: "90%", height: 40, alignSelf: "center", backgroundColor: themeColors.button }}
+              containerStyle={{ width: "90%", height: 44, alignSelf: "center", backgroundColor: themeColors.button }}
             />
           </View>
         )}
@@ -376,15 +378,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 8,
+    minHeight: 40
   },
   homeSearchIcon: {
-    width: 18,
-    height: 18,
+    width: 16,
+    height: 16,
     marginRight: 10,
   },
   homeSearchPlaceholder: {
     flex: 1,
-    fontSize: 12,
   },
 });
 

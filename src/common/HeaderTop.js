@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 5,
     marginBottom: 8,
+    marginTop: 12
   },
   sideSlot: {
     width: 96,
@@ -150,14 +151,14 @@ const styles = StyleSheet.create({
     right: 10
   },
   brandLogo: {
-    width: 100,
-    height: 50,
+    width: 107,
+    height: 26,
   },
   brandTitle: {
     letterSpacing: 0.5,
   },
   actionIcon: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
   },
 });

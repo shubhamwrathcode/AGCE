@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { searchIcon } from "../../helper/ImageAssets";
 import { TouchableOpacity } from "react-native-gesture-handler";
-import { AppText, FOURTEEN, MEDIUM, SEMI_BOLD, SIXTEEN, THIRTEEN } from "../../shared";
+import { AppText, FOURTEEN, MEDIUM, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE } from "../../shared";
 import FastImage from "react-native-fast-image";
 import { colors, lightTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
@@ -53,7 +53,7 @@ const MarketHeader = ({
   const { colors: themeColors } = useTheme();
 
   const textColor = themeColors.text;
-  const placeholderColor = themeColors.secondaryText;
+  const placeholderColor = '#9e9fa3';
   const tabInactiveColor = themeColors.secondaryText;
 
   const scrollRef = React.useRef(null);
@@ -110,7 +110,7 @@ const MarketHeader = ({
             tintColor={placeholderColor}
           />
           <TextInput
-            style={[styles.searchInput, { color: textColor, fontSize: 14, fontWeight: '500' }]}
+            style={[styles.searchInput, { color: textColor, fontSize: 12, fontWeight: fontFamilyMedium }]}
             placeholder="Search Coins"
             placeholderTextColor={placeholderColor}
             value={search}
@@ -208,7 +208,7 @@ const MarketHeader = ({
                     },
                   ]}
                 >
-                  <AppText weight={MEDIUM} type={THIRTEEN} style={[styles.subTabText, { color: isActive ? themeColors.text : '#84888C' }]}>
+                  <AppText weight={MEDIUM} type={TWELVE} style={[styles.subTabText, { color: isActive ? themeColors.text : '#84888C' }]}>
                     {it.label}
                   </AppText>
                 </TouchableOpacity>

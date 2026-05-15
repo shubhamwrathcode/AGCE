@@ -369,20 +369,20 @@ const CoinSlider = () => {
           </View>
 
           <View style={styles.midRow}>
-            <AppText weight={SEMI_BOLD} type={TEN} numberOfLines={1} style={{ color: themeColors.text, flexShrink: 1 }}>
+            <AppText weight={SEMI_BOLD} type={TEN} numberOfLines={1} style={{ color: themeColors.text, flexShrink: 1, fontWeight: "600" }}>
               {coinName}{' '}
               <AppText type={NINE} style={{ color: '#9CA3AF' }}>
                 {sym}
               </AppText>
             </AppText>
             <View style={styles.pctRow}>
-              <AppText style={{ fontSize: 8, color: isPositive ? '#10B981' : '#EF4444' }} numberOfLines={1}>
-                {isPositive ? '▲' : '▼'}{pctStr}
+              <AppText weight={SEMI_BOLD} style={{ fontSize: 7, color: isPositive ? '#10B981' : '#EF4444' }} numberOfLines={1}>
+                {isPositive ? '▲  ' : '▼  '}{pctStr}
               </AppText>
             </View>
           </View>
 
-          <AppText weight={SEMI_BOLD} type={TEN} numberOfLines={1} style={{ color: '#111827', marginTop: 2 }}>
+          <AppText weight={SEMI_BOLD} type={TWELVE} numberOfLines={1} style={{ color: '#111827', marginTop: 2 }}>
             {priceStr}
           </AppText>
         </View>
@@ -419,7 +419,8 @@ const styles = StyleSheet.create({
 
   },
   card: {
-    borderRadius: 5,
+    height: 79,
+    borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 5,
     justifyContent: 'flex-start',

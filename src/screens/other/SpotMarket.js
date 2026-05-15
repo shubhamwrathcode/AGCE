@@ -18,7 +18,7 @@ const QUOTE_OPTIONS = [
   { key: "BNB", label: "BNB", icon: bnbIcon },
 ];
 
-const SpotMarket = ({ coinPairs, search = "", subCategory = "All" }) => {
+const SpotMarket = ({ coinPairs, search = "", subCategory = "All", hideStar = true, favoriteArray, onToggleFavorite }) => {
   const { colors: themeColors } = useTheme();
   const [spotQuoteCurrency, setSpotQuoteCurrency] = useState("USDT");
 
@@ -92,7 +92,7 @@ const SpotMarket = ({ coinPairs, search = "", subCategory = "All" }) => {
         ))}
       </ScrollView> */}
 
-      <MarketList filterData={filterData} onPress={handleNavigate} />
+      <MarketList filterData={filterData} onPress={handleNavigate} hideStar={hideStar} favoriteArray={favoriteArray} onToggleFavorite={onToggleFavorite} />
     </View>
   );
 };
