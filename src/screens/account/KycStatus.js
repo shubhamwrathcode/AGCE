@@ -243,7 +243,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
-              Your verification is being processed. Scanned or copied documents are not accepted. Please ensure your original ID is clear.
+              Your KYC verification is currently under review. Please ensure that the uploaded document is a clear photo of your original ID. Scanned or copied documents are not accepted.
             </AppText>
           </View>
         </View>
