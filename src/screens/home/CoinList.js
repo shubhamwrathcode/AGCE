@@ -253,7 +253,7 @@ const CoinList = React.memo(() => {
                     weight={MEDIUM}
                     style={[
                       {
-                        fontSize: 14,
+                        fontSize: 16,
                         color: active
                           ? isDark
                             ? themeColors.text
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     bottom: 10
   },
   viewMoreText: {
-    fontSize: 11,
+    fontSize: 13,
   },
 });
 

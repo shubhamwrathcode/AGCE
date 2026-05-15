@@ -55,6 +55,7 @@ interface AppTextProps extends TextProps {
   color?: string;
   // theme?: String;
   numberOfLines?: number;
+  allowFontScaling?: boolean;
 }
 
 const AppText = ({
@@ -64,6 +65,7 @@ const AppText = ({
   color,
   // theme,
   numberOfLines,
+  allowFontScaling = true,
   ...props
 }: AppTextProps) => {
   const themeState = useAppSelector(state => state.auth.theme);
@@ -199,7 +201,7 @@ const AppText = ({
   };
   return (
     <Text
-      allowFontScaling={false}
+      allowFontScaling={allowFontScaling}
       numberOfLines={numberOfLines}
       style={StyleSheet.flatten([styles.text(type, weight, color), style])}
       {...props}

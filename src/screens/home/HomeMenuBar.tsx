@@ -7,7 +7,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
-import { AppText, ELEVEN, TEN } from "../../shared";
+import { AppText, ELEVEN, TEN, THIRTEEN, TWELVE } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
 const Width = Dimensions.get("window").width;
 import Toast from "react-native-simple-toast";
@@ -77,7 +77,7 @@ const MenuItem = React.memo(({ item, index }: any) => {
             style={item?.id === "6" ? styles.iconMore : styles.icon}
           />
         </View>
-        <AppText style={{ color: themeColors.text }} type={ELEVEN}>
+        <AppText style={{ color: themeColors.text }} type={THIRTEEN}>
           {item?.title}
         </AppText>
       </TouchableOpacityView>
@@ -168,12 +168,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   icon: {
-    height: 22,
-    width: 22
+    height: 25,
+    width: 25
   },
   iconMore: {
-    height: 22,
-    width: 22,
+    height: 25,
+    width: 25,
   },
   iconWrap: {
     height: 42,

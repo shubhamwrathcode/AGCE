@@ -895,7 +895,6 @@ const ProfileDrawer = () => {
                 ]}
               >
                 <Text
-                  allowFontScaling={false}
                   style={{
                     fontSize: 12,
                     fontFamily: fontFamilySemiBold,

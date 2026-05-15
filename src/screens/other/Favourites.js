@@ -123,7 +123,7 @@ const Favourites = ({ style, from, coinPairs: propsCoinPairs, search: propsSearc
               <View style={[styles.cardIcon, { backgroundColor: '#ddd', borderRadius: 10 }]} />
             )}
             <AppText weight={MEDIUM} style={[styles.cardSym, { color: themeColors.text }]}>
-              {sym}<AppText style={{ color: '#9CA3AF', fontSize: 10 }}>/{quote}</AppText>
+              {sym}<AppText style={{ color: '#9CA3AF', fontSize: 12 }}> / {quote}</AppText>
             </AppText>
           </View>
           {processingId === item._id ? (
@@ -280,26 +280,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardIcon: {
-    width: 33,
-    height: 33,
-    borderRadius: 16.5,
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
     overflow: "hidden",
   },
   cardSym: {
-    fontSize: 12,
+    fontSize: 14,
   },
   cardCheck: {
-    width: 12,
-    height: 12,
+    width: 14,
+    height: 14,
   },
   cardCheckEmpty: {
-    width: 12,
-    height: 12,
+    width: 14,
+    height: 14,
     borderRadius: 4,
     borderWidth: 1
   },
   cardPct: {
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 4,
   },
   mainBtn: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   addOtherText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "500",
     textDecorationLine: "underline",
   },
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginBottom: 30,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: 16,
   },
   emptyBtn: {
     width: "60%",

@@ -234,7 +234,7 @@ import { WALLET_SCREEN } from '../../navigation/routes';
 import FastImage from 'react-native-fast-image';
 import { IMAGE_BASE_URL } from '../../helper/Constants';
 import MiniSparkline from '../../shared/components/MiniSparkline';
-import { AppText, BOLD, FOURTEEN, NINE, SEMI_BOLD, TEN, TWELVE } from '../../shared';
+import { AppText, BOLD, ELEVEN, FOURTEEN, NINE, SEMI_BOLD, TEN, TWELVE } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
 import { colors, lightTheme } from '../../theme/colors';
 
@@ -369,14 +369,14 @@ const CoinSlider = () => {
           </View>
 
           <View style={styles.midRow}>
-            <AppText weight={SEMI_BOLD} type={TEN} numberOfLines={1} style={{ color: themeColors.text, flexShrink: 1, fontWeight: "600" }}>
+            <AppText weight={SEMI_BOLD} type={TWELVE} numberOfLines={1} style={{ color: themeColors.text, flexShrink: 1, fontWeight: "600" }}>
               {coinName}{' '}
-              <AppText type={NINE} style={{ color: '#9CA3AF' }}>
+              <AppText type={ELEVEN} style={{ color: '#9CA3AF' }}>
                 {sym}
               </AppText>
             </AppText>
             <View style={styles.pctRow}>
-              <AppText weight={SEMI_BOLD} style={{ fontSize: 7, color: isPositive ? '#10B981' : '#EF4444' }} numberOfLines={1}>
+              <AppText weight={SEMI_BOLD} style={{ fontSize: 8, color: isPositive ? '#10B981' : '#EF4444' }} numberOfLines={1}>
                 {isPositive ? '▲  ' : '▼  '}{pctStr}
               </AppText>
             </View>

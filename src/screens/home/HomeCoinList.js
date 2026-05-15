@@ -144,10 +144,10 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
           <FastImage
             source={bell_ic}
             resizeMode="contain"
-            style={{ width: 16, height: 16 }}
+            style={{ width: 18, height: 18 }}
             tintColor={theme === "Dark" ? colors.white : colors.black}
           />
-          <AppText color={BLACK} weight={SEMI_BOLD} type={THIRTEEN}>
+          <AppText color={BLACK} weight={SEMI_BOLD} type={FOURTEEN}>
             News
           </AppText>
         </View>
@@ -163,7 +163,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
         >
           <AppText
             color={colors.white}
-            type={ELEVEN}
+            type={THIRTEEN}
             onPress={() => NavigationService.navigate(NOTIFICATION_SCREEN)}
           >
             {`More`}{" "}
@@ -172,8 +172,8 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
             source={back_ic}
             resizeMode="contain"
             style={{
-              width: 8,
-              height: 8,
+              width: 10,
+              height: 10,
               top: 1,
               transform: [{ rotateX: "360deg" }, { rotateZ: "180deg" }],
             }}

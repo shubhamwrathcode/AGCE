@@ -8,11 +8,16 @@ import {
   DISCLAIMTEXT,
   EIGHTEEN,
   ELEVEN,
+  FIFTEEN,
+  FOURTEEN,
   Header,
   MEDIUM,
   SEMI_BOLD,
+  SIXTEEN,
   TWELVE,
   TWENTY,
+  TWENTY_FOUR,
+  TWENTY_SIX,
   WHITE,
   YELLOW,
 } from "../../shared";
@@ -262,12 +267,12 @@ const Home = () => {
           >
             <View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                <AppText color={DISCLAIMTEXT}>Estimated Balance</AppText>
+                <AppText type={SIXTEEN} color={DISCLAIMTEXT}>Estimated Balance</AppText>
                 <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
                   <FastImage
                     source={!showBalance ? eye_close_icon : eye_open_icon}
                     resizeMode="contain"
-                    style={{ width: 14, height: 14 }}
+                    style={{ width: 16, height: 16 }}
                     tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
                   />
                 </TouchableOpacity>
@@ -275,15 +280,15 @@ const Home = () => {
 
               <View style={{ marginTop: 5 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-                  <AppText type={TWENTY} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                  <AppText type={TWENTY_SIX} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                     {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5)}{" "}
                   </AppText>
-                  <AppText color={DISCLAIMTEXT} style={{ top: 5 }}>
+                  <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>
                     {portfolioPreferredCurrency(walletBalance)}
                   </AppText>
                 </View>
                 <View style={{ marginTop: 6 }}>
-                  <AppText color={DISCLAIMTEXT}>
+                  <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
                     ≈ {!showBalance ? "****" : formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5)} USD
                   </AppText>
                 </View>
@@ -291,7 +296,7 @@ const Home = () => {
             </View>
 
             <TouchableOpacity
-              onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
+              onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}//////////
               style={{
                 backgroundColor: '#303236',
                 paddingHorizontal: 20,

@@ -85,10 +85,10 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
             </View>
             <View style={styles.nameBlock}>
               <AppText numberOfLines={1} weight={SEMI_BOLD} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
-                {fullName}
+                {ticker}<AppText style={{ color: '#9CA3AF', fontSize: 12 }}> / {quote}</AppText>
               </AppText>
               <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
-                {ticker}
+                {fullName}
               </AppText>
             </View>
           </View>
@@ -145,10 +145,10 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
           )}
           <View style={styles.nameBlock}>
             <AppText numberOfLines={1} weight={SEMI_BOLD} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
-              {fullName}
+              {ticker}<AppText style={{ color: '#9CA3AF', fontSize: 12 }}>/{quote}</AppText>
             </AppText>
             <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
-              {ticker}
+              {fullName}
             </AppText>
           </View>
         </View>
@@ -229,11 +229,11 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
   const ListHeaderComponent = useMemo(() => {
     if (pairTypography === "homeTab") {
       return (
-        <View style={[styles.tableHeader, styles.tableHeaderHomeTab, { borderBottomColor: "transparent", }]}>
+        <View style={[styles.tableHeader, styles.tableHeaderHomeTab, { borderBottomColor: "transparent" }]}>
           <AppText
             weight={MEDIUM}
             numberOfLines={1}
-            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { flex: 1.2, color: '#9CA3AF', left: 0 }]}
+            style={[styles.tableHeaderText, styles.tableHeaderTextNoMargin, { flex: 1.2, color: '#9CA3AF' }]}
           >
             Symbol
           </AppText>
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   tableHeaderText: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#9CA3AF",
     marginRight: 5,
   },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   headerChgWrap: {
-    flex: 1,
+    flex: 0.8,
     alignItems: "flex-end",
     minWidth: 0,
   },
@@ -472,39 +472,41 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   starBtnHomeTab: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
   },
   iconCircleHomeTab: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   coinIconHomeTab: {
-    width: 30,
-    height: 30,
-    borderRadius: 21,
+    width: 32,
+    height: 32,
+    borderRadius: 22,
   },
   coinListPair: {
+    fontSize: 16,
   },
   coinListSub: {
     marginTop: 0,
-    fontSize: 11,
+    fontSize: 13,
   },
   coinListPriceMain: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
     textAlign: "right",
   },
   coinListPriceSub: {
     marginTop: 0,
     textAlign: "right",
+    fontSize: 12,
   },
   changePillHomeTab: {
     minWidth: 56,
@@ -516,7 +518,7 @@ const styles = StyleSheet.create({
   },
   changeTextHomeTab: {
     color: "#FFFFFF",
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
   },
   chgCol: {
@@ -526,19 +528,19 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   starBtn: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
     justifyContent: "center",
     alignItems: "center",
   },
   starIcon: {
-    width: 11,
-    height: 11,
+    width: 13,
+    height: 13,
   },
   coinIcon: {
-    width: 33,
-    height: 33,
-    borderRadius: 16.5,
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
     overflow: "hidden",
   },
   coinIconPlaceholder: {
@@ -550,7 +552,7 @@ const styles = StyleSheet.create({
     left: 5
   },
   symbolText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
   },
   fullName: {
@@ -564,10 +566,12 @@ const styles = StyleSheet.create({
   },
   lastPrice: {
     textAlign: "right",
+    fontSize: 14,
   },
   inrPrice: {
     marginTop: 1,
     textAlign: "right",
+    fontSize: 12,
   },
   chgPill: {
     minWidth: 50,
@@ -585,7 +589,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.green,
   },
   chgPillText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "600",
     color: colors.white,
   },
