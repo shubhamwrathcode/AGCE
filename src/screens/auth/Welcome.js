@@ -12,9 +12,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppSafeAreaView,
   AppText,
+  ELEVEN,
   FOURTEEN,
+  MEDIUM,
   SEMI_BOLD,
+  TEN,
   THIRTEEN,
+  TWELVE,
 } from "../../shared";
 import {
   APP_LOGO,
@@ -26,7 +30,7 @@ import {
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN, REGISTER_SCREEN } from "../../navigation/routes";
 import { useTheme } from "../../hooks/useTheme";
-import { lightTheme } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import Toast from "react-native-simple-toast";
 import { useAppSelector } from "../../store/hooks";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
@@ -205,11 +209,11 @@ const Welcome = () => {
         >
           {/* Header */}
           <View style={[styles.header, { paddingTop: 8 }]}>
-            <View style={[styles.logoCircle, { backgroundColor: lightTheme.input}]}>
+            <View style={[styles.logoCircle, { backgroundColor: lightTheme.input }]}>
               <FastImage source={APP_LOGO} style={styles.logoImg} resizeMode="contain" />
             </View>
             <TouchableOpacity onPress={onLogin} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: palette.text }}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: palette.text }}>
                 Log In
               </AppText>
             </TouchableOpacity>
@@ -222,7 +226,7 @@ const Welcome = () => {
                 <View key={i} style={[styles.heroStripe, { backgroundColor: palette.stripe }]} />
               ))}
             </View>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.heroTitle, { color: palette.text }]}>
+            <AppText weight={SEMI_BOLD} style={[styles.heroTitle, { color: palette.text }]}>
               Trade hundreds of{"\n"}cryptocurrencies instantly
             </AppText>
             <View style={styles.heroArtWrap}>
@@ -240,104 +244,122 @@ const Welcome = () => {
           </View>
 
           {/* Tabs — same as Home `CoinList` (Favorite tab omitted) */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabRow}
-            style={styles.tabsScroll}
-          >
-            {WELCOME_TABS.map((t) => {
-              const active = activeTabList === t.key;
-              const pillBg = isDark ? themeColors.themeElevationColor : lightTheme.input;
-              return (
-                <TouchableOpacity
-                  key={String(t.key)}
-                  style={[styles.tabPill, active && { backgroundColor: pillBg }]}
-                  onPress={() => setActiveTabList(t.key)}
-                  activeOpacity={0.8}
-                >
-                  <AppText weight={SEMI_BOLD} style={[styles.tabLabel, { color: active ? palette.text : palette.muted }]}>
-                    {t.label}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-            <View style={{ width: 6 }} />
-          </ScrollView>
+          <View style={[styles.tabsWrapper, { borderBottomColor: isDark ? "rgba(255,255,255,0.1)" : lightTheme.input }]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabRow}
+              style={styles.tabsScroll}
+            >
+              {WELCOME_TABS.map((t) => {
+                const active = activeTabList === t.key;
+                return (
+                  <TouchableOpacity
+                    key={String(t.key)}
+                    style={styles.tabPill}
+                    onPress={() => setActiveTabList(t.key)}
+                    activeOpacity={0.8}
+                  >
+                    <AppText
+                      weight={SEMI_BOLD}
+                      type={FOURTEEN}
+                      style={{ color: active ? palette.text : palette.muted }}
+                    >
+                      {t.label}
+                    </AppText>
+                    {active && (
+                      <View style={[styles.tabIndicator, { backgroundColor: palette.text }]} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              <View style={{ width: 16 }} />
+            </ScrollView>
+          </View>
 
           {/* Market list — same socket-fed `coinPairs` as Home `CoinList` */}
           <View style={styles.listWrap}>
             <View style={styles.tableHeader}>
-              <AppText style={[styles.tableHeaderText, { flex: 1.2, color: palette.muted }]}>Symbol</AppText>
-              <AppText style={[styles.tableHeaderText, { flex: 1, textAlign: "right", color: palette.muted }]}>Last Price</AppText>
+              <AppText type={TWELVE} style={[styles.tableHeaderText, { flex: 1.2, color: palette.muted }]}>Symbol</AppText>
+              <AppText type={TWELVE} style={[styles.tableHeaderText, { flex: 1, textAlign: "right", color: palette.muted }]}>Last Price</AppText>
               <View style={{ flex: 0.9, alignItems: "flex-end" }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <AppText style={[styles.tableHeaderText, { color: palette.muted }]}>24H Change</AppText>
-                  <FastImage
-                    source={back_ic}
-                    style={{ width: 10, height: 10, transform: [{ rotate: "90deg" }] }}
-                    resizeMode="contain"
-                    tintColor={palette.muted}
-                  />
+                  <AppText type={TWELVE} style={[styles.tableHeaderText, { color: palette.muted }]}>
+                    24H Change
+                  </AppText>
+                  <View style={{ gap: 1 }}>
+                    <FastImage
+                      source={back_ic}
+                      style={{ width: 6.5, height: 6.5, transform: [{ rotate: "90deg" }] }}
+                      resizeMode="contain"
+                      tintColor={palette.muted}
+                    />
+                    <FastImage
+                      source={back_ic}
+                      style={{ width: 6.5, height: 6.5, transform: [{ rotate: "-90deg" }] }}
+                      resizeMode="contain"
+                      tintColor={palette.muted}
+                    />
+                  </View>
                 </View>
               </View>
             </View>
 
             {fourItems.length > 0
               ? fourItems.map((item, idx) => {
-                  const sym = String(item?.base_currency || "").toUpperCase();
-                  const q = normSym(item?.quote_currency) || "USDT";
-                  const pairTop = sym ? `${sym}/${q}` : "—";
-                  const name = item?.base_currency_name || item?.base_currency || "—";
-                  const last = item?.buy_price ?? item?.last_price ?? item?.price ?? 0;
-                  const sub = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
-                  const chg =
-                    Number(item?.change_percentage ?? item?.changePercentage ?? item?.change) || 0;
-                  const isUp = chg >= 0;
-                  const chgText = `${Math.abs(chg).toFixed(2)}%`;
-                  return (
-                    <TouchableOpacity
-                      key={`live-${activeTabList}-${sym}-${idx}`}
-                      style={styles.row}
-                      onPress={onLogin}
-                      activeOpacity={0.85}
-                    >
-                      <View style={[styles.colSymbol, { flex: 1.2 }]}>
-                        <View style={[styles.iconCircle, { backgroundColor: isDark ? themeColors.themeElevationColor : "#F3F4F6" }]}>
-                          <FastImage
-                            source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
-                            resizeMode="contain"
-                            style={{ width: 22, height: 22 }}
-                          />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <AppText style={[styles.coinName, { color: palette.text }]} numberOfLines={1}>
-                            {pairTop}
-                          </AppText>
-                          <AppText style={[styles.coinSym, { color: palette.muted }]} numberOfLines={1}>
-                            {name}
-                          </AppText>
-                        </View>
+                const sym = String(item?.base_currency || "").toUpperCase();
+                const q = normSym(item?.quote_currency) || "USDT";
+                const pairTop = sym ? `${sym}/${q}` : "—";
+                const name = item?.base_currency_name || item?.base_currency || "—";
+                const last = item?.buy_price ?? item?.last_price ?? item?.price ?? 0;
+                const sub = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
+                const chg =
+                  Number(item?.change_percentage ?? item?.changePercentage ?? item?.change) || 0;
+                const isUp = chg >= 0;
+                const chgText = `${Math.abs(chg).toFixed(2)}%`;
+                return (
+                  <TouchableOpacity
+                    key={`live-${activeTabList}-${sym}-${idx}`}
+                    style={styles.row}
+                    onPress={onLogin}
+                    activeOpacity={0.85}
+                  >
+                    <View style={[styles.colSymbol, { flex: 1.2, right: 10 }]}>
+                      <View style={[styles.iconCircle, {}]}>
+                        <FastImage
+                          source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
+                          resizeMode="contain"
+                          style={{ width: 25, height: 25, borderRadius: 50 }}
+                        />
                       </View>
-                      <View style={{ flex: 1, alignItems: "flex-end" }}>
-                        <AppText style={[styles.priceMain, { color: palette.text }]} numberOfLines={1}>
-                          {String(last)}
+                      <View style={{ flex: 1, }}>
+                        <AppText weight={SEMI_BOLD} type={TWELVE} style={[styles.coinName, { color: palette.text }]} numberOfLines={1}>
+                          {pairTop}
                         </AppText>
-                        <AppText style={[styles.priceSub, { color: palette.muted }]} numberOfLines={1}>
-                          {String(sub)}
+                        <AppText style={[styles.coinSym, { color: palette.muted }]} numberOfLines={1}>
+                          {name}
                         </AppText>
                       </View>
-                      <View style={{ flex: 0.9, alignItems: "flex-end" }}>
-                        <View style={[styles.changePillCoin, { backgroundColor: isUp ? "#2DBE7E" : "#EF4444" }]}>
-                          <AppText style={styles.changeText} numberOfLines={1}>
-                            {isUp ? "▲ " : "▼ "}
-                            {chgText}
-                          </AppText>
-                        </View>
+                    </View>
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: palette.text }} numberOfLines={1}>
+                        {String(last)}
+                      </AppText>
+                      <AppText style={[styles.priceSub, { color: palette.muted }]} numberOfLines={1}>
+                        {String(sub)}
+                      </AppText>
+                    </View>
+                    <View style={{ flex: 0.9, alignItems: "flex-end" }}>
+                      <View style={[styles.changePillCoin, { backgroundColor: isUp ? "#2DBE7E" : "#EF4444" }]}>
+                        <AppText style={styles.changeText} weight={MEDIUM} type={ELEVEN} numberOfLines={1}>
+                          {isUp ? "+ " : "- "}
+                          {chgText}
+                        </AppText>
                       </View>
-                    </TouchableOpacity>
-                  );
-                })
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
               : (
                 <View style={styles.marketEmpty}>
                   <AppText style={[styles.coinSym, { color: palette.muted, textAlign: "center" }]}>
@@ -400,13 +422,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   logoCircle: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  logoImg: { width: 22, height: 22 },
+  logoImg: { width: 26, height: 20 },
   heroCard: {
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
@@ -429,7 +451,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     flexDirection: "row",
     justifyContent: "space-evenly",
-    opacity: 1,
+    opacity: 0.5,
   },
   heroStripe: {
     width: 1,
@@ -437,43 +459,59 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     textAlign: "left",
-    lineHeight: 21,
-    marginBottom: 6,
+    fontSize: 19,
+    lineHeight: 24,
+    marginBottom: 8,
     zIndex: 1,
+    alignSelf: "flex-start",
   },
   heroArtWrap: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 120,
+    height: 130,
     zIndex: 1,
+    marginVertical: 20,
   },
   heroArt: {
-    width: 300,
-    height: 150,
-    maxHeight: 150,
+    width: 196,
+    height: 188,
+    // maxHeight: 150,
   },
   heroCta: {
-    height: 40,
+    height: 42,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
     zIndex: 1,
   },
-  tabsScroll: { marginTop: 8, marginBottom: 4 },
+  tabsWrapper: {
+    marginHorizontal: -16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  tabsScroll: {},
   tabRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingRight: 0,
+    gap: 15,
+    paddingHorizontal: 16,
   },
   tabPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 5,
+    paddingHorizontal: 2,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabIndicator: {
+    height: 2.5,
+    width: 24,
+    borderRadius: 2,
+    position: "absolute",
+    bottom: 0,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 14,
   },
   listWrap: { marginTop: 6 },
   marketEmpty: { paddingVertical: 28, paddingHorizontal: 12 },
@@ -484,7 +522,7 @@ const styles = StyleSheet.create({
     paddingTop: 5,
   },
   tableHeaderText: {
-    fontSize: 11,
+
   },
   row: {
     flexDirection: "row",
@@ -495,7 +533,6 @@ const styles = StyleSheet.create({
   colSymbol: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
   },
   iconCircle: {
     width: 38,
@@ -506,33 +543,29 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   coinName: {
-    fontSize: 13,
-    fontWeight: "700",
+
   },
   coinSym: {
     marginTop: 0,
-    fontSize: 10,
+    fontSize: 11,
   },
   priceMain: {
-    fontSize: 13,
-    fontWeight: "700",
   },
   priceSub: {
     marginTop: 2,
-    fontSize: 10,
+    fontSize: 11,
   },
   changePillCoin: {
-    minWidth: 70,
+    minWidth: 55,
     paddingHorizontal: 8,
-    height: 26,
+    height: 25,
     borderRadius: 7,
     alignItems: "center",
     justifyContent: "center",
   },
   changeText: {
     color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "700",
+
   },
   footer: {
     flexDirection: "row",
@@ -540,19 +573,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-      },
-      android: { elevation: 8 },
-    }),
+    // ...Platform.select({
+    //   ios: {
+    //     shadowColor: "#000",
+    //     shadowOffset: { width: 0, height: -2 },
+    //     shadowOpacity: 0.04,
+    //     shadowRadius: 8,
+    //   },
+    //   android: { elevation: 8 },
+    // }),
   },
   signUpBtn: {
     flex: 1,
-    height: 44,
+    height: 42,
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
