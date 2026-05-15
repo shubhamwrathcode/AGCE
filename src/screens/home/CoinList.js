@@ -15,10 +15,10 @@ import MarketList from "../other/MarketList";
 import { FuturesList } from "../other/FuturesMarket";
 import HomeCoinList from "./HomeCoinList";
 import NavigationService from "../../navigation/NavigationService";
-import { WALLET_SCREEN, MARKET_SCREEN, FUTURES_SCREEN } from "../../navigation/routes";
+import { WALLET_SCREEN, MARKET_SCREEN, FUTURES_SCREEN, ADD_FAVOURITE_SCREEN } from "../../navigation/routes";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import FastImage from "react-native-fast-image";
-import { AppText, MEDIUM, SEMI_BOLD } from "../../shared";
+import { AppText, Button, MEDIUM, SEMI_BOLD } from "../../shared";
 import { back_ic } from "../../helper/ImageAssets";
 import { useDispatch } from "react-redux";
 import { setBuyOrders, setSellOrders, setSpotSelectedPair, setFuturesSelectedPair } from "../../slices/homeSlice";
@@ -30,6 +30,7 @@ const CoinList = React.memo(() => {
   const { colors: themeColors, isDark } = useTheme();
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const futuresPairs = useAppSelector((state) => state.home.futuresPairs ?? []);
+  const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const theme = useAppSelector((state) => state.auth.theme);
   const dispatch = useDispatch();
   // Web parity tabs: 0=Favorite, 1=Trending, 2=Hot, 3=New Listing, 4=Top Gainers
@@ -39,6 +40,7 @@ const CoinList = React.memo(() => {
 
   const listAnimX = useSharedValue(0);
   const listAnimOpacity = useSharedValue(1);
+  const [btnLoading, setBtnLoading] = useState(false);
 
   const tabLayoutsRef = useRef({});
 
@@ -104,15 +106,20 @@ const CoinList = React.memo(() => {
   const spotUsdtPairs = useMemo(() => {
     if (!coinPairs || coinPairs.length === 0) return [];
     const usdt = coinPairs.filter((p) => normSym(p?.quote_currency) === "USDT");
-    return usdt.length ? usdt : coinPairs;
+    return usdt.length >= 6 ? usdt : coinPairs;
   }, [coinPairs, normSym]);
 
   // 0=Favourite, 1=Trending, 2=Hot, 3=New Listing, 4=Top Gainers
   const filterData = useMemo(() => {
     if (!spotUsdtPairs || spotUsdtPairs.length === 0) return [];
 
-    // Favorite handled by component; return a stable list for it too
-    if (activeTabList === 0) return [...spotUsdtPairs];
+    // Favorite handled by component
+    if (activeTabList === 0) {
+      if (!favoriteArray || favoriteArray.length === 0) {
+        return [...spotUsdtPairs];
+      }
+      return spotUsdtPairs.filter((p) => favoriteArray.includes(p?._id));
+    }
 
     // Trending: highest 24h volume
     if (activeTabList === 1) {
@@ -153,7 +160,7 @@ const CoinList = React.memo(() => {
     }
 
     return [...spotUsdtPairs];
-  }, [spotUsdtPairs, activeTabList, pairVolumeNumber, HOT_BASE_ORDER, pickPairForBase, pairListingTimeMs, spotChangeNumber]);
+  }, [spotUsdtPairs, activeTabList, pairVolumeNumber, HOT_BASE_ORDER, pickPairForBase, pairListingTimeMs, spotChangeNumber, favoriteArray]);
 
   const fourItems = useMemo(
     () => (Array.isArray(filterData) ? filterData.slice(0, 10) : []),
@@ -271,11 +278,11 @@ const CoinList = React.memo(() => {
           </ScrollView>
         </Animated.View>
 
-        <View style={[styles.listWrap, { minHeight: activeTabList === 0 ? 100 : 275 }]}>
+        <View style={[styles.listWrap, activeTabList === 0 && (!favoriteArray || favoriteArray?.length === 0) ? { minHeight: 300 } : { minHeight: 0 }]}>
           {activeTabList === 0 ? null : null}
 
           <Animated.View style={listAnimatedStyle}>
-            {activeTabList === 0 ? (
+            {activeTabList === 0 && (!favoriteArray || favoriteArray?.length === 0) ? (
               <Favourites coinPairs={filterData} onPress={handleNavigate} from="home" />
             ) : (
               <MarketList
@@ -290,7 +297,21 @@ const CoinList = React.memo(() => {
           </Animated.View>
         </View>
 
-        {activeTabList !== 0 && (
+        {activeTabList === 0 && favoriteArray?.length > 0 ? (
+          <View style={{ paddingHorizontal: 5, paddingBottom: 10, marginTop: 20 }}>
+            <Button
+              loading={btnLoading}
+              children="Add Favourite"
+              containerStyle={[styles.mainBtn, { width: '100%', height: 40 }]}
+              onPress={async () => {
+                setBtnLoading(true);
+                // The actual navigation will happen, but we show loading for feedback
+                await NavigationService.navigate(ADD_FAVOURITE_SCREEN);
+                setBtnLoading(false);
+              }}
+            />
+          </View>
+        ) : activeTabList !== 0 && (
           <TouchableOpacityView
             style={styles.viewMoreRow}
             onPress={handleViewMore}
@@ -330,7 +351,6 @@ const styles = StyleSheet.create({
   },
   listWrap: {
     marginTop: 0,
-    minHeight: 275, // Stabilize height to prevent the "felta hua" shadow expansion artifact on load
   },
   marketListFixed: {
     width: "100%",
@@ -420,6 +440,10 @@ const styles = StyleSheet.create({
   },
   viewMoreText: {
     fontSize: 13,
+  },
+  mainBtn: {
+    width: "100%",
+    height: 45,
   },
 });
 

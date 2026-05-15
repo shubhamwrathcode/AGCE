@@ -12,13 +12,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppSafeAreaView,
   AppText,
+  BOLD,
   ELEVEN,
+  FIFTEEN,
   FOURTEEN,
   MEDIUM,
   SEMI_BOLD,
+  SIXTEEN,
   TEN,
   THIRTEEN,
   TWELVE,
+  TWENTY,
 } from "../../shared";
 import {
   APP_LOGO,
@@ -164,7 +168,7 @@ const Welcome = () => {
   ]);
 
   const fourItems = useMemo(
-    () => (Array.isArray(filterData) ? filterData.slice(0, 5) : []),
+    () => (Array.isArray(filterData) ? filterData.slice(0, 10) : []),
     [filterData]
   );
 
@@ -226,7 +230,7 @@ const Welcome = () => {
                 <View key={i} style={[styles.heroStripe, { backgroundColor: palette.stripe }]} />
               ))}
             </View>
-            <AppText weight={SEMI_BOLD} style={[styles.heroTitle, { color: palette.text }]}>
+            <AppText weight={BOLD} type={TWENTY} style={[styles.heroTitle, { color: palette.text }]}>
               Trade hundreds of{"\n"}cryptocurrencies instantly
             </AppText>
             <View style={styles.heroArtWrap}>
@@ -237,7 +241,7 @@ const Welcome = () => {
               onPress={onLogin}
               activeOpacity={0.85}
             >
-              <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: palette.btnText }}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: palette.btnText }}>
                 Log In to Trade
               </AppText>
             </TouchableOpacity>
@@ -262,7 +266,7 @@ const Welcome = () => {
                   >
                     <AppText
                       weight={SEMI_BOLD}
-                      type={FOURTEEN}
+                      type={SIXTEEN}
                       style={{ color: active ? palette.text : palette.muted }}
                     >
                       {t.label}
@@ -309,7 +313,7 @@ const Welcome = () => {
               ? fourItems.map((item, idx) => {
                 const sym = String(item?.base_currency || "").toUpperCase();
                 const q = normSym(item?.quote_currency) || "USDT";
-                const pairTop = sym ? `${sym}/${q}` : "—";
+                const pairTop = sym ? `${sym} / ${q}` : "—";
                 const name = item?.base_currency_name || item?.base_currency || "—";
                 const last = item?.buy_price ?? item?.last_price ?? item?.price ?? 0;
                 const sub = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
@@ -324,17 +328,17 @@ const Welcome = () => {
                     onPress={onLogin}
                     activeOpacity={0.85}
                   >
-                    <View style={[styles.colSymbol, { flex: 1.2, right: 10 }]}>
+                    <View style={[styles.colSymbol, { flex: 1.2, right: 5 }]}>
                       <View style={[styles.iconCircle, {}]}>
                         <FastImage
                           source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
                           resizeMode="contain"
-                          style={{ width: 25, height: 25, borderRadius: 50 }}
+                          style={{ width: 32, height: 32, borderRadius: 50 }}
                         />
                       </View>
                       <View style={{ flex: 1, }}>
-                        <AppText weight={SEMI_BOLD} type={TWELVE} style={[styles.coinName, { color: palette.text }]} numberOfLines={1}>
-                          {pairTop}
+                        <AppText weight={SEMI_BOLD} type={FOURTEEN} style={[styles.coinName, { color: palette.text }]} numberOfLines={1}>
+                          {sym}<AppText style={{ color: palette.muted, fontSize: 12 }}> / {q}</AppText>
                         </AppText>
                         <AppText style={[styles.coinSym, { color: palette.muted }]} numberOfLines={1}>
                           {name}
@@ -342,7 +346,7 @@ const Welcome = () => {
                       </View>
                     </View>
                     <View style={{ flex: 1, alignItems: "flex-end" }}>
-                      <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: palette.text }} numberOfLines={1}>
+                      <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: palette.text }} numberOfLines={1}>
                         {String(last)}
                       </AppText>
                       <AppText style={[styles.priceSub, { color: palette.muted }]} numberOfLines={1}>
@@ -383,7 +387,7 @@ const Welcome = () => {
           ]}
         >
           <TouchableOpacity style={[styles.signUpBtn, { backgroundColor: palette.btn }]} onPress={onRegister} activeOpacity={0.88}>
-            <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: palette.btnText }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: palette.btnText }}>
               Sign Up
             </AppText>
           </TouchableOpacity>
@@ -459,7 +463,6 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     textAlign: "left",
-    fontSize: 19,
     lineHeight: 24,
     marginBottom: 8,
     zIndex: 1,
@@ -535,9 +538,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -556,7 +559,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   changePillCoin: {
-    minWidth: 55,
+    minWidth: 56,
     paddingHorizontal: 8,
     height: 25,
     borderRadius: 7,
@@ -565,6 +568,8 @@ const styles = StyleSheet.create({
   },
   changeText: {
     color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
 
   },
   footer: {

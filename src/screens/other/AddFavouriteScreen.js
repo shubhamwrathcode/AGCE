@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { StyleSheet, View, TouchableOpacity, RefreshControl, ScrollView } from "react-native";
-import { AppSafeAreaView, AppText, BOLD, Button, SIXTEEN } from "../../shared";
+import { AppSafeAreaView, AppText, BOLD, Button, EIGHTEEN, SIXTEEN } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
 import FastImage from "react-native-fast-image";
 import { back_ic } from "../../helper/ImageAssets";
@@ -14,7 +14,6 @@ import { getFavoriteArray, addToFavorites } from "../../actions/homeActions";
 import { colors } from "../../theme/colors";
 
 const AddFavouriteScreen = () => {
-  const { colors: themeColors, isDark } = useTheme();
   const dispatch = useAppDispatch();
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const [activeTab, setActiveTab] = useState("Spot");
@@ -56,6 +55,9 @@ const AddFavouriteScreen = () => {
 
   const renderContent = () => {
     switch (activeTab) {
+      case "Favorites":
+        const filteredFavorites = coinPairs.filter(p => favouriteCoins.includes(p._id));
+        return <SpotMarket coinPairs={filteredFavorites} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favouriteCoins} onToggleFavorite={handleToggleFavorite} />;
       case "Spot":
         return <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favouriteCoins} onToggleFavorite={handleToggleFavorite} />;
       case "Cryptos":
@@ -79,7 +81,7 @@ const AddFavouriteScreen = () => {
             tintColor={colors.black}
           />
         </TouchableOpacity>
-        <AppText weight={BOLD} type={SIXTEEN} style={{ color: colors.black }}>
+        <AppText weight={BOLD} type={EIGHTEEN} style={{ color: colors.black }}>
           Add to Favourite
         </AppText>
         <View style={{ width: 40 }} />

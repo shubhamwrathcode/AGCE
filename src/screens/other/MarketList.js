@@ -12,23 +12,13 @@ import {
 import { useAppSelector } from "../../store/hooks";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import { colors } from "../../theme/colors";
-import { addToFavorites } from "../../actions/homeActions";
 import { useDispatch } from "react-redux";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { useTheme } from "../../hooks/useTheme";
-import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const H_PAD = Math.max(14, SCREEN_WIDTH * 0.04);
 const ROW_HEIGHT_DEFAULT = 40;
 const ROW_HEIGHT_HOME_TAB = 60;
-
-const formatInrPrice = (usdPrice) => {
-  if (usdPrice == null || isNaN(usdPrice)) return "—";
-  const inr = Number(usdPrice) * 90;
-  return inr >= 1000 ? `${(inr / 1000).toFixed(2)}K` : `${inr.toFixed(2)}`;
-};
-
 const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, pairTypography, hideStar }) => {
   const { colors: themeColors, isDark } = useTheme();
   const isHomeTab = pairTypography === "homeTab";
@@ -145,7 +135,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
           )}
           <View style={styles.nameBlock}>
             <AppText numberOfLines={1} weight={SEMI_BOLD} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
-              {ticker}<AppText style={{ color: '#9CA3AF', fontSize: 12 }}>/{quote}</AppText>
+              {ticker}<AppText style={{ color: '#9CA3AF', fontSize: 12 }}> / {quote}</AppText>
             </AppText>
             <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
               {fullName}
@@ -158,7 +148,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
         <AppText numberOfLines={1} weight={SEMI_BOLD} type={TWELVE} style={[styles.lastPrice, { color: themeColors.text }]}>
           {priceStr}
         </AppText>
-        <AppText numberOfLines={1} type={TEN} weight={MEDIUM} style={[styles.inrPrice, { color: themeColors.secondaryText, }]}>
+        <AppText numberOfLines={1} weight={MEDIUM} style={[styles.inrPrice, { color: themeColors.secondaryText, }]}>
           {subPriceStr}
         </AppText>
       </View>
@@ -190,7 +180,6 @@ MarketRow.displayName = "MarketRow";
 const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = true, pairTypography, hideStar = false, favoriteArray: propsFavoriteArray, onToggleFavorite }) => {
   const { colors: themeColors, isDark } = useTheme();
   const rowHeight = pairTypography === "homeTab" ? ROW_HEIGHT_HOME_TAB : ROW_HEIGHT_DEFAULT;
-  const dispatch = useDispatch();
   const favoriteArrayFromRedux = useAppSelector((state) => state.home.favoriteArray);
   const favoriteArray = propsFavoriteArray || favoriteArrayFromRedux;
 
@@ -552,11 +541,12 @@ const styles = StyleSheet.create({
     left: 5
   },
   symbolText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
   fullName: {
     marginTop: 1,
+    fontSize: 11,
   },
   priceCol: {
     flex: 1,
@@ -566,7 +556,8 @@ const styles = StyleSheet.create({
   },
   lastPrice: {
     textAlign: "right",
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: "700",
   },
   inrPrice: {
     marginTop: 1,

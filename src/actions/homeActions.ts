@@ -219,21 +219,24 @@ export const getFavoriteArray = () => async (dispatch: AppDispatch) => {
 };
 
 export const addToFavorites =
-  (data: AddToFavoriteProps) => async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
+  (data: AddToFavoriteProps, skipToast: boolean = false) => async (dispatch: AppDispatch) => {
+    if (!skipToast) dispatch(setLoading(true));
     try {
       const response: any = await appOperation.customer.add_to_favorite(data);
       if (response.success) {
-        showSuccess(response?.message || "Favorites updated");
+        if (!skipToast) showSuccess(response?.message || "Favorites updated");
         dispatch(getFavoriteArray());
+        return response;
       } else {
-        showError(response?.message || "Failed to update favorites");
+        if (!skipToast) showError(response?.message || "Failed to update favorites");
+        return response;
       }
     } catch (e) {
       logger(e);
-      showError(e?.message || "An error occurred");
+      if (!skipToast) showError(e?.message || "An error occurred");
+      return { success: false, message: e?.message };
     } finally {
-      dispatch(setLoading(false));
+      if (!skipToast) dispatch(setLoading(false));
     }
   };
 

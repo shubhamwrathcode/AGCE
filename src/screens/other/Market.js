@@ -8,13 +8,14 @@ import SpotMarket from "./SpotMarket";
 import FuturesMarket from "./FuturesMarket";
 import CryptosMarket from "./CryptosMarket";
 import AlphaMarket from "./AlphaMarket";
+import MarketList from "./MarketList";
 import MarketPlaceholder from "./MarketPlaceholder";
 import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
 import { universalPaddingHorizontal } from "../../theme/dimens";
 import { useRoute, useIsFocused } from "@react-navigation/native";
 import { SocketContext } from "../../SocketProvider";
-import { getFavoriteArray } from "../../actions/homeActions";
+import { getFavoriteArray, addToFavorites } from "../../actions/homeActions";
 import NavigationService from "../../navigation/NavigationService";
 import { WALLET_SCREEN } from "../../navigation/routes";
 import Carousel from "react-native-reanimated-carousel";
@@ -110,14 +111,15 @@ const Market = () => {
   const { colors: themeColors } = useTheme();
   const route = useRoute();
   const isFocused = useIsFocused();
-  const dispatch = useDispatch();
   const socketContextVars = useContext(SocketContext) || {};
   const { subscribeToMarket, unsubscribeFromMarket } = socketContextVars;
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const hotPairsChart = useAppSelector((state) => state.home.hotPairsChart) ?? {};
   const futuresPairs = useAppSelector((state) => state.home.futuresPairs ?? []);
   const userData = useAppSelector((state) => state.auth.userData);
-  const isLoggedIn = !!userData;
+  const isLoggedIn = useAppSelector((state) => state.auth.isLoggedIn);
+  const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
+  const dispatch = useDispatch();
 
   const [activeTab, setActiveTab] = useState("Spot");
   const [spotSubCategory, setSpotSubCategory] = useState("All");
@@ -344,9 +346,19 @@ const Market = () => {
             <Animated.View style={{ flex: 1, transform: [{ translateX: contentSlideX }], opacity: contentOpacity }}>
               {activeTab === "Favorites" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData
-                    ? <TabListSkeleton rows={7} />
-                    : <Favourites coinPairs={coinPairs} search={search} isLoggedIn={isLoggedIn} subCategory={spotSubCategory} />}
+                  {!hasMarketData ? (
+                    <TabListSkeleton rows={7} />
+                  ) : favoriteArray?.length > 0 ? (
+                    <MarketList
+                      filterData={coinPairs.filter(p => favoriteArray.includes(p._id))}
+                      onPress={(item) => NavigationService.navigate(WALLET_SCREEN, { coinDetail: item })}
+                      onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))}
+                      favoriteArray={favoriteArray}
+                      hideStar={true}
+                    />
+                  ) : (
+                    <Favourites coinPairs={coinPairs} search={search} isLoggedIn={isLoggedIn} subCategory={spotSubCategory} />
+                  )}
                 </View>
               )}
               {activeTab === "Spot" && (

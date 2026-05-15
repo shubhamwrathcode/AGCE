@@ -164,7 +164,7 @@ const MarketHeader = ({
               >
                 <TouchableOpacity onPress={() => setActiveTab(key)} style={[styles.tab, isActive && styles.tabActive]} activeOpacity={0.8}>
                   <AppText
-                    type={FOURTEEN}
+                    type={SIXTEEN}
                     weight={SEMI_BOLD}
                     style={[
                       styles.tabLabel,
