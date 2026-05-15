@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Animated, AppState, Dimensions, StyleSheet, TouchableOpacity, View, ScrollView, FlatList, useWindowDimensions, Modal } from "react-native";
+import { Animated, AppState, Dimensions, StyleSheet, TouchableOpacity, View, ScrollView, FlatList, useWindowDimensions, Modal, Linking } from "react-native";
 import {
   AppSafeAreaView,
   AppText,
@@ -7,17 +7,17 @@ import {
   RED,
   SEMI_BOLD,
   FOURTEEN,
-  FIFTEEN,
   SIXTEEN,
   TWELVE,
   THIRTEEN,
   ELEVEN,
   EIGHTEEN,
   BOLD,
-  TWENTY_FOUR,
   TEN,
   TWENTY_TWO,
   MEDIUM,
+  TWENTY,
+  FIFTEEN,
 } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
@@ -27,20 +27,11 @@ import {
   downIcon,
   upIcon,
   kyc_verification_vector,
-  lock_ic,
   withdrawIcon,
   depositIcon,
   p2p_Icon,
-  verification_kyc,
-  withdrawal_icon2,
-  deposit_icon2,
-  Trade_ic,
-  p2pIcon2,
   tradeIcon,
-  progress_icon_pending,
-  verification_reject,
   giftIc,
-  checkarrow3,
   verification_gift,
   identity_verification,
   newLock,
@@ -51,11 +42,11 @@ import {
   kyc_success_vector,
   kyc_complete,
   verified_kyc,
+  back_ic,
 } from "../../helper/ImageAssets";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
-import { borderWidth, universalPaddingHorizontal, universalPaddingHorizontalHigh } from "../../theme/dimens";
 import NavigationService from "../../navigation/NavigationService";
-import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, TRADE_SCREEN, NAVIGATION_BOTTOM_TAB_STACK, NAVIGATION_TRADE_STACK, CONTACT_US_SCREEN, CREATE_TICKET_SCREEN } from "../../navigation/routes";
+import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, TRADE_SCREEN, NAVIGATION_BOTTOM_TAB_STACK, CREATE_TICKET_SCREEN } from "../../navigation/routes";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLoading } from "../../slices/authSlice";
@@ -157,8 +148,13 @@ function kycWebAlignedDisplayName(userData) {
   return `AGCE User-${local.slice(0, 8)}`;
 }
 
-function kycWebAlignedInitials(displayName) {
-  return (displayName || "U").slice(0, 2).toUpperCase();
+function kycWebAlignedInitials(userData) {
+  const name = userData?.display_name || userData?.user_login || userData?.user_nicename || "User";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
 }
 
 function KycAvatarInitialsRing({ initials }) {
@@ -169,14 +165,14 @@ function KycAvatarInitialsRing({ initials }) {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{
-        width: 44,
-        height: 44,
-        borderRadius: 32,
+        width: 64,
+        height: 64,
+        borderRadius: 36,
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <AppText type={FOURTEEN} style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "400", letterSpacing: -0.45 }}>
+      <AppText type={FIFTEEN} style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "400", letterSpacing: -0.45 }}>
         {initials}
       </AppText>
     </LinearGradient>
@@ -222,7 +218,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
   const isLoading = useAppSelector((state) => state.auth.isLoading);
 
   const displayName = kycWebAlignedDisplayName(userData);
-  const initials = kycWebAlignedInitials(displayName);
+  const initials = kycWebAlignedInitials(userData);
   const orangeColor = "#F59E0B";
 
   return (
@@ -230,12 +226,12 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
       {/* Profile Header */}
       <View style={{ alignItems: "center", marginBottom: 20 }}>
         <KycAvatarInitialsRing initials={initials} size={70} />
-        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 16, marginBottom: 8 }}>
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 16, marginBottom: 8 }}>
           {displayName}
         </AppText>
         <View style={[styles.statusBadge, { backgroundColor: "rgba(245, 158, 11, 0.1)" }]}>
-          <FastImage source={pending_kyc} style={{ width: 14, height: 14, marginRight: 6 }} tintColor={orangeColor} />
-          <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: orangeColor }}>Pending</AppText>
+          <FastImage source={pending_kyc} style={{ width: 18, height: 18, marginRight: 6 }} tintColor={orangeColor} />
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: orangeColor }}>Pending</AppText>
         </View>
       </View>
 
@@ -243,10 +239,10 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
       <View style={[styles.statusMessageBox, { borderLeftColor: orangeColor, borderLeftWidth: 4 }]}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           <View style={[styles.statusIconWrap, { backgroundColor: "rgba(245, 158, 11, 0.1)" }]}>
-            <FastImage source={pending_kyc} style={{ width: 18, height: 16 }} tintColor={orangeColor} />
+            <FastImage source={pending_kyc} style={{ width: 24, height: 24 }} tintColor={orangeColor} />
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <AppText type={THIRTEEN} style={{ color: themeColors.text, lineHeight: 20 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
               Your verification is being processed. Scanned or copied documents are not accepted. Please ensure your original ID is clear.
             </AppText>
           </View>
@@ -275,9 +271,9 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
 
       {/* Reward Banner */}
       <View style={[styles.kycRewardCard, { backgroundColor: isDark ? "#1E222D" : "#F9FAFB" }]}>
-        <FastImage source={bonus_image} style={{ width: 60, height: 50, marginRight: 16 }} resizeMode="contain" />
+        <FastImage source={bonus_image} style={{ width: 64, height: 50, marginRight: 16 }} resizeMode="contain" />
         <View style={{ flex: 1 }}>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
             Complete verification to receive{" "}
             <AppText style={{ color: colors.orangeTheme }} weight={MEDIUM}>10 USDT</AppText>
           </AppText>
@@ -287,9 +283,9 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
       {/* Privileges Table */}
       <View style={{ width: "100%", marginTop: 10 }}>
         <View style={styles.tableHeaderRow}>
-          <AppText type={TWELVE} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
-          <AppText type={TWELVE} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
-          <AppText type={TWELVE} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
         </View>
         {[
           { label: "Withdrawal", value: "--", locked: true },
@@ -299,7 +295,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
         ].map((item, idx) => (
           <View key={idx} style={styles.tableDataRow}>
             <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1.5, color: themeColors.text }}>{item.label}</AppText>
-            <AppText type={FOURTEEN} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
             <View style={{ flex: 1, alignItems: "flex-end" }}>
               <FastImage source={verify_lock} style={{ width: 16, height: 16 }} tintColor="#9CA3AF" />
             </View>
@@ -317,7 +313,7 @@ const KycRejected = ({ onVerifyPress }) => {
   const kyc_reject_reason = userData?.kyc_reject_reason;
 
   const displayName = kycWebAlignedDisplayName(userData);
-  const initials = kycWebAlignedInitials(displayName);
+  const initials = kycWebAlignedInitials(userData);
   const userId = userData?.user_id || "User-ID";
 
   return (
@@ -325,12 +321,12 @@ const KycRejected = ({ onVerifyPress }) => {
       {/* Profile Header */}
       <View style={{ alignItems: "center", marginBottom: 20 }}>
         <KycAvatarInitialsRing initials={initials} size={70} />
-        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 16, marginBottom: 8 }}>
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 16, marginBottom: 8 }}>
           {displayName}
         </AppText>
         <View style={[styles.statusBadge, { backgroundColor: "rgba(239, 68, 68, 0.1)" }]}>
-          <FastImage source={failed} style={{ width: 14, height: 14, marginRight: 6 }} tintColor={themeColors.red} />
-          <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.red }}>Failed</AppText>
+          <FastImage source={failed} style={{ width: 18, height: 18, marginRight: 6 }} tintColor={themeColors.red} />
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.red }}>Failed</AppText>
         </View>
       </View>
 
@@ -338,10 +334,10 @@ const KycRejected = ({ onVerifyPress }) => {
       <View style={[styles.statusMessageBox, { borderLeftColor: themeColors.red, borderLeftWidth: 4 }]}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           <View style={[styles.statusIconWrap, { backgroundColor: 'transparent' }]}>
-            <FastImage source={failed} style={{ width: 16, height: 16 }} tintColor={themeColors.red} />
+            <FastImage source={failed} style={{ width: 24, height: 24 }} tintColor={themeColors.red} />
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <AppText type={THIRTEEN} style={{ color: themeColors.text, lineHeight: 20 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
               {kyc_reject_reason || "Your verification is incomplete. Please submit the required details and complete facial recognition."}
             </AppText>
           </View>
@@ -361,7 +357,7 @@ const KycRejected = ({ onVerifyPress }) => {
           onPress={() => NavigationService.navigate(CREATE_TICKET_SCREEN)}
           style={{ alignSelf: "center", marginTop: 12 }}
         >
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
             Need Help?
           </AppText>
         </TouchableOpacity>
@@ -369,9 +365,9 @@ const KycRejected = ({ onVerifyPress }) => {
 
       {/* Reward Banner */}
       <View style={[styles.kycRewardCard, { backgroundColor: isDark ? "#1E222D" : "#F9FAFB" }]}>
-        <FastImage source={bonus_image} style={{ width: 60, height: 50, marginRight: 16 }} resizeMode="contain" />
+        <FastImage source={bonus_image} style={{ width: 64, height: 50, marginRight: 16 }} resizeMode="contain" />
         <View style={{ flex: 1 }}>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
             Complete verification to receive{" "}
             <AppText style={{ color: colors.orangeTheme }} weight={MEDIUM}>10 USDT</AppText>
           </AppText>
@@ -381,9 +377,9 @@ const KycRejected = ({ onVerifyPress }) => {
       {/* Privileges Table */}
       <View style={{ width: "100%", marginTop: 10 }}>
         <View style={styles.tableHeaderRow}>
-          <AppText type={TWELVE} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
-          <AppText type={TWELVE} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
-          <AppText type={TWELVE} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
         </View>
         {[
           { label: "Withdrawal", value: "--", locked: true },
@@ -393,7 +389,7 @@ const KycRejected = ({ onVerifyPress }) => {
         ].map((item, idx) => (
           <View key={idx} style={styles.tableDataRow}>
             <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1.5, color: themeColors.text }}>{item.label}</AppText>
-            <AppText type={FOURTEEN} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
             <View style={{ flex: 1, alignItems: "flex-end" }}>
               <FastImage source={verify_lock} style={{ width: 16, height: 16 }} tintColor="#9CA3AF" />
             </View>
@@ -422,14 +418,14 @@ const KycDue = ({ onVerifyPress }) => {
         <FastImage
           source={identity_verification}
           resizeMode="contain"
-          style={{ width: 250, height: 180, marginBottom: 24 }}
+          style={{ width: 250, height: 180, marginBottom: 10 }}
         />
 
         {/* Title & Subtitle */}
-        <AppText type={TWENTY_TWO} weight={SEMI_BOLD} style={{ color: "#111827", textAlign: "center", marginBottom: 12 }}>
+        <AppText type={TWENTY_TWO} weight={SEMI_BOLD} style={{ color: "#111827", textAlign: "center", marginBottom: 10 }}>
           Complete Identity Verification
         </AppText>
-        <AppText type={FOURTEEN} style={{ color: "#6B7280", textAlign: "center", lineHeight: 22, paddingHorizontal: 30, marginBottom: 32 }}>
+        <AppText type={FOURTEEN} style={{ color: "#6B7280", textAlign: "center", paddingHorizontal: 30, marginBottom: 12 }}>
           Unlock deposits, trading, and payments by verifying your account.
         </AppText>
 
@@ -440,7 +436,7 @@ const KycDue = ({ onVerifyPress }) => {
             <View style={styles.rewardHeader}>
               <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
                 <FastImage source={newLock} style={{ width: 22, height: 22, marginRight: 10 }} tintColor="#B47D16" />
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                <AppText type={FOURTEEN} style={{ color: themeColors.text }}>
                   Verify to claim <AppText style={{ color: "#D1AA67" }} weight={SEMI_BOLD}>15 USDT</AppText>
                 </AppText>
               </View>
@@ -459,11 +455,11 @@ const KycDue = ({ onVerifyPress }) => {
           <View style={{ padding: 16 }}>
             <View style={styles.checkStep}>
               <View style={styles.bullet} />
-              <AppText type={THIRTEEN} style={{ color: themeColors.text }}>Submit your basic details</AppText>
+              <AppText type={THIRTEEN} style={{ color: colors.black }}>Submit your basic details</AppText>
             </View>
             <View style={styles.checkStep}>
               <View style={styles.bullet} />
-              <AppText type={THIRTEEN} style={{ color: themeColors.text }}>Complete document & facial verification</AppText>
+              <AppText type={THIRTEEN} style={{ color: colors.black }}>Complete document & facial verification</AppText>
             </View>
           </View>
         </View>
@@ -488,7 +484,7 @@ const KycCompleted = () => {
   const userData = useAppSelector((state) => state.auth.userData);
 
   const displayName = kycWebAlignedDisplayName(userData);
-  const initials = kycWebAlignedInitials(displayName);
+  const initials = kycWebAlignedInitials(userData);
   const greenColor = themeColors.green || "#10B981";
 
   return (
@@ -500,12 +496,12 @@ const KycCompleted = () => {
           style={{ width: 120, height: 120, marginBottom: 10 }}
           resizeMode="contain"
         />
-        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 10, marginBottom: 8 }}>
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 10, marginBottom: 8 }}>
           {displayName}
         </AppText>
         <View style={[styles.statusBadge, { backgroundColor: "rgba(16, 185, 129, 0.1)" }]}>
-          <FastImage source={kyc_complete} style={{ width: 14, height: 14, marginRight: 6 }} tintColor={greenColor} />
-          <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: greenColor }}>Successful</AppText>
+          <FastImage source={kyc_complete} style={{ width: 18, height: 18, marginRight: 6 }} tintColor={greenColor} />
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: greenColor }}>Successful</AppText>
         </View>
       </View>
 
@@ -513,10 +509,10 @@ const KycCompleted = () => {
       <View style={[styles.statusMessageBox, { borderLeftColor: greenColor, borderLeftWidth: 4 }]}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           <View style={[styles.statusIconWrap, {}]}>
-            <FastImage source={kyc_complete} style={{ width: 20, height: 20 }} tintColor={greenColor} />
+            <FastImage source={kyc_complete} style={{ width: 24, height: 24 }} tintColor={greenColor} />
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <AppText type={THIRTEEN} style={{ color: themeColors.text, lineHeight: 20 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
               Your identity verification is complete. You now have full access to all features, including higher limits and P2P trading.
             </AppText>
           </View>
@@ -535,7 +531,7 @@ const KycCompleted = () => {
           onPress={() => NavigationService.navigate(CREATE_TICKET_SCREEN)}
           style={{ alignSelf: "center", marginTop: 12 }}
         >
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
             Need Help?
           </AppText>
         </TouchableOpacity>
@@ -543,9 +539,9 @@ const KycCompleted = () => {
 
       {/* Reward Banner */}
       <View style={[styles.kycRewardCard, { backgroundColor: isDark ? "#1E222D" : "#F9FAFB" }]}>
-        <FastImage source={bonus_image} style={{ width: 60, height: 50, marginRight: 16 }} resizeMode="contain" />
+        <FastImage source={bonus_image} style={{ width: 64, height: 50, marginRight: 16 }} resizeMode="contain" />
         <View style={{ flex: 1 }}>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
             Verification complete! You've received{" "}
             <AppText style={{ color: colors.orangeTheme }} weight={MEDIUM}>10 USDT</AppText>
           </AppText>
@@ -555,9 +551,9 @@ const KycCompleted = () => {
       {/* Privileges Table */}
       <View style={{ width: "100%", marginTop: 10 }}>
         <View style={styles.tableHeaderRow}>
-          <AppText type={TWELVE} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
-          <AppText type={TWELVE} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
-          <AppText type={TWELVE} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
+          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
         </View>
         {[
           { label: "Withdrawal", value: "--" },
@@ -567,7 +563,7 @@ const KycCompleted = () => {
         ].map((item, idx) => (
           <View key={idx} style={styles.tableDataRow}>
             <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1.5, color: themeColors.text }}>{item.label}</AppText>
-            <AppText type={FOURTEEN} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
             <View style={{ flex: 1, alignItems: "flex-end" }}>
               <FastImage source={verified_kyc} style={{ width: 16, height: 16 }} />
             </View>
@@ -755,7 +751,7 @@ const KycStatus = () => {
 
 
   const kycStatusView = () => {
-    switch (kycVerified) {
+    switch (1) {
       case 0: return <KycDue onVerifyPress={openVerifyModal} screenWidth={screenWidth} />;
       case 1: return <KycPending idDocStatus={idDocStatus} taxDocStatus={taxDocStatus} selfieStatus={selfieStatus} submittedIdDocType={submittedIdDocType} submittedTaxDocType={submittedTaxDocType} />;
       case 2: return <KycCompleted />;
@@ -773,6 +769,7 @@ const KycStatus = () => {
             title={"Verification Center"}
             theme={isDark ? "Dark" : "Light"}
             onInfoPress={() => faqSheetRef.current?.open()}
+            onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })}
           />
           <View style={styles.sectionWrapper}>
             {contentLoading ? <KycStatusSkeleton /> : kycStatusView()}
@@ -834,7 +831,7 @@ const KycStatus = () => {
       </RBSheet>
 
       <Modal visible={!!diditWebviewUrl} animationType="slide" presentationStyle="fullScreen" onRequestClose={closeDiditWebview}>
-        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: themeColors.background }}>
+        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.white }}>
           <View
             style={{
               flexDirection: "row",
@@ -842,14 +839,14 @@ const KycStatus = () => {
               justifyContent: "space-between",
               paddingHorizontal: 12,
               paddingVertical: 10,
-              borderBottomWidth: StyleSheet.hairlineWidth,
+              // borderBottomWidth: StyleSheet.hairlineWidth,
               borderBottomColor: themeColors.border,
             }}
           >
             <TouchableOpacity onPress={closeDiditWebview} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close verification">
-              <FastImage source={closeIcon} style={{ width: 16, height: 16 }} resizeMode="contain" tintColor={themeColors.text} />
+              <FastImage source={back_ic} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={themeColors.text} />
             </TouchableOpacity>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+            <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
               Identity verification
             </AppText>
             <View style={{ width: 16 }} />

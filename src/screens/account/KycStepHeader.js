@@ -1,15 +1,15 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppText, FIFTEEN, SEMI_BOLD, SIXTEEN } from "../../shared";
+import { AppText, FIFTEEN, SEMI_BOLD, SIXTEEN, TWENTY } from "../../shared";
 import { colors } from "../../theme/colors";
-import { back_ic, headPhoneIcon, INFO } from "../../helper/ImageAssets";
+import { back_ic, headPhoneIcon, helpicon, INFO } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 
 const BACK_ICON_SIZE = 18;
 const INFO_ICON_SIZE = 22;
 
-const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress }) => {
+const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupportPress }) => {
   const isDark = theme === "Dark";
   const textColor = isDark ? colors.white : colors.black;
   const onPress = onBackPress ?? (() => NavigationService.goBack());
@@ -30,9 +30,9 @@ const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress }) => {
       </TouchableOpacity>
 
       <AppText
-        type={SIXTEEN}
+        type={TWENTY}
         weight={SEMI_BOLD}
-        style={[styles.headerTitle, { color: textColor }]}
+        style={[styles.headerTitle, { color: textColor, left: 10 }]}
         numberOfLines={1}
       >
         {title}
@@ -47,6 +47,25 @@ const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress }) => {
         {onInfoPress ? (
           <FastImage
             source={INFO}
+            resizeMode="contain"
+            style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }}
+            tintColor={textColor}
+          />
+        ) : (
+          <View style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }} />
+        )}
+      </TouchableOpacity>
+
+
+      <TouchableOpacity
+        onPress={onSupportPress}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={[styles.actionBtn, { alignItems: 'flex-end' }]}
+        disabled={!onInfoPress}
+      >
+        {onInfoPress ? (
+          <FastImage
+            source={headPhoneIcon}
             resizeMode="contain"
             style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }}
             tintColor={textColor}
@@ -80,6 +99,5 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: "center",
-    marginHorizontal: 8,
   },
 });
