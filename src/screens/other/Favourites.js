@@ -287,7 +287,7 @@ const Favourites = ({ style, from, coinPairs: propsCoinPairs, search: propsSearc
               <View style={{ marginTop: 20, marginBottom: 5 }}>
                 <Button
                   loading={btnLoading}
-                  children="Quick Add"
+                  children="Add to Favourite"
                   containerStyle={styles.mainBtn}
                   onPress={async () => {
                     const toAdd = (favouriteCoins || []).filter(id => !favoriteArray.includes(id));

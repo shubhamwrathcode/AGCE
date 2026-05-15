@@ -1,11 +1,8 @@
-import { AppText, ELEVEN, SEMI_BOLD } from "../../shared";
 import { StyleSheet, TouchableOpacity, View, ScrollView } from "react-native";
 import { useMemo, useState } from "react";
-import FastImage from "react-native-fast-image";
 import MarketList from "./MarketList";
-import { useAppSelector } from "../../store/hooks";
 import NavigationService from "../../navigation/NavigationService";
-import { WALLET_SCREEN } from "../../navigation/routes";
+import { TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import { colors } from "../../theme/colors";
 import { Coin, tetherIcon, bitcoinIcon, bnbIcon } from "../../helper/ImageAssets";
 import { useTheme } from "../../hooks/useTheme";
@@ -47,12 +44,9 @@ const SpotMarket = ({ coinPairs, search = "", subCategory = "All", hideStar = tr
   }, [coinPairs, search, spotQuoteCurrency, subCategory]);
 
   const handleNavigate = (item) => {
-    NavigationService.navigate(WALLET_SCREEN, { coinDetail: item });
+    NavigationService.navigate(TRADE_SCREEN, { coinDetail: item });
   };
 
-  const chipBg = (selected) => (selected ? themeColors.card : "transparent");
-  const chipTextColor = (selected) => (selected ? themeColors.text : themeColors.secondaryText);
-  const chipBorder = (selected) => (selected ? themeColors.border : "transparent");
 
   return (
     <View style={styles.container}>

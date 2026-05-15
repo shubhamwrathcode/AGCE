@@ -79,7 +79,10 @@ export const colors = {
   buyButtonColor: "#00C076",
   sellButtonColor: "#ED4E4E",
   blueThemeColor: '#1e56f5',
-  starColor: "#ffc108"
+  starColor: "#ffc108",
+  startintcolor: "#D1AA67",
+  stardisablecolor: '#e9e9e9'
+
 };
 
 /** Light canvas: not pure #fff so the app reads distinct from the cloned template. */

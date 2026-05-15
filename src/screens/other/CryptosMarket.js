@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { View } from "react-native";
 import MarketList from "./MarketList";
 import NavigationService from "../../navigation/NavigationService";
-import { WALLET_SCREEN } from "../../navigation/routes";
+import { TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 
 // Web "Cryptos" tab is a coins view (not strictly pairs).
 // We approximate it on mobile by collapsing spot pairs into one row per base currency,
@@ -53,7 +53,7 @@ const CryptosMarket = ({ coinPairs, search = "", subCategory = "All", hideStar =
   }, [coinPairs, search, subCategory]);
 
   const handleNavigate = (item) => {
-    NavigationService.navigate(WALLET_SCREEN, { coinDetail: item });
+    NavigationService.navigate(TRADE_SCREEN, { coinDetail: item });
   };
 
   return (

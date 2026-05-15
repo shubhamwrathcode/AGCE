@@ -448,6 +448,9 @@ export const pending_kyc = require('../../assets/images/pending_kyc.png');
 export const kyc_complete = require('../../assets/images/kyc_complete.png');
 export const verified_kyc = require('../../assets/images/verified_kyc.png');
 export const favCheck = require('../../assets/images/favCheck.png');
+export const favUnCheck = require('../../assets/images/starDisable.png');
+
+
 
 
 

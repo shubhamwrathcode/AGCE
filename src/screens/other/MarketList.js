@@ -8,6 +8,7 @@ import {
   starFillIcon,
   starIcon,
   back_ic,
+  favUnCheck,
 } from "../../helper/ImageAssets";
 import { useAppSelector } from "../../store/hooks";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
@@ -59,10 +60,10 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
             {!hideStar && (
               <TouchableOpacity onPress={() => onToggleFavorite(item?._id)} activeOpacity={0.7} style={styles.starBtnHomeTab}>
                 <FastImage
-                  source={isFavorite ? starFillIcon : starIcon}
+                  source={isFavorite ? starFillIcon : favUnCheck}
                   resizeMode="contain"
                   style={styles.starIcon}
-                  tintColor={isFavorite ? colors.starColor : themeColors.secondaryText}
+                  tintColor={isFavorite ? colors.startintcolor : colors.stardisablecolor}
                 />
               </TouchableOpacity>
             )}
@@ -121,10 +122,10 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
           {!hideStar && (
             <TouchableOpacity onPress={() => onToggleFavorite(item?._id)} activeOpacity={0.7} style={styles.starBtn}>
               <FastImage
-                source={isFavorite ? starFillIcon : starIcon}
+                source={isFavorite ? starFillIcon : favUnCheck}
                 resizeMode="contain"
                 style={styles.starIcon}
-                tintColor={isFavorite ? colors.starColor : themeColors.secondaryText}
+                tintColor={isFavorite ? colors.startintcolor : colors.stardisablecolor}
               />
             </TouchableOpacity>
           )}
@@ -523,8 +524,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   starIcon: {
-    width: 13,
-    height: 13,
+    width: 16,
+    height: 16,
   },
   coinIcon: {
     width: 35,

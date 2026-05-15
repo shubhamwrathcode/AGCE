@@ -7,6 +7,8 @@ import MarketList from "./MarketList";
 import { back_ic, favCheck, closeIcon, checkIc } from "../../helper/ImageAssets";
 import { colors } from "../../theme/colors";
 import RBSheet from "react-native-raw-bottom-sheet";
+import NavigationService from "../../navigation/NavigationService";
+import { TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -38,7 +40,7 @@ const ALPHA_POOLS = {
   ],
 };
 
-const AlphaMarket = ({ coinPairs, search }) => {
+const AlphaMarket = ({ coinPairs, search, hideStar = true, favoriteArray, onToggleFavorite }) => {
   const { colors: themeColors, isDark } = useTheme();
 
   const chainSheetRef = useRef();
@@ -88,6 +90,10 @@ const AlphaMarket = ({ coinPairs, search }) => {
     setPoolSearch("");
   };
 
+  const handleNavigate = (item) => {
+    NavigationService.navigate(TRADE_SCREEN, { coinDetail: item });
+  };
+
   return (
     <View style={styles.container}>
       {/* Dropdowns Row */}
@@ -133,7 +139,7 @@ const AlphaMarket = ({ coinPairs, search }) => {
         </TouchableOpacity>
       </View>
 
-      <MarketList filterData={filterAlphaData} hideStar={true} />
+      <MarketList filterData={filterAlphaData} hideStar={hideStar} favoriteArray={favoriteArray} onToggleFavorite={onToggleFavorite} onPress={handleNavigate} />
 
       {/* Chain Selection Sheet */}
       <RBSheet

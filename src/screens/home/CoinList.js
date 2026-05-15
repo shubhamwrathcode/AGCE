@@ -15,7 +15,7 @@ import MarketList from "../other/MarketList";
 import { FuturesList } from "../other/FuturesMarket";
 import HomeCoinList from "./HomeCoinList";
 import NavigationService from "../../navigation/NavigationService";
-import { WALLET_SCREEN, MARKET_SCREEN, FUTURES_SCREEN, ADD_FAVOURITE_SCREEN } from "../../navigation/routes";
+import { WALLET_SCREEN, MARKET_SCREEN, FUTURES_SCREEN, ADD_FAVOURITE_SCREEN, TRADE_SCREEN } from "../../navigation/routes";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import FastImage from "react-native-fast-image";
 import { AppText, Button, MEDIUM, SEMI_BOLD } from "../../shared";
@@ -34,7 +34,7 @@ const CoinList = React.memo(() => {
   const theme = useAppSelector((state) => state.auth.theme);
   const dispatch = useDispatch();
   // Web parity tabs: 0=Favorite, 1=Trending, 2=Hot, 3=New Listing, 4=Top Gainers
-  const [activeTabList, setActiveTabList] = useState(1);
+  const [activeTabList, setActiveTabList] = useState(0);
   const prevTabRef = useRef(activeTabList);
   const tabScrollRef = useRef(null);
 
@@ -46,7 +46,7 @@ const CoinList = React.memo(() => {
 
   const tabs = useMemo(
     () => [
-      { key: 0, label: "Favorite" },
+      { key: 0, label: "Spot" },
       { key: 1, label: "Trending" },
       { key: 2, label: "Hot" },
       { key: 3, label: "New Listing" },
@@ -113,12 +113,9 @@ const CoinList = React.memo(() => {
   const filterData = useMemo(() => {
     if (!spotUsdtPairs || spotUsdtPairs.length === 0) return [];
 
-    // Favorite handled by component
+    // Spot tab: all USDT pairs
     if (activeTabList === 0) {
-      if (!favoriteArray || favoriteArray.length === 0) {
-        return [...spotUsdtPairs];
-      }
-      return spotUsdtPairs.filter((p) => favoriteArray.includes(p?._id));
+      return [...spotUsdtPairs];
     }
 
     // Trending: highest 24h volume
@@ -179,7 +176,7 @@ const CoinList = React.memo(() => {
     dispatch(setSpotSelectedPair(item));
     dispatch(setBuyOrders([]));
     dispatch(setSellOrders([]));
-    NavigationService.navigate(WALLET_SCREEN, { coinDetail: item });
+    NavigationService.navigate(TRADE_SCREEN, { coinDetail: item });
   }, [dispatch]);
 
   const handleViewMore = useCallback(() => {
@@ -282,36 +279,18 @@ const CoinList = React.memo(() => {
           {activeTabList === 0 ? null : null}
 
           <Animated.View style={listAnimatedStyle}>
-            {activeTabList === 0 && (!favoriteArray || favoriteArray?.length === 0) ? (
-              <Favourites coinPairs={filterData} onPress={handleNavigate} from="home" />
-            ) : (
-              <MarketList
-                filterData={fourItems}
-                onPress={handleNavigate}
-                scrollEnabled={false}
-                pairTypography="homeTab"
-                hideStar={true}
-                style={styles.marketListFixed}
-              />
-            )}
+            <MarketList
+              filterData={fourItems}
+              onPress={handleNavigate}
+              scrollEnabled={false}
+              pairTypography="homeTab"
+              hideStar={true}
+              style={styles.marketListFixed}
+            />
           </Animated.View>
         </View>
 
-        {activeTabList === 0 && favoriteArray?.length > 0 ? (
-          <View style={{ paddingHorizontal: 5, paddingBottom: 10, marginTop: 20 }}>
-            <Button
-              loading={btnLoading}
-              children="Add Favourite"
-              containerStyle={[styles.mainBtn, { width: '100%', height: 40 }]}
-              onPress={async () => {
-                setBtnLoading(true);
-                // The actual navigation will happen, but we show loading for feedback
-                await NavigationService.navigate(ADD_FAVOURITE_SCREEN);
-                setBtnLoading(false);
-              }}
-            />
-          </View>
-        ) : activeTabList !== 0 && (
+        {activeTabList !== 0 && (
           <TouchableOpacityView
             style={styles.viewMoreRow}
             onPress={handleViewMore}

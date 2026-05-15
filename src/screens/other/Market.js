@@ -17,20 +17,15 @@ import { useRoute, useIsFocused } from "@react-navigation/native";
 import { SocketContext } from "../../SocketProvider";
 import { getFavoriteArray, addToFavorites } from "../../actions/homeActions";
 import NavigationService from "../../navigation/NavigationService";
-import { WALLET_SCREEN } from "../../navigation/routes";
-import Carousel from "react-native-reanimated-carousel";
-import MarketFeaturedCard from "./MarketFeaturedCard";
-import CustomDots from "../home/CustomDots";
+import { TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import MarketSkeleton from "./MarketSkeleton";
 import { futureSocketService } from "../../services/socket/FutureSocketService";
 import { setFuturesPairs } from "../../slices/homeSlice";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const H_PAD = universalPaddingHorizontal;
-const ITEM_WIDTH = SCREEN_WIDTH / 2 - 22;
 const SIDE_SPACE = 20;
+const HOT_BASE_ORDER = ["BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "MATIC"];
 const SHIMMER_STRIP = 120;
 
 // Reusable shimmer box shared by TabListSkeleton
@@ -283,11 +278,7 @@ const Market = () => {
     return out;
   }, [coinPairs, hotPairsChart]);
 
-  const handleFeaturedPress = useCallback((item) => {
-    if (item?.base_currency && item?.quote_currency) {
-      NavigationService.navigate(WALLET_SCREEN, { coinDetail: item });
-    }
-  }, []);
+
 
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white }}>
@@ -351,24 +342,28 @@ const Market = () => {
                   ) : favoriteArray?.length > 0 ? (
                     <MarketList
                       filterData={coinPairs.filter(p => favoriteArray.includes(p._id))}
-                      onPress={(item) => NavigationService.navigate(WALLET_SCREEN, { coinDetail: item })}
+                      onPress={(item) => NavigationService.navigate(TRADE_SCREEN, { coinDetail: item })}
                       onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))}
                       favoriteArray={favoriteArray}
-                      hideStar={true}
+                      hideStar={false}
                     />
                   ) : (
-                    <Favourites coinPairs={coinPairs} search={search} isLoggedIn={isLoggedIn} subCategory={spotSubCategory} />
+                    <Favourites
+                      coinPairs={coinPairs}
+                      onPress={(item) => NavigationService.navigate(TRADE_SCREEN, { coinDetail: item })}
+                      from="home"
+                    />
                   )}
                 </View>
               )}
               {activeTab === "Spot" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={true} />}
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
                 </View>
               )}
               {activeTab === "Cryptos" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={true} />}
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
                 </View>
               )}
               {activeTab === "USD_M_FUTURES" && (
@@ -395,7 +390,7 @@ const Market = () => {
 
               {activeTab === "ALPHA" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <AlphaMarket coinPairs={coinPairs} search={search} />}
+                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <AlphaMarket coinPairs={coinPairs} search={search} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
                 </View>
               )}
             </Animated.View>
