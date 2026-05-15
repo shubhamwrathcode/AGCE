@@ -77,7 +77,7 @@ const Input = ({
   const { colors: themeColors, isDark } = useTheme();
   const resolvedInputBg = themeColors.input;
   const [isFocused, setIsFocused] = useState(false);
-  
+
   return (
     <View style={[styles.inputWrapper, mainContainer]}>
       {title && <AppText type={THIRTEEN} style={[styles.title, { color: themeColors.text }]} weight={SEMI_BOLD}>{title}</AppText>}
@@ -85,7 +85,7 @@ const Input = ({
         style={[
           styles.container,
           {
-            backgroundColor: resolvedInputBg,
+            backgroundColor: '#EDEDEE',
             borderColor: hasError
               ? colors.red
               : isFocused
@@ -102,7 +102,7 @@ const Input = ({
         <TextInput
           {...props}
           placeholder={placeholder}
-          placeholderTextColor={isDark ? colors.disabledText : colors.placeholderColor}
+          placeholderTextColor={'#84888C'}
           autoCorrect={false}
           style={[styles.inputF, inputStyle, { color: themeColors.text }]}
           value={value}
@@ -159,8 +159,8 @@ const Input = ({
         {isOtp && (
           <Button
             children={otpText}
-            titleStyle={[styles.titleStyle,{color: themeColors.buttonText}]}
-            containerStyle={[styles.containerStyle,{backgroundColor: themeColors.button}]}
+            titleStyle={[styles.titleStyle, { color: themeColors.buttonText }]}
+            containerStyle={[styles.containerStyle, { backgroundColor: themeColors.button }]}
             onPress={onSendOtp}
             disabled={isOtpDisabled}
           />
@@ -173,10 +173,10 @@ const Input = ({
 export { Input };
 const styles = StyleSheet.create({
   inputWrapper: {
-    marginBottom: 14,
+    marginBottom: 8,
   },
   inputF: {
-    fontFamily: fontFamily,
+    fontFamily: fontFamilyMedium,
     fontSize: 14,
     // color: colors.black,
     height: inputHeight,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    marginTop: 4,
+    marginTop: 2,
     height: inputHeight,
     borderWidth: 1,
     borderColor: colors.white,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   containerStyle: {
-    height: smallButtonHeight,
+    height: smallButtonHeight + 4,
     paddingHorizontal: 15,
     borderRadius: 10,
   },

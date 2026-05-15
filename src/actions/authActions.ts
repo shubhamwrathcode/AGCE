@@ -490,7 +490,7 @@ export const verifyOtp = (
         onBlocked();
       }
     } else {
-      showSuccess(response?.message ?? 'Account verified successfully.');
+      showSuccess('Login successful');
       setOtpError(false);
       setOtp('');
       const tok = extractTokenFromAuthResponse(response);
@@ -500,9 +500,8 @@ export const verifyOtp = (
       if (tok) {
         await persistSignupSessionToken(tok);
       }
-      NavigationService.navigate(NAVIGATION_AUTH_STACK, {
-        screen: ACCOUNT_ACTIVATED_SCREEN,
-      });
+      NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
+      dispatch(getUserProfile());
     }
   } catch (e: any) {
     logger(e);

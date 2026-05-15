@@ -11,7 +11,7 @@ import { useTheme } from "../../hooks/useTheme";
  */
 const AuthHeader = ({ onSupportPress, onClosePress, title }) => {
   const { colors: themeColors, isDark } = useTheme();
-  const logoBg = isDark ? themeColors.card : "#F5F0E8";
+  const logoBg = "#F5F6F7";
 
   return (
     <View>
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   logoWrap: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 25,
     overflow: "hidden",
   },
   logoImg: {
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerIcon: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
   },
 });
 

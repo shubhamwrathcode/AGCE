@@ -51,7 +51,7 @@ const Button = ({
       ) : (
         typeof children === 'string' ? (
           <AppText
-            type={FIFTEEN}
+            type={SIXTEEN}
             weight={SEMI_BOLD}
             style={StyleSheet.flatten([{ color: colors.white }, titleStyle])}>
             {children}

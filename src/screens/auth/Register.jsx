@@ -3,8 +3,11 @@ import {
   AppSafeAreaView,
   AppText,
   Button,
+  ELEVEN,
+  FIFTEEN,
   FOURTEEN,
   Input,
+  MEDIUM,
   TEN,
   THIRTEEN,
   TWELVE,
@@ -232,8 +235,8 @@ const Register = () => {
         if (isSkippablePrecheckError(e)) {
           console.warn("[Register] check-signup-email unavailable, skipping pre-check", e?.code || e?.message);
         } else {
-        showError(e?.message || e?.response?.data?.message || "Request failed");
-        return;
+          showError(e?.message || e?.response?.data?.message || "Request failed");
+          return;
         }
       } finally {
         setStep1Submitting(false);
@@ -255,8 +258,8 @@ const Register = () => {
         if (isSkippablePrecheckError(e)) {
           console.warn("[Register] validate-signup-referral unavailable, skipping pre-check", e?.code || e?.message);
         } else {
-        showError(e?.message || e?.response?.data?.message || "Request failed");
-        return;
+          showError(e?.message || e?.response?.data?.message || "Request failed");
+          return;
         }
       } finally {
         setStep1Submitting(false);
@@ -408,17 +411,17 @@ const Register = () => {
                 if (signUpIdError) setSignUpIdError(false);
                 setSignUpId(text);
               }}
-              placeholder={checkValue(languages?.place_userName) || "Enter phone number"}
+              placeholder={"Enter phone number"}
               hasError={signUpIdError}
               onSelectCountry={setCountryCode}
               onCountry={setCountry}
               country={country}
               countryCode={countryCode}
               maxLength={15}
-              onFocus={() => {}}
-              onBlur={() => {}}
-              onSubmitEditing={() => {}}
-              onEndEditing={() => {}}
+              onFocus={() => { }}
+              onBlur={() => { }}
+              onSubmitEditing={() => { }}
+              onEndEditing={() => { }}
             />
           ) : (
             <View style={[authStyles.mobileContainer, styles.emailSuggestWrap]}>
@@ -478,14 +481,14 @@ const Register = () => {
 
           <TouchableOpacityView
             style={{
-              marginTop: 15,
+              marginTop: 5,
               flexDirection: "row",
               alignItems: "center",
               gap: 10,
             }}
             onPress={() => setShowRefer(!showRefer)}
           >
-            <AppText style={{ color: themeColors.text }}>Referral code</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>Referral code</AppText>
             <FastImage
               source={!showRefer ? downIcon : upIcon}
               resizeMode="contain"
@@ -510,7 +513,7 @@ const Register = () => {
               flexDirection: "row",
               alignItems: "center",
               marginVertical: 12,
-              gap: 10,
+              gap: 8,
             }}
             onPress={() => {
               if (index === 0) setCheckTermsEmail((c) => !c);
@@ -524,11 +527,11 @@ const Register = () => {
                 else setCheckTermsPhone((c) => !c);
               }}
             />
-            <AppText type={TWELVE} style={{ color: themeColors.text }}>
+            <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
               I agree to AGCE{" "}
               <AppText
-                type={TWELVE}
-                style={{ color: colors.buttonBg ,textDecorationLine:"underline"}}
+                type={TWELVE} weight={MEDIUM}
+                style={{ color: colors.buttonBg, textDecorationLine: "underline" }}
                 onPress={() =>
                   NavigationService.navigate(CMS_SCREEN, {
                     id: "https://agce.wrathcode.com/terms_conditions",
@@ -548,67 +551,67 @@ const Register = () => {
             }
             onPress={() => send()}
             loading={(showButtonLoading && !isGoogleSignInInProgress && !isAppleSignInInProgress) || step1Submitting}
-            containerStyle={[styles.primaryCTA, { marginTop: 20 }]}
+            containerStyle={[styles.primaryCTA, { marginTop: 10 }]}
           />
         </View>
         <View style={styles.socialSection}>
-        <View style={styles.dividerRow}>
-          <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
-          <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
-            Or log in with
-          </AppText>
-          <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
-        </View>
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>
+              Or log in with
+            </AppText>
+            <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
+          </View>
 
-        <TouchableOpacityView
-          style={[styles.socialPill, { borderColor: socialPillBorder, backgroundColor: socialPillBg }]}
-          onPress={signupWithGoogle}
-          disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
-        >
-          {isGoogleSignInInProgress ? (
-            <ActivityIndicator size={"small"} color={themeColors.text} />
-          ) : (
-            <FastImage source={googleIcon} resizeMode="contain" style={styles.socialBrandIcon} />
-          )}
-          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
-            Continue with Google
-          </AppText>
-        </TouchableOpacityView>
-
-        {Platform.OS === "ios" ? (
           <TouchableOpacityView
-            style={[styles.socialPill, { borderColor: socialPillBorder, backgroundColor: socialPillBg }]}
-            onPress={signupWithApple}
+            style={[styles.socialPill, { borderColor: socialPillBorder, }]}
+            onPress={signupWithGoogle}
             disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
           >
-            {isAppleSignInInProgress ? (
+            {isGoogleSignInInProgress ? (
               <ActivityIndicator size={"small"} color={themeColors.text} />
             ) : (
-              <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
+              <FastImage source={googleIcon} resizeMode="contain" style={styles.socialBrandIcon} />
             )}
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
-              Continue with Apple
+            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+              Continue with Google
             </AppText>
           </TouchableOpacityView>
-        ) : null}
 
-        <AppText type={TEN} style={{ color: themeColors.secondaryText, textAlign: "center", marginTop: 4 }}>
-          By signing up, I agree to AGCE Exchange user{" "}
-          <AppText
-            style={{ color: colors.buttonBg, textDecorationLine: "underline" }}
-            type={TEN}
-            onPress={() => {
-              NavigationService.navigate(CMS_SCREEN, {
-                id: "https://agce.wrathcode.com/terms_conditions",
-              });
-            }}
-          >
-            Terms and Conditions
+          {Platform.OS === "ios" ? (
+            <TouchableOpacityView
+              style={[styles.socialPill, { borderColor: socialPillBorder, backgroundColor: "transparent" }]}
+              onPress={signupWithApple}
+              disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
+            >
+              {isAppleSignInInProgress ? (
+                <ActivityIndicator size={"small"} color={themeColors.text} />
+              ) : (
+                <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
+              )}
+              <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+                Continue with Apple
+              </AppText>
+            </TouchableOpacityView>
+          ) : null}
+
+          <AppText type={ELEVEN} style={{ color: themeColors.secondaryText, marginTop: 4, marginLeft: 5 }}>
+            By signing up, I agree to AGCE Exchange user{" "}
+            <AppText
+              style={{ color: colors.buttonBg, textDecorationLine: "underline" }}
+              type={TEN}
+              onPress={() => {
+                NavigationService.navigate(CMS_SCREEN, {
+                  id: "https://agce.wrathcode.com/terms_conditions",
+                });
+              }}
+            >
+              Terms and Conditions
+            </AppText>
           </AppText>
-        </AppText>
-      </View>
+        </View>
       </KeyBoardAware>
-    
+
     </AppSafeAreaView>
   );
 };
@@ -649,7 +652,7 @@ const styles = StyleSheet.create({
   socialSection: {
     paddingBottom: 24,
     gap: 12,
-    marginTop:20
+    marginTop: 10
   },
   dividerRow: {
     flexDirection: "row",
@@ -665,15 +668,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
     gap: 10,
+    minHeight: 53,
   },
   socialBrandIcon: {
-    width: 22,
-    height: 22,
+    width: 28,
+    height: 28,
   },
   appleIcon: {
     marginRight: 0,

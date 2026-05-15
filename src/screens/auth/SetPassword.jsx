@@ -35,7 +35,7 @@ const RuleItem = ({ state, label, doneColor }) => {
         {isBad ? <FastImage source={closeIcon} style={{ width: 7, height: 7 }} tintColor={colors.red} resizeMode="contain" /> : null}
         {isPending ? <FastImage source={minus} style={{ width: 12, height: 12 }} resizeMode="contain" /> : null}
       </View>
-      <AppText type={THIRTEEN} style={{ color: "#9AA3AF" }}>
+      <AppText type={TWELVE} style={{ color: "#9AA3AF" }}>
         {label}
       </AppText>
     </View>
@@ -168,11 +168,11 @@ const SetPassword = () => {
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <View style={styles.wrap}>
         <AuthHeader
-          onSupportPress={() => Linking.openURL("https://zillion.wrathcode.com/").catch(() => { })}
+          onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })}
           onClosePress={() => NavigationService.goBack()}
         />
 
-        <AppText weight={BOLD} type={TWENTY_SIX} style={{ color: themeColors.text, marginTop: 8 }}>
+        <AppText weight={SEMI_BOLD} type={TWENTY_SIX} style={{ color: themeColors.text, marginTop: 8 }}>
           Set Your Password
         </AppText>
         <AppText type={THIRTEEN} style={{ color: "#9AA3AF", marginTop: 6 }}>

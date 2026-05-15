@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
-import { AppText, BOLD, FOURTEEN, SEMI_BOLD } from "..";
+import { AppText, BOLD, FOURTEEN, MEDIUM, SEMI_BOLD } from "..";
 import TouchableOpacityView from "./TouchableOpacityView";
 import { useTheme } from "../../hooks/useTheme";
 import { colors } from "../../theme/colors";
@@ -59,7 +59,7 @@ const AuthEmailPhoneTabBar = ({ tabs, index, onChange }) => {
             >
               <AppText
                 type={FOURTEEN}
-                weight={active ? BOLD : SEMI_BOLD}
+                weight={MEDIUM}
                 style={{
                   color: active
                     ? isDark
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
+    gap: 18,
   },
   tabHit: {
     paddingVertical: 8,

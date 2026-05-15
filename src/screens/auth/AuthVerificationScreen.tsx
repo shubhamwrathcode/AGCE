@@ -16,7 +16,7 @@ import { clearPending2FA } from "../../slices/authSlice";
 import { sendLoginOtp, verifyUser } from "../../actions/authActions";
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN } from "../../navigation/routes";
-import { AppText, AppSafeAreaView, Button, BOLD, FOURTEEN as FOURTEEN_CONST, SEMI_BOLD, THIRTEEN, EIGHTEEN, SIXTEEN, MEDIUM } from "../../shared";
+import { AppText, AppSafeAreaView, Button, BOLD, FOURTEEN as FOURTEEN_CONST, SEMI_BOLD, THIRTEEN, EIGHTEEN, SIXTEEN, MEDIUM, TWENTY_SIX, TWELVE, FOURTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import FastImage from "react-native-fast-image";
 import { closeIcon, EMAIL, PHONE, KEY_ICON, pasteImg, SHARE_NEW_ICON } from "../../helper/ImageAssets";
@@ -49,7 +49,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const isLoading = useAppSelector((state) => state.auth.isLoading);
   const loadingFor = useAppSelector((state) => state.auth.loadingFor);
   const showButtonLoading = isLoading && loadingFor === 'otp';
-  
+
   const getFirstMethod = () => {
     if (!pending2FA) return 1;
     const baseMethods = (pending2FA.availableMethods ?? []).filter((m: any) => m.type !== 4);
@@ -77,10 +77,11 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const optionsSheetRef = useRef<any>(null);
 
   const lastAutoSentForMethod = useRef<number | null>(null);
+  const isVerifyingRef = useRef(false);
   const prevSelectedMethod = useRef<number>(initialMethod);
   const autoSubmitEnabled = useRef<boolean>(true);
   const { height: winHeight } = useWindowDimensions();
-  
+
   const sheetCustomStyles = {
     container: {
       borderTopLeftRadius: 20,
@@ -211,6 +212,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   };
 
   const handleSubmit = async () => {
+    if (isVerifyingRef.current) return false;
     if (otpCode.length < 6) {
       setOtpError(true);
       showError("Please enter a valid 6-digit code");
@@ -218,23 +220,28 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     }
     setOtpError(false);
     Keyboard.dismiss();
-    const res: any = await dispatch(
-      verifyUser({ email_or_phone: getVerifySignId(), otp: otpCode, type: selectedAuthMethod }) as any
-    );
-    if (res && res.success === false) {
-      setOtpError(true);
-      // After a wrong OTP once, require user to press Next for subsequent attempts
-      autoSubmitEnabled.current = false;
-      return false;
+    isVerifyingRef.current = true;
+    try {
+      const res: any = await dispatch(
+        verifyUser({ email_or_phone: getVerifySignId(), otp: otpCode, type: selectedAuthMethod }) as any
+      );
+      if (res && res.success === false) {
+        setOtpError(true);
+        // After a wrong OTP once, require user to press Next for subsequent attempts
+        autoSubmitEnabled.current = false;
+        return false;
+      }
+      return true;
+    } finally {
+      isVerifyingRef.current = false;
     }
-    return true;
   };
 
   // Auto-submit on 6th digit for first attempt only.
   useEffect(() => {
     if (!pending2FA) return;
     if (!autoSubmitEnabled.current) return;
-    if (showButtonLoading) return;
+    if (showButtonLoading || isVerifyingRef.current) return;
     if (otpCode.length !== 6) return;
 
     (async () => {
@@ -255,10 +262,10 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   };
 
   const methodsForOptions = (pending2FA?.availableMethods ?? []).filter((m: any) => m.type !== 4);
-  
+
   const alternativeMethods = (methodsForOptions ?? []).filter((m: any) => m.type !== selectedAuthMethod);
   const hasAlternative = alternativeMethods.length > 0;
-  
+
   const optionsSheetHeight = Math.min(
     Math.max(180, 124 + 56 * alternativeMethods.length),
     winHeight * 0.6
@@ -279,16 +286,16 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
           showsVerticalScrollIndicator={false}
         >
           <AuthHeader
-            onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => {})}
+            onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })}
             onClosePress={onClose}
             title={""}
           />
 
           <>
-            <AppText weight={BOLD} type={EIGHTEEN} style={[styles.title, { color: themeColors.text }]}>
+            <AppText weight={SEMI_BOLD} type={TWENTY_SIX} style={[styles.title, { color: themeColors.text }]}>
               {selectedAuthMethod === 1 ? "Verify Your Email" : selectedAuthMethod === 3 ? "Verify Your Phone" : getVerificationTitle()}
             </AppText>
-            <AppText type={THIRTEEN} style={[styles.description, { color: themeColors.secondaryText }]}>
+            <AppText type={TWELVE} style={[styles.description, { color: themeColors.secondaryText }]}>
               {selectedAuthMethod === 1 || selectedAuthMethod === 3
                 ? `The verification code has been sent to your ${selectedAuthMethod === 1 ? "email" : "phone"} ${getMaskedEmail()}, valid for 10 minutes.`
                 : getVerificationDescription()}
@@ -296,72 +303,72 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
           </>
 
           <>
-              <OtpInput6Digit
-                value={otpCode}
-                onChangeText={(v: string) => {
-                  if (otpError) setOtpError(false);
-                  setOtpCode(v);
-                }}
-                isDark={isDark}
-                hasError={otpError}
-              />
-              {selectedAuthMethod !== 2 ? (
-                <View style={styles.otpLinksRow}>
-                  <TouchableOpacityView
-                    onPress={resendTimer > 0 ? undefined : handleGetOtp}
-                    disabled={resendTimer > 0}
-                  >
-                    <AppText
-                      type={FOURTEEN_CONST}
-                      weight={MEDIUM}
-                      style={[
-                        styles.underlineText,
-                        { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
-                      ]}
-                    >
-                      {resendTimer > 0 ? `Resend (${resendTimer}s)` : "Resend"}
-                    </AppText>
-                  </TouchableOpacityView>
-
-                  <TouchableOpacityView onPress={handlePasteOtp} style={styles.pasteBtn}>
-                    <AppText type={FOURTEEN_CONST} weight={MEDIUM} style={{ color: themeColors.text }}>
-                      Paste
-                    </AppText>
-                    <FastImage
-                      source={pasteImg}
-                      resizeMode="contain"
-                      style={{ width: 16, height: 16 }}
-                      tintColor={themeColors.text}
-                    />
-                  </TouchableOpacityView>
-                </View>
-              ) : null}
-              <Button
-                children="Next"
-                disabled={false}
-                onPress={handleSubmit}
-                loading={showButtonLoading}
-                containerStyle={styles.submitBtn}
-              />
-
-              {selectedAuthMethod !== 2 ? (
+            <OtpInput6Digit
+              value={otpCode}
+              onChangeText={(v: string) => {
+                if (otpError) setOtpError(false);
+                setOtpCode(v);
+              }}
+              isDark={isDark}
+              hasError={otpError}
+            />
+            {selectedAuthMethod !== 2 ? (
+              <View style={styles.otpLinksRow}>
                 <TouchableOpacityView
-                  style={styles.didntReceiveWrap}
                   onPress={resendTimer > 0 ? undefined : handleGetOtp}
                   disabled={resendTimer > 0}
                 >
                   <AppText
-                    type={FOURTEEN_CONST}
-                    weight={SEMI_BOLD}
+                    type={FOURTEEN}
+                    weight={MEDIUM}
                     style={[
                       styles.underlineText,
                       { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
                     ]}
                   >
-                    Didn't receive the code?
+                    {resendTimer > 0 ? `Resend (${resendTimer}s)` : "Resend"}
                   </AppText>
                 </TouchableOpacityView>
-              ) : null}
+
+                <TouchableOpacityView onPress={handlePasteOtp} style={styles.pasteBtn}>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+                    Paste
+                  </AppText>
+                  <FastImage
+                    source={pasteImg}
+                    resizeMode="contain"
+                    style={{ width: 16, height: 16 }}
+                    tintColor={themeColors.text}
+                  />
+                </TouchableOpacityView>
+              </View>
+            ) : null}
+            <Button
+              children="Next"
+              disabled={false}
+              onPress={handleSubmit}
+              loading={showButtonLoading}
+              containerStyle={styles.submitBtn}
+            />
+
+            {/* {selectedAuthMethod !== 2 ? (
+              <TouchableOpacityView
+                style={styles.didntReceiveWrap}
+                onPress={resendTimer > 0 ? undefined : handleGetOtp}
+                disabled={resendTimer > 0}
+              >
+                <AppText
+                  type={FOURTEEN_CONST}
+                  weight={SEMI_BOLD}
+                  style={[
+                    styles.underlineText,
+                    { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
+                  ]}
+                >
+                  Didn't receive the code?
+                </AppText>
+              </TouchableOpacityView>
+            ) : null} */}
           </>
 
           {hasAlternative ? (

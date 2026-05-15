@@ -209,7 +209,7 @@ const Welcome = () => {
         >
           {/* Header */}
           <View style={[styles.header, { paddingTop: 8 }]}>
-            <View style={[styles.logoCircle, { backgroundColor: lightTheme.input }]}>
+            <View style={[styles.logoCircle, { backgroundColor: '#F5F6F7' }]}>
               <FastImage source={APP_LOGO} style={styles.logoImg} resizeMode="contain" />
             </View>
             <TouchableOpacity onPress={onLogin} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   logoCircle: {
     width: 40,
     height: 40,
-    borderRadius: 18,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },

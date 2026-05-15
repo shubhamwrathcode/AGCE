@@ -8,6 +8,7 @@ import {
   Input,
   MEDIUM,
   SEMI_BOLD,
+  TWENTY_FOUR,
   TWENTY_SIX,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
@@ -38,8 +39,8 @@ const RenderTabBarAuth = (props) => {
   });
   const routes = [
     // Requirement: Email first, then Mobile
-    { key: "first", title: checkValue(languages?.email) },
-    { key: "second", title: checkValue(languages?.mobile) },
+    { key: "first", title: checkValue(languages?.email) || "Email" },
+    { key: "second", title: "Phone" },
   ];
   return (
     <View style={authStyles.tabBarMain}>
@@ -199,7 +200,7 @@ const ForgotPassword = () => {
         </View>
         <AppText
           weight={BOLD}
-          type={TWENTY_SIX}
+          type={TWENTY_FOUR}
           style={{ marginHorizontal: 20, color: themeColors.text }}
         >
           Forgot Password
@@ -222,10 +223,10 @@ const ForgotPassword = () => {
                   country={country}
                   countryCode={countryCode}
                   maxLength={15}
-                  onFocus={() => {}}
-                  onBlur={() => {}}
+                  onFocus={() => { }}
+                  onBlur={() => { }}
                   onSubmitEditing={() => onGetOtp()}
-                  onEndEditing={() => {}}
+                  onEndEditing={() => { }}
                 />
               ) : (
                 <Input
@@ -278,15 +279,16 @@ const ForgotPassword = () => {
               children={"Forgot Password"}
               onPress={() => onSubmit()}
               disabled={false}
-              containerStyle={authStyles.marginTop}
+              containerStyle={{ marginTop: 20 }}
             />
             <AppText
               weight={MEDIUM}
-              style={[authStyles.bottomTextLogin, { color: themeColors.text }]}
+              style={[authStyles.bottomTextLogin, { color: themeColors.text, marginTop: 15, fontSize: 14 }]}
             >
-              {"Back to  "}
+              {"Back to "}
               <AppText
-                weight={SEMI_BOLD}
+                weight={MEDIUM}
+                type={FOURTEEN}
                 style={[authStyles.termsText, { color: colors.buttonBg }]}
                 onPress={() => onLogin()}
               >

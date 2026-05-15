@@ -19,10 +19,10 @@ const AuthPhoneInput = ({
   countryCode,
   hasError = false,
   maxLength = 15,
-  onFocus = () => {},
-  onBlur = () => {},
-  onSubmitEditing = () => {},
-  onEndEditing = () => {},
+  onFocus = () => { },
+  onBlur = () => { },
+  onSubmitEditing = () => { },
+  onEndEditing = () => { },
 }) => {
   const { colors: themeColors, isDark } = useTheme();
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -52,17 +52,12 @@ const AuthPhoneInput = ({
           visible={pickerVisible}
           onClose={() => setPickerVisible(false)}
           containerButtonStyle={styles.countryButton}
-          theme={
-            isDark
-              ? {
-                  backgroundColor: themeColors.background,
-                  onBackgroundTextColor: themeColors.text,
-                  fontSize: 14,
-                  itemHeight: 50,
-                  flagSize: 20,
-                }
-              : undefined
-          }
+          theme={{
+            backgroundColor: isDark ? themeColors.background : colors.white,
+            onBackgroundTextColor: themeColors.text,
+            fontSize: 14,
+            itemHeight: 50,
+          }}
         />
         <FastImage
           source={downIcon}
@@ -99,33 +94,33 @@ const styles = StyleSheet.create({
     marginTop: 4,
     height: inputHeight,
     borderRadius: 12,
-    paddingHorizontal: universalPaddingHorizontal,
+    paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
   },
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 2,
+    flexShrink: 0,
   },
   countryButton: {
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 4,
+    overflow: "hidden",
   },
   downArrow: {
-    width: 9,
-    height: 9,
-    marginLeft: 4,
+    width: 8,
+    height: 8,
   },
   codeText: {
-    marginLeft: 6,
+    marginLeft: 3,
     fontSize: 15,
-    minWidth: 30,
   },
   divider: {
     width: 1,
-    height: 30,
-    marginHorizontal: 8,
+    height: 22,
+    marginHorizontal: 6,
   },
   input: {
     flex: 1,

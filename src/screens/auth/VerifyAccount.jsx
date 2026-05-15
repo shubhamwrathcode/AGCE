@@ -12,6 +12,7 @@ import {
   SEMI_BOLD,
   TEN,
   THIRTEEN,
+  TWELVE,
   TWENTY_SIX,
 } from "../../shared";
 import { AuthHeader } from "../../shared/components";
@@ -42,6 +43,7 @@ const VerifyAccount = () => {
   const [resendLoading, setResendLoading] = useState(false);
   const [otpSubmitting, setOtpSubmitting] = useState(false);
   const hasAutoSent = useRef(false);
+  const isVerifyingRef = useRef(false);
   const isNoOtpAttemptsLeft = (msg = "") =>
     String(msg).toLowerCase().includes("no otp attempt left");
 
@@ -65,7 +67,16 @@ const VerifyAccount = () => {
     return () => clearInterval(interval);
   }, [timer]);
 
+  // Auto-submit when OTP reaches 6 digits
+  useEffect(() => {
+    const cleanOtp = String(otp || "").replace(/\D/g, "");
+    if (cleanOtp.length === 6 && !otpSubmitting && !isVerifyingRef.current) {
+      handleVerifyOtp();
+    }
+  }, [otp]);
+
   const handleVerifyOtp = async () => {
+    if (isVerifyingRef.current) return;
     const raw = otp || '';
     const codeStr = String(raw ?? "").replace(/\D/g, "").slice(0, 6);
     const verificationCode = parseInt(codeStr, 10);
@@ -83,6 +94,7 @@ const VerifyAccount = () => {
       token: "",
     };
     setOtpSubmitting(true);
+    isVerifyingRef.current = true;
     try {
       await dispatch(
         verifyOtp(data, setOtp, setOtpError, () =>
@@ -94,6 +106,7 @@ const VerifyAccount = () => {
       );
     } finally {
       setOtpSubmitting(false);
+      isVerifyingRef.current = false;
     }
   };
 
@@ -159,15 +172,15 @@ const VerifyAccount = () => {
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <View style={styles.wrap}>
         <AuthHeader
-          onSupportPress={() => Linking.openURL("https://zillion.wrathcode.com/").catch(() => { })}
+          onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })}
           onClosePress={() => NavigationService.goBack()}
         />
 
-        <AppText weight={BOLD} type={TWENTY_SIX} style={{ color: themeColors.text, marginTop: 10 }}>
+        <AppText weight={SEMI_BOLD} type={TWENTY_SIX} style={{ color: themeColors.text, marginTop: 10 }}>
           {verifyLabel}
         </AppText>
 
-        <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 10 }}>
+        <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 10 }}>
           The verification code has been sent to your{" "}
           {userData?.registeredBy === "email" ? "email " : "phone "}
           <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>
@@ -220,7 +233,7 @@ const VerifyAccount = () => {
           containerStyle={{ marginTop: 28, width: "100%" }}
         />
 
-        <TouchableOpacityView
+        {/* <TouchableOpacityView
           style={{ alignSelf: "center", marginTop: 22 }}
           onPress={() => onGetOtp(true)}
           disabled={disableBtn}
@@ -235,7 +248,7 @@ const VerifyAccount = () => {
           >
             {disableBtn ? `Didn't receive the code?` : "Didn't receive the code?"}
           </AppText>
-        </TouchableOpacityView>
+        </TouchableOpacityView> */}
 
 
       </View>

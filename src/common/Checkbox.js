@@ -22,7 +22,7 @@ const Checkbox = ({
       onPress={onPress}
       disabled={disabled}
       style={[{
-        height: 22, width: 22,
+        height: 20, width: 20,
         alignItems: "center", justifyContent: "center"
       }, containerStyle]}>
       <View style={[styles.linearGradientWrapper, style]}>

@@ -4,7 +4,7 @@ import { ActivityIndicator, Keyboard, Linking, Platform, ScrollView, StyleSheet,
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../navigation/routes";
-import { AppSafeAreaView, AppText, Button, ELEVEN, FOURTEEN, Input, MEDIUM, TEN } from "../../shared";
+import { AppSafeAreaView, AppText, Button, ELEVEN, FIFTEEN, FOURTEEN, Input, MEDIUM, TEN, THIRD, THIRTEEN, TWELVE } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
@@ -300,7 +300,7 @@ const Login = (): JSX.Element => {
   };
 
   const openSupport = () => {
-    Linking.openURL("https://zillion.wrathcode.com/").catch(() => {});
+    Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { });
   };
 
   return (
@@ -325,17 +325,17 @@ const Login = (): JSX.Element => {
             <AuthPhoneInput
               value={signUpId}
               onChangeText={(text: string) => changeInput(text)}
-              placeholder={checkValue(languages?.place_userName) || "Enter phone number"}
+              placeholder={"Enter phone number"}
               hasError={identifierError}
               onSelectCountry={setCountryCode}
               onCountry={setCountry}
               country={country}
               countryCode={countryCode}
               maxLength={15}
-              onFocus={() => {}}
-              onBlur={() => {}}
-              onSubmitEditing={() => {}}
-              onEndEditing={() => {}}
+              onFocus={() => { }}
+              onBlur={() => { }}
+              onSubmitEditing={() => { }}
+              onEndEditing={() => { }}
             />
           ) : (
             <View style={[authStyles.mobileContainer, styles.emailSuggestWrap]}>
@@ -358,8 +358,8 @@ const Login = (): JSX.Element => {
                     emailSuggestBlurTimer.current = null;
                   }, 200);
                 }}
-                onSubmitEditing={() => {}}
-                onEndEditing={() => {}}
+                onSubmitEditing={() => { }}
+                onEndEditing={() => { }}
                 hasError={identifierError}
                 mainContainer={[authStyles.mobileInput, styles.emailFieldMain]}
                 maxLength={100}
@@ -397,36 +397,7 @@ const Login = (): JSX.Element => {
           )}
 
           {/* Web parity: Bind IP + Forgot Password row (identifier step). */}
-          {!showPassField ? (
-            <View style={styles.bindRow}>
-              <TouchableOpacityView
-                style={styles.bindLeft}
-                onPress={() => setBindIp((v) => !v)}
-              >
-                <Checkbox
-                  value={bindIp}
-                  onPress={() => setBindIp((v) => !v)}
-                  disabled={false}
-                  type={1}
-                  style={undefined}
-                  innerStyle={undefined}
-                  theme={undefined}
-                  containerStyle={undefined}
-                />
-                <AppText type={ELEVEN} weight={MEDIUM} style={{ color: themeColors.text }}>
-                  Bind IP (Security option)
-                </AppText>
-              </TouchableOpacityView>
 
-              <AppText
-                type={ELEVEN} weight={MEDIUM}
-                style={{ color: themeColors.text, textDecorationLine: "underline" }}
-                onPress={() => NavigationService.navigate(FORGOT_PASSWORD_SCREEN)}
-              >
-                Forgot Password?
-              </AppText>
-            </View>
-          ) : null}
 
           {!showPassField && (
             <Button
@@ -461,7 +432,7 @@ const Login = (): JSX.Element => {
 
               {/* Web parity: Bind IP + Forgot Password row (password step). */}
               <View style={styles.bindRow}>
-                <TouchableOpacityView
+                {/* <TouchableOpacityView
                   style={styles.bindLeft}
                   onPress={() => setBindIp((v) => !v)}
                 >
@@ -475,13 +446,13 @@ const Login = (): JSX.Element => {
                     theme={undefined}
                     containerStyle={undefined}
                   />
-                  <AppText type={ELEVEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
                     Bind IP (Security option)
                   </AppText>
-                </TouchableOpacityView>
+                </TouchableOpacityView> */}
 
                 <AppText
-                  type={ELEVEN}
+                  type={THIRTEEN}
                   weight={MEDIUM}
                   style={{ color: themeColors.text, textDecorationLine: "underline" }}
                   onPress={() => NavigationService.navigate(FORGOT_PASSWORD_SCREEN)}
@@ -502,55 +473,55 @@ const Login = (): JSX.Element => {
           )}
         </View>
         <View style={styles.socialSection}>
-            <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
-              <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                Or login with
-              </AppText>
-              <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
-            </View>
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>
+              Or login with
+            </AppText>
+            <View style={[styles.dividerLine, { backgroundColor: themeColors.border }]} />
+          </View>
 
+          <TouchableOpacityView
+            style={[styles.socialPill, { borderColor: themeColors.border }]}
+            onPress={signInWithGoogle}
+            disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
+          >
+            {isGoogleSignInInProgress ? (
+              <ActivityIndicator size={"small"} color={themeColors.text} />
+            ) : (
+              <FastImage source={googleIcon} resizeMode="contain" style={styles.socialBrandIcon} />
+            )}
+            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+              Continue with Google
+            </AppText>
+          </TouchableOpacityView>
+
+          {Platform.OS === "ios" ? (
             <TouchableOpacityView
               style={[styles.socialPill, { borderColor: themeColors.border }]}
-              onPress={signInWithGoogle}
+              onPress={signInWithApple}
               disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
             >
-              {isGoogleSignInInProgress ? (
+              {isAppleSignInInProgress ? (
                 <ActivityIndicator size={"small"} color={themeColors.text} />
               ) : (
-                <FastImage source={googleIcon} resizeMode="contain" style={styles.socialBrandIcon} />
+                <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
               )}
-              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
-                Continue with Google
+              <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+                Continue with Apple
               </AppText>
             </TouchableOpacityView>
+          ) : null}
 
-            {Platform.OS === "ios" ? (
-              <TouchableOpacityView
-                style={[styles.socialPill, { borderColor: themeColors.border }]}
-                onPress={signInWithApple}
-                disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
-              >
-                {isAppleSignInInProgress ? (
-                  <ActivityIndicator size={"small"} color={themeColors.text} />
-                ) : (
-                  <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
-                )}
-                <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
-                  Continue with Apple
-                </AppText>
-              </TouchableOpacityView>
-            ) : null}
-
-            <TouchableOpacityView
-              style={styles.createAccountWrap}
-              onPress={() => NavigationService.navigate(REGISTER_SCREEN)}
-            >
-              <AppText type={FOURTEEN} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
-                Create a AGCE Account
-              </AppText>
-            </TouchableOpacityView>
-          </View>
+          <TouchableOpacityView
+            style={styles.createAccountWrap}
+            onPress={() => NavigationService.navigate(REGISTER_SCREEN)}
+          >
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
+              Create a AGCE Account
+            </AppText>
+          </TouchableOpacityView>
+        </View>
       </KeyBoardAware>
     </AppSafeAreaView>
   );
@@ -585,7 +556,7 @@ const styles = StyleSheet.create({
   socialPill: {
     borderWidth: 1,
     borderRadius: 999,
-    minHeight: 50,
+    minHeight: 53,
     paddingHorizontal: 18,
     flexDirection: "row",
     alignItems: "center",
@@ -593,8 +564,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   socialBrandIcon: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
   },
   createAccountWrap: {
     marginTop: 2,
