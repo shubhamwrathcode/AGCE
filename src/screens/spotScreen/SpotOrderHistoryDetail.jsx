@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     height: 20,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: fontFamilyBold,
   },
   scroll: {
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   pairTitle: {
-    fontSize: 16,
+    fontSize: 18,
     marginRight: 6,
   },
   chevron: {
@@ -222,11 +222,11 @@ const styles = StyleSheet.create({
     height: 12,
   },
   dateTime: {
-    fontSize: 11,
+    fontSize: 13,
     marginBottom: 2,
   },
   sideType: {
-    fontSize: 12,
+    fontSize: 14,
     marginTop: 2,
   },
   listSection: {
@@ -239,11 +239,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     flex: 1,
   },
   value: {
-    fontSize: 12,
+    fontSize: 14,
     flex: 1,
     textAlign: "right",
   },
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   cancelOrderText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "600",
   },
 });

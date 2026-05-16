@@ -809,7 +809,7 @@ const OrderBookSection = memo(({
     const askSum = asksAggregated.slice(0, takeN).reduce((s, o) => s + (toFiniteOB(o?.remaining) || 0), 0);
     const total = bidSum + askSum;
     if (!total || !Number.isFinite(total)) return { bidPct: 50, askPct: 50 };
-    const bidPct = Math.round((bidSum / total) * 100);
+    const bidPct = (bidSum / total) * 100;
     return { bidPct, askPct: 100 - bidPct };
   }, [bidsAggregated, asksAggregated]);
 
@@ -877,27 +877,21 @@ const OrderBookSection = memo(({
         getOrderItemLayout={getOrderItemLayout}
       />
 
-      <View style={[sty.spotObRatioRow, { bottom: 10 }]}>
-        <ImageBackground
-          source={buyImage}
-          resizeMode="stretch"
-          style={sty.spotObRatioPill}
-          imageStyle={{}}
-        >
-          <AppText style={{ fontSize: 11, fontWeight: "600", color: themeColors.green }}>
-            {obRatio.bidPct}%
+      <View style={[sty.ratioIndicatorBar, { marginVertical: 6, gap: 4 }]}>
+        <View style={[sty.ratioIndicatorHalf, { justifyContent: "flex-start" }]}>
+          <AppText weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
+            {obRatio.bidPct.toFixed(1)}%
           </AppText>
-        </ImageBackground>
-        <ImageBackground
-          source={selImage}
-          resizeMode="stretch"
-          style={sty.spotObRatioPill}
-          imageStyle={{}}
-        >
-          <AppText style={{ fontSize: 11, fontWeight: "600", color: themeColors.red }}>
-            {obRatio.askPct}%
+        </View>
+        <View style={[sty.ratioIndicatorTrack, { flex: 2, height: 3 }]}>
+          <View style={[sty.ratioIndicatorFill, { width: `${obRatio.bidPct}%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
+          <View style={[sty.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
+        </View>
+        <View style={[sty.ratioIndicatorHalf, { justifyContent: "flex-end" }]}>
+          <AppText weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 10 }}>
+            {obRatio.askPct.toFixed(1)}%
           </AppText>
-        </ImageBackground>
+        </View>
       </View>
 
       <View style={sty.spotObToolbarRow}>
@@ -2641,7 +2635,7 @@ const Spot = () => {
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-                  <AppText style={{ color: themeColors.text, fontSize: 16 }} weight={SEMI_BOLD}>
+                  <AppText style={{ color: themeColors.text, fontSize: 15 }} weight={SEMI_BOLD}>
                     {mLabel}
                   </AppText>
                   <FastImage
@@ -2651,50 +2645,50 @@ const Spot = () => {
                     tintColor={themeColors.secondaryText}
                   />
                 </View>
-                <AppText weight={MEDIUM} style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 2 }}>
+                <AppText weight={MEDIUM} style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>
                   {dateStr} {timeStr}
                 </AppText>
-                <AppText style={{ color: sideColor, fontSize: 14, marginBottom: 12 }} weight={SEMI_BOLD}>
+                <AppText style={{ color: sideColor, fontSize: 13, marginBottom: 12 }} weight={SEMI_BOLD}>
                   {side} · {role}
                 </AppText>
 
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Date</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Date</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
                     {dateStr}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Time</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Time</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
                     {timeStr}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Pair</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Pair</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
                     {mLabel}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Side</AppText>
-                  <AppText style={[styles.kvV, { color: sideColor, fontSize: 13, textAlign: "right" }]}>{side}</AppText>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Side</AppText>
+                  <AppText style={[styles.kvV, { color: sideColor, fontSize: 12, textAlign: "right" }]}>{side}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Role</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Role</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
                     {role}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Price</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Price</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
                     {safeToFixed8(item?.price, "—")}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Quantity</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Quantity</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
                     {safeToFixed8(item?.quantity, "—")} {baseSym}
                   </AppText>
                 </View>
@@ -2804,7 +2798,7 @@ const Spot = () => {
       >
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-            <AppText style={{ color: textColor, fontSize: 16 }} weight={SEMI_BOLD}>
+            <AppText style={{ color: textColor, fontSize: 15 }} weight={SEMI_BOLD}>
               {currencyPair}
             </AppText>
             <FastImage
@@ -2814,46 +2808,46 @@ const Spot = () => {
               tintColor={labelColor}
             />
           </View>
-          <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 13, marginBottom: 2 }}>
+          <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 12, marginBottom: 2 }}>
             {headerDateTime}
           </AppText>
-          <AppText style={{ color: getSideColor(inv?.side), fontSize: 14, marginBottom: 12 }} weight={SEMI_BOLD}>
+          <AppText style={{ color: getSideColor(inv?.side), fontSize: 13, marginBottom: 12 }} weight={SEMI_BOLD}>
             {side} · {typeUpper}
           </AppText>
 
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Date</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{dateStr}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Date</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{dateStr}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Time</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{timeStr}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Time</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{timeStr}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Market</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{currencyPair}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Market</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{currencyPair}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Side</AppText>
-            <AppText style={[styles.kvV, { color: getSideColor(inv?.side), fontSize: 13 }]}>{side || "—"}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Side</AppText>
+            <AppText style={[styles.kvV, { color: getSideColor(inv?.side), fontSize: 12 }]}>{side || "—"}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Type</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{typeUpper}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Type</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{typeUpper}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>TIF</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{tifStr}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>TIF</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{tifStr}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Price</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{priceDisplay}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Price</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{priceDisplay}</AppText>
           </View>
         </View>
 
         {canCancel ? (
           <View style={[styles.openOrderCardRow, { marginTop: 8, marginBottom: 4 }]}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor, fontSize: 13 }]}>Action:</AppText>
+            <AppText style={[styles.openOrderCardLabel, { color: labelColor, fontSize: 12 }]}>Action:</AppText>
             <TouchableOpacity
               style={styles.cancelActionBtn}
               activeOpacity={0.8}
@@ -2862,7 +2856,7 @@ const Spot = () => {
                 setIsCancelModalVisible(true);
               }}
             >
-              <AppText style={{ color: themeColors.red, fontWeight: "600", fontSize: 13 }}>Cancel</AppText>
+              <AppText style={{ color: themeColors.red, fontWeight: "600", fontSize: 12 }}>Cancel</AppText>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -2915,7 +2909,7 @@ const Spot = () => {
       >
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-            <AppText style={{ color: textColor, fontSize: 16 }} weight={SEMI_BOLD}>
+            <AppText style={{ color: textColor, fontSize: 15 }} weight={SEMI_BOLD}>
               {currencyPair}
             </AppText>
             <FastImage
@@ -2925,14 +2919,14 @@ const Spot = () => {
               tintColor={labelColor}
             />
           </View>
-          <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 13, marginBottom: 2 }}>
+          <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 12, marginBottom: 2 }}>
             {(() => {
               const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
               return d ? moment(d).format("DD/MM/YYYY HH:mm:ss") : "---";
             })()}
           </AppText>
 
-          <AppText style={{ color: getSideColor(inv?.side), fontSize: 14, marginBottom: 12 }} weight={SEMI_BOLD}>
+          <AppText style={{ color: getSideColor(inv?.side), fontSize: 13, marginBottom: 12 }} weight={SEMI_BOLD}>
             {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
           </AppText>
 
@@ -2941,23 +2935,23 @@ const Spot = () => {
             return (
               <>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Date</AppText>
-                  <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
+                  <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Date</AppText>
+                  <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Time</AppText>
-                  <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
+                  <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Time</AppText>
+                  <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
                 </View>
               </>
             );
           })()}
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Market</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{currencyPair}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Side</AppText><AppText style={[styles.kvV, { color: getSideColor(inv?.side), fontSize: 13 }]}>{String(inv?.side || "---").toUpperCase()}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Type</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>TIF</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{inv?.time_in_force || inv?.tif || "—"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Market</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{currencyPair}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Side</AppText><AppText style={[styles.kvV, { color: getSideColor(inv?.side), fontSize: 12 }]}>{String(inv?.side || "---").toUpperCase()}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Type</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>TIF</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{inv?.time_in_force || inv?.tif || "—"}</AppText></View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Price</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Price</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>
               {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
             </AppText>
           </View>
@@ -3001,20 +2995,20 @@ const Spot = () => {
                     </View>
 
                     <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 13 }]}>Price:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 13 }]}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 12 }]}>Price:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 12 }]}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
                     </View>
                     <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 13 }]}>Executed:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 13 }]}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 12 }]}>Executed:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 12 }]}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
                     </View>
                     <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 13 }]}>Fee:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 13 }]}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 12 }]}>Fee:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 12 }]}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
                     </View>
                     <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 13 }]}>Total:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 13 }]}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 12 }]}>Total:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 12 }]}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
                     </View>
                   </View>
                 ))}
@@ -3945,12 +3939,13 @@ const Spot = () => {
                         ))}
                       </View>
                       {pastOrdersForSpotPair?.length > 5 && (
-                        <TouchableOpacityView
+                        <TouchableOpacity
+                          activeOpacity={0.8}
                           style={styles.viewAllButton}
                           onPress={() => NavigationService.navigate('Trade_History')}
                         >
                           <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
-                        </TouchableOpacityView>
+                        </TouchableOpacity>
                       )}
                     </>
                   ) : (
@@ -4182,7 +4177,7 @@ export default Spot;
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    // padding: 12,
+    paddingBottom: 60,
   },
   minicontainer: {
     flexDirection: "row",
@@ -4247,13 +4242,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginHorizontal: 5,
     position: "relative",
-    paddingBottom: 24,
+    paddingBottom: 40,
   },
   ordersTabPanel: {
     paddingVertical: 4,
     paddingHorizontal: 2,
     borderRadius: 10,
-    overflow: "hidden",
   },
   dropdown: {
     flexDirection: "row",
@@ -4689,6 +4683,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  ratioIndicatorBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 0,
+    paddingVertical: 0,
+    gap: 10,
+  },
+  ratioIndicatorHalf: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ratioIndicatorTrack: {
+    flex: 3,
+    height: 3,
+    backgroundColor: "rgba(128,128,128,0.12)",
+    borderRadius: 2,
+    flexDirection: "row",
+    overflow: "hidden",
+  },
+  ratioIndicatorFill: {
+    height: "100%",
+  },
   spotObAggTrigger: {
     flex: 1,
     flexDirection: "row",
@@ -4882,12 +4899,12 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   labelText: {
-    fontSize: 13,
+    fontSize: 12,
     marginRight: 8,
     minWidth: 110,
   },
   valueText: {
-    fontSize: 13,
+    fontSize: 12,
     flex: 1,
     flexShrink: 1,
     textAlign: "right",
@@ -4915,7 +4932,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   cancelButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "500",
   },
   expandButton: {
@@ -4927,7 +4944,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   expandButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "500",
   },
   executedTradesContainer: {
@@ -4954,10 +4971,10 @@ const styles = StyleSheet.create({
   viewAllButton: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    marginTop: 4,
-    marginBottom: 4,
+    marginTop: 8,
+    marginBottom: 12,
   },
   viewAllText: {
     fontSize: 16,
@@ -4996,15 +5013,15 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   openOrderCardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     marginRight: 6,
     fontWeight: "600",
   },
   openOrderCardDate: {
-    fontSize: 13,
+    fontSize: 12,
   },
   openOrderTypeLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     marginBottom: 6,
   },
@@ -5021,11 +5038,11 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   kvK: {
-    fontSize: 13,
+    fontSize: 12,
     flex: 1,
   },
   kvV: {
-    fontSize: 13,
+    fontSize: 12,
     flex: 1,
     textAlign: "right",
   },
@@ -5043,7 +5060,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   execTradesBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
   },
   execTradesBox: {
@@ -5065,7 +5082,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   execTradeHeaderText: {
-    fontSize: 13,
+    fontSize: 12,
   },
   execTradeKvRow: {
     flexDirection: "row",
@@ -5074,20 +5091,20 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   execTradeKvK: {
-    fontSize: 13,
+    fontSize: 12,
     flex: 1,
   },
   execTradeKvV: {
-    fontSize: 13,
+    fontSize: 12,
     flex: 1,
     textAlign: "right",
   },
   openOrderCardLabel: {
-    fontSize: 14,
+    fontSize: 13,
     flex: 1,
   },
   openOrderCardValue: {
-    fontSize: 14,
+    fontSize: 13,
     flex: 1,
     textAlign: "right",
   },

@@ -138,13 +138,13 @@ const OrderCard = React.memo(({
         <View style={styles.orderSpotHeaderRow}>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <AppText style={[styles.orderSpotTitle, { color: textColor, fontSize: 17 }]} weight={SEMI_BOLD}>
+              <AppText style={[styles.orderSpotTitle, { color: textColor, fontSize: 16 }]} weight={SEMI_BOLD}>
                 {currencyPair}
               </AppText>
               <FastImage source={right_ic} style={{ width: 12, height: 12, marginLeft: 4 }} resizeMode="contain" tintColor={labelColor} />
             </View>
-            <AppText weight={MEDIUM} style={{ color: textColor, fontSize: 14, marginTop: 4 }}>{headerDateTime}</AppText>
-            <AppText style={{ color: sideColor, fontSize: 15, marginTop: 4 }} weight={SEMI_BOLD}>
+            <AppText weight={MEDIUM} style={{ color: textColor, fontSize: 13, marginTop: 4 }}>{headerDateTime}</AppText>
+            <AppText style={{ color: sideColor, fontSize: 14, marginTop: 4 }} weight={SEMI_BOLD}>
               {side} · {typeUpper}
             </AppText>
           </View>
@@ -198,7 +198,7 @@ const OrderCard = React.memo(({
       {canCancel && (
         <View style={styles.actionRow}>
           <TouchableOpacity style={[styles.cancelBtn, { borderColor: colors.red }]} onPress={() => onCancel(item)}>
-            <AppText style={{ color: colors.red, fontWeight: "600", fontSize: 13 }}>Cancel order</AppText>
+            <AppText style={{ color: colors.red, fontWeight: "600", fontSize: 12 }}>Cancel order</AppText>
           </TouchableOpacity>
         </View>
       )}
@@ -238,11 +238,11 @@ const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColo
       style={[styles.tradeFillCard, { borderBottomColor: colors.iconBgColor, backgroundColor: colors.white }]}
     >
       <View style={styles.pairRow}>
-        <AppText style={{ color: textColor, fontSize: 17 }} weight={SEMI_BOLD}>{mLabel}</AppText>
+        <AppText style={{ color: textColor, fontSize: 16 }} weight={SEMI_BOLD}>{mLabel}</AppText>
         <FastImage source={right_ic} style={{ width: 11, height: 11, marginLeft: 4 }} resizeMode="contain" tintColor={labelColor} />
       </View>
-      <AppText weight={MEDIUM} style={{ color: textColor, fontSize: 14, marginBottom: 2 }}>{dateStr} {timeStr}</AppText>
-      <AppText style={{ color: sideColor, fontSize: 15, marginBottom: 12 }} weight={SEMI_BOLD}>{side} · {role}</AppText>
+      <AppText weight={MEDIUM} style={{ color: textColor, fontSize: 13, marginBottom: 2 }}>{dateStr} {timeStr}</AppText>
+      <AppText style={{ color: sideColor, fontSize: 14, marginBottom: 12 }} weight={SEMI_BOLD}>{side} · {role}</AppText>
 
       <TradeKvRow label="Date" value={dateStr} labelColor={labelColor} textColor={textColor} />
       <TradeKvRow label="Time" value={timeStr} labelColor={labelColor} textColor={textColor} />
@@ -414,10 +414,10 @@ const TradeHistory = ({ route }) => {
 
       <View style={[styles.tabBar, { borderBottomColor: memoizedTheme?.themeBorderColor ?? "#EEEEEE" }]}>
         <TouchableOpacity onPress={() => setActiveTab(0)} style={[styles.tab, activeTab === 0 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
-          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 0 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 16 }]}>Orders</AppText>
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 0 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 15 }]}>Orders</AppText>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setActiveTab(1)} style={[styles.tab, activeTab === 1 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
-          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 1 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 16 }]}>Trades</AppText>
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 1 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 15 }]}>Trades</AppText>
         </TouchableOpacity>
       </View>
 
@@ -493,32 +493,32 @@ const styles = StyleSheet.create({
   tradesListContent: { paddingHorizontal: 5, paddingBottom: 100 },
   orderSpotCard: { padding: 14, paddingBottom: 0, width: "100%", alignSelf: "center" },
   orderSpotHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
-  orderSpotTitle: { fontSize: 17, marginRight: 6, fontWeight: "600" },
+  orderSpotTitle: { fontSize: 16, marginRight: 6, fontWeight: "600" },
   execTradesBtnSpot: { alignSelf: "flex-end", paddingVertical: 4, paddingHorizontal: 5, borderWidth: 0.7, borderRadius: 5 },
   execTradesBtnRowSpot: { flexDirection: "row", alignItems: "center" },
   orderHistoryChevronSpot: { width: 10, height: 10, marginTop: 2 },
-  execTradesBtnTextSpot: { fontSize: 13, fontWeight: "600" },
+  execTradesBtnTextSpot: { fontSize: 12, fontWeight: "600" },
   execTradesBoxSpot: { marginTop: 8, backgroundColor: "rgba(128, 128, 128, 0.08)", paddingVertical: 8, paddingHorizontal: 8, borderRadius: 8 },
   execTradeItemSpot: { backgroundColor: "transparent", borderBottomWidth: 1, borderBottomColor: "rgba(128, 128, 128, 0.15)", paddingVertical: 6, paddingHorizontal: 4, marginBottom: 0 },
   execTradeHeaderRowSpot: { marginBottom: 4 },
-  execTradeHeaderTextSpot: { fontSize: 13 },
+  execTradeHeaderTextSpot: { fontSize: 12 },
   execTradeKvRowSpot: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 },
-  execTradeKvKSpot: { fontSize: 16, flex: 1 },
-  execTradeKvVSpot: { fontSize: 16, flex: 1, textAlign: "right" },
+  execTradeKvKSpot: { fontSize: 15, flex: 1 },
+  execTradeKvVSpot: { fontSize: 15, flex: 1, textAlign: "right" },
   orderSpotDivider: { height: 1.5, marginTop: 12, marginBottom: 4 },
   tradeFillCard: { paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: 1.5 },
   tradeKvRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 8 },
-  tradeKvK: { fontSize: 16, flexShrink: 0, maxWidth: "42%" },
-  tradeKvV: { fontSize: 16, fontWeight: "500", flex: 1, textAlign: "right" },
+  tradeKvK: { fontSize: 15, flexShrink: 0, maxWidth: "42%" },
+  tradeKvV: { fontSize: 15, fontWeight: "500", flex: 1, textAlign: "right" },
   tabBar: { flexDirection: "row", height: 44, borderBottomWidth: 1 },
   tab: { flex: 1, justifyContent: "center", alignItems: "center" },
-  tabText: { fontSize: 16, fontWeight: "600" },
+  tabText: { fontSize: 15, fontWeight: "600" },
   pairRow: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
   actionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingBottom: 16 },
   cancelBtn: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 4, borderWidth: 1, borderColor: colors.red },
   noDataRow: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 },
   modalContent: { padding: 24, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  modalTitle: { fontSize: 18, textAlign: "center", marginBottom: 12 },
+  modalTitle: { fontSize: 17, textAlign: "center", marginBottom: 12 },
   modalButtons: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   modalBtn: { flex: 1, height: 48, borderRadius: 10, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#eee" },
 });

@@ -82,7 +82,7 @@ import {
   TEN,
   YELLOW,
 } from "../shared";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, Keyboard } from "react-native";
 import Toast from "react-native-simple-toast";
 import StakingSuccess from "../screens/Staking/StakingSuccess";
 import QsTransaction from "../screens/QuickBuySell/qsTransaction";
@@ -166,6 +166,26 @@ const P2PTab = createBottomTabNavigator();
 const P2PStack = createStackNavigator();
 
 const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
+  const [visible, setVisible] = React.useState(true);
+
+  React.useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setVisible(false)
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setVisible(true)
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  if (!visible) return null;
+
   return (
     <View style={customTabBarStyles.container}>
       {state.routes.map((route: any, index: number) => {

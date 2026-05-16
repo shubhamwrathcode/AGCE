@@ -1042,16 +1042,16 @@ const SpotChartScreen = () => {
       <View style={{ paddingHorizontal: 12 }}>
         <View style={styles.ratioIndicatorBar}>
           <View style={[styles.ratioIndicatorHalf, { justifyContent: "flex-start" }]}>
-            <AppText weight={SEMI_BOLD} style={{ color: themeColors.green, fontSize: 13 }}>
+            <AppText weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 13 }}>
               B {bidPct.toFixed(2)}%
             </AppText>
           </View>
           <View style={styles.ratioIndicatorTrack}>
-            <View style={[styles.ratioIndicatorFill, { width: `${bidPct}%`, backgroundColor: themeColors.green, borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
-            <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: themeColors.red, borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
+            <View style={[styles.ratioIndicatorFill, { width: `${bidPct}%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
+            <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
           </View>
           <View style={[styles.ratioIndicatorHalf, { justifyContent: "flex-end" }]}>
-            <AppText weight={SEMI_BOLD} style={{ color: themeColors.red, fontSize: 13 }}>
+            <AppText weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 13 }}>
               {(100 - bidPct).toFixed(2)}% S
             </AppText>
           </View>
@@ -2530,14 +2530,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    paddingRight: 1,
+    paddingRight: 0,
   },
   depthAskSide: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
-    paddingLeft: 1,
+    paddingLeft: 0,
   },
   depthQty: {
     width: 60,
@@ -2769,7 +2769,7 @@ const styles = StyleSheet.create({
   },
   ratioIndicatorTrack: {
     flex: 3,
-    height: 6,
+    height: 3,
     backgroundColor: "rgba(128,128,128,0.12)",
     borderRadius: 2,
     flexDirection: "row",
@@ -2803,7 +2803,7 @@ const styles = StyleSheet.create({
     gap: 3,
     fontSize: 12,
     color: "#000",
-    paddingHorizontal: 1, // Sync with price column spacing
+    paddingHorizontal: 0, // Sync with price column spacing
   },
   headerChevronSmall: {
     width: 7,
