@@ -1033,6 +1033,7 @@ const Spot = () => {
   const [isPriceFocused, setIsPriceFocused] = useState(false);
   const [isAmountFocused, setIsAmountFocused] = useState(false);
   const [isStopFocused, setIsStopFocused] = useState(false);
+  const [isTotalFocused, setIsTotalFocused] = useState(false);
 
   const priceAnim = useRef(new Animated.Value(0)).current;
   const amountAnim = useRef(new Animated.Value(0)).current;
@@ -1059,6 +1060,17 @@ const Spot = () => {
 
   useLayoutEffect(() => {
     const hasAmt = String(amount ?? "").trim() !== "";
+    Animated.timing(totalAnim, {
+      toValue: hasAmt ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [amount]);
+
+  useLayoutEffect(() => {
+    const hasAmt = String(amount ?? "").trim() !== "";
+
+    // Amount label: value or focus based (original perfect logic)
     if (hasAmt) {
       amountAnim.setValue(1);
       return;
@@ -1098,15 +1110,6 @@ const Spot = () => {
       useNativeDriver: false,
     }).start();
   }, [stopPrice, isStopFocused]);
-
-  useLayoutEffect(() => {
-    const totalFilled = String(amount ?? "").trim() !== "";
-    if (totalFilled) {
-      totalAnim.setValue(1);
-    } else {
-      totalAnim.setValue(0);
-    }
-  }, [amount]);
 
   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
@@ -1890,6 +1893,11 @@ const Spot = () => {
     const q = formatQuantity(itemQuantity).toString();
     syncAmountAnimForQuantityString(q);
     setAmount(q);
+    Animated.timing(totalAnim, {
+      toValue: q.trim() !== "" ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
   }, [isLimit, formatPrice, formatQuantity, syncAmountAnimForQuantityString]);
 
   const validateOrder = (price, quantity, side, orderKind = "LIMIT") => {
@@ -2059,7 +2067,14 @@ const Spot = () => {
     setStopPrice(val);
   };
 
-  const handleQty = (text) => handleQuantityInput(text, setAmount);
+  const handleQty = (text) => {
+    handleQuantityInput(text, setAmount);
+    Animated.timing(totalAnim, {
+      toValue: text.trim() !== "" ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  };
 
   const toFixed8 = (data) => {
     const precision = getQuantityPrecision();
@@ -2096,14 +2111,11 @@ const Spot = () => {
       const amtStr = finalQuantity.toString() || "0";
       syncAmountAnimForQuantityString(amtStr);
       setAmount(amtStr);
-      // handleTotal(percentCalculation(coinBalance?.quote_currency_balance || 0, value));
-    } else {
-      const finalQuantity = toFixed8(
-        percentCalculation(coinBalance?.base_currency_balance || 0, value)
-      );
-      const amtStr = finalQuantity.toString() || "0";
-      syncAmountAnimForQuantityString(amtStr);
-      setAmount(amtStr);
+      Animated.timing(totalAnim, {
+        toValue: amtStr.trim() !== "" ? 1 : 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
     }
   };
 
@@ -3536,6 +3548,8 @@ const Spot = () => {
                           placeholderTextColor={themeColors.secondaryText}
                           selectionColor={inputSelectionColor}
                           value={amount ? formatTotal(totalDisplayValue) : ""}
+                          onBlur={() => setIsTotalFocused(false)}
+                          onFocus={() => setIsTotalFocused(true)}
                           keyboardType="numeric"
                           style={[
                             styles.spotOrderInputValue,

@@ -325,11 +325,11 @@ const SelectCoin = () => {
       >
         <FastImage source={iconUri ? { uri: iconUri } : null} style={styles.coinIcon} resizeMode="cover" />
         <View style={styles.coinInfo}>
-          <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: isDark ? colors.white : colors.black }}>{item?.short_name}</AppText>
-          <AppText type={ELEVEN} style={{ color: colors.textGray, marginTop: 1 }}>{item?.name}</AppText>
+          <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: isDark ? colors.white : colors.black }}>{item?.short_name}</AppText>
+          <AppText type={THIRTEEN} style={{ color: colors.textGray, marginTop: 1 }}>{item?.name}</AppText>
         </View>
         <View style={styles.balanceInfo}>
-          <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: isDark ? colors.white : colors.black }}>{getWithdrawMinHint(item)}</AppText>
+          <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: isDark ? colors.white : colors.black }}>{getWithdrawMinHint(item)}</AppText>
         </View>
       </TouchableOpacity>
     );
@@ -367,7 +367,7 @@ const SelectCoin = () => {
               onPress={() => NavigationService.navigate("WALLET_WITHDRAW_SCREEN", { data: item })}
             >
               <FastImage source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item) } : null} style={styles.quickPickIcon} />
-              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: isDark ? colors.white : colors.black }}>{item?.short_name}</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.white : colors.black }}>{item?.short_name}</AppText>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -439,13 +439,13 @@ const styles = StyleSheet.create({
   searchIconStyle: { width: 18, height: 18, marginRight: 10 },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
   quickPickScroll: { paddingHorizontal: 16, marginTop: 16, gap: 8, paddingBottom: 16 },
-  quickPickChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, height: 32 },
-  quickPickIcon: { width: 16, height: 16, marginRight: 6, borderRadius: 9 },
+  quickPickChip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, height: 36 },
+  quickPickIcon: { width: 20, height: 20, marginRight: 6, borderRadius: 10 },
   listSection: { marginTop: 0, paddingHorizontal: 16, flex: 1 },
   listRow: { flexDirection: "row", flex: 1, position: "relative" },
   listContent: { paddingBottom: 40, paddingRight: 40 },
   coinRow: { flexDirection: "row", alignItems: "center", height: COIN_LIST_ROW_INNER, marginBottom: COIN_LIST_ROW_GAP, paddingRight: 8 },
-  coinIcon: { width: 30, height: 30, borderRadius: 17 },
+  coinIcon: { width: 38, height: 38, borderRadius: 19 },
   coinInfo: { marginLeft: 12, flex: 1 },
   balanceInfo: { alignItems: "flex-end", paddingRight: 4 },
   emptyText: { textAlign: "center", marginTop: 40, color: colors.textGray },
