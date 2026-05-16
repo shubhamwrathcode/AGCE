@@ -14,6 +14,7 @@ import {
   Platform,
   Modal,
 } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import FastImage from "react-native-fast-image";
 import Toast from "react-native-simple-toast";
 
@@ -28,31 +29,14 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import LottieView from "lottie-react-native";
 import {
   alarm,
-  arbitary,
   back_ic,
-  bank_ic,
-  contact,
-  currencyPreferIcon,
-  depositIcon,
-  userPic,
-  depositImage,
-  earning,
-  earningMenuIcon,
-  externalLinkIcon,
   helpicon,
   kycixon,
   lock,
   logoutIcon,
-  memexIcon,
-  Mode,
-  moreOption,
-  newDepositDarkIcon,
   newDepositIcon,
-  newWidthrawDarkIcon,
   newWidthrawIcon,
-  notification_bell_ic,
   orderIcon,
-  profile_placeholder_ic,
   rewardHubIcon,
   giftIc,
   inviteIcon,
@@ -110,19 +94,19 @@ import {
   p2pIcon,
   spottradingIconNew,
   checkIcon,
+  arrowRightIcon,
+  right_ic,
 } from "../../helper/ImageAssets";
 import AntDesign from "react-native-vector-icons/AntDesign";
-import { AppText, BLACK, DISCLAIMTEXT, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
+import { AppText, BLACK, BOLD, DISCLAIMTEXT, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import NavigationService from "../../navigation/NavigationService";
 import { languages } from "../../helper/languages";
 import { checkValue, copyText } from "../../helper/utility";
 import {
-  ACCOUNT_SCREEN,
-  ARBITORY_SCREEN,
-  CURRENCY_PREFERENCE_SCREEN,
   DEPOSIT_COIN_SCREEN,
   EARING_SCREEN,
+  ACCOUNT_SCREEN,
   KYC_STATUS_SCREEN,
   MARKET_SCREEN,
   OPEN_ORDER_SCREEN,
@@ -457,8 +441,20 @@ function maskProfileEmail(email) {
   return `${head}*@${dom}**`;
 }
 
-const PROFILE_GRID_ICON_WRAP = 38;
-const PROFILE_GRID_ICON_INNER = 16;
+const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
+const KYC_AVATAR_GRADIENT_LOCATIONS = [0, 0.5, 1];
+
+function getInitials(userData) {
+  const name = userData?.display_name || userData?.user_login || userData?.user_nicename || userData?.first_name || "User";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+const PROFILE_GRID_ICON_WRAP = 42;
+const PROFILE_GRID_ICON_INNER = 25;
 
 const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, itemWidth, iconTintColor }) => (
   <TouchableOpacity
@@ -470,8 +466,8 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
       style={{
         width: PROFILE_GRID_ICON_WRAP,
         height: PROFILE_GRID_ICON_WRAP,
-        borderRadius: PROFILE_GRID_ICON_WRAP / 2,
-        backgroundColor: '#F7F7F7',
+        borderRadius: 20,
+        backgroundColor: colors.iconBgColor,
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -484,14 +480,13 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
       />
     </View>
     <AppText
-      weight={SEMI_BOLD}
       numberOfLines={2}
+      type={THIRTEEN}
       style={{
         marginTop: 8,
-        fontSize: 11,
         textAlign: "center",
         color: themeColors.text,
-        lineHeight: 14,
+        lineHeight: 16,
       }}
     >
       {title}
@@ -528,8 +523,8 @@ const IconAndLabel = ({ theme, themeColors, iconSource, title, textStyle = {} })
           height: 40,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: theme !== "Dark" ? "#F2F2F2" : "#2f313b",
-          borderRadius: 5,
+          backgroundColor: colors.iconBgColor,
+          borderRadius: 20,
         }}
       >
         <FastImage
@@ -542,7 +537,7 @@ const IconAndLabel = ({ theme, themeColors, iconSource, title, textStyle = {} })
       <View style={{ alignItems: "center" }}>
         <AppText
           style={[
-            { fontWeight: "700", fontSize: 10, textAlign: "center", color: themeColors.text },
+            { fontWeight: "700", fontSize: 12, textAlign: "center", color: themeColors.text },
             textStyle,
           ]}
           type={THIRTEEN}
@@ -577,7 +572,7 @@ const DepositWithdrawCard = ({ theme, bigImage, smallIcon, label }) => {
       <View style={{ alignItems: "center" }}>
         <FastImage
           source={smallIcon}
-          style={{ height: 24, width: 24, marginBottom: 6 }}
+          style={{ height: 26, width: 26, marginBottom: 6 }}
           resizeMode="contain"
         />
         <AppText style={{ fontWeight: "500", color: theme == "Dark" ? colors.white : colors.black }}>{label}</AppText>
@@ -717,6 +712,7 @@ const ProfileDrawer = () => {
   const drawerColors = themeColors;
   const effectiveTheme = theme ?? (isDark ? "Dark" : "Light");
   const userData = useAppSelector((state) => state.auth.userData);
+
   const Data = getGeneralFeaturesData(effectiveTheme);
   const Data2 = getSupportToolsData(effectiveTheme);
   const Data3 = getHistoryData(effectiveTheme);
@@ -724,10 +720,8 @@ const ProfileDrawer = () => {
   const emailTextOpacity = useRef(new Animated.Value(0)).current;
   const emailTextTranslateY = useRef(new Animated.Value(10)).current;
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showAllServicesModal, setShowAllServicesModal] = useState(false);
   const [addToHome, setAddToHome] = useState(true);
-  const logoutAnim = useRef(new Animated.Value(0)).current; // 0 closed → 1 open
 
   const shortcutItems = useMemo(() => getShortcutMenuItems(effectiveTheme), [effectiveTheme]);
   const popularItems = useMemo(() => getPopularMenuItems(effectiveTheme), [effectiveTheme]);
@@ -744,34 +738,6 @@ const ProfileDrawer = () => {
     ? maskProfileEmail(userData.emailId)
     : `${userData?.country_code || ""} ${userData?.mobileNumber || ""}`.trim();
 
-  const openLogoutModal = () => {
-    setShowLogoutModal(true);
-    logoutAnim.setValue(0);
-    Animated.timing(logoutAnim, {
-      toValue: 1,
-      duration: 260,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const closeLogoutModal = (afterClose) => {
-    Animated.timing(logoutAnim, {
-      toValue: 0,
-      duration: 180,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        setShowLogoutModal(false);
-        if (typeof afterClose === "function") afterClose();
-      }
-    });
-  };
-
-  const confirmLogout = () => {
-    closeLogoutModal(() => dispatch(logoutAction()));
-  };
 
   useEffect(() => {
     dispatch(getUserProfile());
@@ -825,20 +791,29 @@ const ProfileDrawer = () => {
               onPress={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
               hitSlop={8}
             >
-              <FastImage source={scanner} resizeMode="contain" style={{ width: 20, height: 20 }} />
+              <FastImage source={scanner} resizeMode="contain" style={{ width: 22, height: 22 }} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => NavigationService.navigate(SETTING_SCREEN_New)} hitSlop={8}>
-              <FastImage source={setting_icon} resizeMode="contain" style={{ width: 20, height: 20 }} />
+              <FastImage source={setting_icon} resizeMode="contain" style={{ width: 22, height: 22 }} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => NavigationService.navigate("Support")} hitSlop={8}>
-              <FastImage source={headPhoneIcon} resizeMode="contain" style={{ width: 20, height: 20 }} />
+              <FastImage source={headPhoneIcon} resizeMode="contain" style={{ width: 22, height: 22 }} />
             </TouchableOpacity>
           </View>
         </View>
 
-        <View
-          // onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
-          style={{ flexDirection: "row", alignItems: "center" }}
+        <LinearGradient
+          colors={isDark ? ["#23242a", "#1a1b21"] : ["#FFFFFF", "#FFFFFF"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            padding: 5,
+            borderRadius: 16,
+            borderWidth: isDark ? 1 : 0,
+            borderColor: isDark ? "#2A2A2E" : "transparent",
+          }}
         >
           <View
             style={{
@@ -848,39 +823,46 @@ const ProfileDrawer = () => {
               overflow: "hidden",
               borderWidth: 1,
               borderColor: colors.disclaimDarText,
-              bottom: 5
+              bottom: 10
             }}
           >
-            <FastImage
-              // source={
-              //   userData?.profilepicture
-              //     ? { uri: IMAGE_BASE_URL + userData.profilepicture }
-              //     : defaultPic
-              // }
-              source={defaultPic}
-              style={{ width: 56, height: 56 }}
-              resizeMode="cover"
-            />
+            {/* Forcing gradient for now as URL is not ready */}
+            <LinearGradient
+              colors={KYC_AVATAR_GRADIENT}
+              locations={KYC_AVATAR_GRADIENT_LOCATIONS}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: 56,
+                height: 56,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 18 }}>
+                {getInitials(userData)}
+              </AppText>
+            </LinearGradient>
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Animated.View style={{ opacity: emailTextOpacity, transform: [{ translateY: emailTextTranslateY }] }}>
-              <AppText style={{ color: themeColors.text, fontSize: 16, fontWeight: "700" }} numberOfLines={1}>
+              <AppText style={{ color: themeColors.text, fontSize: 18, }} weight={SEMI_BOLD} numberOfLines={1}>
                 {displayAccountLine}
               </AppText>
             </Animated.View>
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 6 }}>
-              <AppText type={TWELVE} color={DISCLAIMTEXT}>
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
                 UID: {userData?.uuid || "—"}
               </AppText>
               {userData?.uuid ? (
                 <TouchableOpacity onPress={() => copyText(userData.uuid)} hitSlop={8}>
-                  <FastImage source={copyIcon} resizeMode="contain" style={{ width: 12, height: 12 }} tintColor={colors.disabledText} />
+                  <FastImage source={copyIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.secondaryText} />
                 </TouchableOpacity>
               ) : null}
             </View>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
               <View style={[styles.profileBadge, { backgroundColor: isDark ? "#2F3138" : "#F3F4F6" }]}>
-                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
                   VIP {vipLevel}
                 </AppText>
               </View>
@@ -889,14 +871,12 @@ const ProfileDrawer = () => {
                   styles.profileBadge,
                   {
                     backgroundColor: kycBadge.bg,
-                    borderWidth: 1,
-                    borderColor: kycBadge.borderColor,
                   },
                 ]}
               >
                 <Text
                   style={{
-                    fontSize: 12,
+                    fontSize: 14,
                     fontFamily: fontFamilySemiBold,
                     color: kycBadge.fg,
                   }}
@@ -907,15 +887,13 @@ const ProfileDrawer = () => {
             </View>
           </View>
           <TouchableOpacity
-            onPress={openLogoutModal}
+            onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={{ flexShrink: 0, justifyContent: "center", paddingLeft: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="Log out"
           >
-            <FastImage source={logoutIcon} style={{ width: 22, height: 22, right: 15 }} resizeMode="contain" />
+            <FastImage source={right_ic} style={{ width: 18, height: 18, right: 15 }} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
 
 
 
@@ -930,20 +908,20 @@ const ProfileDrawer = () => {
           ]}
         >
           <View style={{ flex: 1, paddingRight: 8 }}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
               Referral Program
             </AppText>
-            <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginTop: 6, lineHeight: 18 }}>
+            <AppText type={FOURTEEN} color={themeColors.secondaryText} style={{ marginTop: 6, lineHeight: 18 }}>
               {`Refer friends to earn a 35% \n commission`}
             </AppText>
           </View>
           <View style={styles.referralArtWrap}>
-            <FastImage source={referralProfile} style={{ width: 56, height: 56 }} resizeMode="contain" />
+            <FastImage source={referralProfile} style={{ width: 58, height: 58 }} resizeMode="contain" />
           </View>
         </TouchableOpacity>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
             Security & verification
           </AppText>
         </View>
@@ -963,7 +941,7 @@ const ProfileDrawer = () => {
         </View>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 26 }}>
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
             Shortcut
           </AppText>
 
@@ -983,7 +961,7 @@ const ProfileDrawer = () => {
           ))}
         </View>
 
-        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 22 }}>
+        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 22 }}>
           Popular
         </AppText>
         <View style={[styles.profileIconGrid, { marginTop: 14 }]}>
@@ -1072,7 +1050,7 @@ const ProfileDrawer = () => {
         </View>
       </Modal>
 
-      <Modal
+      {/* <Modal
         visible={showLogoutModal}
         transparent
         statusBarTranslucent
@@ -1160,7 +1138,7 @@ const ProfileDrawer = () => {
             </View>
           </Animated.View>
         </Animated.View>
-      </Modal>
+      </Modal> */}
     </View>
   );
 };
@@ -1170,7 +1148,7 @@ export default ProfileDrawer;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.newThemeColor,
+    backgroundColor: "#FFFFFF",
     width: screenWidth,
   },
   logoutModalBackdrop: {
