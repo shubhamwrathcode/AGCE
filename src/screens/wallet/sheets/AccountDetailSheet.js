@@ -3,6 +3,7 @@ import { ScrollView, TouchableOpacity, View } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
 import Toast from "react-native-simple-toast";
 import { AppText, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, TWELVE } from "../../../shared";
+import { colors } from "../../../theme/colors";
 
 const AccountDetailSheet = ({
   sheetRef,
@@ -24,7 +25,7 @@ const AccountDetailSheet = ({
       animationType="fade"
       customStyles={{
         container: {
-          backgroundColor: themeColors.background,
+          backgroundColor: colors.white,
           height: accountSheetHeight,
           borderTopRightRadius: 26,
           borderTopLeftRadius: 26,
@@ -115,7 +116,7 @@ const AccountDetailSheet = ({
                   sheetRef.current?.close?.();
                   onTransfer?.(selectedAccount);
                 }}
-                style={[styles.sheetBtn, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}
+                style={[styles.sheetBtn, { backgroundColor: colors.iconBgColor }]}
               >
                 <AppText weight={SEMI_BOLD} type={FOURTEEN}>Transfer</AppText>
               </TouchableOpacity>
@@ -124,7 +125,7 @@ const AccountDetailSheet = ({
                   sheetRef.current?.close?.();
                   Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM);
                 }}
-                style={[styles.sheetBtn, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}
+                style={[styles.sheetBtn, { backgroundColor: colors.iconBgColor }]}
               >
                 <AppText weight={SEMI_BOLD} type={FOURTEEN}>History</AppText>
               </TouchableOpacity>
@@ -148,7 +149,7 @@ const styles = {
     flex: 1,
     height: 48,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",
   },

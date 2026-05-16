@@ -450,6 +450,12 @@ export const verified_kyc = require('../../assets/images/verified_kyc.png');
 export const favCheck = require('../../assets/images/favCheck.png');
 export const favUnCheck = require('../../assets/images/starDisable.png');
 export const history_line = require('../../assets/images/history-line.png');
+export const swap_line = require('../../assets/images/swap-line.png');
+export const referWallet = require('../../assets/images/referWallet.png');
+
+
+
+
 
 
 

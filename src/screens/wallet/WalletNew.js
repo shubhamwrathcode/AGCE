@@ -18,8 +18,10 @@ import {
   FIFTEEN,
   FOURTEEN,
   SEMI_BOLD,
+  SIXTEEN,
   TWELVE,
   TWENTY,
+  TWENTY_SIX,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import WalletHeader from "./WalletHeader";
@@ -314,8 +316,8 @@ const WalletNew = () => {
       return (
         <>
           <View style={{ marginVertical: 20, paddingHorizontal: 20 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <AppText weight={SEMI_BOLD}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <AppText type={SIXTEEN} weight={SEMI_BOLD} color={DISCLAIMTEXT}>
                 {tabKey === "Main"
                   ? "Estimated Main Wallet Assets"
                   : tabKey === "Spot"
@@ -333,16 +335,16 @@ const WalletNew = () => {
                 <FastImage
                   source={showBalance ? eye_close_icon : eye_open_icon}
                   resizeMode="contain"
-                  style={{ width: 20, height: 20 }}
+                  style={{ width: 16, height: 16 }}
                   tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
                 />
               </TouchableOpacity>
             </View>
-            <View style={{ marginTop: 10 }}>
+            <View style={{ marginTop: 5 }}>
               <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-                <AppText type={FIFTEEN} weight={SEMI_BOLD}>
+                <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>
                   {!showBalance
-                    ? "********"
+                    ? "****"
                     : !isBalanceLoaded
                       ? "..."
                       : toFixedFive(
@@ -363,21 +365,21 @@ const WalletNew = () => {
                   onPress={() => NavigationService.navigate(CURRENCY_PREFERENCE_SCREEN)}
                   style={{ flexDirection: "row", alignItems: "center" }}
                 >
-                  <AppText color={DISCLAIMTEXT}>
+                  <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>
                     {isBalanceLoaded ? (walletBalance?.Currency || "") : "..."}{" "}
                   </AppText>
                   <FastImage
                     source={externalLinkIcon}
                     resizeMode="contain"
-                    style={{ width: 10, height: 10 }}
+                    style={{ width: 10, height: 10, top: 5 }}
                     tintColor={theme === "Dark" ? colors.white : colors.black}
                   />
                 </TouchableOpacity>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
-                <AppText type={FIFTEEN} weight={SEMI_BOLD}>
-                  {!showBalance
-                    ? "********"
+                <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
+                  ≈ {!showBalance
+                    ? "****"
                     : !isBalanceLoaded
                       ? "..."
                       : toFixedFive(
@@ -392,21 +394,23 @@ const WalletNew = () => {
                                 : tabKey === "Futures"
                                   ? walletBalanceFutures?.dollarPrice || 0
                                   : 0
-                      )}{" "}
+                      )}{" "}USD
                 </AppText>
-                <AppText color={DISCLAIMTEXT}>USDT</AppText>
               </View>
             </View>
           </View>
-          <WalletMenu
-            theme={theme}
-            onDeposit={() => {
-              NavigationService.navigate(DEPOSIT_COIN_SCREEN);
-            }}
-            onWithdraw={() => {
-              NavigationService.navigate(WALLET_WITHDRAW_SCREEN);
-            }}
-          />
+          <View style={{ paddingHorizontal: 20 }}>
+            <WalletTabQuickActions
+              theme={theme}
+              themeColors={themeColors}
+              items={[
+                { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
+                { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN) },
+                { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
+                { key: "history", label: "History", variant: "history", onPress: () => { NavigationService.navigate("Wallet_History") } },
+              ]}
+            />
+          </View>
           <View style={{ marginVertical: 20, paddingHorizontal: 20 }}>
             <WalletList
               userWallet={
@@ -652,8 +656,12 @@ const WalletNew = () => {
   );
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
-      <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
+    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+      <KeyBoardAware 
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}
+      >
 
         {contentLoading ? (
           <WalletSkeleton />
@@ -681,16 +689,16 @@ const WalletNew = () => {
                           marginTop: 12,
                           paddingVertical: 0,
                           borderRadius: 14,
-                          backgroundColor: themeColors.themeElevationColor,
+                          backgroundColor: colors.white,
                         }}
                       >
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                          <AppText color={DISCLAIMTEXT}>Estimated Balance</AppText>
+                          <AppText type={SIXTEEN} color={DISCLAIMTEXT}>Estimated Balance</AppText>
                           <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
                             <FastImage
                               source={!showBalance ? eye_close_icon : eye_open_icon}
                               resizeMode="contain"
-                              style={{ width: 14, height: 14 }}
+                              style={{ width: 16, height: 16 }}
                               tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
                             />
                           </TouchableOpacity>
@@ -698,15 +706,15 @@ const WalletNew = () => {
 
                         <View style={{ marginTop: 5 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-                            <AppText type={TWENTY} weight={SEMI_BOLD}>
+                            <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>
                               {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5)}{" "}
                             </AppText>
-                            <AppText color={DISCLAIMTEXT} style={{ top: 5 }}>
+                            <AppText color={DISCLAIMTEXT} type={FIFTEEN} style={{ top: 5 }}>
                               {portfolioPreferredCurrency(walletBalance)}
                             </AppText>
                           </View>
                           <View style={{ marginTop: 6 }}>
-                            <AppText color={DISCLAIMTEXT}>
+                            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
                               ≈ {!showBalance ? "****" : formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5)} USD
                             </AppText>
                           </View>
@@ -746,6 +754,7 @@ const WalletNew = () => {
                               <View style={{ flexDirection: "row", gap: 18, alignItems: "flex-end" }}>
                                 <TouchableOpacity onPress={() => setInnerIndex(0)} style={{ alignItems: "center" }}>
                                   <AppText
+                                    type={FOURTEEN}
                                     weight={SEMI_BOLD}
                                     color={overviewInnerTab === "crypto" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}
                                   >
@@ -764,6 +773,7 @@ const WalletNew = () => {
 
                                 <TouchableOpacity onPress={() => setInnerIndex(1)} style={{ alignItems: "center" }}>
                                   <AppText
+                                    type={FOURTEEN}
                                     weight={SEMI_BOLD}
                                     color={overviewInnerTab === "account" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}
                                   >
@@ -812,7 +822,7 @@ const WalletNew = () => {
                             </View>
 
                             {shouldShowCryptoSearch ? (
-                              <View style={[styles.aoCryptoSearchRow, { borderColor: themeColors.border, backgroundColor: themeColors.themeElevationColor }]}>
+                              <View style={styles.aoCryptoSearchRow}>
                                 <FastImage
                                   source={searchIcon}
                                   resizeMode="contain"
@@ -839,6 +849,8 @@ const WalletNew = () => {
                                 data={overviewCryptoRows}
                                 keyExtractor={(item, idx) => String(item?.currency_id || idx)}
                                 style={{ marginTop: 14 }}
+                                showsVerticalScrollIndicator={false}
+                                showsHorizontalScrollIndicator={false}
                                 renderItem={({ item }) => {
                                   const total = totalWalletQty(item);
                                   return (
@@ -863,12 +875,12 @@ const WalletNew = () => {
                                           />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                          <AppText weight={SEMI_BOLD}>{item?.short_name}</AppText>
+                                          <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item?.short_name}</AppText>
                                           <AppText type={TWELVE} color={DISCLAIMTEXT}>{item?.currency}</AppText>
                                         </View>
                                       </View>
                                       <View style={{ alignItems: "flex-end" }}>
-                                        <AppText weight={SEMI_BOLD}>{safeRound(total, 8)}</AppText>
+                                        <AppText type={FOURTEEN} weight={SEMI_BOLD}>{safeRound(total, 8)}</AppText>
                                         <AppText type={TWELVE} color={DISCLAIMTEXT}>{approxUsdLine(item)}</AppText>
                                       </View>
                                       <TouchableOpacity
@@ -903,6 +915,8 @@ const WalletNew = () => {
                               data={accountRows}
                               keyExtractor={(it) => it.key}
                               style={{ marginTop: 14 }}
+                              showsVerticalScrollIndicator={false}
+                              showsHorizontalScrollIndicator={false}
                               renderItem={({ item }) => (
                                 <View style={styles.aoRow}>
                                   <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
@@ -915,10 +929,10 @@ const WalletNew = () => {
                                         marginRight: 10,
                                       }}
                                     />
-                                    <AppText weight={SEMI_BOLD}>{item.label}</AppText>
+                                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.label}</AppText>
                                   </View>
                                   <View style={{ alignItems: "flex-end" }}>
-                                    <AppText weight={SEMI_BOLD}>
+                                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>
                                       {showBalance ? `${safeRound(item.pref, 8)} ${item.cur}` : "****"}
                                     </AppText>
                                     <AppText type={TWELVE} color={DISCLAIMTEXT}>
@@ -1287,21 +1301,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderWidth: 1,
+    borderWidth: 0,
     paddingHorizontal: 10,
     borderRadius: 18,
     height: 32,
     width: 140,
+    backgroundColor: "#F5F6F7",
   },
   aoCryptoSearchRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderWidth: 1,
+    borderWidth: 0,
     paddingHorizontal: 12,
     borderRadius: 12,
     height: 42,
     marginTop: 10,
+    backgroundColor: "#F5F6F7",
   },
   aoRow: {
     flexDirection: "row",

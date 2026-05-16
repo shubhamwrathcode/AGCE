@@ -5,6 +5,7 @@ import RBSheet from "react-native-raw-bottom-sheet";
 import Toast from "react-native-simple-toast";
 import { AppText, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, TWELVE } from "../../../shared";
 import { bitcoin_ic } from "../../../helper/ImageAssets";
+import { colors } from "../../../theme/colors";
 
 const CoinDetailSheet = ({
   sheetRef,
@@ -78,7 +79,7 @@ const CoinDetailSheet = ({
       animationType="fade"
       customStyles={{
         container: {
-          backgroundColor: themeColors.background,
+          backgroundColor: colors.white,
           height: 390,
           borderTopRightRadius: 26,
           borderTopLeftRadius: 26,
@@ -94,7 +95,7 @@ const CoinDetailSheet = ({
       }}
     >
       {selectedCoin ? (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: colors.white }}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 6 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -161,7 +162,7 @@ const CoinDetailSheet = ({
                     sheetRef.current?.close?.();
                     b.onPress?.();
                   }}
-                  style={[styles.sheetBtn, { backgroundColor: themeColors.themeElevationColor, borderColor: themeColors.border }]}
+                  style={[styles.sheetBtn, { backgroundColor: colors.iconBgColor, borderColor: 'transparent' }]}
                 >
                   <AppText weight={SEMI_BOLD} type={FOURTEEN}>{b.label}</AppText>
                 </TouchableOpacity>
@@ -186,7 +187,7 @@ const styles = {
     flex: 1,
     height: 48,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",
   },

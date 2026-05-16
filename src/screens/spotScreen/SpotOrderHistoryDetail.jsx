@@ -10,7 +10,7 @@ import { back_ic, right_ic } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import moment from "moment";
 import { toFixedEight, spotOpenOrderMarketLabel } from "../../helper/utility";
-import { fontFamilyBold } from "../../theme/typography";
+import { fontFamilyBold, fontFamilySemiBold } from "../../theme/typography";
 import { cancelOrder } from "../../actions/homeActions";
 
 const SpotOrderHistoryDetail = () => {
@@ -190,12 +190,12 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backIcon: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
   },
   headerTitle: {
     fontSize: 18,
-    fontFamily: fontFamilyBold,
+    fontFamily: fontFamilySemiBold,
   },
   scroll: {
     flex: 1,

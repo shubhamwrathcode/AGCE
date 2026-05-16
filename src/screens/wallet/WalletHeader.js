@@ -1,6 +1,6 @@
 import { View, ScrollView, TouchableOpacity as RNTouchableOpacity } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
-import { AppText, BOLD, THIRTEEN } from "../../shared";
+import { AppText, BOLD, FIFTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useState, useRef } from "react";
 import { back_ic } from "../../helper/ImageAssets";
@@ -46,6 +46,7 @@ const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: 10,
+        backgroundColor: colors.white
       }}
     >
       {/* Left scroll icon (show when can scroll left) */}
@@ -60,16 +61,17 @@ const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
           }}
           onPress={() => scrollToEdge("left")}
         >
-         <FastImage
-                source={back_ic}
-                resizeMode="contain"
-                style={{
-                  width: 15,
-                  height: 15,
-                  // transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
-                }}
-                tintColor={theme !== "Dark" ? colors.black : colors.white}
-              />
+          <FastImage
+            source={back_ic}
+            resizeMode="contain"
+            style={{
+              width: 15,
+              height: 15,
+              bottom: 3
+              // transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
+            }}
+            tintColor={theme !== "Dark" ? colors.black : colors.white}
+          />
         </RNTouchableOpacity>
       )}
 
@@ -98,7 +100,7 @@ const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
             >
               <AppText
                 weight={BOLD}
-                type={THIRTEEN}
+                type={FIFTEEN}
                 style={{ color: isActive ? colors.buttonBg : themeColors.secondaryText }}
               >
                 {r.title}
@@ -130,15 +132,16 @@ const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
           onPress={() => scrollToEdge("right")}
         >
           <FastImage
-                source={back_ic}
-                resizeMode="contain"
-                style={{
-                  width: 15,
-                  height: 15,
-                  transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
-                }}
-                tintColor={theme !== "Dark" ? colors.black : colors.white}
-              />
+            source={back_ic}
+            resizeMode="contain"
+            style={{
+              width: 15,
+              height: 15,
+              bottom: 3,
+              transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
+            }}
+            tintColor={theme !== "Dark" ? colors.black : colors.white}
+          />
         </RNTouchableOpacity>
       )}
     </View>

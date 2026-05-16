@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { FlatList, TextInput, TouchableOpacity, View } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppText, DISCLAIMTEXT, EIGHTEEN, SEMI_BOLD, TWELVE } from "../../../shared";
+import { AppText, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
 import { colors } from "../../../theme/colors";
-import { bitcoin_ic, checkIc, moreOption, searchIcon } from "../../../helper/ImageAssets";
+import { bitcoin_ic, checkIc, moreOption, searchIcon, NO_NOTIFICATION_ICON } from "../../../helper/ImageAssets";
 import WalletTabQuickActions from "../WalletTabQuickActions";
 
 const GenericWalletTab = ({
@@ -64,44 +64,45 @@ const GenericWalletTab = ({
         {title}
       </AppText>
 
-      {actions?.length ? <WalletTabQuickActions theme={theme} themeColors={themeColors} items={actions} /> : null}
-
       <View
         style={{
-          marginTop: 18,
-          borderRadius: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 12,
-          backgroundColor: themeColors.themeElevationColor,
+          marginTop: 12,
+          paddingVertical: 0,
+          borderRadius: 14,
+          backgroundColor: colors.white,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <AppText color={DISCLAIMTEXT}>Total Assets</AppText>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <AppText type={SIXTEEN} color={DISCLAIMTEXT} weight={SEMI_BOLD}>Total Assets</AppText>
           <TouchableOpacity onPress={() => setShowBalance((v) => !v)}>
             <FastImage
               source={showBalance ? eyeCloseIcon : eyeOpenIcon}
               resizeMode="contain"
-              style={{ width: 18, height: 18 }}
+              style={{ width: 16, height: 16 }}
               tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
             />
           </TouchableOpacity>
         </View>
-        <View style={{ marginTop: 8 }}>
+        <View style={{ marginTop: 5 }}>
           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-            <AppText weight={SEMI_BOLD} style={{ fontSize: 22 }}>
+            <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>
               {showBalance ? formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5) : "****"}{" "}
             </AppText>
-            <AppText color={DISCLAIMTEXT}>{portfolioPreferredCurrency(walletBalance)}</AppText>
+            <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>{portfolioPreferredCurrency(walletBalance)}</AppText>
           </View>
-          <AppText color={DISCLAIMTEXT} style={{ marginTop: 4 }}>
-            ≈ {showBalance ? formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5) : "****"}{" "}
-            {walletBalance?.Currency || "USD"}
-          </AppText>
+          <View style={{ marginTop: 6 }}>
+            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
+              ≈ {showBalance ? formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5) : "****"}{" "}
+              {walletBalance?.Currency || "USD"}
+            </AppText>
+          </View>
         </View>
       </View>
 
+      {actions?.length ? <WalletTabQuickActions theme={theme} themeColors={themeColors} items={actions} /> : null}
+
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14 }}>
-        <View style={[styles.searchBox, { borderColor: themeColors.border, backgroundColor: themeColors.themeElevationColor }]}>
+        <View style={[styles.searchBox, { backgroundColor: "#F5F6F7" }]}>
           <FastImage source={searchIcon} style={{ width: 14, height: 14 }} resizeMode="contain" tintColor={"#787878"} />
           <TextInput
             value={search}
@@ -136,6 +137,8 @@ const GenericWalletTab = ({
         data={rows}
         keyExtractor={(item, idx) => String(item?.currency_id || idx)}
         style={{ marginTop: 10 }}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => {
           const total = totalWalletQty(item);
           return (
@@ -160,13 +163,13 @@ const GenericWalletTab = ({
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText weight={SEMI_BOLD}>{item?.short_name}</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item?.short_name}</AppText>
                   <AppText type={TWELVE} color={DISCLAIMTEXT}>{item?.currency}</AppText>
                 </View>
               </View>
 
               <View style={{ alignItems: "flex-end" }}>
-                <AppText weight={SEMI_BOLD}>{safeRound(total, 8)}</AppText>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD}>{safeRound(total, 8)}</AppText>
                 <AppText type={TWELVE} color={DISCLAIMTEXT}>{approxUsdLine(item)}</AppText>
               </View>
 
@@ -176,6 +179,12 @@ const GenericWalletTab = ({
             </View>
           );
         }}
+        ListEmptyComponent={() => (
+          <View style={{ alignItems: "center", marginTop: 40, gap: 10 }}>
+            <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 80, height: 80 }} resizeMode="contain" />
+            <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Data Found</AppText>
+          </View>
+        )}
       />
     </View>
   );
@@ -187,7 +196,7 @@ const styles = {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderWidth: 1,
+    borderWidth: 0,
     paddingHorizontal: 12,
     borderRadius: 12,
     height: 42,

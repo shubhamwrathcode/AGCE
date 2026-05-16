@@ -1,25 +1,29 @@
 import React from "react";
-import { TouchableOpacity, View } from "react-native";
+import { Platform, TouchableOpacity, View } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, MEDIUM, SEMI_BOLD, TWELVE } from "../../shared";
 import { colors } from "../../theme/colors";
 import {
   buyCrypto,
+  earningAsset1,
   earningMenuDarkIcon,
   earningMenuIcon,
+  futuresActiveIcon,
   futuresIcon,
   history,
   historyIcon,
   newDepositDarkIcon,
   newDepositIcon,
+  newReferalIcon,
+  newReferImage,
   newWidthrawDarkIcon,
   newWidthrawIcon,
   p2pIcon,
+  referWallet,
+  swap_line,
   swapHistory,
   swap as swapIconDark,
   swapLight as swapIconLight,
-  walletTransferIcon,
-  walletTransferIconLight,
 } from "../../helper/ImageAssets";
 
 /**
@@ -42,11 +46,11 @@ function iconSourceForVariant(variant, theme) {
     case "p2p":
       return p2pIcon;
     case "swap":
-      return theme !== "Dark" ? swapIconLight : swapIconDark;
+      return swap_line;
     case "earning":
-      return isDark ? earningMenuDarkIcon : earningMenuIcon;
+      return referWallet;
     case "futures":
-      return futuresIcon;
+      return futuresActiveIcon;
     default:
       return null;
   }
@@ -59,19 +63,19 @@ function iconSourceForVariant(variant, theme) {
 const WalletTabQuickActions = ({ theme, themeColors, items }) => {
   if (!Array.isArray(items) || items.length === 0) return null;
   const isDark = theme === "Dark";
-// console.log(items,'==items');
+  // console.log(items,'==items');
 
-   
+
 
   return (
     <View
       style={{
         flexDirection: "row",
-        justifyContent: "flex-start",
+        justifyContent: items.length === 4 ? "space-between" : "flex-start",
         alignItems: "flex-start",
         flexWrap: "wrap",
         marginTop: 12,
-        gap: 18,
+        gap: items.length === 4 ? 0 : 20,
       }}
     >
       {items.map((item) => {
@@ -85,23 +89,23 @@ const WalletTabQuickActions = ({ theme, themeColors, items }) => {
             activeOpacity={0.78}
             accessibilityRole="button"
             accessibilityLabel={item.label}
-            style={{ alignItems: "center", width: 64, paddingHorizontal: 2 ,}}
+            style={{ alignItems: "center", width: 64, paddingHorizontal: 2, }}
           >
             <View
               style={{
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: isDark ? "#2B2D33" : "#EFEFF1",
+                backgroundColor: colors.iconBgColor,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
               <FastImage
                 source={src}
-                style={{ width:24, height: 24 }}
+                style={{ width: 26, height: 26 }}
                 resizeMode="contain"
-                tintColor={colors.black}
+                tintColor={variant === "futures" ? "#787878" : colors.black}
               />
             </View>
             <AppText
