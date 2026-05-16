@@ -9,9 +9,11 @@ import {
 import {
   AppText,
   BLACK,
+  EIGHTEEN,
   ELEVEN,
   FIFTEEN,
   FOURTEEN,
+  NORMAL,
   SEMI_BOLD,
   SIXTEEN,
   THIRTEEN,
@@ -76,11 +78,11 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
           }}
         ></View>
         <View>
-          <AppText style={{ color: theme !== "Dark" ? "#000000BF" : colors.buttonBg }}>
+          <AppText weight={NORMAL} type={SIXTEEN} style={{ color: theme !== "Dark" ? "#000000BF" : colors.buttonBg }}>
             {" "}
             {moment(item?.createdAt).format("lll")}{" "}
           </AppText>
-          <AppText color={BLACK} weight={SEMI_BOLD} type={FOURTEEN} style={{ marginLeft: 3 }}>
+          <AppText color={BLACK} weight={SEMI_BOLD} type={SIXTEEN} style={{ marginLeft: 3 }}>
             {item?.title}
           </AppText>
         </View>
@@ -149,7 +151,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
             style={{ width: 18, height: 18 }}
             tintColor={theme === "Dark" ? colors.white : colors.black}
           />
-          <AppText color={BLACK} weight={SEMI_BOLD} type={FIFTEEN}>
+          <AppText color={BLACK} weight={SEMI_BOLD} type={EIGHTEEN}>
             News
           </AppText>
         </View>
@@ -165,7 +167,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
         >
           <AppText
             color={colors.white}
-            type={FOURTEEN}
+            type={SIXTEEN}
             onPress={() => NavigationService.navigate(NOTIFICATION_SCREEN)}
           >
             {`More`}{" "}

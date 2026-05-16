@@ -63,10 +63,14 @@ const OtpInputWithGetOtp: React.FC<OtpInputWithGetOtpProps> = ({
           onChangeText={(t) => onChangeText(t.replace(/\D/g, "").slice(0, 6))}
           placeholder=""
           placeholderTextColor={colors.placeholderColor}
+          importantForAutofill="no"
+          autoComplete="off"
           maxLength={6}
           keyboardType="number-pad"
+          contextMenuHidden
+          selectionColor={colors.black + '40'}
+          cursorColor={colors.black}
           style={styles.input}
-          selectionColor={colors.buttonBg}
         />
         <View style={styles.rightInContainer} pointerEvents="box-none">
           {hideGetOtp ? (

@@ -89,6 +89,15 @@ const ForgotPassword = () => {
   const [userNameError, setUserNameError] = useState(false);
   const [otpError, setOtpError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [timer, setTimer] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (timer > 0) {
+      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
 
   const safeText = (value, fallback) =>
     value != null && value !== "" ? checkValue(value) : fallback;
@@ -101,6 +110,15 @@ const ForgotPassword = () => {
   }, [index]);
 
   const onGetOtp = () => {
+    if (timer > 0) return;
+    const rawUser = String(userName || "").trim();
+    if (!rawUser) {
+      setUserNameError(true);
+      showError(index === 0 ? checkValue(languages?.error_email) : checkValue(languages?.error_userName));
+      return;
+    }
+    setUserNameError(false);
+
     let data;
     // index: 0 = Email, 1 = Mobile
     if (index === 1) {
@@ -119,6 +137,7 @@ const ForgotPassword = () => {
 
     Keyboard.dismiss();
     dispatch(forgotOtp(data, true));
+    setTimer(60);
   };
 
   const onLogin = () => {
@@ -257,7 +276,8 @@ const ForgotPassword = () => {
               returnKeyType="next"
               isOtp
               onSendOtp={onGetOtp}
-              otpText={"Get OTP"}
+              otpText={timer > 0 ? `Resend (${timer}s)` : "Get OTP"}
+              isOtpDisabled={timer > 0}
               hasError={otpError}
             />
             <Input

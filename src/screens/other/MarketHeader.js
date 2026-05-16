@@ -110,7 +110,7 @@ const MarketHeader = ({
             tintColor={placeholderColor}
           />
           <TextInput
-            style={[styles.searchInput, { color: textColor, fontSize: 12, fontWeight: fontFamilyMedium }]}
+            style={[styles.searchInput, { color: textColor, fontSize: 14, fontFamily: fontFamilySemiBold }]}
             placeholder="Search Coins"
             placeholderTextColor={placeholderColor}
             value={search}
@@ -123,10 +123,10 @@ const MarketHeader = ({
       {!showSearch && (
         <TouchableOpacity
           onPress={() => NavigationService.navigate(SEARCH_SCREEN)}
-          style={[styles.searchBar, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 0.8 }]}
+          style={[styles.searchBar, { backgroundColor: themeColors.card, }]}
         >
           <FastImage source={searchIcon} resizeMode="contain" style={styles.searchIcon} tintColor={placeholderColor} />
-          <AppText style={[styles.searchPlaceholder, { color: placeholderColor }]}>Search Coin Pairs</AppText>
+          <AppText weight={SEMI_BOLD} type={FOURTEEN} style={[styles.searchPlaceholder, { color: placeholderColor }]}>Search Coins</AppText>
         </TouchableOpacity>
       )}
 
@@ -229,10 +229,10 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 5,
-    paddingVertical: 6,
+    borderRadius: 8,
+    height: 42,
     paddingHorizontal: 10,
-    marginBottom: 10,
+    marginBottom: 5,
   },
   searchIcon: {
     width: 16,

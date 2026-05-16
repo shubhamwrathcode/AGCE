@@ -751,7 +751,7 @@ const KycStatus = () => {
 
 
   const kycStatusView = () => {
-    switch (1) {
+    switch (kycVerified) {
       case 0: return <KycDue onVerifyPress={openVerifyModal} screenWidth={screenWidth} />;
       case 1: return <KycPending idDocStatus={idDocStatus} taxDocStatus={taxDocStatus} selfieStatus={selfieStatus} submittedIdDocType={submittedIdDocType} submittedTaxDocType={submittedTaxDocType} />;
       case 2: return <KycCompleted />;

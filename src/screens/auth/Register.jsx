@@ -28,7 +28,6 @@ import {
   googleIcon,
   apple,
 } from "../../helper/ImageAssets";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   checkValue,
   validateEmail,
@@ -48,9 +47,7 @@ import {
   GoogleSignin,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
-// import {PickerSelect} from '../../shared/components/PickerSelect';
-// import {countryCodes} from '../../helper/dummydata';
-// import Recaptcha from 'react-native-recaptcha-that-works';
+
 
 /** Matches AppOperation.send(): only `api/*` skips the `v1/` prefix. */
 const guestPostUrl = (path) => {
@@ -134,8 +131,8 @@ const Register = () => {
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
   const [isAppleSignInInProgress, setIsAppleSignInInProgress] = useState(false);
   const [step1Submitting, setStep1Submitting] = useState(false);
-  const [checkTermsEmail, setCheckTermsEmail] = useState(false);
-  const [checkTermsPhone, setCheckTermsPhone] = useState(false);
+  const [checkTermsEmail, setCheckTermsEmail] = useState(true);
+  const [checkTermsPhone, setCheckTermsPhone] = useState(true);
   const [signUpIdError, setSignUpIdError] = useState(false);
   const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
   const emailSuggestBlurTimer = useRef(null);

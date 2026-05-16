@@ -454,7 +454,7 @@ const Login = (): JSX.Element => {
                 <AppText
                   type={THIRTEEN}
                   weight={MEDIUM}
-                  style={{ color: themeColors.text, textDecorationLine: "underline" }}
+                  style={{ color: themeColors.text, }}
                   onPress={() => NavigationService.navigate(FORGOT_PASSWORD_SCREEN)}
                 >
                   Forgot Password?

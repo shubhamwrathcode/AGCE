@@ -100,11 +100,14 @@ const OtpInput6Digit = forwardRef(function OtpInput6Digit(
           value={normalized}
           onChangeText={handleChange}
           maxLength={CODE_LENGTH}
+          importantForAutofill="no"
+          autoComplete="off"
           keyboardType="number-pad"
           style={styles.hiddenInput}
           caretHidden
           contextMenuHidden
-          selectionColor={themeColors.button}
+          selectionColor={themeColors.text + '40'}
+          cursorColor={themeColors.text}
         />
       </TouchableOpacity>
     </View>

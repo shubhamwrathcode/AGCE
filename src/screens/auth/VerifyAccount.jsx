@@ -44,6 +44,14 @@ const VerifyAccount = () => {
   const [otpSubmitting, setOtpSubmitting] = useState(false);
   const hasAutoSent = useRef(false);
   const isVerifyingRef = useRef(false);
+  const otpInputRef = useRef(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      otpInputRef.current?.focus();
+    }, 500);
+    return () => clearTimeout(t);
+  }, []);
   const isNoOtpAttemptsLeft = (msg = "") =>
     String(msg).toLowerCase().includes("no otp attempt left");
 
@@ -190,6 +198,7 @@ const VerifyAccount = () => {
         </AppText>
 
         <OtpInput6Digit
+          ref={otpInputRef}
           value={otp}
           onChangeText={(val) => {
             if (otpError) setOtpError(false);
@@ -210,7 +219,6 @@ const VerifyAccount = () => {
               type={FOURTEEN}
               weight={MEDIUM}
               style={[
-                styles.underlineText,
                 { color: disableBtn ? themeColors.secondaryText : themeColors.text },
               ]}
             >

@@ -75,6 +75,14 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const [otpError, setOtpError] = useState(false);
   const [resendTimer, setResendTimer] = useState((initialMethod === 1 || initialMethod === 3) ? 60 : 0);
   const optionsSheetRef = useRef<any>(null);
+  const otpInputRef = useRef<any>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      otpInputRef.current?.focus();
+    }, 500);
+    return () => clearTimeout(t);
+  }, []);
 
   const lastAutoSentForMethod = useRef<number | null>(null);
   const isVerifyingRef = useRef(false);
@@ -141,6 +149,9 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     }
 
     prevSelectedMethod.current = selectedAuthMethod;
+    if (selectedAuthMethod === 1 || selectedAuthMethod === 2 || selectedAuthMethod === 3) {
+      setTimeout(() => otpInputRef.current?.focus(), 300);
+    }
   }, [pending2FA, selectedAuthMethod]);
 
   useEffect(() => {
@@ -304,6 +315,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
           <>
             <OtpInput6Digit
+              ref={otpInputRef}
               value={otpCode}
               onChangeText={(v: string) => {
                 if (otpError) setOtpError(false);
@@ -322,7 +334,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                     type={FOURTEEN}
                     weight={MEDIUM}
                     style={[
-                      styles.underlineText,
                       { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
                     ]}
                   >
