@@ -10,13 +10,15 @@ import {
   Dimensions,
 } from "react-native";
 import ReactNativeModal from "react-native-modal";
+import { useIsFocused } from "@react-navigation/native";
 import {
   AppSafeAreaView,
   AppText,
   Toolbar,
   MEDIUM,
+  SEMI_BOLD,
 } from "../../shared";
-import { colors } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
 import FastImage from "react-native-fast-image";
@@ -26,512 +28,377 @@ import { getPastOrders, cancelOrder } from "../../actions/homeActions";
 import { getTradeHistory } from "../../actions/walletActions";
 import moment from "moment";
 import TradeHistorySkeleton from "./TradeHistorySkeleton";
-import { spotOpenOrderMarketLabel, tradeHistoryBaseAsset } from "../../helper/utility";
+import {
+  spotOpenOrderMarketLabel,
+  tradeHistoryBaseAsset,
+} from "../../helper/utility";
 import NavigationService from "../../navigation/NavigationService";
 import { SPOT_ORDER_HISTORY_DETAIL } from "../../navigation/routes";
-import { fontFamilyBold } from "../../theme/typography";
-import { useRoute } from "@react-navigation/core";
-import { useIsFocused } from "@react-navigation/native";
 
-/** Align with web `TradePage` / `TradeHistorySection` — order history & trade fills. */
-function safeToFixed8(value, fallback = "0") {
-  const parsed = parseFloat(String(value ?? ""));
-  if (!Number.isFinite(parsed)) return fallback;
-  const s = parsed.toFixed(8).replace(/\.?0+$/, "");
-  return s === "" ? "0" : s;
-}
-
-function orderHistoryMarketLabel(item) {
-  return spotOpenOrderMarketLabel(item, item?.ask_currency, item?.pay_currency);
-}
+const { width: screenW } = Dimensions.get("window");
 
 function orderHistoryEventTime(item) {
-  return item?.updated_at || item?.updatedAt || item?.created_at || item?.createdAt;
+  return item?.updated_at || item?.updatedAt || item?.created_at || item?.createdAt || item?.date || item?.timestamp || item?.time;
 }
 
-function formatOrderHistoryDateTime(item, format) {
-  const ts = orderHistoryEventTime(item);
-  if (ts == null || ts === "") return "—";
-  const m = moment(ts);
-  return m.isValid() ? m.format(format) : "—";
+function orderHistoryMarketLabel(item, base, quote) {
+  return spotOpenOrderMarketLabel(item, base, quote);
 }
 
 function orderHistoryQuoteCurrency(item) {
   const lbl = orderHistoryMarketLabel(item);
   const parts = lbl.split("/");
-  if (parts.length === 2 && parts[1] && parts[1] !== "---") return parts[1];
-  return item?.pay_currency || "";
+  return parts.length > 1 ? parts[1] : "";
 }
 
-/** Same sources as Spot `pastOrdersNormalized` — fills shown under Executed trades. */
-function orderHistoryExecutionsList(inv) {
-  const ep = inv?.executed_prices;
-  const ex = inv?.executions;
-  if (Array.isArray(ep) && ep.length > 0) return ep;
-  if (Array.isArray(ex) && ex.length > 0) return ex;
+function orderHistoryExecutionsList(item) {
+  if (Array.isArray(item?.executions)) return item.executions;
+  if (Array.isArray(item?.trades)) return item.trades;
   return [];
 }
 
 function orderHistoryTifDisplay(item) {
-  const t = item?.time_in_force ?? item?.tif ?? item?.timeInForce;
-  if (t == null || String(t).trim() === "") return "—";
-  return String(t).toUpperCase();
+  return item?.time_in_force || item?.timeInForce || "GTC";
 }
 
-function tradeHistoryRoleLabel(item) {
-  if (item?.is_maker === true) return "Maker";
-  if (item?.is_maker === false) return "Taker";
-  return "—";
+function safeToFixed8(val, fallback = "0") {
+  if (val == null || val === "" || isNaN(Number(val))) return fallback;
+  return Number(val).toFixed(8);
 }
 
-const TradeHistory = () => {
+/**
+ * Optimized Key-Value Row for Cards
+ */
+const TradeKvRow = React.memo(({ label, value, color, labelColor, textColor }) => (
+  <View style={styles.tradeKvRow}>
+    <AppText style={[styles.tradeKvK, { color: labelColor }]}>{label}</AppText>
+    <AppText style={[styles.tradeKvV, { color: color ?? textColor }]} numberOfLines={3}>
+      {value}
+    </AppText>
+  </View>
+));
+
+/**
+ * Memoized Order Card component
+ */
+const OrderCard = React.memo(({
+  item,
+  spotSelectedPair,
+  themeColors,
+  onCancel,
+  showTrades,
+  onToggleExpand,
+  getSideColor
+}) => {
+  const orderId = item?._id || item?.id || item?.order_id;
+  const baseHint = spotSelectedPair?.base_currency ?? spotSelectedPair?.base_currency_short_name;
+  const quoteHint = spotSelectedPair?.quote_currency ?? spotSelectedPair?.quote_currency_short_name;
+
+  const currencyPair = useMemo(() => spotOpenOrderMarketLabel(item, baseHint, quoteHint), [item, baseHint, quoteHint]);
+  const side = useMemo(() => String(item?.side || "").toUpperCase(), [item?.side]);
+  const sideColor = useMemo(() => getSideColor(side), [side, getSideColor]);
+  const typeUpper = useMemo(() => String(item?.order_type || item?.type || item?.orderType || "Market").toUpperCase(), [item]);
+
+  const canCancel = useMemo(() => {
+    const status = String(item?.status || item?.user_status || "").toUpperCase();
+    return !!orderId && !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(status);
+  }, [item, orderId]);
+
+  const eventM = useMemo(() => {
+    const ts = orderHistoryEventTime(item);
+    return ts ? moment(ts) : null;
+  }, [item]);
+
+  const dateStr = eventM?.isValid() ? eventM.format("DD/MM/YYYY") : "—";
+  const timeStr = eventM?.isValid() ? eventM.format("HH:mm:ss") : "—";
+  const headerDateTime = eventM?.isValid() ? eventM.format("DD/MM/YYYY HH:mm:ss") : "—";
+
+  const executions = useMemo(() => orderHistoryExecutionsList(item), [item]);
+  const hasExecutedTrades = executions.length > 0;
+  const quoteCc = useMemo(() => orderHistoryQuoteCurrency(item), [item]);
+  const baseSym = useMemo(() => item?.ask_currency || item?.base_currency || (currencyPair.includes("/") ? currencyPair.split("/")[0] : ""), [item, currencyPair]);
+
+  const priceDisplay = useMemo(() => {
+    return String(item?.order_type || item?.type || "").toUpperCase() === "MARKET"
+      ? "Market"
+      : safeToFixed8(item?.price ?? 0, "—");
+  }, [item]);
+
+  const labelColor = themeColors.secondaryText ?? "#8E8E93";
+  const textColor = themeColors.text ?? "#000000";
+  const execBorder = themeColors.themeBorderColor ?? themeColors.border ?? "#EEEEEE";
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
+      style={[styles.orderSpotCard, { backgroundColor: colors.white }]}
+    >
+      <View>
+        <View style={styles.orderSpotHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <AppText style={[styles.orderSpotTitle, { color: textColor, fontSize: 17 }]} weight={SEMI_BOLD}>
+                {currencyPair}
+              </AppText>
+              <FastImage source={right_ic} style={{ width: 12, height: 12, marginLeft: 4 }} resizeMode="contain" tintColor={labelColor} />
+            </View>
+            <AppText weight={MEDIUM} style={{ color: textColor, fontSize: 14, marginTop: 4 }}>{headerDateTime}</AppText>
+            <AppText style={{ color: sideColor, fontSize: 15, marginTop: 4 }} weight={SEMI_BOLD}>
+              {side} · {typeUpper}
+            </AppText>
+          </View>
+        </View>
+
+        <TradeKvRow label="Date" value={dateStr} labelColor={labelColor} textColor={textColor} />
+        <TradeKvRow label="Time" value={timeStr} labelColor={labelColor} textColor={textColor} />
+        <TradeKvRow label="Market" value={currencyPair} labelColor={labelColor} textColor={textColor} />
+        <TradeKvRow label="Side" value={side} color={sideColor} labelColor={labelColor} textColor={textColor} />
+        <TradeKvRow label="Type" value={typeUpper} labelColor={labelColor} textColor={textColor} />
+        <TradeKvRow label="TIF" value={orderHistoryTifDisplay(item)} labelColor={labelColor} textColor={textColor} />
+        <TradeKvRow label="Price" value={priceDisplay} labelColor={labelColor} textColor={textColor} />
+
+        {hasExecutedTrades && (
+          <View style={{ marginTop: 8 }}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[styles.execTradesBtnSpot, { borderColor: colors.secondBorder }]}
+              onPress={() => onToggleExpand(item)}
+            >
+              <View style={styles.execTradesBtnRowSpot}>
+                <FastImage
+                  source={downIcon}
+                  tintColor={'grey'}
+                  style={[styles.orderHistoryChevronSpot, { transform: [{ rotate: showTrades ? "180deg" : "0deg" }] }]}
+                  resizeMode="contain"
+                />
+                <AppText style={[styles.execTradesBtnTextSpot, { color: textColor }]}> Executed trades</AppText>
+              </View>
+            </TouchableOpacity>
+
+            {showTrades && (
+              <View style={styles.execTradesBoxSpot}>
+                {executions.map((tr, i) => (
+                  <View key={`${orderId}_${tr?.trade_id ?? i}`} style={[styles.execTradeItemSpot, i === executions.length - 1 && { borderBottomWidth: 0, marginBottom: 0 }]}>
+                    <View style={styles.execTradeHeaderRowSpot}>
+                      <AppText style={[styles.execTradeHeaderTextSpot, { color: labelColor }]} weight={MEDIUM}>Trade #{i + 1}</AppText>
+                    </View>
+                    <TradeKvRow label="Price:" value={`${safeToFixed8(tr?.price || 0, "0")} ${quoteCc}`} labelColor={labelColor} textColor={textColor} />
+                    <TradeKvRow label="Executed:" value={`${safeToFixed8(tr?.quantity || 0, "0")} ${baseSym}`} labelColor={labelColor} textColor={textColor} />
+                    <TradeKvRow label="Fee:" value={`${safeToFixed8(tr?.fee || 0, "0")} ${quoteCc}`} labelColor={labelColor} textColor={textColor} />
+                    <TradeKvRow label="Total:" value={safeToFixed8((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0), "0")} labelColor={labelColor} textColor={textColor} />
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      {canCancel && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={[styles.cancelBtn, { borderColor: colors.red }]} onPress={() => onCancel(item)}>
+            <AppText style={{ color: colors.red, fontWeight: "600", fontSize: 13 }}>Cancel order</AppText>
+          </TouchableOpacity>
+        </View>
+      )}
+      <View style={[styles.orderSpotDivider, { backgroundColor: colors.iconBgColor }]} />
+    </TouchableOpacity>
+  );
+});
+
+/**
+ * Memoized Trade Fill Card component
+ */
+const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColor }) => {
+  const baseHint = spotSelectedPair?.base_currency ?? spotSelectedPair?.base_currency_short_name;
+  const quoteHint = spotSelectedPair?.quote_currency ?? spotSelectedPair?.quote_currency_short_name;
+
+  const mLabel = useMemo(() => orderHistoryMarketLabel(item, baseHint, quoteHint), [item, baseHint, quoteHint]);
+  const baseSym = useMemo(() => tradeHistoryBaseAsset(item, baseHint, quoteHint), [item, baseHint, quoteHint]);
+  const side = useMemo(() => String(item?.side || "").toUpperCase(), [item?.side]);
+  const sideColor = useMemo(() => getSideColor(side), [side, getSideColor]);
+  const role = useMemo(() => (item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—"), [item?.is_maker]);
+
+  const eventM = useMemo(() => {
+    const ts = item?.executed_at || item?.executedAt || item?.created_at;
+    return ts ? moment(ts) : null;
+  }, [item]);
+
+  const dateStr = eventM?.isValid() ? eventM.format("DD/MM/YYYY") : "—";
+  const timeStr = eventM?.isValid() ? eventM.format("HH:mm:ss") : "—";
+  const labelColor = themeColors.secondaryText ?? "#8E8E93";
+  const textColor = themeColors.text ?? "#000000";
+  const borderColor = themeColors.themeBorderColor ?? themeColors.border ?? "#EEEEEE";
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
+      style={[styles.tradeFillCard, { borderBottomColor: colors.iconBgColor, backgroundColor: colors.white }]}
+    >
+      <View style={styles.pairRow}>
+        <AppText style={{ color: textColor, fontSize: 17 }} weight={SEMI_BOLD}>{mLabel}</AppText>
+        <FastImage source={right_ic} style={{ width: 11, height: 11, marginLeft: 4 }} resizeMode="contain" tintColor={labelColor} />
+      </View>
+      <AppText weight={MEDIUM} style={{ color: textColor, fontSize: 14, marginBottom: 2 }}>{dateStr} {timeStr}</AppText>
+      <AppText style={{ color: sideColor, fontSize: 15, marginBottom: 12 }} weight={SEMI_BOLD}>{side} · {role}</AppText>
+
+      <TradeKvRow label="Date" value={dateStr} labelColor={labelColor} textColor={textColor} />
+      <TradeKvRow label="Time" value={timeStr} labelColor={labelColor} textColor={textColor} />
+      <TradeKvRow label="Pair" value={mLabel} labelColor={labelColor} textColor={textColor} />
+      <TradeKvRow label="Side" value={side} color={sideColor} labelColor={labelColor} textColor={textColor} />
+      <TradeKvRow label="Role" value={role} labelColor={labelColor} textColor={textColor} />
+      <TradeKvRow label="Price" value={safeToFixed8(item?.price, "—")} labelColor={labelColor} textColor={textColor} />
+      <TradeKvRow label="Quantity" value={`${safeToFixed8(item?.quantity, "—")}${baseSym ? ` ${baseSym}` : ""}`} labelColor={labelColor} textColor={textColor} />
+    </TouchableOpacity>
+  );
+});
+
+const TradeHistory = ({ route }) => {
   const dispatch = useDispatch();
-  const route = useRoute();
+  const { isDark, themeColors } = useTheme();
+  const memoizedTheme = useMemo(() => themeColors || {}, [themeColors, isDark]);
   const isFocused = useIsFocused();
-  const { colors: themeColors, isDark } = useTheme();
-  const screenW = Dimensions.get("window").width;
 
-  // 0 = Orders History, 1 = Trade History (Fills)
-  const [activeTab, setActiveTab] = useState(route?.params?.activeTab ?? 0);
-  const pagerX = useRef(new Animated.Value(-(route?.params?.activeTab ?? 0) * screenW)).current;
-
-  // Data Sources
-  const pastOrdersRedux = useAppSelector((state) => state.home.pastOrders) || [];
-  const walletTradeHistory = useAppSelector((state) => state.wallet.tradeHistory) || [];
+  const { pastOrders: pastOrdersRedux } = useAppSelector((state) => state.home);
+  const { tradeHistory: walletTradeHistory } = useAppSelector((state) => state.wallet);
   const spotSelectedPair = useAppSelector((state) => state.home.spotSelectedPair);
+
+  const [activeTab, setActiveTab] = useState(route?.params?.activeTab ?? 0);
+  const pagerX = useRef(new Animated.Value(-activeTab * screenW)).current;
 
   const [ordersData, setOrdersData] = useState([]);
   const [tradesData, setTradesData] = useState([]);
-
   const [ordersPage, setOrdersPage] = useState(1);
   const [tradesPage, setTradesPage] = useState(1);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingTrades, setLoadingTrades] = useState(false);
-  /** Pagination only — bottom footer spinner (initial load uses `loading` + skeleton). */
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreOrders, setHasMoreOrders] = useState(true);
   const [hasMoreTrades, setHasMoreTrades] = useState(true);
-  /** Prevent rapid refetch loops (ms timestamps). */
-  const lastOrdersFetchAtRef = useRef(0);
-  const lastTradesFetchAtRef = useRef(0);
 
-  // Cancellation state
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const [isCancelLoading, setIsCancelLoading] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [showExecutedTrades, setShowExecutedTrades] = useState({});
+
   const ordersListRef = useRef(null);
   const tradesListRef = useRef(null);
-
   const limit = 20;
 
+  // Stability for Redux data syncing
   useEffect(() => {
-    const arr = Array.isArray(pastOrdersRedux) ? pastOrdersRedux : [];
-    setOrdersData(arr);
-    setHasMoreOrders(arr.length >= limit);
-  }, [pastOrdersRedux]);
+    const next = Array.isArray(pastOrdersRedux) ? pastOrdersRedux : [];
+    const currentId = ordersData[0]?._id ?? ordersData[0]?.id;
+    const nextId = next[0]?._id ?? next[0]?.id;
 
-  useEffect(() => {
-    const arr = Array.isArray(walletTradeHistory) ? walletTradeHistory : [];
-    setTradesData(arr);
-    setHasMoreTrades(arr.length >= limit);
-  }, [walletTradeHistory]);
-
-  /**
-   * Prefetch both tabs on focus (if cache empty).   
-   * This makes switching Orders ↔ Trades feel instant, regardless of entry point (Spot vs ProfileDrawer).
-   */
-  useEffect(() => {
-    if (!isFocused) return;
-    let cancelled = false;
-
-    const now = Date.now();
-
-    const maybeFetchOrders = async () => {
-      if (loadingOrders) return;
-      if ((pastOrdersRedux?.length ?? 0) > 0) return;
-      // Debounce refetches (e.g. quick focus flickers)
-      if (now - lastOrdersFetchAtRef.current < 1200) return;
-      lastOrdersFetchAtRef.current = now;
-      setLoadingOrders(true);
-      try {
-        await dispatch(getPastOrders({ page: 1, page_size: limit }, { useGlobalLoader: false }));
-      } finally {
-        if (!cancelled) setLoadingOrders(false);
-      }
-    };
-
-    const maybeFetchTrades = async () => {
-      if (loadingTrades) return;
-      if ((walletTradeHistory?.length ?? 0) > 0) return;
-      if (now - lastTradesFetchAtRef.current < 1200) return;
-      lastTradesFetchAtRef.current = now;
-      setLoadingTrades(true);
-      try {
-        await dispatch(
-          getTradeHistory(0, limit, undefined, {
-            useGlobalLoader: false,
-            // Keep old list visible until new arrives (prevents flicker/lag on back/switch)
-            clearBeforeFetch: false,
-          }),
-        );
-      } finally {
-        if (!cancelled) setLoadingTrades(false);
-      }
-    };
-
-    // Fire-and-forget; they update Redux + local lists.
-    maybeFetchOrders();
-    maybeFetchTrades();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isFocused,
-    dispatch,
-    limit,
-    loadingOrders,
-    loadingTrades,
-    pastOrdersRedux?.length,
-    walletTradeHistory?.length,
-  ]);
-
-  const handleLoadMore = useCallback(async () => {
-    if ((activeTab === 0 ? loadingOrders : loadingTrades) || loadingMore) return;
-    if (activeTab === 0 && !hasMoreOrders) return;
-    if (activeTab === 1 && !hasMoreTrades) return;
-
-    setLoadingMore(true);
-    try {
-      if (activeTab === 0) {
-        const next = ordersPage + 1;
-        setOrdersPage(next);
-        await dispatch(
-          getPastOrders({ page: next, page_size: limit }, { useGlobalLoader: false }),
-        );
-      } else {
-        const next = tradesPage + 1;
-        setTradesPage(next);
-        const skip = (next - 1) * limit;
-        await dispatch(
-          getTradeHistory(skip, limit, undefined, {
-            useGlobalLoader: false,
-            clearBeforeFetch: false,
-          }),
-        );
-      }
-    } catch (e) {
-      console.log("Fetch history error", e);
-    } finally {
-      setLoadingMore(false);
+    if (next.length !== ordersData.length || nextId !== currentId) {
+      console.log("[TradeHistory] Updating ordersData. New Count:", next.length);
+      setOrdersData(next);
+      setHasMoreOrders(next.length >= limit);
     }
-  }, [
-    activeTab,
-    loadingOrders,
-    loadingTrades,
-    loadingMore,
-    hasMoreOrders,
-    hasMoreTrades,
-    ordersPage,
-    tradesPage,
-    dispatch,
-  ]);
+  }, [pastOrdersRedux, ordersData]);
+
+  useEffect(() => {
+    const next = Array.isArray(walletTradeHistory) ? walletTradeHistory : [];
+    const currentId = tradesData[0]?._id ?? tradesData[0]?.id;
+    const nextId = next[0]?._id ?? next[0]?.id;
+
+    if (next.length !== tradesData.length || nextId !== currentId) {
+      console.log("[TradeHistory] Updating tradesData. New Count:", next.length);
+      setTradesData(next);
+      setHasMoreTrades(next.length >= limit);
+    }
+  }, [walletTradeHistory, tradesData]);
+
+  const fetchOrders = useCallback(async (page = 1, isLoadMore = false) => {
+    if (loadingOrders || (isLoadMore && loadingMore)) return;
+    if (isLoadMore) setLoadingMore(true); else setLoadingOrders(true);
+    try {
+      await dispatch(getPastOrders({ page, page_size: limit }, { useGlobalLoader: false }));
+    } finally {
+      if (isLoadMore) setLoadingMore(false); else setLoadingOrders(false);
+    }
+  }, [dispatch, loadingOrders, loadingMore]);
+
+  const fetchTrades = useCallback(async (page = 1, isLoadMore = false) => {
+    if (loadingTrades || (isLoadMore && loadingMore)) return;
+    if (isLoadMore) setLoadingMore(true); else setLoadingTrades(true);
+    const skip = (page - 1) * limit;
+    console.log("[TradeHistory] fetchTrades calling getTradeHistory skip:", skip);
+    try {
+      const res = await dispatch(getTradeHistory(skip, limit, "", { useGlobalLoader: false, clearBeforeFetch: false }));
+      console.log("[TradeHistory] getTradeHistory response success:", res?.success);
+    } finally {
+      if (isLoadMore) setLoadingMore(false); else setLoadingTrades(false);
+    }
+  }, [dispatch, loadingTrades, loadingMore]);
+
+  useEffect(() => {
+    if (isFocused) {
+      if (ordersData.length === 0) fetchOrders(1);
+      if (tradesData.length === 0) fetchTrades(1);
+    }
+  }, [isFocused]);
+
+  const handleLoadMore = useCallback(() => {
+    if (activeTab === 0 && hasMoreOrders && !loadingMore && !loadingOrders) {
+      const next = ordersPage + 1;
+      setOrdersPage(next);
+      fetchOrders(next, true);
+    } else if (activeTab === 1 && hasMoreTrades && !loadingMore && !loadingTrades) {
+      const next = tradesPage + 1;
+      setTradesPage(next);
+      fetchTrades(next, true);
+    }
+  }, [activeTab, hasMoreOrders, hasMoreTrades, loadingMore, loadingOrders, loadingTrades, ordersPage, tradesPage, fetchOrders, fetchTrades]);
 
   const toggleExpand = useCallback((item) => {
     const id = item._id || item.id || item.order_id;
     setShowExecutedTrades(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
-  /** Orders tab — includes Executed trades expand section. */
-  const renderOrderCard = useCallback(
-    ({ item: inv }) => {
-      const orderId = inv?._id || inv?.id || inv?.order_id;
-      const baseHint =
-        spotSelectedPair?.base_currency ?? spotSelectedPair?.base_currency_short_name ?? undefined;
-      const quoteHint =
-        spotSelectedPair?.quote_currency ?? spotSelectedPair?.quote_currency_short_name ?? undefined;
-      const currencyPair = spotOpenOrderMarketLabel(inv, baseHint, quoteHint);
-      const side = String(inv?.side || "").toUpperCase();
-      const sideColor = side === "BUY" ? themeColors.green : themeColors.red;
-      const typeUpper = String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase();
-      const canCancel =
-        !!orderId &&
-        !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(
-          String(inv?.status || inv?.user_status || "").toUpperCase(),
-        );
+  const getSideColor = useCallback((side) => {
+    const s = String(side).toUpperCase();
+    if (s === "BUY") return memoizedTheme?.green ?? "#00c087";
+    if (s === "SELL") return memoizedTheme?.red ?? "#ff4b5c";
+    return memoizedTheme?.text ?? "#000";
+  }, [memoizedTheme]);
 
-      const eventTs =
-        inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
-      const eventM = eventTs ? moment(eventTs) : null;
-      const dateStr = eventM?.isValid() ? eventM.format("DD/MM/YYYY") : "—";
-      const timeStr = eventM?.isValid() ? eventM.format("HH:mm:ss") : "—";
-      const headerDateTime = eventM?.isValid() ? eventM.format("DD/MM/YYYY HH:mm:ss") : "—";
-
-      const quoteCc = orderHistoryQuoteCurrency(inv);
-      const baseSym =
-        inv?.ask_currency || inv?.base_currency || (currencyPair.includes("/") ? currencyPair.split("/")[0] : "");
-
-      const priceDisplay =
-        String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET"
-          ? "Market"
-          : safeToFixed8(inv?.price ?? 0, "—");
-
-      const executions = orderHistoryExecutionsList(inv);
-      const hasExecutedTrades = executions.length > 0;
-      const showTrades = !!showExecutedTrades?.[orderId];
-
-      const labelColor = themeColors.secondaryText;
-      const textColor = themeColors.text;
-      const borderDivider = themeColors.themeBorderColor ?? themeColors.border;
-      const execBorder = themeColors.themeBorderColor ?? themeColors.border;
-
-      const kv = (label, value, opts = {}) => (
-        <View key={label} style={styles.tradeKvRow}>
-          <AppText style={[styles.tradeKvK, { color: labelColor }]}>{label}</AppText>
-          <AppText style={[styles.tradeKvV, { color: opts.color ?? textColor }]} numberOfLines={3}>
-            {value}
-          </AppText>
-        </View>
-      );
-
-      return (
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
-          style={[styles.orderSpotCard, { backgroundColor: themeColors.background }]}
-        >
-          <View>
-            <View style={styles.orderSpotHeaderRow}>
-              <View style={{ flex: 1 }}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
-                  style={{ flexDirection: "row", alignItems: "center" }}
-                >
-                  <AppText style={[styles.orderSpotTitle, { color: textColor }]} weight={MEDIUM}>
-                    {currencyPair}
-                  </AppText>
-                  <FastImage
-                    source={right_ic}
-                    style={{ width: 12, height: 12 }}
-                    resizeMode="contain"
-                    tintColor={labelColor}
-                  />
-                </TouchableOpacity>
-                <AppText style={{ color: labelColor, fontSize: 11, marginTop: 4 }}>{headerDateTime}</AppText>
-                <AppText style={{ color: sideColor, fontSize: 12, marginTop: 4 }} weight={MEDIUM}>
-                  {side} · {typeUpper}
-                </AppText>
-              </View>
-            </View>
-
-            {kv("Date", dateStr)}
-            {kv("Time", timeStr)}
-            {kv("Market", currencyPair)}
-            {kv("Side", side, { color: sideColor })}
-            {kv("Type", typeUpper)}
-            {kv("TIF", orderHistoryTifDisplay(inv))}
-            {kv("Price", priceDisplay)}
-
-            {hasExecutedTrades ? (
-              <View style={{ marginTop: 8 }}>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={[styles.execTradesBtnSpot, { borderColor: execBorder }]}
-                  onPress={() => toggleExpand(inv)}
-                >
-                  <View style={styles.execTradesBtnRowSpot}>
-                    <FastImage
-                      source={downIcon}
-                      tintColor={themeColors.secondaryText}
-                      style={[
-                        styles.orderHistoryChevronSpot,
-                        { transform: [{ rotate: showTrades ? "180deg" : "0deg" }] },
-                      ]}
-                      resizeMode="contain"
-                    />
-                    <AppText style={[styles.execTradesBtnTextSpot, { color: textColor }]}> Executed trades</AppText>
-                  </View>
-                </TouchableOpacity>
-
-                {showTrades ? (
-                  <View style={styles.execTradesBoxSpot}>
-                    {executions.map((tr, i) => (
-                      <View
-                        key={`${orderId}_${tr?.trade_id ?? i}`}
-                        style={[
-                          styles.execTradeItemSpot,
-                          i === executions.length - 1 ? { borderBottomWidth: 0, marginBottom: 0 } : null,
-                        ]}
-                      >
-                        <View style={styles.execTradeHeaderRowSpot}>
-                          <AppText style={[styles.execTradeHeaderTextSpot, { color: labelColor }]} weight={MEDIUM}>
-                            Trade #{i + 1}
-                          </AppText>
-                        </View>
-                        <View style={styles.execTradeKvRowSpot}>
-                          <AppText style={[styles.execTradeKvKSpot, { color: labelColor }]}>Price:</AppText>
-                          <AppText style={[styles.execTradeKvVSpot, { color: textColor }]}>
-                            {safeToFixed8(Number(tr?.price) || 0, "0")} {quoteCc}
-                          </AppText>
-                        </View>
-                        <View style={styles.execTradeKvRowSpot}>
-                          <AppText style={[styles.execTradeKvKSpot, { color: labelColor }]}>Executed:</AppText>
-                          <AppText style={[styles.execTradeKvVSpot, { color: textColor }]}>
-                            {safeToFixed8(Number(tr?.quantity) || 0, "0")} {baseSym}
-                          </AppText>
-                        </View>
-                        <View style={styles.execTradeKvRowSpot}>
-                          <AppText style={[styles.execTradeKvKSpot, { color: labelColor }]}>Fee:</AppText>
-                          <AppText style={[styles.execTradeKvVSpot, { color: textColor }]}>
-                            {safeToFixed8(Number(tr?.fee) || 0, "0")} {quoteCc}
-                          </AppText>
-                        </View>
-                        <View style={styles.execTradeKvRowSpot}>
-                          <AppText style={[styles.execTradeKvKSpot, { color: labelColor }]}>Total:</AppText>
-                          <AppText style={[styles.execTradeKvVSpot, { color: textColor }]}>
-                            {safeToFixed8((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0), "0")}
-                          </AppText>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-          </View>
-
-          {canCancel ? (
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: colors.red }]}
-                onPress={() => {
-                  setOrderToCancel(inv);
-                  setIsCancelModalVisible(true);
-                }}
-              >
-                <AppText style={{ color: colors.red, fontWeight: "600", fontSize: 13 }}>Cancel order</AppText>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          <View style={[styles.orderSpotDivider, { backgroundColor: borderDivider }]} />
-        </TouchableOpacity>
-      );
-    },
-    [themeColors, spotSelectedPair, showExecutedTrades, toggleExpand],
-  );
-
-  /** Same layout + fields as Spot screen Trade History API preview (`tradeHistorySectionNode`). */
-  const renderTradeCard = useCallback(
-    ({ item }) => {
-      const baseHint =
-        spotSelectedPair?.base_currency ?? spotSelectedPair?.base_currency_short_name ?? undefined;
-      const quoteHint =
-        spotSelectedPair?.quote_currency ?? spotSelectedPair?.quote_currency_short_name ?? undefined;
-      const mLabel = spotOpenOrderMarketLabel(item, baseHint, quoteHint);
-      const baseSym = tradeHistoryBaseAsset(item, baseHint, quoteHint);
-      const side = String(item?.side || "").toUpperCase();
-      const role = tradeHistoryRoleLabel(item);
-      const sideColor = side === "BUY" ? themeColors.green : themeColors.red;
-      const ts = item?.executed_at || item?.executedAt || item?.created_at;
-      const m = moment(ts);
-      const dateStr = m.isValid() ? m.format("DD/MM/YYYY") : "—";
-      const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
-      const borderColor = themeColors.themeBorderColor ?? themeColors.border;
-
-      const kv = (label, value, opts = {}) => (
-        <View key={label} style={styles.tradeKvRow}>
-          <AppText style={[styles.tradeKvK, { color: themeColors.secondaryText }]}>{label}</AppText>
-          <AppText
-            style={[styles.tradeKvV, { color: opts.color ?? themeColors.text }]}
-            numberOfLines={3}
-          >
-            {value}
-          </AppText>
-        </View>
-      );
-
-      return (
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
-          style={[styles.tradeFillCard, { borderBottomColor: borderColor, backgroundColor: themeColors.background }]}
-        >
-          <View style={styles.pairRow}>
-            <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>
-              {mLabel}
-            </AppText>
-            <FastImage
-              source={right_ic}
-              style={{ width: 11, height: 11, marginLeft: 4 }}
-              resizeMode="contain"
-              tintColor={themeColors.secondaryText}
-            />
-          </View>
-          <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>
-            {dateStr} {timeStr}
-          </AppText>
-          <AppText style={{ color: sideColor, fontSize: 13, marginBottom: 12 }} weight={MEDIUM}>
-            {side} · {role}
-          </AppText>
-
-          {kv("Date", dateStr)}
-          {kv("Time", timeStr)}
-          {kv("Pair", mLabel)}
-          {kv("Side", side, { color: sideColor })}
-          {kv("Role", role)}
-          {kv("Price", safeToFixed8(item?.price, "—"))}
-          {kv("Quantity", `${safeToFixed8(item?.quantity, "—")}${baseSym ? ` ${baseSym}` : ""}`)}
-        </TouchableOpacity>
-      );
-    },
-    [themeColors, spotSelectedPair],
-  );
-
-  const showOrdersSkeleton = loadingOrders && (ordersData?.length ?? 0) === 0;
-  const showTradesSkeleton = loadingTrades && (tradesData?.length ?? 0) === 0;
+  const onCancelPress = useCallback((item) => {
+    setOrderToCancel(item);
+    setIsCancelModalVisible(true);
+  }, []);
 
   const listKeyExtractor = useCallback((item, index) => {
     const id = item?._id ?? item?.id ?? item?.trade_id;
     return id != null ? String(id) : `row_${index}`;
   }, []);
 
-  const listFooterOrders = useMemo(() => {
-    if (activeTab === 0 && loadingMore && (ordersData?.length ?? 0) > 0) {
-      return (
-        <View style={styles.listFooterLoading}>
-          <ActivityIndicator size="small" color={themeColors.text} />
-          <AppText style={[styles.listFooterLoadingText, { color: themeColors.secondaryText }]}>
-            Loading more…
-          </AppText>
-        </View>
-      );
-    }
-    return <View style={styles.listFooterSpacer} />;
-  }, [activeTab, loadingMore, ordersData?.length, themeColors.text, themeColors.secondaryText]);
+  const renderOrder = useCallback(({ item }) => (
+    <OrderCard
+      item={item}
+      spotSelectedPair={spotSelectedPair}
+      themeColors={memoizedTheme}
+      onCancel={onCancelPress}
+      showTrades={!!showExecutedTrades?.[item?._id || item?.id || item?.order_id]}
+      onToggleExpand={toggleExpand}
+      getSideColor={getSideColor}
+    />
+  ), [spotSelectedPair, memoizedTheme, onCancelPress, showExecutedTrades, toggleExpand, getSideColor]);
 
-  const listFooterTrades = useMemo(() => {
-    if (activeTab === 1 && loadingMore && (tradesData?.length ?? 0) > 0) {
-      return (
-        <View style={styles.listFooterLoading}>
-          <ActivityIndicator size="small" color={themeColors.text} />
-          <AppText style={[styles.listFooterLoadingText, { color: themeColors.secondaryText }]}>
-            Loading more…
-          </AppText>
-        </View>
-      );
-    }
-    return <View style={styles.listFooterSpacer} />;
-  }, [activeTab, loadingMore, tradesData?.length, themeColors.text, themeColors.secondaryText]);
-
-  const scrollOrdersToTop = useCallback(() => {
-    try { ordersListRef.current?.scrollToOffset?.({ offset: 0, animated: true }); } catch (e) {}
-  }, []);
-  const scrollTradesToTop = useCallback(() => {
-    try { tradesListRef.current?.scrollToOffset?.({ offset: 0, animated: true }); } catch (e) {}
-  }, []);
+  const renderTrade = useCallback(({ item }) => {
+    // console.log("[TradeHistory] renderTrade called for:", item?._id || item?.id);
+    return (
+      <TradeCard
+        item={item}
+        spotSelectedPair={spotSelectedPair}
+        themeColors={memoizedTheme}
+        getSideColor={getSideColor}
+      />
+    );
+  }, [spotSelectedPair, memoizedTheme, getSideColor]);
 
   useEffect(() => {
     Animated.timing(pagerX, {
@@ -539,133 +406,75 @@ const TradeHistory = () => {
       duration: 220,
       useNativeDriver: true,
     }).start();
-  }, [activeTab, pagerX, screenW]);
+  }, [activeTab]);
 
   return (
-    <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <AppSafeAreaView style={[styles.container, { backgroundColor: memoizedTheme.background ?? "#FFFFFF" }]}>
       <Toolbar isSecond title={"History"} style={{ width: "58%", backgroundColor: "transparent" }} />
 
-      <View style={[styles.tabBar, { borderBottomColor: themeColors.themeBorderColor ?? "#eee" }]}>
-        <TouchableOpacity
-          onPress={() => {
-            setActiveTab(0);
-            scrollOrdersToTop();
-          }}
-          style={[styles.tab, activeTab === 0 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}
-        >
-          <AppText style={[styles.tabText, { color: activeTab === 0 ? themeColors.text : themeColors.secondaryText }]}>Orders</AppText>
+      <View style={[styles.tabBar, { borderBottomColor: memoizedTheme?.themeBorderColor ?? "#EEEEEE" }]}>
+        <TouchableOpacity onPress={() => setActiveTab(0)} style={[styles.tab, activeTab === 0 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 0 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 16 }]}>Orders</AppText>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => {
-            setActiveTab(1);
-            scrollTradesToTop();
-          }}
-          style={[styles.tab, activeTab === 1 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}
-        >
-          <AppText style={[styles.tabText, { color: activeTab === 1 ? themeColors.text : themeColors.secondaryText }]}>Trades</AppText>
+        <TouchableOpacity onPress={() => setActiveTab(1)} style={[styles.tab, activeTab === 1 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 1 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 16 }]}>Trades</AppText>
         </TouchableOpacity>
       </View>
 
       <Animated.View style={{ flex: 1, overflow: "hidden" }}>
-        <Animated.View
-          style={{
-            flex: 1,
-            flexDirection: "row",
-            width: screenW * 2,
-            transform: [{ translateX: pagerX }],
-          }}
-        >
+        <Animated.View style={{ flex: 1, flexDirection: "row", width: screenW * 2, transform: [{ translateX: pagerX }] }}>
           <View style={{ width: screenW }}>
-            {showOrdersSkeleton ? (
-              <TradeHistorySkeleton />
-            ) : (
+            {loadingOrders && ordersData.length === 0 ? <TradeHistorySkeleton /> : (
               <FlatList
-                ref={ordersListRef}
                 data={ordersData}
-                renderItem={renderOrderCard}
+                renderItem={renderOrder}
                 keyExtractor={listKeyExtractor}
-                extraData={{ showExecutedTrades, loadingMore }}
-                removeClippedSubviews={Platform.OS === "android"}
-                initialNumToRender={10}
-                maxToRenderPerBatch={10}
-                windowSize={7}
-                updateCellsBatchingPeriod={50}
-                onEndReached={activeTab === 0 ? handleLoadMore : undefined}
-                onEndReachedThreshold={0.4}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                initialNumToRender={6}
+                windowSize={5}
+                removeClippedSubviews={true}
                 contentContainerStyle={styles.ordersListContent}
-                ListFooterComponent={listFooterOrders}
-                ListEmptyComponent={() => (
-                  <View style={styles.noDataRow}>
-                    <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" />
-                    <AppText style={{ marginTop: 10, color: themeColors.secondaryText }}>No data found</AppText>
-                  </View>
-                )}
+                ListEmptyComponent={<View style={styles.noDataRow}><FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" /><AppText style={{ marginTop: 10, color: memoizedTheme?.secondaryText }}>No data found</AppText></View>}
               />
             )}
           </View>
-
           <View style={{ width: screenW }}>
-            {showTradesSkeleton ? (
-              <TradeHistorySkeleton />
-            ) : (
+            {loadingTrades && tradesData.length === 0 ? <TradeHistorySkeleton /> : (
               <FlatList
-                ref={tradesListRef}
                 data={tradesData}
-                renderItem={renderTradeCard}
+                renderItem={renderTrade}
                 keyExtractor={listKeyExtractor}
-                extraData={{ loadingMore }}
-                removeClippedSubviews={Platform.OS === "android"}
-                initialNumToRender={10}
-                maxToRenderPerBatch={10}
-                windowSize={7}
-                updateCellsBatchingPeriod={50}
-                onEndReached={activeTab === 1 ? handleLoadMore : undefined}
-                onEndReachedThreshold={0.4}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                initialNumToRender={6}
+                windowSize={5}
+                removeClippedSubviews={true}
                 contentContainerStyle={styles.tradesListContent}
-                ListFooterComponent={listFooterTrades}
-                ListEmptyComponent={() => (
-                  <View style={styles.noDataRow}>
-                    <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" />
-                    <AppText style={{ marginTop: 10, color: themeColors.secondaryText }}>No data found</AppText>
-                  </View>
-                )}
+                ListEmptyComponent={<View style={styles.noDataRow}><FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" /><AppText style={{ marginTop: 10, color: memoizedTheme?.secondaryText }}>No data found</AppText></View>}
               />
             )}
           </View>
         </Animated.View>
       </Animated.View>
 
-      <ReactNativeModal
-        isVisible={isCancelModalVisible}
-        onBackdropPress={() => !isCancelLoading && setIsCancelModalVisible(false)}
-        onBackButtonPress={() => !isCancelLoading && setIsCancelModalVisible(false)}
-        style={{ margin: 0, justifyContent: "flex-end" }}
-      >
-        <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
-          <AppText style={[styles.modalTitle, { color: themeColors.text }]} weight={fontFamilyBold}>Cancel Order</AppText>
-          <AppText style={{ color: themeColors.secondaryText, textAlign: "center", marginBottom: 20 }}>Are you sure you want to cancel this order?</AppText>
+      <ReactNativeModal isVisible={isCancelModalVisible} onBackdropPress={() => setIsCancelModalVisible(false)} style={{ margin: 0, justifyContent: "flex-end" }}>
+        <View style={[styles.modalContent, { backgroundColor: memoizedTheme?.background }]}>
+          <AppText style={[styles.modalTitle, { color: memoizedTheme?.text }]} weight={SEMI_BOLD}>Cancel Order?</AppText>
+          <AppText style={{ textAlign: "center", color: memoizedTheme?.secondaryText, marginBottom: 24 }}>Are you sure you want to cancel this order?</AppText>
           <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.modalBtn} disabled={isCancelLoading} onPress={() => setIsCancelModalVisible(false)}>
-              <AppText style={{ color: themeColors.text }}>No</AppText>
-            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalBtn} onPress={() => setIsCancelModalVisible(false)}><AppText style={{ color: memoizedTheme?.text }}>No, Keep it</AppText></TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: colors.red }]}
-              disabled={isCancelLoading}
+              style={[styles.modalBtn, { backgroundColor: colors.red, borderColor: colors.red }]}
               onPress={async () => {
-                if (!orderToCancel) return;
-                const orderId = orderToCancel._id || orderToCancel.id;
-                if (!orderId) {
-                  setIsCancelModalVisible(false);
-                  setOrderToCancel(null);
-                  return;
-                }
+                const orderId = orderToCancel?._id || orderToCancel?.id;
+                if (!orderId) return;
                 setIsCancelLoading(true);
                 const res = await dispatch(cancelOrder({ order_id: orderId }));
                 setIsCancelLoading(false);
                 if (res?.success) {
-                  setOrdersData((prev) => prev.filter((o) => (o._id || o.id) !== orderId));
+                  setOrdersData(prev => prev.filter(o => (o._id || o.id) !== orderId));
                   setIsCancelModalVisible(false);
-                  setOrderToCancel(null);
                 }
               }}
             >
@@ -680,109 +489,30 @@ const TradeHistory = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  ordersListContent: {
-    paddingHorizontal: 5,
-    paddingBottom: 8,
-  },
-  tradesListContent: {
-    paddingHorizontal: 5,
-    paddingBottom: 8,
-  },
-  orderSpotCard: {
-    padding: 14,
-    paddingBottom: 0,
-    width: "100%",
-    alignSelf: "center",
-  },
-  orderSpotHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  orderSpotTitle: {
-    fontSize: 14,
-    marginRight: 6,
-    fontWeight: "600",
-  },
-  execTradesBtnSpot: {
-    alignSelf: "flex-end",
-    paddingVertical: 4,
-    paddingHorizontal: 5,
-    borderWidth: 1,
-    borderRadius: 5,
-  },
-  execTradesBtnRowSpot: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  orderHistoryChevronSpot: {
-    width: 10,
-    height: 10,
-    marginTop: 2,
-  },
-  execTradesBtnTextSpot: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  execTradesBoxSpot: {
-    marginTop: 8,
-    backgroundColor: "rgba(128, 128, 128, 0.08)",
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  execTradeItemSpot: {
-    backgroundColor: "transparent",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(128, 128, 128, 0.15)",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    marginBottom: 0,
-  },
-  execTradeHeaderRowSpot: {
-    marginBottom: 4,
-  },
-  execTradeHeaderTextSpot: {
-    fontSize: 11,
-  },
-  execTradeKvRowSpot: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 1,
-  },
-  execTradeKvKSpot: {
-    fontSize: 11,
-    flex: 1,
-  },
-  execTradeKvVSpot: {
-    fontSize: 11,
-    flex: 1,
-    textAlign: "right",
-  },
-  orderSpotDivider: {
-    height: 1,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  tradeFillCard: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-  },
-  tradeKvRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 6,
-    gap: 8,
-  },
-  tradeKvK: { fontSize: 11, flexShrink: 0, maxWidth: "42%" },
-  tradeKvV: { fontSize: 11, fontWeight: "500", flex: 1, textAlign: "right" },
-  tabBar: { flexDirection: "row", height: 44, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  ordersListContent: { paddingHorizontal: 5, paddingBottom: 100 },
+  tradesListContent: { paddingHorizontal: 5, paddingBottom: 100 },
+  orderSpotCard: { padding: 14, paddingBottom: 0, width: "100%", alignSelf: "center" },
+  orderSpotHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
+  orderSpotTitle: { fontSize: 17, marginRight: 6, fontWeight: "600" },
+  execTradesBtnSpot: { alignSelf: "flex-end", paddingVertical: 4, paddingHorizontal: 5, borderWidth: 0.7, borderRadius: 5 },
+  execTradesBtnRowSpot: { flexDirection: "row", alignItems: "center" },
+  orderHistoryChevronSpot: { width: 10, height: 10, marginTop: 2 },
+  execTradesBtnTextSpot: { fontSize: 13, fontWeight: "600" },
+  execTradesBoxSpot: { marginTop: 8, backgroundColor: "rgba(128, 128, 128, 0.08)", paddingVertical: 8, paddingHorizontal: 8, borderRadius: 8 },
+  execTradeItemSpot: { backgroundColor: "transparent", borderBottomWidth: 1, borderBottomColor: "rgba(128, 128, 128, 0.15)", paddingVertical: 6, paddingHorizontal: 4, marginBottom: 0 },
+  execTradeHeaderRowSpot: { marginBottom: 4 },
+  execTradeHeaderTextSpot: { fontSize: 13 },
+  execTradeKvRowSpot: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 },
+  execTradeKvKSpot: { fontSize: 16, flex: 1 },
+  execTradeKvVSpot: { fontSize: 16, flex: 1, textAlign: "right" },
+  orderSpotDivider: { height: 1.5, marginTop: 12, marginBottom: 4 },
+  tradeFillCard: { paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: 1.5 },
+  tradeKvRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 8 },
+  tradeKvK: { fontSize: 16, flexShrink: 0, maxWidth: "42%" },
+  tradeKvV: { fontSize: 16, fontWeight: "500", flex: 1, textAlign: "right" },
+  tabBar: { flexDirection: "row", height: 44, borderBottomWidth: 1 },
   tab: { flex: 1, justifyContent: "center", alignItems: "center" },
-  tabText: { fontSize: 14, fontWeight: "600" },
+  tabText: { fontSize: 16, fontWeight: "600" },
   pairRow: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
   actionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingBottom: 16 },
   cancelBtn: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 4, borderWidth: 1, borderColor: colors.red },
@@ -791,21 +521,6 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, textAlign: "center", marginBottom: 12 },
   modalButtons: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   modalBtn: { flex: 1, height: 48, borderRadius: 10, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#eee" },
-  listFooterLoading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-  },
-  listFooterLoadingText: {
-    fontSize: 13,
-    fontWeight: "500",
-    marginLeft: 10,
-  },
-  listFooterSpacer: {
-    height: 48,
-  },
 });
 
 export default TradeHistory;

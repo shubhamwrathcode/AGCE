@@ -8,7 +8,7 @@ import {
 import React, { useState, useEffect, useRef } from "react";
 import FastImage from "react-native-fast-image";
 import LinearGradient from "react-native-linear-gradient";
-import { back_ic, candle, downIcon, modes, moreImg } from "../../helper/ImageAssets";
+import { back_ic, candle, downIcon, history_line, modes, moreImg } from "../../helper/ImageAssets";
 import TradingDataModal from "../TradingDataModal/TradingDataModal";
 import { AppText, SEMI_BOLD } from "../AppText";
 import { toFixedThree } from "../../helper/utility";
@@ -16,6 +16,7 @@ import { useTheme } from "../../hooks/useTheme";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { colors } from "../../theme/colors";
 import { Alert, Platform, ToastAndroid } from "react-native";
+import NavigationService from "../../navigation/NavigationService";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const HEADER_SHIMMER_STRIP = 140;
@@ -148,7 +149,7 @@ const SpotHeader = ({
           styles.changePill,
           {
             backgroundColor: colors.green,
-            borderColor:colors.green
+            borderColor: colors.green
           },
         ]}
       >
@@ -163,7 +164,7 @@ const SpotHeader = ({
 
   return (
     <>
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.white }]}>
         <View style={styles.topRow}>
           <TouchableOpacity
             onPress={onBackPress}
@@ -189,7 +190,7 @@ const SpotHeader = ({
                     idx !== arr.length - 1 && { marginRight: 5 },
                   ]}
                 >
-                  <AppText style={{ fontSize: 14, fontWeight: active ? "700" : "600", color: active ? themeColors.text : themeColors.secondaryText }}>
+                  <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: active ? themeColors.text : themeColors.secondaryText }}>
                     {t}
                   </AppText>
                   <View style={[styles.topTabUnderline, { backgroundColor: active ? themeColors.text : "transparent" }]} />
@@ -204,7 +205,7 @@ const SpotHeader = ({
             {leftContent}
           </View>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             activeOpacity={0.7}
             onPress={showComingSoon}
             style={styles.iconBtn}
@@ -216,7 +217,7 @@ const SpotHeader = ({
               resizeMode="contain"
               tintColor={iconTint}
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={styles.iconBtn}
@@ -235,13 +236,15 @@ const SpotHeader = ({
 
           <TouchableOpacity
             style={styles.iconBtn}
-            onPress={showComingSoon}
+            onPress={() => {
+              NavigationService.navigate('Trade_History')
+            }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Open chart"
           >
             <FastImage
-              source={moreImg}
+              source={history_line}
               style={styles.headerIcon}
               resizeMode="contain"
               tintColor={iconTint}
@@ -322,9 +325,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderRadius: 5,
     borderWidth: StyleSheet.hairlineWidth,
-    justifyContent:"flex-start",
-    alignItems:"center",
-    paddingHorizontal:5
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingHorizontal: 5
   },
   changeText: {
     fontSize: 13,
@@ -338,7 +341,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerIcon: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
   },
 });

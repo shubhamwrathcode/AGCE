@@ -2641,7 +2641,7 @@ const Spot = () => {
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-                  <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>
+                  <AppText style={{ color: themeColors.text, fontSize: 16 }} weight={SEMI_BOLD}>
                     {mLabel}
                   </AppText>
                   <FastImage
@@ -2651,50 +2651,50 @@ const Spot = () => {
                     tintColor={themeColors.secondaryText}
                   />
                 </View>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>
+                <AppText weight={MEDIUM} style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 2 }}>
                   {dateStr} {timeStr}
                 </AppText>
-                <AppText style={{ color: sideColor, fontSize: 13, marginBottom: 12 }} weight={MEDIUM}>
+                <AppText style={{ color: sideColor, fontSize: 14, marginBottom: 12 }} weight={SEMI_BOLD}>
                   {side} · {role}
                 </AppText>
 
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Date</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Date</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
                     {dateStr}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Time</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Time</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
                     {timeStr}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Pair</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Pair</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
                     {mLabel}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Side</AppText>
-                  <AppText style={[styles.kvV, { color: sideColor, fontSize: 11, textAlign: "right" }]}>{side}</AppText>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Side</AppText>
+                  <AppText style={[styles.kvV, { color: sideColor, fontSize: 13, textAlign: "right" }]}>{side}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Role</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Role</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
                     {role}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Price</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Price</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
                     {safeToFixed8(item?.price, "—")}
                   </AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 11 }]}>Quantity</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 11, textAlign: "right" }]}>
+                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 13 }]}>Quantity</AppText>
+                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 13, textAlign: "right" }]}>
                     {safeToFixed8(item?.quantity, "—")} {baseSym}
                   </AppText>
                 </View>
@@ -2730,11 +2730,7 @@ const Spot = () => {
     colors.buttonBg,
   ]);
 
-  /** Same UI as `tradeHistorySectionNode`; kept for any `{renderTradeHistorySection()}` call sites / bundles. */
-  const renderTradeHistorySection = useCallback(
-    () => tradeHistorySectionNode,
-    [tradeHistorySectionNode],
-  );
+
 
   // Total: when amount is 0/empty show same default price as Limit field; else amount * price
   const totalDisplayValue = useMemo(() => {
@@ -2749,60 +2745,6 @@ const Spot = () => {
   const openOrdersSlice = useMemo(() => filteredOpenOrders.slice(0, 5), [filteredOpenOrders]);
   const pastOrdersSlice = useMemo(() => (pastOrdersForSpotPair ?? []).slice(0, 5), [pastOrdersForSpotPair]);
 
-  // Estimated height for order cards (variable due to expand) - improves scroll perf when getItemLayout not used
-  const ORDER_CARD_ESTIMATED_HEIGHT = 380;
-  // Height per card so 3 cards fit fully without cutting the last one (card content + margins + Cancel button)
-  const ORDER_CARD_HEIGHT_FOR_CONTAINER = 420;
-
-  // Memoized empty list components so FlatList doesn't recreate on every render
-  const openOrdersListEmptyComponent = useMemo(
-    () => (
-      <View style={styles.noDataRow}>
-        <FastImage
-          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-          resizeMode="contain"
-          style={{ width: 80, height: 80 }}
-        />
-        {/* <AppText style={[styles.noDataText, { color: theme !== "Dark" ? colors.textGray : colors.descText }]}>
-          No Open Orders
-        </AppText> */}
-      </View>
-    ),
-    [isDark, theme]
-  );
-  const orderHistoryListEmptyComponent = useMemo(
-    () => (
-      <View style={styles.noDataRow}>
-        <FastImage
-          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-          resizeMode="contain"
-          style={{ width: 80, height: 80 }}
-        />
-      </View>
-    ),
-    [isDark, theme]
-  );
-
-  // Format date like "27/11/2025, 11:08 PM"
-  const formatDateTime = useCallback((dateString) => {
-    if (!dateString) return "---";
-    return moment(dateString).format("DD/MM/YYYY, hh:mm A");
-  }, []);
-
-  // Get status color
-  const getStatusColor = useCallback((status) => {
-    if (status === "COMPLETE" || status === "Completed" || status === "FILLED" || status === "EXECUTED") {
-      return themeColors.green;
-    }
-    if (status === "PENDING" || status === "OPEN") {
-      return themeColors.yellow || "#FFD700";
-    }
-    if (status === "CANCELLED" || status === "CANCELED") {
-      return themeColors.secondaryText;
-    }
-    return themeColors.green;
-  }, [themeColors]);
-
   // Get side color
   const getSideColor = useCallback((side) => {
     if (side === "BUY" || side === "buy") {
@@ -2813,7 +2755,11 @@ const Spot = () => {
     }
     return themeColors.text;
   }, [themeColors]);
-
+  /** Same UI as `tradeHistorySectionNode`; kept for any `{renderTradeHistorySection()}` call sites / bundles. */
+  const renderTradeHistorySection = useCallback(
+    () => tradeHistorySectionNode,
+    [tradeHistorySectionNode],
+  );
   /** Open orders preview — matches detail header + Date…Price only; pair row → full detail; Cancel unchanged. */
   const renderOpenOrderItem = useCallback(({ item: inv }) => {
     const currencyPair = buildCurrencyPairText(inv);
@@ -2849,66 +2795,65 @@ const Spot = () => {
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
-        style={[styles.openOrderCard, { backgroundColor: themeColors.background }]}
+        style={{
+          paddingVertical: 10,
+          paddingHorizontal: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: themeColors.themeBorderColor,
+        }}
       >
         <View>
-          <View style={styles.openOrderTopRow}>
-            <View style={{ flex: 1 }}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
-                style={{ flexDirection: "row", alignItems: "center" }}
-              >
-                <AppText style={[styles.openOrderCardTitle, { color: textColor, fontSize: 16 }]} weight={SEMI_BOLD}>
-                  {currencyPair}
-                </AppText>
-                <FastImage
-                  source={right_ic}
-                  style={{ width: 12, height: 12 }}
-                  resizeMode="contain"
-                  tintColor={labelColor}
-                />
-              </TouchableOpacity>
-              <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 13, marginTop: 4 }}>{headerDateTime}</AppText>
-              <AppText style={{ color: getSideColor(inv?.side), fontSize: 14, marginTop: 4 }} weight={SEMI_BOLD}>
-                {side} · {typeUpper}
-              </AppText>
-            </View>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+            <AppText style={{ color: textColor, fontSize: 16 }} weight={SEMI_BOLD}>
+              {currencyPair}
+            </AppText>
+            <FastImage
+              source={right_ic}
+              style={{ width: 11, height: 11, marginLeft: 4 }}
+              resizeMode="contain"
+              tintColor={labelColor}
+            />
           </View>
+          <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 13, marginBottom: 2 }}>
+            {headerDateTime}
+          </AppText>
+          <AppText style={{ color: getSideColor(inv?.side), fontSize: 14, marginBottom: 12 }} weight={SEMI_BOLD}>
+            {side} · {typeUpper}
+          </AppText>
 
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor }]}>Date</AppText>
-            <AppText style={[styles.kvV, { color: textColor }]}>{dateStr}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Date</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{dateStr}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor }]}>Time</AppText>
-            <AppText style={[styles.kvV, { color: textColor }]}>{timeStr}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Time</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{timeStr}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor }]}>Market</AppText>
-            <AppText style={[styles.kvV, { color: textColor }]}>{currencyPair}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Market</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{currencyPair}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor }]}>Side</AppText>
-            <AppText style={[styles.kvV, { color: getSideColor(inv?.side) }]}>{side || "—"}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Side</AppText>
+            <AppText style={[styles.kvV, { color: getSideColor(inv?.side), fontSize: 13 }]}>{side || "—"}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor }]}>Type</AppText>
-            <AppText style={[styles.kvV, { color: textColor }]}>{typeUpper}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Type</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{typeUpper}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor }]}>TIF</AppText>
-            <AppText style={[styles.kvV, { color: textColor }]}>{tifStr}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>TIF</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{tifStr}</AppText>
           </View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor }]}>Price</AppText>
-            <AppText style={[styles.kvV, { color: textColor }]}>{priceDisplay}</AppText>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Price</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{priceDisplay}</AppText>
           </View>
         </View>
 
         {canCancel ? (
-          <View style={[styles.openOrderCardRow, { marginTop: 8 }]}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor }]}>Action:</AppText>
+          <View style={[styles.openOrderCardRow, { marginTop: 8, marginBottom: 4 }]}>
+            <AppText style={[styles.openOrderCardLabel, { color: labelColor, fontSize: 13 }]}>Action:</AppText>
             <TouchableOpacity
               style={styles.cancelActionBtn}
               activeOpacity={0.8}
@@ -2921,8 +2866,6 @@ const Spot = () => {
             </TouchableOpacity>
           </View>
         ) : null}
-
-        <View style={[styles.openOrderCardDivider, { backgroundColor: themeColors.themeBorderColor }]} />
       </TouchableOpacity>
     );
   }, [themeColors, buildCurrencyPairText, getOrderStatusRaw, getSideColor]);
@@ -2963,54 +2906,58 @@ const Spot = () => {
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
-        style={[styles.openOrderCard, { backgroundColor: themeColors.background }]}
+        style={{
+          paddingVertical: 10,
+          paddingHorizontal: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: themeColors.themeBorderColor,
+        }}
       >
         <View>
-          <View style={styles.openOrderTopRow}>
-            <View style={{ flex: 1 }}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
-                style={{ flexDirection: "row", alignItems: "center" }}
-              >
-                <AppText style={[styles.openOrderCardTitle, { color: textColor, fontSize: 16, }]} weight={SEMI_BOLD}>{currencyPair}</AppText>
-                <FastImage source={right_ic} style={{ width: 12, height: 12, }} resizeMode="contain" tintColor={labelColor} />
-              </TouchableOpacity>
-              <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 13, marginTop: 4 }}>
-                {(() => {
-                  const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
-                  return d ? moment(d).format("DD/MM/YYYY HH:mm:ss") : "---";
-                })()}
-              </AppText>
-
-              <AppText style={{ color: getSideColor(inv?.side), fontSize: 14, marginTop: 4 }} weight={SEMI_BOLD}>
-                {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
-              </AppText>
-            </View>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+            <AppText style={{ color: textColor, fontSize: 16 }} weight={SEMI_BOLD}>
+              {currencyPair}
+            </AppText>
+            <FastImage
+              source={right_ic}
+              style={{ width: 11, height: 11, marginLeft: 4 }}
+              resizeMode="contain"
+              tintColor={labelColor}
+            />
           </View>
+          <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 13, marginBottom: 2 }}>
+            {(() => {
+              const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
+              return d ? moment(d).format("DD/MM/YYYY HH:mm:ss") : "---";
+            })()}
+          </AppText>
+
+          <AppText style={{ color: getSideColor(inv?.side), fontSize: 14, marginBottom: 12 }} weight={SEMI_BOLD}>
+            {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
+          </AppText>
 
           {(() => {
             const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
             return (
               <>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: labelColor }]}>Date</AppText>
-                  <AppText style={[styles.kvV, { color: textColor }]}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
+                  <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Date</AppText>
+                  <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: labelColor }]}>Time</AppText>
-                  <AppText style={[styles.kvV, { color: textColor }]}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
+                  <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Time</AppText>
+                  <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
                 </View>
               </>
             );
           })()}
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Market</AppText><AppText style={[styles.kvV, { color: textColor }]}>{currencyPair}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Side</AppText><AppText style={[styles.kvV, { color: getSideColor(inv?.side) }]}>{String(inv?.side || "---").toUpperCase()}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>Type</AppText><AppText style={[styles.kvV, { color: textColor }]}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor }]}>TIF</AppText><AppText style={[styles.kvV, { color: textColor }]}>{inv?.time_in_force || inv?.tif || "—"}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Market</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{currencyPair}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Side</AppText><AppText style={[styles.kvV, { color: getSideColor(inv?.side), fontSize: 13 }]}>{String(inv?.side || "---").toUpperCase()}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Type</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText></View>
+          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>TIF</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>{inv?.time_in_force || inv?.tif || "—"}</AppText></View>
           <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor }]}>Price</AppText>
-            <AppText style={[styles.kvV, { color: textColor }]}>
+            <AppText style={[styles.kvK, { color: labelColor, fontSize: 13 }]}>Price</AppText>
+            <AppText style={[styles.kvV, { color: textColor, fontSize: 13 }]}>
               {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
             </AppText>
           </View>
@@ -3054,20 +3001,20 @@ const Spot = () => {
                     </View>
 
                     <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor }]}>Price:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor }]}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 13 }]}>Price:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 13 }]}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
                     </View>
                     <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor }]}>Executed:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor }]}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 13 }]}>Executed:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 13 }]}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
                     </View>
                     <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor }]}>Fee:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor }]}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 13 }]}>Fee:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 13 }]}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
                     </View>
                     <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor }]}>Total:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor }]}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
+                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 13 }]}>Total:</AppText>
+                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 13 }]}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
                     </View>
                   </View>
                 ))}
@@ -3075,8 +3022,6 @@ const Spot = () => {
             )}
           </View>
         )}
-
-        <View style={[styles.openOrderCardDivider, { backgroundColor: themeColors.themeBorderColor }]} />
       </TouchableOpacity>
     );
   }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor]);
@@ -3084,11 +3029,12 @@ const Spot = () => {
   return (
     <View style={{ flex: 1, backgroundColor: colors.white }}>
       <ScrollView
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         contentContainerStyle={[
           styles.container,
-          { backgroundColor: themeColors.background },
+          { backgroundColor: colors.white },
         ]}
       >
         <>
@@ -3359,7 +3305,7 @@ const Spot = () => {
                             color: "#8E8E93",
                             fontSize: stopAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [12, 10],
+                              outputRange: [13, 10],
                             }),
                             fontWeight: "500",
                           }}
@@ -3437,7 +3383,7 @@ const Spot = () => {
                           color: "#8E8E93",
                           fontSize: amountAnim.interpolate({
                             inputRange: [0, 1],
-                            outputRange: [12, 10],
+                            outputRange: [13, 10],
                           }),
                           fontWeight: "500",
                         }}
@@ -3523,7 +3469,7 @@ const Spot = () => {
                             color: "#8E8E93",
                             fontSize: totalAnim.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [12, 10],
+                              outputRange: [13, 10],
                             }),
                             fontWeight: "500",
                           }}
@@ -3857,10 +3803,10 @@ const Spot = () => {
                 >
                   <AppText
                     numberOfLines={1}
+                    weight={SEMI_BOLD}
                     style={{
                       color: activeTab === t.id ? themeColors.text : themeColors.secondaryText,
                       fontSize: 14,
-                      fontWeight: "600",
                     }}
                   >
                     {t.label}
@@ -3887,7 +3833,6 @@ const Spot = () => {
             <Animated.View style={{ transform: [{ translateX: ordersTabsAnimX }] }}>
               {mountedOrdersTab === 1 ? (
                 <View style={styles.ordersTabPanel}>
-                  {/* existing Open Orders panel */}
                   <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
                     <ScrollView
                       horizontal
@@ -3913,16 +3858,14 @@ const Spot = () => {
                               paddingHorizontal: 8,
                               paddingVertical: 4,
                               borderRadius: 6,
-                              borderWidth: active ? 1 : 0,
-                              borderColor: active ? themeColors.themeBorderColor : "transparent",
                               backgroundColor: active ? themeColors.input : "transparent",
                             }}
                           >
                             <AppText
+                              weight={MEDIUM}
                               style={{
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: active ? themeColors.text : themeColors.secondaryText,
-                                fontWeight: active ? "600" : "500",
                               }}
                             >
                               {k.label}
@@ -3954,7 +3897,7 @@ const Spot = () => {
                           }}
                         >
                           <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                          <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
+                          <AppText weight={MEDIUM} style={{ fontSize: 12, color: themeColors.secondaryText }}>Reset</AppText>
                         </TouchableOpacity>
                       </View>
                     </ScrollView>
