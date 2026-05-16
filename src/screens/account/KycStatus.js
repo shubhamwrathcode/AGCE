@@ -148,6 +148,30 @@ function kycWebAlignedDisplayName(userData) {
   return `AGCE User-${local.slice(0, 8)}`;
 }
 
+const LEGACY_STATUS_TO_CANONICAL = {
+  draft: "NOT_STARTED",
+  submitted: "PENDING",
+  under_review: "PENDING",
+  approved: "APPROVED",
+  rejected: "REJECTED",
+  expired: "EXPIRED",
+};
+
+const CANONICAL_SET = new Set(["NOT_STARTED", "PENDING", "APPROVED", "REJECTED", "EXPIRED", "RESUBMISSION_REQUESTED"]);
+
+function toCanonicalStatus(raw) {
+  if (raw == null || raw === "") return "";
+  const s = String(raw).trim();
+  const low = s.toLowerCase();
+  if (LEGACY_STATUS_TO_CANONICAL[low]) return LEGACY_STATUS_TO_CANONICAL[low];
+  const up = s.toUpperCase().replace(/-/g, "_");
+  if (CANONICAL_SET.has(up)) return up;
+  if (["VERIFIED", "SUCCESS", "COMPLETE"].includes(up)) return "APPROVED";
+  if (["IN_PROGRESS", "SUBMITTED", "PROCESSING", "REVIEW", "IN_REVIEW", "AWAITING", "INITIATED", "STARTED", "RESUBMITTED"].includes(up)) return "PENDING";
+  if (["DECLINED", "FAILED", "CANCELLED"].includes(up)) return "REJECTED";
+  return up;
+}
+
 function kycWebAlignedInitials(userData) {
   const name = userData?.display_name || userData?.user_login || userData?.user_nicename || "User";
   const parts = name.trim().split(/\s+/);
@@ -275,7 +299,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
         <View style={{ flex: 1 }}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
             Complete verification to receive{" "}
-            <AppText style={{ color: colors.orangeTheme }} weight={MEDIUM}>10 USDT</AppText>
+            <AppText type={FOURTEEN} style={{ color: colors.orangeTheme }} weight={MEDIUM}>exciting rewards</AppText>
           </AppText>
         </View>
       </View>
@@ -369,7 +393,7 @@ const KycRejected = ({ onVerifyPress }) => {
         <View style={{ flex: 1 }}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
             Complete verification to receive{" "}
-            <AppText style={{ color: colors.orangeTheme }} weight={MEDIUM}>10 USDT</AppText>
+            <AppText style={{ color: colors.orangeTheme }} type={FOURTEEN} weight={MEDIUM}>Exciting Rewards</AppText>
           </AppText>
         </View>
       </View>
@@ -434,20 +458,20 @@ const KycDue = ({ onVerifyPress }) => {
           {/* Top Section with Background */}
           <View style={{ backgroundColor: isDark ? "#2A2E39" : lightTheme.input, padding: 12 }}>
             <View style={styles.rewardHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", flexShrink: 1, marginRight: 8 }}>
                 <FastImage source={newLock} style={{ width: 22, height: 22, marginRight: 10 }} tintColor="#B47D16" />
                 <AppText type={FOURTEEN} style={{ color: themeColors.text }}>
-                  Verify to claim <AppText style={{ color: "#D1AA67" }} weight={SEMI_BOLD}>15 USDT</AppText>
+                  Verify to claim <AppText type={FOURTEEN} style={{ color: "#D1AA67" }} weight={MEDIUM}>exciting rewards</AppText>
                 </AppText>
               </View>
               {/* Mock Timer */}
-              <View style={{ flexDirection: "row", gap: 4 }}>
+              {/* <View style={{ flexDirection: "row", gap: 4, flexShrink: 0 }}>
                 {["3D", "02", "23", "22"].map((t, i) => (
                   <View key={i} style={styles.timerBlock}>
                     <AppText type={TEN} weight={BOLD} style={{ color: "#FFF" }}>{t}</AppText>
                   </View>
                 ))}
-              </View>
+              </View> */}
             </View>
           </View>
 
@@ -543,7 +567,7 @@ const KycCompleted = () => {
         <View style={{ flex: 1 }}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
             Verification complete! You've received{" "}
-            <AppText style={{ color: colors.orangeTheme }} weight={MEDIUM}>10 USDT</AppText>
+            <AppText type={FOURTEEN} style={{ color: colors.orangeTheme }} weight={MEDIUM}>Exciting Rewards</AppText>
           </AppText>
         </View>
       </View>
@@ -578,9 +602,25 @@ const KycCompleted = () => {
 function shouldCloseDiditKycWebView(url) {
   if (!url || typeof url !== "string") return false;
   const u = url.toLowerCase();
-  if (u.startsWith("agce://") && u.includes("kyc")) return true;
-  if (u.includes("/kyc/submitted")) return true;
-  return false;
+  console.log("[KYC WebView URL Check]:", u);
+  if (u.startsWith("agce://")) return true;
+
+  const closePatterns = [
+    "/kyc/submitted",
+    "/kyc/complete",
+    "/kyc/success",
+    "/kyc/finished",
+    "/kyc/failed",
+    "/kyc/return",
+    "kyc_return=1",
+    "open_in_app=1",
+    "/user_profile",
+    "/account",
+    "/kyc/submitted"
+  ];
+  const shouldClose = closePatterns.some((p) => u.includes(p));
+  if (shouldClose) console.log("[KYC WebView] Match found! Closing modal for URL:", u);
+  return shouldClose;
 }
 
 const faqData = [
@@ -607,6 +647,9 @@ const KycStatus = () => {
   const [existingIdDocNumber, setExistingIdDocNumber] = useState("");
   const [existingTaxDocNumber, setExistingTaxDocNumber] = useState("");
   const [existingCountryCode, setExistingCountryCode] = useState("");
+  const [statusCanonical, setStatusCanonical] = useState("");
+  const [trackingStatus, setTrackingStatus] = useState("");
+  const [kycVerifiedFromApi, setKycVerifiedFromApi] = useState(null);
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
   const [contentLoading, setContentLoading] = useState(true);
   const [diditWebviewUrl, setDiditWebviewUrl] = useState(null);
@@ -618,6 +661,16 @@ const KycStatus = () => {
 
   const applyKycStatusData = useCallback((data) => {
     if (!data) return;
+    console.log("[KYC API DATA RECEIVED]:", data);
+
+    // Track individual document statuses
+    console.log("[KYC DOCUMENT STATUSES]:", {
+      id_document: data.id_document_status,
+      tax_document: data.tax_document_status,
+      selfie: data.selfie_status,
+      overall_status: data.status
+    });
+
     setIdDocStatus(data.id_document_status ?? null);
     setTaxDocStatus(data.tax_document_status ?? null);
     setSelfieStatus(data.selfie_status ?? null);
@@ -629,7 +682,27 @@ const KycStatus = () => {
       if (data.kyc_data.tax_document_number) setExistingTaxDocNumber(data.kyc_data.tax_document_number);
     }
     if (data.needs_resubmission) {
+      console.log("[KYC RESUBMISSION REQUIRED]:", data.documents_needing_resubmission);
       setDocumentsToResubmit(data.documents_needing_resubmission || []);
+    }
+    setStatusCanonical(toCanonicalStatus(data.status));
+    setTrackingStatus(data.trackingStatus || "");
+
+    const apiTier = data.kycVerified ?? data.kyc_verified;
+    if (apiTier !== undefined && apiTier !== null && apiTier !== "") {
+      const n = Number(apiTier);
+      if (Number.isFinite(n) && n >= 0 && n <= 4) {
+        console.log("[KYC TIER FROM API]:", n);
+        setKycVerifiedFromApi(n);
+      }
+    } else {
+      const c = toCanonicalStatus(data.status);
+      console.log("[KYC CALCULATED TIER FROM STATUS]:", c);
+      if (c === "APPROVED") setKycVerifiedFromApi(2);
+      else if (c === "REJECTED") setKycVerifiedFromApi(3);
+      else if (c === "PENDING" || c === "RESUBMISSION_REQUESTED") setKycVerifiedFromApi(1);
+      else if (c === "NOT_STARTED" || c === "EXPIRED") setKycVerifiedFromApi(0);
+      else setKycVerifiedFromApi(null);
     }
   }, []);
 
@@ -649,7 +722,19 @@ const KycStatus = () => {
 
   const tryFinishDiditFromUrl = useCallback(
     (url) => {
-      if (!shouldCloseDiditKycWebView(url) || diditWebCompleteOnceRef.current) return;
+      if (!url) return;
+      const u = url.toLowerCase();
+      console.log("[KYC tryFinishDiditFromUrl Check]:", u);
+
+      const shouldClose = shouldCloseDiditKycWebView(u);
+      if (!shouldClose || diditWebCompleteOnceRef.current) {
+        if (diditWebCompleteOnceRef.current) {
+          console.log("[KYC tryFinishDiditFromUrl] Already completed once, skipping.");
+        }
+        return;
+      }
+
+      console.log("[KYC tryFinishDiditFromUrl] SUCCESS: Closing WebView and refreshing status.");
       diditWebCompleteOnceRef.current = true;
       setDiditWebviewUrl(null);
       diditExternalOpenedRef.current = false;
@@ -699,7 +784,9 @@ const KycStatus = () => {
 
     // Poll every 3 seconds if not Approved (2) or Rejected (3)
     let intervalId = null;
-    if (kycVerified !== 2 && kycVerified !== 3) {
+    const effectiveTier = kycVerifiedFromApi !== null ? kycVerifiedFromApi : kycVerified;
+
+    if (effectiveTier !== 2 && effectiveTier !== 3) {
       intervalId = setInterval(() => {
         dispatch(getUserProfile(false, false, true)); // Skip global loading
         fetchStatus();
@@ -710,7 +797,7 @@ const KycStatus = () => {
       mounted = false;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [dispatch, kycVerified, applyKycStatusData]);
+  }, [dispatch, kycVerified, kycVerifiedFromApi, applyKycStatusData]);
 
   const getRejectReason = (docType) => {
     const doc = documentsToResubmit.find((d) => d.type === docType);
@@ -751,14 +838,59 @@ const KycStatus = () => {
 
 
   const kycStatusView = () => {
-    switch (kycVerified) {
-      case 0: return <KycDue onVerifyPress={openVerifyModal} screenWidth={screenWidth} />;
-      case 1: return <KycPending idDocStatus={idDocStatus} taxDocStatus={taxDocStatus} selfieStatus={selfieStatus} submittedIdDocType={submittedIdDocType} submittedTaxDocType={submittedTaxDocType} />;
-      case 2: return <KycCompleted />;
-      case 3: return <KycRejected onVerifyPress={openVerifyModal} />;
-      case 4: return <KycPending idDocStatus={idDocStatus} taxDocStatus={taxDocStatus} selfieStatus={selfieStatus} submittedIdDocType={submittedIdDocType} submittedTaxDocType={submittedTaxDocType} showResubmitButton onResubmitPress={openResubmitModal} />;
-      default: return <KycDue onVerifyPress={openVerifyModal} screenWidth={screenWidth} />;
+    const effectiveTier = kycVerifiedFromApi !== null ? kycVerifiedFromApi : kycVerified;
+
+    console.log("[KYC VIEW CALCULATION]:", {
+      effectiveTier,
+      kycVerifiedFromApi,
+      kycVerifiedProfile: kycVerified,
+      statusCanonical,
+      trackingStatus
+    });
+
+    // 1. Prioritize Resubmission requested (matches web kycPayloadRequestsResubmission)
+    const hasResubmitRequest = statusCanonical === "RESUBMISSION_REQUESTED" ||
+      String(trackingStatus).toLowerCase() === "resubmission" ||
+      (documentsToResubmit && documentsToResubmit.length > 0) ||
+      effectiveTier === 4;
+
+    if (hasResubmitRequest) {
+      return (
+        <KycPending
+          idDocStatus={idDocStatus}
+          taxDocStatus={taxDocStatus}
+          selfieStatus={selfieStatus}
+          submittedIdDocType={submittedIdDocType}
+          submittedTaxDocType={submittedTaxDocType}
+          showResubmitButton
+          onResubmitPress={openResubmitModal}
+        />
+      );
     }
+
+    // 2. Map Tiers and Canonical Status strings (matches web resolveKycView)
+    if (effectiveTier === 2 || statusCanonical === "APPROVED") {
+      return <KycCompleted />;
+    }
+
+    if (effectiveTier === 3 || statusCanonical === "REJECTED") {
+      return <KycRejected onVerifyPress={openVerifyModal} />;
+    }
+
+    if (effectiveTier === 1 || statusCanonical === "PENDING") {
+      return (
+        <KycPending
+          idDocStatus={idDocStatus}
+          taxDocStatus={taxDocStatus}
+          selfieStatus={selfieStatus}
+          submittedIdDocType={submittedIdDocType}
+          submittedTaxDocType={submittedTaxDocType}
+        />
+      );
+    }
+
+    // 3. Defaults (NOT_STARTED, EXPIRED, tier 0)
+    return <KycDue onVerifyPress={openVerifyModal} screenWidth={screenWidth} />;
   };
 
   return (
