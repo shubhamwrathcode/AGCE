@@ -1099,14 +1099,14 @@ const Spot = () => {
     }).start();
   }, [stopPrice, isStopFocused]);
 
-  useEffect(() => {
-    const totalFilled = amount && String(totalDisplayValue ?? "").trim() !== "";
-    Animated.timing(totalAnim, {
-      toValue: totalFilled ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [amount, totalDisplayValue]);
+  useLayoutEffect(() => {
+    const totalFilled = String(amount ?? "").trim() !== "";
+    if (totalFilled) {
+      totalAnim.setValue(1);
+    } else {
+      totalAnim.setValue(0);
+    }
+  }, [amount]);
 
   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
@@ -3527,8 +3527,7 @@ const Spot = () => {
                             backgroundColor: "transparent",
                             paddingHorizontal: 0,
                             paddingVertical: 0,
-                            minHeight: 22,
-                            marginTop: 2,
+                            marginTop: 4,
                           },
                         ]}
                       >
