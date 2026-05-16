@@ -12,7 +12,7 @@ import {
 } from '../helper/ImageAssets';
 import { universalPaddingHorizontalHigh } from '../theme/dimens';
 import NavigationService from '../navigation/NavigationService';
-import { AppText, SEMI_BOLD, SIXTEEN } from './AppText';
+import { AppText, EIGHTEEN, SEMI_BOLD, SIXTEEN } from './AppText';
 import {
   CONVERT_HISTORY_SCREEN,
   HOME_SCREEN,
@@ -94,7 +94,7 @@ const Toolbar = ({
         />
       )}
       {isSecond && (
-        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={[styles.title, { color: themeColors.text }]}>
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.title, { color: themeColors.text }]}>
           {title}
         </AppText>
       )}

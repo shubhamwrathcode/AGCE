@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
-import { AppSafeAreaView, AppText, Toolbar, SEMI_BOLD, TWELVE, TEN, FOURTEEN, FIFTEEN } from "../../shared";
+import { AppSafeAreaView, AppText, Toolbar, BOLD, MEDIUM, SEMI_BOLD, TWELVE, TEN, FOURTEEN, FIFTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import FastImage from "react-native-fast-image";
@@ -68,9 +68,9 @@ const NewWalletHistory = ({
         kind === "address"
           ? pickExplorerHref(ex.address) || pickExplorerHref(ex.address_url) || pickExplorerHref(ex.account)
           : pickExplorerHref(ex.tx) ||
-            pickExplorerHref(ex.transaction) ||
-            pickExplorerHref(ex.tx_hash_url) ||
-            pickExplorerHref(ex.txUrl);
+          pickExplorerHref(ex.transaction) ||
+          pickExplorerHref(ex.tx_hash_url) ||
+          pickExplorerHref(ex.txUrl);
       if (!tpl || !value || value === "—") return null;
       if (/\{address\}/i.test(tpl) && kind === "address") return tpl.replace(/\{address\}/gi, encodeURIComponent(value));
       if ((/\{txid\}/i.test(tpl) || /\{txhash\}/i.test(tpl)) && kind === "tx") {
@@ -231,28 +231,28 @@ const NewWalletHistory = ({
         row?.statusLabel === "COMPLETED"
           ? "rgba(20, 184, 166, 0.12)"
           : row?.statusLabel === "FAILED"
-          ? "rgba(239, 68, 68, 0.10)"
-          : row?.statusLabel === "PENDING"
-          ? "rgba(245, 158, 11, 0.12)"
-          : "rgba(148, 163, 184, 0.12)";
+            ? "rgba(239, 68, 68, 0.10)"
+            : row?.statusLabel === "PENDING"
+              ? "rgba(245, 158, 11, 0.12)"
+              : "rgba(148, 163, 184, 0.12)";
       const pillText =
         row?.statusLabel === "COMPLETED"
           ? "#16A34A"
           : row?.statusLabel === "FAILED"
-          ? "#DC2626"
-          : row?.statusLabel === "PENDING"
-          ? "#B45309"
-          : themeColors.secondaryText;
+            ? "#DC2626"
+            : row?.statusLabel === "PENDING"
+              ? "#B45309"
+              : themeColors.secondaryText;
       const addressUrl = resolveExplorerUrl(row?.explorer, "address", row?.address);
       const txUrl = resolveExplorerUrl(row?.explorer, "tx", row?.txid);
 
       const Row = ({ label, value, right }) => (
         <View style={styles.depHistRow}>
-          <AppText type={TWELVE} style={[styles.depHistLabel, { color: themeColors.secondaryText }]}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.depHistLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>
             {label}
           </AppText>
           <View style={styles.depHistValueWrap}>
-            <AppText type={TWELVE} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={1}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={1}>
               {value}
             </AppText>
           </View>
@@ -268,11 +268,11 @@ const NewWalletHistory = ({
           style={[styles.depHistCard, { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : "#EEE" }]}
         >
           <View style={styles.depHistTop}>
-            <AppText type={TWELVE} style={{ color: themeColors.text }}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
               {dateStr}
             </AppText>
             <View style={[styles.depHistPill, { backgroundColor: pillBg }]}>
-              <AppText type={TEN} weight={SEMI_BOLD} style={{ color: pillText }}>
+              <AppText type={TWELVE} weight={BOLD} style={{ color: pillText }}>
                 {row?.statusLabel || "—"}
               </AppText>
             </View>

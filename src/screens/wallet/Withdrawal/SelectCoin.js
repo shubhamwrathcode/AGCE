@@ -22,6 +22,7 @@ import {
   THIRTEEN,
   ELEVEN,
   FIFTEEN,
+  EIGHTEEN,
 } from "../../../shared";
 import FastImage from "react-native-fast-image";
 import {
@@ -340,7 +341,7 @@ const SelectCoin = () => {
         <TouchableOpacity onPress={() => NavigationService.goBack()} style={styles.backBtn}>
           <FastImage source={back_ic} style={styles.backIcon} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
         </TouchableOpacity>
-        <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: isDark ? colors.white : colors.black }}>Select Coin</AppText>
+        <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: isDark ? colors.white : colors.black }}>Select Coin</AppText>
         <View style={{ width: 40 }} />
       </View>
 

@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, Linking, Clipboard } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import { AppSafeAreaView, AppText, Toolbar, SEMI_BOLD, TWELVE, TEN, FOURTEEN, BOLD, MEDIUM, THIRTEEN, ELEVEN, Button } from "../../shared";
+import { AppSafeAreaView, AppText, Toolbar, SEMI_BOLD, TWELVE, TEN, FOURTEEN, BOLD, MEDIUM, THIRTEEN, ELEVEN, Button, EIGHTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import FastImage from "react-native-fast-image";
@@ -115,10 +115,10 @@ export default function WithdrawalDetailPage() {
 
   const Row = ({ label, value, right }) => (
     <View style={[styles.row, { borderBottomColor: isDark ? themeColors.border : '#EEE' }]}>
-      <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{label}</AppText>
+      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666" }}>{label}</AppText>
       <View style={styles.rowRight}>
         {typeof value === 'string' ? (
-          <AppText type={TWELVE} numberOfLines={1} ellipsizeMode="middle" style={{ color: themeColors.text, flexShrink: 1 }}>{value}</AppText>
+          <AppText type={FOURTEEN} weight={MEDIUM} numberOfLines={1} ellipsizeMode="middle" style={{ color: themeColors.text, flexShrink: 1 }}>{value}</AppText>
         ) : (
           value
         )}
@@ -134,7 +134,7 @@ export default function WithdrawalDetailPage() {
         <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <FastImage source={back_ic} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
-        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Withdrawal Details</AppText>
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Withdrawal Details</AppText>
         <View style={{ width: 18, height: 18 }} />
       </View>
 
@@ -147,8 +147,8 @@ export default function WithdrawalDetailPage() {
               <View style={[styles.stepLine, { backgroundColor: tone === 'success' ? stepAccent : '#C7F9E9' }]} />
             </View>
             <View style={{ flex: 1 }}>
-              <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>Withdrawal request submitted</AppText>
-              <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 4 }}>{dateStr}</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>Withdrawal request submitted</AppText>
+              <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginTop: 4 }}>{dateStr}</AppText>
             </View>
           </View>
 
@@ -158,13 +158,13 @@ export default function WithdrawalDetailPage() {
               <View style={[styles.stepDot, { backgroundColor: tone === 'success' ? stepAccent : '#D1D5DB' }]} />
             </View>
             <View style={{ flex: 1 }}>
-              <AppText type={TWELVE} weight={MEDIUM} style={{ color: tone === 'success' ? themeColors.text : themeColors.secondaryText }}>Transfer completed</AppText>
-              {tone === 'success' && <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 4 }}>{dateStr}</AppText>}
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: tone === 'success' ? themeColors.text : themeColors.secondaryText }}>Transfer completed</AppText>
+              {tone === 'success' && <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginTop: 4 }}>{dateStr}</AppText>}
             </View>
           </View>
         </View>
 
-        <AppText type={TEN} style={[styles.note, { color: themeColors.secondaryText }]}>
+        <AppText type={TWELVE} weight={MEDIUM} style={[styles.note, { color: themeColors.secondaryText }]}>
           {tone === 'success'
             ? "Your withdrawal has completed. You should see funds at the destination address."
             : "Your withdrawal request is being processed. You will receive an email once it is completed."}
@@ -175,7 +175,7 @@ export default function WithdrawalDetailPage() {
         </TouchableOpacity>
 
         <View style={[styles.card, { borderColor: isDark ? themeColors.border : '#EEE' }]}>
-          <Row label="Status" value={<AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: statusColor }}>{status}</AppText>} />
+          <Row label="Status" value={<AppText type={FOURTEEN} weight={BOLD} style={{ color: statusColor }}>{status}</AppText>} />
           <Row label="Date" value={dateStr} />
           <Row label="Source" value="Main Wallet" />
           <Row label="Coin" value={
@@ -187,7 +187,7 @@ export default function WithdrawalDetailPage() {
                   <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{String(currencySymbol).slice(0, 2).toUpperCase()}</AppText>
                 )}
               </View>
-              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{currencySymbol}</AppText>
+              <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text }}>{currencySymbol}</AppText>
             </View>
           } />
 

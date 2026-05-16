@@ -901,7 +901,7 @@ const KycStatus = () => {
             title={"Verification Center"}
             theme={isDark ? "Dark" : "Light"}
             onInfoPress={() => faqSheetRef.current?.open()}
-            onSupportPress={() => { NavigationService.navigate(CREATE_TICKET_SCREEN) }}
+            onSupportPress={() => { NavigationService.navigate("Support") }}
           />
           <View style={styles.sectionWrapper}>
             {contentLoading ? <KycStatusSkeleton /> : kycStatusView()}

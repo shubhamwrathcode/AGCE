@@ -2048,7 +2048,7 @@ const WithdrawForm = () => {
         <TouchableOpacity onPress={handleHeaderBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <FastImage source={back_ic} resizeMode="contain" style={{ width: 16, height: 16 }} tintColor={themeColors.text} />
         </TouchableOpacity>
-        <AppText color={themeColors.text} weight={SEMI_BOLD} type={SIXTEEN}>
+        <AppText color={themeColors.text} weight={SEMI_BOLD} type={EIGHTEEN}>
           {withdrawFormHeaderTitle}
         </AppText>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -2085,7 +2085,7 @@ const WithdrawForm = () => {
           <View style={{ flexDirection: "row", gap: 30, paddingHorizontal: 4, marginVertical: 20 }}>
             <TouchableOpacity onPress={() => setWithdrawToTab("address")}>
               <AppText
-                type={FOURTEEN}
+                type={SIXTEEN}
                 weight={withdrawToTab === "address" ? SEMI_BOLD : MEDIUM}
                 style={{ color: withdrawToTab === "address" ? themeColors.text : themeColors.secondaryText }}
               >
@@ -2096,7 +2096,7 @@ const WithdrawForm = () => {
 
             <TouchableOpacity onPress={() => setWithdrawToTab("agce_user")}>
               <AppText
-                type={FOURTEEN}
+                type={SIXTEEN}
                 weight={withdrawToTab === "agce_user" ? SEMI_BOLD : MEDIUM}
                 style={{ color: withdrawToTab === "agce_user" ? themeColors.text : themeColors.secondaryText }}
               >

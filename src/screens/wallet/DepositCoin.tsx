@@ -41,6 +41,7 @@ import {
     EIGHT,
     MEDIUM,
     BOLD,
+    EIGHTEEN,
 } from '../../shared';
 import KeyBoardAware from '../../shared/components/KeyboardAware';
 import FastImage from 'react-native-fast-image';
@@ -1336,7 +1337,7 @@ const DepositCoin = () => {
                 <AppText
                     color={themeColors.text}
                     weight={SEMI_BOLD}
-                    type={SIXTEEN}
+                    type={EIGHTEEN}
                 >
                     {headerTitle}
                 </AppText>
@@ -1404,7 +1405,7 @@ const DepositCoin = () => {
                     <DepositCoinSelectListSkeleton />
                 ) : (
                     <View style={styles.selectCoinPhase}>
-                        <View style={[styles.selectCoinSearchWrap, { borderColor: isDark ? themeColors.border : '#EEE' }]}>
+                        <View style={[styles.selectCoinSearchWrap, { backgroundColor: lightTheme.input }]}>
                             <FastImage
                                 source={searchIcon}
                                 style={styles.selectCoinSearchIcon}
@@ -1415,7 +1416,7 @@ const DepositCoin = () => {
                                 style={[
                                     styles.selectCoinSearchInput,
                                     {
-                                        backgroundColor: themeColors.background,
+                                        backgroundColor: lightTheme.input,
                                         borderColor: isDark ? themeColors.border : '#EEE',
                                         color: themeColors.text,
                                     },
@@ -2878,6 +2879,7 @@ const styles = StyleSheet.create({
     },
     selectCoinPhase: {
         flex: 1,
+
         paddingHorizontal: 16,
     },
     selectCoinListRow: {
@@ -2899,8 +2901,7 @@ const styles = StyleSheet.create({
         marginTop: 6,
         marginBottom: 6,
         paddingHorizontal: 10,
-        borderRadius: 10,
-        borderWidth: 1,
+        borderRadius: 8,
         minHeight: 40,
     },
     selectCoinSearchIcon: {

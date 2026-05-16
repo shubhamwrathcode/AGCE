@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import { useRoute } from '@react-navigation/native';
-import { AppSafeAreaView, AppText, SEMI_BOLD, TWELVE, TEN, FOURTEEN, FIFTEEN, Button, ELEVEN } from '../../shared';
+import { AppSafeAreaView, AppText, SEMI_BOLD, TWELVE, TEN, FOURTEEN, FIFTEEN, Button, ELEVEN, EIGHTEEN, MEDIUM, BOLD } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
 import { back_ic, copyIcon, externalLinkIcon } from '../../helper/ImageAssets';
 import NavigationService from '../../navigation/NavigationService';
@@ -43,9 +43,9 @@ const resolveExplorerUrl = (explorer: any, kind: 'address' | 'tx', value: string
     kind === 'address'
       ? pickExplorerHref(ex.address) || pickExplorerHref(ex.address_url) || pickExplorerHref(ex.account)
       : pickExplorerHref(ex.tx) ||
-        pickExplorerHref(ex.transaction) ||
-        pickExplorerHref(ex.tx_hash_url) ||
-        pickExplorerHref(ex.txUrl);
+      pickExplorerHref(ex.transaction) ||
+      pickExplorerHref(ex.tx_hash_url) ||
+      pickExplorerHref(ex.txUrl);
   if (!tpl || !value || value === '—') return null;
   if (/\{address\}/i.test(tpl) && kind === 'address') return tpl.replace(/\{address\}/gi, encodeURIComponent(value));
   if ((/\{txid\}/i.test(tpl) || /\{txhash\}/i.test(tpl)) && kind === 'tx') {
@@ -124,12 +124,12 @@ export default function DepositHistoryDetailScreen() {
 
   const Row = ({ label, value, right }: { label: string; value: React.ReactNode; right?: React.ReactNode }) => (
     <View style={[styles.row, { borderBottomColor: isDark ? themeColors.border : '#EEE' }]}>
-      <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666" }}>
         {label}
       </AppText>
       <View style={styles.rowRight}>
         {typeof value === 'string' ? (
-          <AppText type={TWELVE} style={{ color: themeColors.text }}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
             {value}
           </AppText>
         ) : (
@@ -149,7 +149,7 @@ export default function DepositHistoryDetailScreen() {
         >
           <FastImage source={back_ic} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
-        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
           Deposit Details
         </AppText>
         <View style={{ width: 18, height: 18 }} />
@@ -163,44 +163,44 @@ export default function DepositHistoryDetailScreen() {
             const showHighlight = isCompleted && isLast;
             return (
               <View key={idx} style={styles.stepRow}>
-              <View style={styles.stepTrack}>
-                <View style={[styles.stepDot, isCompleted && { backgroundColor: stepAccent }]} />
-                {idx < steps.length - 1 ? (
-                  <View style={[styles.stepLine, isCompleted && { backgroundColor: stepAccent }]} />
-                ) : null}
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppText
-                  type={TWELVE}
-                  weight={s.emphasized ? SEMI_BOLD : undefined}
-                  style={{ color: showHighlight ? stepAccent : themeColors.text }}
-                >
-                  {s.title}
-                </AppText>
-                {s.subtitle ? (
-                  <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 6 }}>
-                    {s.subtitle}
+                <View style={styles.stepTrack}>
+                  <View style={[styles.stepDot, isCompleted && { backgroundColor: stepAccent }]} />
+                  {idx < steps.length - 1 ? (
+                    <View style={[styles.stepLine, isCompleted && { backgroundColor: stepAccent }]} />
+                  ) : null}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText
+                    type={FOURTEEN}
+                    weight={BOLD}
+                    style={{ color: showHighlight ? stepAccent : themeColors.text }}
+                  >
+                    {s.title}
                   </AppText>
-                ) : null}
-                <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 6 }}>
-                  {s.time}
-                </AppText>
-              </View>
+                  {s.subtitle ? (
+                    <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginTop: 6 }}>
+                      {s.subtitle}
+                    </AppText>
+                  ) : null}
+                  <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginTop: 6 }}>
+                    {s.time}
+                  </AppText>
+                </View>
               </View>
             );
           })}
         </View>
 
         {tone === 'danger' ? (
-          <AppText type={TEN} style={[styles.note, { color: themeColors.secondaryText }]}>
+          <AppText type={ELEVEN} style={[styles.note, { color: themeColors.secondaryText }]}>
             This deposit did not complete as expected. If funds left your external wallet, contact support with this reference.
           </AppText>
         ) : tone === 'success' ? (
-          <AppText type={TEN} style={[styles.note, { color: themeColors.secondaryText }]}>
+          <AppText type={ELEVEN} style={[styles.note, { color: themeColors.secondaryText }]}>
             Your deposit has been credited. Balances may take a moment to update everywhere.
           </AppText>
         ) : (
-          <AppText type={TEN} style={[styles.note, { color: themeColors.secondaryText }]}>
+          <AppText type={ELEVEN} style={[styles.note, { color: themeColors.secondaryText }]}>
             Please note that you will receive an email once this deposit is confirmed.
           </AppText>
         )}
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   note: {
     lineHeight: 18,
-    marginTop:10
+    marginTop: 10
   },
   linkRow: {
     paddingVertical: 5,

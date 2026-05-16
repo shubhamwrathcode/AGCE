@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
-import { AppSafeAreaView, AppText, Toolbar, SEMI_BOLD, TWELVE, TEN, FOURTEEN, BOLD, MEDIUM, THIRTEEN } from "../../shared";
+import { AppSafeAreaView, AppText, Toolbar, SEMI_BOLD, TWELVE, TEN, FOURTEEN, BOLD, MEDIUM, THIRTEEN, FIFTEEN, SIXTEEN } from "../../shared";
 import { colors, lightTheme } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import FastImage from "react-native-fast-image";
@@ -111,32 +111,32 @@ const WithdrawalHistory = () => {
         ]}
       >
         <View style={styles.dateStatusRow}>
-          <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.text }}>{date}</AppText>
+          <AppText weight={BOLD} type={FIFTEEN} style={{ color: themeColors.text }}>{date}</AppText>
           <View style={[styles.statusBadge, { backgroundColor: tone === 'success' ? '#E9F9F1' : tone === 'pending' ? '#FFF9E6' : '#FEECEC' }]}>
-            <AppText type={TEN} weight={BOLD} style={{ color: tone === 'success' ? '#05C46B' : tone === 'pending' ? '#FFC312' : '#FF3F34' }}>{status}</AppText>
+            <AppText type={TWELVE} weight={BOLD} style={{ color: tone === 'success' ? '#05C46B' : tone === 'pending' ? '#FFC312' : '#FF3F34' }}>{status}</AppText>
           </View>
         </View>
 
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
-            <AppText type={TWELVE} color={themeColors.secondaryText} style={styles.detailLabel}>Network</AppText>
-            <AppText type={TWELVE} style={[styles.detailValue, { color: themeColors.text }]}>{networkLabel}</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Network</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailValue, { color: themeColors.text }]}>{networkLabel}</AppText>
           </View>
 
           <View style={styles.detailRow}>
-            <AppText type={TWELVE} color={themeColors.secondaryText} style={styles.detailLabel}>Amount</AppText>
-            <AppText type={TWELVE} style={[styles.detailValue, { color: themeColors.text }]}>{formatWithdrawAmountDisplay(amount)} {currencySymbol}</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Amount</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailValue, { color: themeColors.text }]}>{formatWithdrawAmountDisplay(amount)} {currencySymbol}</AppText>
           </View>
 
           <View style={styles.detailRow}>
-            <AppText type={TWELVE} color={themeColors.secondaryText} style={styles.detailLabel}>Source wallet</AppText>
-            <AppText type={TWELVE} weight={MEDIUM} style={[styles.detailValue, { color: themeColors.text }]}>Main Wallet</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Source wallet</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailValue, { color: themeColors.text }]}>Main Wallet</AppText>
           </View>
 
           <View style={styles.detailRow}>
-            <AppText type={TWELVE} color={themeColors.secondaryText} style={styles.detailLabel}>{isAddress ? "Address" : "Recipient"}</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>{isAddress ? "Address" : "Recipient"}</AppText>
             <View style={styles.valueWithIcons}>
-              <AppText numberOfLines={1} ellipsizeMode="middle" type={TWELVE} style={[styles.mono, { color: themeColors.text, flex: 1, textAlign: 'right' }]}>{recipient}</AppText>
+              <AppText numberOfLines={1} ellipsizeMode="middle" type={FOURTEEN} weight={MEDIUM} style={[styles.mono, { color: themeColors.text, flex: 1, textAlign: 'right' }]}>{recipient}</AppText>
               <View style={styles.iconGroup}>
                 <TouchableOpacity onPress={() => {
                   Clipboard.setString(recipient);
@@ -149,9 +149,9 @@ const WithdrawalHistory = () => {
           </View>
 
           <View style={styles.detailRow}>
-            <AppText type={TWELVE} color={themeColors.secondaryText} style={styles.detailLabel}>TxID</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>TxID</AppText>
             <View style={styles.valueWithIcons}>
-              <AppText numberOfLines={1} ellipsizeMode="middle" type={TWELVE} style={[styles.mono, { color: themeColors.text, flex: 1, textAlign: 'right' }]}>{txId || "—"}</AppText>
+              <AppText numberOfLines={1} ellipsizeMode="middle" type={FOURTEEN} weight={MEDIUM} style={[styles.mono, { color: themeColors.text, flex: 1, textAlign: 'right' }]}>{txId || "—"}</AppText>
               {txId ? (
                 <View style={styles.iconGroup}>
                   <TouchableOpacity onPress={() => {
@@ -178,15 +178,26 @@ const WithdrawalHistory = () => {
           onPress={() => setActiveTab("address")}
           style={[styles.tabPill]}
         >
-          <AppText weight={activeTab === "address" ? SEMI_BOLD : MEDIUM} type={FOURTEEN}
-            style={{ color: activeTab === "address" ? themeColors.text : themeColors.secondaryText }}>Address</AppText>
+          <AppText
+            weight={activeTab === "address" ? BOLD : MEDIUM}
+            type={SIXTEEN}
+            style={{ color: activeTab === "address" ? themeColors.text : themeColors.secondaryText }}
+          >
+            Address
+          </AppText>
           {activeTab === "address" && <View style={styles.activeIndicator} />}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setActiveTab("agce")}
           style={[styles.tabPill]}
         >
-          <AppText weight={activeTab === "agce" ? SEMI_BOLD : MEDIUM} type={FOURTEEN} style={{ color: activeTab === "agce" ? themeColors.text : themeColors.secondaryText }}>AGCE user</AppText>
+          <AppText
+            weight={activeTab === "agce" ? BOLD : MEDIUM}
+            type={SIXTEEN}
+            style={{ color: activeTab === "agce" ? themeColors.text : themeColors.secondaryText }}
+          >
+            AGCE user
+          </AppText>
           {activeTab === "agce" && <View style={styles.activeIndicator} />}
         </TouchableOpacity>
       </View>
