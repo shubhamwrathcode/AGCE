@@ -901,7 +901,7 @@ const KycStatus = () => {
             title={"Verification Center"}
             theme={isDark ? "Dark" : "Light"}
             onInfoPress={() => faqSheetRef.current?.open()}
-            onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })}
+            onSupportPress={() => { NavigationService.navigate(CREATE_TICKET_SCREEN) }}
           />
           <View style={styles.sectionWrapper}>
             {contentLoading ? <KycStatusSkeleton /> : kycStatusView()}

@@ -4,14 +4,16 @@ import RBSheet from "react-native-raw-bottom-sheet";
 import {
   AppSafeAreaView,
   AppText,
+  BOLD,
   Button,
-  ELEVEN,
+  EIGHTEEN,
+  FOURTEEN,
   Input,
   PictureModal,
   SEMI_BOLD,
   SIXTEEN,
-  TEN,
   THIRTEEN,
+  TWELVE,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { back_ic, checkIc, doneIcon, DOWN_ARROW, printIcon, uploadIcon } from "../../helper/ImageAssets";
@@ -175,13 +177,13 @@ export default function CreateTicket() {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
       <KeyBoardAware style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <FastImage source={back_ic} resizeMode="contain" style={{ width: 18, height: 18 }} tintColor={themeColors.text} />
           </TouchableOpacity>
-          <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+          <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
             Create Tickets
           </AppText>
           <TouchableOpacity
@@ -193,28 +195,32 @@ export default function CreateTicket() {
         </View>
 
         <View style={[styles.container, { paddingHorizontal: H_PADDING }]}>
-          <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16, marginBottom: 14 }}>
+          <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 16, marginBottom: 14 }}>
             Track and manage all your support requests in one place.
           </AppText>
 
-          <View style={[styles.formCard, { backgroundColor: themeColors.card, }]}>
-            <Input
-              title={"Subject*"}
-              placeholder={"Enter subject"}
-              value={subject}
-              onChangeText={setSubject}
-              autoCapitalize="none"
-              returnKeyType="next"
-              containerStyle={{
-                backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
-                borderColor: themeColors.border,
-                borderWidth: 1
-              }}
-              inputStyle={{ color: themeColors.text }}
-              placeholderTextColor={themeColors.secondaryText}
-            />
+          <View style={[styles.formCard, {}]}>
             <View style={{ marginBottom: 16 }}>
-              <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                Subject*
+              </AppText>
+              <Input
+                placeholder={"Enter subject"}
+                value={subject}
+                onChangeText={setSubject}
+                autoCapitalize="none"
+                returnKeyType="next"
+                containerStyle={{
+                  backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F3F4F6",
+                  borderWidth: 0
+                }}
+                inputStyle={{ color: themeColors.text }}
+                placeholderTextColor={themeColors.secondaryText}
+              />
+            </View>
+
+            <View style={{ marginBottom: 16 }}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
                 Category*
               </AppText>
               <TouchableOpacity
@@ -223,13 +229,14 @@ export default function CreateTicket() {
                 style={[
                   styles.categoryTrigger,
                   {
-                    backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
-                    borderColor: themeColors.border,
+                    backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F3F4F6",
+                    borderColor: "transparent",
+                    borderWidth: 0
                   },
                 ]}
               >
                 <AppText
-                  type={ELEVEN}
+                  type={FOURTEEN}
                   style={{
                     flex: 1,
                     color: isCategoryPlaceholder ? themeColors.secondaryText : themeColors.text,
@@ -246,7 +253,7 @@ export default function CreateTicket() {
               </TouchableOpacity>
             </View>
             <View style={{ marginBottom: 16 }}>
-              <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
                 Priority*
               </AppText>
               <TouchableOpacity
@@ -255,13 +262,14 @@ export default function CreateTicket() {
                 style={[
                   styles.categoryTrigger,
                   {
-                    backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
-                    borderColor: themeColors.border,
+                    backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F3F4F6",
+                    borderColor: "transparent",
+                    borderWidth: 0
                   },
                 ]}
               >
                 <AppText
-                  type={ELEVEN}
+                  type={FOURTEEN}
                   style={{
                     flex: 1,
                     color: isPriorityPlaceholder ? themeColors.secondaryText : themeColors.text,
@@ -278,28 +286,31 @@ export default function CreateTicket() {
               </TouchableOpacity>
             </View>
 
-            <Input
-              title={"Description*"}
-              placeholder={"Describe your issue in detail"}
-              value={desc}
-              onChangeText={setDesc}
-              autoCapitalize="none"
-              returnKeyType="done"
-              multiline
-              containerStyle={{
-                backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
-                borderColor: themeColors.border,
-                height: 120,
-                alignItems: "flex-start",
-                paddingTop: 8,
-                borderWidth: 1
-              }}
-              inputStyle={{ color: themeColors.text, textAlignVertical: "top" }}
-              placeholderTextColor={themeColors.secondaryText}
-            />
+            <View style={{ marginBottom: 16 }}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>
+                Description*
+              </AppText>
+              <Input
+                placeholder={"Describe your issue in detail"}
+                value={desc}
+                onChangeText={setDesc}
+                autoCapitalize="none"
+                returnKeyType="done"
+                multiline
+                containerStyle={{
+                  backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F3F4F6",
+                  height: 120,
+                  alignItems: "flex-start",
+                  paddingTop: 8,
+                  borderWidth: 0
+                }}
+                inputStyle={{ color: themeColors.text, textAlignVertical: "top" }}
+                placeholderTextColor={themeColors.secondaryText}
+              />
+            </View>
 
-            <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text,  }}>
-            Supporting image (Optional)*
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, }}>
+              Supporting image (Optional)*
             </AppText>
             <TouchableOpacityView
               onPress={() => setIsVisible(true)}
@@ -350,14 +361,14 @@ export default function CreateTicket() {
           draggableIcon: { backgroundColor: themeColors.border, width: 40 },
         }}
       >
-        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>
+        <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>
           Select category
         </AppText>
-        <AppText type={TEN} style={{ color: themeColors.secondaryText, marginBottom: 12 }}>
+        <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 12 }}>
           Choose the topic that best matches your issue.
         </AppText>
         {categories.length === 0 ? (
-          <AppText type={ELEVEN} style={{ color: themeColors.secondaryText, paddingVertical: 20 }}>
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, paddingVertical: 20 }}>
             No categories available. Try again later or reopen this screen.
           </AppText>
         ) : (
@@ -382,7 +393,7 @@ export default function CreateTicket() {
                       { borderBottomColor: themeColors.border, backgroundColor: selected ? themeColors.card : "transparent" },
                     ]}
                   >
-                    <AppText type={ELEVEN} weight={selected ? SEMI_BOLD : undefined} style={{ color: themeColors.text, flex: 1 }}>
+                    <AppText type={SIXTEEN} weight={selected ? SEMI_BOLD : undefined} style={{ color: themeColors.text, flex: 1 }}>
                       {item?.name != null ? String(item.name) : String(item?.id ?? "—")}
                     </AppText>
                     {selected ? (
@@ -415,14 +426,14 @@ export default function CreateTicket() {
           draggableIcon: { backgroundColor: themeColors.border, width: 40 },
         }}
       >
-        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>
+        <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>
           Select priority
         </AppText>
-        <AppText type={TEN} style={{ color: themeColors.secondaryText, marginBottom: 12 }}>
+        <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 12 }}>
           Higher priority may be reviewed sooner when queues are busy.
         </AppText>
         {!priorities?.length ? (
-          <AppText type={ELEVEN} style={{ color: themeColors.secondaryText, paddingVertical: 20 }}>
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, paddingVertical: 20 }}>
             No priority options available.
           </AppText>
         ) : (
@@ -447,7 +458,7 @@ export default function CreateTicket() {
                       { borderBottomColor: themeColors.border, backgroundColor: selected ? themeColors.card : "transparent" },
                     ]}
                   >
-                    <AppText type={ELEVEN} weight={selected ? SEMI_BOLD : undefined} style={{ color: themeColors.text, flex: 1 }}>
+                    <AppText type={SIXTEEN} weight={selected ? SEMI_BOLD : undefined} style={{ color: themeColors.text, flex: 1 }}>
                       {item?.name != null ? String(item.name) : String(item?.id ?? "—")}
                     </AppText>
                     {selected ? (

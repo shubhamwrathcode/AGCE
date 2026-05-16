@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from "react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AppSafeAreaView, AppText, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TEN } from "../../shared";
+import { AppSafeAreaView, AppText, EIGHTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE } from "../../shared";
 import { useAppSelector } from "../../store/hooks";
 import { colors } from "../../theme/colors";
 import {
@@ -75,10 +75,10 @@ const TicketCard = ({ item, onSupportChat }) => {
     >
       <View style={styles.cardHeader}>
         <View style={{ flex: 1 }}>
-          <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>
+          <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
             {item.subject}
           </AppText>
-          <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 4 }}>
+          <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 4 }}>
             Ticket ID: #{item.ticketId}
           </AppText>
         </View>
@@ -92,7 +92,7 @@ const TicketCard = ({ item, onSupportChat }) => {
           ]}
         >
           <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-          <AppText weight={SEMI_BOLD} type={TEN} style={{ color: getStatusColor(item.status) }}>
+          <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: getStatusColor(item.status) }}>
             {item.status}
           </AppText>
         </View>
@@ -103,23 +103,23 @@ const TicketCard = ({ item, onSupportChat }) => {
       <View style={styles.cardBody}>
         <View style={styles.infoGrid}>
           <View style={styles.infoItem}>
-            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
               Category
             </AppText>
             <AppText
               weight={SEMI_BOLD}
-              type={ELEVEN}
+              type={THIRTEEN}
               style={{ color: themeColors.text, marginTop: 2, textTransform: "capitalize" }}
             >
               {item.category?.replace(/_/g, " ") || "General"}
             </AppText>
           </View>
           <View style={[styles.infoItem, { alignItems: "flex-end" }]}>
-            <AppText type={TEN} style={{ color: themeColors.secondaryText, textAlign: "right" }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textAlign: "right" }}>
               Priority
             </AppText>
             <View style={[styles.priorityBadge, { backgroundColor: themeColors.button + "20" }]}>
-              <AppText weight={SEMI_BOLD} type={TEN} style={{ color: themeColors.button, textTransform: "capitalize" }}>
+              <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: themeColors.button, textTransform: "capitalize" }}>
                 {item.priority || "Medium"}
               </AppText>
             </View>
@@ -128,15 +128,15 @@ const TicketCard = ({ item, onSupportChat }) => {
 
         <View style={styles.infoGrid}>
           <View style={styles.infoItem}>
-            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
               Created on
             </AppText>
-            <AppText type={ELEVEN} style={{ color: themeColors.text, marginTop: 2 }}>
+            <AppText type={THIRTEEN} style={{ color: themeColors.text, marginTop: 2 }}>
               {moment(item.createdAt).format("DD MMM, YYYY")} at {moment(item.createdAt).format("hh:mm A")}
             </AppText>
           </View>
           <TouchableOpacity onPress={() => onSupportChat(item)}>
-            <AppText weight={SEMI_BOLD} type={ELEVEN} style={{ color: themeColors.button }}>
+            <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.button }}>
               View details {">"}
             </AppText>
           </TouchableOpacity>
@@ -202,7 +202,7 @@ export default function SupportIssueList() {
 
   const listHeader = (
     <View style={styles.listHeader}>
-      <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16, marginBottom: 14 }}>
+      <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 16, marginBottom: 14 }}>
         Track and open your support requests. Tap a ticket to view the conversation.
       </AppText>
       <View style={styles.filterRow}>
@@ -223,7 +223,7 @@ export default function SupportIssueList() {
             >
               <AppText
                 weight={SEMI_BOLD}
-                type={TEN}
+                type={THIRTEEN}
                 style={{ color: selected ? themeColors.buttonText : themeColors.text }}
               >
                 {tab.label}
@@ -241,11 +241,11 @@ export default function SupportIssueList() {
         <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <FastImage source={back_ic} resizeMode="contain" style={{ width: 18, height: 18 }} tintColor={themeColors.text} />
         </TouchableOpacity>
-        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
-          My tickets
+        <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
+          My Tickets
         </AppText>
-        <TouchableOpacity style={{borderWidth:1,borderColor:colors.grey,borderRadius:5,paddingHorizontal:5,paddingVertical:5}} onPress={() => NavigationService.navigate(CREATE_TICKET_SCREEN)} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
-          <AppText weight={SEMI_BOLD} type={TEN} style={{ color: themeColors.button }}>
+        <TouchableOpacity style={{ borderWidth: 1, borderColor: colors.grey, borderRadius: 5, paddingHorizontal: 10, paddingVertical: 8 }} onPress={() => NavigationService.navigate(CREATE_TICKET_SCREEN)} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
+          <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: themeColors.button }}>
             Create
           </AppText>
         </TouchableOpacity>
@@ -303,10 +303,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 },
-      android: { elevation: 1.5 },
-    }),
+    // ...Platform.select({
+    //   ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 },
+    //   android: { elevation: 1.5 },
+    // }),
   },
   cardHeader: {
     flexDirection: "row",
