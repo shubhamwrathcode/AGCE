@@ -437,39 +437,8 @@ export const getKycStatus = () => async () => {
     if (__DEV__) console.log('[KYC API] get_kyc_status canonical failed', e?.code, e?.message);
   }
   if (payload == null) {
-    try {
-      response = await appOperation.customer.get_kyc_status_legacy();
-      if (response?.success && response?.data != null) {
-        payload = response.data;
-      }
-    } catch (e: any) {
-      if (__DEV__) console.warn('[KYC API] get_kyc_status legacy failed', e?.code, e?.message);
-      logger(e);
-      return null;
-    }
-  }
-  if (__DEV__) {
-    console.log('[KYC API] get_kyc_status (resolved)', {
-      success: response?.success,
-      code: response?.code,
-      message: response?.message,
-      hasPayload: !!payload,
-    });
-    if (payload && typeof payload === 'object') {
-      const n = normalizeKycStatusForUi({ ...payload });
-      console.log('[KYC API] get_kyc_status (status fields)', {
-        id_document_status: n.id_document_status,
-        tax_document_status: n.tax_document_status,
-        selfie_status: n.selfie_status,
-        needs_resubmission: n.needs_resubmission,
-        status: payload.status ?? payload.data?.status,
-        documents_needing_resubmission: Array.isArray(n.documents_needing_resubmission)
-          ? n.documents_needing_resubmission.map((x: any) => x?.type ?? x)
-          : n.documents_needing_resubmission,
-      });
-    } else if (!response?.success) {
-      console.warn('[KYC API] get_kyc_status no data', response);
-    }
+    if (__DEV__) console.warn('[KYC API] get_kyc_status: no canonical payload found');
+    return null;
   }
   if (payload == null) return null;
   return normalizeKycStatusForUi(payload);

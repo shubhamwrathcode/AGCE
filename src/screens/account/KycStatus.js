@@ -661,15 +661,8 @@ const KycStatus = () => {
 
   const applyKycStatusData = useCallback((data) => {
     if (!data) return;
-    console.log("[KYC API DATA RECEIVED]:", data);
 
-    // Track individual document statuses
-    console.log("[KYC DOCUMENT STATUSES]:", {
-      id_document: data.id_document_status,
-      tax_document: data.tax_document_status,
-      selfie: data.selfie_status,
-      overall_status: data.status
-    });
+
 
     setIdDocStatus(data.id_document_status ?? null);
     setTaxDocStatus(data.tax_document_status ?? null);
@@ -682,7 +675,6 @@ const KycStatus = () => {
       if (data.kyc_data.tax_document_number) setExistingTaxDocNumber(data.kyc_data.tax_document_number);
     }
     if (data.needs_resubmission) {
-      console.log("[KYC RESUBMISSION REQUIRED]:", data.documents_needing_resubmission);
       setDocumentsToResubmit(data.documents_needing_resubmission || []);
     }
     setStatusCanonical(toCanonicalStatus(data.status));
@@ -692,12 +684,10 @@ const KycStatus = () => {
     if (apiTier !== undefined && apiTier !== null && apiTier !== "") {
       const n = Number(apiTier);
       if (Number.isFinite(n) && n >= 0 && n <= 4) {
-        console.log("[KYC TIER FROM API]:", n);
         setKycVerifiedFromApi(n);
       }
     } else {
       const c = toCanonicalStatus(data.status);
-      console.log("[KYC CALCULATED TIER FROM STATUS]:", c);
       if (c === "APPROVED") setKycVerifiedFromApi(2);
       else if (c === "REJECTED") setKycVerifiedFromApi(3);
       else if (c === "PENDING" || c === "RESUBMISSION_REQUESTED") setKycVerifiedFromApi(1);
@@ -812,7 +802,7 @@ const KycStatus = () => {
       diditWebCompleteOnceRef.current = false;
       setDiditWebviewUrl(diditOpenUrl);
     } else {
-      NavigationService.navigate(KYC_STEP_ONE_SCREEN, { resetForm: true });
+      // NavigationService.navigate(KYC_STEP_ONE_SCREEN, { resetForm: true });
     }
   };
 
@@ -839,14 +829,6 @@ const KycStatus = () => {
 
   const kycStatusView = () => {
     const effectiveTier = kycVerifiedFromApi !== null ? kycVerifiedFromApi : kycVerified;
-
-    console.log("[KYC VIEW CALCULATION]:", {
-      effectiveTier,
-      kycVerifiedFromApi,
-      kycVerifiedProfile: kycVerified,
-      statusCanonical,
-      trackingStatus
-    });
 
     // 1. Prioritize Resubmission requested (matches web kycPayloadRequestsResubmission)
     const hasResubmitRequest = statusCanonical === "RESUBMISSION_REQUESTED" ||

@@ -2847,7 +2847,7 @@ const Spot = () => {
                 onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
                 style={{ flexDirection: "row", alignItems: "center" }}
               >
-                <AppText style={[styles.openOrderCardTitle, { color: textColor, fontSize: 14 }]} weight={MEDIUM}>
+                <AppText style={[styles.openOrderCardTitle, { color: textColor, fontSize: 16 }]} weight={SEMI_BOLD}>
                   {currencyPair}
                 </AppText>
                 <FastImage
@@ -2857,8 +2857,8 @@ const Spot = () => {
                   tintColor={labelColor}
                 />
               </TouchableOpacity>
-              <AppText style={{ color: labelColor, fontSize: 11, marginTop: 4 }}>{headerDateTime}</AppText>
-              <AppText style={{ color: getSideColor(inv?.side), fontSize: 12, marginTop: 4 }} weight={MEDIUM}>
+              <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 13, marginTop: 4 }}>{headerDateTime}</AppText>
+              <AppText style={{ color: getSideColor(inv?.side), fontSize: 14, marginTop: 4 }} weight={SEMI_BOLD}>
                 {side} · {typeUpper}
               </AppText>
             </View>
@@ -2961,17 +2961,17 @@ const Spot = () => {
                 onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
                 style={{ flexDirection: "row", alignItems: "center" }}
               >
-                <AppText style={[styles.openOrderCardTitle, { color: textColor, fontSize: 14, }]} weight={MEDIUM}>{currencyPair}</AppText>
+                <AppText style={[styles.openOrderCardTitle, { color: textColor, fontSize: 16, }]} weight={SEMI_BOLD}>{currencyPair}</AppText>
                 <FastImage source={right_ic} style={{ width: 12, height: 12, }} resizeMode="contain" tintColor={labelColor} />
               </TouchableOpacity>
-              <AppText style={{ color: labelColor, fontSize: 11, marginTop: 4 }}>
+              <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 13, marginTop: 4 }}>
                 {(() => {
                   const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
                   return d ? moment(d).format("DD/MM/YYYY HH:mm:ss") : "---";
                 })()}
               </AppText>
 
-              <AppText style={{ color: getSideColor(inv?.side), fontSize: 12, marginTop: 4 }} weight={MEDIUM}>
+              <AppText style={{ color: getSideColor(inv?.side), fontSize: 14, marginTop: 4 }} weight={SEMI_BOLD}>
                 {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
               </AppText>
             </View>
@@ -3845,7 +3845,7 @@ const Spot = () => {
                     numberOfLines={1}
                     style={{
                       color: activeTab === t.id ? themeColors.text : themeColors.secondaryText,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: "600",
                     }}
                   >
@@ -5039,15 +5039,15 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   openOrderCardTitle: {
-    fontSize: 14,
+    fontSize: 16,
     marginRight: 6,
     fontWeight: "600",
   },
   openOrderCardDate: {
-    fontSize: 11,
+    fontSize: 13,
   },
   openOrderTypeLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
     marginBottom: 6,
   },
@@ -5064,11 +5064,11 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   kvK: {
-    fontSize: 11,
+    fontSize: 13,
     flex: 1,
   },
   kvV: {
-    fontSize: 11,
+    fontSize: 13,
     flex: 1,
     textAlign: "right",
   },
@@ -5086,7 +5086,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   execTradesBtnText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "600",
   },
   execTradesBox: {
@@ -5108,7 +5108,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   execTradeHeaderText: {
-    fontSize: 11,
+    fontSize: 13,
   },
   execTradeKvRow: {
     flexDirection: "row",
@@ -5117,20 +5117,20 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   execTradeKvK: {
-    fontSize: 11,
+    fontSize: 13,
     flex: 1,
   },
   execTradeKvV: {
-    fontSize: 11,
+    fontSize: 13,
     flex: 1,
     textAlign: "right",
   },
   openOrderCardLabel: {
-    fontSize: 12,
+    fontSize: 14,
     flex: 1,
   },
   openOrderCardValue: {
-    fontSize: 12,
+    fontSize: 14,
     flex: 1,
     textAlign: "right",
   },
