@@ -198,7 +198,7 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
               </View>
             </View>
           </TouchableOpacity>
-         
+
         </View>
         <View style={styles.tableHeaderRight}>
           <TouchableOpacity
@@ -233,7 +233,7 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
               </View>
             </View>
           </TouchableOpacity>
-         
+
         </View>
       </View>
     ),
@@ -340,7 +340,7 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
     >
       <View style={[styles.sheet, { height: SHEET_HEIGHT, backgroundColor: modalBg }]}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: textColor }]}>Select Token</Text>
+          <Text style={[styles.title, { color: textColor }]}>Select Coin</Text>
           <TouchableOpacity
             onPress={onClose}
             style={[styles.closeCircle, { backgroundColor: closeCircleBg }]}

@@ -23,7 +23,7 @@ import { useRoute, useNavigation, useFocusEffect, useIsFocused } from "@react-na
 import moment from "moment";
 import { useDispatch } from "react-redux";
 import { useTheme } from "../../hooks/useTheme";
-import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD, THIRTEEN, MEDIUM } from "../../shared";
+import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD, THIRTEEN, MEDIUM, FOURTEEN, FIFTEEN, SIXTEEN, EIGHTEEN, TWELVE } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
   back_ic,
@@ -47,6 +47,8 @@ import {
   buyImage,
   selImage,
   arrowRightIcon,
+  favUnCheck,
+  favCheck,
 } from "../../helper/ImageAssets";
 import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
@@ -298,7 +300,7 @@ const OrderBookSkeleton = React.memo(({ rows = 12 }) => {
   const BONE_HEIGHT = 14;
   const BONE_RADIUS = 4;
   return (
-    <View style={{ flex: 1, paddingVertical: 4, gap: 2 }}>
+    <View style={{ flex: 1, paddingVertical: 0, gap: 1 }}>
       {[...Array(rows)].map((_, i) => (
         <View
           key={i}
@@ -309,8 +311,14 @@ const OrderBookSkeleton = React.memo(({ rows = 12 }) => {
             height: ROW_HEIGHT,
           }}
         >
-          <ShimmerBox width="48%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
-          <ShimmerBox width="48%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
+          <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingRight: 4 }}>
+            <ShimmerBox width="40%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
+            <ShimmerBox width="50%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
+          </View>
+          <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingLeft: 4 }}>
+            <ShimmerBox width="50%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
+            <ShimmerBox width="40%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
+          </View>
         </View>
       ))}
     </View>
@@ -327,10 +335,8 @@ const orderBookRemaining = (row) =>
   toFinite(row?.remaining ?? row?.quantity ?? row?.qty ?? row?.amount ?? 0);
 
 const DepthRow = React.memo(({ bid, ask, bidFillPct, askFillPct, themeColors, isDark, formatPrice, formatQty }) => {
-  // Depth bar colors (web-like). Keep low opacity so text stays readable.
-  // Slightly stronger than web so it's visible on mobile screens.
-  const depthGreen = isDark ? "rgba(0, 192, 118, 0.28)" : "rgba(0, 192, 118, 0.18)";
-  const depthRed = isDark ? "rgba(232, 97, 97, 0.32)" : "rgba(255, 77, 79, 0.22)";
+  const depthGreen = isDark ? "rgba(0, 192, 118, 0.16)" : "rgba(0, 192, 118, 0.12)";
+  const depthRed = isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)";
   const bidRem = bid ? orderBookRemaining(bid) : 0;
   const askRem = ask ? orderBookRemaining(ask) : 0;
   const br = clamp01(Number(bidFillPct ?? 0) / 100);
@@ -338,51 +344,45 @@ const DepthRow = React.memo(({ bid, ask, bidFillPct, askFillPct, themeColors, is
 
   return (
     <View style={styles.depthRow}>
+      {/* Bid Side */}
       <View style={styles.depthBidSide}>
-        <AppText type={ELEVEN} style={[styles.depthQty, { color: themeColors.secondaryText }]} numberOfLines={1}>
-          {bid ? formatQty(bidRem) : "—"}
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            right: -1,
+            width: `${br > 0 ? Math.max(1, br * 100) : 0}%`,
+            backgroundColor: depthGreen,
+          }}
+        />
+        <AppText type={ELEVEN} style={[styles.depthQty, { color: themeColors.secondaryText, zIndex: 1, position: 'absolute', left: 0 }]} numberOfLines={1}>
+          {bid ? formatQty(bidRem) : ""}
         </AppText>
-        <View style={styles.depthBidGradWrap}>
-          <View style={[styles.depthGradInner, { position: "relative", overflow: "hidden" }]}>
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width: `${br > 0 ? Math.max(2, br * 100) : 0}%`,
-                backgroundColor: depthGreen,
-              }}
-            />
-            <AppText style={[styles.depthBidPrice, { color: themeColors.green }]}>
-              {bid ? formatPrice(bid.price) : ""}
-            </AppText>
-          </View>
-        </View>
+        <AppText style={[styles.depthBidPrice, { color: themeColors.green, zIndex: 1 }]}>
+          {bid ? formatPrice(bid.price) : ""}
+        </AppText>
       </View>
-      <View style={styles.depthMidRule} />
+
+      {/* Ask Side */}
       <View style={styles.depthAskSide}>
-        <View style={styles.depthAskGradWrap}>
-          <View style={[styles.depthGradInner, styles.depthAskInner, { position: "relative", overflow: "hidden" }]}>
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: `${ar > 0 ? Math.max(2, ar * 100) : 0}%`,
-                backgroundColor: depthRed,
-              }}
-            />
-            <AppText style={[styles.depthAskPrice, { color: themeColors.red }]}>
-              {ask ? formatPrice(ask.price) : ""}
-            </AppText>
-          </View>
-        </View>
-        <AppText type={ELEVEN} style={[styles.depthQty, { color: themeColors.secondaryText, textAlign: "right" }]} numberOfLines={1}>
-          {ask ? formatQty(askRem) : "—"}
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: -1,
+            width: `${ar > 0 ? Math.max(1, ar * 100) : 0}%`,
+            backgroundColor: depthRed,
+          }}
+        />
+        <AppText style={[styles.depthAskPrice, { color: themeColors.red, zIndex: 1 }]}>
+          {ask ? formatPrice(ask.price) : ""}
+        </AppText>
+        <AppText type={ELEVEN} style={[styles.depthQty, { color: themeColors.secondaryText, textAlign: "right", zIndex: 1, position: 'absolute', right: 0 }]} numberOfLines={1}>
+          {ask ? formatQty(askRem) : ""}
         </AppText>
       </View>
     </View>
@@ -1023,91 +1023,69 @@ const SpotChartScreen = () => {
   const liveMid = Number.isFinite(Number(bestAsk)) && Number.isFinite(Number(bestBid)) ? (Number(bestAsk) + Number(bestBid)) / 2 : null;
   const midPrice = liveMid ?? mergedPair?.buy_price ?? mergedPair?.last ?? mergedPair?.price ?? null;
 
+  const bidVolSum = useMemo(
+    () => bidsDisplay.reduce((s, o) => s + orderBookRemaining(o), 0),
+    [bidsDisplay]
+  );
+  const askVolSum = useMemo(
+    () => asksDisplay.reduce((s, o) => s + orderBookRemaining(o), 0),
+    [asksDisplay]
+  );
+  const totalVolBar = bidVolSum + askVolSum || 1;
+  const bidPct = (bidVolSum / totalVolBar) * 100;
+
   const orderBookWebNode = useMemo(() => {
     const hasData = lastSocketData || buyOrders?.length > 0 || sellOrders?.length > 0;
     if (!hasData) return <OrderBookSkeleton rows={ORDER_BOOK_ROWS} />;
 
     return (
-      <View>
-        <View style={styles.webObHeaderRow}>
-          <AppText type={TEN} style={[styles.webObHeaderCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
-            Price ({pairQuote})
-          </AppText>
-          <AppText type={TEN} style={[styles.webObHeaderCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
-            Amount ({pairBase})
-          </AppText>
-          <AppText type={TEN} style={[styles.webObHeaderCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
-            Total ({pairQuote})
-          </AppText>
+      <View style={{ paddingHorizontal: 12 }}>
+        <View style={styles.ratioIndicatorBar}>
+          <View style={[styles.ratioIndicatorHalf, { justifyContent: "flex-start" }]}>
+            <AppText weight={SEMI_BOLD} style={{ color: themeColors.green, fontSize: 13 }}>
+              B {bidPct.toFixed(2)}%
+            </AppText>
+          </View>
+          <View style={styles.ratioIndicatorTrack}>
+            <View style={[styles.ratioIndicatorFill, { width: `${bidPct}%`, backgroundColor: themeColors.green, borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
+            <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: themeColors.red, borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
+          </View>
+          <View style={[styles.ratioIndicatorHalf, { justifyContent: "flex-end" }]}>
+            <AppText weight={SEMI_BOLD} style={{ color: themeColors.red, fontSize: 13 }}>
+              {(100 - bidPct).toFixed(2)}% S
+            </AppText>
+          </View>
         </View>
 
-        {orderBookViewMode !== "bids" &&
-          asksDisplayDesc.map((ask, idx) => {
-            const origIndex = asksDisplay.length - 1 - idx;
-            const fillPct = maxAskCum > 0 ? Math.min(100, (Number(askCum[origIndex] || 0) / maxAskCum) * 100) : 0;
-            const amount = orderBookRemaining(ask);
-            const total = rowQuoteTotal(ask);
-            return (
-              <WebObRow
-                key={`ask_${ask?._id || origIndex}`}
-                side="ask"
-                price={ask?.price}
-                total={total}
-                amount={amount}
-                fillPct={fillPct}
-                themeColors={themeColors}
-                isDark={isDark}
-                formatPrice={formatPrice}
-                formatQty={formatObQty}
-                formatTotal={formatObTotal}
-              />
-            );
-          })}
+        {/* Column Headers */}
+        <View style={styles.splitObHeader}>
+          <TouchableOpacity activeOpacity={0.7} style={[styles.splitObHeaderCol, { gap: 2 }]}>
+            <AppText style={{ fontSize: 12, color: "#333" }}>Amount({pairBase})</AppText>
+          </TouchableOpacity>
 
-        <TouchableOpacity activeOpacity={0.75} style={styles.webObMidRow}>
-          <View style={styles.webObMidLeft}>
-            <AppText style={[styles.webObMidPrice, { color: changeColor }]} weight={MEDIUM} numberOfLines={1}>
-              {midPrice != null ? formatPriceComma(midPrice) : "—"}
-            </AppText>
-            <FastImage
-              source={arrowRightIcon}
-              resizeMode="contain"
-              style={[styles.webObMidArrow, { transform: [{ rotate: isNeg ? "90deg" : "-90deg" }] }]}
-              tintColor={changeColor}
-            />
-          </View>
-          <View style={styles.webObMidSubRow}>
-            <AppText type={TEN} style={[styles.webObMidSub, { color: themeColors.secondaryText }]} numberOfLines={1}>
-              {midPrice != null ? `$${formatPriceComma(midPrice)}` : "—"}
-            </AppText>
-            <AppText type={TEN} style={[styles.webObMidSub, { color: themeColors.secondaryText }]} numberOfLines={1}>
-              {mergedPair?.change_percentage != null ? `${toFixedThree(Number(mergedPair.change_percentage))}%` : "—"}
-            </AppText>
-          </View>
+          <TouchableOpacity onPress={openAggMenu} activeOpacity={0.7} style={[styles.splitObHeaderColMid, { gap: 2 }]}>
+            <AppText style={{ fontSize: 12, color: "#333" }}>{formatAggStepLabel(orderBookAggStep)}</AppText>
+          </TouchableOpacity>
 
-        </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.7} style={[styles.splitObHeaderCol, { justifyContent: "flex-end", gap: 2 }]}>
+            <AppText style={{ fontSize: 12, color: "#333" }}>Amount({pairBase})</AppText>
+          </TouchableOpacity>
+        </View>
 
-        {orderBookViewMode !== "asks" &&
-          bidsDisplay.map((bid, idx) => {
-            const fillPct = maxBidCum > 0 ? Math.min(100, (Number(bidCum[idx] || 0) / maxBidCum) * 100) : 0;
-            const amount = orderBookRemaining(bid);
-            const total = rowQuoteTotal(bid);
-            return (
-              <WebObRow
-                key={`bid_${bid?._id || idx}`}
-                side="bid"
-                price={bid?.price}
-                total={total}
-                amount={amount}
-                fillPct={fillPct}
-                themeColors={themeColors}
-                isDark={isDark}
-                formatPrice={formatPrice}
-                formatQty={formatObQty}
-                formatTotal={formatObTotal}
-              />
-            );
-          })}
+        {/* Split Order Book Rows */}
+        {depthRows.map((row, i) => (
+          <DepthRow
+            key={i}
+            bid={row.bid}
+            ask={row.ask}
+            bidFillPct={row.bidFillPct}
+            askFillPct={row.askFillPct}
+            themeColors={themeColors}
+            isDark={isDark}
+            formatPrice={formatPrice}
+            formatQty={formatObQty}
+          />
+        ))}
       </View>
     );
   }, [
@@ -1133,16 +1111,7 @@ const SpotChartScreen = () => {
     themeColors,
   ]);
 
-  const bidVolSum = useMemo(
-    () => bidsDisplay.reduce((s, o) => s + orderBookRemaining(o), 0),
-    [bidsDisplay]
-  );
-  const askVolSum = useMemo(
-    () => asksDisplay.reduce((s, o) => s + orderBookRemaining(o), 0),
-    [asksDisplay]
-  );
-  const totalVolBar = bidVolSum + askVolSum || 1;
-  const bidPct = (bidVolSum / totalVolBar) * 100;
+  // (openAggMenu/closeAggMenu/selectAggStep removed)
 
   // (openAggMenu/closeAggMenu/selectAggStep removed)
 
@@ -1180,7 +1149,7 @@ const SpotChartScreen = () => {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <AppText
-              weight={BOLD}
+              weight={SEMI_BOLD}
               numberOfLines={1}
               style={[styles.headerTitle, { color: themeColors.text }]}
             >
@@ -1204,12 +1173,22 @@ const SpotChartScreen = () => {
             {favLoading ? (
               <ActivityIndicator size="small" color={isFav ? "#FFD700" : themeColors.text} />
             ) : (
-              <FastImage
-                source={isFav ? starFillIcon : starIcon}
-                style={styles.headerIcon}
-                resizeMode="contain"
-                tintColor={isFav ? "#FFD700" : themeColors.text}
-              />
+              isFav ? (
+                <FastImage
+                  source={starFillIcon}
+                  style={styles.headerIcon}
+                  resizeMode="contain"
+                />
+              ) : (
+                <FastImage
+                  source={favUnCheck}
+                  style={styles.headerIcon}
+                  resizeMode="contain"
+                  tintColor={'#EAEDF0'}
+                />
+              )
+
+
             )}
           </TouchableOpacity>
           <TouchableOpacity onPress={onNotificationPress} style={styles.headerIconBtn} activeOpacity={0.7}>
@@ -1234,37 +1213,6 @@ const SpotChartScreen = () => {
           showsVerticalScrollIndicator
           nestedScrollEnabled
         >
-          <View
-            style={[
-              styles.topTabsRow,
-              { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: themeColors.themeBorderColor },
-            ]}
-          >
-            {/* {TOP_TABS.map((t) => {
-              const active = topTab === t;
-              return (
-                <TouchableOpacity
-                  key={t}
-                  activeOpacity={0.75}
-                  onPress={() => onPressTopTab(t)}
-                  style={styles.topTabBtn}
-                >
-                  <AppText
-                    weight={active ? SEMI_BOLD : undefined}
-                    style={[styles.topTabText, { color: active ? themeColors.text : themeColors.secondaryText }]}
-                  >
-                    {t}
-                  </AppText>
-                  {active ? (
-                    <View style={[styles.topTabUnderline, { backgroundColor: "#000" }]} />
-                  ) : (
-                    <View style={styles.topTabUnderlineSpacer} />
-                  )}
-                </TouchableOpacity>
-              );
-            })} */}
-          </View>
-
           {/* 24h strip — layout aligned with web TradeCenterSection (TradePage): left price + 24h change; right 2×2 high/low + volumes */}
           <View style={[styles.statsStrip, { borderBottomColor: themeColors.themeBorderColor }]}>
             <View style={styles.statsMainRow}>
@@ -1280,7 +1228,7 @@ const SpotChartScreen = () => {
                     tintColor={changeColor}
                   />
                 </View>
-                <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statChangeSectionTitle, { color: themeColors.text }]}>
+                <AppText type={TWELVE} weight={MEDIUM} style={[styles.statChangeSectionTitle, { color: themeColors.text }]}>
                   24h Change
                 </AppText>
                 <View style={styles.statChangeRow}>
@@ -1300,7 +1248,7 @@ const SpotChartScreen = () => {
               <View style={styles.statsRightCols}>
                 <View style={styles.statsCol}>
                   <View style={styles.statKV}>
-                    <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                    <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
                       {`24h High (${pairQuote})`}
                     </AppText>
                     <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVValue, { color: themeColors.green }]}>
@@ -1308,7 +1256,7 @@ const SpotChartScreen = () => {
                     </AppText>
                   </View>
                   <View style={[styles.statKV, styles.statKVGap]}>
-                    <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
                       {`24h Volume (${pairBase})`}
                     </AppText>
                     <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: themeColors.secondaryText }]} numberOfLines={1}>
@@ -1318,7 +1266,7 @@ const SpotChartScreen = () => {
                 </View>
                 <View style={styles.statsCol}>
                   <View style={styles.statKV}>
-                    <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
                       {`24h Low (${pairQuote})`}
                     </AppText>
                     <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVValue, { color: themeColors.red }]}>
@@ -1326,7 +1274,7 @@ const SpotChartScreen = () => {
                     </AppText>
                   </View>
                   <View style={[styles.statKV, styles.statKVGap]}>
-                    <AppText type={TEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
                       {`24h Volume (${pairQuote})`}
                     </AppText>
                     <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: themeColors.secondaryText }]} numberOfLines={1}>
@@ -1338,6 +1286,7 @@ const SpotChartScreen = () => {
             </View>
           </View>
 
+
           <View style={{ width: Width, overflow: "hidden" }}>
             <Animated.View
               style={{
@@ -1347,8 +1296,7 @@ const SpotChartScreen = () => {
               }}
             >
               <View style={{ width: Width }}>
-                {/* Chart — fixed height; skeleton overlays WebView (never stacked) so layout does not jump */}
-                <View style={[styles.chartWrap, { backgroundColor: bg, height: CHART_BLOCK_HEIGHT }]}>
+                <View style={[styles.chartWrap, { backgroundColor: colors.white, height: CHART_BLOCK_HEIGHT }]}>
                   <View
                     style={[
                       styles.chartWebWrap,
@@ -1363,7 +1311,7 @@ const SpotChartScreen = () => {
                       <WebView
                         key={chartUri}
                         source={{ uri: chartUri }}
-                        style={{ width: Width, height: CHART_BLOCK_HEIGHT, backgroundColor: "transparent" }}
+                        style={{ width: Width, height: CHART_BLOCK_HEIGHT, backgroundColor: colors.iconBgColor }}
                         containerStyle={{ backgroundColor: "transparent" }}
                         opaque={false}
                         androidLayerType="hardware"
@@ -1393,7 +1341,6 @@ const SpotChartScreen = () => {
                   ) : null}
                 </View>
 
-                {/* Order book + tabs — same vertical scroll as chart (full-height scroll) */}
                 <View
                   style={[
                     styles.obTabsRow,
@@ -1420,12 +1367,12 @@ const SpotChartScreen = () => {
                           styles.obTab,
                           activeTab === tab && [
                             styles.obTabActive,
-                            { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : lightTheme.input },
+                            { backgroundColor: colors.iconBgColor },
                           ],
                         ]}
                       >
                         <AppText
-                          type={TEN}
+                          type={ELEVEN}
                           weight={activeTab === tab ? SEMI_BOLD : undefined}
                           style={{ color: activeTab === tab ? themeColors.text : themeColors.secondaryText }}
                         >
@@ -1442,12 +1389,12 @@ const SpotChartScreen = () => {
                       style={[
                         styles.obAggTrigger,
                         {
-                          backgroundColor: themeColors.input,
+                          backgroundColor: colors.iconBgColor,
                           borderColor: themeColors.themeBorderColor,
                         },
                       ]}
                     >
-                      <AppText type={TEN} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>
+                      <AppText type={ELEVEN} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>
                         {formatAggStepLabel(orderBookAggStep)}
                       </AppText>
                       <FastImage
@@ -1464,8 +1411,8 @@ const SpotChartScreen = () => {
                       style={[
                         styles.obAggTrigger,
                         {
-                          backgroundColor: themeColors.input,
-                          borderColor: themeColors.themeBorderColor,
+                          backgroundColor: colors.iconBgColor,
+                          borderColor: 'transparent',
                           paddingHorizontal: 8,
                         },
                       ]}
@@ -1525,29 +1472,6 @@ const SpotChartScreen = () => {
                       <View style={{ width: Width }}>
                         {bottomSlidePair.from === "Order Book" ? (
                           <View style={{ width: Width, paddingHorizontal: 12 }}>
-                            <View style={styles.obRatioRow}>
-                              <ImageBackground
-                                source={buyImage}
-                                resizeMode="stretch"
-                                style={styles.obRatioPill}
-                                imageStyle={{}}
-                              >
-                                <AppText style={{ color: themeColors.green, fontWeight: "800", fontSize: 12 }}>
-                                  {Math.round(bidPct)}%
-                                </AppText>
-                              </ImageBackground>
-                              <ImageBackground
-                                source={selImage}
-                                resizeMode="stretch"
-                                style={styles.obRatioPill}
-                                imageStyle={{}}
-                              >
-                                <AppText style={{ color: themeColors.red, fontWeight: "800", fontSize: 12 }}>
-                                  {Math.round(100 - bidPct)}%
-                                </AppText>
-                              </ImageBackground>
-                            </View>
-
                             {orderBookWebNode}
                           </View>
                         ) : bottomSlidePair.from === "Market Trades" ? (
@@ -1743,28 +1667,6 @@ const SpotChartScreen = () => {
                       <View style={{ width: Width }}>
                         {bottomSlidePair.to === "Order Book" ? (
                           <View style={{ width: Width, paddingHorizontal: 12 }}>
-                            <View style={styles.obRatioRow}>
-                              <ImageBackground
-                                source={buyImage}
-                                resizeMode="stretch"
-                                style={styles.obRatioPill}
-                                imageStyle={{ borderRadius: 10 }}
-                              >
-                                <AppText style={{ color: themeColors.green, fontWeight: "800", fontSize: 12 }}>
-                                  {Math.round(bidPct)}%
-                                </AppText>
-                              </ImageBackground>
-                              <ImageBackground
-                                source={selImage}
-                                resizeMode="stretch"
-                                style={styles.obRatioPill}
-                                imageStyle={{ borderRadius: 10 }}
-                              >
-                                <AppText style={{ color: themeColors.red, fontWeight: "800", fontSize: 12 }}>
-                                  {Math.round(100 - bidPct)}%
-                                </AppText>
-                              </ImageBackground>
-                            </View>
                             {orderBookWebNode}
                           </View>
                         ) : bottomSlidePair.to === "Market Trades" ? (
@@ -1925,28 +1827,6 @@ const SpotChartScreen = () => {
                   <View style={styles.chartBottomTabBody}>
                     {mountedTab === "Order Book" ? (
                       <View style={{ width: Width, paddingHorizontal: 12 }}>
-                        <View style={[styles.obRatioRow, { gap: 0 }]}>
-                          <ImageBackground
-                            source={buyImage}
-                            resizeMode="stretch"
-                            style={styles.obRatioPill}
-                            imageStyle={{ borderRadius: 10 }}
-                          >
-                            <AppText style={{ color: themeColors.green, fontWeight: "800", fontSize: 12 }}>
-                              {Math.round(bidPct)}%
-                            </AppText>
-                          </ImageBackground>
-                          <ImageBackground
-                            source={selImage}
-                            resizeMode="stretch"
-                            style={styles.obRatioPill}
-                            imageStyle={{ borderRadius: 10 }}
-                          >
-                            <AppText style={{ color: themeColors.red, fontWeight: "800", fontSize: 12 }}>
-                              {Math.round(100 - bidPct)}%
-                            </AppText>
-                          </ImageBackground>
-                        </View>
                         {orderBookWebNode}
                       </View>
                     ) : null}
@@ -2155,6 +2035,8 @@ const SpotChartScreen = () => {
               </View>
             </Animated.View>
           </View>
+
+          {/* //// */}
         </ScrollView>
       </View>
 
@@ -2352,7 +2234,7 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   headerTitle: {
-    fontSize: 14,
+    fontSize: 18,
     letterSpacing: 0.15,
     flexShrink: 1,
   },
@@ -2425,24 +2307,24 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   statKVLabel: {
-    fontSize: 10,
+    fontSize: 11,
     lineHeight: 14,
   },
   statKVValue: {
     marginTop: 4,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 16,
   },
   statKVValueMuted: {
     marginTop: 4,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 16,
     fontWeight: "500",
   },
   statChangeSectionTitle: {
     marginTop: 8,
-    fontSize: 10,
     lineHeight: 14,
+    fontSize: 13,
   },
   statChangeRow: {
     flexDirection: "row",
@@ -2452,11 +2334,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statChangePct: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
   statChangeAbs: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
   },
   infoCard: {
@@ -2516,7 +2398,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   statMainPrice: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: SEMI_BOLD,
   },
   statTrendIcon: {
@@ -2531,6 +2413,7 @@ const styles = StyleSheet.create({
   chartSkeletonOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
+    backgroundColor: "transparent",
   },
   chartWebWrap: {
     width: Width,
@@ -2551,6 +2434,7 @@ const styles = StyleSheet.create({
   obTabsLeft: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 16,
   },
   obAggTrigger: {
     flexDirection: "row",
@@ -2638,21 +2522,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
     minHeight: 19,
-    marginBottom: 1,
+    marginBottom: 0,
+    gap: 0,
   },
   depthBidSide: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 2,
+    justifyContent: "flex-end",
+    paddingRight: 1,
   },
   depthAskSide: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-start",
+    paddingLeft: 1,
   },
   depthQty: {
-    width: 48,
+    width: 60,
+    fontSize: 12,
+    fontWeight: "600",
   },
   depthBidGradWrap: {
     flex: 1,
@@ -2670,26 +2560,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    paddingRight: 4,
+    paddingRight: 2,
     paddingVertical: 2,
   },
   depthAskInner: {
     justifyContent: "flex-start",
     paddingRight: 0,
-    paddingLeft: 4,
+    paddingLeft: 2,
   },
   depthBidPrice: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
+    paddingRight: 0,
+    marginRight: 0,
+    textAlign: "right",
+    flex: 1,
   },
   depthAskPrice: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
+    paddingLeft: 0,
+    marginLeft: 0,
+    textAlign: "left",
+    flex: 1,
   },
   depthMidRule: {
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(128,128,128,0.25)",
-    marginHorizontal: 4,
+    width: 0,
+    backgroundColor: "transparent",
+    marginHorizontal: 2, // Slight gap for clarity
   },
   webObHeaderRow: {
     flexDirection: "row",
@@ -2856,6 +2754,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 6,
+  },
+  ratioIndicatorBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 0,
+    paddingVertical: 0,
+    gap: 10,
+  },
+  ratioIndicatorHalf: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ratioIndicatorTrack: {
+    flex: 3,
+    height: 6,
+    backgroundColor: "rgba(128,128,128,0.12)",
+    borderRadius: 2,
+    flexDirection: "row",
+    overflow: "hidden",
+  },
+  ratioIndicatorFill: {
+    height: "100%",
+  },
+  splitObHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    marginBottom: 6,
+    borderBottomWidth: 0,
+    borderBottomColor: "#FFFFFF", // Clear white divider
+  },
+  splitObHeaderCol: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    fontSize: 12,
+    color: "#000",
+  },
+  splitObHeaderColMid: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    fontSize: 12,
+    color: "#000",
+    paddingHorizontal: 1, // Sync with price column spacing
+  },
+  headerChevronSmall: {
+    width: 7,
+    height: 7,
+    marginLeft: 1,
+    marginTop: 1,
   },
 });
 
