@@ -993,7 +993,8 @@ const SpotChartScreen = () => {
 
   const depthRows = useMemo(() => {
     const rows = [];
-    for (let i = 0; i < ORDER_BOOK_ROWS; i++) {
+    const maxLen = Math.max(bidsDisplay.length, asksDisplay.length);
+    for (let i = 0; i < maxLen; i++) {
       const bid = bidsDisplay[i] || null;
       const ask = asksDisplay[i] || null;
       const bidFillPct = maxBidCum > 0 ? Math.min(100, (Number(bidCum[i] || 0) / maxBidCum) * 100) : 0;
@@ -1104,7 +1105,6 @@ const SpotChartScreen = () => {
           ))
         ) : (
           (orderBookViewMode === "bids" ? bidsDisplay : asksDisplay)
-            .slice(0, ORDER_BOOK_ROWS * 2)
             .map((item, i) => {
               const rem = item ? orderBookRemaining(item) : 0;
               const maxCum = orderBookViewMode === "bids" ? maxBidCum : maxAskCum;
@@ -1430,7 +1430,7 @@ const SpotChartScreen = () => {
                           {tab}
                         </AppText>
                         {activeTab === tab && (
-                          <View style={{ position: "absolute", bottom: 0, width: 20, height: 3, backgroundColor: "#EAB308", borderTopLeftRadius: 2, borderTopRightRadius: 2 }} />
+                          <View style={{ position: "absolute", bottom: 0, width: 22, height: 3, backgroundColor: isDark ? "#FFFFFF" : "#000000", }} />
                         )}
                       </TouchableOpacity>
                     ))}

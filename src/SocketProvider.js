@@ -73,6 +73,7 @@ export const SocketProvider = ({ children }) => {
       socketService.emit("exchange:subscribe", {
         base_currency_id: baseCurrencyId,
         quote_currency_id: quoteCurrencyId,
+        limit: 20,
       });
     }
   }, []);

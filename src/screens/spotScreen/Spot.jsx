@@ -625,6 +625,7 @@ const OrderBookPanel = memo(({
             style={sellListStyle}
             nestedScrollEnabled={true}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={true}
             contentContainerStyle={
               sellData?.length === 0
                 ? styles.orderBookEmptyList
@@ -647,6 +648,7 @@ const OrderBookPanel = memo(({
             style={buyListStyle}
             nestedScrollEnabled={true}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={true}
             contentContainerStyle={
               buyData?.length === 0
                 ? styles.orderBookEmptyList
@@ -672,6 +674,7 @@ const OrderBookPanel = memo(({
             style={buyListStyle}
             nestedScrollEnabled={true}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
             contentContainerStyle={
               buyData?.length === 0
                 ? styles.orderBookEmptyList
@@ -696,6 +699,7 @@ const OrderBookPanel = memo(({
             style={sellListStyle}
             nestedScrollEnabled={true}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
             contentContainerStyle={
               sellData?.length === 0
                 ? styles.orderBookEmptyList
@@ -784,12 +788,32 @@ const OrderBookSection = memo(({
   const showBidSide = orderBookViewMode !== "asks";
 
   const sellOrdersForDisplay = useMemo(
-    () => (showOrderBookSkeleton ? [] : (orderBookReady && showAskSide ? asksAggregated : [])),
-    [showOrderBookSkeleton, orderBookReady, showAskSide, asksAggregated]
+    () => {
+      if (showOrderBookSkeleton) return [];
+      if (!orderBookReady || !showAskSide) return [];
+      const isSingleSide = !(showAskSide && showBidSide);
+      const minRows = isSingleSide ? 12 : 6;
+      const data = [...asksAggregated];
+      while (data.length < minRows) {
+        data.push({ isPlaceholder: true, price: `placeholder-ask-${data.length}`, remaining: 0 });
+      }
+      return data;
+    },
+    [showOrderBookSkeleton, orderBookReady, showAskSide, showBidSide, asksAggregated]
   );
   const buyOrdersForDisplay = useMemo(
-    () => (showOrderBookSkeleton ? [] : (orderBookReady && showBidSide ? bidsAggregated : [])),
-    [showOrderBookSkeleton, orderBookReady, showBidSide, bidsAggregated]
+    () => {
+      if (showOrderBookSkeleton) return [];
+      if (!orderBookReady || !showBidSide) return [];
+      const isSingleSide = !(showAskSide && showBidSide);
+      const minRows = isSingleSide ? 12 : 6;
+      const data = [...bidsAggregated];
+      while (data.length < minRows) {
+        data.push({ isPlaceholder: true, price: `placeholder-bid-${data.length}`, remaining: 0 });
+      }
+      return data;
+    },
+    [showOrderBookSkeleton, orderBookReady, showAskSide, showBidSide, bidsAggregated]
   );
 
   const maxBuyVolume = useMemo(
@@ -822,39 +846,61 @@ const OrderBookSection = memo(({
   }, [bidsAggregated, asksAggregated]);
 
   const renderSellOrderItem = useCallback(
-    ({ item }) => (
-      <OrderBookSellRow
-        item={item}
-        maxVolume={maxSellVolume}
-        theme={theme}
-        onPress={onOrderBookPress}
-        formatPrice={formatPrice}
-        formatQuantity={formatQuantity}
-        styles={sty}
-      />
-    ),
+    ({ item }) => {
+      if (item.isPlaceholder) {
+        return (
+          <View style={[sty.orderRow, { height: 28, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: "#9D9D9D", opacity: 0.15 }}>—</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: "#9D9D9D", opacity: 0.15 }}>—</AppText>
+          </View>
+        );
+      }
+      return (
+        <OrderBookSellRow
+          item={item}
+          maxVolume={maxSellVolume}
+          theme={theme}
+          onPress={onOrderBookPress}
+          formatPrice={formatPrice}
+          formatQuantity={formatQuantity}
+          styles={sty}
+        />
+      );
+    },
     [maxSellVolume, theme, onOrderBookPress, formatPrice, formatQuantity, sty]
   );
   const renderBuyOrderItem = useCallback(
-    ({ item }) => (
-      <OrderBookBuyRow
-        item={item}
-        maxVolume={maxBuyVolume}
-        theme={theme}
-        onPress={onOrderBookPress}
-        formatPrice={formatPrice}
-        formatQuantity={formatQuantity}
-        styles={sty}
-      />
-    ),
+    ({ item }) => {
+      if (item.isPlaceholder) {
+        return (
+          <View style={[sty.orderRow, { height: 28, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: "#9D9D9D", opacity: 0.15 }}>—</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: "#9D9D9D", opacity: 0.15 }}>—</AppText>
+          </View>
+        );
+      }
+      return (
+        <OrderBookBuyRow
+          item={item}
+          maxVolume={maxBuyVolume}
+          theme={theme}
+          onPress={onOrderBookPress}
+          formatPrice={formatPrice}
+          formatQuantity={formatQuantity}
+          styles={sty}
+        />
+      );
+    },
     [maxBuyVolume, theme, onOrderBookPress, formatPrice, formatQuantity, sty]
   );
 
   const sellKeyExtractor = useCallback((item) => {
+    if (item.isPlaceholder) return item.price;
     const p = item?.price != null ? String(Number(item.price)) : "";
     return `sell_${p}`;
   }, []);
   const buyKeyExtractor = useCallback((item) => {
+    if (item.isPlaceholder) return item.price;
     const p = item?.price != null ? String(Number(item.price)) : "";
     return `buy_${p}`;
   }, []);
