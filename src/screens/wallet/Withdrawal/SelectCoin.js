@@ -9,6 +9,7 @@ import {
   Platform,
   Vibration,
   PanResponder,
+  Modal,
 } from "react-native";
 import {
   AppSafeAreaView,
@@ -23,12 +24,18 @@ import {
   ELEVEN,
   FIFTEEN,
   EIGHTEEN,
+  SIXTEEN,
 } from "../../../shared";
 import FastImage from "react-native-fast-image";
 import {
   back_ic,
   searchIcon,
+  INFO,
+  printIcon,
+  upIcon,
+  downIcon,
 } from "../../../helper/ImageAssets";
+import { WITHDRAW_HISTORY_SCREEN } from "../../../navigation/routes";
 import { buildCoinImageUri } from "../../../helper/coinIconUrl";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import NavigationService from "../../../navigation/NavigationService";
@@ -36,6 +43,7 @@ import { useAppSelector } from "../../../store/hooks";
 import { useDispatch } from "react-redux";
 import { getDepositFiatCoins, getWithdrawActiveCoins, getUserMainWallet } from "../../../actions/walletActions";
 import { colors } from "../../../theme/colors";
+import { useTheme } from "../../../hooks/useTheme";
 import {
   isWithdrawCoinDisabled,
   networkKeysFromChain,
@@ -125,12 +133,30 @@ const SelectCoin = () => {
   const route = useRoute();
   const theme = useAppSelector((state) => state.auth.theme);
   const isDark = theme === "Dark";
+  const { colors: themeColors } = useTheme();
   const withdrawActiveCoins = useAppSelector((state) => state.wallet.withdrawActiveCoins);
   const depositFiatCoins = useAppSelector((state) => state.wallet.depositFiatCoins);
   const userMainWallet = useAppSelector((state) => state.wallet.userMainWallet || []);
   const isFrom = route?.params?.data;
 
   const [activeTab, setActiveTab] = useState(isFrom || "Crypto");
+  const [showWithdrawFaqModal, setShowWithdrawFaqModal] = useState(false);
+  const [faqActiveIndex, setFaqActiveIndex] = useState(null);
+
+  const faqData = [
+    {
+      title: "How to Withdraw Crypto?",
+      content: "To withdraw crypto, go to the withdrawal section, select your cryptocurrency, enter the recipient wallet address, choose the correct network, and specify the amount. Review the details carefully before confirming the withdrawal. Processing time may vary based on network congestion and withdrawal policies."
+    },
+    {
+      title: "How to Withdraw Crypto Step-by-step Guide",
+      content: "• Go to the Withdrawal Section – Navigate to the withdrawal page.\n• Select Your Crypto – Choose the cryptocurrency you want to withdraw.\n• Enter the Wallet Address – Make sure the address is correct and belongs to the selected blockchain network.\n• Choose the Network – Select the correct blockchain network (e.g., BEP20, ERC20, TRC20, Polygon).\n• Enter the Amount – Specify the amount you want to withdraw, ensuring it meets the minimum withdrawal limit.\n• Confirm & Submit – Review all details carefully and confirm the withdrawal.\n• Wait for Processing – Withdrawals are processed based on network congestion and request approval."
+    },
+    {
+      title: "Withdrawal hasn't arrived?",
+      content: "• Check Transaction Status – Use a blockchain explorer to track the transaction.\n• Verify the Wallet Address – Ensure the recipient address is correct.\n• Confirm Network Selection – The chosen network should match the recipient's wallet.\n• Check for Pending Processing – Some withdrawals require manual approval."
+    }
+  ];
   const [searchResult, setSearchResult] = useState("");
   const [listScreenLoading, setListScreenLoading] = useState(true);
   const [railScrollLetter, setRailScrollLetter] = useState(null);
@@ -342,7 +368,20 @@ const SelectCoin = () => {
           <FastImage source={back_ic} style={styles.backIcon} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
         </TouchableOpacity>
         <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: isDark ? colors.white : colors.black }}>Select Coin</AppText>
-        <View style={{ width: 40 }} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setFaqActiveIndex(null);
+              setShowWithdrawFaqModal(true);
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <FastImage source={INFO} resizeMode="contain" style={{ width: 18, height: 18 }} tintColor={isDark ? colors.white : colors.black} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => NavigationService.navigate(WITHDRAW_HISTORY_SCREEN)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <FastImage source={printIcon} resizeMode="contain" style={{ width: 20, height: 17 }} tintColor={isDark ? colors.white : colors.black} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchSection}>
@@ -424,6 +463,65 @@ const SelectCoin = () => {
           </View>
         </View>
       )}
+
+      <Modal visible={showWithdrawFaqModal} animationType="slide" transparent onRequestClose={() => setShowWithdrawFaqModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : "#EEE", borderWidth: 1 },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+                Withdraw help
+              </AppText>
+              <TouchableOpacity onPress={() => setShowWithdrawFaqModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <AppText type={TWENTY} style={{ color: themeColors.text }}>
+                  ×
+                </AppText>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {faqData.map((item, index) => (
+                <View
+                  key={String(index)}
+                  style={[
+                    styles.faqItemInner,
+                    index === faqData.length - 1 && styles.faqItemInnerLast,
+                    { borderColor: isDark ? themeColors.border : colors.inputBorder },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={styles.faqQuestionRow}
+                    onPress={() => setFaqActiveIndex(faqActiveIndex === index ? null : index)}
+                    activeOpacity={0.7}
+                  >
+                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.faqQuestion, { color: themeColors.secondaryText }]}>
+                      {item.title}
+                    </AppText>
+                    <FastImage
+                      source={faqActiveIndex === index ? upIcon : downIcon}
+                      resizeMode="contain"
+                      style={styles.faqArrow}
+                      tintColor={themeColors.secondaryText}
+                    />
+                  </TouchableOpacity>
+                  {faqActiveIndex === index && (
+                    <View style={styles.faqAnswer}>
+                      {item.content.split("\n").map((line, lineIndex) => (
+                        <AppText key={lineIndex} type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
+                          {line}
+                        </AppText>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </AppSafeAreaView>
   );
 };
@@ -454,4 +552,43 @@ const styles = StyleSheet.create({
   alphabetIndexLetterCell: { height: 14, marginBottom: 5, justifyContent: "center", alignItems: "center" },
   alphabetBubbleWrap: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center", zIndex: 100 },
   alphabetBubble: { width: 80, height: 80, borderRadius: 40, justifyContent: "center", alignItems: "center" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  modalList: {
+    maxHeight: 400,
+  },
+  faqItemInner: {
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "rgba(128,128,128,0.15)",
+  },
+  faqItemInnerLast: { borderBottomWidth: 0 },
+  faqQuestionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  faqQuestion: { flex: 1 },
+  faqArrow: { width: 10, height: 10, marginLeft: 8 },
+  faqAnswer: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(128,128,128,0.2)",
+  },
 });

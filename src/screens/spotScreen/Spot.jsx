@@ -92,6 +92,8 @@ import {
   TEN,
   THIRTEEN,
   TWELVE,
+  FOURTEEN,
+  FIFTEEN,
 } from "../../shared";
 import PercentQuickSelect from "../../shared/components/PercentQuickSelect";
 import ReactNativeModal from "react-native-modal";
@@ -349,7 +351,7 @@ const OrderBookSellRow = memo(({ item, maxVolume, onPress, formatPrice, formatQu
 
   // Depth bar color (web-like). Use low opacity so text stays readable.
   // Slightly stronger than web so it's visible on mobile screens.
-  const depthRed = isDark ? "rgba(232, 97, 97, 0.32)" : "rgba(255, 77, 79, 0.22)";
+  const depthRed = isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)";
 
   return (
     <TouchableOpacity onPress={handlePress}>
@@ -386,7 +388,7 @@ const OrderBookBuyRow = memo(({ item, maxVolume, onPress, formatPrice, formatQua
   const ratio = clamp01OB(remaining / denom);
   const handlePress = useCallback(() => { onPress(item?.price, item?.remaining); }, [onPress, item?.price, item?.remaining]);
 
-  const depthGreen = isDark ? "rgba(0, 192, 118, 0.28)" : "rgba(0, 192, 118, 0.18)";
+  const depthGreen = isDark ? "rgba(0, 192, 118, 0.16)" : "rgba(0, 192, 118, 0.12)";
 
   return (
     <TouchableOpacity onPress={handlePress}>
@@ -481,9 +483,9 @@ const ShimmerBox = ({
 
 /** ~7 visible rows per list; user scrolls for more. */
 const ORDER_BOOK_VISIBLE_ROWS = 7;
-const ORDER_BOOK_ROW_LAYOUT_HEIGHT = 24;
+const ORDER_BOOK_ROW_LAYOUT_HEIGHT = 28;
 const ORDER_BOOK_LIST_MAX_HEIGHT =
-  ORDER_BOOK_VISIBLE_ROWS * ORDER_BOOK_ROW_LAYOUT_HEIGHT - 5;
+  ORDER_BOOK_VISIBLE_ROWS * ORDER_BOOK_ROW_LAYOUT_HEIGHT;
 /** Use fixed height (not maxHeight) so switching view modes never collapses the panel. */
 const ORDER_BOOK_LIST_STYLE = { height: ORDER_BOOK_LIST_MAX_HEIGHT, flexGrow: 0 };
 /** Tail inset after last row; inverted asks use paddingTop for the scroll end. */
@@ -491,7 +493,7 @@ const ORDER_BOOK_LIST_END_PAD = 10;
 const ORDER_BOOK_HEADER_ROW_STYLE = { flexDirection: "row", justifyContent: "space-between" };
 const ORDER_BOOK_HEADER_LABEL_STYLE = { color: "#9D9D9D" };
 /** Keep order book area stable when toggling view (both/bids/asks). */
-const ORDER_BOOK_PANEL_FIXED_HEIGHT = ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 92;
+const ORDER_BOOK_PANEL_FIXED_HEIGHT = ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 104;
 const ORDER_BOOK_SHIMMER_STRIP_WIDTH = 240;
 
 const OrderBookSkeleton = () => {
@@ -575,16 +577,21 @@ const OrderBookPanel = memo(({
   const renderCurrentPrice = () => (
     <View style={styles.currentPriceBox}>
       {showOrderBookSkeleton ? (
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-          <ShimmerBox width="52%" height={20} borderRadius={4} shimmerStripWidth={ORDER_BOOK_SHIMMER_STRIP_WIDTH} />
-          <ShimmerBox width="50%" height={16} borderRadius={4} shimmerStripWidth={ORDER_BOOK_SHIMMER_STRIP_WIDTH} style={{ marginLeft: 3 }} />
+        <View style={{ flexDirection: "column", gap: 4, width: "100%" }}>
+          <ShimmerBox width="60%" height={22} borderRadius={4} shimmerStripWidth={ORDER_BOOK_SHIMMER_STRIP_WIDTH} />
+          <ShimmerBox width="45%" height={14} borderRadius={4} shimmerStripWidth={ORDER_BOOK_SHIMMER_STRIP_WIDTH} style={{ marginTop: 2 }} />
         </View>
       ) : (
         <>
           <AppText style={[styles.currentPrice, { color: currentPriceColor }]}>{buy_price}</AppText>
-          <AppText style={[styles.currentPriceUSD, { color: currentPriceColor }]}>
-            {change_percentage}
-          </AppText>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+            <AppText style={styles.currentPriceUSD}>
+              ≈ ${buy_price}
+            </AppText>
+            <AppText style={{ fontSize: 11, fontWeight: "600", color: currentPriceColor }}>
+              {Number(change_percentage) >= 0 ? "+" : ""}{Number(change_percentage || 0).toFixed(2)}%
+            </AppText>
+          </View>
         </>
       )}
     </View>
@@ -2664,14 +2671,14 @@ const Spot = () => {
                 activeOpacity={0.85}
                 onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
                 style={{
-                  paddingVertical: 10,
+                  paddingVertical: 12,
                   paddingHorizontal: 0,
                   borderBottomWidth: 1,
                   borderBottomColor: themeColors.themeBorderColor,
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-                  <AppText style={{ color: themeColors.text, fontSize: 15 }} weight={SEMI_BOLD}>
+                  <AppText style={{ color: themeColors.text }} type={FIFTEEN} weight={BOLD}>
                     {mLabel}
                   </AppText>
                   <FastImage
@@ -2681,52 +2688,54 @@ const Spot = () => {
                     tintColor={themeColors.secondaryText}
                   />
                 </View>
-                <AppText weight={MEDIUM} style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 2 }}>
+                <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 2 }}>
                   {dateStr} {timeStr}
                 </AppText>
-                <AppText style={{ color: sideColor, fontSize: 13, marginBottom: 12 }} weight={SEMI_BOLD}>
+                <AppText style={{ color: sideColor, marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
                   {side} · {role}
                 </AppText>
 
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Date</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
-                    {dateStr}
-                  </AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Time</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
-                    {timeStr}
-                  </AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Pair</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
-                    {mLabel}
-                  </AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Side</AppText>
-                  <AppText style={[styles.kvV, { color: sideColor, fontSize: 12, textAlign: "right" }]}>{side}</AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Role</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
-                    {role}
-                  </AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Price</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
-                    {safeToFixed8(item?.price, "—")}
-                  </AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: themeColors.secondaryText, fontSize: 12 }]}>Quantity</AppText>
-                  <AppText style={[styles.kvV, { color: themeColors.text, fontSize: 12, textAlign: "right" }]}>
-                    {safeToFixed8(item?.quantity, "—")} {baseSym}
-                  </AppText>
+                <View style={{ gap: 5 }}>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                      {dateStr}
+                    </AppText>
+                  </View>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                      {timeStr}
+                    </AppText>
+                  </View>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Pair</AppText>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                      {mLabel}
+                    </AppText>
+                  </View>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: sideColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{side}</AppText>
+                  </View>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Role</AppText>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                      {role}
+                    </AppText>
+                  </View>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                      {safeToFixed8(item?.price, "—")}
+                    </AppText>
+                  </View>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                      {safeToFixed8(item?.quantity, "—")}{baseSym ? ` ${baseSym}` : ""}
+                    </AppText>
+                  </View>
                 </View>
               </TouchableOpacity>
             );
@@ -2826,7 +2835,7 @@ const Spot = () => {
         activeOpacity={0.85}
         onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
         style={{
-          paddingVertical: 10,
+          paddingVertical: 12,
           paddingHorizontal: 0,
           borderBottomWidth: 1,
           borderBottomColor: themeColors.themeBorderColor,
@@ -2834,7 +2843,7 @@ const Spot = () => {
       >
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-            <AppText style={{ color: textColor, fontSize: 15 }} weight={SEMI_BOLD}>
+            <AppText style={{ color: textColor }} type={FIFTEEN} weight={BOLD}>
               {currencyPair}
             </AppText>
             <FastImage
@@ -2844,46 +2853,48 @@ const Spot = () => {
               tintColor={labelColor}
             />
           </View>
-          <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 12, marginBottom: 2 }}>
+          <AppText weight={MEDIUM} type={TWELVE} style={{ color: labelColor, marginBottom: 2 }}>
             {headerDateTime}
           </AppText>
-          <AppText style={{ color: getSideColor(inv?.side), fontSize: 13, marginBottom: 12 }} weight={SEMI_BOLD}>
+          <AppText style={{ color: getSideColor(inv?.side), marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
             {side} · {typeUpper}
           </AppText>
 
-          <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Date</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{dateStr}</AppText>
-          </View>
-          <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Time</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{timeStr}</AppText>
-          </View>
-          <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Market</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{currencyPair}</AppText>
-          </View>
-          <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Side</AppText>
-            <AppText style={[styles.kvV, { color: getSideColor(inv?.side), fontSize: 12 }]}>{side || "—"}</AppText>
-          </View>
-          <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Type</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{typeUpper}</AppText>
-          </View>
-          <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>TIF</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{tifStr}</AppText>
-          </View>
-          <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Price</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{priceDisplay}</AppText>
+          <View style={{ gap: 5 }}>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{dateStr}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{timeStr}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{side || "—"}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{typeUpper}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>TIF</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{tifStr}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{priceDisplay}</AppText>
+            </View>
           </View>
         </View>
 
         {canCancel ? (
           <View style={[styles.openOrderCardRow, { marginTop: 8, marginBottom: 4 }]}>
-            <AppText style={[styles.openOrderCardLabel, { color: labelColor, fontSize: 12 }]}>Action:</AppText>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666" }}>Action:</AppText>
             <TouchableOpacity
               style={styles.cancelActionBtn}
               activeOpacity={0.8}
@@ -2898,7 +2909,7 @@ const Spot = () => {
         ) : null}
       </TouchableOpacity>
     );
-  }, [themeColors, buildCurrencyPairText, getOrderStatusRaw, getSideColor]);
+  }, [themeColors, buildCurrencyPairText, getOrderStatusRaw, getSideColor, isDark]);
 
   // Memoized render function for past orders - same card UI as Open Orders; tap → SPOT_ORDER_HISTORY_DETAIL with full order data
   const renderPastOrderItem = useCallback(({ item: inv, index: idx }) => {
@@ -2937,7 +2948,7 @@ const Spot = () => {
         activeOpacity={0.85}
         onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
         style={{
-          paddingVertical: 10,
+          paddingVertical: 12,
           paddingHorizontal: 0,
           borderBottomWidth: 1,
           borderBottomColor: themeColors.themeBorderColor,
@@ -2945,7 +2956,7 @@ const Spot = () => {
       >
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-            <AppText style={{ color: textColor, fontSize: 15 }} weight={SEMI_BOLD}>
+            <AppText style={{ color: textColor }} type={FIFTEEN} weight={BOLD}>
               {currencyPair}
             </AppText>
             <FastImage
@@ -2955,42 +2966,54 @@ const Spot = () => {
               tintColor={labelColor}
             />
           </View>
-          <AppText weight={MEDIUM} style={{ color: labelColor, fontSize: 12, marginBottom: 2 }}>
+          <AppText weight={MEDIUM} type={TWELVE} style={{ color: labelColor, marginBottom: 2 }}>
             {(() => {
               const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
               return d ? moment(d).format("DD/MM/YYYY HH:mm:ss") : "---";
             })()}
           </AppText>
 
-          <AppText style={{ color: getSideColor(inv?.side), fontSize: 13, marginBottom: 12 }} weight={SEMI_BOLD}>
+          <AppText style={{ color: getSideColor(inv?.side), marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
             {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
           </AppText>
 
           {(() => {
             const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
             return (
-              <>
+              <View style={{ gap: 5 }}>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Date</AppText>
-                  <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Time</AppText>
-                  <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
                 </View>
-              </>
+                <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.side || "---").toUpperCase()}</AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>TIF</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{inv?.time_in_force || inv?.tif || "—"}</AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
+                  </AppText>
+                </View>
+              </View>
             );
           })()}
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Market</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{currencyPair}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Side</AppText><AppText style={[styles.kvV, { color: getSideColor(inv?.side), fontSize: 12 }]}>{String(inv?.side || "---").toUpperCase()}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Type</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText></View>
-          <View style={styles.kvRow}><AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>TIF</AppText><AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>{inv?.time_in_force || inv?.tif || "—"}</AppText></View>
-          <View style={styles.kvRow}>
-            <AppText style={[styles.kvK, { color: labelColor, fontSize: 12 }]}>Price</AppText>
-            <AppText style={[styles.kvV, { color: textColor, fontSize: 12 }]}>
-              {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
-            </AppText>
-          </View>
         </View>
 
         {hasExecutedTrades && (
@@ -3030,21 +3053,23 @@ const Spot = () => {
                       </AppText>
                     </View>
 
-                    <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 12 }]}>Price:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 12 }]}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
-                    </View>
-                    <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 12 }]}>Executed:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 12 }]}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
-                    </View>
-                    <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 12 }]}>Fee:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 12 }]}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
-                    </View>
-                    <View style={styles.execTradeKvRow}>
-                      <AppText style={[styles.execTradeKvK, { color: labelColor, fontSize: 12 }]}>Total:</AppText>
-                      <AppText style={[styles.execTradeKvV, { color: textColor, fontSize: 12 }]}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
+                    <View style={{ gap: 4, marginTop: 4 }}>
+                      <View style={styles.execTradeKvRow}>
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price:</AppText>
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
+                      </View>
+                      <View style={styles.execTradeKvRow}>
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Executed:</AppText>
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
+                      </View>
+                      <View style={styles.execTradeKvRow}>
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee:</AppText>
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
+                      </View>
+                      <View style={styles.execTradeKvRow}>
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total:</AppText>
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
+                      </View>
                     </View>
                   </View>
                 ))}
@@ -3054,7 +3079,7 @@ const Spot = () => {
         )}
       </TouchableOpacity>
     );
-  }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor]);
+  }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor, isDark]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.white }}>
@@ -4666,7 +4691,9 @@ const styles = StyleSheet.create({
   orderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 2,
+    alignItems: "center",
+    paddingVertical: 4.5,
+    minHeight: 26,
     width: "100%",
   },
   orderRowThreeCol: {
@@ -4680,11 +4707,12 @@ const styles = StyleSheet.create({
     color: "#E86161",
     fontSize: 12,
     flex: 1,
+    textAlign: "left",
   },
   orderSize: {
     fontSize: 12,
     flex: 1,
-    textAlign: "center",
+    textAlign: "right",
   },
   orderTotal: {
     flex: 1,
@@ -4749,10 +4777,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   currentPriceBox: {
-    marginVertical: 6,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    marginVertical: 8,
+    paddingVertical: 4,
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
   spotObToolbarRow: {
     flexDirection: "row",
@@ -4842,11 +4870,12 @@ const styles = StyleSheet.create({
   currentPrice: {
     color: "#00C076",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: 19,
   },
   currentPriceUSD: {
-    fontSize: 12,
-    color: "#555",
+    fontSize: 11,
+    color: "#8E8E93",
+    fontWeight: "500",
   },
   selectContainer: {
     height: 25,

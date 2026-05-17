@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
 import { AppSafeAreaView, AppText, Toolbar, BOLD, MEDIUM, SEMI_BOLD, TWELVE, TEN, FOURTEEN, FIFTEEN } from "../../shared";
-import { colors } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import FastImage from "react-native-fast-image";
 import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, copyIcon, externalLinkIcon } from "../../helper/ImageAssets";
@@ -227,22 +227,28 @@ const NewWalletHistory = ({
     (row, idx) => {
       const dateStr = moment(row?.createdAt).isValid() ? moment(row.createdAt).format("DD/MM/YYYY, HH:mm:ss") : "—";
       const networkText = row?.chain_full_name && row.chain_full_name !== "—" ? row.chain_full_name : row?.chain || "—";
+      
+      const tone =
+        row?.statusLabel === "COMPLETED"
+          ? "success"
+          : row?.statusLabel === "PENDING"
+            ? "pending"
+            : "failed";
+
       const pillBg =
-        row?.statusLabel === "COMPLETED"
-          ? "rgba(20, 184, 166, 0.12)"
-          : row?.statusLabel === "FAILED"
-            ? "rgba(239, 68, 68, 0.10)"
-            : row?.statusLabel === "PENDING"
-              ? "rgba(245, 158, 11, 0.12)"
-              : "rgba(148, 163, 184, 0.12)";
+        tone === "success"
+          ? "#E9F9F1"
+          : tone === "pending"
+            ? "#FFF9E6"
+            : "#FEECEC";
+
       const pillText =
-        row?.statusLabel === "COMPLETED"
-          ? "#16A34A"
-          : row?.statusLabel === "FAILED"
-            ? "#DC2626"
-            : row?.statusLabel === "PENDING"
-              ? "#B45309"
-              : themeColors.secondaryText;
+        tone === "success"
+          ? "#05C46B"
+          : tone === "pending"
+            ? "#FFC312"
+            : "#FF3F34";
+
       const addressUrl = resolveExplorerUrl(row?.explorer, "address", row?.address);
       const txUrl = resolveExplorerUrl(row?.explorer, "tx", row?.txid);
 
@@ -252,7 +258,7 @@ const NewWalletHistory = ({
             {label}
           </AppText>
           <View style={styles.depHistValueWrap}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={1}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={3}>
               {value}
             </AppText>
           </View>
@@ -265,10 +271,16 @@ const NewWalletHistory = ({
           key={row?.id || idx}
           activeOpacity={0.92}
           onPress={() => NavigationService.navigate(DEPOSIT_HISTORY_DETAIL_SCREEN, { row })}
-          style={[styles.depHistCard, { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : "#EEE" }]}
+          style={[
+            styles.depHistCard,
+            {
+              backgroundColor: "transparent",
+              borderColor: lightTheme.input,
+            }
+          ]}
         >
           <View style={styles.depHistTop}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+            <AppText type={FIFTEEN} weight={BOLD} style={{ color: themeColors.text }}>
               {dateStr}
             </AppText>
             <View style={[styles.depHistPill, { backgroundColor: pillBg }]}>
@@ -388,16 +400,16 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   depHistCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
   },
   depHistTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   depHistPill: {
     paddingHorizontal: 10,
@@ -407,19 +419,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   depHistRows: {
-    gap: 12,
+    gap: 10,
   },
   depHistRow: {
     flexDirection: "row",
-    alignItems: "center",
-    minWidth: 0,
+    alignItems: "flex-start",
   },
   depHistLabel: {
-    width: 120,
+    flex: 1,
   },
   depHistValueWrap: {
-    flex: 1,
-    minWidth: 0,
+    flex: 2,
+    alignItems: "flex-end",
   },
   depHistValue: {
     textAlign: "right",

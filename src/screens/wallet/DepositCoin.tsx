@@ -1991,7 +1991,7 @@ const DepositCoin = () => {
                                     style={[
                                         styles.faqItemInner,
                                         index === faqData.length - 1 && styles.faqItemInnerLast,
-                                        { borderColor: isDark ? themeColors.border : colors.inputBorder },
+                                        { borderColor: colors.inputBorder },
                                     ]}
                                 >
                                     <TouchableOpacity
@@ -2663,7 +2663,7 @@ const styles = StyleSheet.create({
     faqScrollContent: { paddingBottom: 8 },
     faqItemInner: {
         paddingVertical: 12,
-        borderBottomWidth: 1,
+        borderBottomWidth: 0.7,
         borderBottomColor: colors.iconBgColor
     },
     faqItemInnerLast: { borderBottomWidth: 0 },

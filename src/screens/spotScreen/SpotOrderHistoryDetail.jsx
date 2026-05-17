@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
-import { AppText, MEDIUM } from "../../shared";
+import { AppText, MEDIUM, BOLD, FOURTEEN, FIFTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import FastImage from "react-native-fast-image";
@@ -16,7 +16,7 @@ import { cancelOrder } from "../../actions/homeActions";
 const SpotOrderHistoryDetail = () => {
   const route = useRoute();
   const dispatch = useDispatch();
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   const order = route?.params?.order ?? route?.params?.item ?? {};
 
   const pair = spotOpenOrderMarketLabel(order);
@@ -73,12 +73,11 @@ const SpotOrderHistoryDetail = () => {
     rawTif != null && String(rawTif).trim() !== "" ? String(rawTif).trim().toUpperCase() : "—";
 
   const textColor = themeColors.text;
-  const labelColor = themeColors.secondaryText;
 
   const Row = ({ label, value, valueColor }) => (
     <View style={styles.row}>
-      <AppText style={[styles.label, { color: labelColor }]}>{label}</AppText>
-      <AppText style={[styles.value, { color: valueColor || textColor }]}>{value}</AppText>
+      <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: isDark ? "#8E8E93" : "#666666" }]}>{label}</AppText>
+      <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.value, { color: valueColor || textColor }]} numberOfLines={3}>{value}</AppText>
     </View>
   );
 
@@ -99,10 +98,10 @@ const SpotOrderHistoryDetail = () => {
         {/* Top Summary Header */}
         <View style={styles.topSection}>
           <View style={styles.pairHeaderRow}>
-            <AppText style={[styles.pairTitle, { color: textColor }]} weight={MEDIUM}>{pair}</AppText>
+            <AppText type={FIFTEEN} weight={BOLD} style={{ color: textColor }}>{pair}</AppText>
           </View>
-          <AppText style={[styles.dateTime, { color: labelColor }]}>{dateStr} {timeStr}</AppText>
-          <AppText style={[styles.sideType, { color: getSideColor(side) }]} weight={MEDIUM}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", marginTop: 4 }}>{dateStr} {timeStr}</AppText>
+          <AppText style={{ color: getSideColor(side), marginTop: 4 }} weight={BOLD} type={FOURTEEN}>
             {side} · {isTradeFill ? role : type}
           </AppText>
         </View>
@@ -201,7 +200,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 25,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
   },
@@ -231,20 +230,18 @@ const styles = StyleSheet.create({
   },
   listSection: {
     marginTop: 4,
+    gap: 10,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 6,
+    alignItems: "flex-start",
   },
   label: {
-    fontSize: 14,
     flex: 1,
   },
   value: {
-    fontSize: 14,
-    flex: 1,
+    flex: 2,
     textAlign: "right",
   },
   cancelOrderBtn: {

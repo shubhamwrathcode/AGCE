@@ -17,6 +17,9 @@ import {
   Toolbar,
   MEDIUM,
   SEMI_BOLD,
+  BOLD,
+  FOURTEEN,
+  FIFTEEN,
 } from "../../shared";
 import { colors, lightTheme } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
@@ -69,10 +72,10 @@ function safeToFixed8(val, fallback = "0") {
 /**
  * Optimized Key-Value Row for Cards
  */
-const TradeKvRow = React.memo(({ label, value, color, labelColor, textColor }) => (
+const TradeKvRow = React.memo(({ label, value, color, textColor, isDark }) => (
   <View style={styles.tradeKvRow}>
-    <AppText style={[styles.tradeKvK, { color: labelColor }]}>{label}</AppText>
-    <AppText style={[styles.tradeKvV, { color: color ?? textColor }]} numberOfLines={3}>
+    <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.tradeKvK, { color: isDark ? "#8E8E93" : "#666666" }]}>{label}</AppText>
+    <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.tradeKvV, { color: color ?? textColor }]} numberOfLines={3}>
       {value}
     </AppText>
   </View>
@@ -88,7 +91,8 @@ const OrderCard = React.memo(({
   onCancel,
   showTrades,
   onToggleExpand,
-  getSideColor
+  getSideColor,
+  isDark
 }) => {
   const orderId = item?._id || item?.id || item?.order_id;
   const baseHint = spotSelectedPair?.base_currency ?? spotSelectedPair?.base_currency_short_name;
@@ -138,25 +142,27 @@ const OrderCard = React.memo(({
         <View style={styles.orderSpotHeaderRow}>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <AppText style={[styles.orderSpotTitle, { color: textColor, fontSize: 16 }]} weight={SEMI_BOLD}>
+              <AppText type={FIFTEEN} weight={BOLD} style={{ color: textColor }}>
                 {currencyPair}
               </AppText>
               <FastImage source={right_ic} style={{ width: 12, height: 12, marginLeft: 4 }} resizeMode="contain" tintColor={labelColor} />
             </View>
-            <AppText weight={MEDIUM} style={{ color: textColor, fontSize: 13, marginTop: 4 }}>{headerDateTime}</AppText>
-            <AppText style={{ color: sideColor, fontSize: 14, marginTop: 4 }} weight={SEMI_BOLD}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", marginTop: 4 }}>{headerDateTime}</AppText>
+            <AppText style={{ color: sideColor, marginTop: 4 }} weight={BOLD} type={FOURTEEN}>
               {side} · {typeUpper}
             </AppText>
           </View>
         </View>
 
-        <TradeKvRow label="Date" value={dateStr} labelColor={labelColor} textColor={textColor} />
-        <TradeKvRow label="Time" value={timeStr} labelColor={labelColor} textColor={textColor} />
-        <TradeKvRow label="Market" value={currencyPair} labelColor={labelColor} textColor={textColor} />
-        <TradeKvRow label="Side" value={side} color={sideColor} labelColor={labelColor} textColor={textColor} />
-        <TradeKvRow label="Type" value={typeUpper} labelColor={labelColor} textColor={textColor} />
-        <TradeKvRow label="TIF" value={orderHistoryTifDisplay(item)} labelColor={labelColor} textColor={textColor} />
-        <TradeKvRow label="Price" value={priceDisplay} labelColor={labelColor} textColor={textColor} />
+        <View style={styles.detailsContainer}>
+          <TradeKvRow label="Date" value={dateStr} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="Time" value={timeStr} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="Market" value={currencyPair} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="Side" value={side} color={sideColor} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="Type" value={typeUpper} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="TIF" value={orderHistoryTifDisplay(item)} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="Price" value={priceDisplay} textColor={textColor} isDark={isDark} />
+        </View>
 
         {hasExecutedTrades && (
           <View style={{ marginTop: 8 }}>
@@ -183,10 +189,10 @@ const OrderCard = React.memo(({
                     <View style={styles.execTradeHeaderRowSpot}>
                       <AppText style={[styles.execTradeHeaderTextSpot, { color: labelColor }]} weight={MEDIUM}>Trade #{i + 1}</AppText>
                     </View>
-                    <TradeKvRow label="Price:" value={`${safeToFixed8(tr?.price || 0, "0")} ${quoteCc}`} labelColor={labelColor} textColor={textColor} />
-                    <TradeKvRow label="Executed:" value={`${safeToFixed8(tr?.quantity || 0, "0")} ${baseSym}`} labelColor={labelColor} textColor={textColor} />
-                    <TradeKvRow label="Fee:" value={`${safeToFixed8(tr?.fee || 0, "0")} ${quoteCc}`} labelColor={labelColor} textColor={textColor} />
-                    <TradeKvRow label="Total:" value={safeToFixed8((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0), "0")} labelColor={labelColor} textColor={textColor} />
+                    <TradeKvRow label="Price:" value={`${safeToFixed8(tr?.price || 0, "0")} ${quoteCc}`} textColor={textColor} isDark={isDark} />
+                    <TradeKvRow label="Executed:" value={`${safeToFixed8(tr?.quantity || 0, "0")} ${baseSym}`} textColor={textColor} isDark={isDark} />
+                    <TradeKvRow label="Fee:" value={`${safeToFixed8(tr?.fee || 0, "0")} ${quoteCc}`} textColor={textColor} isDark={isDark} />
+                    <TradeKvRow label="Total:" value={safeToFixed8((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0), "0")} textColor={textColor} isDark={isDark} />
                   </View>
                 ))}
               </View>
@@ -210,7 +216,7 @@ const OrderCard = React.memo(({
 /**
  * Memoized Trade Fill Card component
  */
-const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColor }) => {
+const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColor, isDark }) => {
   const baseHint = spotSelectedPair?.base_currency ?? spotSelectedPair?.base_currency_short_name;
   const quoteHint = spotSelectedPair?.quote_currency ?? spotSelectedPair?.quote_currency_short_name;
 
@@ -227,9 +233,7 @@ const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColo
 
   const dateStr = eventM?.isValid() ? eventM.format("DD/MM/YYYY") : "—";
   const timeStr = eventM?.isValid() ? eventM.format("HH:mm:ss") : "—";
-  const labelColor = themeColors.secondaryText ?? "#8E8E93";
   const textColor = themeColors.text ?? "#000000";
-  const borderColor = themeColors.themeBorderColor ?? themeColors.border ?? "#EEEEEE";
 
   return (
     <TouchableOpacity
@@ -238,19 +242,21 @@ const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColo
       style={[styles.tradeFillCard, { borderBottomColor: colors.iconBgColor, backgroundColor: colors.white }]}
     >
       <View style={styles.pairRow}>
-        <AppText style={{ color: textColor, fontSize: 16 }} weight={SEMI_BOLD}>{mLabel}</AppText>
-        <FastImage source={right_ic} style={{ width: 11, height: 11, marginLeft: 4 }} resizeMode="contain" tintColor={labelColor} />
+        <AppText type={FIFTEEN} weight={BOLD} style={{ color: textColor }}>{mLabel}</AppText>
+        <FastImage source={right_ic} style={{ width: 11, height: 11, marginLeft: 4 }} resizeMode="contain" tintColor={isDark ? "#8E8E93" : "#666666"} />
       </View>
-      <AppText weight={MEDIUM} style={{ color: textColor, fontSize: 13, marginBottom: 2 }}>{dateStr} {timeStr}</AppText>
-      <AppText style={{ color: sideColor, fontSize: 14, marginBottom: 12 }} weight={SEMI_BOLD}>{side} · {role}</AppText>
+      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", marginTop: 4, marginBottom: 4 }}>{dateStr} {timeStr}</AppText>
+      <AppText style={{ color: sideColor, marginBottom: 10 }} weight={BOLD} type={FOURTEEN}>{side} · {role}</AppText>
 
-      <TradeKvRow label="Date" value={dateStr} labelColor={labelColor} textColor={textColor} />
-      <TradeKvRow label="Time" value={timeStr} labelColor={labelColor} textColor={textColor} />
-      <TradeKvRow label="Pair" value={mLabel} labelColor={labelColor} textColor={textColor} />
-      <TradeKvRow label="Side" value={side} color={sideColor} labelColor={labelColor} textColor={textColor} />
-      <TradeKvRow label="Role" value={role} labelColor={labelColor} textColor={textColor} />
-      <TradeKvRow label="Price" value={safeToFixed8(item?.price, "—")} labelColor={labelColor} textColor={textColor} />
-      <TradeKvRow label="Quantity" value={`${safeToFixed8(item?.quantity, "—")}${baseSym ? ` ${baseSym}` : ""}`} labelColor={labelColor} textColor={textColor} />
+      <View style={styles.detailsContainer}>
+        <TradeKvRow label="Date" value={dateStr} textColor={textColor} isDark={isDark} />
+        <TradeKvRow label="Time" value={timeStr} textColor={textColor} isDark={isDark} />
+        <TradeKvRow label="Pair" value={mLabel} textColor={textColor} isDark={isDark} />
+        <TradeKvRow label="Side" value={side} color={sideColor} textColor={textColor} isDark={isDark} />
+        <TradeKvRow label="Role" value={role} textColor={textColor} isDark={isDark} />
+        <TradeKvRow label="Price" value={safeToFixed8(item?.price, "—")} textColor={textColor} isDark={isDark} />
+        <TradeKvRow label="Quantity" value={`${safeToFixed8(item?.quantity, "—")}${baseSym ? ` ${baseSym}` : ""}`} textColor={textColor} isDark={isDark} />
+      </View>
     </TouchableOpacity>
   );
 });
@@ -385,20 +391,21 @@ const TradeHistory = ({ route }) => {
       showTrades={!!showExecutedTrades?.[item?._id || item?.id || item?.order_id]}
       onToggleExpand={toggleExpand}
       getSideColor={getSideColor}
+      isDark={isDark}
     />
-  ), [spotSelectedPair, memoizedTheme, onCancelPress, showExecutedTrades, toggleExpand, getSideColor]);
+  ), [spotSelectedPair, memoizedTheme, onCancelPress, showExecutedTrades, toggleExpand, getSideColor, isDark]);
 
   const renderTrade = useCallback(({ item }) => {
-    // console.log("[TradeHistory] renderTrade called for:", item?._id || item?.id);
     return (
       <TradeCard
         item={item}
         spotSelectedPair={spotSelectedPair}
         themeColors={memoizedTheme}
         getSideColor={getSideColor}
+        isDark={isDark}
       />
     );
-  }, [spotSelectedPair, memoizedTheme, getSideColor]);
+  }, [spotSelectedPair, memoizedTheme, getSideColor, isDark]);
 
   useEffect(() => {
     Animated.timing(pagerX, {
@@ -426,6 +433,7 @@ const TradeHistory = ({ route }) => {
           <View style={{ width: screenW }}>
             {loadingOrders && ordersData.length === 0 ? <TradeHistorySkeleton /> : (
               <FlatList
+                showsVerticalScrollIndicator={false}
                 data={ordersData}
                 renderItem={renderOrder}
                 keyExtractor={listKeyExtractor}
@@ -443,6 +451,7 @@ const TradeHistory = ({ route }) => {
             {loadingTrades && tradesData.length === 0 ? <TradeHistorySkeleton /> : (
               <FlatList
                 data={tradesData}
+                showsVerticalScrollIndicator={false}
                 renderItem={renderTrade}
                 keyExtractor={listKeyExtractor}
                 onEndReached={handleLoadMore}
@@ -489,10 +498,15 @@ const TradeHistory = ({ route }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  ordersListContent: { paddingHorizontal: 5, paddingBottom: 100 },
-  tradesListContent: { paddingHorizontal: 5, paddingBottom: 100 },
-  orderSpotCard: { padding: 14, paddingBottom: 0, width: "100%", alignSelf: "center" },
-  orderSpotHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
+  ordersListContent: { paddingHorizontal: 8, paddingVertical: 12, paddingBottom: 100 },
+  tradesListContent: { paddingHorizontal: 8, paddingVertical: 12, paddingBottom: 100 },
+  orderSpotCard: {
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
+    backgroundColor: "transparent",
+  },
+  orderSpotHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
   orderSpotTitle: { fontSize: 16, marginRight: 6, fontWeight: "600" },
   execTradesBtnSpot: { alignSelf: "flex-end", paddingVertical: 4, paddingHorizontal: 5, borderWidth: 0.7, borderRadius: 5 },
   execTradesBtnRowSpot: { flexDirection: "row", alignItems: "center" },
@@ -506,14 +520,22 @@ const styles = StyleSheet.create({
   execTradeKvKSpot: { fontSize: 15, flex: 1 },
   execTradeKvVSpot: { fontSize: 15, flex: 1, textAlign: "right" },
   orderSpotDivider: { height: 1.5, marginTop: 12, marginBottom: 4 },
-  tradeFillCard: { paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: 1.5 },
-  tradeKvRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 8 },
-  tradeKvK: { fontSize: 15, flexShrink: 0, maxWidth: "42%" },
-  tradeKvV: { fontSize: 15, fontWeight: "500", flex: 1, textAlign: "right" },
+  tradeFillCard: {
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.iconBgColor,
+    backgroundColor: "transparent",
+  },
+  detailsContainer: { gap: 5 },
+  tradeKvRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
+  tradeKvK: { flex: 1 },
+  tradeKvV: { flex: 2, textAlign: "right" },
   tabBar: { flexDirection: "row", height: 44, borderBottomWidth: 1 },
   tab: { flex: 1, justifyContent: "center", alignItems: "center" },
   tabText: { fontSize: 15, fontWeight: "600" },
-  pairRow: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
+  pairRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   actionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingBottom: 16 },
   cancelBtn: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 4, borderWidth: 1, borderColor: colors.red },
   noDataRow: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 },
