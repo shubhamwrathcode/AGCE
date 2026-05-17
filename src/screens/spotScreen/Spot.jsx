@@ -1204,7 +1204,7 @@ const Spot = () => {
   const latestLocalBuyOrdersRef = useRef([]);
   const latestLocalSellOrdersRef = useRef([]);
   const currentCurrencyRef = useRef(null);
-  const SOCKET_UI_THROTTLE_MS = 500;
+  const SOCKET_UI_THROTTLE_MS = 300;
   /** Match web `TradePage`: poll spot history while the matching tab is visible (`SPOT_HIST_POLL_MS`). */
   const SPOT_HIST_POLL_MS = 3000;
   const socketThrottleTimerRef = useRef(null);
@@ -1798,9 +1798,7 @@ const Spot = () => {
       pendingSocketFlushRef.current = payload;
       const now = Date.now();
       const elapsed = now - socketLastFlushRef.current;
-      const throttleMs = (activeTabRef.current === 1 || activeTabRef.current === 2 || activeTabRef.current === 3)
-        ? 1200
-        : SOCKET_UI_THROTTLE_MS;
+      const throttleMs = SOCKET_UI_THROTTLE_MS;
       if (elapsed >= throttleMs || socketLastFlushRef.current === 0) {
         socketLastFlushRef.current = now;
         flushSocketToState(payload);

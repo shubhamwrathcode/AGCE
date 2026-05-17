@@ -651,11 +651,12 @@ const SpotChartScreen = () => {
   const socket = useAppSelector((state) => state.home.socket);
   const isFocused = useIsFocused();
   const isFocusedRef = useRef(true);
-  const appStateRef = useRef(AppState.currentState);
 
   useEffect(() => {
     isFocusedRef.current = isFocused;
   }, [isFocused]);
+
+  const appStateRef = useRef(AppState.currentState);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (next) => {
@@ -669,7 +670,17 @@ const SpotChartScreen = () => {
   const pendingSocketFlushRef = useRef(null);
   const lastFlushedBuyRef = useRef(null);
   const lastFlushedSellRef = useRef(null);
-  const SOCKET_UI_THROTTLE_MS = 800;
+  const SOCKET_UI_THROTTLE_MS = 300;
+
+  useEffect(() => {
+    if (pairSheetVisible) {
+      if (socketThrottleTimerRef.current) {
+        clearTimeout(socketThrottleTimerRef.current);
+        socketThrottleTimerRef.current = null;
+      }
+      pendingSocketFlushRef.current = null;
+    }
+  }, [pairSheetVisible]);
 
   const flushSocketToState = useCallback((payload) => {
     if (!payload || !isFocusedRef.current) return;

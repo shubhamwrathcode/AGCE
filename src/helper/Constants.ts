@@ -21,6 +21,8 @@ export const CHART_WEB_BASE_URL = 'https://agce.wrathcode.com/';
  * Build URLs as `${IMAGE_BASE_URL}${icon_path}` (path from API, e.g. `icons/...`).
  */
 export const IMAGE_BASE_URL = 'https://backend.demoexchange.wrathcode.com/';
+// export const IMAGE_BASE_URL = 'https://backend.arabglobal.io/';
+
 // export const BASE_URL = 'http://3.110.173.10:3008/';
 
 // For passkey testing with backend on localhost:5001 use one of:
