@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Dimensions, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
-import { AppSafeAreaView, AppText, BLACK, Button, DISCLAIMTEXT, FOURTEEN, MEDIUM, SEMI_BOLD, SIXTEEN, TEN, TWENTY, WHITE } from "../../shared";
+import { AppSafeAreaView, AppText, BLACK, BOLD, Button, DISCLAIMTEXT, FOURTEEN, MEDIUM, SEMI_BOLD, SIXTEEN, TEN, TWELVE, TWENTY, WHITE } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import FastImage from "react-native-fast-image";
 import { back_ic, BACK_ICON, bitcoin_ic, moreOption, printIcon, sideIcon } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import { colors } from "../../theme/colors";
+import { fontFamilyMedium } from "../../theme/typography";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
@@ -19,7 +20,15 @@ import TransferModal from "../../shared/components/TransferModal";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import TransferSkeleton from "./TransferSkeleton";
 
-const Height = Dimensions.get('window').height;
+const formatWalletName = (name) => {
+  if (!name) return "";
+  const lower = name.toLowerCase();
+  if (lower === "spot") return "Spot Wallet";
+  if (lower === "main") return "Main Wallet";
+  if (lower === "funding") return "Funding Wallet";
+  if (lower === "futures") return "Futures Wallet";
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() + " Wallet";
+};
 const Transfer = () => {
   const dispatch = useDispatch();
   const route = useRoute();
@@ -133,13 +142,13 @@ const Transfer = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background }} isfrom>
+    <AppSafeAreaView style={{ backgroundColor: colors.white }} isfrom>
       {/* Static header - no skeleton */}
       <View style={[styles.headerSection, { paddingHorizontal: 20, }]}>
         <View style={styles.headerView}>
           <TouchableOpacity onPress={() => NavigationService.goBack()}>
             <FastImage
-              source={BACK_ICON}
+              source={back_ic}
               resizeMode="contain"
               tintColor={themeColors.text}
               style={{ width: 20, height: 20 }}
@@ -154,7 +163,7 @@ const Transfer = () => {
             />
           </TouchableOpacity>
         </View>
-        <AppText color={themeColors.text} weight={SEMI_BOLD} type={TWENTY} style={{ marginVertical: 10 }}>Transfer</AppText>
+        <AppText color={themeColors.text} weight={SEMI_BOLD} type={TWENTY} style={{ marginBottom: 6, marginTop: 4 }}>Transfer</AppText>
       </View>
 
       <KeyBoardAware style={{ flex: 1, }}>
@@ -163,59 +172,59 @@ const Transfer = () => {
         ) : (
           <>
             <View style={[styles.fromToCard, {
-              backgroundColor: isDark ? colors.themeElevationColor : "#FFFFFF",
+              backgroundColor: colors.iconBgColor,
               borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "#EEE",
               borderWidth: 1,
-              marginTop: 0
+              marginTop: 4
             }]}>
               <View style={styles.fromToCardInner}>
                 <FastImage source={sideIcon} resizeMode="contain" style={styles.sideRailIcon} />
                 <View style={styles.fromToRows}>
-                <TouchableOpacity style={styles.walletPickerRow} onPress={() => openModal("from")} activeOpacity={0.7}>
-                  <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN} style={styles.walletPickerLabel}>
-                    From
-                  </AppText>
-                  <View style={styles.walletPickerValueCol}>
-                    <AppText
-                      color={themeColors.text}
-                      weight={MEDIUM}
-                      type={FOURTEEN}
-                      numberOfLines={1}
-                      style={styles.walletPickerValueText}
-                    >
-                      {fromWallet?.toUpperCase()}
+                  <TouchableOpacity style={styles.walletPickerRow} onPress={() => openModal("from")} activeOpacity={0.7}>
+                    <AppText color={themeColors.text} weight={SEMI_BOLD} type={FOURTEEN} style={styles.walletPickerLabel}>
+                      From
                     </AppText>
-                  </View>
-                  <FastImage
-                    source={back_ic}
-                    resizeMode="contain"
-                    style={styles.walletPickerChevron}
-                    tintColor={themeColors.text}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.walletPickerRow} onPress={() => openModal("to")} activeOpacity={0.7}>
-                  <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN} style={styles.walletPickerLabel}>
-                    To
-                  </AppText>
-                  <View style={styles.walletPickerValueCol}>
-                    <AppText
-                      color={themeColors.text}
-                      weight={MEDIUM}
-                      type={FOURTEEN}
-                      numberOfLines={1}
-                      style={styles.walletPickerValueText}
-                    >
-                      {toWallet?.toUpperCase()}
+                    <View style={styles.walletPickerValueCol}>
+                      <AppText
+                        color={themeColors.text}
+                        weight={SEMI_BOLD}
+                        type={FOURTEEN}
+                        numberOfLines={1}
+                        style={styles.walletPickerValueText}
+                      >
+                        {formatWalletName(fromWallet)}
+                      </AppText>
+                    </View>
+                    <FastImage
+                      source={back_ic}
+                      resizeMode="contain"
+                      style={styles.walletPickerChevron}
+                      tintColor={themeColors.text}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.walletPickerRow} onPress={() => openModal("to")} activeOpacity={0.7}>
+                    <AppText color={themeColors.text} weight={SEMI_BOLD} type={FOURTEEN} style={styles.walletPickerLabel}>
+                      To
                     </AppText>
-                  </View>
-                  <FastImage
-                    source={back_ic}
-                    resizeMode="contain"
-                    style={styles.walletPickerChevron}
-                    tintColor={themeColors.text}
-                  />
-                </TouchableOpacity>
-              </View>
+                    <View style={styles.walletPickerValueCol}>
+                      <AppText
+                        color={themeColors.text}
+                        weight={SEMI_BOLD}
+                        type={FOURTEEN}
+                        numberOfLines={1}
+                        style={styles.walletPickerValueText}
+                      >
+                        {formatWalletName(toWallet)}
+                      </AppText>
+                    </View>
+                    <FastImage
+                      source={back_ic}
+                      resizeMode="contain"
+                      style={styles.walletPickerChevron}
+                      tintColor={themeColors.text}
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
             <TouchableOpacity style={{
@@ -231,7 +240,7 @@ const Transfer = () => {
                         : bitcoin_ic
                     }
                     resizeMode="contain"
-                    style={{ width: 30, height: 30 }}
+                    style={{ width: 28, height: 28 }}
                   />
                 </View>
 
@@ -254,40 +263,56 @@ const Transfer = () => {
               <AppText color={themeColors.text} weight={SEMI_BOLD} type={SIXTEEN} style={{ marginVertical: 10 }}>Transfer Amount</AppText>
             </View>
             <View style={[styles.inputContainer, {
-              backgroundColor: isDark ? "transparent" : "#FFFFFF",
-              borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "#EEE",
-              borderWidth: 1
+              backgroundColor: colors.iconBgColor,
             }]}>
               <TextInput placeholder="Enter the amount" placeholderTextColor={themeColors.secondaryText}
-                style={{ marginLeft: 20, width: '55%', color: themeColors.text }} value={amount} onChangeText={(value) => setAmount(value)} keyboardType="numeric" />
-              <View style={{ flexDirection: "row", gap: 25, alignItems: "center", paddingHorizontal: 20 }}>
-                <AppText style={{ color: themeColors.secondaryText }} type={FOURTEEN}>{coin?.short_name}</AppText>
-                <AppText style={{ color: colors.buttonBg }} type={FOURTEEN} onPress={() => setAmount(String(particularCoinBalance?.fromWallet?.balance) || 0)}>MAX</AppText>
+                style={{ marginLeft: 20, width: '55%', color: themeColors.text, fontFamily: fontFamilyMedium }} value={amount} onChangeText={(value) => setAmount(value)} keyboardType="numeric" />
+              <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20 }}>
+                <AppText style={{ color: themeColors.secondaryText }} weight={SEMI_BOLD} type={FOURTEEN}>{coin?.short_name}</AppText>
+                <View style={{ width: 1, height: 16, backgroundColor: isDark ? "rgba(255, 255, 255, 0.15)" : "#E4E7EC", marginHorizontal: 12 }} />
+                <AppText style={{ color: colors.orangeTheme }} weight={SEMI_BOLD} type={FOURTEEN} onPress={() => setAmount(String(particularCoinBalance?.fromWallet?.balance) || 0)}>MAX</AppText>
               </View>
 
             </View>
+            {Number(amount) > Number(particularCoinBalance?.fromWallet?.balance || 0) ? (
+              <AppText style={{ marginLeft: 20, marginTop: 6, color: colors.red }} type={TWELVE} weight={MEDIUM}>
+                Insufficient funds
+              </AppText>
+            ) : null}
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginHorizontal: 20, marginVertical: 10 }}>
-              <AppText color={DISCLAIMTEXT}> Available Balance</AppText>
-              <AppText color={DISCLAIMTEXT} > {particularCoinBalance?.fromWallet?.balance} {coin?.short_name}</AppText>
+              <AppText color={DISCLAIMTEXT} weight={MEDIUM}> Available Balance</AppText>
+              <AppText color={DISCLAIMTEXT} weight={MEDIUM} > {particularCoinBalance?.fromWallet?.balance} {coin?.short_name}</AppText>
             </View>
 
           </>
         )}
       </KeyBoardAware>
 
-      <Button children="Confirm" containerStyle={{ margin: 20 }} disabled={!fromWallet || !toWallet || !amount || !coin} onPress={handleTransfer} loading={loading} />
-      <WalletTypeModal 
-        visible={modalVisible} 
-        onClose={() => setModalVisible(false)} 
-        data={WalletTypes?.filter(item => item?.toLowerCase() !== (type === "from" ? toWallet?.toLowerCase() : fromWallet?.toLowerCase()))} 
-        onSelect={handleSelect} 
+      <Button
+        children="Confirm"
+        containerStyle={{ margin: 20 }}
+        disabled={
+          !fromWallet ||
+          !toWallet ||
+          !amount ||
+          !coin ||
+          Number(amount) > Number(particularCoinBalance?.fromWallet?.balance || 0)
+        }
+        onPress={handleTransfer}
+        loading={loading}
+      />
+      <WalletTypeModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        data={WalletTypes?.filter(item => item?.toLowerCase() !== (type === "from" ? toWallet?.toLowerCase() : fromWallet?.toLowerCase()))}
+        onSelect={handleSelect}
         selectedItem={type === "from" ? fromWallet : toWallet}
       />
-      <CoinListModal 
-        visible={coinModal} 
-        onClose={() => setCoinModal(false)} 
-        data={userWallet} 
-        onSelect={handleSelectCoin} 
+      <CoinListModal
+        visible={coinModal}
+        onClose={() => setCoinModal(false)}
+        data={userWallet}
+        onSelect={handleSelectCoin}
         selectedCoinId={coin?.currency_id}
       />
       <TransferModal visible={visible} handleVisiblity={handlePopup} type={'transfer'} />
@@ -299,7 +324,6 @@ export default Transfer;
 
 const styles = StyleSheet.create({
   headerSection: {
-    minHeight: Height * 0.12,
     paddingBottom: 4,
   },
   headerView: {
@@ -322,9 +346,8 @@ const styles = StyleSheet.create({
   fromToCardInner: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     width: "100%",
-    gap: 12,
+    gap: 5,
   },
   sideRailIcon: {
     width: 50,
@@ -332,10 +355,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   fromToRows: {
-    minWidth: 200,
-    maxWidth: 300,
-    gap: 20,
-    flexShrink: 1,
+    flex: 1,
+    height: 80,
+    justifyContent: "space-between",
   },
   walletPickerRow: {
     flexDirection: "row",
@@ -345,6 +367,7 @@ const styles = StyleSheet.create({
   },
   walletPickerLabel: {
     width: 48,
+
   },
   walletPickerValueCol: {
     flex: 1,
@@ -352,15 +375,20 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "center",
     marginRight: 8,
+    right: 5
+
+
   },
   walletPickerValueText: {
     width: "100%",
     textAlign: "right",
   },
   walletPickerChevron: {
-    width: 15,
-    height: 15,
+    width: 13,
+    height: 13,
     transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
+    right: 5
+
   },
   inputContainer: {
     backgroundColor: "transparent",

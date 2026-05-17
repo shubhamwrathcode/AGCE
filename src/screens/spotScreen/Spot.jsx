@@ -2734,7 +2734,7 @@ const Spot = () => {
                     tintColor={themeColors.secondaryText}
                   />
                 </View>
-                <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 2 }}>
+                <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 2 }}>
                   {dateStr} {timeStr}
                 </AppText>
                 <AppText style={{ color: sideColor, marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
@@ -2743,42 +2743,42 @@ const Spot = () => {
 
                 <View style={{ gap: 5 }}>
                   <View style={styles.kvRow}>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {dateStr}
                     </AppText>
                   </View>
                   <View style={styles.kvRow}>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {timeStr}
                     </AppText>
                   </View>
                   <View style={styles.kvRow}>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Pair</AppText>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Pair</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {mLabel}
                     </AppText>
                   </View>
                   <View style={styles.kvRow}>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: sideColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{side}</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: sideColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{side}</AppText>
                   </View>
                   <View style={styles.kvRow}>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Role</AppText>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Role</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {role}
                     </AppText>
                   </View>
                   <View style={styles.kvRow}>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {safeToFixed8(item?.price, "—")}
                     </AppText>
                   </View>
                   <View style={styles.kvRow}>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
-                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {safeToFixed8(item?.quantity, "—")}{baseSym ? ` ${baseSym}` : ""}
                     </AppText>
                   </View>
@@ -2899,7 +2899,7 @@ const Spot = () => {
               tintColor={labelColor}
             />
           </View>
-          <AppText weight={MEDIUM} type={TWELVE} style={{ color: labelColor, marginBottom: 2 }}>
+          <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: labelColor, marginBottom: 2 }}>
             {headerDateTime}
           </AppText>
           <AppText style={{ color: getSideColor(inv?.side), marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
@@ -2908,32 +2908,32 @@ const Spot = () => {
 
           <View style={{ gap: 5 }}>
             <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{dateStr}</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{dateStr}</AppText>
             </View>
             <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{timeStr}</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{timeStr}</AppText>
             </View>
             <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
             </View>
             <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{side || "—"}</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{side || "—"}</AppText>
             </View>
             <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{typeUpper}</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{typeUpper}</AppText>
             </View>
             <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>TIF</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{tifStr}</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>TIF</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{tifStr}</AppText>
             </View>
             <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{priceDisplay}</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{priceDisplay}</AppText>
             </View>
           </View>
         </View>
@@ -2987,7 +2987,7 @@ const Spot = () => {
     const showTrades = !!showExecutedTrades?.[orderId];
 
     const textColor = themeColors.text;
-    const labelColor = themeColors.secondaryText;
+    const labelColor = '"#666666"';
 
     return (
       <TouchableOpacity
@@ -3012,14 +3012,14 @@ const Spot = () => {
               tintColor={labelColor}
             />
           </View>
-          <AppText weight={MEDIUM} type={TWELVE} style={{ color: labelColor, marginBottom: 2 }}>
+          <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: labelColor, marginBottom: 2 }}>
             {(() => {
               const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
               return d ? moment(d).format("DD/MM/YYYY HH:mm:ss") : "---";
             })()}
           </AppText>
 
-          <AppText style={{ color: getSideColor(inv?.side), marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
+          <AppText style={{ color: getSideColor(inv?.side), marginBottom: 8 }} type={THIRTEEN} weight={BOLD}>
             {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
           </AppText>
 
@@ -3028,32 +3028,32 @@ const Spot = () => {
             return (
               <View style={{ gap: 5 }}>
                 <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.side || "---").toUpperCase()}</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.side || "---").toUpperCase()}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>TIF</AppText>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{inv?.time_in_force || inv?.tif || "—"}</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>TIF</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{inv?.time_in_force || inv?.tif || "—"}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
                     {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
                   </AppText>
                 </View>

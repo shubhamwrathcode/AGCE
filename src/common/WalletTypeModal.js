@@ -20,10 +20,20 @@ import { colors } from '../theme/colors';
 import { useTheme } from '../hooks/useTheme';
 import { AppText, BOLD, SEMI_BOLD } from './AppText';
 import FastImage from 'react-native-fast-image';
-import { closeIcon } from '../helper/ImageAssets';
+import { closeIcon, checkIcon, checkIc } from '../helper/ImageAssets';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const AnimatedView = Animated.createAnimatedComponent(View);
+
+const formatWalletName = (name) => {
+  if (!name) return "";
+  const lower = name.toLowerCase();
+  if (lower === "spot") return "Spot Wallet";
+  if (lower === "main") return "Main Wallet";
+  if (lower === "funding") return "Funding Wallet";
+  if (lower === "futures") return "Futures Wallet";
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() + " Wallet";
+};
 
 const WalletTypeModal = ({ visible, data, onSelect, onClose, selectedItem }) => {
   const { colors: themeColors, isDark } = useTheme();
@@ -131,11 +141,7 @@ const WalletTypeModal = ({ visible, data, onSelect, onClose, selectedItem }) => 
                       style={[
                         styles.item,
                         {
-                          backgroundColor: isSelected
-                            ? (isDark ? "rgba(255,255,255,0.05)" : "#F5F7F9")
-                            : (isDark ? "rgba(255,255,255,0.05)" : "#F8F9FA"),
-                          borderColor: isSelected ? themeColors.button : (isDark ? "rgba(255,255,255,0.05)" : "#EEE"),
-                          borderWidth: 1
+                          borderBottomColor: isDark ? "rgba(255, 255, 255, 0.08)" : "#EEEEEE",
                         },
                       ]}
                       onPress={() => handleSelectItem(item)}
@@ -144,12 +150,19 @@ const WalletTypeModal = ({ visible, data, onSelect, onClose, selectedItem }) => 
                       <AppText
                         style={[
                           styles.itemText,
-                          { color: isDark ? colors.white : colors.black },
+                          { color: isSelected ? themeColors.button : (isDark ? colors.white : colors.black) },
                         ]}
                         weight={isSelected ? BOLD : SEMI_BOLD}
                       >
-                        {item?.toUpperCase()}
+                        {formatWalletName(item)}
                       </AppText>
+                      {isSelected && (
+                        <FastImage
+                          source={checkIc}
+                          style={{ width: 16, height: 16 }}
+                          resizeMode="contain"
+                        />
+                      )}
                     </TouchableOpacity>
                   );
                 }}
@@ -171,20 +184,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 24,
-    paddingHorizontal: 20,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingTop: 20,
+    paddingHorizontal: 16,
     paddingBottom: 32,
     maxHeight: SCREEN_HEIGHT * 0.65,
     width: '100%',
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 16,
   },
   header: {
     flexDirection: 'row',
@@ -207,16 +213,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   item: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 15,
-    marginBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    paddingHorizontal: 5
   },
   itemText: {
-    fontSize: 13,
+    fontSize: 14,
     letterSpacing: -0.2,
   },
   dot: {

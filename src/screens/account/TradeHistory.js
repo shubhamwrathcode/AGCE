@@ -74,8 +74,8 @@ function safeToFixed8(val, fallback = "0") {
  */
 const TradeKvRow = React.memo(({ label, value, color, textColor, isDark }) => (
   <View style={styles.tradeKvRow}>
-    <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.tradeKvK, { color: isDark ? "#8E8E93" : "#666666" }]}>{label}</AppText>
-    <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.tradeKvV, { color: color ?? textColor }]} numberOfLines={3}>
+    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.tradeKvK, { color: isDark ? "#8E8E93" : "#666666" }]}>{label}</AppText>
+    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.tradeKvV, { color: color ?? textColor }]} numberOfLines={3}>
       {value}
     </AppText>
   </View>
@@ -147,7 +147,7 @@ const OrderCard = React.memo(({
               </AppText>
               <FastImage source={right_ic} style={{ width: 12, height: 12, marginLeft: 4 }} resizeMode="contain" tintColor={labelColor} />
             </View>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", marginTop: 4 }}>{headerDateTime}</AppText>
+            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", marginTop: 4 }}>{headerDateTime}</AppText>
             <AppText style={{ color: sideColor, marginTop: 4 }} weight={BOLD} type={FOURTEEN}>
               {side} · {typeUpper}
             </AppText>

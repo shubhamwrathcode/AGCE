@@ -227,7 +227,7 @@ const NewWalletHistory = ({
     (row, idx) => {
       const dateStr = moment(row?.createdAt).isValid() ? moment(row.createdAt).format("DD/MM/YYYY, HH:mm:ss") : "—";
       const networkText = row?.chain_full_name && row.chain_full_name !== "—" ? row.chain_full_name : row?.chain || "—";
-      
+
       const tone =
         row?.statusLabel === "COMPLETED"
           ? "success"
@@ -254,11 +254,11 @@ const NewWalletHistory = ({
 
       const Row = ({ label, value, right }) => (
         <View style={styles.depHistRow}>
-          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.depHistLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.depHistLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>
             {label}
           </AppText>
           <View style={styles.depHistValueWrap}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={3}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.depHistValue, { color: themeColors.text }]} numberOfLines={3}>
               {value}
             </AppText>
           </View>

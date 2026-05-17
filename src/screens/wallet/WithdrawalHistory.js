@@ -119,22 +119,22 @@ const WithdrawalHistory = () => {
 
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Network</AppText>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailValue, { color: themeColors.text }]}>{networkLabel}</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Network</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.detailValue, { color: themeColors.text }]}>{networkLabel}</AppText>
           </View>
 
           <View style={styles.detailRow}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Amount</AppText>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailValue, { color: themeColors.text }]}>{formatWithdrawAmountDisplay(amount)} {currencySymbol}</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Amount</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.detailValue, { color: themeColors.text }]}>{formatWithdrawAmountDisplay(amount)} {currencySymbol}</AppText>
           </View>
 
           <View style={styles.detailRow}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Source wallet</AppText>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailValue, { color: themeColors.text }]}>Main Wallet</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>Source wallet</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.detailValue, { color: themeColors.text }]}>Main Wallet</AppText>
           </View>
 
           <View style={styles.detailRow}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>{isAddress ? "Address" : "Recipient"}</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>{isAddress ? "Address" : "Recipient"}</AppText>
             <View style={styles.valueWithIcons}>
               <AppText numberOfLines={1} ellipsizeMode="middle" type={FOURTEEN} weight={MEDIUM} style={[styles.mono, { color: themeColors.text, flex: 1, textAlign: 'right' }]}>{recipient}</AppText>
               <View style={styles.iconGroup}>
@@ -149,9 +149,9 @@ const WithdrawalHistory = () => {
           </View>
 
           <View style={styles.detailRow}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>TxID</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.detailLabel, { color: isDark ? "#8E8E93" : "#666666" }]}>TxID</AppText>
             <View style={styles.valueWithIcons}>
-              <AppText numberOfLines={1} ellipsizeMode="middle" type={FOURTEEN} weight={MEDIUM} style={[styles.mono, { color: themeColors.text, flex: 1, textAlign: 'right' }]}>{txId || "—"}</AppText>
+              <AppText numberOfLines={1} ellipsizeMode="middle" type={FOURTEEN} weight={SEMI_BOLD} style={[styles.mono, { color: themeColors.text, flex: 1, textAlign: 'right' }]}>{txId || "—"}</AppText>
               {txId ? (
                 <View style={styles.iconGroup}>
                   <TouchableOpacity onPress={() => {
@@ -170,7 +170,7 @@ const WithdrawalHistory = () => {
   };
 
   return (
-    <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <AppSafeAreaView style={[styles.container, { backgroundColor: colors.white }]}>
       <Toolbar isSecond title={"Withdrawal History"} style={{ width: "68%", backgroundColor: "transparent" }} />
 
       <View style={styles.tabsContainer}>

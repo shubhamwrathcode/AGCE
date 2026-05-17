@@ -21,7 +21,7 @@ import Animated, {
   Layout,
 } from "react-native-reanimated";
 import { IMAGE_BASE_URL } from "../helper/Constants";
-import { AppText, BLACK, BOLD, DISCLAIMTEXT, SEMI_BOLD, TEN, TWELVE } from "./AppText";
+import { AppText, BLACK, BOLD, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, TEN, TWELVE } from "./AppText";
 import FastImage from "react-native-fast-image";
 import { toFixedFive } from "../helper/utility";
 import { showError } from "../helper/logger";
@@ -115,13 +115,7 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
         style={[
           styles.coinItem,
           {
-            backgroundColor: isSelected
-              ? (isDark ? "rgba(30, 86, 245, 0.12)" : "rgba(30, 86, 245, 0.08)")
-              : (isDark ? "rgba(255, 255, 255, 0.03)" : "#FDFDFD"),
-            borderColor: isSelected
-              ? themeColors.button
-              : (isDark ? "rgba(255, 255, 255, 0.05)" : "#F0F0F0"),
-            borderWidth: 1,
+            borderBottomColor: isDark ? "rgba(255, 255, 255, 0.08)" : "#EEEEEE",
             opacity: isDisabled ? 0.4 : 1,
           },
         ]}
@@ -135,23 +129,15 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
         }}
       >
         <View style={styles.coinLeft}>
-          <View style={[
-            styles.coinIconWrapper,
-            {
-              backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F5F7F9",
-              borderColor: isSelected ? themeColors.button : (isDark ? "rgba(255,255,255,0.1)" : "#EEE")
-            }
-          ]}>
-            <FastImage
-              source={{
-                uri: /^https?:\/\//i.test(String(item?.icon_path || ""))
-                  ? String(item?.icon_path || "")
-                  : `${String(IMAGE_BASE_URL || "").replace(/\/+$/, "")}/${String(item?.icon_path || "").replace(/^\/+/, "")}`,
-              }}
-              style={styles.coinIcon}
-              resizeMode="contain"
-            />
-          </View>
+          <FastImage
+            source={{
+              uri: /^https?:\/\//i.test(String(item?.icon_path || ""))
+                ? String(item?.icon_path || "")
+                : `${String(IMAGE_BASE_URL || "").replace(/\/+$/, "")}/${String(item?.icon_path || "").replace(/^\/+/, "")}`,
+            }}
+            style={styles.coinIcon}
+            resizeMode="contain"
+          />
           <View style={styles.coinInfo}>
             <AppText
               color={isSelected ? themeColors.button : themeColors.text}
@@ -163,7 +149,7 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
             <AppText
               color={themeColors.secondaryText}
               style={styles.coinCurrency}
-              type={TEN}
+              type={TWELVE}
             >
               {item?.currency}
             </AppText>
@@ -171,21 +157,13 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
         </View>
 
         <View style={styles.coinRight}>
-          {/* {isSelected && (
-            <FastImage
-              source={checkIcon}
-              style={{ width: 16, height: 16, marginRight: 12 }}
-              tintColor={themeColors.button}
-              resizeMode="contain"
-            />
-          )} */}
           <AppText
             style={[
               styles.coinBalance,
               { color: isSelected ? themeColors.button : themeColors.text }
             ]}
             weight={isSelected ? BOLD : SEMI_BOLD}
-            type={TWELVE}
+            type={FOURTEEN}
           >
             {toFixedFive(item?.balance)}
           </AppText>
@@ -311,12 +289,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: 24,
-    paddingHorizontal: 20,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingTop: 20,
+    paddingHorizontal: 16,
     paddingBottom: 32,
-    maxHeight: SCREEN_HEIGHT * 0.75,
+    maxHeight: SCREEN_HEIGHT * 0.8,
     width: "100%",
   },
   header: {
@@ -360,34 +338,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    marginBottom: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
   coinLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
   },
-  coinIconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 1,
-  },
   coinIcon: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
+    marginRight: 12,
+    borderRadius: 14,
   },
   coinInfo: {
     flex: 1,
   },
   coinShortName: {
-    fontSize: 13,
+    fontSize: 14,
     marginBottom: 1,
     letterSpacing: -0.3,
   },
@@ -396,7 +365,6 @@ const styles = StyleSheet.create({
   },
   coinRight: {
     alignItems: "flex-end",
-    gap: 4
   },
   coinBalance: {
     letterSpacing: -0.2,
