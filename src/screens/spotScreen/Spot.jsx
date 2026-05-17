@@ -122,6 +122,7 @@ import {
   SPOT_CHART_SCREEN,
   TRANSFER_SCREEN,
   WALLET_WITHDRAW_SCREEN,
+  SELECT_COIN_SCREEN,
 } from "../../navigation/routes";
 import { cancelOrder, placeOrder } from "../../actions/homeActions";
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
@@ -1028,7 +1029,7 @@ const Spot = () => {
   const [isStopFocused, setIsStopFocused] = useState(false);
   const [isTotalFocused, setIsTotalFocused] = useState(false);
 
-  const priceAnim = useRef(new Animated.Value(0)).current;
+  const priceAnim = useRef(new Animated.Value(1)).current;
   const amountAnim = useRef(new Animated.Value(0)).current;
   const stopAnim = useRef(new Animated.Value(0)).current;
   const totalAnim = useRef(new Animated.Value(0)).current;
@@ -1038,6 +1039,7 @@ const Spot = () => {
   const syncAmountAnimForQuantityString = useCallback((qtyStr) => {
     if (String(qtyStr ?? "").trim() !== "") {
       amountAnim.setValue(1);
+      totalAnim.setValue(1);
     }
   }, []);
 
@@ -1047,28 +1049,47 @@ const Spot = () => {
     }
   }, []);
 
-  useEffect(() => {
-    // Price label is now static as requested by the user.
+  useLayoutEffect(() => {
+    const displayValue = price || buy_price;
+    const hasPrice = String(displayValue ?? "").trim() !== "";
+    const isLoaded = !!buy_price;
+    if (hasPrice || isPriceFocused || !isLoaded) {
+      Animated.timing(priceAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+      return;
+    }
+    Animated.timing(priceAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
   }, [isPriceFocused, price, buy_price]);
 
   useLayoutEffect(() => {
     const hasAmt = String(amount ?? "").trim() !== "";
+    if (hasAmt || isTotalFocused) {
+      Animated.timing(totalAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+      return;
+    }
     Animated.timing(totalAnim, {
-      toValue: hasAmt ? 1 : 0,
+      toValue: 0,
       duration: 200,
       useNativeDriver: false,
     }).start();
-  }, [amount]);
+  }, [amount, isTotalFocused]);
 
   useLayoutEffect(() => {
     const hasAmt = String(amount ?? "").trim() !== "";
 
     // Amount label: value or focus based (original perfect logic)
-    if (hasAmt) {
-      amountAnim.setValue(1);
-      return;
-    }
-    if (isAmountFocused) {
+    if (hasAmt || isAmountFocused) {
       Animated.timing(amountAnim, {
         toValue: 1,
         duration: 200,
@@ -1085,11 +1106,7 @@ const Spot = () => {
 
   useLayoutEffect(() => {
     const hasStop = String(stopPrice ?? "").trim() !== "";
-    if (hasStop) {
-      stopAnim.setValue(1);
-      return;
-    }
-    if (isStopFocused) {
+    if (hasStop || isStopFocused) {
       Animated.timing(stopAnim, {
         toValue: 1,
         duration: 200,
@@ -3180,24 +3197,32 @@ const Spot = () => {
                   ]}
                 >
                   <View style={styles.spotOrderFieldStack}>
-                    <View
+                    <Animated.View
                       pointerEvents="none"
                       style={{
                         position: "absolute",
                         left: 0,
-                        top: 2,
+                        right: 0,
+                        alignItems: "center",
+                        top: priceAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [12, 2],
+                        }),
                       }}
                     >
-                      <AppText
+                      <Animated.Text
                         style={{
                           color: "#8E8E93",
-                          fontSize: 10,
+                          fontSize: priceAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [13, 10],
+                          }),
                           fontWeight: "500",
                         }}
                       >
                         Price ({quote_currency})
-                      </AppText>
-                    </View>
+                      </Animated.Text>
+                    </Animated.View>
 
                     {isLimit ? (
                       <View
@@ -3228,7 +3253,7 @@ const Spot = () => {
                             styles.spotOrderInputValue,
                             {
                               color: themeColors.text,
-                              textAlign: "left",
+                              textAlign: "center",
                               fontSize: 13,
                               fontWeight: "bold",
                               paddingVertical: 0,
@@ -3245,7 +3270,7 @@ const Spot = () => {
                           width: "100%",
                           minHeight: 23,
                           justifyContent: "center",
-                          alignItems: "flex-start",
+                          alignItems: "center",
                           marginTop: 0,
                         }}
                       >
@@ -3256,8 +3281,8 @@ const Spot = () => {
                               flex: 0,
                               color: "#8E8E93",
                               fontSize: 12,
-                              textAlign: "left",
-                              alignSelf: "flex-start",
+                              textAlign: "center",
+                              alignSelf: "center",
                               marginTop: 8,
                             },
                           ]}
@@ -3287,9 +3312,11 @@ const Spot = () => {
                         style={{
                           position: "absolute",
                           left: 0,
+                          right: 0,
+                          alignItems: "center",
                           top: stopAnim.interpolate({
                             inputRange: [0, 1],
-                            outputRange: [10, 2],
+                            outputRange: [12, 2],
                           }),
                         }}
                       >
@@ -3334,7 +3361,7 @@ const Spot = () => {
                             styles.spotOrderInputValue,
                             {
                               color: themeColors.text,
-                              textAlign: "left",
+                              textAlign: "center",
                               fontSize: 13,
                               fontWeight: "bold",
                               paddingVertical: 0,
@@ -3365,9 +3392,11 @@ const Spot = () => {
                       style={{
                         position: "absolute",
                         left: 0,
+                        right: 0,
+                        alignItems: "center",
                         top: amountAnim.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [10, 2],
+                          outputRange: [8, 2],
                         }),
                       }}
                     >
@@ -3392,10 +3421,20 @@ const Spot = () => {
                           backgroundColor: "transparent",
                           paddingHorizontal: 0,
                           paddingVertical: 0,
-                          marginTop: 4,
+                          marginTop: 2,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "space-between"
                         },
                       ]}
                     >
+                      <TouchableOpacity
+                        onPress={() => handleAmountStep(-1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={{ width: 34, alignItems: 'center', justifyContent: 'center', }}
+                      >
+                        <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>-</AppText>
+                      </TouchableOpacity>
                       <TextInput
                         ref={amountInputRef}
                         placeholder={""}
@@ -3412,8 +3451,9 @@ const Spot = () => {
                         style={[
                           styles.spotOrderInputValue,
                           {
+                            flex: 1,
                             color: themeColors.text,
-                            textAlign: "left",
+                            textAlign: "center",
                             fontSize: 13,
                             fontWeight: "bold",
                             paddingVertical: 0,
@@ -3422,6 +3462,13 @@ const Spot = () => {
                           },
                         ]}
                       />
+                      <TouchableOpacity
+                        onPress={() => handleAmountStep(1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={{ width: 34, alignItems: 'center', justifyContent: 'center', }}
+                      >
+                        <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>+</AppText>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -3451,9 +3498,11 @@ const Spot = () => {
                         style={{
                           position: "absolute",
                           left: 0,
+                          right: 0,
+                          alignItems: "center",
                           top: totalAnim.interpolate({
                             inputRange: [0, 1],
-                            outputRange: [10, 2],
+                            outputRange: [8, 2],
                           }),
                         }}
                       >
@@ -3478,7 +3527,7 @@ const Spot = () => {
                             backgroundColor: "transparent",
                             paddingHorizontal: 0,
                             paddingVertical: 0,
-                            marginTop: 4,
+                            marginTop: 2,
                           },
                         ]}
                       >
@@ -3495,7 +3544,7 @@ const Spot = () => {
                             {
                               flex: 1,
                               color: themeColors.text,
-                              textAlign: "left",
+                              textAlign: "center",
                               fontSize: 13,
                               fontWeight: "bold",
                               paddingVertical: 0,
@@ -3689,7 +3738,7 @@ const Spot = () => {
                       onPress={() =>
                         NavigationService.navigate(
                           btn == "Withdraw"
-                            ? WALLET_WITHDRAW_SCREEN
+                            ? SELECT_COIN_SCREEN
                             : btn == "Deposit"
                               ? DEPOSIT_COIN_SCREEN
                               : TRANSFER_SCREEN
