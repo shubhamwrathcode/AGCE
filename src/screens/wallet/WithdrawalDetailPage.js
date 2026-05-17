@@ -8,12 +8,13 @@ import FastImage from "react-native-fast-image";
 import { back_ic, copyIcon, externalLinkIcon, CREATE_TICKET_ICON } from "../../helper/ImageAssets";
 import moment from "moment";
 import NavigationService from "../../navigation/NavigationService";
-import { WITHDRAW_SCREEN, CREATE_TICKET_SCREEN, WALLET_WITHDRAW_SCREEN } from "../../navigation/routes";
+import { WITHDRAW_SCREEN, CREATE_TICKET_SCREEN, WALLET_WITHDRAW_SCREEN, WITHDRAW_FORM_SCREEN } from "../../navigation/routes";
 import { formatWithdrawAmountDisplay, CHAIN_FULL_NAMES, WITHDRAW_NETWORK_LABELS } from "../../helper/walletChainHelpers";
 import { showSuccess } from "../../helper/logger";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from "../../store/hooks";
 import { buildCoinImageUri } from "../../helper/coinIconUrl";
+import { getWithdrawActiveCoins } from "../../actions/walletActions";
 
 
 export default function WithdrawalDetailPage() {
@@ -63,6 +64,35 @@ export default function WithdrawalDetailPage() {
   }, [currencySymbol, withdrawCoinsList]);
 
   const coinIconUrl = buildCoinImageUri(coinObj);
+
+  const navigateToWithdrawAgain = () => {
+    if (!coinObj) return;
+
+    const params = {
+      data: coinObj,
+    };
+
+    if (isAddress) {
+      params.withdrawTo = "address";
+      params.address = recipient;
+      params.network = item.network || item.chain;
+    } else {
+      params.withdrawTo = "agce_user";
+      const rec = String(recipient || "").trim();
+      if (rec.includes("@")) {
+        params.agceRecipientTab = "email";
+        params.agceRecipientEmail = rec;
+      } else if (/^\+?\d+$/.test(rec)) {
+        params.agceRecipientTab = "phone";
+        params.agceRecipientPhone = rec;
+      } else {
+        params.agceRecipientTab = "agce";
+        params.agceRecipientId = rec;
+      }
+    }
+
+    NavigationService.navigate(WITHDRAW_FORM_SCREEN, params);
+  };
 
 
   const resolveNetworkLabel = (itm) => {
@@ -237,9 +267,11 @@ export default function WithdrawalDetailPage() {
           <AppText type={TWELVE} style={{ color: colors.orangeTheme }}>Need help? Chat with us</AppText>
         </TouchableOpacity>
 
-        <Button onPress={() => NavigationService.navigate(WALLET_WITHDRAW_SCREEN)} containerStyle={styles.withdrawAgainBtn}>
-          <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.white }}>Withdrawal Again</AppText>
-        </Button>
+        {tone === 'success' && (
+          <Button onPress={navigateToWithdrawAgain} containerStyle={styles.withdrawAgainBtn}>
+            <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.white }}>Withdraw Again</AppText>
+          </Button>
+        )}
       </ScrollView>
     </AppSafeAreaView>
   );

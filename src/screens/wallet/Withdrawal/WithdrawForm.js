@@ -158,6 +158,12 @@ const WithdrawForm = () => {
   const { emailId } = userData ?? "";
 
   const [selectedCurrency, setSelectedCurrency] = useState({});
+  const activeCoinObj = useMemo(() => {
+    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0) return null;
+    const sym = String(selectedCurrency.short_name || selectedCurrency.coin || "").toUpperCase();
+    if (!sym) return null;
+    return withdrawCoinsList.find((c) => String(c.short_name || c.coin || "").toUpperCase() === sym) || selectedCurrency;
+  }, [selectedCurrency, withdrawCoinsList]);
   /** Web parity: `WithdrawPageSteps12` — Address vs AGCE User under “Withdraw to”. */
   const [withdrawToTab, setWithdrawToTab] = useState("address");
   /** Web `agceRecipientTab`: email | phone | agce */
@@ -365,32 +371,32 @@ const WithdrawForm = () => {
   const userPickedCoinRef = useRef(false);
 
   const activeWithdrawChains = useMemo(
-    () => getActiveWithdrawChainKeys(selectedCurrency),
-    [selectedCurrency]
+    () => getActiveWithdrawChainKeys(activeCoinObj),
+    [activeCoinObj]
   );
 
   const sheetWithdrawChains = useMemo(
-    () => getActiveWithdrawChainKeys(selectedCurrency),
-    [selectedCurrency]
+    () => getActiveWithdrawChainKeys(activeCoinObj),
+    [activeCoinObj]
   );
 
   const withdrawNetworkDisplay = useMemo(() => {
     if (!network) return "";
     const full = String(
-      selectedCurrency?.chain_full_names?.[network] ||
-      selectedCurrency?._chain_full_name?.[network] ||
+      activeCoinObj?.chain_full_names?.[network] ||
+      activeCoinObj?._chain_full_name?.[network] ||
       ""
     ).trim();
     if (full) return full;
     return network;
-  }, [selectedCurrency, network]);
+  }, [activeCoinObj, network]);
 
   const openWithdrawNetworkSheet = useCallback(() => {
-    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0) return;
-    const keys = getActiveWithdrawChainKeys(selectedCurrency);
+    if (!activeCoinObj || Object.keys(activeCoinObj).length === 0) return;
+    const keys = getActiveWithdrawChainKeys(activeCoinObj);
     if (keys.length === 0) {
-      const raw = networkKeysFromChain(selectedCurrency?.chain).length;
-      const hasChains = Array.isArray(selectedCurrency?.chains) && selectedCurrency.chains.length > 0;
+      const raw = networkKeysFromChain(activeCoinObj?.chain).length;
+      const hasChains = Array.isArray(activeCoinObj?.chains) && activeCoinObj.chains.length > 0;
       if (raw === 0 && !hasChains) {
         showError("No withdrawal network available for this coin");
       } else {
@@ -399,7 +405,7 @@ const WithdrawForm = () => {
       return;
     }
     setTimeout(() => networkSheetRef.current?.open(), 0);
-  }, [selectedCurrency]);
+  }, [activeCoinObj]);
 
 
 
@@ -416,23 +422,36 @@ const WithdrawForm = () => {
   }, []);
 
   const chainWithdrawalFee = useMemo(() => {
-    if (!selectedCurrency || !network) return 0;
-    const raw = selectedCurrency.withdrawal_fee || selectedCurrency.withdraw_fee || {};
-    const val = raw[network] ?? raw[String(network).toLowerCase()] ?? raw[String(network).toUpperCase()] ?? valueForChain(selectedCurrency, "withdrawal_fee", network);
+    if (!activeCoinObj || !network) return 0;
+    const raw = activeCoinObj.withdrawal_fee || activeCoinObj.withdraw_fee || {};
+    const val = raw[network] ?? raw[String(network).toLowerCase()] ?? raw[String(network).toUpperCase()] ?? valueForChain(activeCoinObj, "withdrawal_fee", network);
     return parseNum(val, 0);
-  }, [selectedCurrency, network]);
+  }, [activeCoinObj, network]);
 
   const chainMinWithdrawal = useMemo(() => {
-    if (!selectedCurrency || !network) return 0;
-    const raw = selectedCurrency.min_withdrawal || selectedCurrency.min_withdraw || {};
-    const val = raw[network] ?? raw[String(network).toLowerCase()] ?? raw[String(network).toUpperCase()] ?? valueForChain(selectedCurrency, "min_withdrawal", network);
+    if (!activeCoinObj || !network) return 0;
+    const raw = activeCoinObj.min_withdrawal || activeCoinObj.min_withdraw || {};
+    const val = raw[network] ?? raw[String(network).toLowerCase()] ?? raw[String(network).toUpperCase()] ?? valueForChain(activeCoinObj, "min_withdrawal", network);
     return parseNum(val, 0);
-  }, [selectedCurrency, network]);
+  }, [activeCoinObj, network]);
+
+  const chainMinWithdrawalDisplay = useMemo(() => {
+    if (withdrawToTab === "agce_user") {
+      return "0";
+    }
+    
+    // If a specific network is selected, try using its min withdrawal value
+    if (network && network !== "Select Network") {
+      return formatWithdrawAmountDisplay(chainMinWithdrawal);
+    }
+    
+    return "";
+  }, [withdrawToTab, network, chainMinWithdrawal]);
 
   const mainWalletFundRow = useMemo(() => {
-    if (!Array.isArray(userMainWallet) || !selectedCurrency) return null;
-    const cid = selectedCurrency._id;
-    const sym = String(selectedCurrency.short_name || "").toUpperCase();
+    if (!Array.isArray(userMainWallet) || !activeCoinObj) return null;
+    const cid = activeCoinObj._id;
+    const sym = String(activeCoinObj.short_name || "").toUpperCase();
     return (
       userMainWallet.find((row) => {
         if (cid && row?.currency_id === cid) return true;
@@ -440,15 +459,15 @@ const WithdrawForm = () => {
         return false;
       }) || null
     );
-  }, [userMainWallet, selectedCurrency]);
+  }, [userMainWallet, activeCoinObj]);
 
   /** Web `withdrawStep3Preview` (useWithdrawPageController) — meta row + fee / receive. */
   const withdrawStep3Preview = useMemo(() => {
     const isAgce = withdrawToTab === "agce_user";
-    const sym = selectedCurrency?.short_name || "—";
+    const sym = activeCoinObj?.short_name || "—";
 
     // Web logic parity: if no currency or network (or internal transfer which has no network), return nulls
-    if (!selectedCurrency || (!isAgce && (!network || network === "" || network === "Select Network"))) {
+    if (!activeCoinObj || (!isAgce && (!network || network === "" || network === "Select Network"))) {
       return {
         networkCode: "—",
         limit24hLine: "— / —",
@@ -467,7 +486,7 @@ const WithdrawForm = () => {
       ? (Number.isFinite(amt) && amt > 0 ? amt : null)
       : (feeNum != null && Number.isFinite(amt) && amt > 0 ? Math.max(0, amt - feeNum) : null);
 
-    const netMax = parseNum(valueForChain(selectedCurrency, "max_withdrawal", network), NaN);
+    const netMax = parseNum(valueForChain(activeCoinObj, "max_withdrawal", network), NaN);
     const remaining = Number(withdraw24hUsage?.remaining);
     const limitU = Number(withdraw24hUsage?.limit);
     const usageLine =
@@ -483,14 +502,14 @@ const WithdrawForm = () => {
     const limitLeft = (parts[0] || "—").trim();
     const limitRight = (parts.slice(1).join("/") || "—").trim();
     return { networkCode: netCode, limitLeft, limitRight, feeNum, receiveNum, sym, limit24hLine };
-  }, [withdrawToTab, selectedCurrency, network, withdrawAmount, chainWithdrawalFee, withdraw24hUsage]);
+  }, [withdrawToTab, activeCoinObj, network, withdrawAmount, chainWithdrawalFee, withdraw24hUsage]);
 
   const selectedTokenAssetId = useMemo(() => {
-    if (!selectedCurrency || Object.keys(selectedCurrency).length === 0 || !network) return "";
-    const fromMap = selectedCurrency?.token_asset_ids?.[network];
+    if (!activeCoinObj || Object.keys(activeCoinObj).length === 0 || !network) return "";
+    const fromMap = activeCoinObj?.token_asset_ids?.[network];
     if (fromMap != null && String(fromMap).trim()) return String(fromMap).trim();
     return network;
-  }, [selectedCurrency, network]);
+  }, [activeCoinObj, network]);
 
   const currentWithdrawAddressValidationKey = useMemo(() => {
     const a = String(withdrawAddress || "").trim();
@@ -575,13 +594,65 @@ const WithdrawForm = () => {
     }
     // dispatch(getUserMainWallet("spot")); // Removed as it overwrites "main" balance in Redux and causes flickering
     dispatch(getNotificationList());
+  }, [dispatch]);
 
+  /** Runs every time route params change to support pre-filling from History / Withdraw Again when screen is already mounted */
+  useEffect(() => {
     if (routeCoin && typeof routeCoin === "object" && Object.keys(routeCoin).length > 0) {
       userPickedCoinRef.current = true;
       setSelectedCurrency(routeCoin);
-      setWithdrawToTab("address");
+
+      const routeWithdrawTo = route?.params?.withdrawTo;
+      const routeAgceRecipientTab = route?.params?.agceRecipientTab;
+      const routeAgceRecipientEmail = route?.params?.agceRecipientEmail;
+      const routeAgceRecipientPhone = route?.params?.agceRecipientPhone;
+      const routeAgceRecipientId = route?.params?.agceRecipientId;
+      const routeNetwork = route?.params?.network;
+      const routeAddress = route?.params?.address;
+
+      if (routeWithdrawTo) {
+        setWithdrawToTab(routeWithdrawTo);
+      } else {
+        setWithdrawToTab("address");
+      }
+      if (routeAgceRecipientTab) {
+        setAgceRecipientTab(routeAgceRecipientTab);
+      }
+      if (routeAgceRecipientEmail) {
+        setAgceRecipientEmail(routeAgceRecipientEmail);
+      } else {
+        setAgceRecipientEmail("");
+      }
+      if (routeAgceRecipientPhone) {
+        setAgceRecipientPhoneLocal(routeAgceRecipientPhone);
+      } else {
+        setAgceRecipientPhoneLocal("");
+      }
+      if (routeAgceRecipientId) {
+        setAgceRecipientId(routeAgceRecipientId);
+      } else {
+        setAgceRecipientId("");
+      }
+      if (routeNetwork) {
+        setNetwork(routeNetwork);
+      } else {
+        setNetwork("Select Network");
+      }
+      if (routeAddress) {
+        setWithdrawAddress(routeAddress);
+      } else {
+        setWithdrawAddress("");
+      }
+
+      // Clear input amount and reset errors for a clean state
+      setWithdrawAmount("");
+      setWithdrawAmountTouched(false);
+      setWithdrawAddressValidError("");
+      setWithdrawAddressValidatedKey("");
+      setWithdrawAddressCheckDone(false);
+      setIsWithdrawAddressValidated(false);
     }
-  }, []);
+  }, [route?.params, routeCoin]);
 
   /** Default coin: USDT (web-style), else first asset with an active withdraw network. */
   useEffect(() => {
@@ -598,6 +669,16 @@ const WithdrawForm = () => {
       dispatch(getUserMainWallet("main"));
     }
   }, [withdrawCoinsList, selectedCurrency, dispatch]);
+
+  /** Hydrate selectedCurrency with full details once catalog loads */
+  useEffect(() => {
+    if (!withdrawCoinsList.length || !selectedCurrency || Object.keys(selectedCurrency).length === 0) return;
+    const sym = String(selectedCurrency.short_name || selectedCurrency.coin || "").toUpperCase();
+    const hydrated = withdrawCoinsList.find((c) => String(c.short_name || c.coin || "").toUpperCase() === sym);
+    if (hydrated && hydrated.min_withdrawal && JSON.stringify(hydrated.min_withdrawal) !== JSON.stringify(selectedCurrency.min_withdrawal)) {
+      setSelectedCurrency(hydrated);
+    }
+  }, [withdrawCoinsList, selectedCurrency]);
 
   useEffect(() => {
     if (notificationList?.length > 0) {
@@ -2366,10 +2447,13 @@ const WithdrawForm = () => {
               }}>
                 <TextInput
                   style={{ flex: 1, color: themeColors.text, fontSize: 14, fontWeight: "400", padding: 0 }}
-                  placeholder={`Minimal ${chainMinWithdrawal}`}
+                  placeholder={chainMinWithdrawalDisplay ? `Minimal ${chainMinWithdrawalDisplay}` : "Enter Amount"}
                   placeholderTextColor={themeColors.secondaryText}
                   value={withdrawAmount}
-                  onChangeText={setWithdrawAmount}
+                  onChangeText={(val) => {
+                    setWithdrawAmount(val);
+                    setWithdrawAmountTouched(true);
+                  }}
                   keyboardType="numeric"
                 />
                 <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text, marginRight: 12 }}>{selectedCurrency.short_name}</AppText>
@@ -2378,6 +2462,12 @@ const WithdrawForm = () => {
                   <AppText weight={BOLD} type={FOURTEEN} style={{ color: "#E2B24C" }}>MAX</AppText>
                 </TouchableOpacity>
               </View>
+
+              {withdrawAmountInlineError ? (
+                <AppText type={TWELVE} style={{ color: "#E74C3C", marginTop: 6 }}>
+                  {withdrawAmountInlineError}
+                </AppText>
+              ) : null}
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 5, marginVertical: 10 }}>
                 <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Available Withdraw</AppText>
@@ -2392,16 +2482,6 @@ const WithdrawForm = () => {
                   * Beware of scams! AGCE will never ask for personal information or private transfers via SMS or email.
                 </AppText>
               </View>
-
-              {withdrawAmountInlineError && (
-                <AppText weight={SEMI_BOLD} type={TEN} style={{ color: "red" }}>{withdrawAmountInlineError}</AppText>
-              )}
-
-
-
-
-
-
             </View>
           )}
         </View>

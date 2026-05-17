@@ -109,7 +109,6 @@ import Transfer from "../features/wallet/screens/SendFundsScreen";
 import ConvertNew from "../screens/wallet/ConvertNew";
 import DepositWallet from "../screens/wallet/DepositWallet";
 import DepositCoin from "../screens/wallet/DepositCoin";
-import WithdrawWallet from "../screens/wallet/WithdrawWallet";
 import Earning from "../screens/other/Earning";
 import DashboardInner from "../screens/dashboardInner/DashboardInner";
 import Spot from "../screens/spotScreen/Spot";
@@ -477,7 +476,8 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.WITHDRAW_FORM_SCREEN} component={WithdrawForm} options={options} />
       <Stack.Screen
         name={routes.WALLET_WITHDRAW_SCREEN}
-        component={WithdrawWallet}
+        component={SelectCoin}
+        options={options}
       />
       <Stack.Screen name={routes.Dashboard_Inner} component={DashboardInner} />
 

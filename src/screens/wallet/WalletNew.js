@@ -70,7 +70,7 @@ import {
 import { useAppSelector } from "../../store/hooks";
 import { getUserBankDetails } from "../../actions/accountActions";
 import { toFixedFive } from "../../helper/utility";
-import { ACCOUNT_SCREEN, CONVERT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN, EARING_SCREEN, TRANSFER_SCREEN, WALLET_HISTORY_SCREEN, WALLET_SCREEN, WALLET_WITHDRAW_SCREEN } from "../../navigation/routes";
+import { ACCOUNT_SCREEN, CONVERT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN, EARING_SCREEN, TRANSFER_SCREEN, WALLET_HISTORY_SCREEN, WALLET_SCREEN, WALLET_WITHDRAW_SCREEN, SELECT_COIN_SCREEN } from "../../navigation/routes";
 import WalletSkeleton from "./WalletSkeleton";
 import RBSheet from "react-native-raw-bottom-sheet";
 import DepositSheet from "../../shared/components/DepositSheet";
@@ -405,7 +405,7 @@ const WalletNew = () => {
               themeColors={themeColors}
               items={[
                 { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
-                { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN) },
+                { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
                 { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
                 { key: "history", label: "History", variant: "history", onPress: () => { NavigationService.navigate("Wallet_History") } },
               ]}
@@ -735,7 +735,7 @@ const WalletNew = () => {
                         themeColors={themeColors}
                         items={[
                           { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
-                          { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN) },
+                          { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
                           { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
                           { key: "history", label: "History", variant: "history", onPress: () => { NavigationService.navigate("Wallet_History") } },
                         ]}
@@ -987,7 +987,7 @@ const WalletNew = () => {
                     onTransfer={() =>
                       NavigationService.navigate(TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "main" })
                     }
-                    onWithdraw={() => NavigationService.navigate(WALLET_WITHDRAW_SCREEN)}
+                    onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
                     onOpenCoinSheet={(coin) => {
                       setSelectedCoinForSheet(coin);
                       setSelectedCoinSheetWalletType("spot");
@@ -1021,7 +1021,7 @@ const WalletNew = () => {
                     userWalletRows={userMainWallet}
                     actions={[
                       { key: "deposit", label: "Deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
-                      { key: "withdraw", label: "Withdraw", onPress: () => NavigationService.navigate(WALLET_WITHDRAW_SCREEN) },
+                      { key: "withdraw", label: "Withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
                       {
                         key: "transfer",
                         label: "Transfer",
@@ -1267,7 +1267,7 @@ const WalletNew = () => {
         onTrade={(coin) => NavigationService.navigate(WALLET_SCREEN, { coin })}
         onTransfer={(coin) => NavigationService.navigate(TRANSFER_SCREEN, { coin })}
         onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
-        onWithdraw={() => NavigationService.navigate(WALLET_WITHDRAW_SCREEN)}
+        onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
         onP2PTrade={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
         onSwap={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
         onEarning={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}

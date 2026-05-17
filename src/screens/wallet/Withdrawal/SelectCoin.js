@@ -403,7 +403,15 @@ const SelectCoin = () => {
             <TouchableOpacity
               key={item?._id || item?.short_name}
               style={[styles.quickPickChip, { backgroundColor: isDark ? "#1E1E1E" : "#F5F5F7" }]}
-              onPress={() => NavigationService.navigate("WALLET_WITHDRAW_SCREEN", { data: item })}
+              onPress={() => {
+                const withdrawDisabled = isWithdrawCoinDisabled(item);
+                if (withdrawDisabled) {
+                  if (networkKeysFromChain(item?.chain).length === 0) showError("No withdrawal network available for this coin");
+                  else showError("No active withdrawal network for this coin");
+                  return;
+                }
+                NavigationService.navigate("WITHDRAW_FORM_SCREEN", { data: item });
+              }}
             >
               <FastImage source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item) } : null} style={styles.quickPickIcon} />
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.white : colors.black }}>{item?.short_name}</AppText>
