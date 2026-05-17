@@ -399,7 +399,7 @@ const OrderBookBuyRow = memo(({ item, maxVolume, onPress, formatPrice, formatQua
             position: "absolute",
             top: 0,
             bottom: 0,
-            left: 0,
+            right: 0,
             width: `${ratio > 0 ? Math.max(2, ratio * 100) : 0}%`,
             backgroundColor: depthGreen,
           }}
@@ -481,8 +481,8 @@ const ShimmerBox = ({
   );
 };
 
-/** ~7 visible rows per list; user scrolls for more. */
-const ORDER_BOOK_VISIBLE_ROWS = 7;
+/** ~6 visible rows per list; user scrolls for more. */
+const ORDER_BOOK_VISIBLE_ROWS = 6;
 const ORDER_BOOK_ROW_LAYOUT_HEIGHT = 28;
 const ORDER_BOOK_LIST_MAX_HEIGHT =
   ORDER_BOOK_VISIBLE_ROWS * ORDER_BOOK_ROW_LAYOUT_HEIGHT;
@@ -493,7 +493,7 @@ const ORDER_BOOK_LIST_END_PAD = 10;
 const ORDER_BOOK_HEADER_ROW_STYLE = { flexDirection: "row", justifyContent: "space-between" };
 const ORDER_BOOK_HEADER_LABEL_STYLE = { color: "#9D9D9D" };
 /** Keep order book area stable when toggling view (both/bids/asks). */
-const ORDER_BOOK_PANEL_FIXED_HEIGHT = ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 104;
+const ORDER_BOOK_PANEL_FIXED_HEIGHT = ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 70;
 const ORDER_BOOK_SHIMMER_STRIP_WIDTH = 240;
 
 const OrderBookSkeleton = () => {
@@ -600,12 +600,12 @@ const OrderBookPanel = memo(({
     <View style={{ height: ORDER_BOOK_PANEL_FIXED_HEIGHT, flexGrow: 0 }}>
       <View style={ORDER_BOOK_HEADER_ROW_STYLE}>
         <View>
-          <AppText style={ORDER_BOOK_HEADER_LABEL_STYLE}>Price</AppText>
-          <AppText style={ORDER_BOOK_HEADER_LABEL_STYLE}>({quote_currency})</AppText>
+          <AppText weight={MEDIUM} style={ORDER_BOOK_HEADER_LABEL_STYLE}>Price</AppText>
+          <AppText weight={MEDIUM} style={ORDER_BOOK_HEADER_LABEL_STYLE}>({quote_currency})</AppText>
         </View>
-        <View>
-          <AppText style={ORDER_BOOK_HEADER_LABEL_STYLE}>Quantity</AppText>
-          <AppText style={ORDER_BOOK_HEADER_LABEL_STYLE}>({base_currency})</AppText>
+        <View style={{ alignItems: "flex-end" }}>
+          <AppText weight={MEDIUM} style={ORDER_BOOK_HEADER_LABEL_STYLE}>Qty</AppText>
+          <AppText weight={MEDIUM} style={ORDER_BOOK_HEADER_LABEL_STYLE}>({base_currency})</AppText>
         </View>
       </View>
       {/* Binance-like behavior: in single-side mode the visible list consumes full height. */}
@@ -885,7 +885,7 @@ const OrderBookSection = memo(({
         getOrderItemLayout={getOrderItemLayout}
       />
 
-      <View style={[sty.ratioIndicatorBar, { marginVertical: 6, gap: 4 }]}>
+      <View style={[sty.ratioIndicatorBar, { marginVertical: 3, gap: 4 }]}>
         <View style={{ justifyContent: "flex-start", flexShrink: 0 }}>
           <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
             {obRatio.bidPct.toFixed(1)}%
@@ -4440,6 +4440,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     marginTop: SPOT_ORDER_V_GAP,
     marginBottom: SPOT_ORDER_V_GAP,
+    marginLeft: 5
   },
   spotOrderFooterFeesRow: {
     flexDirection: "row",
@@ -4777,8 +4778,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   currentPriceBox: {
-    marginVertical: 8,
-    paddingVertical: 4,
+    marginVertical: 4,
+    paddingVertical: 2,
     flexDirection: "column",
     alignItems: "flex-start",
   },
@@ -4938,7 +4939,7 @@ const styles = StyleSheet.create({
   },
   orderBookListContentAsks: {
     flexGrow: 0,
-    paddingTop: ORDER_BOOK_LIST_END_PAD,
+    paddingBottom: ORDER_BOOK_LIST_END_PAD,
   },
   orderBookListContentBids: {
     flexGrow: 0,

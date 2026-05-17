@@ -49,6 +49,7 @@ import {
   arrowRightIcon,
   favUnCheck,
   favCheck,
+  NO_NOTIFICATION_ICON,
 } from "../../helper/ImageAssets";
 import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
@@ -1668,9 +1669,7 @@ const SpotChartScreen = () => {
                                     ))
                                   ) : (
                                     <View style={styles.noDataContainer}>
-                                      <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                                        No assets in spot wallet
-                                      </AppText>
+                                      <FastImage source={NO_NOTIFICATION_ICON} resizeMode="contain" style={{ width: 80, height: 80 }} />
                                     </View>
                                   )}
                                 </>
@@ -1733,9 +1732,7 @@ const SpotChartScreen = () => {
                                   ))
                                 ) : (
                                   <View style={styles.noDataContainer}>
-                                    <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                                      No market trades yet
-                                    </AppText>
+                                    <FastImage source={NO_NOTIFICATION_ICON} resizeMode="contain" style={{ width: 80, height: 80 }} />
                                   </View>
                                 )}
                               </View>
@@ -1851,13 +1848,13 @@ const SpotChartScreen = () => {
                       <View style={{ width: Width, paddingHorizontal: 12 }}>
                         <View style={styles.mtContainer}>
                           <View style={styles.mtHeader}>
-                            <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
                               Price({pairQuote})
                             </AppText>
-                            <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
                               Quantity({pairBase})
                             </AppText>
-                            <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
                               Time
                             </AppText>
                           </View>
