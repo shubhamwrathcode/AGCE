@@ -218,12 +218,7 @@ const Market = () => {
     };
   }, [activeTab, dispatch, userData?._id, futuresPairs?.length]);
 
-  const showSearch =
-    activeTab === "Favorites" ||
-    activeTab === "Spot" ||
-    activeTab === "Cryptos" ||
-    activeTab === "USD_M_FUTURES" ||
-    activeTab === "ALPHA";
+  const showSearch = true;
 
   const showSubTabs = activeTab === "Spot" || activeTab === "Cryptos" || activeTab === "ALPHA";
 

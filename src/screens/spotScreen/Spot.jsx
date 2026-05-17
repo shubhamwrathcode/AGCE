@@ -122,7 +122,6 @@ import {
   SPOT_CHART_SCREEN,
   TRANSFER_SCREEN,
   WALLET_WITHDRAW_SCREEN,
-  WITHDRAW_Coin_SCREEN,
 } from "../../navigation/routes";
 import { cancelOrder, placeOrder } from "../../actions/homeActions";
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";

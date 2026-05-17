@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   Dimensions,
   StyleSheet,
@@ -15,15 +15,15 @@ import {
   universalPaddingHorizontal,
   universalPaddingHorizontalHigh,
 } from '../theme/dimens';
-import {fontFamily} from '../theme/typography';
-import {colors} from '../theme/colors';
-import {eye_close_icon, eye_open_icon, searchIcon} from '../helper/ImageAssets';
+import { fontFamily, fontFamilyMedium } from '../theme/typography';
+import { colors, lightTheme } from '../theme/colors';
+import { eye_close_icon, eye_open_icon, searchIcon } from '../helper/ImageAssets';
 import TouchableOpacityView from './TouchableOpacityView';
 import FastImage from 'react-native-fast-image';
-import {Button} from './Button';
-import {AppText, BOLD, FIFTEEN, MEDIUM, NORMAL, YELLOW} from './AppText';
+import { Button } from './Button';
+import { AppText, BOLD, FIFTEEN, MEDIUM, NORMAL, YELLOW } from './AppText';
 import NavigationService from '../navigation/NavigationService';
-import {HOME_SCREEN} from '../navigation/routes';
+import { HOME_SCREEN } from '../navigation/routes';
 import { useTheme } from '../hooks/useTheme';
 
 interface InputProps extends TextInputProps {
@@ -39,7 +39,7 @@ interface InputProps extends TextInputProps {
   mainContainer?: ViewStyle;
   cancelBtn?: boolean;
   searchContainStyle?: ViewStyle;
-  sheetDownButton?:boolean;
+  sheetDownButton?: boolean;
   sheetDownPress?: () => void;
   theme?: string;
   assignRef?: any;
@@ -76,10 +76,11 @@ const SearchInput = ({
   const { colors: themeColors, isDark } = useTheme();
 
   return (
-    <View style={(styles.mainViewStyle, [containerStyle])}>
-      <View style={[styles.container, { 
-        marginLeft: 10, 
-        backgroundColor: themeColors.card,
+    <View style={[styles.mainViewStyle, containerStyle]}>
+      <View style={[styles.container, {
+        marginLeft: 10,
+        marginTop: 20,
+        backgroundColor: colors.iconBgColor,
         borderColor: themeColors.border,
         ...searchContainStyle,
       }]}>
@@ -98,7 +99,7 @@ const SearchInput = ({
           autoComplete="off"
           selectionColor={themeColors.text + '40'}
           cursorColor={themeColors.text}
-          style={[styles.inputF, inputStyle, {color: themeColors.text}]}
+          style={[styles.inputF, inputStyle, { color: themeColors.text, fontFamily: fontFamilyMedium, fontSize: 13 }]}
           value={value}
           onChangeText={onChangeText}
           onEndEditing={onEndEditing}
@@ -125,7 +126,7 @@ const SearchInput = ({
         </TouchableOpacityView>
       )}
 
-{sheetDownButton && (
+      {sheetDownButton && (
         <TouchableOpacityView
           style={styles.cancelButton}
           onPress={sheetDownPress}>
@@ -138,35 +139,31 @@ const SearchInput = ({
   );
 };
 
-export {SearchInput};
+export { SearchInput };
 const styles = StyleSheet.create({
   inputF: {
     fontFamily: fontFamily,
     fontSize: 14,
-    // color: colors.black,
     height: 40,
     flex: 1,
   },
   container: {
-    marginTop: 20,
     height: 40,
-    borderWidth: borderWidth,
-    borderRadius: 25,
-    backgroundColor: colors.themeElevationColor,
+    borderWidth: 0,
+    borderRadius: 5,
+    backgroundColor: colors.iconBgColor,
     flexDirection: 'row',
     alignItems: 'center',
-    width: '75%',
-    // marginHorizontal: universalPaddingHorizontalHigh,
+    width: '80%',
     paddingHorizontal: universalPaddingHorizontal,
     alignSelf: 'flex-start',
   },
   searchIcon: {
-    height: 20,
-    width: 20,
+    height: 16,
+    width: 16,
   },
   cancelButton: {
     position: 'absolute',
-    // alignSelf:"flex-start",
     bottom: 10,
     right: 15,
   },
@@ -175,5 +172,6 @@ const styles = StyleSheet.create({
     padding: 5,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.white
   },
 });

@@ -93,7 +93,6 @@ import {
   TWO_FACTOR_AUTHENTICATION,
   WALLET_SCREEN,
   WALLET_WITHDRAW_SCREEN,
-  WITHDRAW_Coin_SCREEN,
 } from "../../navigation/routes";
 
 import { useTheme } from "../../hooks/useTheme";

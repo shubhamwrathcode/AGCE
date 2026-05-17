@@ -22,7 +22,6 @@ import {
   DEPOSIT_WALLET_SCREEN,
   TRANSFER_SCREEN,
   WALLET_WITHDRAW_SCREEN,
-  WITHDRAW_Coin_SCREEN,
 } from "../../navigation/routes";
 import { useRef } from "react";
 import DepositSheet from "../../shared/components/DepositSheet";

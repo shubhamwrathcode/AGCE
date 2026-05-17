@@ -53,7 +53,7 @@ import { Button } from "./Button";
 import { toFixedFive } from "../helper/utility";
 import { swapToken } from "../actions/homeActions";
 import NavigationService from "../navigation/NavigationService";
-import { CONVERT_HISTORY_SCREEN, DEPOSIT_WALLET_SCREEN, WITHDRAW_Coin_SCREEN } from "../navigation/routes";
+import { CONVERT_HISTORY_SCREEN, DEPOSIT_WALLET_SCREEN, SELECT_COIN_SCREEN } from "../navigation/routes";
 
 const WithdrawSheet = ({theme}) => {
   return (
@@ -76,7 +76,7 @@ const WithdrawSheet = ({theme}) => {
                   alignItems: "center",
                   justifyContent: "space-between",
                 }}
-                onPress={() => NavigationService.navigate(WITHDRAW_Coin_SCREEN, {data: "Crypto"})}
+                onPress={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <FastImage
@@ -112,7 +112,7 @@ const WithdrawSheet = ({theme}) => {
                   alignItems: "center",
                   justifyContent: "space-between",
                 }}
-                onPress={() => NavigationService.navigate(WITHDRAW_Coin_SCREEN, {data: "Fiat"})}
+                onPress={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <FastImage

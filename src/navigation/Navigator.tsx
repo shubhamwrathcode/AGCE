@@ -125,7 +125,6 @@ import UploadSelfie from "../screens/kycScrrens/UploadSelfie";
 import CurrencyPrefer from "../screens/currencyPrefer/CurrencyPrefer";
 import Security from "../screens/supportSreen/Security";
 import SettingsScreen from "../screens/settings/Settings";
-import WithdrawCoin from "../screens/wallet/WithdrawCoin";
 import WithdrawInr from "../screens/other/WithdrawInr";
 import WebLink from "../screens/account/WebLink";
 import RefferalReward from "../screens/account/RefferalReward";
@@ -478,10 +477,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.WALLET_WITHDRAW_SCREEN}
         component={WithdrawWallet}
-      />
-      <Stack.Screen
-        name={routes.WITHDRAW_Coin_SCREEN}
-        component={WithdrawCoin}
       />
       <Stack.Screen name={routes.Dashboard_Inner} component={DashboardInner} />
 

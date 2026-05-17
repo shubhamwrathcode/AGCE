@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
   AppSafeAreaView,
@@ -10,19 +10,19 @@ import {
   SIXTEEN,
   SearchInput,
 } from '../../shared';
-import {useAppSelector} from '../../store/hooks';
-import {useTheme} from '../../hooks/useTheme';
-import {CoinCardProps, CoinDataProps} from '../../helper/types';
-import {BASE_URL, placeHolderText} from '../../helper/Constants';
-import {ImageBackground, Platform, StyleSheet, View} from 'react-native';
+import { useAppSelector } from '../../store/hooks';
+import { useTheme } from '../../hooks/useTheme';
+import { CoinCardProps, CoinDataProps } from '../../helper/types';
+import { BASE_URL, placeHolderText } from '../../helper/Constants';
+import { ImageBackground, Platform, StyleSheet, View } from 'react-native';
 import KeyBoardAware from '../../shared/components/KeyboardAware';
-import {Screen, universalPaddingHorizontalHigh} from '../../theme/dimens';
+import { Screen, universalPaddingHorizontalHigh } from '../../theme/dimens';
 import TouchableOpacityView from '../../shared/components/TouchableOpacityView';
 import NavigationService from '../../navigation/NavigationService';
 import { NAVIGATION_BOTTOM_TAB_STACK, NAVIGATION_TRADE_STACK, TRADE_SCREEN, WALLET_SCREEN } from '../../navigation/routes';
 import FastImage from 'react-native-fast-image';
-import {checkValue, toFixedEight} from '../../helper/utility';
-import {HomeBg } from '../../helper/ImageAssets';
+import { checkValue, toFixedEight } from '../../helper/utility';
+import { HomeBg } from '../../helper/ImageAssets';
 import MarketList from '../other/MarketList';
 import { SpinnerSecond } from '../../shared/components/SpinnerSecond';
 import { colors } from '../../theme/colors';
@@ -49,7 +49,7 @@ const Search = () => {
       let filterData = hotCoins.filter(data => {
         return (
           data?.base_currency?.toLowerCase().indexOf(value?.toLowerCase()) >
-            -1 ||
+          -1 ||
           data?.quote_currency?.toLowerCase().indexOf(value?.toLowerCase()) > -1
         );
       });
@@ -58,49 +58,15 @@ const Search = () => {
   };
 
   const handleNavigate = (item) => {
-    NavigationService.navigate(WALLET_SCREEN, {coinDetail: item});
+    NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, {
+      screen: TRADE_SCREEN,
+      params: { coinDetail: item, path: "Spot" }
+    });
   };
 
-  // const renderItem = ({item}) => {
-  //   const navigation = useNavigation();
-  //   return (
-  //     <TouchableOpacityView
-  //       key={item?._id}
-  //       onPress={() =>
-  //         navigation.navigate(NAVIGATION_BOTTOM_TAB_STACK, {
-  //           screen: NAVIGATION_TRADE_STACK,
-  //           params: {
-  //             screen:TRADE_SCREEN,
-  //             params: {
-  //                coinDetail: item,
-  //                path: "Spot"
-  //             },
-  //           },
-  //         })
-  //       }>
-  //       <View style={styles.coinContainer}>
-  //         <FastImage
-  //           resizeMode="contain"
-  //           style={styles.coinLogo}
-  //           source={{uri: `${BASE_URL}${item?.icon_path}`}}
-  //         />
-  //         <View style={{flex: 1}}>
-  //           <AppText weight={MEDIUM} type={FOURTEEN}>
-  //             {item.base_currency}
-  //           </AppText>
-  //           <AppText color={SECOND}>{item.quote_currency}</AppText>
-  //         </View>
-  //         <AppText weight={MEDIUM} type={FOURTEEN}>
-  //           {currency} {toFixedEight(item?.buy_price)}
-  //         </AppText>
-  //       </View>
-  //     </TouchableOpacityView>
-  //   );
-  // };
 
   return (
-    <AppSafeAreaView style={{backgroundColor: themeColors.background}}>
-      {/* <ImageBackground  source={HomeBg} style={styles.imgBg} > */}
+    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
       <SearchInput
         cancelBtn={true}
         value={value}
@@ -111,7 +77,7 @@ const Search = () => {
         returnKeyType="done"
         onSubmitEditing={() => getData()}
         // onFocus={true}
-        containerStyle={{paddingTop: Platform.OS === 'ios' ? 25 : 0, paddingHorizontal: 5, backgroundColor: themeColors.background}}
+        containerStyle={{ paddingTop: Platform.OS === 'ios' ? 25 : 0, paddingHorizontal: 5, backgroundColor: colors.white, }}
         inputStyle={{}}
       />
       <KeyBoardAware>
@@ -121,18 +87,18 @@ const Search = () => {
         {/* {list?.map((item: CoinDataProps, index: number) => {
           return renderItem({item, index});
         })} */}
-         <MarketList filterData={list} onPress={handleNavigate}/>
+        <MarketList filterData={list} onPress={handleNavigate} />
       </KeyBoardAware>
       <SpinnerSecond />
-    {/* </ImageBackground> */}
+      {/* </ImageBackground> */}
     </AppSafeAreaView>
   );
 };
 
 export default Search;
 const styles = StyleSheet.create({
-  imgBg:{
-    width:Screen.Width,height:Screen.Height 
+  imgBg: {
+    width: Screen.Width, height: Screen.Height
   },
   text: {
     marginVertical: universalPaddingHorizontalHigh,
