@@ -3325,9 +3325,19 @@ const Spot = () => {
                             paddingHorizontal: 0,
                             paddingVertical: 0,
                             marginTop: 2,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between"
                           },
                         ]}
                       >
+                        <TouchableOpacity
+                          onPress={() => handlePriceStep(-1)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          style={{ width: 34, alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>-</AppText>
+                        </TouchableOpacity>
                         <TextInput
                           placeholder={""}
                           placeholderTextColor={themeColors.secondaryText}
@@ -3343,6 +3353,7 @@ const Spot = () => {
                           style={[
                             styles.spotOrderInputValue,
                             {
+                              flex: 1,
                               color: themeColors.text,
                               textAlign: "center",
                               fontSize: 13,
@@ -3354,6 +3365,13 @@ const Spot = () => {
                           ]}
                           editable
                         />
+                        <TouchableOpacity
+                          onPress={() => handlePriceStep(1)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          style={{ width: 34, alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>+</AppText>
+                        </TouchableOpacity>
                       </View>
                     ) : (
                       <View
@@ -3421,7 +3439,7 @@ const Spot = () => {
                             fontWeight: "500",
                           }}
                         >
-                          Stop ({quote_currency})
+                          Stop Price ({quote_currency})
                         </Animated.Text>
                       </Animated.View>
                       <View

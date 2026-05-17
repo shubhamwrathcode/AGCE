@@ -440,7 +440,7 @@ const SpotChartScreen = () => {
   const insets = useSafeAreaInsets();
   const tabScrollBottomPadding =
     TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
-  const { subscribeToExchange } = useContext(SocketContext) || {};
+  const { subscribeToExchange, unsubscribeFromExchange } = useContext(SocketContext) || {};
 
   const spotSelectedPair = useAppSelector((state) => state.home.spotSelectedPair);
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
@@ -693,21 +693,46 @@ const SpotChartScreen = () => {
 
 
 
-  useFocusEffect(
-    useCallback(() => {
-      const p = pairRef.current;
-      if (!p?.base_currency_id || !p?.quote_currency_id) {
-        dispatch(setBuyOrders([]));
-        dispatch(setSellOrders([]));
-        dispatch(setRecentTrades([]));
-        setLastSocketData(null);
-        return undefined;
+  const lastSubscribedExchangeRef = useRef(null);
+  const prevChartPairKeyRef = useRef(null);
+
+  useEffect(() => {
+    const base = mergedPair?.base_currency_id;
+    const quote = mergedPair?.quote_currency_id;
+    if (!base || !quote) return;
+    const key = `${base}-${quote}`;
+
+    if (prevChartPairKeyRef.current !== key) {
+      // Clear stale order book data for the new pair immediately
+      dispatch(setBuyOrders([]));
+      dispatch(setSellOrders([]));
+      dispatch(setRecentTrades([]));
+      setLastSocketData(null);
+      prevChartPairKeyRef.current = key;
+    }
+
+    if (!isFocused) return;
+
+    // Manage exchange socket subscriptions reactively on pair change
+    const last = lastSubscribedExchangeRef.current;
+    if (last && (last.base_currency_id !== base || last.quote_currency_id !== quote)) {
+      unsubscribeFromExchange?.(last.base_currency_id, last.quote_currency_id);
+    }
+
+    subscribeToExchange?.(base, quote);
+    lastSubscribedExchangeRef.current = { base_currency_id: base, quote_currency_id: quote };
+
+  }, [isFocused, mergedPair?.base_currency_id, mergedPair?.quote_currency_id, subscribeToExchange, unsubscribeFromExchange, dispatch]);
+
+  useEffect(() => {
+    return () => {
+      const last = lastSubscribedExchangeRef.current;
+      if (last?.base_currency_id != null && last?.quote_currency_id != null) {
+        unsubscribeFromExchange?.(last.base_currency_id, last.quote_currency_id);
+        lastSubscribedExchangeRef.current = null;
       }
-      /** Idempotent — keeps same exchange stream when stacked above Spot (do not clear Redux on blur). */
-      subscribeToExchange?.(p.base_currency_id, p.quote_currency_id);
-      return undefined;
-    }, [subscribeToExchange, dispatch])
-  );
+    };
+  }, [unsubscribeFromExchange]);
 
   useEffect(() => {
     if (!socket || !isFocused) return;
@@ -782,23 +807,7 @@ const SpotChartScreen = () => {
     [dispatch]
   );
 
-  const prevChartPairKeyRef = useRef(null);
-  useEffect(() => {
-    const base = mergedPair?.base_currency_id;
-    const quote = mergedPair?.quote_currency_id;
-    if (!base || !quote) return;
-    const key = `${base}-${quote}`;
-    if (prevChartPairKeyRef.current == null) {
-      prevChartPairKeyRef.current = key;
-      return;
-    }
-    if (prevChartPairKeyRef.current === key) return;
-    prevChartPairKeyRef.current = key;
-    dispatch(setBuyOrders([]));
-    dispatch(setSellOrders([]));
-    dispatch(setRecentTrades([]));
-    setLastSocketData(null);
-  }, [mergedPair?.base_currency_id, mergedPair?.quote_currency_id, dispatch]);
+  // Cleaned up legacy effect as its logic is now merged into the unified subscription hook above.
 
   const [webViewReady, setWebViewReady] = useState(false);
   const [chartRevealed, setChartRevealed] = useState(false);
