@@ -166,6 +166,7 @@ const P2PStack = createStackNavigator();
 
 const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
   const [visible, setVisible] = React.useState(true);
+  const { colors: themeColors, isDark } = useTheme();
 
   React.useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -227,11 +228,11 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
           [routes.WALLET_SCREEN]: "Wallet",
         };
 
-        const tint = isFocused ? colors.black : "#8E8E93";
+        const tint = isFocused ? (isDark ? colors.white : colors.black) : "#8E8E93";
         const icon = iconByRoute[route.name];
         const label = labelByRoute[route.name] ?? route.name;
 
-        const bg = "rgba(255, 255, 255, 0.98)";
+        const bg = isDark ? "rgba(24, 26, 32, 0.95)" : "rgba(255, 255, 255, 0.95)";
 
         return (
           <View key={route.key} style={[customTabBarStyles.itemWrap, { backgroundColor: bg }]}>
