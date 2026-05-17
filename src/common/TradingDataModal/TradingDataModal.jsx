@@ -363,13 +363,13 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
             autoCapitalize="none"
             clearButtonMode="while-editing"
           />
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.pasteBtn, { backgroundColor: pasteBg }]}
             onPress={handlePaste}
             activeOpacity={0.8}
           >
             <Text style={[styles.pasteText, { color: textColor }]}>Paste</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {renderHeader()}

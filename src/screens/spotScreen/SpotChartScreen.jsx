@@ -66,7 +66,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors as themePalette } from "../../theme/colors";
 
 const { width: Width, height: Height } = Dimensions.get("window");
-const CHART_BLOCK_HEIGHT = Math.round(Height * 0.38);
+const CHART_BLOCK_HEIGHT = Math.round(Height * 0.45);
 // Render full order book list on this screen (web-like).
 // (Binance shows many rows; we avoid slicing here.)
 const ORDER_BOOK_ROWS = 12;
@@ -352,15 +352,15 @@ const DepthRow = React.memo(({ bid, ask, bidFillPct, askFillPct, themeColors, is
             position: "absolute",
             top: 0,
             bottom: 0,
-            right: -1,
+            right: 0,
             width: `${br > 0 ? Math.max(1, br * 100) : 0}%`,
             backgroundColor: depthGreen,
           }}
         />
-        <AppText type={ELEVEN} style={[styles.depthQty, { color: themeColors.secondaryText, zIndex: 1, position: 'absolute', left: 0 }]} numberOfLines={1}>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthQty, { color: themeColors.text, zIndex: 1, position: 'absolute', left: 0, }]} numberOfLines={1}>
           {bid ? formatQty(bidRem) : ""}
         </AppText>
-        <AppText style={[styles.depthBidPrice, { color: themeColors.green, zIndex: 1 }]}>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthBidPrice, { color: themeColors.green, zIndex: 1, paddingRight: 4 }]}>
           {bid ? formatPrice(bid.price) : ""}
         </AppText>
       </View>
@@ -373,15 +373,15 @@ const DepthRow = React.memo(({ bid, ask, bidFillPct, askFillPct, themeColors, is
             position: "absolute",
             top: 0,
             bottom: 0,
-            left: -1,
+            left: 0,
             width: `${ar > 0 ? Math.max(1, ar * 100) : 0}%`,
             backgroundColor: depthRed,
           }}
         />
-        <AppText style={[styles.depthAskPrice, { color: themeColors.red, zIndex: 1 }]}>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthAskPrice, { color: themeColors.red, zIndex: 1, paddingLeft: 4 }]}>
           {ask ? formatPrice(ask.price) : ""}
         </AppText>
-        <AppText type={ELEVEN} style={[styles.depthQty, { color: themeColors.secondaryText, textAlign: "right", zIndex: 1, position: 'absolute', right: 0 }]} numberOfLines={1}>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthQty, { color: themeColors.text, textAlign: "right", zIndex: 1, position: 'absolute', right: 0 }]} numberOfLines={1}>
           {ask ? formatQty(askRem) : ""}
         </AppText>
       </View>
@@ -1058,34 +1058,86 @@ const SpotChartScreen = () => {
         </View>
 
         {/* Column Headers */}
-        <View style={styles.splitObHeader}>
-          <TouchableOpacity activeOpacity={0.7} style={[styles.splitObHeaderCol, { gap: 2 }]}>
-            <AppText style={{ fontSize: 12, color: "#333" }}>Amount({pairBase})</AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={openAggMenu} activeOpacity={0.7} style={[styles.splitObHeaderColMid, { gap: 2 }]}>
-            <AppText style={{ fontSize: 12, color: "#333" }}>{formatAggStepLabel(orderBookAggStep)}</AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity activeOpacity={0.7} style={[styles.splitObHeaderCol, { justifyContent: "flex-end", gap: 2 }]}>
-            <AppText style={{ fontSize: 12, color: "#333" }}>Amount({pairBase})</AppText>
-          </TouchableOpacity>
+        <View style={[styles.splitObHeader, { paddingHorizontal: 0, paddingVertical: 8, marginTop: 10 }]}>
+          {orderBookViewMode === "both" ? (
+            <>
+              <View style={[styles.splitObHeaderCol, { justifyContent: "flex-start" }]}>
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>Buy Price</AppText>
+              </View>
+              <View style={[styles.splitObHeaderColMid, { justifyContent: "center" }]}>
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>Sell Price</AppText>
+              </View>
+            </>
+          ) : (
+            <View style={[styles.splitObHeaderCol, { justifyContent: "flex-start", flex: 1 }]}>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
+                {orderBookViewMode === "bids" ? "Buy Price" : "Sell Price"}
+              </AppText>
+            </View>
+          )}
+          <View style={[styles.splitObHeaderCol, { justifyContent: "flex-end", flexDirection: "row", gap: 6, alignItems: "center", flex: orderBookViewMode === "both" ? 1 : 0 }]}>
+            <TouchableOpacity onPress={cycleViewMode} activeOpacity={0.7} style={{ padding: 4, backgroundColor: isDark ? "#2A2A2A" : "#F3F4F6", borderRadius: 4 }}>
+              <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={{ width: 16, height: 16 }} resizeMode="contain" />
+            </TouchableOpacity>
+            <TouchableOpacity ref={aggTriggerRef} onPress={openAggMenu} activeOpacity={0.7} style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#2A2A2A" : "#F3F4F6", paddingHorizontal: 6, paddingVertical: 4, borderRadius: 4, gap: 4 }}>
+              <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{formatAggStepLabel(orderBookAggStep)}</AppText>
+              <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode="contain" tintColor={themeColors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Split Order Book Rows */}
-        {depthRows.map((row, i) => (
-          <DepthRow
-            key={i}
-            bid={row.bid}
-            ask={row.ask}
-            bidFillPct={row.bidFillPct}
-            askFillPct={row.askFillPct}
-            themeColors={themeColors}
-            isDark={isDark}
-            formatPrice={formatPrice}
-            formatQty={formatObQty}
-          />
-        ))}
+        {orderBookViewMode === "both" ? (
+          depthRows.map((row, i) => (
+            <DepthRow
+              key={i}
+              bid={row.bid}
+              ask={row.ask}
+              bidFillPct={row.bidFillPct}
+              askFillPct={row.askFillPct}
+              themeColors={themeColors}
+              isDark={isDark}
+              formatPrice={formatPrice}
+              formatQty={formatObQty}
+            />
+          ))
+        ) : (
+          (orderBookViewMode === "bids" ? bidsDisplay : asksDisplay)
+            .slice(0, ORDER_BOOK_ROWS * 2)
+            .map((item, i) => {
+              const rem = item ? orderBookRemaining(item) : 0;
+              const maxCum = orderBookViewMode === "bids" ? maxBidCum : maxAskCum;
+              const cumArr = orderBookViewMode === "bids" ? bidCum : askCum;
+              const fillPct = maxCum > 0 ? Math.min(100, (Number(cumArr[i] || 0) / maxCum) * 100) : 0;
+              const isAsk = orderBookViewMode === "asks";
+              const depthColor = isAsk
+                ? (isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)")
+                : (isDark ? "rgba(0, 192, 118, 0.16)" : "rgba(0, 192, 118, 0.12)");
+              const priceColor = isAsk ? themeColors.red : themeColors.green;
+
+              return (
+                <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", height: 27, marginBottom: 0, position: "relative" }}>
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      bottom: 0,
+                      right: 0,
+                      width: `${fillPct > 0 ? Math.max(1, fillPct) : 0}%`,
+                      backgroundColor: depthColor,
+                    }}
+                  />
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, zIndex: 1, paddingLeft: 4 }}>
+                    {item ? formatObQty(rem) : ""}
+                  </AppText>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: priceColor, zIndex: 1, paddingRight: 4 }}>
+                    {item ? formatPrice(item.price) : ""}
+                  </AppText>
+                </View>
+              );
+            })
+        )}
       </View>
     );
   }, [
@@ -1210,7 +1262,7 @@ const SpotChartScreen = () => {
             { paddingBottom: tabScrollBottomPadding },
           ]}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator
+          showsVerticalScrollIndicator={false}
           nestedScrollEnabled
         >
           {/* 24h strip — layout aligned with web TradeCenterSection (TradePage): left price + 24h change; right 2×2 high/low + volumes */}
@@ -1311,7 +1363,7 @@ const SpotChartScreen = () => {
                       <WebView
                         key={chartUri}
                         source={{ uri: chartUri }}
-                        style={{ width: Width, height: CHART_BLOCK_HEIGHT, backgroundColor: colors.iconBgColor }}
+                        style={{ width: Width, height: CHART_BLOCK_HEIGHT + 30, marginTop: -30, backgroundColor: colors.iconBgColor }}
                         containerStyle={{ backgroundColor: "transparent" }}
                         opaque={false}
                         androidLayerType="hardware"
@@ -1346,6 +1398,7 @@ const SpotChartScreen = () => {
                     styles.obTabsRow,
                     {
                       paddingHorizontal: 12,
+                      paddingVertical: 0,
                       borderBottomWidth: StyleSheet.hairlineWidth,
                       borderBottomColor: themeColors.themeBorderColor,
                     },
@@ -1365,62 +1418,23 @@ const SpotChartScreen = () => {
                         onPress={() => handleTabChange(tab)}
                         style={[
                           styles.obTab,
-                          activeTab === tab && [
-                            styles.obTabActive,
-                            { backgroundColor: colors.iconBgColor },
-                          ],
+                          { paddingHorizontal: 6, paddingVertical: 12, backgroundColor: "transparent" }
                         ]}
                       >
                         <AppText
-                          type={ELEVEN}
-                          weight={activeTab === tab ? SEMI_BOLD : undefined}
+                          type={FOURTEEN}
+                          weight={activeTab === tab ? BOLD : SEMI_BOLD}
                           style={{ color: activeTab === tab ? themeColors.text : themeColors.secondaryText }}
                         >
                           {tab}
                         </AppText>
+                        {activeTab === tab && (
+                          <View style={{ position: "absolute", bottom: 0, width: 20, height: 3, backgroundColor: "#EAB308", borderTopLeftRadius: 2, borderTopRightRadius: 2 }} />
+                        )}
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    <TouchableOpacity
-                      ref={aggTriggerRef}
-                      activeOpacity={0.75}
-                      onPress={openAggMenu}
-                      style={[
-                        styles.obAggTrigger,
-                        {
-                          backgroundColor: colors.iconBgColor,
-                          borderColor: themeColors.themeBorderColor,
-                        },
-                      ]}
-                    >
-                      <AppText type={ELEVEN} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>
-                        {formatAggStepLabel(orderBookAggStep)}
-                      </AppText>
-                      <FastImage
-                        source={downIcon}
-                        style={styles.obAggCaret}
-                        resizeMode="contain"
-                        tintColor={themeColors.secondaryText}
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={cycleViewMode}
-                      activeOpacity={0.75}
-                      style={[
-                        styles.obAggTrigger,
-                        {
-                          backgroundColor: colors.iconBgColor,
-                          borderColor: 'transparent',
-                          paddingHorizontal: 8,
-                        },
-                      ]}
-                      accessibilityLabel="Order book layout"
-                    >
-                      <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={{ width: 18, height: 18 }} resizeMode="contain" />
-                    </TouchableOpacity>
-                  </View>
+                  {/* Agg menu and Layout toggle moved to OrderBook Header */}
                 </View>
 
                 <Modal visible={orderBookAggOpen} transparent animationType="fade" onRequestClose={closeAggMenu}>
@@ -1479,19 +1493,19 @@ const SpotChartScreen = () => {
                             <View style={styles.mtContainer}>
                               <View style={styles.mtHeader}>
                                 <AppText
-                                  type={TEN}
+                                  type={TWELVE}
                                   style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}
                                 >
                                   Price({pairQuote})
                                 </AppText>
                                 <AppText
-                                  type={TEN}
+                                  type={TWELVE}
                                   style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}
                                 >
                                   Quantity({pairBase})
                                 </AppText>
                                 <AppText
-                                  type={TEN}
+                                  type={TWELVE}
                                   style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}
                                 >
                                   Time
@@ -1502,7 +1516,8 @@ const SpotChartScreen = () => {
                                   recentTrades?.slice(0, 50)?.map((item, index) => (
                                     <View key={item?._id || index} style={styles.mtRow}>
                                       <AppText
-                                        type={TEN}
+                                        type={TWELVE}
+                                        weight={SEMI_BOLD}
                                         style={[
                                           styles.mtCell,
                                           {
@@ -1511,20 +1526,21 @@ const SpotChartScreen = () => {
                                                 ? themeColors.green || "#00c076"
                                                 : themeColors.red || "#ff3b30",
                                             textAlign: "left",
-                                            fontWeight: "600",
                                           },
                                         ]}
                                       >
                                         {String(item?.price || 0)}
                                       </AppText>
                                       <AppText
-                                        type={TEN}
+                                        type={TWELVE}
+                                        weight={SEMI_BOLD}
                                         style={[styles.mtCell, { color: themeColors.text || "#000", textAlign: "center" }]}
                                       >
                                         {String(item?.quantity || 0)}
                                       </AppText>
                                       <AppText
-                                        type={TEN}
+                                        type={TWELVE}
+                                        weight={SEMI_BOLD}
                                         style={[
                                           styles.mtCell,
                                           { color: themeColors.secondaryText || "#888", textAlign: "right" },
@@ -1568,7 +1584,7 @@ const SpotChartScreen = () => {
                                 <>
                                   <View style={styles.assetsHeader}>
                                     <View style={styles.assetsHeaderTitleRow}>
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                                      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                                         Spot Wallets
                                       </AppText>
                                       <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
@@ -1593,7 +1609,7 @@ const SpotChartScreen = () => {
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                       style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
-                                      onPress={() => NavigationService.navigate(routes.WITHDRAW_Coin_SCREEN)}
+                                      onPress={() => NavigationService.navigate(routes.SELECT_COIN_SCREEN)}
                                     >
                                       <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                                         Withdraw
@@ -1610,11 +1626,11 @@ const SpotChartScreen = () => {
                                   </View>
 
                                   <View style={styles.assetsListHeader}>
-                                    <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
+                                    <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
                                       Asset
                                     </AppText>
                                     <AppText
-                                      type={TEN}
+                                      type={TWELVE}
                                       style={[
                                         styles.mtCell,
                                         { color: themeColors.secondaryText, textAlign: "right" },
@@ -1634,7 +1650,7 @@ const SpotChartScreen = () => {
                                             resizeMode="contain"
                                           />
                                           <AppText
-                                            type={TEN}
+                                            type={TWELVE}
                                             weight={SEMI_BOLD}
                                             style={{ color: themeColors.text }}
                                           >
@@ -1642,7 +1658,7 @@ const SpotChartScreen = () => {
                                           </AppText>
                                         </View>
                                         <AppText
-                                          type={TEN}
+                                          type={TWELVE}
                                           weight={SEMI_BOLD}
                                           style={{ color: themeColors.text, textAlign: "right" }}
                                         >
@@ -1673,13 +1689,13 @@ const SpotChartScreen = () => {
                           <View style={{ width: Width, paddingHorizontal: 12 }}>
                             <View style={styles.mtContainer}>
                               <View style={styles.mtHeader}>
-                                <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
+                                <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
                                   Price({pairQuote})
                                 </AppText>
-                                <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
+                                <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
                                   Quantity({pairBase})
                                 </AppText>
-                                <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                                <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
                                   Time
                                 </AppText>
                               </View>
@@ -1688,7 +1704,8 @@ const SpotChartScreen = () => {
                                   recentTrades?.slice(0, 50)?.map((item, index) => (
                                     <View key={item?._id || index} style={styles.mtRow}>
                                       <AppText
-                                        type={TEN}
+                                        type={TWELVE}
+                                        weight={SEMI_BOLD}
                                         style={[
                                           styles.mtCell,
                                           {
@@ -1697,17 +1714,17 @@ const SpotChartScreen = () => {
                                                 ? themeColors.green || "#00c076"
                                                 : themeColors.red || "#ff3b30",
                                             textAlign: "left",
-                                            fontWeight: "600",
                                           },
                                         ]}
                                       >
                                         {String(item?.price || 0)}
                                       </AppText>
-                                      <AppText type={TEN} style={[styles.mtCell, { color: themeColors.text || "#000", textAlign: "center" }]}>
+                                      <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.mtCell, { color: themeColors.text || "#000", textAlign: "center" }]}>
                                         {String(item?.quantity || 0)}
                                       </AppText>
                                       <AppText
-                                        type={TEN}
+                                        type={TWELVE}
+                                        weight={SEMI_BOLD}
                                         style={[styles.mtCell, { color: themeColors.secondaryText || "#888", textAlign: "right" }]}
                                       >
                                         {formatRecentTradeTime(item)}
@@ -1742,7 +1759,7 @@ const SpotChartScreen = () => {
                                 <>
                                   <View style={styles.assetsHeader}>
                                     <View style={styles.assetsHeaderTitleRow}>
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                                      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                                         Spot Wallets
                                       </AppText>
                                       <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
@@ -1766,7 +1783,7 @@ const SpotChartScreen = () => {
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                       style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
-                                      onPress={() => NavigationService.navigate(routes.WITHDRAW_Coin_SCREEN)}
+                                      onPress={() => NavigationService.navigate(routes.SELECT_COIN_SCREEN)}
                                     >
                                       <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                                         Withdraw
@@ -1782,10 +1799,10 @@ const SpotChartScreen = () => {
                                     </TouchableOpacity>
                                   </View>
                                   <View style={styles.assetsListHeader}>
-                                    <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
+                                    <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
                                       Asset
                                     </AppText>
-                                    <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                                    <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
                                       Balance
                                     </AppText>
                                   </View>
@@ -1798,11 +1815,11 @@ const SpotChartScreen = () => {
                                             style={styles.assetIcon}
                                             resizeMode="contain"
                                           />
-                                          <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                                          <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                                             {wallet?.short_name}
                                           </AppText>
                                         </View>
-                                        <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
+                                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
                                           {parseFloat(Number(wallet?.balance || 0).toFixed(8))}
                                         </AppText>
                                       </View>
@@ -1834,13 +1851,13 @@ const SpotChartScreen = () => {
                       <View style={{ width: Width, paddingHorizontal: 12 }}>
                         <View style={styles.mtContainer}>
                           <View style={styles.mtHeader}>
-                            <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
+                            <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "left" }]}>
                               Price({pairQuote})
                             </AppText>
-                            <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
+                            <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "center" }]}>
                               Quantity({pairBase})
                             </AppText>
-                            <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                            <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
                               Time
                             </AppText>
                           </View>
@@ -1849,7 +1866,8 @@ const SpotChartScreen = () => {
                               recentTrades?.slice(0, 50)?.map((item, index) => (
                                 <View key={item?._id || index} style={styles.mtRow}>
                                   <AppText
-                                    type={TEN}
+                                    type={TWELVE}
+                                    weight={SEMI_BOLD}
                                     style={[
                                       styles.mtCell,
                                       {
@@ -1858,17 +1876,17 @@ const SpotChartScreen = () => {
                                             ? themeColors.green || "#00c076"
                                             : themeColors.red || "#ff3b30",
                                         textAlign: "left",
-                                        fontWeight: "600",
                                       },
                                     ]}
                                   >
                                     {String(item?.price || 0)}
                                   </AppText>
-                                  <AppText type={TEN} style={[styles.mtCell, { color: themeColors.text || "#000", textAlign: "center" }]}>
+                                  <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.mtCell, { color: themeColors.text || "#000", textAlign: "center" }]}>
                                     {String(item?.quantity || 0)}
                                   </AppText>
                                   <AppText
-                                    type={TEN}
+                                    type={TWELVE}
+                                    weight={SEMI_BOLD}
                                     style={[styles.mtCell, { color: themeColors.secondaryText || "#888", textAlign: "right" }]}
                                   >
                                     {formatRecentTradeTime(item)}
@@ -1904,7 +1922,7 @@ const SpotChartScreen = () => {
                             <>
                               <View style={styles.assetsHeader}>
                                 <View style={styles.assetsHeaderTitleRow}>
-                                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                                     Spot Wallets
                                   </AppText>
                                   <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
@@ -1928,7 +1946,7 @@ const SpotChartScreen = () => {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                   style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
-                                  onPress={() => NavigationService.navigate(routes.WITHDRAW_Coin_SCREEN)}
+                                  onPress={() => NavigationService.navigate(routes.SELECT_COIN_SCREEN)}
                                 >
                                   <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                                     Withdraw
@@ -1944,10 +1962,10 @@ const SpotChartScreen = () => {
                                 </TouchableOpacity>
                               </View>
                               <View style={styles.assetsListHeader}>
-                                <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
+                                <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
                                   Asset
                                 </AppText>
-                                <AppText type={TEN} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
+                                <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
                                   Balance
                                 </AppText>
                               </View>
@@ -1960,11 +1978,11 @@ const SpotChartScreen = () => {
                                         style={styles.assetIcon}
                                         resizeMode="contain"
                                       />
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                                      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                                         {wallet?.short_name}
                                       </AppText>
                                     </View>
-                                    <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
+                                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
                                       {parseFloat(Number(wallet?.balance || 0).toFixed(8))}
                                     </AppText>
                                   </View>
@@ -2434,7 +2452,7 @@ const styles = StyleSheet.create({
   obTabsLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 6,
   },
   obAggTrigger: {
     flexDirection: "row",
@@ -2521,7 +2539,7 @@ const styles = StyleSheet.create({
   depthRow: {
     flexDirection: "row",
     alignItems: "stretch",
-    minHeight: 19,
+    minHeight: 27,
     marginBottom: 0,
     gap: 0,
   },
@@ -2541,8 +2559,6 @@ const styles = StyleSheet.create({
   },
   depthQty: {
     width: 60,
-    fontSize: 12,
-    fontWeight: "600",
   },
   depthBidGradWrap: {
     flex: 1,
@@ -2569,16 +2585,12 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
   },
   depthBidPrice: {
-    fontSize: 12,
-    fontWeight: "700",
     paddingRight: 0,
     marginRight: 0,
     textAlign: "right",
     flex: 1,
   },
   depthAskPrice: {
-    fontSize: 12,
-    fontWeight: "700",
     paddingLeft: 0,
     marginLeft: 0,
     textAlign: "left",
@@ -2682,7 +2694,8 @@ const styles = StyleSheet.create({
   },
   mtRow: {
     flexDirection: "row",
-    paddingVertical: 5,
+    alignItems: "center",
+    minHeight: 27,
   },
   mtCell: {
     flex: 1,
