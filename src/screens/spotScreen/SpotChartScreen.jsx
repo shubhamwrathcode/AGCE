@@ -1040,18 +1040,18 @@ const SpotChartScreen = () => {
 
     return (
       <View style={{ paddingHorizontal: 12 }}>
-        <View style={styles.ratioIndicatorBar}>
-          <View style={[styles.ratioIndicatorHalf, { justifyContent: "flex-start" }]}>
-            <AppText weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 13 }}>
+        <View style={[styles.ratioIndicatorBar, { gap: 6 }]}>
+          <View style={{ justifyContent: "flex-start", flexShrink: 0 }}>
+            <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 13 }}>
               B {bidPct.toFixed(2)}%
             </AppText>
           </View>
-          <View style={styles.ratioIndicatorTrack}>
+          <View style={[styles.ratioIndicatorTrack, { flex: 1 }]}>
             <View style={[styles.ratioIndicatorFill, { width: `${bidPct}%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
             <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
           </View>
-          <View style={[styles.ratioIndicatorHalf, { justifyContent: "flex-end" }]}>
-            <AppText weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 13 }}>
+          <View style={{ justifyContent: "flex-end", flexShrink: 0 }}>
+            <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 13 }}>
               {(100 - bidPct).toFixed(2)}% S
             </AppText>
           </View>

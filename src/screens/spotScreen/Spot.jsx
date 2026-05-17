@@ -91,6 +91,7 @@ import {
   SEMI_BOLD,
   TEN,
   THIRTEEN,
+  TWELVE,
 } from "../../shared";
 import PercentQuickSelect from "../../shared/components/PercentQuickSelect";
 import ReactNativeModal from "react-native-modal";
@@ -364,8 +365,8 @@ const OrderBookSellRow = memo(({ item, maxVolume, onPress, formatPrice, formatQu
             backgroundColor: depthRed,
           }}
         />
-        <AppText style={[styles.orderPrice, { color: themeColors.red }]}>{formatPrice(item?.price)}</AppText>
-        <AppText style={[styles.orderSize, { color: themeColors.text }]}>{formatQuantity(item?.remaining)}</AppText>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.orderPrice, { color: themeColors.red }]}>{formatPrice(item?.price)}</AppText>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.orderSize, { color: themeColors.text }]}>{formatQuantity(item?.remaining)}</AppText>
       </View>
     </TouchableOpacity>
   );
@@ -401,8 +402,8 @@ const OrderBookBuyRow = memo(({ item, maxVolume, onPress, formatPrice, formatQua
             backgroundColor: depthGreen,
           }}
         />
-        <AppText style={[styles.orderPrice, { color: themeColors.green }]}>{formatPrice(item?.price)}</AppText>
-        <AppText style={[styles.orderSize, { color: themeColors.text }]}>{formatQuantity(item?.remaining)}</AppText>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.orderPrice, { color: themeColors.green }]}>{formatPrice(item?.price)}</AppText>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.orderSize, { color: themeColors.text }]}>{formatQuantity(item?.remaining)}</AppText>
       </View>
     </TouchableOpacity>
   );
@@ -878,17 +879,17 @@ const OrderBookSection = memo(({
       />
 
       <View style={[sty.ratioIndicatorBar, { marginVertical: 6, gap: 4 }]}>
-        <View style={[sty.ratioIndicatorHalf, { justifyContent: "flex-start" }]}>
-          <AppText weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
+        <View style={{ justifyContent: "flex-start", flexShrink: 0 }}>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
             {obRatio.bidPct.toFixed(1)}%
           </AppText>
         </View>
-        <View style={[sty.ratioIndicatorTrack, { flex: 2, height: 3 }]}>
+        <View style={[sty.ratioIndicatorTrack, { flex: 1, height: 3 }]}>
           <View style={[sty.ratioIndicatorFill, { width: `${obRatio.bidPct}%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
           <View style={[sty.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
         </View>
-        <View style={[sty.ratioIndicatorHalf, { justifyContent: "flex-end" }]}>
-          <AppText weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 10 }}>
+        <View style={{ justifyContent: "flex-end", flexShrink: 0 }}>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 10 }}>
             {obRatio.askPct.toFixed(1)}%
           </AppText>
         </View>
@@ -1018,6 +1019,7 @@ const Spot = () => {
   /** Web parity: flip true once socket sends `buy_order`/`sell_order` key (empty array still counts). */
   const [orderBookSocketReady, setOrderBookSocketReady] = useState(false);
   const [appState, setAppState] = useState(AppState.currentState);
+  const appStateRef = useRef(AppState.currentState);
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const [isCancelLoading, setIsCancelLoading] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
@@ -1033,7 +1035,9 @@ const Spot = () => {
   const amountAnim = useRef(new Animated.Value(0)).current;
   const stopAnim = useRef(new Animated.Value(0)).current;
   const totalAnim = useRef(new Animated.Value(0)).current;
+  const slippageAnim = useRef(new Animated.Value(0)).current;
   const amountInputRef = useRef(null);
+  const slippageInputRef = useRef(null);
 
   /** Must run before setAmount so next render’s Animated styles already see 1 (fixes +/− without focus overlap). */
   const syncAmountAnimForQuantityString = useCallback((qtyStr) => {
@@ -1121,12 +1125,28 @@ const Spot = () => {
     }).start();
   }, [stopPrice, isStopFocused]);
 
+  useLayoutEffect(() => {
+    const hasSlippage = String(slippagePct ?? "").trim() !== "";
+    if (hasSlippage || isSlippageInputFocused) {
+      Animated.timing(slippageAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+      return;
+    }
+    Animated.timing(slippageAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [slippagePct, isSlippageInputFocused]);
+
   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
 
   const rbSheetNumber = useRef();
   const rbSheetlimit = useRef();
-  const appStateRef = useRef(AppState.currentState);
   const latestSocketDataRef = useRef(null);
   const latestLocalBuyOrdersRef = useRef([]);
   const latestLocalSellOrdersRef = useRef([]);
@@ -3316,7 +3336,7 @@ const Spot = () => {
                           alignItems: "center",
                           top: stopAnim.interpolate({
                             inputRange: [0, 1],
-                            outputRange: [12, 2],
+                            outputRange: [8, 2],
                           }),
                         }}
                       >
@@ -3623,21 +3643,40 @@ const Spot = () => {
               {isMarketLikeOrder && slippageEnabled ? (
                 <View style={{ marginBottom: SPOT_ORDER_V_GAP }}>
                   <View style={styles.spotOrderInputBlock}>
-                    <View
+                    <TouchableOpacity
+                      activeOpacity={1}
+                      onPress={() => slippageInputRef.current?.focus()}
                       style={[
                         styles.spotOrderFieldCard,
-
                         {
-                          backgroundColor: colors.iconBgColor,
-                          borderColor: themeColors.themeBorderColor,
+                          backgroundColor: lightTheme.input,
+                          borderWidth: 0,
                         },
                       ]}
                     >
                       <View style={styles.spotOrderFieldStack}>
-                        {/*
-                          Web parity (TradeCenterSection): trade_amount_field_limit input-group,
-                          placeholder only — no floating label / animation.
-                        */}
+                        {!isSlippageInputFocused && String(slippagePct ?? "").trim() === "" ? (
+                          <View
+                            pointerEvents="none"
+                            style={{
+                              position: "absolute",
+                              left: 0,
+                              right: 0,
+                              alignItems: "center",
+                              top: 8,
+                            }}
+                          >
+                            <AppText
+                              style={{
+                                color: "#8E8E93",
+                                fontSize: 13,
+                                fontWeight: "500",
+                              }}
+                            >
+                              {slippagePlaceholder}
+                            </AppText>
+                          </View>
+                        ) : null}
                         <View
                           style={[
                             styles.spotOrderInputBox,
@@ -3646,16 +3685,20 @@ const Spot = () => {
                               backgroundColor: "transparent",
                               paddingHorizontal: 0,
                               paddingVertical: 0,
-                              marginTop: 0,
+                              marginTop: 2,
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "space-between",
                             },
                           ]}
                         >
                           <View style={styles.spotOrderTotalSideSpacer} />
                           <View style={styles.spotOrderSlippageInputShell}>
                             <TextInput
+                              ref={slippageInputRef}
                               value={slippagePct}
                               onChangeText={(t) => setSlippagePct(String(t).replace(/[^0-9.]/g, ""))}
-                              placeholder={isSlippageInputFocused ? "" : slippagePlaceholder}
+                              placeholder={""}
                               placeholderTextColor={themeColors.secondaryText}
                               selectionColor={inputSelectionColor}
                               keyboardType="numeric"
@@ -3664,23 +3707,30 @@ const Spot = () => {
                               onFocus={() => setIsSlippageInputFocused(true)}
                               onBlur={() => setIsSlippageInputFocused(false)}
                               style={[
-                                styles.spotOrderSlippageInput,
+                                styles.spotOrderInputValue,
                                 {
+                                  flex: 1,
                                   color: themeColors.text,
+                                  fontSize: 13,
+                                  fontWeight: "bold",
+                                  paddingVertical: 0,
+                                  marginTop: 0,
                                   ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                                 },
                               ]}
                             />
-                            <View pointerEvents="none" style={styles.spotOrderSlippagePctWrap}>
-                              <AppText style={[styles.spotOrderSlippagePctText, { color: themeColors.secondaryText }]}>
-                                %
-                              </AppText>
-                            </View>
+                            {(isSlippageInputFocused || String(slippagePct ?? "").trim() !== "") ? (
+                              <View pointerEvents="none" style={styles.spotOrderSlippagePctWrap}>
+                                <AppText style={[styles.spotOrderSlippagePctText, { color: themeColors.secondaryText, fontSize: 13, fontWeight: "bold" }]}>
+                                  %
+                                </AppText>
+                              </View>
+                            ) : null}
                           </View>
                           <View style={styles.spotOrderTotalSideSpacer} />
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   </View>
                   {slippageError ? (
                     <AppText style={[styles.spotOrderSlippageError, { color: themeColors.red }]}>
@@ -3696,7 +3746,7 @@ const Spot = () => {
                   <AppText
                     style={[
                       styles.assetLabel,
-                      { color: themeColors.text },
+                      { color: colors.placeholderColor },
                     ]}
                   >
                     Coin
@@ -3704,21 +3754,21 @@ const Spot = () => {
                   <AppText
                     style={[
                       styles.assetLabel,
-                      { color: themeColors.text },
+                      { color: colors.placeholderColor },
                     ]}
                   >
                     Total Assets
                   </AppText>
                 </View>
                 <View style={styles.assetRow}>
-                  <AppText style={[styles.assetValue, { color: themeColors.text }]}>{quote_currency}</AppText>
-                  <AppText style={[styles.assetValue, { color: themeColors.text }]}>
+                  <AppText style={[styles.assetValue, { color: colors.black }]}>{quote_currency}</AppText>
+                  <AppText style={[styles.assetValue, { color: colors.black }]}>
                     {coinBalance?.quote_currency_balance || 0}
                   </AppText>
                 </View>
                 <View style={styles.assetRow}>
-                  <AppText style={[styles.assetValue, { color: themeColors.text }]}>{base_currency}</AppText>
-                  <AppText style={[styles.assetValue, { color: themeColors.text }]}>
+                  <AppText style={[styles.assetValue, { color: colors.black }]}>{base_currency}</AppText>
+                  <AppText style={[styles.assetValue, { color: colors.black }]}>
                     {coinBalance?.base_currency_balance || 0}
                   </AppText>
                 </View>
@@ -3745,7 +3795,7 @@ const Spot = () => {
                         )
                       }
                     >
-                      <AppText style={[styles.assetActionText, { color: themeColors.text }]}>{btn}</AppText>
+                      <AppText weight={SEMI_BOLD} style={[styles.assetActionText, { color: themeColors.text }]}>{btn}</AppText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -3759,16 +3809,25 @@ const Spot = () => {
                       ? `Buy ${base_currency}`
                       : `Sell ${base_currency}`
                   }
-                  disabled={!amount}
+                  disabled={false}
+                  activeOpacity={amount ? 0.75 : 1}
                   containerStyle={[
                     styles.spotOrderSubmitBtn,
                     {
-                      backgroundColor: isBuy
-                        ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
-                        : (themeColors.spotTradeSell ?? colors.spotTradeSell),
+                      backgroundColor: amount
+                        ? (isBuy
+                          ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
+                          : (themeColors.spotTradeSell ?? colors.spotTradeSell))
+                        : (isBuy
+                          ? (isDark ? "#19402E" : "#A7E2C6")
+                          : (isDark ? "#4A1D20" : "#F2B2B4")),
                     },
                   ]}
-                  onPress={() => onSubmit()}
+                  onPress={() => {
+                    if (amount) {
+                      onSubmit();
+                    }
+                  }}
                   titleStyle={styles.spotOrderSubmitTitle}
                 />
               </View>
@@ -3783,25 +3842,7 @@ const Spot = () => {
                     Taker {spotFooterMakerTakerPct.taker}%
                   </AppText>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
-                  style={[
-                    styles.spotOrderStakingCard,
-                    {
-                      borderColor: themeColors.themeBorderColor,
-                      backgroundColor: themeColors.themeElevationColor,
-                    },
-                  ]}
-                >
-                  <AppText
-                    weight={SEMI_BOLD}
-                    numberOfLines={1}
-                    style={[styles.spotOrderStakingAprText, { flex: 1 }]}
-                  >
-                    {base_currency || "BTC"} Staking Estimated APR: 2.45%
-                  </AppText>
-                </TouchableOpacity>
+
               </View>
             </View>
 
@@ -4320,7 +4361,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     columnGap: 10,
     rowGap: 4,
-    marginBottom: SPOT_ORDER_V_GAP,
+    marginBottom: 6,
     alignItems: "center",
   },
   spotOrderTifChip: {
@@ -4335,11 +4376,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   spotOrderTifText: {
-    fontSize: 9,
+    fontSize: 13,
+    fontFamily: fontFamilyMedium
   },
   slippageCheckbox: {
-    width: 12,
-    height: 12,
+    width: 16,
+    height: 16,
     borderRadius: 3,
     borderWidth: 1,
     alignItems: "center",
@@ -4347,8 +4389,8 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   slippageCheckIcon: {
-    width: 7,
-    height: 7,
+    width: 9,
+    height: 9,
   },
   spotOrderSlippageError: {
     fontSize: 9,
@@ -4577,7 +4619,6 @@ const styles = StyleSheet.create({
   assetBox: {
     borderRadius: 6,
     padding: 5,
-    marginBottom: SPOT_ORDER_V_GAP,
   },
   assetRow: {
     flexDirection: "row",
@@ -4591,13 +4632,12 @@ const styles = StyleSheet.create({
     marginTop: SPOT_ORDER_V_GAP,
   },
   assetLabel: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 14,
+    fontFamily: fontFamilySemiBold
   },
   assetValue: {
-    fontSize: 11,
-    color: "#fff",
-    fontWeight: "600",
+    fontSize: 13,
+    fontFamily: fontFamilyMedium
   },
   assetActionBtn: {
     flex: 1,
@@ -4610,8 +4650,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   assetActionText: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 11,
   },
   buyBtn: {
     backgroundColor: "#00C076",
