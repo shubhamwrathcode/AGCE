@@ -7,6 +7,9 @@ export const SELECTED_LANGUAGE = 'SELECTED_LANGUAGE';
  * (`https://agcebackend.wrathcode.com`). Used by AppOperation for `v1/...` calls.
  */
 export const BASE_URL = 'https://agcebackend.wrathcode.com/';
+// export const BASE_URL = 'https://backend.arabglobal.io/';
+
+
 /**
  * Spot chart WebView (ejected web), e.g. `.../chart/light/BTC_USDT`.
  * Not the API host — keep separate from `BASE_URL`.

@@ -236,7 +236,7 @@ const UnlockedFeatures = () => {
   );
 };
 
-const KycPending = ({ showResubmitButton, onResubmitPress }) => {
+const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, onVerifyPress }) => {
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
   const isLoading = useAppSelector((state) => state.auth.isLoading);
@@ -244,6 +244,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
   const displayName = kycWebAlignedDisplayName(userData);
   const initials = kycWebAlignedInitials(userData);
   const orangeColor = "#F59E0B";
+  const isInProgress = diditVendorStatus === "In Progress";
 
   return (
     <View style={{ flex: 1, alignItems: "center", paddingTop: 10 }}>
@@ -255,7 +256,9 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
         </AppText>
         <View style={[styles.statusBadge, { backgroundColor: "rgba(245, 158, 11, 0.1)" }]}>
           <FastImage source={pending_kyc} style={{ width: 18, height: 18, marginRight: 6 }} tintColor={orangeColor} />
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: orangeColor }}>Pending</AppText>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: orangeColor }}>
+            {isInProgress ? "In Progress" : "Pending"}
+          </AppText>
         </View>
       </View>
 
@@ -267,7 +270,9 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
-              Your KYC verification is currently under review. Please ensure that the uploaded document is a clear photo of your original ID. Scanned or copied documents are not accepted.
+              {isInProgress 
+                ? "Your verification session is still open. Resume it to complete the remaining steps."
+                : "Your KYC verification is currently under review. Please ensure that the uploaded document is a clear photo of your original ID. Scanned or copied documents are not accepted."}
             </AppText>
           </View>
         </View>
@@ -275,14 +280,15 @@ const KycPending = ({ showResubmitButton, onResubmitPress }) => {
 
       {/* Actions (if resubmit allowed) */}
       <View style={{ width: "100%", marginVertical: 20 }}>
-        <Button
-          children={showResubmitButton ? "Update Information" : "Under Review"}
-          onPress={showResubmitButton ? onResubmitPress : null}
-          loading={isLoading}
-          disabled={!showResubmitButton}
-          containerStyle={styles.primaryActionBtn}
-          titleStyle={styles.primaryActionBtnText}
-        />
+        {(showResubmitButton || isInProgress) && (
+          <Button
+            children={isInProgress ? "Continue Verification" : "Update Information"}
+            onPress={isInProgress ? onVerifyPress : onResubmitPress}
+            loading={isLoading}
+            containerStyle={styles.primaryActionBtn}
+            titleStyle={styles.primaryActionBtnText}
+          />
+        )}
         <TouchableOpacity
           onPress={() => NavigationService.navigate(CREATE_TICKET_SCREEN)}
           style={{ alignSelf: "center", marginTop: 12 }}
@@ -545,12 +551,6 @@ const KycCompleted = () => {
 
       {/* Primary Actions */}
       <View style={{ width: "100%", marginVertical: 20 }}>
-        <Button
-          children="Go to Dashboard"
-          onPress={() => NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK)}
-          containerStyle={styles.primaryActionBtn}
-          titleStyle={styles.primaryActionBtnText}
-        />
         <TouchableOpacity
           onPress={() => NavigationService.navigate(CREATE_TICKET_SCREEN)}
           style={{ alignSelf: "center", marginTop: 12 }}
@@ -650,6 +650,7 @@ const KycStatus = () => {
   const [statusCanonical, setStatusCanonical] = useState("");
   const [trackingStatus, setTrackingStatus] = useState("");
   const [kycVerifiedFromApi, setKycVerifiedFromApi] = useState(null);
+  const [diditVendorStatus, setDiditVendorStatus] = useState("");
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
   const [contentLoading, setContentLoading] = useState(true);
   const [diditWebviewUrl, setDiditWebviewUrl] = useState(null);
@@ -679,6 +680,7 @@ const KycStatus = () => {
     }
     setStatusCanonical(toCanonicalStatus(data.status));
     setTrackingStatus(data.trackingStatus || "");
+    setDiditVendorStatus(data.diditVendorStatus || data.didit_vendor_status || "");
 
     const apiTier = data.kycVerified ?? data.kyc_verified;
     if (apiTier !== undefined && apiTier !== null && apiTier !== "") {
@@ -806,6 +808,16 @@ const KycStatus = () => {
     }
   };
 
+  const openVerifyAgainModal = async () => {
+    const sessionResponse = await dispatch(createKycSession(userData, true));
+    const diditOpenUrl = sessionResponse?.diditUrl || sessionResponse?.url;
+    if (diditOpenUrl) {
+      diditExternalOpenedRef.current = true;
+      diditWebCompleteOnceRef.current = false;
+      setDiditWebviewUrl(diditOpenUrl);
+    }
+  };
+
   const openResubmitModal = async () => {
     const sessionResponse = await dispatch(createKycSession(userData));
     const diditOpenUrl = sessionResponse?.diditUrl || sessionResponse?.url;
@@ -846,6 +858,8 @@ const KycStatus = () => {
           submittedTaxDocType={submittedTaxDocType}
           showResubmitButton
           onResubmitPress={openResubmitModal}
+          diditVendorStatus={diditVendorStatus}
+          onVerifyPress={openVerifyModal}
         />
       );
     }
@@ -856,7 +870,7 @@ const KycStatus = () => {
     }
 
     if (effectiveTier === 3 || statusCanonical === "REJECTED") {
-      return <KycRejected onVerifyPress={openVerifyModal} />;
+      return <KycRejected onVerifyPress={openVerifyAgainModal} />;
     }
 
     if (effectiveTier === 1 || statusCanonical === "PENDING") {
@@ -867,6 +881,8 @@ const KycStatus = () => {
           selfieStatus={selfieStatus}
           submittedIdDocType={submittedIdDocType}
           submittedTaxDocType={submittedTaxDocType}
+          diditVendorStatus={diditVendorStatus}
+          onVerifyPress={openVerifyModal}
         />
       );
     }

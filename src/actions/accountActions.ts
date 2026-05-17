@@ -430,17 +430,32 @@ export const getKycStatus = () => async () => {
   let payload: any = null;
   try {
     response = await appOperation.customer.get_kyc_status();
-    if (response?.success && response?.data != null) {
-      payload = response.data;
+    if (response != null) {
+      if (response.success === true && response.data != null) {
+        if (typeof response.data === 'object' && response.data.data != null && !Array.isArray(response.data.data)) {
+          payload = response.data.data;
+        } else {
+          payload = response.data;
+        }
+      } else if (response.data != null && response.data.status) {
+        payload = response.data;
+      } else if (response.status) {
+        payload = response;
+      }
     }
   } catch (e: any) {
     if (__DEV__) console.log('[KYC API] get_kyc_status canonical failed', e?.code, e?.message);
+    if (e?.response?.data) {
+      const errData = e.response.data;
+      if (errData?.data?.status) payload = errData.data;
+      else if (errData?.status) payload = errData;
+    }
   }
+  
   if (payload == null) {
     if (__DEV__) console.warn('[KYC API] get_kyc_status: no canonical payload found');
     return null;
   }
-  if (payload == null) return null;
   return normalizeKycStatusForUi(payload);
 };
 
@@ -487,7 +502,7 @@ export const getKycConfig = (countryCode: string) => async () => {
   }
 };
 
-export const createKycSession = (userDetails: any) => async (dispatch: AppDispatch) => {
+export const createKycSession = (userDetails: any, forceNew?: boolean) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
     const cc = userDetails?.country_code || userDetails?.countryCode;
@@ -512,6 +527,10 @@ export const createKycSession = (userDetails: any) => async (dispatch: AppDispat
         ? `${webOrigin}/user_profile/kyc/submitted?open_in_app=1`
         : "agce://kyc_return?kyc_return=1",
     };
+
+    if (forceNew === true) {
+      body.forceNew = true;
+    }
 
     const response: any = await appOperation.customer.create_kyc_session(body);
     if (__DEV__) {
