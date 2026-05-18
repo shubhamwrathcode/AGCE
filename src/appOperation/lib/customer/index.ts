@@ -1,5 +1,5 @@
-import {AppOperation} from './../../index';
-import {CUSTOMER_TYPE} from '../../types';
+import { AppOperation } from './../../index';
+import { CUSTOMER_TYPE } from '../../types';
 import {
   AddToFavoriteProps,
   AlertsProps,
@@ -23,20 +23,20 @@ export default (appOperation: AppOperation) => ({
     appOperation.get('qbs/history', undefined, undefined, CUSTOMER_TYPE),
   user_eligibility: () =>
     appOperation.get('user/launchpad/user_eligibility', undefined, undefined, CUSTOMER_TYPE),
-    get_user_commits: () =>
+  get_user_commits: () =>
     appOperation.get('admin/launchpad/get_user_commits', undefined, undefined, CUSTOMER_TYPE),
-    all_project: (data: any) =>
-    appOperation.post('user/launchpad/get_all_project',  data, CUSTOMER_TYPE),
-    get_past_all_projects: (data: any) =>
-    appOperation.post('user/launchpad/get_all_project',  data, CUSTOMER_TYPE),
-    check_commit_existense: (data: any) =>
+  all_project: (data: any) =>
+    appOperation.post('user/launchpad/get_all_project', data, CUSTOMER_TYPE),
+  get_past_all_projects: (data: any) =>
+    appOperation.post('user/launchpad/get_all_project', data, CUSTOMER_TYPE),
+  check_commit_existense: (data: any) =>
     appOperation.get(`user/launchpad/check_commit_existence/${data}`, undefined, undefined, CUSTOMER_TYPE),
-    get_single_project: (data: any) =>
+  get_single_project: (data: any) =>
     appOperation.get(`admin/launchpad/get_single_project/${data}`, undefined, undefined, CUSTOMER_TYPE),
-    /** Same as web /account-verification: GET verify-registration-token (uses stored token in header) */
-    verify_token: () =>
-      appOperation.get('user/verify-registration-token', undefined, undefined, CUSTOMER_TYPE),
-    project_total_commit: (data: any) =>
+  /** Same as web /account-verification: GET verify-registration-token (uses stored token in header) */
+  verify_token: () =>
+    appOperation.get('user/verify-registration-token', undefined, undefined, CUSTOMER_TYPE),
+  project_total_commit: (data: any) =>
     appOperation.get(`user/launchpad/user_project_total_commits/${data}`, undefined, undefined, CUSTOMER_TYPE),
   banner_list: () =>
     appOperation.get('admin/banner_list', undefined, undefined, CUSTOMER_TYPE),
@@ -69,21 +69,21 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-    /** Same as web DepositPage primary list: `GET /v1/wallet/deposit-coins` (Bearer). */
-    deposit_coins: () =>
-      appOperation.get('wallet/deposit-coins', undefined, undefined, CUSTOMER_TYPE),
-    /** Same as web WithdrawPage catalog: `GET /v1/wallet/withdrawal-coins` (Bearer). */
-    withdrawal_coins: () =>
-      appOperation.get('wallet/withdrawal-coins', undefined, undefined, CUSTOMER_TYPE),
-    /** Web primary catalog: `GET /api/v1/wallet/withdrawal-coins` (`fetchWithdrawalCoinsV1`). */
-    withdrawal_coins_v1: () =>
-      appOperation.get('api/v1/wallet/withdrawal-coins', undefined, undefined, CUSTOMER_TYPE),
-    deposit_active_coins: () =>
-      appOperation.get('user/deposit-active-coins', undefined, undefined, CUSTOMER_TYPE),
-    widthraw_active_coins: () =>
-      appOperation.get('user/withdraw-active-coins', undefined, undefined, CUSTOMER_TYPE),
-    deposit_fiat_coins: () =>
-      appOperation.get('user/deposit-active-coins-fiat', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web DepositPage primary list: `GET /v1/wallet/deposit-coins` (Bearer). */
+  deposit_coins: () =>
+    appOperation.get('wallet/deposit-coins', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web WithdrawPage catalog: `GET /v1/wallet/withdrawal-coins` (Bearer). */
+  withdrawal_coins: () =>
+    appOperation.get('wallet/withdrawal-coins', undefined, undefined, CUSTOMER_TYPE),
+  /** Web primary catalog: `GET /api/v1/wallet/withdrawal-coins` (`fetchWithdrawalCoinsV1`). */
+  withdrawal_coins_v1: () =>
+    appOperation.get('api/v1/wallet/withdrawal-coins', undefined, undefined, CUSTOMER_TYPE),
+  deposit_active_coins: () =>
+    appOperation.get('user/deposit-active-coins', undefined, undefined, CUSTOMER_TYPE),
+  widthraw_active_coins: () =>
+    appOperation.get('user/withdraw-active-coins', undefined, undefined, CUSTOMER_TYPE),
+  deposit_fiat_coins: () =>
+    appOperation.get('user/deposit-active-coins-fiat', undefined, undefined, CUSTOMER_TYPE),
   user_wallet: () =>
     appOperation.get('wallet/user-wallet', undefined, undefined, CUSTOMER_TYPE),
   /** Total estimated portfolio across wallets (no `walletType` query) — same as web `allWalletsPortfolio`. */
@@ -119,7 +119,7 @@ export default (appOperation: AppOperation) => ({
   withdrawal_24h_usage: (coinName: string) =>
     appOperation.get(
       'api/v1/wallet/withdrawal-24h-usage',
-      {coinName: String(coinName || '').trim()},
+      { coinName: String(coinName || '').trim() },
       undefined,
       CUSTOMER_TYPE,
     ),
@@ -159,32 +159,32 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-    deposit_verify: (data :any) =>
-      appOperation.post('wallet/verify-deposit', data, CUSTOMER_TYPE),
+  deposit_verify: (data: any) =>
+    appOperation.post('wallet/verify-deposit', data, CUSTOMER_TYPE),
   deposit_inr: (data: FormData) =>
     appOperation.post('wallet/deposit_inr', data, CUSTOMER_TYPE),
   tranfer_coin: (data: any) =>
     appOperation.post('wallet/wallet-transfer', data, CUSTOMER_TYPE),
-    user_commit_project: (data: FormData) =>
+  user_commit_project: (data: FormData) =>
     appOperation.post('user/launchpad/commit_project', data, CUSTOMER_TYPE),
-    transfer_funds: (data: any) =>
-      appOperation.post('wallet/transfer-funds', data, CUSTOMER_TYPE),
-    user_update_commit_project: (data: FormData, id:any) =>
+  transfer_funds: (data: any) =>
+    appOperation.post('wallet/transfer-funds', data, CUSTOMER_TYPE),
+  user_update_commit_project: (data: FormData, id: any) =>
     appOperation.put(`user/launchpad/update_commit/${id}`, data, CUSTOMER_TYPE),
-    wallet_history: (skip: any, limit: any) =>
+  wallet_history: (skip: any, limit: any) =>
     appOperation.get(
       `transaction/wallet-history?skip=${skip}&limit=${limit}`,
       undefined,
       undefined,
       CUSTOMER_TYPE,
     ),
-    interal_wallet_history: (skip: any, limit: any) =>
-      appOperation.get(
-        `wallet/wallet-transfer-history?skip=${skip}&limit=${limit}`,
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
+  interal_wallet_history: (skip: any, limit: any) =>
+    appOperation.get(
+      `wallet/wallet-transfer-history?skip=${skip}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
   trade_history: (data: any) =>
     appOperation.post(
       'transaction/trade-history',
@@ -193,17 +193,17 @@ export default (appOperation: AppOperation) => ({
   verify_deposit: (data: any) =>
     appOperation.post(
       'transaction/wallet-deposit-history',
-      data, 
+      data,
       CUSTOMER_TYPE
     ),
-    verify_withdraw: (data: any) =>
+  verify_withdraw: (data: any) =>
     appOperation.post(
       'transaction/wallet-withdrawal-history',
-      data, 
+      data,
       CUSTOMER_TYPE
     ),
-    withdrawal_address_history: () =>
-      appOperation.get('api/v1/wallet/withdrawal-address-history', undefined, undefined, CUSTOMER_TYPE),
+  withdrawal_address_history: () =>
+    appOperation.get('api/v1/wallet/withdrawal-address-history', undefined, undefined, CUSTOMER_TYPE),
   withdraw_inr: (data: WithdrawInrProps) =>
     appOperation.post('wallet/withdraw_inr', data, CUSTOMER_TYPE),
   kyc_verification: (data: any) =>
@@ -243,13 +243,13 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-    meme_list: () =>
-      appOperation.get(
-        'user/get-meme-pairs',
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
+  meme_list: () =>
+    appOperation.get(
+      'user/get-meme-pairs',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
   user_bank_detail: () =>
     appOperation.get(
       'user/get-user-bank-details',
@@ -282,16 +282,16 @@ export default (appOperation: AppOperation) => ({
       CUSTOMER_TYPE,
     );
   },
-    mark_as_read: (data: any) =>
-      appOperation.post('notifications/mark-as-read', data, CUSTOMER_TYPE),
-    /** GET `/v1/notifications/mark-all-as-read` — same as web `AuthService.markasAllRead`. */
-    mark_all_notifications_read: () =>
-      appOperation.get(
-        'notifications/mark-all-as-read',
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
+  mark_as_read: (data: any) =>
+    appOperation.post('notifications/mark-as-read', data, CUSTOMER_TYPE),
+  /** GET `/v1/notifications/mark-all-as-read` — same as web `AuthService.markasAllRead`. */
+  mark_all_notifications_read: () =>
+    appOperation.get(
+      'notifications/mark-all-as-read',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
   send_kgin_otp: (data: any) =>
     appOperation.post('user/send-kgin-otp', data, CUSTOMER_TYPE),
   update_kgin: (data: any) =>
@@ -303,69 +303,69 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-    bot_package_list: () =>
-      appOperation.get(
-        `bot/bot-package-listing`,
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
-    user_payout_list: () =>
-      appOperation.get(
-        `earning/user-payout-list`,
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
-      earning_portfolio: () =>
-        appOperation.get(
-          `earning/earning-portfolio`,
-          undefined,
-          undefined,
-          CUSTOMER_TYPE,
-        ),
-      earning_portfolio_summary: () =>
-        appOperation.get(
-          `earning/earning-portfolio-summary`,
-          undefined,
-          undefined,
-          CUSTOMER_TYPE,
-        ),
-      subscribed_packageList: () =>
-        appOperation.get(
-          `earning/subscribed-package-list`,
-          undefined,
-          undefined,
-          CUSTOMER_TYPE,
-        ),
-      get_wallet_balance: (fromWallet: any,currencyId: any) =>
-        appOperation.get(
-          `wallet/get-wallet-balance/?fromWallet=${fromWallet}&currencyId=${currencyId}`,
-          undefined,
-          undefined,
-          CUSTOMER_TYPE,
-        ),
-    get_wallet_type: () =>
-      appOperation.get(
-        `wallet/available-wallet-types`,
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
-      get_bot_active_packages: () =>
-        appOperation.get(
-          `bot/get-active-package`,
-          undefined,
-          undefined,
-          CUSTOMER_TYPE,
-        ),
-        get_bot_trade: () =>
-          appOperation.get(
-            `bot/bot-trades`,
-            undefined,
-            undefined,
-            CUSTOMER_TYPE,
-          ),
+  bot_package_list: () =>
+    appOperation.get(
+      `bot/bot-package-listing`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  user_payout_list: () =>
+    appOperation.get(
+      `earning/user-payout-list`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  earning_portfolio: () =>
+    appOperation.get(
+      `earning/earning-portfolio`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  earning_portfolio_summary: () =>
+    appOperation.get(
+      `earning/earning-portfolio-summary`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  subscribed_packageList: () =>
+    appOperation.get(
+      `earning/subscribed-package-list`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  get_wallet_balance: (fromWallet: any, currencyId: any) =>
+    appOperation.get(
+      `wallet/get-wallet-balance/?fromWallet=${fromWallet}&currencyId=${currencyId}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  get_wallet_type: () =>
+    appOperation.get(
+      `wallet/available-wallet-types`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  get_bot_active_packages: () =>
+    appOperation.get(
+      `bot/get-active-package`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  get_bot_trade: () =>
+    appOperation.get(
+      `bot/bot-trades`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
   user_refer_code: () =>
     appOperation.get(
       'user/user_refer_code',
@@ -373,20 +373,20 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-    payout_history: () =>
-      appOperation.get(
-        'affiliate/payout-history',
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
-      get_downline: (sponsorId: any, level: any) =>
-        appOperation.get(
-          `user/get_downline?sponsorId=${sponsorId}&level=${level}`,
-          undefined,
-          undefined,
-          CUSTOMER_TYPE,
-        ),
+  payout_history: () =>
+    appOperation.get(
+      'affiliate/payout-history',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  get_downline: (sponsorId: any, level: any) =>
+    appOperation.get(
+      `user/get_downline?sponsorId=${sponsorId}&level=${level}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
   user_refer_count: () =>
     appOperation.get(
       'user/total_refer_count',
@@ -456,7 +456,7 @@ export default (appOperation: AppOperation) => ({
   close_position: (data: any) =>
     appOperation.post('futures/close-position', data, CUSTOMER_TYPE),
   getOptionsPairs: (data: any) =>
-  appOperation.get('options/optionPairs', undefined, undefined, CUSTOMER_TYPE),
+    appOperation.get('options/optionPairs', undefined, undefined, CUSTOMER_TYPE),
   placeOptionOrder: (data: any) =>
     appOperation.post('options/placeOrder', data, CUSTOMER_TYPE),
   getExpiryDates: (data: any) =>
@@ -470,7 +470,7 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-    coin_details: (data: any) =>
+  coin_details: (data: any) =>
     appOperation.post(
       `exchange/coin-details`,
       data, CUSTOMER_TYPE
@@ -592,38 +592,32 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-    get_Activity_logs: (skip: number, limit: number) =>
-    appOperation.get(
-      `user/activity-logs?skip=${skip}&limit=${limit}`,
-      undefined,
-      undefined,
-      CUSTOMER_TYPE,
-    ),
-    // Referral
-    // - `referral_user_list` is the legacy list (often masked)
-    // - `my-referral-tree` matches web "Referral History" (includes user object)
-    get_referral_list: () =>
+
+  // Referral
+  // - `referral_user_list` is the legacy list (often masked)
+  // - `my-referral-tree` matches web "Referral History" (includes user object)
+  get_referral_list: () =>
     appOperation.get(
       `user/referral_user_list`,
       undefined,
       undefined,
       CUSTOMER_TYPE,
     ),
-    get_my_referral_tree: () =>
+  get_my_referral_tree: () =>
     appOperation.get(
       `user/my-referral-tree`,
       undefined,
       undefined,
       CUSTOMER_TYPE,
     ),
-    get_my_referral_earnings: () =>
+  get_my_referral_earnings: () =>
     appOperation.get(
       `user/my-referral-earnings`,
       undefined,
       undefined,
       CUSTOMER_TYPE,
     ),
-    get_referral_children: (parentId: string) =>
+  get_referral_children: (parentId: string) =>
     appOperation.get(
       `user/referral-children?parentId=${encodeURIComponent(String(parentId ?? ""))}`,
       undefined,
@@ -631,15 +625,15 @@ export default (appOperation: AppOperation) => ({
       CUSTOMER_TYPE,
     ),
 
-    // Airdrop / Referral release history (Airdrop History page)
-    get_referral_release_history: (page: number, limit: number) =>
+  // Airdrop / Referral release history (Airdrop History page)
+  get_referral_release_history: (page: number, limit: number) =>
     appOperation.get(
       `user/referral-release-history?page=${Number(page) || 1}&limit=${Number(limit) || 20}`,
       undefined,
       undefined,
       CUSTOMER_TYPE,
     ),
-    get_referral_vesting_status: () =>
+  get_referral_vesting_status: () =>
     appOperation.get(
       `user/referral-vesting-status`,
       undefined,
@@ -663,76 +657,76 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-   
-    Staking_History: (data: any) =>
-      appOperation.get(
-        'staking/staking_history',
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
-      get_commit_details: (id: any) =>
-      appOperation.get(
-        `user/launchpad/user_project_commit_history/${id}`,
-        undefined,
-        undefined,
-        CUSTOMER_TYPE,
-      ),
-      admin_trades: (skip: any, limit: any) =>
-        appOperation.get(
-          `wallet/bonus-history?skip=${skip}&limit=${limit}`,
-          undefined,
-          undefined,
-          CUSTOMER_TYPE,
-        ),
-        qbs_history: (skip: any, limit: any) =>
-          appOperation.get(
-            `qbs/history?skip=${skip}&limit=${limit}`,
-            undefined,
-            undefined,
-            CUSTOMER_TYPE,
-          ),
-          all_open_orders: (skip: any, limit: any) =>
-            appOperation.get(
-              `exchange/all-open-orders?skip=${skip}&limit=${limit}`,
-              undefined,
-              undefined,
-              CUSTOMER_TYPE,
-            ),
-      break_staking: (data: any) =>
-        appOperation.post('staking/break_staking', data, CUSTOMER_TYPE),
-        /** Legacy — prefer `spot_me_trades` (web parity: GET /spot/v1/me/trades). */
-        get_trade_history: (skip: any, limit: any, pair?: string) =>
-          appOperation.get(
-            `spot/v1/trades/my?skip=${skip}&limit=${limit}${pair ? `&pair=${pair}` : ''}`,
-            undefined,
-            undefined,
-            CUSTOMER_TYPE,
-          ),
-        /** Same as web `AuthService.spotMeTrades`: GET /spot/v1/me/trades?page=&page_size=&pair= */
-        spot_me_trades: (params: {page?: number; page_size?: number; pair?: string}) =>
-          appOperation.get('spot/v1/me/trades', params, undefined, CUSTOMER_TYPE),
-        subscribe_earning_package: (data: any) =>
-          appOperation.post('earning/subscribe-earning-package', data, CUSTOMER_TYPE),
-        swap_currency_list: () =>
-          appOperation.get('qbs/base_currency_list', undefined, undefined, CUSTOMER_TYPE),
-        get_conversion_rate: (from: any, to: any) =>
-          appOperation.get(`qbs/get_conversion_rate?from=${from}&receive=${to}`, undefined, undefined, CUSTOMER_TYPE),
-        get_user_tickets: () =>
-          appOperation.get(`support/get-user-tickets`, undefined, undefined, CUSTOMER_TYPE),
-        get_ticket_categories: () =>
-          appOperation.get(`support/get-categories`, undefined, undefined, CUSTOMER_TYPE),
-        /** Same as web: GET security/anti-phishing/status - returns { success, data: { hasAntiPhishingCode, antiPhishingCode, methods } } */
-        get_anti_phishing_status: () =>
-          appOperation.get('security/anti-phishing/status', undefined, undefined, CUSTOMER_TYPE),
-        /** Same as web: POST security/anti-phishing/send-otp - body { target } */
-        send_anti_phishing_otp: (target: string) =>
-          appOperation.post('security/anti-phishing/send-otp', { target }, CUSTOMER_TYPE),
-        /** Same as web: POST security/anti-phishing/add - body { antiPhishingCode, verifyMethod, code?, passkeyUserId? } */
-        add_anti_phishing_code: (data: { antiPhishingCode: string; verifyMethod: string; code?: string; passkeyUserId?: string }) =>
-          appOperation.post('security/anti-phishing/add', data, CUSTOMER_TYPE),
-        /** Same as web: POST security/anti-phishing/remove - body { verifyMethod, code?, passkeyUserId? } */
-        remove_anti_phishing_code: (data: { verifyMethod: string; code?: string; passkeyUserId?: string }) =>
-          appOperation.post('security/anti-phishing/remove', data, CUSTOMER_TYPE),
-        
-  });
+
+  Staking_History: (data: any) =>
+    appOperation.get(
+      'staking/staking_history',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  get_commit_details: (id: any) =>
+    appOperation.get(
+      `user/launchpad/user_project_commit_history/${id}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  admin_trades: (skip: any, limit: any) =>
+    appOperation.get(
+      `wallet/bonus-history?skip=${skip}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  qbs_history: (skip: any, limit: any) =>
+    appOperation.get(
+      `qbs/history?skip=${skip}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  all_open_orders: (skip: any, limit: any) =>
+    appOperation.get(
+      `exchange/all-open-orders?skip=${skip}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  break_staking: (data: any) =>
+    appOperation.post('staking/break_staking', data, CUSTOMER_TYPE),
+  /** Legacy — prefer `spot_me_trades` (web parity: GET /spot/v1/me/trades). */
+  get_trade_history: (skip: any, limit: any, pair?: string) =>
+    appOperation.get(
+      `spot/v1/trades/my?skip=${skip}&limit=${limit}${pair ? `&pair=${pair}` : ''}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  /** Same as web `AuthService.spotMeTrades`: GET /spot/v1/me/trades?page=&page_size=&pair= */
+  spot_me_trades: (params: { page?: number; page_size?: number; pair?: string }) =>
+    appOperation.get('spot/v1/me/trades', params, undefined, CUSTOMER_TYPE),
+  subscribe_earning_package: (data: any) =>
+    appOperation.post('earning/subscribe-earning-package', data, CUSTOMER_TYPE),
+  swap_currency_list: () =>
+    appOperation.get('qbs/base_currency_list', undefined, undefined, CUSTOMER_TYPE),
+  get_conversion_rate: (from: any, to: any) =>
+    appOperation.get(`qbs/get_conversion_rate?from=${from}&receive=${to}`, undefined, undefined, CUSTOMER_TYPE),
+  get_user_tickets: () =>
+    appOperation.get(`support/get-user-tickets`, undefined, undefined, CUSTOMER_TYPE),
+  get_ticket_categories: () =>
+    appOperation.get(`support/get-categories`, undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: GET security/anti-phishing/status - returns { success, data: { hasAntiPhishingCode, antiPhishingCode, methods } } */
+  get_anti_phishing_status: () =>
+    appOperation.get('security/anti-phishing/status', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: POST security/anti-phishing/send-otp - body { target } */
+  send_anti_phishing_otp: (target: string) =>
+    appOperation.post('security/anti-phishing/send-otp', { target }, CUSTOMER_TYPE),
+  /** Same as web: POST security/anti-phishing/add - body { antiPhishingCode, verifyMethod, code?, passkeyUserId? } */
+  add_anti_phishing_code: (data: { antiPhishingCode: string; verifyMethod: string; code?: string; passkeyUserId?: string }) =>
+    appOperation.post('security/anti-phishing/add', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/anti-phishing/remove - body { verifyMethod, code?, passkeyUserId? } */
+  remove_anti_phishing_code: (data: { verifyMethod: string; code?: string; passkeyUserId?: string }) =>
+    appOperation.post('security/anti-phishing/remove', data, CUSTOMER_TYPE),
+
+});

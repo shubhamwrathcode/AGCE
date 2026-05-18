@@ -43,6 +43,7 @@ import {
   kyc_complete,
   verified_kyc,
   back_ic,
+  succescelebrate,
 } from "../../helper/ImageAssets";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import NavigationService from "../../navigation/NavigationService";
@@ -270,7 +271,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, on
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
-              {isInProgress 
+              {isInProgress
                 ? "Your verification session is still open. Resume it to complete the remaining steps."
                 : "Your KYC verification is currently under review. Please ensure that the uploaded document is a clear photo of your original ID. Scanned or copied documents are not accepted."}
             </AppText>
@@ -522,7 +523,7 @@ const KycCompleted = () => {
       {/* Success Header */}
       <View style={{ alignItems: "center", marginBottom: 20 }}>
         <FastImage
-          source={kyc_success_vector}
+          source={succescelebrate}
           style={{ width: 120, height: 120, marginBottom: 10 }}
           resizeMode="contain"
         />

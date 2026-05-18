@@ -34,23 +34,19 @@ import EditProfile from "../screens/account/EditProfile";
 import Notification from "../screens/other/Notification";
 import NotificationSettings from "../screens/account/NotificationSettings";
 import Settings from "../screens/account/Settings";
-import KycStepOne from "../screens/account/KycStepOne";
 import KycStatus from "../screens/account/KycStatus";
-import CmsPages from "../screens/account/CmsPages";
-import BankingSettings from "../screens/account/BankingSettings";
 import ChangePassword from "../screens/settings/ChangePassword";
-import AntiPhishingCode from "../screens/settings/AntiPhishingCode";
+import AntiPhishingStatus from "../screens/Security/AntiPhishing/AntiPhishingStatus";
+import CreateAntiPhishingScreen from "../screens/Security/AntiPhishing/CreateAntiPhishingScreen";
+import RemoveAntiPhishingScreen from "../screens/Security/AntiPhishing/RemoveAntiPhishingScreen";
+import EditAntiPhishingScreen from "../screens/Security/AntiPhishing/EditAntiPhishingScreen";
+import DisableAntiPhishingScreen from "../screens/Security/AntiPhishing/DisableAntiPhishingScreen";
 import ResetPassword from "../screens/settings/ResetPassword";
 import CurrencyPreference from "../screens/account/CurrencyPreference";
 import CoinDetails from "../screens/trades/CoinDetails";
 import WalletDetails from "../features/wallet/screens/WalletDetailsScreen";
 import WalletHistoryDetails from "../screens/wallet/WalletHistoryDetails";
 import TradeHistoryDetails from "../screens/wallet/TradeHistoryDetails";
-import KycStepTwo from "../screens/account/KycStepTwo";
-import KycStepThree from "../screens/account/KycStepThree";
-import KycStepFour from "../screens/account/KycStepFour";
-import KycStepFive from "../screens/account/KycStepFive";
-import KycStepReview from "../screens/account/KycStepReview";
 import KycVerificationScreen from "../screens/account/KycVerificationScreen";
 import KycResubmitScreen from "../screens/account/KycResubmitScreen";
 import { KycFormProvider } from "../context/KycFormContext";
@@ -61,13 +57,15 @@ import CoinDetailChart from "../screens/home/CoinDetailChart";
 import CoinTransactionHistory from "../screens/home/CoinTransactionHistory";
 import TwoFactor from "../screens/account/TwoFactor";
 import TwoFactorQr from "../screens/account/TwoFactorQr";
-import AddPhoneNumberScreen from "../screens/account/AddPhoneNumberScreen";
-import AddEmailScreen from "../screens/account/AddEmailScreen";
+import AddPhoneNumberScreen from "../screens/Security/PhoneVerification/AddPhoneNumberScreen";
+import ChangePhoneNumberScreen from "../screens/Security/PhoneVerification/ChangePhoneNumberScreen";
+import UnlinkPhoneNumberScreen from "../screens/Security/PhoneVerification/UnlinkPhoneNumberScreen";
+import UnlinkSuccessScreen from "../screens/Security/PhoneVerification/UnlinkSuccessScreen";
+import LoginTwoStepVerificationScreen from "../screens/Security/LoginTwoStepVerificationScreen";
+import AddEmailScreen from "../screens/Security/AddEmailScreen";
 import SetupTwoFactorScreen from "../screens/account/SetupTwoFactorScreen";
 import VerifyAuthenticatorCodeScreen from "../screens/account/VerifyAuthenticatorCodeScreen";
 import AddPasskeyScreen from "../screens/account/AddPasskeyScreen";
-import ChangeEmailScreen from "../screens/account/ChangeEmailScreen";
-import ChangeMobileScreen from "../screens/account/ChangeMobileScreen";
 import ViewPasskeysScreen from "../screens/account/ViewPasskeysScreen";
 import EnablePasskey from "../screens/Security/Passkey/EnablePasskey";
 import PasskeyAddPhone from "../screens/Security/Passkey/PasskeyAddPhone";
@@ -104,7 +102,6 @@ import CommitDetails from "../screens/trades/CommitDetails";
 import ActivityLogs from "../features/account/screens/ActivityLogsScreen";
 import ReferralList from "../features/account/screens/ReferralListScreen";
 import PaymentOptions from "../features/account/screens/PaymentOptionsScreen";
-import AddNewBank from "../screens/account/AddNewBank";
 import WalletHistory from "../features/wallet/screens/WalletHistoryScreen";
 import Market from "../screens/other/Market";
 import SpotMarket from "../screens/other/SpotMarket";
@@ -159,7 +156,7 @@ import WithdrawalDetailPage from "../screens/wallet/WithdrawalDetailPage";
 import SelectCoin from "../screens/wallet/Withdrawal/SelectCoin";
 import WithdrawForm from "../screens/wallet/Withdrawal/WithdrawForm";
 import AddFavouriteScreen from "../screens/other/AddFavouriteScreen";
-import AccountDetails from "../screens/account/AccountDetails";
+import AccountDetails from "../screens/Security/AccountDetails";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -307,24 +304,6 @@ const MyAuthLoadingStack = () => {
         component={NotificationSettings}
       />
       <Stack.Screen name={routes.SETTINGS_SCREEN} component={Settings} />
-      <Stack.Screen name={routes.KYC_STEP_ONE_SCREEN} component={KycStepOne} />
-      <Stack.Screen name={routes.KYC_STEP_TWO_SCREEN} component={KycStepTwo} />
-      <Stack.Screen
-        name={routes.KYC_STEP_THREE_SCREEN}
-        component={KycStepThree}
-      />
-      <Stack.Screen
-        name={routes.KYC_STEP_FOUR_SCREEN}
-        component={KycStepFour}
-      />
-      <Stack.Screen
-        name={routes.KYC_STEP_FIVE_SCREEN}
-        component={KycStepFive}
-      />
-      <Stack.Screen
-        name={routes.KYC_STEP_SIX_SCREEN}
-        component={KycStepReview}
-      />
       <Stack.Screen
         name={routes.KYC_VERIFICATION_SCREEN}
         component={KycVerificationScreen}
@@ -335,12 +314,7 @@ const MyAuthLoadingStack = () => {
         options={{ headerShown: false }}
       />
       <Stack.Screen name={routes.KYC_STATUS_SCREEN} component={KycStatus} />
-      <Stack.Screen
-        name={routes.BANKING_AND_TRADE_SETTINGS_SCREEN}
-        component={BankingSettings}
-      />
 
-      <Stack.Screen name={routes.CMS_SCREEN} component={CmsPages} />
       <Stack.Screen
         name={routes.CHANGE_PASSWORD_SCREEN}
         component={ChangePassword}
@@ -383,7 +357,6 @@ const MyAuthLoadingStack = () => {
         name={routes.DOWNLOAD_TRADE_REPORT_SCREEN}
         component={DownloadReport}
       />
-      <Stack.Screen name={routes.ADD_NEW_BANK_SCREEN} component={AddNewBank} />
       <Stack.Screen
         name={routes.COIN_DETAILS_CHART_SCREEN}
         component={CoinDetailChart}
@@ -405,6 +378,22 @@ const MyAuthLoadingStack = () => {
         component={AddPhoneNumberScreen}
       />
       <Stack.Screen
+        name={routes.UNLINK_PHONE_NUMBER_SCREEN}
+        component={UnlinkPhoneNumberScreen}
+      />
+      <Stack.Screen
+        name={routes.UNLINK_SUCCESS_SCREEN}
+        component={UnlinkSuccessScreen}
+      />
+      <Stack.Screen
+        name={routes.CHANGE_PHONE_NUMBER_SCREEN}
+        component={ChangePhoneNumberScreen}
+      />
+      <Stack.Screen
+        name={routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN}
+        component={LoginTwoStepVerificationScreen}
+      />
+      <Stack.Screen
         name={routes.ADD_EMAIL_SCREEN}
         component={AddEmailScreen}
       />
@@ -420,14 +409,7 @@ const MyAuthLoadingStack = () => {
         name={routes.ADD_PASSKEY_SCREEN}
         component={AddPasskeyScreen}
       />
-      <Stack.Screen
-        name={routes.CHANGE_EMAIL_SCREEN}
-        component={ChangeEmailScreen}
-      />
-      <Stack.Screen
-        name={routes.CHANGE_MOBILE_SCREEN}
-        component={ChangeMobileScreen}
-      />
+
       <Stack.Screen
         name={routes.VIEW_PASSKEYS_SCREEN}
         component={ViewPasskeysScreen}
@@ -479,7 +461,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.ORDER_HISTORY} component={OrderHistory} />
       <Stack.Screen name={routes.SPOT_ORDER_HISTORY_DETAIL} component={SpotOrderHistoryDetail} />
       <Stack.Screen name={routes.COMMIT_DETAIL} component={CommitDetails} />
-      <Stack.Screen name={routes.ACTIVITY_LOGS} component={ActivityLogs} />
       <Stack.Screen name={routes.REFERRAL_LIST} component={ReferralList} />
       <Stack.Screen
         name={routes.WALLET_HISTORY_SCREEN}
@@ -552,7 +533,23 @@ const MyAuthLoadingStack = () => {
 
       <Stack.Screen
         name={routes.ANTI_PHISHING_CODE_SCREEN}
-        component={AntiPhishingCode}
+        component={AntiPhishingStatus}
+      />
+      <Stack.Screen
+        name={routes.CREATE_ANTI_PHISHING_SCREEN}
+        component={CreateAntiPhishingScreen}
+      />
+      <Stack.Screen
+        name={routes.REMOVE_ANTI_PHISHING_SCREEN}
+        component={RemoveAntiPhishingScreen}
+      />
+      <Stack.Screen
+        name={routes.EDIT_ANTI_PHISHING_SCREEN}
+        component={EditAntiPhishingScreen}
+      />
+      <Stack.Screen
+        name={routes.DISABLE_ANTI_PHISHING_SCREEN}
+        component={DisableAntiPhishingScreen}
       />
       <Stack.Screen
         name={routes.FORGOT_PASSWORD_SCREEN}

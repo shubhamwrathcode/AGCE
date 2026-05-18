@@ -6,6 +6,7 @@ import NavigationService from '../../../navigation/NavigationService';
 import FastImage from 'react-native-fast-image';
 import { back_ic } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
+import * as routes from '../../../navigation/routes';
 
 const SecurityVerification = () => {
   const { colors: themeColors, isDark } = useTheme();
@@ -14,16 +15,16 @@ const SecurityVerification = () => {
   const [emailCode, setEmailCode] = useState('');
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.white }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : '#FFFFFF' }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
-          <FastImage source={back_ic} tintColor={colors.black} style={{ width: 18, height: 18 }} resizeMode='contain' />
+          <FastImage source={back_ic} tintColor={isDark ? '#FFFFFF' : '#000000'} style={{ width: 18, height: 18 }} resizeMode='contain' />
         </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
         <View style={styles.topSection}>
-          <AppText type={TWENTY_TWO} weight={BOLD} style={[styles.mainTitle, { color: themeColors.text }]}>
+          <AppText type={TWENTY_TWO} weight={SEMI_BOLD} style={[styles.mainTitle, { color: themeColors.text }]}>
             Security Verification
           </AppText>
           <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.subtitle, { color: '#999' }]}>
@@ -73,7 +74,7 @@ const SecurityVerification = () => {
           <TouchableOpacity 
             style={[styles.submitBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]} 
             activeOpacity={0.8}
-            onPress={() => NavigationService.navigate('PASSKEY_SCREEN')}
+            onPress={() => NavigationService.navigate(routes.CHANGE_PHONE_NUMBER_SCREEN)}
           >
             <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
               Confirm

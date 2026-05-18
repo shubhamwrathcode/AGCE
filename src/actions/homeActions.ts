@@ -1,6 +1,6 @@
-import {Alert} from 'react-native';
-import {appOperation} from '../appOperation';
-import {logger, showError, showSuccess} from '../helper/logger';
+import { Alert } from 'react-native';
+import { appOperation } from '../appOperation';
+import { logger, showError, showSuccess } from '../helper/logger';
 import {
   AddToFavoriteProps,
   CancelOrderProps,
@@ -19,7 +19,7 @@ import {
   STAKING_SUCCESS,
   WALLET_DETAIL_SCREEN,
 } from '../navigation/routes';
-import {setLoading} from '../slices/authSlice';
+import { setLoading } from '../slices/authSlice';
 import {
   onCancelOrder,
   setBannerList,
@@ -52,15 +52,15 @@ import {
   setReferralList,
   setMemeList
 } from '../slices/homeSlice';
-import {AppDispatch} from '../store/store';
-import {getOpenOrders, getUserWallet} from './walletActions';
+import { AppDispatch } from '../store/store';
+import { getOpenOrders, getUserWallet } from './walletActions';
 import { setUserData } from '../slices/authSlice';
 export const getBannerList = () => async (dispatch: AppDispatch) => {
   try {
     const response: any = await appOperation.customer.banner_list();
     if (response.success) {
       const bannerData = response?.data?.filter(
-        (        banner: { status: string; }) => banner?.status === 'Active',
+        (banner: { status: string; }) => banner?.status === 'Active',
       );
       dispatch(setBannerList(bannerData));
     }
@@ -164,27 +164,27 @@ export function parseNotificationsListResponse(response: any): {
 
 export const getNotificationList =
   (opts?: { page?: number; limit?: number; skipGlobalLoader?: boolean }) =>
-  async (dispatch: AppDispatch) => {
-    try {
-      if (!opts?.skipGlobalLoader) {
-        dispatch(setLoading(true));
+    async (dispatch: AppDispatch) => {
+      try {
+        if (!opts?.skipGlobalLoader) {
+          dispatch(setLoading(true));
+        }
+        const response: any = await appOperation.customer.notification_list({
+          page: opts?.page ?? 1,
+          limit: opts?.limit ?? 50,
+        });
+        const parsed = parseNotificationsListResponse(response);
+        if (parsed.ok) {
+          dispatch(setNotificationList(parsed.list));
+        }
+      } catch (e) {
+        logger(e);
+      } finally {
+        if (!opts?.skipGlobalLoader) {
+          dispatch(setLoading(false));
+        }
       }
-      const response: any = await appOperation.customer.notification_list({
-        page: opts?.page ?? 1,
-        limit: opts?.limit ?? 50,
-      });
-      const parsed = parseNotificationsListResponse(response);
-      if (parsed.ok) {
-        dispatch(setNotificationList(parsed.list));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      if (!opts?.skipGlobalLoader) {
-        dispatch(setLoading(false));
-      }
-    }
-  };
+    };
 
 export const markAsRead = (id: any) => async (dispatch: AppDispatch) => {
   try {
@@ -242,22 +242,22 @@ export const addToFavorites =
 
 export const getPastOrders =
   (data: PastOrdersProps, options?: { useGlobalLoader?: boolean }) =>
-  async (dispatch: AppDispatch) => {
-    const useLoader = options?.useGlobalLoader !== false;
-    try {
-      if (useLoader) dispatch(setLoading(true));
-      const response: any = await appOperation.customer.past_orders(data);
-      // console.log(response, "getPastOrders");
-      if (response.success) {
-        const items = Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.items) ? response.data.items : (Array.isArray(response?.data?.data) ? response.data.data : []));
-        dispatch(setPastOrders(items));
+    async (dispatch: AppDispatch) => {
+      const useLoader = options?.useGlobalLoader !== false;
+      try {
+        if (useLoader) dispatch(setLoading(true));
+        const response: any = await appOperation.customer.past_orders(data);
+        // console.log(response, "getPastOrders");
+        if (response.success) {
+          const items = Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.items) ? response.data.items : (Array.isArray(response?.data?.data) ? response.data.data : []));
+          dispatch(setPastOrders(items));
+        }
+      } catch (e) {
+        logger(e);
+      } finally {
+        if (useLoader) dispatch(setLoading(false));
       }
-    } catch (e) {
-      logger(e);
-    } finally {
-      if (useLoader) dispatch(setLoading(false));
-    }
-  };
+    };
 
 export const getHistoricData =
   (data: OpenOrdersProps, item: any) => async (dispatch: AppDispatch) => {
@@ -267,18 +267,18 @@ export const getHistoricData =
       dispatch(setHistoricData([]));
       const response: any = await appOperation.customer.open_orders(data);
       // console.log(response,'==repo');
-      
+
       if (response.success) {
         dispatch(setLoading(false));
         dispatch(setHistoricData(response?.data));
-        
+
       }
     } catch (e) {
       logger(e);
     } finally {
       dispatch(setLoading(false));
       // console.log('==repoer');
-      NavigationService.navigate(WALLET_DETAIL_SCREEN, {item});
+      NavigationService.navigate(WALLET_DETAIL_SCREEN, { item });
     }
   };
 
@@ -291,14 +291,14 @@ export const cancelOrder =
         showSuccess("Order Cancelled Successfully");
         dispatch(onCancelOrder(data.order_id));
         dispatch(getOpenOrders(0, 10));
-        return {...response, success: true};
+        return { ...response, success: true };
       }
       showError(response?.message || "Failed to cancel order");
-      return {...response, success: false};
+      return { ...response, success: false };
     } catch (e: any) {
       logger(e);
       showError(e?.message || "An error occurred");
-      return {success: false, message: e?.message};
+      return { success: false, message: e?.message };
     }
   };
 
@@ -306,7 +306,7 @@ export const placeOrder =
   (data: PlaceOrderProps, setVisible: any) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
-      const {total: _orderTotalUi, ...spotOrderBody} = data;
+      const { total: _orderTotalUi, ...spotOrderBody } = data;
       const response: any = await appOperation.customer.place_order(spotOrderBody);
 
       if (response.success) {
@@ -324,7 +324,7 @@ export const placeOrder =
     }
   };
 
-  export const closePosition =
+export const closePosition =
   (data: any) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
@@ -342,7 +342,7 @@ export const placeOrder =
     }
   };
 
-  export const cancelFutureOrder =
+export const cancelFutureOrder =
   (data: { orderId: string }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
@@ -362,7 +362,7 @@ export const placeOrder =
 
 
 
-  export const placeReverseOrder =
+export const placeReverseOrder =
   (data: any) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
@@ -381,8 +381,8 @@ export const placeOrder =
     }
   };
 
-  /** Place new futures order (Limit/Market). Uses same futures/order endpoint. */
-  export const placeFutureOrder =
+/** Place new futures order (Limit/Market). Uses same futures/order endpoint. */
+export const placeFutureOrder =
   (data: {
     baseCurrency: string;
     quoteCurrency: string;
@@ -532,7 +532,7 @@ export const getTransactionHistory =
       if (response?.success) {
         if (response?.data?.length == 0) {
           showError("No More Data");
-        }else {
+        } else {
           dispatch(setQbsHistory(response?.data));
         }
       }
@@ -541,37 +541,23 @@ export const getTransactionHistory =
     }
   };
 
-  export const getActivityLogs =
-  (skip: number, limit: number) => async (dispatch: AppDispatch) => {
-    try {
-      const response: any = await appOperation.customer.get_Activity_logs(skip, limit);
-      if (response?.success) {
-        if (response?.data?.length == 0) {
-          showError("No More Data");
-        }else {
-          dispatch(setActivityLogs(response?.data));
-        }
-      }
-    } catch (e) {
-      logger(e);
-    }
-  };
 
-  export const getReferralList = (data:any) => async (dispatch: AppDispatch) => {
-     dispatch(setLoading(true));
-    try {
-      const response: any = await appOperation.customer.get_my_referral_tree();
-      if (response?.success) {
-          const d = response?.data;
-          const items = Array.isArray(d?.items) ? d.items : Array.isArray(d) ? d : [];
-          dispatch(setReferralList(items));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-       dispatch(setLoading(false));
+
+export const getReferralList = (data: any) => async (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response: any = await appOperation.customer.get_my_referral_tree();
+    if (response?.success) {
+      const d = response?.data;
+      const items = Array.isArray(d?.items) ? d.items : Array.isArray(d) ? d : [];
+      dispatch(setReferralList(items));
     }
-  };
+  } catch (e) {
+    logger(e);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
 
 export const getStaking = () => async (dispatch: AppDispatch) => {
   try {
@@ -579,7 +565,7 @@ export const getStaking = () => async (dispatch: AppDispatch) => {
     if (response?.success) {
       dispatch(setStaking(response?.data));
     }
-  } catch (e) {}
+  } catch (e) { }
 };
 
 export const PLACE_STAKING = (data: any, stakeCurrency: any) => async (dispatch: AppDispatch) => {
@@ -588,7 +574,7 @@ export const PLACE_STAKING = (data: any, stakeCurrency: any) => async (dispatch:
     const response = await appOperation.customer.place_staking(data);
     if (response?.success) {
       dispatch(getStaking());
-      NavigationService.navigate(STAKING_SUCCESS, {stakeCurrency: stakeCurrency});
+      NavigationService.navigate(STAKING_SUCCESS, { stakeCurrency: stakeCurrency });
       showError(response?.message);
     }
   } catch (e) {
@@ -605,7 +591,7 @@ export const Laked_staking_income =
       if (response?.success) {
         dispatch(setLakedStaking(response?.data));
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
 export const staking_history = (data: any) => async (dispatch: AppDispatch) => {
@@ -614,7 +600,7 @@ export const staking_history = (data: any) => async (dispatch: AppDispatch) => {
     if (response?.success) {
       dispatch(setStakingHistory(response?.data));
     }
-  } catch (e) {}
+  } catch (e) { }
 };
 
 export const getCommitDetails = (id: any) => async (dispatch: AppDispatch) => {
@@ -754,9 +740,9 @@ export const userCommitProject = (data: any) => async (dispatch: AppDispatch) =>
     if (response?.success) {
       dispatch(setUserCommitProject(response));
       showError(response?.message);
-    }else {
+    } else {
       showError(response?.message);
-    }  
+    }
   } catch (e) {
     logger(e);
     showError(e?.message);
@@ -765,16 +751,16 @@ export const userCommitProject = (data: any) => async (dispatch: AppDispatch) =>
   }
 };
 
-export const userCommitUpdateProject = (data: any, id:any ) => async (dispatch: AppDispatch) => {
+export const userCommitUpdateProject = (data: any, id: any) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.user_update_commit_project(data, id);
     if (response?.success) {
       dispatch(setUserProjectUpdateCommit(response?.data));
       showError(response?.message);
-    }else {
+    } else {
       showError(response?.message);
-    }  
+    }
   } catch (e) {
     logger(e);
     showError(e?.message);

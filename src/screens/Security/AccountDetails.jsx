@@ -108,6 +108,16 @@ const AccountDetails = () => {
     return `${head}*@${dom}**`;
   };
 
+  const maskProfilePhone = (phone) => {
+    if (!phone) return "+91*****3";
+    const cleaned = String(phone).replace(/\s+/g, '');
+    const isIndia = cleaned.startsWith("+91") || cleaned.startsWith("91");
+    const prefix = isIndia ? "+91" : "";
+    const digitsOnly = cleaned.replace(/^\+91|^91/, '');
+    if (digitsOnly.length < 2) return "+91*****3";
+    return `${prefix}*****${digitsOnly.slice(-1)}`;
+  };
+
   const MenuItem = ({ label, value, badge, badgeBgColor, badgeTextColor, showArrow = true, onPress, isLogout }) => (
     <TouchableOpacity
       style={styles.menuItem}
@@ -245,9 +255,17 @@ const AccountDetails = () => {
                 </AppText>
               </View>
               <MenuItem label="Passkey" value="Not enabled" onPress={() => NavigationService.navigate(routes.PASSKEY_SCREEN)} />
-              <MenuItem label="Authenticator App" value="Not enabled" />
-              <MenuItem label="Email Verification" value={userData?.emailId ? maskProfileEmail(userData.emailId) : "Not enabled"} />
-              <MenuItem label="Phone Number" />
+              <MenuItem label="Authenticator App" value="Not enabled" onPress={() => NavigationService.navigate(routes.DOWNLOAD_AUTHENTICATOR_SCREEN)} />
+              <MenuItem
+                label="Email Verification"
+                value={userData?.emailId ? maskProfileEmail(userData.emailId) : "Not enabled"}
+                onPress={() => NavigationService.navigate(routes.ADD_EMAIL_SCREEN)}
+              />
+              <MenuItem
+                label="Phone Number"
+                value={userData?.mobileNumber || userData?.mobile_number ? maskProfilePhone(userData.mobileNumber || userData.mobile_number) : "+91*****3"}
+                onPress={() => NavigationService.navigate(routes.ADD_PHONE_NUMBER_SCREEN)}
+              />
 
               {/* Advanced Security Section */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>
@@ -255,8 +273,16 @@ const AccountDetails = () => {
                   Advanced Security
                 </AppText>
               </View>
-              <MenuItem label="Login 2-Step Verification" value="Not configured" />
-              <MenuItem label="Anti-Phishing Code" value="Not enabled" />
+              <MenuItem 
+                label="Login 2-Step Verification" 
+                value="Not configured" 
+                onPress={() => NavigationService.navigate(routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN)} 
+              />
+              <MenuItem 
+                label="Anti-Phishing Code" 
+                value="Not enabled" 
+                onPress={() => NavigationService.navigate(routes.ANTI_PHISHING_CODE_SCREEN)} 
+              />
               <MenuItem label="Withdrawal Settings" value="Not configured" />
               <MenuItem label="Emergency Contact" value="Not enabled" />
               <MenuItem label="Account Connections" value="Not configured" />
