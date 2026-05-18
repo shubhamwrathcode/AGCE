@@ -69,6 +69,11 @@ import AddPasskeyScreen from "../screens/account/AddPasskeyScreen";
 import ChangeEmailScreen from "../screens/account/ChangeEmailScreen";
 import ChangeMobileScreen from "../screens/account/ChangeMobileScreen";
 import ViewPasskeysScreen from "../screens/account/ViewPasskeysScreen";
+import EnablePasskey from "../screens/Security/Passkey/EnablePasskey";
+import PasskeyAddPhone from "../screens/Security/Passkey/PasskeyAddPhone";
+import SecurityVerification from "../screens/Security/Passkey/SecurityVerification";
+import DownloadAuthenticator from "../screens/Security/Passkey/DownloadAuthenticator";
+import SetupAuthenticator from "../screens/Security/Passkey/SetupAuthenticator";
 import DisableTwoFactorScreen from "../screens/account/DisableTwoFactorScreen";
 import EnterOtp from "../screens/account/EnterOtp";
 import ConvertHistory from "../screens/home/ConvertHistory";
@@ -148,8 +153,6 @@ import OptionsHistory from "../screens/Options/OptionsHistory";
 import AllEndedProjects from "../screens/Launchpad/AllEndedProjects";
 import TicketScreen from "../screens/supportSreen/TicketScreen";
 import { useTheme } from "../hooks/useTheme";
-import AirDropScreen from "../screens/airdrop/AirDropScreen";
-import AirdropHistoryScreen from "../screens/airdrop/AirdropHistoryScreen";
 import DepositHistoryDetailScreen from "../screens/account/DepositHistoryDetailScreen";
 import WithdrawalHistory from "../screens/wallet/WithdrawalHistory";
 import WithdrawalDetailPage from "../screens/wallet/WithdrawalDetailPage";
@@ -298,7 +301,6 @@ const MyAuthLoadingStack = () => {
       />
       <Stack.Screen name={routes.SEARCH_SCREEN} component={Search} />
       <Stack.Screen name={routes.MARKET_SCREEN} component={Market} />
-      <Stack.Screen name={routes.AIRDROP_HISTORY_SCREEN} component={AirdropHistoryScreen} />
 
       <Stack.Screen
         name={routes.NOTIFICATION_SETTINGS_SCREEN}
@@ -431,6 +433,26 @@ const MyAuthLoadingStack = () => {
         component={ViewPasskeysScreen}
       />
       <Stack.Screen
+        name={routes.PASSKEY_SCREEN}
+        component={EnablePasskey}
+      />
+      <Stack.Screen
+        name={routes.PASSKEY_ADD_PHONE_SCREEN}
+        component={PasskeyAddPhone}
+      />
+      <Stack.Screen
+        name={routes.PASSKEY_SECURITY_VERIFICATION_SCREEN}
+        component={SecurityVerification}
+      />
+      <Stack.Screen
+        name={routes.DOWNLOAD_AUTHENTICATOR_SCREEN}
+        component={DownloadAuthenticator}
+      />
+      <Stack.Screen
+        name={routes.PASSKEY_SETUP_AUTHENTICATOR_SCREEN}
+        component={SetupAuthenticator}
+      />
+      <Stack.Screen
         name={routes.DISABLE_2FA_SCREEN}
         component={DisableTwoFactorScreen}
       />
@@ -496,7 +518,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={"WebLink"} component={WebLink} />
       <Stack.Screen name={routes.INVITE_AND_EARN_SCREEN} component={RefferalReward} />
       <Stack.Screen name={routes.REFFERAL_TREE} component={ReferralTree} />
-      <Stack.Screen name={routes.AIRDROP_SCREEN} component={AirDropScreen} />
       <Stack.Screen name={'Trade_History'} component={TradeHistory} />
       <Stack.Screen name={'Interanl_Trade_History'} component={InternalWalletHistory} />
       <Stack.Screen name={routes.OPEN_ORDER_SCREEN} component={OpenOrder} />

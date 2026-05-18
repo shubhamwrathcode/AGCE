@@ -218,7 +218,6 @@ export const Robot = require('../../assets/images/robot.png');
 export const Coin = require('../../assets/images/coin.png');
 export const binIcon = require('../../assets/images/binIcon.png');
 
-export const download = require('../../assets/images/download.png');
 export const menu = require('../../assets/images/menu.png');
 export const Star = require('../../assets/images/Star.png');
 export const barsIcon = require('../../assets/images/barsIcon.png');
@@ -297,7 +296,6 @@ export const futuresActiveIcon = require('../../assets/images/futuresActiveIcon.
 export const SHARE_NEW_ICON = require('../../assets/images/shareNew.png');
 export const FINGERPRINT = require('../../assets/images/fingerprint.png');
 export const EMAIL = require('../../assets/images/mail.png');
-export const PHONE = require('../../assets/images/phone.png');
 export const CAMERA_IMG = require('../../assets/images/cameraImg.png');
 export const TIGER = require('../../assets/images/tiger.png');
 export const SECURITY_SHEIELD = require('../../assets/images/security_shield.png');
@@ -386,7 +384,6 @@ export const tradeIcon = require('../../assets/images/tradeIcon.png');
 export const p2pIcon2 = require('../../assets/images/p2pIcon2.png');
 export const progress_icon_pending = require('../../assets/images/progress_icon_pending.png');
 export const verification_reject = require('../../assets/images/verification_reject.png');
-export const googleAuthenticator = require('../../assets/images/googleAuthenticator.png');
 export const fundpass = require('../../assets/images/fundpass.png');
 export const security_risk_vector = require('../../assets/images/security_risk_vector.png');
 export const change_email_vector = require('../../assets/images/change_email_vector.png');
@@ -452,6 +449,27 @@ export const favUnCheck = require('../../assets/images/starDisable.png');
 export const history_line = require('../../assets/images/history-line.png');
 export const swap_line = require('../../assets/images/swap-line.png');
 export const referWallet = require('../../assets/images/referWallet.png');
+export const switchAccount = require('../../assets/images/switchAccount.png');
+export const enablepasskey = require('../../assets/images/enablepasskey.png');
+export const multidevice = require('../../assets/images/multidevice.png');
+export const highsecurity = require('../../assets/images/highsecurity.png');
+export const easyVerificaton = require('../../assets/images/easyVerificaton.png');
+export const securityrisk = require('../../assets/images/securityrisk.png');
+export const googleAuthenticator = require('../../assets/images/googleAuthenticator.png');
+export const PHONE = require('../../assets/images/phone.png');
+export const googleAuthApp = require('../../assets/images/googleAuthApp.png');
+export const download = require('../../assets/images/download.png');
+export const paste1 = require('../../assets/images/paste1.png');
+
+
+
+
+
+
+
+
+
+
 
 
 

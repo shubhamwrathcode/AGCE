@@ -24,11 +24,15 @@ import {
   TWELVE,
   TWENTY,
   MEDIUM,
+  TWENTY_FOUR,
+  FIFTEEN,
+  EIGHTEEN,
 } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
 import NavigationService from "../../navigation/NavigationService";
+import * as routes from "../../navigation/routes";
 import { back_ic, copyIcon, editIcon, right_arrow, right_ic } from "../../helper/ImageAssets";
 import { logoutAction } from "../../actions/authActions";
 import KycStepHeader from "./KycStepHeader";
@@ -104,7 +108,7 @@ const AccountDetails = () => {
     return `${head}*@${dom}**`;
   };
 
-  const MenuItem = ({ label, value, badge, showArrow = true, onPress, isLogout }) => (
+  const MenuItem = ({ label, value, badge, badgeBgColor, badgeTextColor, showArrow = true, onPress, isLogout }) => (
     <TouchableOpacity
       style={styles.menuItem}
       onPress={onPress || showComingSoonToast}
@@ -112,16 +116,16 @@ const AccountDetails = () => {
     >
       <View style={{ flex: 1 }}>
         <AppText
-          type={SIXTEEN}
-          style={{ color: isLogout ? colors.red : themeColors.text }}
+          type={FIFTEEN}
+          style={{ color: isLogout ? colors.red : colors.black }}
         >
           {label}
         </AppText>
       </View>
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         {badge && (
-          <View style={[styles.badge, { backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6" }]}>
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{badge}</AppText>
+          <View style={[styles.badge, { backgroundColor: badgeBgColor ? badgeBgColor : (isDark ? "#2A2A2E" : "#F3F4F6") }]}>
+            <AppText type={TWELVE} style={{ color: badgeTextColor ? badgeTextColor : themeColors.secondaryText }}>{badge}</AppText>
           </View>
         )}
         {value && (
@@ -132,7 +136,7 @@ const AccountDetails = () => {
         {showArrow && (
           <FastImage
             source={right_ic}
-            style={{ width: 14, height: 14 }}
+            style={{ width: 13, height: 13 }}
             tintColor={"#C1C1C1"}
             resizeMode="contain"
           />
@@ -223,8 +227,8 @@ const AccountDetails = () => {
               <MenuItem label="Personal Page" />
               <MenuItem label="Nickname" value={displayName} />
               <MenuItem label="Username" value={displayName} />
-              <MenuItem label="Referral" badge="40% commission" />
-              <MenuItem label="Affiliate" badge="Exclusive Commissions" />
+              <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
+              <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
               <MenuItem label="Switch Account" />
               <MenuItem
                 label="Log Out"
@@ -234,35 +238,63 @@ const AccountDetails = () => {
             </>
           ) : (
             <>
-              {/* Authentication Section */}
+              {/* Two-Factor Authentication (2FA) */}
               <View style={styles.sectionHeader}>
-                <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
-                  Authentication
+                <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
+                  Two-Factor Authentication (2FA)
                 </AppText>
-                <FastImage source={right_arrow} style={{ width: 14, height: 14, marginLeft: 8 }} tintColor={themeColors.secondaryText} resizeMode="contain" />
               </View>
-              <MenuItem label="Passkey" value="Not enabled" />
+              <MenuItem label="Passkey" value="Not enabled" onPress={() => NavigationService.navigate(routes.PASSKEY_SCREEN)} />
               <MenuItem label="Authenticator App" value="Not enabled" />
               <MenuItem label="Email Verification" value={userData?.emailId ? maskProfileEmail(userData.emailId) : "Not enabled"} />
               <MenuItem label="Phone Number" />
-              <MenuItem label="Fund Password" value="Not enabled" />
-              <MenuItem label="Two-Factor Authentication (2FA)" value="Off" />
 
               {/* Advanced Security Section */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>
-                <AppText weight={BOLD} type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+                <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
                   Advanced Security
                 </AppText>
-                <FastImage source={right_arrow} style={{ width: 14, height: 14, marginLeft: 8 }} tintColor={themeColors.secondaryText} resizeMode="contain" />
               </View>
-              <MenuItem label="Payment Method" value="Not configured" />
-              <MenuItem label="Withdrawal Settings" />
-              <MenuItem label="Login Settings" />
-              <MenuItem label="Device Management" />
-              <MenuItem label="Anti-Phishing Code" value="Not configured" />
-              <MenuItem label="App Unlock" />
-              <MenuItem label="Authorized Services" />
+              <MenuItem label="Login 2-Step Verification" value="Not configured" />
+              <MenuItem label="Anti-Phishing Code" value="Not enabled" />
+              <MenuItem label="Withdrawal Settings" value="Not configured" />
+              <MenuItem label="Emergency Contact" value="Not enabled" />
+              <MenuItem label="Account Connections" value="Not configured" />
+
+              {/* Password Management */}
+              <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+                <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
+                  Password Management
+                </AppText>
+              </View>
+              <MenuItem label="Password" value="Not configured" />
+              <MenuItem label="Fund Password" value="Not enabled" />
+
+              {/* Security Logs */}
+              <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+                <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
+                  Security Logs
+                </AppText>
+              </View>
+              <MenuItem label="Authorized Devices" value="Not configured" />
+              <MenuItem label="Security Logs" />
+
+              {/* Security Logs (Account Management) */}
+              <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+                <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
+                  Security Logs
+                </AppText>
+              </View>
+              <MenuItem label="Disable Account" value="Not configured" />
               <MenuItem label="Close Account" />
+
+              {/* Other Settings */}
+              <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+                <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
+                  Other Settings
+                </AppText>
+              </View>
+              <MenuItem label="Third Party Account Access Management" />
             </>
           )}
         </View>
@@ -449,7 +481,7 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 18,
+    paddingVertical: 12,
     paddingHorizontal: 20,
   },
   badge: {
