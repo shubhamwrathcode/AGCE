@@ -49,7 +49,8 @@ import {
   VIEW_PASSKEYS_SCREEN,
   DISABLE_2FA_SCREEN,
   ANTI_PHISHING_CODE_SCREEN,
-  CHANGE_PASSWORD_SCREEN
+  CHANGE_PASSWORD_SCREEN,
+  WITHDRAWAL_SETTINGS_SCREEN
 } from '../../navigation/routes';
 import {
   getUserProfile,
@@ -658,7 +659,7 @@ const TwoFactor = () => {
               isBooleanStatus={true}
               statusText="off"
               actionLabel="Change"
-              onAction={() => { showError("Withdrawal settings pending"); }}
+              onAction={() => { navigation.navigate(WITHDRAWAL_SETTINGS_SCREEN); }}
             />
             <TwoFaSimpleRow
               themeColors={themeColors}

@@ -17,3 +17,4 @@ export * from './CountDownTimer';
 export { default as OtpInputWithGetOtp } from './OtpInputWithGetOtp';
 export type { OtpInputWithGetOtpProps } from './OtpInputWithGetOtp';
 export { default as OtpInput6Digit } from './OtpInput6Digit';
+export { default as ToggleSwitch } from './ToggleSwitch';

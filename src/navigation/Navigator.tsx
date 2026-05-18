@@ -62,6 +62,9 @@ import ChangePhoneNumberScreen from "../screens/Security/PhoneVerification/Chang
 import UnlinkPhoneNumberScreen from "../screens/Security/PhoneVerification/UnlinkPhoneNumberScreen";
 import UnlinkSuccessScreen from "../screens/Security/PhoneVerification/UnlinkSuccessScreen";
 import LoginTwoStepVerificationScreen from "../screens/Security/LoginTwoStepVerificationScreen";
+import WithdrawalSettingsScreen from "../screens/Security/WithdrawalSettings/WithdrawalSettingsScreen";
+import WithdrawalVerifyEmailScreen from "../screens/Security/WithdrawalSettings/WithdrawalVerifyEmailScreen";
+import WithdrawalVerifyPhoneScreen from "../screens/Security/WithdrawalSettings/WithdrawalVerifyPhoneScreen";
 import AddEmailScreen from "../screens/Security/AddEmailScreen";
 import SetupTwoFactorScreen from "../screens/account/SetupTwoFactorScreen";
 import VerifyAuthenticatorCodeScreen from "../screens/account/VerifyAuthenticatorCodeScreen";
@@ -392,6 +395,18 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN}
         component={LoginTwoStepVerificationScreen}
+      />
+      <Stack.Screen
+        name={routes.WITHDRAWAL_SETTINGS_SCREEN}
+        component={WithdrawalSettingsScreen}
+      />
+      <Stack.Screen
+        name={routes.WITHDRAWAL_VERIFY_EMAIL_SCREEN}
+        component={WithdrawalVerifyEmailScreen}
+      />
+      <Stack.Screen
+        name={routes.WITHDRAWAL_VERIFY_PHONE_SCREEN}
+        component={WithdrawalVerifyPhoneScreen}
       />
       <Stack.Screen
         name={routes.ADD_EMAIL_SCREEN}

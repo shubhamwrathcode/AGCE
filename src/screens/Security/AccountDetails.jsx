@@ -283,7 +283,11 @@ const AccountDetails = () => {
                 value="Not enabled" 
                 onPress={() => NavigationService.navigate(routes.ANTI_PHISHING_CODE_SCREEN)} 
               />
-              <MenuItem label="Withdrawal Settings" value="Not configured" />
+              <MenuItem 
+                label="Withdrawal Settings" 
+                value="Not configured" 
+                onPress={() => NavigationService.navigate(routes.WITHDRAWAL_SETTINGS_SCREEN)} 
+              />
               <MenuItem label="Emergency Contact" value="Not enabled" />
               <MenuItem label="Account Connections" value="Not configured" />
 
