@@ -19,10 +19,12 @@ import { colors } from '../../../theme/colors';
 const ChangeFundPassword = () => {
   const { colors: themeColors, isDark } = useTheme();
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordAgain, setNewPasswordAgain] = useState('');
   const [emailCode, setEmailCode] = useState('');
 
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showPass1, setShowPass1] = useState(false);
   const [showPass2, setShowPass2] = useState(false);
 
@@ -52,6 +54,31 @@ const ChangeFundPassword = () => {
       {/* Content */}
       <View style={styles.content}>
         
+        {/* Current Password field */}
+        <View style={styles.inputGroup}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
+            Current password
+          </AppText>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+            <TextInput
+              style={[styles.input, { color: themeColors.text }]}
+              placeholder="Please enter"
+              placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
+              secureTextEntry={!showCurrentPass}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+            />
+            <TouchableOpacity onPress={() => setShowCurrentPass(!showCurrentPass)} style={styles.eyeBtn}>
+              <FastImage
+                source={showCurrentPass ? eye_open_icon : eye_close_icon}
+                style={styles.eyeIcon}
+                tintColor={isDark ? '#8A8A93' : '#8E8E93'}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* New Password field */}
         <View style={styles.inputGroup}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
@@ -126,7 +153,7 @@ const ChangeFundPassword = () => {
 
       </View>
 
-      {/* Confirm Button */}
+      {/* Confirm Button & Unable to Verify Link */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
           style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
@@ -134,6 +161,16 @@ const ChangeFundPassword = () => {
         >
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
             Confirm
+          </AppText>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.unableLink} activeOpacity={0.7}>
+          <AppText
+            type={FOURTEEN}
+            weight={MEDIUM}
+            style={[styles.unableText, { color: isDark ? '#FFFFFF' : '#000000' }]}
+          >
+            Unable to Verify?
           </AppText>
         </TouchableOpacity>
       </View>
@@ -202,12 +239,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     paddingTop: 16,
+    alignItems: 'center',
   },
   confirmBtn: {
     height: 52,
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
+    marginBottom: 20,
+  },
+  unableLink: {
+    paddingVertical: 4,
+  },
+  unableText: {
+    textDecorationLine: 'underline',
   },
 });
 

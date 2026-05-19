@@ -18,7 +18,7 @@ import {
   TWENTY,
   FIFTEEN,
 } from '../../../shared';
-import { back_ic, right_ic, warningImg } from '../../../helper/ImageAssets';
+import { back_ic, right_ic, securityrisk, warningImg } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import * as routes from '../../../navigation/routes';
 
@@ -129,7 +129,7 @@ const FundPasswordMain = () => {
       >
         <View style={styles.sheetContainer}>
           <FastImage
-            source={warningImg}
+            source={securityrisk}
             style={styles.sheetRobotIcon}
             resizeMode="contain"
           />
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 15,
-    borderBottomWidth: 1,
+
   },
   bottomContainer: {
     paddingHorizontal: 13,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   sheetContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
     paddingTop: 10,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     alignItems: 'center',
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 5,
   },
 });
 
