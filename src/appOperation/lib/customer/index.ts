@@ -536,6 +536,15 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/disable-account - body { type, code, credential? } */
   securityDisableAccount: (data: { type: string; code: string; credential?: any }) =>
     appOperation.post('security/disable-account', data, CUSTOMER_TYPE),
+  /** Same as web: GET security/get-login-logs */
+  securityGetLoginLogs: () =>
+    appOperation.get('security/get-login-logs', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: GET security/get-security-logs */
+  securityGetSecurityLogs: () =>
+    appOperation.get('security/get-security-logs', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: GET security/get-logs */
+  securityGetLogs: () =>
+    appOperation.get('security/get-logs', undefined, undefined, CUSTOMER_TYPE),
   /** Same as web: GET security/get-fund-password-status */
   security_get_fund_password_status: () =>
     appOperation.get('security/get-fund-password-status', undefined, undefined, CUSTOMER_TYPE),
