@@ -306,7 +306,11 @@ const AccountDetails = () => {
                 </AppText>
               </View>
               <MenuItem label="Password" value="Not configured" />
-              <MenuItem label="Fund Password" value="Not enabled" />
+              <MenuItem 
+                label="Fund Password" 
+                value="Not enabled" 
+                onPress={() => NavigationService.navigate(routes.FUND_PASSWORD_MAIN_SCREEN)} 
+              />
 
               {/* Security Logs */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>
