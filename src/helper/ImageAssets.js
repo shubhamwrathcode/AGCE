@@ -229,7 +229,6 @@ export const telegramIcon = require('../../assets/images/telegramIcon.png');
 export const facebookIcon = require('../../assets/images/facebookIcon.png');
 export const twitterIcon = require('../../assets/images/twitterIcon.png');
 export const instaIcon = require('../../assets/images/instaIcon.png');
-export const peopleIcon = require('../../assets/images/peopleIcon.png');
 export const add = require('../../assets/images/add.png');
 export const minus = require('../../assets/images/minus.png');
 
@@ -415,7 +414,6 @@ export const setting_icon = require('../../assets/images/setting_icon.png');
 export const rewardHubIcon = require('../../assets/images/rewardHubIcon.png');
 export const inviteIcon = require('../../assets/images/inviteIcon.png');
 export const spottradingIcon = require('../../assets/images/spottradingIcon.png');
-export const editIcon = require('../../assets/images/editIcon.png');
 export const newsicon = require('../../assets/images/newsicon.png');
 export const newDepositIcon = require('../../assets/images/newDepositIcon.png');
 export const p2pIcon = require('../../assets/images/p2pIcon.png');
@@ -465,6 +463,17 @@ export const antiphisingFrame = require('../../assets/images/antiphisingFrame.pn
 export const antiphising3d = require('../../assets/images/antiphising3d.png');
 export const antiphisinglock = require('../../assets/images/antiphisinglock.png');
 export const succescelebrate = require('../../assets/images/succescelebrate.png');
+export const emergencyContact = require('../../assets/images/emergencyContact.png');
+export const editIcon = require('../../assets/images/editIcon.png');
+export const peopleIcon = require('../../assets/images/peopleIcon.png');
+export const profileNewIcon = require('../../assets/images/profileNewIcon.png');
+
+
+
+
+
+
+
 
 
 

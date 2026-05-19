@@ -75,6 +75,10 @@ import PasskeyAddPhone from "../screens/Security/Passkey/PasskeyAddPhone";
 import SecurityVerification from "../screens/Security/Passkey/SecurityVerification";
 import DownloadAuthenticator from "../screens/Security/Passkey/DownloadAuthenticator";
 import SetupAuthenticator from "../screens/Security/Passkey/SetupAuthenticator";
+import EmergencyContactMain from "../screens/Security/EmergencyContact/EmergencyContactMain";
+import AddEmergencyContact from "../screens/Security/EmergencyContact/AddEmergencyContact";
+import ConfirmEmergencyContact from "../screens/Security/EmergencyContact/ConfirmEmergencyContact";
+import EmergencyContactVerification from "../screens/Security/EmergencyContact/EmergencyContactVerification";
 import DisableTwoFactorScreen from "../screens/account/DisableTwoFactorScreen";
 import EnterOtp from "../screens/account/EnterOtp";
 import ConvertHistory from "../screens/home/ConvertHistory";
@@ -448,6 +452,22 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.PASSKEY_SETUP_AUTHENTICATOR_SCREEN}
         component={SetupAuthenticator}
+      />
+      <Stack.Screen
+        name={routes.EMERGENCY_CONTACT_SCREEN}
+        component={EmergencyContactMain}
+      />
+      <Stack.Screen
+        name={routes.ADD_EMERGENCY_CONTACT_SCREEN}
+        component={AddEmergencyContact}
+      />
+      <Stack.Screen
+        name={routes.CONFIRM_EMERGENCY_CONTACT_SCREEN}
+        component={ConfirmEmergencyContact}
+      />
+      <Stack.Screen
+        name={routes.EMERGENCY_CONTACT_VERIFICATION_SCREEN}
+        component={EmergencyContactVerification}
       />
       <Stack.Screen
         name={routes.DISABLE_2FA_SCREEN}

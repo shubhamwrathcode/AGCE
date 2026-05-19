@@ -288,7 +288,11 @@ const AccountDetails = () => {
                 value="Not configured" 
                 onPress={() => NavigationService.navigate(routes.WITHDRAWAL_SETTINGS_SCREEN)} 
               />
-              <MenuItem label="Emergency Contact" value="Not enabled" />
+              <MenuItem 
+                label="Emergency Contact" 
+                value="Not enabled" 
+                onPress={() => NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN)}
+              />
               <MenuItem label="Account Connections" value="Not configured" />
 
               {/* Password Management */}
