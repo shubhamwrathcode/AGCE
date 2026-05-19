@@ -159,7 +159,7 @@ const ChangeFundPassword = () => {
         <TouchableOpacity
           style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
           activeOpacity={0.8}
-          onPress={() => NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN)}
+          onPress={() => NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, { targetScreen: routes.FUND_PASSWORD_MAIN_SCREEN })}
         >
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
             Confirm

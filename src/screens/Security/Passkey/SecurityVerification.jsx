@@ -8,8 +8,9 @@ import { back_ic } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import * as routes from '../../../navigation/routes';
 
-const SecurityVerification = () => {
+const SecurityVerification = ({ route }) => {
   const { colors: themeColors, isDark } = useTheme();
+  const targetScreen = route?.params?.targetScreen || routes.CHANGE_PHONE_NUMBER_SCREEN;
 
   const [smsCode, setSmsCode] = useState('');
   const [emailCode, setEmailCode] = useState('');
@@ -74,7 +75,7 @@ const SecurityVerification = () => {
           <TouchableOpacity 
             style={[styles.submitBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]} 
             activeOpacity={0.8}
-            onPress={() => NavigationService.navigate(routes.CHANGE_PHONE_NUMBER_SCREEN)}
+            onPress={() => NavigationService.navigate(targetScreen)}
           >
             <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
               Confirm
