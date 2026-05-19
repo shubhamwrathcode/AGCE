@@ -524,6 +524,12 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: GET security/get-security-methods-list - returns enabled methods */
   get_security_methods_list: () =>
     appOperation.get('security/get-security-methods-list', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: POST security/closed-account/send-otp - body { security_methods } */
+  securityClosedAccountSendOtp: (security_methods: string) =>
+    appOperation.post('security/closed-account/send-otp', { security_methods }, CUSTOMER_TYPE),
+  /** Same as web: POST security/closed-account - body { type, code, credential? } */
+  securityClosedAccount: (data: { type: string; code: string; credential?: any }) =>
+    appOperation.post('security/closed-account', data, CUSTOMER_TYPE),
   /** Same as web: GET security/get-fund-password-status */
   security_get_fund_password_status: () =>
     appOperation.get('security/get-fund-password-status', undefined, undefined, CUSTOMER_TYPE),

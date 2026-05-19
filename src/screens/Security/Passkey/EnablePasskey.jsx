@@ -15,9 +15,9 @@ import { showError, showSuccess } from '../../../helper/logger';
 const EnablePasskey = () => {
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
-  
+
   const userData = useAppSelector((state) => state.auth.userData);
-  
+
   const [passkeys, setPasskeys] = useState([]);
   const [loadingPasskeys, setLoadingPasskeys] = useState(true);
   const [isRiskModalVisible, setRiskModalVisible] = useState(false);
@@ -125,7 +125,7 @@ const EnablePasskey = () => {
           const emailId = userData?.emailId || userData?.email_id || '';
           const projectName = 'Arab Global Exchange';
           const defaultName = emailId ? `${projectName} - ${emailId.split('@')[0]}` : `${projectName} Passkey`;
-          
+
           const verified = await dispatch(verifyPasskeyRegistration(passkeyResponse, defaultName));
           if (verified) {
             await dispatch(getUserProfile());
@@ -265,7 +265,7 @@ const EnablePasskey = () => {
               onPress={handleAddPasskey}
             >
               <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
-                + Add Another Passkey
+                Add Another Passkey
               </AppText>
             </TouchableOpacity>
           </View>
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bottomContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 18,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     paddingTop: 16,
   },

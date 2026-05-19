@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../../../hooks/useTheme';
 import RBSheet from 'react-native-raw-bottom-sheet';
-import { useAppSelector } from '../../../../store/hooks';
+import { appOperation } from '../../../../appOperation';
+import { useAppSelector, useAppDispatch } from '../../../../store/hooks';
 import {
   AppSafeAreaView,
   AppText,
@@ -21,12 +22,26 @@ import FastImage from 'react-native-fast-image';
 import { back_ic, closeAccountBanner, disableAccount, profileNewIcon } from '../../../../helper/ImageAssets';
 import { colors } from '../../../../theme/colors';
 import * as routes from '../../../../navigation/routes';
+import { logoutAction } from '../../../../actions/authActions';
+import { showError, showSuccess } from '../../../../helper/logger';
 
 const REASONS = [
   'I no longer wish to use this account',
   'Merge multiple accounts into one',
   'Others',
 ];
+
+const formatEstimatedTotalBtc = (value) => {
+  const n = Number(value);
+  if (isNaN(n) || !isFinite(n)) return '0';
+  return parseFloat(n.toFixed(8)).toString();
+};
+
+const pickPreferredVerificationMethod = (methods) => {
+  if (!methods) return null;
+  const appPriority = ['totp', 'email', 'mobile'];
+  return appPriority.find((k) => methods[k]) || null;
+};
 
 const CloseAccountReasonScreen = () => {
   const navigation = useNavigation();
@@ -36,6 +51,55 @@ const CloseAccountReasonScreen = () => {
   const [selectedReason, setSelectedReason] = useState(REASONS[0]);
   const [agreed, setAgreed] = useState(false);
   const sheetRef = useRef(null);
+  const dispatch = useAppDispatch();
+
+  const [estimatedTotalBtc, setEstimatedTotalBtc] = useState('0');
+  const [walletTotalLoading, setWalletTotalLoading] = useState(true);
+
+  const [resolvedMethods, setResolvedMethods] = useState(null);
+  const [methodsLoading, setMethodsLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchOnMount = async () => {
+      try {
+        setWalletTotalLoading(true);
+        setMethodsLoading(true);
+
+        // Fetch portfolio balance
+        appOperation.customer.all_wallets_portfolio()
+          .then(res => {
+            if (res?.success) {
+              const raw = res?.data?.estimated_total_btc || res?.estimated_total_btc || '0';
+              setEstimatedTotalBtc(raw);
+            }
+          })
+          .catch(e => console.log('Error fetching portfolio:', e))
+          .finally(() => setWalletTotalLoading(false));
+
+        // Fetch enabled security verification methods
+        const resMethods = await appOperation.customer.get_security_methods_list();
+        if (resMethods?.success) {
+          const raw =
+            resMethods?.data?.security_methods ||
+            resMethods?.data?.data?.security_methods ||
+            resMethods?.security_methods ||
+            resMethods?.data?.securityMethods ||
+            {};
+          setResolvedMethods({
+            email: !!raw.email,
+            mobile: !!(raw.mobile ?? raw.phone ?? raw.sms),
+            totp: !!raw.totp,
+            passkey: !!raw.passkey,
+          });
+        }
+      } catch (err) {
+        console.log('Error in mount fetch:', err);
+      } finally {
+        setMethodsLoading(false);
+      }
+    };
+    fetchOnMount();
+  }, []);
 
   const userData = useAppSelector((state) => state.auth?.userData);
   const userName = userData?.userName || 'AGCEUser';
@@ -55,6 +119,8 @@ const CloseAccountReasonScreen = () => {
     } else if (step === 2) {
       setStep(3);
     } else if (step === 3) {
+      setStep(4);
+    } else if (step === 4) {
       if (agreed) {
         sheetRef.current?.open();
       }
@@ -63,10 +129,42 @@ const CloseAccountReasonScreen = () => {
 
   const processAccountClosure = () => {
     sheetRef.current?.close();
-    navigation.navigate(routes.ACCOUNT_SCREEN);
+
+    if (methodsLoading) {
+      showError("Loading security methods. Please wait...");
+      return;
+    }
+
+    if (!resolvedMethods) {
+      showError("Could not retrieve security settings.");
+      return;
+    }
+
+    const priority = ['totp', 'email', 'mobile'];
+    const activeList = priority.filter(k => resolvedMethods[k]);
+    if (activeList.length === 0) {
+      showError("Please enable a verification method first.");
+      return;
+    }
+
+    navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+      purpose: 'delete_account',
+      verifyMethods: activeList,
+    });
   };
 
   const renderStep1 = () => (
+    <View style={styles.content}>
+      <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.title, { color: themeColors.text, marginBottom: 24 }]}>
+        Personal Data Retention
+      </AppText>
+      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? '#8A8A93' : '#8E8E93', lineHeight: 22 }}>
+        We inform you that the personal data you provided while using our services will be retained as long as necessary to fulfill the purposes outlined in our Privacy Policy, and to comply with legal obligations such as tax, accounting, Anti-Money Laundering regulations, or to resolve disputes and legal claims.
+      </AppText>
+    </View>
+  );
+
+  const renderStep2 = () => (
     <View style={styles.content}>
       <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.title, { color: themeColors.text, marginBottom: 40 }]}>
         Why do you want to close your account?
@@ -101,15 +199,15 @@ const CloseAccountReasonScreen = () => {
     </View>
   );
 
-  const renderStep2 = () => (
+  const renderStep3 = () => (
     <View style={styles.scrollContent}>
       <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.titleCentered, { color: themeColors.text }]}>
-        AGCE Account Dereistration{'\n'}Terms and Conditions
+        AGCE Account Deregistration{'\n'}Terms and Conditions
       </AppText>
 
       <AppText type={TWELVE} weight={MEDIUM} style={[styles.termsText, { color: isDark ? '#8A8A93' : '#8E8E93' }]}>
         ACCOUNT OPENED WITH AGCE, YOU MUST CAREFULLY READ THE TERMS AND CONDITIONS IN ITS ENTIRELY CONTEMPLATED HEREOF.{'\n\n'}
-        This AGCE Account Dereistration Terms and Conditions ("Terms") applies to all users who wishes to, requests or applies to deregister or cancel its account ("AGCE Account") opened or registered with or on the Sites of AGCE ("AGCE", "we", "our", "us", "ours"). By submitting an application or request for or proceeding with the deregistration and cancellation of your AGCE Account, you will be deemed to have fully read, understood and expressly agreed and consented to the Terms.{'\n\n'}
+        This AGCE Account Deregistration Terms and Conditions ("Terms") applies to all users who wishes to, requests or applies to deregister or cancel its account ("AGCE Account") opened or registered with or on the Sites of AGCE ("AGCE", "we", "our", "us", "ours"). By submitting an application or request for or proceeding with the deregistration and cancellation of your AGCE Account, you will be deemed to have fully read, understood and expressly agreed and consented to the Terms.{'\n\n'}
         The Terms shall be supplemental to and constitute part of the AGCE User Agreement (available at https://www.agce.com/zh/user-agreement) ("User Agreement") and should be read in conjunction with such User Agreement. Therefore, unless otherwise stated in this Agreement, the capitalized terms used in this Agreement shall have the same meaning given to them under the User Agreement. Where a term is defined both in the Terms and the User Agreement, for the purposes of these Terms only, the definition in these Terms shall prevail.{'\n\n'}
       </AppText>
 
@@ -124,7 +222,7 @@ const CloseAccountReasonScreen = () => {
     </View>
   );
 
-  const renderStep3 = () => (
+  const renderStep4 = () => (
     <View style={styles.scrollContent}>
       <View style={styles.illustrationContainer}>
         <FastImage source={closeAccountBanner} style={styles.illustration} resizeMode="contain" />
@@ -133,6 +231,24 @@ const CloseAccountReasonScreen = () => {
       <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.titleCentered, { color: themeColors.text }]}>
         Close Your Account
       </AppText>
+
+      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginTop: 10, marginBottom: 12 }}>
+        You have the following assets:
+      </AppText>
+
+      <View style={[styles.assetsCard, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+        <View style={styles.assetRow}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>NFT</AppText>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>0</AppText>
+        </View>
+        <View style={[styles.assetDivider, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]} />
+        <View style={styles.assetRow}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>Crypto Assets</AppText>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+            {walletTotalLoading ? '...' : `${formatEstimatedTotalBtc(estimatedTotalBtc)}`} BTC
+          </AppText>
+        </View>
+      </View>
 
       <View style={[styles.warningBox, { backgroundColor: colors.iconBgColor }]}>
         <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.warningText, { color: themeColors.text, marginBottom: 16 }]}>
@@ -190,6 +306,7 @@ const CloseAccountReasonScreen = () => {
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
+        {step === 4 && renderStep4()}
 
         {/* Spacer to push button to the bottom if content doesn't fill the screen */}
         <View style={{ flex: 1 }} />
@@ -200,14 +317,14 @@ const CloseAccountReasonScreen = () => {
             style={[
               styles.confirmBtn,
               { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' },
-              (step === 3 && !agreed) && { opacity: 0.5 }
+              (step === 4 && !agreed) && { opacity: 0.5 }
             ]}
             activeOpacity={0.8}
             onPress={handleNext}
-            disabled={step === 3 && !agreed}
+            disabled={step === 4 && !agreed}
           >
             <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
-              {step === 1 ? 'Confirm' : 'Accept and Continue'}
+              {step === 1 ? 'Disable Account' : step === 2 ? 'Confirm' : 'Accept and Continue'}
             </AppText>
           </TouchableOpacity>
         </View>
@@ -271,6 +388,7 @@ const CloseAccountReasonScreen = () => {
           </View>
         </View>
       </RBSheet>
+
     </AppSafeAreaView>
   );
 };
@@ -469,6 +587,21 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  assetsCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  assetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  assetDivider: {
+    height: 1,
+    marginVertical: 12,
   },
 });
 

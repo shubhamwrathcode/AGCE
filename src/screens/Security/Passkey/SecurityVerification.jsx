@@ -9,6 +9,8 @@ import { colors } from '../../../theme/colors';
 import * as routes from '../../../navigation/routes';
 import { useAppSelector, useAppDispatch } from '../../../store/hooks';
 import { sendSecurityOtp, verifySecurityOtp, verifySecurityTotp } from '../../../actions/accountActions';
+import { logoutAction } from '../../../actions/authActions';
+import { appOperation } from '../../../appOperation';
 import { showError, showSuccess } from '../../../helper/logger';
 import { VerificationOptionsSheet } from '../../../common/VerificationOptionsSheet';
 
@@ -42,12 +44,14 @@ const SecurityVerification = ({ route }) => {
     return ['email'];
   }, [params.verifyMethods, hasEmail, hasMobile, hasGoogleAuth]);
 
-  // Active methods in state so it can be changed dynamically by the user
-  const [activeMethods, setActiveMethods] = useState(initialVerifyMethods);
+  // Active methods in state so it can be changed dynamically by the user (only one active method is verified at a time)
+  const [activeMethods, setActiveMethods] = useState([initialVerifyMethods[0]]);
 
   // Sync state when dynamic initialVerifyMethods changes on mount
   useEffect(() => {
-    setActiveMethods(initialVerifyMethods);
+    if (initialVerifyMethods && initialVerifyMethods.length > 0) {
+      setActiveMethods([initialVerifyMethods[0]]);
+    }
   }, [initialVerifyMethods]);
 
   // Track keyboard active state to toggle justifyContent
@@ -97,22 +101,23 @@ const SecurityVerification = ({ route }) => {
   // Calculate dynamic available methods that the user has enabled (always includes all active methods)
   const availableOptions = useMemo(() => {
     const list = [];
+    const allowed = params.verifyMethods || [];
 
-    if (hasEmail) {
+    if (hasEmail && (allowed.length === 0 || allowed.includes('email'))) {
       list.push({
         value: 'email',
         label: 'Email Verification',
         description: `Verify using code sent to ${displayEmail}`,
       });
     }
-    if (hasMobile) {
+    if (hasMobile && (allowed.length === 0 || allowed.includes('mobile'))) {
       list.push({
         value: 'mobile',
         label: 'Phone Verification',
         description: `Verify using code sent to ${displayPhone}`,
       });
     }
-    if (hasGoogleAuth) {
+    if (hasGoogleAuth && (allowed.length === 0 || allowed.includes('totp'))) {
       list.push({
         value: 'totp',
         label: 'Google Authenticator',
@@ -120,7 +125,7 @@ const SecurityVerification = ({ route }) => {
       });
     }
     return list;
-  }, [hasEmail, hasMobile, hasGoogleAuth, displayEmail, displayPhone]);
+  }, [hasEmail, hasMobile, hasGoogleAuth, displayEmail, displayPhone, params.verifyMethods]);
 
   // Auto-send OTP when active methods change
   useEffect(() => {
@@ -201,6 +206,27 @@ const SecurityVerification = ({ route }) => {
     if (!skipDirectVerification) {
       setIsSubmitting(true);
       try {
+        if (purpose === 'delete_account') {
+          const type = activeMethods[0];
+          const submitType = type === 'mobile' ? 'phone' : type;
+          const code = type === 'totp' ? totpCode : (type === 'email' ? emailCode : smsCode);
+
+          const res = await appOperation.customer.securityClosedAccount({
+            type: submitType,
+            code,
+          });
+
+          if (res?.success) {
+            showSuccess(res?.message || 'Account successfully closed');
+            dispatch(logoutAction());
+            return;
+          } else {
+            showError(res?.message || 'Verification failed');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
         if (activeMethods.includes('email')) {
           const ok = await dispatch(verifySecurityOtp('email', emailCode, purpose));
           if (!ok) {

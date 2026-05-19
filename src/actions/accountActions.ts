@@ -1016,7 +1016,9 @@ export const disable2fa = (
 export const sendSecurityOtp = (target: string, purpose: string, value?: string | null) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
-    const response: any = await appOperation.customer.securitySendOtp(target, purpose, value ?? undefined);
+    const response: any = purpose === 'delete_account'
+      ? await appOperation.customer.securityClosedAccountSendOtp(target === 'mobile' ? 'phone' : target)
+      : await appOperation.customer.securitySendOtp(target, purpose, value ?? undefined);
     if (response?.success) {
       showSuccess(response?.message || 'OTP sent successfully');
       return true;

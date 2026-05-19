@@ -116,8 +116,8 @@ const PasskeyAddPhone = ({ route }) => {
     setIsSubmitting(false);
 
     if (success) {
-      // Redirect to Account Details screen
-      NavigationService.navigate(routes.ACCOUNT_SCREEN);
+      // Redirect to Passkey Management screen
+      NavigationService.navigate(routes.PASSKEY_SCREEN);
     }
   };
 
