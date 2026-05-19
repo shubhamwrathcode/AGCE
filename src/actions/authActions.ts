@@ -254,6 +254,11 @@ export function classifyLoginFailureMessage(message: unknown): LoginFailureKind 
   return 'auth_failed';
 }
 
+const isSuspendedMessage = (msg: string): boolean => {
+  const m = String(msg || '').toLowerCase();
+  return m.includes('suspended') || m.includes('suspicious') || m.includes('support') || m.includes('assistance');
+};
+
 function loginFailureHighlights(kind: LoginFailureKind): {
   highlightPasswordField: boolean;
   highlightIdentifierField: boolean;
@@ -314,6 +319,15 @@ export const login = (data: LoginProps & { token?: string }) => async (
 
     if (!response.success) {
       if (response?.code == 403) {
+        const failMsg = loginFailMessage(response);
+        if (isSuspendedMessage(failMsg)) {
+          showError(failMsg);
+          return {
+            success: false,
+            highlightPasswordField: false,
+            highlightIdentifierField: false,
+          };
+        }
         appOperation.setCustomerToken(response?.data);
         NavigationService.navigate(REGISTER_SCREEN, {myToken: true, userData: data});
         return {
@@ -365,6 +379,13 @@ export const login = (data: LoginProps & { token?: string }) => async (
     const errMsg = e?.response?.data?.message ?? e?.message ?? 'An error occurred. Please try again later.';
     showError(errMsg);
     if (e?.code == 403) {
+      if (isSuspendedMessage(errMsg)) {
+        return {
+          success: false,
+          highlightPasswordField: false,
+          highlightIdentifierField: false,
+        };
+      }
       appOperation.setCustomerToken(e?.data);
       NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
       return {
@@ -419,8 +440,12 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
     }
   } catch (e: any) {
     logger(e);
-    showError(e?.message);
+    const errMsg = e?.response?.data?.message ?? e?.message ?? '';
+    showError(errMsg || 'Google login failed');
     if (e?.code == 403) {
+      if (isSuspendedMessage(errMsg)) {
+        return;
+      }
       appOperation.setCustomerToken(e?.data);
       NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
       return;

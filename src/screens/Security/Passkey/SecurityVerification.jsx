@@ -78,6 +78,7 @@ const SecurityVerification = ({ route }) => {
 
   // RBSheet reference for switching methods
   const sheetRef = useRef(null);
+  const sentOtpRef = useRef(new Set());
 
   // Masking helpers
   const maskEmail = (email) => {
@@ -130,14 +131,22 @@ const SecurityVerification = ({ route }) => {
   // Auto-send OTP when active methods change
   useEffect(() => {
     if (activeMethods.includes('email') && emailId) {
-      void dispatch(sendSecurityOtp('email', purpose)).then((ok) => {
-        if (ok) setEmailCountdown(60);
-      });
+      const key = `email-${purpose}`;
+      if (!sentOtpRef.current.has(key)) {
+        sentOtpRef.current.add(key);
+        void dispatch(sendSecurityOtp('email', purpose)).then((ok) => {
+          if (ok) setEmailCountdown(60);
+        });
+      }
     }
     if (activeMethods.includes('mobile') && profileMobile) {
-      void dispatch(sendSecurityOtp('mobile', purpose)).then((ok) => {
-        if (ok) setSmsCountdown(60);
-      });
+      const key = `mobile-${purpose}`;
+      if (!sentOtpRef.current.has(key)) {
+        sentOtpRef.current.add(key);
+        void dispatch(sendSecurityOtp('mobile', purpose)).then((ok) => {
+          if (ok) setSmsCountdown(60);
+        });
+      }
     }
   }, [activeMethods, emailId, profileMobile, purpose]);
 
@@ -218,6 +227,27 @@ const SecurityVerification = ({ route }) => {
 
           if (res?.success) {
             showSuccess(res?.message || 'Account successfully closed');
+            dispatch(logoutAction());
+            return;
+          } else {
+            showError(res?.message || 'Verification failed');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
+        if (purpose === 'disable_account') {
+          const type = activeMethods[0];
+          const submitType = type === 'mobile' ? 'phone' : type;
+          const code = type === 'totp' ? totpCode : (type === 'email' ? emailCode : smsCode);
+
+          const res = await appOperation.customer.securityDisableAccount({
+            type: submitType,
+            code,
+          });
+
+          if (res?.success) {
+            showSuccess(res?.message || 'Account successfully disabled');
             dispatch(logoutAction());
             return;
           } else {
@@ -405,6 +435,15 @@ const SecurityVerification = ({ route }) => {
               Choose other verification method
             </AppText>
           </TouchableOpacity>
+
+          {/* <TouchableOpacity
+            style={[styles.linkContainer, { marginTop: 12 }]}
+            onPress={() => NavigationService.navigate(routes.SECURITY_VERIFICATION_UNAVAILABLE_SCREEN)}
+          >
+            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: colors.orangeTheme }]}>
+              Security verification unavailable?
+            </AppText>
+          </TouchableOpacity> */}
         </View>
       </ScrollView>
 

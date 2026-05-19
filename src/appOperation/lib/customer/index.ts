@@ -530,6 +530,12 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/closed-account - body { type, code, credential? } */
   securityClosedAccount: (data: { type: string; code: string; credential?: any }) =>
     appOperation.post('security/closed-account', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/disable-account/send-otp - body { security_methods } */
+  securityDisableAccountSendOtp: (security_methods: string) =>
+    appOperation.post('security/disable-account/send-otp', { security_methods }, CUSTOMER_TYPE),
+  /** Same as web: POST security/disable-account - body { type, code, credential? } */
+  securityDisableAccount: (data: { type: string; code: string; credential?: any }) =>
+    appOperation.post('security/disable-account', data, CUSTOMER_TYPE),
   /** Same as web: GET security/get-fund-password-status */
   security_get_fund_password_status: () =>
     appOperation.get('security/get-fund-password-status', undefined, undefined, CUSTOMER_TYPE),

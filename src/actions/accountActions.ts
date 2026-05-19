@@ -1018,6 +1018,8 @@ export const sendSecurityOtp = (target: string, purpose: string, value?: string 
     dispatch(setLoading(true));
     const response: any = purpose === 'delete_account'
       ? await appOperation.customer.securityClosedAccountSendOtp(target === 'mobile' ? 'phone' : target)
+      : purpose === 'disable_account'
+      ? await appOperation.customer.securityDisableAccountSendOtp(target === 'mobile' ? 'phone' : target)
       : await appOperation.customer.securitySendOtp(target, purpose, value ?? undefined);
     if (response?.success) {
       showSuccess(response?.message || 'OTP sent successfully');

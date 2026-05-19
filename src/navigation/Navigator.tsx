@@ -72,6 +72,9 @@ import ViewPasskeysScreen from "../screens/account/ViewPasskeysScreen";
 import EnablePasskey from "../screens/Security/Passkey/EnablePasskey";
 import PasskeyAddPhone from "../screens/Security/Passkey/PasskeyAddPhone";
 import SecurityVerification from "../screens/Security/Passkey/SecurityVerification";
+import SecurityVerificationUnavailableScreen from "../screens/Security/Passkey/SecurityVerificationUnavailableScreen";
+import SecurityPasskeyVerificationScreen from "../screens/Security/Passkey/SecurityPasskeyVerificationScreen";
+import SecurityFacialVerificationScreen from "../screens/Security/Passkey/SecurityFacialVerificationScreen";
 import DownloadAuthenticator from "../screens/Security/Passkey/DownloadAuthenticator";
 import SetupAuthenticator from "../screens/Security/Passkey/SetupAuthenticator";
 import EmergencyContactMain from "../screens/Security/EmergencyContact/EmergencyContactMain";
@@ -87,7 +90,6 @@ import ResetYourPasswordScreen from "../screens/Security/LoginPassword/ResetYour
 import AuthorizedDevicesScreen from "../screens/Security/AuthorizedDevicesScreen";
 import SecurityLogsScreen from "../screens/Security/SecurityLogsScreen";
 import DisableAccountScreen from "../screens/Security/AccountManagement/DisableAccountScreen";
-import DisableAccountVerifyScreen from "../screens/Security/AccountManagement/DisableAccountVerifyScreen";
 import ThirdPartyAccountAccessScreen from "../screens/Security/AccountManagement/ThirdPartyAccountAccessScreen";
 import CloseAccountReasonScreen from "../screens/Security/AccountManagement/CloseAccount/CloseAccountReasonScreen";
 import EmergencyContactVerification from "../screens/Security/EmergencyContact/EmergencyContactVerification";
@@ -458,6 +460,18 @@ const MyAuthLoadingStack = () => {
         component={SecurityVerification}
       />
       <Stack.Screen
+        name={routes.SECURITY_VERIFICATION_UNAVAILABLE_SCREEN}
+        component={SecurityVerificationUnavailableScreen}
+      />
+      <Stack.Screen
+        name={routes.SECURITY_PASSKEY_VERIFICATION_SCREEN}
+        component={SecurityPasskeyVerificationScreen}
+      />
+      <Stack.Screen
+        name={routes.SECURITY_FACIAL_VERIFICATION_SCREEN}
+        component={SecurityFacialVerificationScreen}
+      />
+      <Stack.Screen
         name={routes.DOWNLOAD_AUTHENTICATOR_SCREEN}
         component={DownloadAuthenticator}
       />
@@ -608,10 +622,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.DISABLE_ACCOUNT_SCREEN}
         component={DisableAccountScreen}
-      />
-      <Stack.Screen
-        name={routes.DISABLE_ACCOUNT_VERIFY_SCREEN}
-        component={DisableAccountVerifyScreen}
       />
       <Stack.Screen
         name={routes.THIRD_PARTY_ACCOUNT_ACCESS_SCREEN}

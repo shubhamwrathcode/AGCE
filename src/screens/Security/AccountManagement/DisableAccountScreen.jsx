@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../../hooks/useTheme';
 import {
@@ -13,13 +13,76 @@ import {
   THIRTEEN,
 } from '../../../shared';
 import FastImage from 'react-native-fast-image';
-import { back_ic, account_restrictions, Polygon, disableAccount } from '../../../helper/ImageAssets';
+import { back_ic, Polygon, disableAccount } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
+import { Button } from '../../../common/Button';
+import { appOperation } from '../../../appOperation';
+import { showError } from '../../../helper/logger';
 import * as routes from '../../../navigation/routes';
 
 const DisableAccountScreen = () => {
   const navigation = useNavigation();
   const { colors: themeColors, isDark } = useTheme();
+
+  const [methodsLoading, setMethodsLoading] = useState(true);
+  const [resolvedMethods, setResolvedMethods] = useState(null);
+
+  useEffect(() => {
+    const fetchMethods = async () => {
+      try {
+        setMethodsLoading(true);
+        const resMethods = await appOperation.customer.get_security_methods_list();
+        if (resMethods?.success) {
+          const raw =
+            resMethods?.data?.security_methods ||
+            resMethods?.data?.data?.security_methods ||
+            resMethods?.security_methods ||
+            resMethods?.data?.securityMethods ||
+            {};
+          setResolvedMethods({
+            email: !!raw.email,
+            mobile: !!(raw.mobile ?? raw.phone ?? raw.sms),
+            totp: !!raw.totp,
+            passkey: !!raw.passkey,
+          });
+        }
+      } catch (err) {
+        console.log('Error fetching security methods:', err);
+      } finally {
+        setMethodsLoading(false);
+      }
+    };
+    fetchMethods();
+  }, []);
+
+  const handleDisableAccount = () => {
+    if (methodsLoading) {
+      showError("Loading security methods. Please wait...");
+      return;
+    }
+
+    if (!resolvedMethods) {
+      showError("Could not retrieve security settings.");
+      return;
+    }
+
+    const priority = ['totp', 'email', 'mobile'];
+    const activeList = priority.filter(k => resolvedMethods[k]);
+    if (activeList.length === 0) {
+      showError("Please enable a verification method first.");
+      return;
+    }
+
+    navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+      purpose: 'disable_account',
+      verifyMethods: activeList,
+    });
+  };
+
+  const cardBg = isDark ? '#1C1C1E' : '#F2F2F7';
+  const borderCol = isDark ? '#2C2C2E' : '#E5E5EA';
+  const textColor = themeColors.text;
+  const subTextColor = isDark ? '#8A8A93' : '#8E8E93';
 
   return (
     <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : colors.white }]}>
@@ -38,7 +101,7 @@ const DisableAccountScreen = () => {
           />
         </TouchableOpacity>
 
-        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: textColor }]}>
           Disable Account
         </AppText>
         <View style={{ width: 24 }} />
@@ -55,48 +118,51 @@ const DisableAccountScreen = () => {
         </View>
 
         {/* Text */}
-        <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.description, { color: themeColors.text }]}>
+        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.description, { color: textColor }]}>
           Please be aware of the following impacts on your account once it is disabled:
         </AppText>
 
         <View style={styles.bulletList}>
-          <View style={styles.bulletItem}>
+          <View style={[styles.bulletItemCard, { backgroundColor: cardBg, borderColor: borderCol }]}>
             <FastImage
               source={Polygon}
-              style={{ width: 12, height: 12, marginTop: 5, marginRight: 10 }}
+              style={{ width: 10, height: 10, marginTop: 4, marginRight: 10 }}
               resizeMode="contain"
             />
-            <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.bulletText, { color: themeColors.text }]}>
+            <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.bulletText, { color: textColor }]}>
               Any pending withdrawal requests will be canceled.
             </AppText>
           </View>
-          <View style={styles.bulletItem}>
+          
+          <View style={[styles.bulletItemCard, { backgroundColor: cardBg, borderColor: borderCol }]}>
             <FastImage
               source={Polygon}
-              style={{ width: 12, height: 12, marginTop: 5, marginRight: 10 }}
+              style={{ width: 10, height: 10, marginTop: 4, marginRight: 10 }}
               resizeMode="contain"
             />
-            <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.bulletText, { color: themeColors.text }]}>
+            <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.bulletText, { color: textColor }]}>
               All trading features on your account will be disabled.
             </AppText>
           </View>
-          <View style={styles.bulletItem}>
+
+          <View style={[styles.bulletItemCard, { backgroundColor: cardBg, borderColor: borderCol }]}>
             <FastImage
               source={Polygon}
-              style={{ width: 12, height: 12, marginTop: 5, marginRight: 10 }}
+              style={{ width: 10, height: 10, marginTop: 4, marginRight: 10 }}
               resizeMode="contain"
             />
-            <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.bulletText, { color: themeColors.text }]}>
+            <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.bulletText, { color: textColor }]}>
               All API keys linked to your account will be removed.
             </AppText>
           </View>
-          <View style={styles.bulletItem}>
+
+          <View style={[styles.bulletItemCard, { backgroundColor: cardBg, borderColor: borderCol }]}>
             <FastImage
               source={Polygon}
-              style={{ width: 12, height: 12, marginTop: 5, marginRight: 10 }}
+              style={{ width: 10, height: 10, marginTop: 4, marginRight: 10 }}
               resizeMode="contain"
             />
-            <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.bulletText, { color: themeColors.text }]}>
+            <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.bulletText, { color: textColor }]}>
               Your identity verification details will be retained and not deleted.
             </AppText>
           </View>
@@ -105,15 +171,18 @@ const DisableAccountScreen = () => {
 
       {/* Bottom Button */}
       <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={[styles.disableBtn, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate(routes.DISABLE_ACCOUNT_VERIFY_SCREEN)}
-        >
-          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
-            Disable Account
-          </AppText>
-        </TouchableOpacity>
+        {methodsLoading ? (
+          <ActivityIndicator size="small" color={colors.orangeTheme} style={{ marginVertical: 12 }} />
+        ) : (
+          <Button
+            containerStyle={styles.disableBtn}
+            onPress={handleDisableAccount}
+          >
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: colors.white }}>
+              Disable Account
+            </AppText>
+          </Button>
+        )}
       </View>
     </AppSafeAreaView>
   );
@@ -143,53 +212,44 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   illustrationContainer: {
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 40,
+    marginTop: 24,
+    marginBottom: 24,
   },
   illustration: {
-    width: 160,
-    height: 160,
+    width: 140,
+    height: 140,
   },
   description: {
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   bulletList: {
-    marginTop: 8,
+    marginTop: 4,
   },
-  bulletItem: {
+  bulletItemCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
     marginBottom: 10,
-  },
-  bulletPoint: {
-    width: 12,
-    height: 12,
-    marginTop: 4,
-    marginRight: 10,
-    borderRadius: 2, // Slightly rounded hexagon shape approximation
-    transform: [{ rotate: '45deg' }],
   },
   bulletText: {
     flex: 1,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   bottomContainer: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 34 : 24,
     left: 0,
     right: 0,
-    paddingHorizontal: 12,
+    paddingHorizontal: 24,
   },
   disableBtn: {
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
     width: '100%',
   },
 });
