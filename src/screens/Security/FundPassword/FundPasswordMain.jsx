@@ -1,9 +1,8 @@
-import React, { useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
 import FastImage from 'react-native-fast-image';
-import RBSheet from 'react-native-raw-bottom-sheet';
 import {
   AppSafeAreaView,
   AppText,
@@ -11,47 +10,33 @@ import {
   FOURTEEN,
   SIXTEEN,
   SEMI_BOLD,
-  TWELVE,
   EIGHTEEN,
   THIRTEEN,
   MEDIUM,
   TWENTY,
-  FIFTEEN,
 } from '../../../shared';
-import { back_ic, right_ic, securityrisk, warningImg } from '../../../helper/ImageAssets';
+import { back_ic, securityrisk } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import * as routes from '../../../navigation/routes';
+import { useAppSelector, useAppDispatch } from '../../../store/hooks';
+import { getUserProfile, getFundPasswordStatusAction } from '../../../actions/accountActions';
 
 const FundPasswordMain = () => {
   const { colors: themeColors, isDark } = useTheme();
-  const sheetRef = useRef(null);
+  const dispatch = useAppDispatch();
+  const userData = useAppSelector((state) => state.auth.userData);
+  const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
+  const hasFundPassword = fundPasswordStatus ?? !!(userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
 
-  const MenuItem = ({ label, value, onPress }) => (
-    <TouchableOpacity
-      style={[styles.menuItem, { borderBottomColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={{ flex: 1 }}>
-        <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
-          {label}
-        </AppText>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {value && (
-          <AppText type={THIRTEEN} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginRight: 8 }}>
-            {value}
-          </AppText>
-        )}
-        <FastImage
-          source={right_ic}
-          style={{ width: 12, height: 12 }}
-          tintColor={isDark ? '#8A8A93' : '#C1C1C1'}
-          resizeMode="contain"
-        />
-      </View>
-    </TouchableOpacity>
-  );
+  const loadStatus = async () => {
+    dispatch(getUserProfile(false));
+    const res = await dispatch(getFundPasswordStatusAction());
+    setFundPasswordStatus(!!res);
+  };
+
+  useEffect(() => {
+    loadStatus();
+  }, []);
 
   return (
     <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : colors.white }]}>
@@ -71,108 +56,54 @@ const FundPasswordMain = () => {
         </TouchableOpacity>
 
         <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
-          Set fund password
+          {hasFundPassword ? "Change fund password" : "Set fund password"}
         </AppText>
         <View style={{ width: 24 }} />
       </View>
 
       {/* Content */}
-      <View style={styles.content}>
-        <View>
-          <MenuItem
-            label="Change Fund Password"
-            value="Change"
-            onPress={() => sheetRef.current?.open()}
-          />
-          <MenuItem 
-            label="Reset Fund Password" 
-            value="Reset" 
-            onPress={() => NavigationService.navigate(routes.RESET_FUND_PASSWORD_SCREEN)}
-          />
-        </View>
-      </View>
-
-      {/* Bottom Buttons Container */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={[styles.confirmButton, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
-          activeOpacity={0.8}
+      <View style={styles.stepOneMain}>
+        <ScrollView
+          contentContainerStyle={styles.stepOneScrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
-            Confirm
-          </AppText>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.unableLink} activeOpacity={0.7}>
-          <AppText
-            type={FOURTEEN}
-            weight={MEDIUM}
-            style={[styles.unableText, { color: isDark ? '#FFFFFF' : '#000000' }]}
-          >
-            Unable to Verify?
-          </AppText>
-        </TouchableOpacity>
-      </View>
-
-      {/* RBSheet prompt for confirmation */}
-      <RBSheet
-        ref={sheetRef}
-        height={380}
-        closeOnDragDown={true}
-        closeOnPressMask={true}
-        customStyles={{
-          container: {
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-          },
-          wrapper: { backgroundColor: 'rgba(0,0,0,0.5)' },
-          draggableIcon: { backgroundColor: isDark ? '#3A3A3C' : '#E5E5EA', width: 40 },
-        }}
-      >
-        <View style={styles.sheetContainer}>
           <FastImage
             source={securityrisk}
-            style={styles.sheetRobotIcon}
+            style={styles.stepOneImage}
             resizeMode="contain"
           />
+
           <AppText
             type={TWENTY}
             weight={SEMI_BOLD}
-            style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}
+            style={[styles.stepOneTitleText, { color: isDark ? '#FFFFFF' : '#121214' }]}
           >
-            Are you sure you want to change the fund password?
+            {hasFundPassword ? "Are you sure you want to change your fund password?" : "Are you sure you want to set your fund password?"}
           </AppText>
+
           <AppText
             type={THIRTEEN}
             weight={MEDIUM}
-            style={[styles.sheetSubtitle, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
+            style={[styles.stepOneDescText, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
           >
-            To protect your account and assets, withdrawals and P2P transactions will be temporarily restricted for 24 hours after updating your email address.
+            For the security of your assets, withdrawals and P2P selling will be temporarily locked for <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.orangeTheme }}>24</AppText> hours after you {hasFundPassword ? "change" : "set"} your fund password.
           </AppText>
-          <View style={styles.sheetButtonRow}>
-            <TouchableOpacity
-              style={[styles.sheetCancelBtn, { backgroundColor: isDark ? '#2A2A2E' : '#F5F5F7' }]}
-              onPress={() => sheetRef.current?.close()}
-            >
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#FFFFFF' : '#000000' }}>
-                Cancel
-              </AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.sheetContinueBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
-              onPress={() => {
-                sheetRef.current?.close();
-                NavigationService.navigate(routes.CHANGE_FUND_PASSWORD_SCREEN);
-              }}
-            >
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
-                Continue
-              </AppText>
-            </TouchableOpacity>
-          </View>
+        </ScrollView>
+
+        <View style={styles.stepOneBottomContainer}>
+          <TouchableOpacity
+            style={[styles.confirmButton, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
+            onPress={() => {
+              NavigationService.navigate(routes.CHANGE_FUND_PASSWORD_SCREEN);
+            }}
+            activeOpacity={0.8}
+          >
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#121214' : '#FFFFFF' }}>
+              Confirm
+            </AppText>
+          </TouchableOpacity>
         </View>
-      </RBSheet>
+      </View>
     </AppSafeAreaView>
   );
 };
@@ -199,22 +130,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     zIndex: -1,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-
-  },
-  bottomContainer: {
-    paddingHorizontal: 13,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-    alignItems: 'center',
-  },
   confirmButton: {
     height: 52,
     borderRadius: 26,
@@ -223,52 +138,34 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 20,
   },
-  unableLink: {
-    paddingVertical: 4,
+  stepOneMain: {
+    flex: 1,
   },
-  unableText: {
-    textDecorationLine: 'underline',
+  stepOneScrollContent: {
+    alignItems: 'center',
+    paddingTop: 40,
+    paddingHorizontal: 20,
   },
-  sheetContainer: {
-    paddingHorizontal: 15,
-    paddingTop: 10,
+  stepOneBottomContainer: {
+    paddingHorizontal: 16,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-    alignItems: 'center',
   },
-  sheetRobotIcon: {
-    width: 90,
-    height: 90,
+  stepOneImage: {
+    width: 220,
+    height: 150,
+    marginBottom: 30,
+  },
+  stepOneTitleText: {
+    textAlign: 'center',
+    lineHeight: 28,
     marginBottom: 16,
+    paddingHorizontal: 10,
   },
-  sheetTitle: {
+  stepOneDescText: {
     textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: 10,
-  },
-  sheetSubtitle: {
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  sheetButtonRow: {
-    flexDirection: 'row',
-    width: '100%',
-  },
-  sheetCancelBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  sheetContinueBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 5,
+    lineHeight: 22,
+    marginBottom: 40,
+    paddingHorizontal: 15,
   },
 });
 

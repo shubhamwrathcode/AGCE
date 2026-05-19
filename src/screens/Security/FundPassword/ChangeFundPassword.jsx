@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, TextInput, ScrollView, Keyboard } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, TextInput, ScrollView, Keyboard, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
 import FastImage from 'react-native-fast-image';
@@ -16,19 +16,95 @@ import {
 import { back_ic, eye_open_icon, eye_close_icon } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import * as routes from '../../../navigation/routes';
+import { useAppSelector, useAppDispatch } from '../../../store/hooks';
+import { sendSecurityOtp, securityAddFundPasswordAction, getUserProfile, getFundPasswordStatusAction } from '../../../actions/accountActions';
+import { showError, showSuccess } from '../../../helper/logger';
 
 const ChangeFundPassword = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const dispatch = useAppDispatch();
+  const userData = useAppSelector((state) => state.auth.userData);
+  const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
+  const hasFundPassword = fundPasswordStatus ?? !!(userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
 
-  const [currentPassword, setCurrentPassword] = useState('');
+  const maskedEmail = React.useMemo(() => {
+    const email = String(userData?.emailId || userData?.email || '').trim();
+    if (!email || !email.includes('@')) return 'your email';
+    const [name, domain] = email.split('@');
+    return `${name.slice(0, 2)}***@${domain}`;
+  }, [userData]);
+
+  const verifyType = React.useMemo(() => {
+    if (userData?.['2fa'] === 2) return 'totp';
+    if (userData?.emailId || userData?.email) return 'email';
+    if (userData?.mobileNumber || userData?.mobile_number) return 'phone';
+    return 'email';
+  }, [userData]);
+
+  const getVerifyLabel = () => {
+    if (verifyType === 'totp') return 'Google Authenticator Code';
+    if (verifyType === 'phone') return 'Mobile Code';
+    return 'Email verification code';
+  };
+
+  const getVerifyHint = () => {
+    if (verifyType === 'totp') return 'Enter the 6-digit code from your authenticator app.';
+    if (verifyType === 'phone') return 'Send the verification code to your mobile, and the code will be valid for 10 minutes';
+    return `Send the verification code to ${maskedEmail}, and the code will be valid for 10 minutes`;
+  };
+
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordAgain, setNewPasswordAgain] = useState('');
   const [emailCode, setEmailCode] = useState('');
 
-  const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showPass1, setShowPass1] = useState(false);
   const [showPass2, setShowPass2] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleSendOtp = async () => {
+    const channel = verifyType === 'phone' ? 'mobile' : 'email';
+    await dispatch(sendSecurityOtp(channel, 'fund_password'));
+  };
+
+  const handleConfirm = async () => {
+    if (!newPassword || !newPasswordAgain) {
+      showError('Please fill in all password fields');
+      return;
+    }
+    if (newPassword !== newPasswordAgain) {
+      showError('Passwords do not match');
+      return;
+    }
+    if (!emailCode) {
+      showError('Please enter verification code');
+      return;
+    }
+
+    setIsConfirming(true);
+    const payload = {
+      fund_password: newPassword,
+      confirm_fund_password: newPasswordAgain,
+      code: emailCode,
+      type: verifyType,
+    };
+
+    const success = await dispatch(securityAddFundPasswordAction(payload));
+    setIsConfirming(false);
+    if (success) {
+      NavigationService.navigate(routes.ACCOUNT_SCREEN);
+    }
+  };
+
+  const loadStatus = async () => {
+    dispatch(getUserProfile(false));
+    const res = await dispatch(getFundPasswordStatusAction());
+    setFundPasswordStatus(!!res);
+  };
+
+  useEffect(() => {
+    loadStatus();
+  }, []);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -64,7 +140,7 @@ const ChangeFundPassword = () => {
         </TouchableOpacity>
 
         <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
-          Change fund password
+          {hasFundPassword ? "Change fund password" : "Set fund password"}
         </AppText>
         <View style={{ width: 24 }} />
       </View>
@@ -76,35 +152,11 @@ const ChangeFundPassword = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Current Password field */}
-        <View style={styles.inputGroup}>
-          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-            Current password
-          </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
-            <TextInput
-              style={[styles.input, { color: themeColors.text }]}
-              placeholder="Please enter"
-              placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
-              secureTextEntry={!showCurrentPass}
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-            />
-            <TouchableOpacity onPress={() => setShowCurrentPass(!showCurrentPass)} style={styles.eyeBtn}>
-              <FastImage
-                source={showCurrentPass ? eye_open_icon : eye_close_icon}
-                style={styles.eyeIcon}
-                tintColor={isDark ? '#8A8A93' : '#8E8E93'}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* New Password field */}
         <View style={styles.inputGroup}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-            New password
+            New Fund Password
           </AppText>
           <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
             <TextInput
@@ -124,12 +176,15 @@ const ChangeFundPassword = () => {
               />
             </TouchableOpacity>
           </View>
+          <AppText type={THIRTEEN} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 6, lineHeight: 18 }}>
+            Choose a strong fund password and keep it private.
+          </AppText>
         </View>
 
         {/* New Password Again field */}
         <View style={styles.inputGroup}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-            New password again
+            Confirm Fund Password
           </AppText>
           <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
             <TextInput
@@ -151,10 +206,10 @@ const ChangeFundPassword = () => {
           </View>
         </View>
 
-        {/* Email Verification Code field */}
+        {/* Verification Code field */}
         <View style={styles.inputGroup}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-            Email verification code
+            {getVerifyLabel()}
           </AppText>
           <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
             <TextInput
@@ -163,14 +218,20 @@ const ChangeFundPassword = () => {
               placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
               keyboardType="number-pad"
               value={emailCode}
-              onChangeText={setEmailCode}
+              onChangeText={(val) => setEmailCode(val.replace(/\D/g, '').slice(0, 6))}
+              maxLength={6}
             />
-            <TouchableOpacity activeOpacity={0.8} style={styles.sendBtn}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme }}>
-                Send
-              </AppText>
-            </TouchableOpacity>
+            {(verifyType === 'email' || verifyType === 'phone') && (
+              <TouchableOpacity activeOpacity={0.8} style={styles.sendBtn} onPress={handleSendOtp}>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme }}>
+                  Send
+                </AppText>
+              </TouchableOpacity>
+            )}
           </View>
+          <AppText type={THIRTEEN} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 6, lineHeight: 18 }}>
+            {getVerifyHint()}
+          </AppText>
         </View>
       </ScrollView>
 
@@ -180,22 +241,18 @@ const ChangeFundPassword = () => {
           <TouchableOpacity
             style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
             activeOpacity={0.8}
-            onPress={() => NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, { targetScreen: routes.FUND_PASSWORD_MAIN_SCREEN })}
+            onPress={handleConfirm}
+            disabled={isConfirming}
           >
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
-              Confirm
-            </AppText>
+            {isConfirming ? (
+              <ActivityIndicator color={isDark ? '#000000' : '#FFFFFF'} size="small" />
+            ) : (
+              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
+                Confirm
+              </AppText>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.unableLink} activeOpacity={0.7}>
-            <AppText
-              type={FOURTEEN}
-              weight={MEDIUM}
-              style={[styles.unableText, { color: isDark ? '#FFFFFF' : '#000000' }]}
-            >
-              Unable to Verify?
-            </AppText>
-          </TouchableOpacity>
         </View>
       )}
     </AppSafeAreaView>

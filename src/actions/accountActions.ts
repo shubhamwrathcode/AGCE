@@ -309,6 +309,7 @@ export const securityAddFundPasswordAction =
 
       if (response?.success) {
         showSuccess(response?.message || 'Fund password updated successfully.');
+        dispatch(getUserProfile(false));
         return true;
       } else {
         showError(response?.message || 'Failed to update fund password');

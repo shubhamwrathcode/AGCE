@@ -470,6 +470,9 @@ export const profileNewIcon = require('../../assets/images/profileNewIcon.png');
 export const Polygon = require('../../assets/images/Polygon.png');
 export const disableAccount = require('../../assets/images/disableAccount.png');
 export const closeAccountBanner = require('../../assets/images/closeAccountBanner.png');
+export const fundpassword = require('../../assets/images/fundpassword.png');
+
+
 
 
 

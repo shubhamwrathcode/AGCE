@@ -35,6 +35,7 @@ import NavigationService from "../../navigation/NavigationService";
 import * as routes from "../../navigation/routes";
 import { back_ic, copyIcon, editIcon, right_arrow, right_ic } from "../../helper/ImageAssets";
 import { logoutAction } from "../../actions/authActions";
+import { getFundPasswordStatusAction } from "../../actions/accountActions";
 import KycStepHeader from "./KycStepHeader";
 import { copyText } from "../../helper/utility";
 import { useFocusEffect } from "@react-navigation/native";
@@ -50,6 +51,8 @@ const AccountDetails = () => {
   const dispatch = useDispatch();
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
+  const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
+  const hasFundPassword = fundPasswordStatus ?? !!(userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
   const [activeTab, setActiveTab] = useState("Profile");
   const [securityMethods, setSecurityMethods] = useState({
     passkey: false,
@@ -75,10 +78,12 @@ const AccountDetails = () => {
           mobile: !!(raw.mobile ?? raw.phone ?? raw.sms),
         });
       }
+      const fundRes = await dispatch(getFundPasswordStatusAction());
+      setFundPasswordStatus(!!fundRes);
     } catch (err) {
       console.log("Error fetching security methods:", err);
     }
-  }, []);
+  }, [dispatch]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -348,7 +353,7 @@ const AccountDetails = () => {
               />
               <MenuItem
                 label="Fund Password"
-                value="Not enabled"
+                value={hasFundPassword ? "Change" : "Not enabled"}
                 onPress={() => NavigationService.navigate(routes.FUND_PASSWORD_MAIN_SCREEN)}
               />
 
