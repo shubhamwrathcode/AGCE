@@ -37,6 +37,8 @@ import { back_ic, copyIcon, editIcon, right_arrow, right_ic } from "../../helper
 import { logoutAction } from "../../actions/authActions";
 import KycStepHeader from "./KycStepHeader";
 import { copyText } from "../../helper/utility";
+import { useFocusEffect } from "@react-navigation/native";
+import { appOperation } from "../../appOperation";
 
 const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
 const KYC_AVATAR_GRADIENT_LOCATIONS = [0, 0.5, 1];
@@ -49,6 +51,40 @@ const AccountDetails = () => {
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
   const [activeTab, setActiveTab] = useState("Profile");
+  const [securityMethods, setSecurityMethods] = useState({
+    passkey: false,
+    totp: false,
+    email: false,
+    mobile: false,
+  });
+
+  const fetchMethods = React.useCallback(async () => {
+    try {
+      const res = await appOperation.customer.get_security_methods_list();
+      if (res?.success) {
+        const raw =
+          res?.data?.security_methods ||
+          res?.data?.data?.security_methods ||
+          res?.security_methods ||
+          res?.data?.securityMethods ||
+          {};
+        setSecurityMethods({
+          passkey: !!raw.passkey,
+          totp: !!raw.totp,
+          email: !!raw.email,
+          mobile: !!(raw.mobile ?? raw.phone ?? raw.sms),
+        });
+      }
+    } catch (err) {
+      console.log("Error fetching security methods:", err);
+    }
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchMethods();
+    }, [fetchMethods])
+  );
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const logoutAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -254,8 +290,8 @@ const AccountDetails = () => {
                   Two-Factor Authentication (2FA)
                 </AppText>
               </View>
-              <MenuItem label="Passkey" value="Not enabled" onPress={() => NavigationService.navigate(routes.PASSKEY_SCREEN)} />
-              <MenuItem label="Authenticator App" value="Not enabled" onPress={() => NavigationService.navigate(routes.DOWNLOAD_AUTHENTICATOR_SCREEN)} />
+              <MenuItem label="Passkey" value={securityMethods.passkey ? "Manage" : "Not enabled"} onPress={() => NavigationService.navigate(routes.PASSKEY_SCREEN)} />
+              <MenuItem label="Authenticator App" value={securityMethods.totp ? "Disable" : "Not enabled"} onPress={() => NavigationService.navigate(routes.DOWNLOAD_AUTHENTICATOR_SCREEN)} />
               <MenuItem
                 label="Email Verification"
                 value={userData?.emailId ? maskProfileEmail(userData.emailId) : "Not enabled"}
@@ -307,7 +343,7 @@ const AccountDetails = () => {
               </View>
               <MenuItem
                 label="Password"
-                value="Not configured"
+                value="Change"
                 onPress={() => NavigationService.navigate(routes.CHANGE_LOGIN_PASSWORD_SCREEN)}
               />
               <MenuItem
