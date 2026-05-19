@@ -129,7 +129,7 @@ const ResetFundPassword = () => {
 
       {/* Bottom Confirm Button - Hidden when keyboard is open */}
       {!isKeyboardVisible && (
-        <View style={styles.bottomContainer}>
+        <View style={[styles.bottomContainer, { backgroundColor: isDark ? '#121214' : colors.white }]}>
           <TouchableOpacity
             style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
             activeOpacity={0.8}
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   inputGroup: {
     marginBottom: 20,
@@ -206,6 +206,10 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   bottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 15,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     paddingTop: 16,

@@ -9,6 +9,7 @@ import {
   SIXTEEN,
   SEMI_BOLD,
   TWENTY_TWO,
+  TWENTY,
 } from '../../../shared';
 import { back_ic, succescelebrate } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
@@ -48,7 +49,7 @@ const ResetSuccess = () => {
             resizeMode='contain'
           />
           <AppText
-            type={TWENTY_TWO}
+            type={TWENTY}
             weight={SEMI_BOLD}
             style={[styles.successText, { color: themeColors.text }]}
           >
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 13,
+    paddingHorizontal: 15,
     height: Platform.OS === 'ios' ? 44 : 56,
   },
   headerBtn: {
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 15,
   },
   centerContainer: {
     alignItems: 'center',
@@ -99,7 +100,6 @@ const styles = StyleSheet.create({
   successIcon: {
     width: 180,
     height: 180,
-    marginBottom: 32,
   },
   successText: {
     textAlign: 'center',
