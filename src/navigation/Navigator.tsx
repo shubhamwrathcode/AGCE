@@ -80,6 +80,7 @@ import AddEmergencyContact from "../screens/Security/EmergencyContact/AddEmergen
 import ConfirmEmergencyContact from "../screens/Security/EmergencyContact/ConfirmEmergencyContact";
 import AccountConnections from "../screens/Security/AccountConnections";
 import FundPasswordMain from "../screens/Security/FundPassword/FundPasswordMain";
+import ChangeFundPassword from "../screens/Security/FundPassword/ChangeFundPassword";
 import EmergencyContactVerification from "../screens/Security/EmergencyContact/EmergencyContactVerification";
 import DisableTwoFactorScreen from "../screens/account/DisableTwoFactorScreen";
 import EnterOtp from "../screens/account/EnterOtp";
@@ -474,6 +475,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.FUND_PASSWORD_MAIN_SCREEN}
         component={FundPasswordMain}
+      />
+      <Stack.Screen
+        name={routes.CHANGE_FUND_PASSWORD_SCREEN}
+        component={ChangeFundPassword}
       />
       <Stack.Screen
         name={routes.EMERGENCY_CONTACT_VERIFICATION_SCREEN}
