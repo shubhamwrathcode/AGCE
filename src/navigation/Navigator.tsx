@@ -83,6 +83,14 @@ import FundPasswordMain from "../screens/Security/FundPassword/FundPasswordMain"
 import ChangeFundPassword from "../screens/Security/FundPassword/ChangeFundPassword";
 import ResetFundPassword from "../screens/Security/FundPassword/ResetFundPassword";
 import ResetSuccess from "../screens/Security/FundPassword/ResetSuccess";
+import ChangeLoginPasswordScreen from "../screens/Security/LoginPassword/ChangeLoginPasswordScreen";
+import ResetYourPasswordScreen from "../screens/Security/LoginPassword/ResetYourPasswordScreen";
+import AuthorizedDevicesScreen from "../screens/Security/AuthorizedDevicesScreen";
+import SecurityLogsScreen from "../screens/Security/SecurityLogsScreen";
+import DisableAccountScreen from "../screens/Security/AccountManagement/DisableAccountScreen";
+import DisableAccountVerifyScreen from "../screens/Security/AccountManagement/DisableAccountVerifyScreen";
+import ThirdPartyAccountAccessScreen from "../screens/Security/AccountManagement/ThirdPartyAccountAccessScreen";
+import CloseAccountReasonScreen from "../screens/Security/AccountManagement/CloseAccount/CloseAccountReasonScreen";
 import EmergencyContactVerification from "../screens/Security/EmergencyContact/EmergencyContactVerification";
 import DisableTwoFactorScreen from "../screens/account/DisableTwoFactorScreen";
 import EnterOtp from "../screens/account/EnterOtp";
@@ -491,6 +499,14 @@ const MyAuthLoadingStack = () => {
         component={ResetSuccess}
       />
       <Stack.Screen
+        name={routes.CHANGE_LOGIN_PASSWORD_SCREEN}
+        component={ChangeLoginPasswordScreen}
+      />
+      <Stack.Screen
+        name={routes.RESET_YOUR_PASSWORD_SCREEN}
+        component={ResetYourPasswordScreen}
+      />
+      <Stack.Screen
         name={routes.EMERGENCY_CONTACT_VERIFICATION_SCREEN}
         component={EmergencyContactVerification}
       />
@@ -581,6 +597,30 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.OPTIONS_SCREEN}
         component={OptionsScreen}
+      />
+      <Stack.Screen
+        name={routes.AUTHORIZED_DEVICES_SCREEN}
+        component={AuthorizedDevicesScreen}
+      />
+      <Stack.Screen
+        name={routes.SECURITY_LOGS_SCREEN}
+        component={SecurityLogsScreen}
+      />
+      <Stack.Screen
+        name={routes.DISABLE_ACCOUNT_SCREEN}
+        component={DisableAccountScreen}
+      />
+      <Stack.Screen
+        name={routes.DISABLE_ACCOUNT_VERIFY_SCREEN}
+        component={DisableAccountVerifyScreen}
+      />
+      <Stack.Screen
+        name={routes.THIRD_PARTY_ACCOUNT_ACCESS_SCREEN}
+        component={ThirdPartyAccountAccessScreen}
+      />
+      <Stack.Screen
+        name={routes.CLOSE_ACCOUNT_REASON_SCREEN}
+        component={CloseAccountReasonScreen}
       />
       <Stack.Screen
         name={routes.BUY_OPTIONS_SCREEN}

@@ -43,7 +43,7 @@ export const RED = "RED";
 export const GREEN = "GREEN";
 export const AMBER = "AMBER";
 export const DESC = "DESC";
-export const DISCLAIMTEXT= "DISCLAIMTEXT";
+export const DISCLAIMTEXT = "DISCLAIMTEXT";
 export const WHITESHADOW = "WHITESHADOW";
 export const LIGHTGREY = 'LIGHTGREY'
 
@@ -177,19 +177,19 @@ const AppText = ({
       case DESC:
         style["color"] = colors.descText;
         break;
-        case WHITESHADOW:
+      case WHITESHADOW:
         style["color"] = colors.whiteCCShadow;
         break;
-        case LIGHTGREY:
-          style["color"] = colors.lightGrey;
-          break;
-        case DISCLAIMTEXT:
-          style["color"] = themeState === "Dark" ? colors.disclaimDarText :colors.disclaimText;
-          break;
-        
+      case LIGHTGREY:
+        style["color"] = colors.lightGrey;
+        break;
+      case DISCLAIMTEXT:
+        style["color"] = themeState === "Dark" ? colors.disclaimDarText : colors.disclaimText;
+        break;
+
 
       default:
-        style["color"] = themeState === "Dark" ? colors.white :colors.black;
+        style["color"] = themeState === "Dark" ? colors.white : colors.black;
     }
 
     return style;

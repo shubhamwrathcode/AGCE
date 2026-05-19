@@ -273,30 +273,30 @@ const AccountDetails = () => {
                   Advanced Security
                 </AppText>
               </View>
-              <MenuItem 
-                label="Login 2-Step Verification" 
-                value="Not configured" 
-                onPress={() => NavigationService.navigate(routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN)} 
+              <MenuItem
+                label="Login 2-Step Verification"
+                value="Not configured"
+                onPress={() => NavigationService.navigate(routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN)}
               />
-              <MenuItem 
-                label="Anti-Phishing Code" 
-                value="Not enabled" 
-                onPress={() => NavigationService.navigate(routes.ANTI_PHISHING_CODE_SCREEN)} 
+              <MenuItem
+                label="Anti-Phishing Code"
+                value="Not enabled"
+                onPress={() => NavigationService.navigate(routes.ANTI_PHISHING_CODE_SCREEN)}
               />
-              <MenuItem 
-                label="Withdrawal Settings" 
-                value="Not configured" 
-                onPress={() => NavigationService.navigate(routes.WITHDRAWAL_SETTINGS_SCREEN)} 
+              <MenuItem
+                label="Withdrawal Settings"
+                value="Not configured"
+                onPress={() => NavigationService.navigate(routes.WITHDRAWAL_SETTINGS_SCREEN)}
               />
-              <MenuItem 
-                label="Emergency Contact" 
-                value="Not enabled" 
+              <MenuItem
+                label="Emergency Contact"
+                value="Not enabled"
                 onPress={() => NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN)}
               />
-              <MenuItem 
-                label="Account Connections" 
-                value="Not configured" 
-                onPress={() => NavigationService.navigate(routes.ACCOUNT_CONNECTIONS_SCREEN)} 
+              <MenuItem
+                label="Account Connections"
+                value="Not configured"
+                onPress={() => NavigationService.navigate(routes.ACCOUNT_CONNECTIONS_SCREEN)}
               />
 
               {/* Password Management */}
@@ -305,30 +305,48 @@ const AccountDetails = () => {
                   Password Management
                 </AppText>
               </View>
-              <MenuItem label="Password" value="Not configured" />
-              <MenuItem 
-                label="Fund Password" 
-                value="Not enabled" 
-                onPress={() => NavigationService.navigate(routes.FUND_PASSWORD_MAIN_SCREEN)} 
+              <MenuItem
+                label="Password"
+                value="Not configured"
+                onPress={() => NavigationService.navigate(routes.CHANGE_LOGIN_PASSWORD_SCREEN)}
+              />
+              <MenuItem
+                label="Fund Password"
+                value="Not enabled"
+                onPress={() => NavigationService.navigate(routes.FUND_PASSWORD_MAIN_SCREEN)}
               />
 
               {/* Security Logs */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>
                 <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
-                  Security Logs
+                  Devices & activity
                 </AppText>
               </View>
-              <MenuItem label="Authorized Devices" value="Not configured" />
-              <MenuItem label="Security Logs" />
+              <MenuItem
+                label="Authorized Devices"
+                value="Not configured"
+                onPress={() => NavigationService.navigate(routes.AUTHORIZED_DEVICES_SCREEN)}
+              />
+              <MenuItem
+                label="Security Logs"
+                onPress={() => NavigationService.navigate(routes.SECURITY_LOGS_SCREEN)}
+              />
 
               {/* Security Logs (Account Management) */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>
                 <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
-                  Security Logs
+                  Account Management
                 </AppText>
               </View>
-              <MenuItem label="Disable Account" value="Not configured" />
-              <MenuItem label="Close Account" />
+              <MenuItem 
+                label="Disable Account" 
+                value="Not configured" 
+                onPress={() => NavigationService.navigate(routes.DISABLE_ACCOUNT_SCREEN)} 
+              />
+              <MenuItem 
+                label="Close Account" 
+                onPress={() => NavigationService.navigate(routes.CLOSE_ACCOUNT_REASON_SCREEN)} 
+              />
 
               {/* Other Settings */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>
@@ -336,7 +354,10 @@ const AccountDetails = () => {
                   Other Settings
                 </AppText>
               </View>
-              <MenuItem label="Third Party Account Access Management" />
+              <MenuItem 
+                label="Third Party Account Access Management" 
+                onPress={() => NavigationService.navigate(routes.THIRD_PARTY_ACCOUNT_ACCESS_SCREEN)} 
+              />
             </>
           )}
         </View>

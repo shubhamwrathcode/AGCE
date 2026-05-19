@@ -12,6 +12,7 @@
         <item name="android:statusBarColor">#171a20</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:colorAccent">#F3BB2B</item>
+        <item name="android:autofilledHighlight">@android:color/transparent</item>
 
     </style>
 
