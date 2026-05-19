@@ -293,7 +293,11 @@ const AccountDetails = () => {
                 value="Not enabled" 
                 onPress={() => NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN)}
               />
-              <MenuItem label="Account Connections" value="Not configured" />
+              <MenuItem 
+                label="Account Connections" 
+                value="Not configured" 
+                onPress={() => NavigationService.navigate(routes.ACCOUNT_CONNECTIONS_SCREEN)} 
+              />
 
               {/* Password Management */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>
