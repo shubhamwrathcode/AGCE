@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, TextInput, ScrollView, KeyboardAvoidingView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Platform, TextInput, ScrollView, Keyboard } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
 import FastImage from 'react-native-fast-image';
@@ -28,141 +28,148 @@ const ChangeFundPassword = () => {
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showPass1, setShowPass1] = useState(false);
   const [showPass2, setShowPass2] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   return (
     <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : colors.white }]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerBtn}
-            onPress={() => NavigationService.goBack()}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <FastImage
-              source={back_ic}
-              tintColor={isDark ? colors.white : colors.black}
-              style={{ width: 18, height: 18 }}
-              resizeMode='contain'
-            />
-          </TouchableOpacity>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => NavigationService.goBack()}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <FastImage
+            source={back_ic}
+            tintColor={isDark ? colors.white : colors.black}
+            style={{ width: 18, height: 18 }}
+            resizeMode='contain'
+          />
+        </TouchableOpacity>
 
-          <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
-            Change fund password
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
+          Change fund password
+        </AppText>
+        <View style={{ width: 24 }} />
+      </View>
+
+      {/* Content ScrollView */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Current Password field */}
+        <View style={styles.inputGroup}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
+            Current password
           </AppText>
-          <View style={{ width: 24 }} />
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+            <TextInput
+              style={[styles.input, { color: themeColors.text }]}
+              placeholder="Please enter"
+              placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
+              secureTextEntry={!showCurrentPass}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+            />
+            <TouchableOpacity onPress={() => setShowCurrentPass(!showCurrentPass)} style={styles.eyeBtn}>
+              <FastImage
+                source={showCurrentPass ? eye_open_icon : eye_close_icon}
+                style={styles.eyeIcon}
+                tintColor={isDark ? '#8A8A93' : '#8E8E93'}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Content ScrollView */}
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Current Password field */}
-          <View style={styles.inputGroup}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-              Current password
-            </AppText>
-            <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
-              <TextInput
-                style={[styles.input, { color: themeColors.text }]}
-                placeholder="Please enter"
-                placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
-                secureTextEntry={!showCurrentPass}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
+        {/* New Password field */}
+        <View style={styles.inputGroup}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
+            New password
+          </AppText>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+            <TextInput
+              style={[styles.input, { color: themeColors.text }]}
+              placeholder="Please enter"
+              placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
+              secureTextEntry={!showPass1}
+              value={newPassword}
+              onChangeText={setNewPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPass1(!showPass1)} style={styles.eyeBtn}>
+              <FastImage
+                source={showPass1 ? eye_open_icon : eye_close_icon}
+                style={styles.eyeIcon}
+                tintColor={isDark ? '#8A8A93' : '#8E8E93'}
+                resizeMode="contain"
               />
-              <TouchableOpacity onPress={() => setShowCurrentPass(!showCurrentPass)} style={styles.eyeBtn}>
-                <FastImage
-                  source={showCurrentPass ? eye_open_icon : eye_close_icon}
-                  style={styles.eyeIcon}
-                  tintColor={isDark ? '#8A8A93' : '#8E8E93'}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          {/* New Password field */}
-          <View style={styles.inputGroup}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-              New password
-            </AppText>
-            <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
-              <TextInput
-                style={[styles.input, { color: themeColors.text }]}
-                placeholder="Please enter"
-                placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
-                secureTextEntry={!showPass1}
-                value={newPassword}
-                onChangeText={setNewPassword}
+        {/* New Password Again field */}
+        <View style={styles.inputGroup}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
+            New password again
+          </AppText>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+            <TextInput
+              style={[styles.input, { color: themeColors.text }]}
+              placeholder="Please enter"
+              placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
+              secureTextEntry={!showPass2}
+              value={newPasswordAgain}
+              onChangeText={setNewPasswordAgain}
+            />
+            <TouchableOpacity onPress={() => setShowPass2(!showPass2)} style={styles.eyeBtn}>
+              <FastImage
+                source={showPass2 ? eye_open_icon : eye_close_icon}
+                style={styles.eyeIcon}
+                tintColor={isDark ? '#8A8A93' : '#8E8E93'}
+                resizeMode="contain"
               />
-              <TouchableOpacity onPress={() => setShowPass1(!showPass1)} style={styles.eyeBtn}>
-                <FastImage
-                  source={showPass1 ? eye_open_icon : eye_close_icon}
-                  style={styles.eyeIcon}
-                  tintColor={isDark ? '#8A8A93' : '#8E8E93'}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          {/* New Password Again field */}
-          <View style={styles.inputGroup}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-              New password again
-            </AppText>
-            <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
-              <TextInput
-                style={[styles.input, { color: themeColors.text }]}
-                placeholder="Please enter"
-                placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
-                secureTextEntry={!showPass2}
-                value={newPasswordAgain}
-                onChangeText={setNewPasswordAgain}
-              />
-              <TouchableOpacity onPress={() => setShowPass2(!showPass2)} style={styles.eyeBtn}>
-                <FastImage
-                  source={showPass2 ? eye_open_icon : eye_close_icon}
-                  style={styles.eyeIcon}
-                  tintColor={isDark ? '#8A8A93' : '#8E8E93'}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            </View>
+        {/* Email Verification Code field */}
+        <View style={styles.inputGroup}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
+            Email verification code
+          </AppText>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+            <TextInput
+              style={[styles.input, { color: themeColors.text }]}
+              placeholder="Please enter"
+              placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
+              keyboardType="number-pad"
+              value={emailCode}
+              onChangeText={setEmailCode}
+            />
+            <TouchableOpacity activeOpacity={0.8} style={styles.sendBtn}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme }}>
+                Send
+              </AppText>
+            </TouchableOpacity>
           </View>
+        </View>
+      </ScrollView>
 
-          {/* Email Verification Code field */}
-          <View style={styles.inputGroup}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-              Email verification code
-            </AppText>
-            <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
-              <TextInput
-                style={[styles.input, { color: themeColors.text }]}
-                placeholder="Please enter"
-                placeholderTextColor={isDark ? '#8A8A93' : '#A9A9B2'}
-                keyboardType="number-pad"
-                value={emailCode}
-                onChangeText={setEmailCode}
-              />
-              <TouchableOpacity activeOpacity={0.8} style={styles.sendBtn}>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme }}>
-                  Send
-                </AppText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-
-        {/* Bottom Confirm Button & Unable to Verify Link Wrapper */}
-        <View style={styles.bottomWrapper}>
+      {/* Bottom Confirm Button & Unable to Verify Link - Hidden when keyboard is open */}
+      {!isKeyboardVisible && (
+        <View style={styles.bottomContainer}>
           <TouchableOpacity
             style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
             activeOpacity={0.8}
@@ -183,16 +190,13 @@ const ChangeFundPassword = () => {
             </AppText>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      )}
     </AppSafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
-  },
-  flex: {
     flex: 1,
   },
   header: {
@@ -219,7 +223,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 160,
+    paddingBottom: 40,
   },
   inputGroup: {
     marginBottom: 20,
@@ -251,12 +255,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
-  bottomWrapper: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 24 : 16,
-    left: 0,
-    right: 0,
+  bottomContainer: {
     paddingHorizontal: 15,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+    paddingTop: 16,
     alignItems: 'center',
   },
   confirmBtn: {
