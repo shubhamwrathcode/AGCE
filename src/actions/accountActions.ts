@@ -1144,6 +1144,28 @@ export const getPasskeyList = () => async (_dispatch: AppDispatch) => {
   }
 };
 
+/** Same as web: deletes a passkey */
+export const deletePasskey = (passkeyId: string, verifyMethod: string, code: string | null, passkeyUserId: string | null) => async (dispatch: AppDispatch) => {
+  try {
+    dispatch(setLoading(true));
+    const response: any = await appOperation.customer.passkeyDelete(passkeyId, verifyMethod, code, passkeyUserId);
+    if (response?.success) {
+      dispatch(getUserProfile());
+      showSuccess(response?.message || 'Passkey deleted successfully');
+      return true;
+    } else {
+      showError(response?.message || 'Failed to delete passkey');
+      return false;
+    }
+  } catch (e: any) {
+    logger(e);
+    showError(e?.message || 'Something went wrong');
+    return false;
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
 /**
  * Get passkey registration options for Passkey.create().
  * Returns WebAuthn PublicKeyCredentialCreationOptions (unwrap .publicKey if backend sends it).

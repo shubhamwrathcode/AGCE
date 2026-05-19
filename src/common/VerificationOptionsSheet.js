@@ -5,9 +5,10 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import FastImage from 'react-native-fast-image';
-import { AppText, BOLD, SIXTEEN, FOURTEEN, THIRTEEN } from '../shared';
-import { back_ic, EMAIL, PHONE, KEY_ICON, FINGERPRINT } from '../helper/ImageAssets';
+import { AppText, BOLD, SIXTEEN, FOURTEEN } from '../shared';
+import { back_ic, EMAIL, PHONE, KEY_ICON, FINGERPRINT, checkIc } from '../helper/ImageAssets';
 import { useTheme } from "../hooks/useTheme";
+import { colors } from '../theme/colors';
 
 const getMethodIcon = (value) => {
   switch (value) {
@@ -23,13 +24,13 @@ export const VerificationOptionsSheet = ({
   sheetRef,
   options = [],
   onSelect,
+  selectedValue,
 }) => {
   const { colors: themeColors, isDark } = useTheme();
 
   return (
     <RBSheet
       ref={sheetRef}
-      height={320}
       closeOnDragDown={false}
       closeOnPressMask={true}
       customStyles={{
@@ -38,6 +39,7 @@ export const VerificationOptionsSheet = ({
           borderTopRightRadius: 24,
           backgroundColor: themeColors.card,
           paddingBottom: 24,
+          height: 'auto',
         },
         wrapper: { backgroundColor: 'rgba(0,0,0,0.5)' },
         draggableIcon: { backgroundColor: 'transparent' },
@@ -69,17 +71,24 @@ export const VerificationOptionsSheet = ({
             >
               <View style={styles.sheetOptionLeft}>
                 <View style={[styles.iconWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }]}>
-                    <FastImage
+                  <FastImage
                     source={getMethodIcon(m.value)}
                     style={styles.sheetOptionIcon}
                     resizeMode="contain"
                     tintColor={themeColors.button}
-                    />
+                  />
                 </View>
                 <View style={styles.sheetOptionTextWrap}>
                   <AppText type={FOURTEEN} weight={BOLD} style={{ color: themeColors.text }}>{m.label}</AppText>
-                  <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 2 }}>{m.description}</AppText>
                 </View>
+                {selectedValue === m.value && (
+                  <FastImage
+                    source={checkIc}
+                    style={styles.checkIcon}
+                    // tintColor={colors.orangeTheme}
+                    resizeMode="contain"
+                  />
+                )}
               </View>
             </TouchableOpacity>
             {index < options.length - 1 && <View style={[styles.sheetOptionDivider, { backgroundColor: themeColors.border }]} />}
@@ -105,7 +114,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sheetBackIcon: { width: 22, height: 22 },
+  sheetBackIcon: { width: 20, height: 20 },
   sheetHeaderDivider: { height: 1, marginHorizontal: 20 },
   sheetOptions: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
   sheetOptionRow: { paddingVertical: 14 },
@@ -120,4 +129,10 @@ const styles = StyleSheet.create({
   sheetOptionIcon: { width: 18, height: 18 },
   sheetOptionTextWrap: { marginLeft: 16, flex: 1 },
   sheetOptionDivider: { height: 1 },
+  checkIcon: {
+    width: 16,
+    height: 16,
+    marginLeft: 'auto',
+  },
+
 });

@@ -68,7 +68,6 @@ import WithdrawalVerifyPhoneScreen from "../screens/Security/WithdrawalSettings/
 import AddEmailScreen from "../screens/Security/AddEmailScreen";
 import SetupTwoFactorScreen from "../screens/account/SetupTwoFactorScreen";
 import VerifyAuthenticatorCodeScreen from "../screens/account/VerifyAuthenticatorCodeScreen";
-import AddPasskeyScreen from "../screens/account/AddPasskeyScreen";
 import ViewPasskeysScreen from "../screens/account/ViewPasskeysScreen";
 import EnablePasskey from "../screens/Security/Passkey/EnablePasskey";
 import PasskeyAddPhone from "../screens/Security/Passkey/PasskeyAddPhone";
@@ -439,7 +438,7 @@ const MyAuthLoadingStack = () => {
       />
       <Stack.Screen
         name={routes.ADD_PASSKEY_SCREEN}
-        component={AddPasskeyScreen}
+        component={EnablePasskey}
       />
 
       <Stack.Screen
