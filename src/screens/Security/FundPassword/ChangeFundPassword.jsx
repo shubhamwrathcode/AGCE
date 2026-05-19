@@ -15,6 +15,7 @@ import {
 } from '../../../shared';
 import { back_ic, eye_open_icon, eye_close_icon } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
+import * as routes from '../../../navigation/routes';
 
 const ChangeFundPassword = () => {
   const { colors: themeColors, isDark } = useTheme();
@@ -158,6 +159,7 @@ const ChangeFundPassword = () => {
         <TouchableOpacity
           style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
           activeOpacity={0.8}
+          onPress={() => NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN)}
         >
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
             Confirm
