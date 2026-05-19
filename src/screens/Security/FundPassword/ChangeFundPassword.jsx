@@ -61,10 +61,37 @@ const ChangeFundPassword = () => {
   const [showPass2, setShowPass2] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [timerCount, setTimerCount] = useState(0);
+  const [otpLoading, setOtpLoading] = useState(false);
+
+  useEffect(() => {
+    let interval = null;
+    if (timerCount > 0) {
+      interval = setInterval(() => {
+        setTimerCount((lastTimerCount) => {
+          if (lastTimerCount <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return lastTimerCount - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerCount]);
 
   const handleSendOtp = async () => {
+    if (timerCount > 0 || otpLoading) return;
+    setOtpLoading(true);
     const channel = verifyType === 'phone' ? 'mobile' : 'email';
-    await dispatch(sendSecurityOtp(channel, 'fund_password'));
+    const success = await dispatch(sendSecurityOtp(channel, 'fund_password'));
+    setOtpLoading(false);
+    if (success) {
+      setTimerCount(60);
+      showSuccess('Verification code sent successfully');
+    }
   };
 
   const handleConfirm = async () => {
@@ -222,10 +249,19 @@ const ChangeFundPassword = () => {
               maxLength={6}
             />
             {(verifyType === 'email' || verifyType === 'phone') && (
-              <TouchableOpacity activeOpacity={0.8} style={styles.sendBtn} onPress={handleSendOtp}>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme }}>
-                  Send
-                </AppText>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.sendBtn, (timerCount > 0 || otpLoading) && { opacity: 0.6 }]}
+                onPress={handleSendOtp}
+                disabled={timerCount > 0 || otpLoading}
+              >
+                {otpLoading ? (
+                  <ActivityIndicator size="small" color={colors.orangeTheme} />
+                ) : (
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme }}>
+                    {timerCount > 0 ? `${timerCount}s` : 'Send'}
+                  </AppText>
+                )}
               </TouchableOpacity>
             )}
           </View>
