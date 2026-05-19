@@ -84,8 +84,11 @@ const FundPasswordMain = () => {
             value="Change"
             onPress={() => sheetRef.current?.open()}
           />
-          <MenuItem label="Reset Fund Password" value="Reset" />
-          <MenuItem label="Input Frequency" value="Never" />
+          <MenuItem 
+            label="Reset Fund Password" 
+            value="Reset" 
+            onPress={() => NavigationService.navigate(routes.RESET_FUND_PASSWORD_SCREEN)}
+          />
         </View>
       </View>
 
