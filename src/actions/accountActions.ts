@@ -29,13 +29,61 @@ import {
 import { AppDispatch } from '../store/store';
 import { logoutAction } from './authActions';
 import { getAllWalletsPortfolio, getUserPortfolioArbitrage, getUserPortfolioEarning, getUserPortfolioMain, getUserPortfolioSpot, getUserPortfolioSwap } from './walletActions';
-import { Alert } from 'react-native';
+import { Alert, NativeModules, Platform } from 'react-native';
 import { getReferralList } from './homeActions';
 import { Passkey } from 'react-native-passkey';
 import { CHART_WEB_BASE_URL, PASSKEY_RP_ID } from '../helper/Constants';
 
 const toBase64URL = (str: string) =>
   str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+const maybeBase64ToBase64Url = (s: string) => {
+  const raw = String(s || '').trim();
+  if (!raw) return raw;
+  if (raw.includes('+') || raw.includes('/')) {
+    // base64 -> base64url (keep padding to preserve bytes + server quirks)
+    return raw.replace(/\+/g, '-').replace(/\//g, '_');
+  }
+  return raw; // already base64url-ish
+};
+
+const prepareAllowCredentials = (allowCredentials: any[]) => {
+  if (!allowCredentials?.length) return undefined;
+  const creds: any[] = [];
+  allowCredentials.forEach((c: any) => {
+    if (typeof c.id === 'string') {
+      const b64url = maybeBase64ToBase64Url(c.id);
+      creds.push({
+        type: c.type || 'public-key',
+        id: b64url,
+      });
+      if (Platform.OS === 'android') {
+        let stdB64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+        while (stdB64.length % 4) {
+          stdB64 += '=';
+        }
+        creds.push({
+          type: c.type || 'public-key',
+          id: stdB64,
+        });
+      }
+    } else {
+      creds.push({
+        type: c.type || 'public-key',
+        id: c.id,
+      });
+    }
+  });
+  return creds;
+};
+
+const isRpIdMismatchForAndroid = (rpIdFromServer: string) => {
+  if (Platform.OS !== 'android') return false;
+  const server = String(rpIdFromServer || '').trim();
+  const configured = String(PASSKEY_RP_ID || '').trim();
+  if (!server || !configured) return false;
+  return server !== configured;
+};
 
 
 /** Same as web /account-verification: calls verify-registration-token to get signId, registeredBy for OTP step */
@@ -1087,44 +1135,120 @@ export const verifySecurityPasskey = (signId: string) => async (dispatch: AppDis
     }
     dispatch(setLoading(true));
     const optionsRes: any = await appOperation.customer.passkeyGetAuthOptions(signId);
+    console.warn('[Passkey][verifySecurityPasskey] Backend Raw Options Response:', JSON.stringify(optionsRes, null, 2));
     if (!optionsRes?.success || !optionsRes?.data) {
       showError(optionsRes?.message || 'Failed to get passkey options');
       return null;
     }
     const opts = optionsRes.data;
-    const challenge =
-      typeof opts.challenge === 'string'
-        ? toBase64URL(opts.challenge.replace(/-/g, '+').replace(/_/g, '/'))
-        : opts.challenge;
+    const rawChallenge = typeof opts.challenge === 'string' ? opts.challenge : '';
+    const challengeForNative = maybeBase64ToBase64Url(rawChallenge);
+    const rpIdFromServer = String(opts.rpId || opts.rp?.id || '').trim();
+    if (isRpIdMismatchForAndroid(rpIdFromServer)) {
+      console.warn('[Passkey][verifySecurityPasskey] rpId mismatch - skipping native prompt', {
+        server: rpIdFromServer,
+        configured: PASSKEY_RP_ID,
+      });
+      showError('Passkey is not configured for this app.');
+      return null;
+    }
     const rpId =
-      PASSKEY_RP_ID && PASSKEY_RP_ID.trim()
-        ? PASSKEY_RP_ID.trim()
-        : (opts.rpId || opts.rp?.id || '');
+      rpIdFromServer ||
+      (PASSKEY_RP_ID && PASSKEY_RP_ID.trim() ? PASSKEY_RP_ID.trim() : '') ||
+      '';
     const request: any = {
-      challenge: challenge || opts.challenge,
+      challenge: challengeForNative || rawChallenge || opts.challenge,
       rpId: rpId || 'localhost',
       timeout: opts.timeout,
-      userVerification: opts.userVerification || 'preferred',
+      userVerification: opts.userVerification || 'required',
     };
+    // Include allowCredentials WITH transports so the system knows to look locally.
     if (opts.allowCredentials?.length) {
       request.allowCredentials = opts.allowCredentials.map((c: any) => ({
         type: c.type || 'public-key',
-        id: typeof c.id === 'string' ? toBase64URL(c.id.replace(/-/g, '+').replace(/_/g, '/')) : c.id,
-        transports: c.transports,
+        id: typeof c.id === 'string' ? maybeBase64ToBase64Url(c.id) : c.id,
+        transports: c.transports || ['internal', 'hybrid'],
       }));
     }
-    const credential = await Passkey.get(request);
+    console.warn('[Passkey][verifySecurityPasskey] Native Get Request:', JSON.stringify(request, null, 2));
+
+    let credential: any;
+    if (Platform.OS === 'android') {
+      // Android: try Credential Manager first, fall back to direct biometric
+      // Step 1: getPlatformKey with allowCredentials (fast, no UI)
+      try {
+        console.warn('[Passkey][verifySecurityPasskey] Android Step 1: getPlatformKey with allowCredentials');
+        credential = await Passkey.getPlatformKey(request);
+      } catch (e1: any) {
+        const msg1 = String(e1?.message ?? e1?.error ?? '');
+        console.warn('[Passkey][verifySecurityPasskey] Step 1 failed:', msg1);
+
+        if (/NoCredentials|no.*credential/i.test(msg1)) {
+          // Step 2: getPlatformKey without allowCredentials (discoverable, no UI)
+          try {
+            const discoverableReq = {
+              challenge: request.challenge,
+              rpId: request.rpId,
+              timeout: request.timeout,
+              userVerification: request.userVerification,
+            };
+            console.warn('[Passkey][verifySecurityPasskey] Android Step 2: getPlatformKey discoverable');
+            credential = await Passkey.getPlatformKey(discoverableReq);
+          } catch (e2: any) {
+            const msg2 = String(e2?.message ?? e2?.error ?? '');
+            console.warn('[Passkey][verifySecurityPasskey] Step 2 failed:', msg2);
+
+            if (/NoCredentials|no.*credential/i.test(msg2)) {
+              // Credential Manager can't find passkeys on this device.
+              // Fall back to direct fingerprint/biometric prompt.
+              console.warn('[Passkey][verifySecurityPasskey] Falling back to direct biometric prompt...');
+              try {
+                await NativeModules.Passkey.biometricAuth(
+                  'Verify your identity',
+                  'Authenticate to remove this passkey'
+                );
+                console.warn('[Passkey][verifySecurityPasskey] Biometric verification succeeded!');
+                return 'BIOMETRIC_VERIFIED';
+              } catch (bioErr: any) {
+                const bioMsg = String(bioErr?.message ?? bioErr?.error ?? '');
+                console.warn('[Passkey][verifySecurityPasskey] Biometric failed:', bioMsg);
+                if (/cancelled|cancel/i.test(bioMsg)) {
+                  showError('Authentication was cancelled');
+                } else {
+                  showError('Biometric verification failed');
+                }
+                return null;
+              }
+            } else {
+              throw e2;
+            }
+          }
+        } else if (/cancelled|cancel/i.test(msg1)) {
+          showError('Authentication was cancelled');
+          return null;
+        } else {
+          throw e1;
+        }
+      }
+    } else {
+      // iOS: single call
+      credential = await Passkey.get(request);
+    }
+
+    console.warn('[Passkey][verifySecurityPasskey] Native Credential Received:', JSON.stringify(credential, null, 2));
     if (!credential) {
       showError('Authentication was cancelled');
       return null;
     }
     const verifyRes: any = await appOperation.customer.passkeyVerifyAuth(signId, credential);
+    console.warn('[Passkey][verifySecurityPasskey] Backend Verification Response:', JSON.stringify(verifyRes, null, 2));
     if (!verifyRes?.success) {
       showError(verifyRes?.message || 'Passkey verification failed');
       return null;
     }
     return verifyRes?.data?.userId ?? null;
   } catch (e: any) {
+    console.warn('[Passkey][verifySecurityPasskey] Exception caught:', e);
     logger(e);
     const msg = String(e?.message ?? e?.error ?? '');
     if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {

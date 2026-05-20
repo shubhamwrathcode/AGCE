@@ -1,0 +1,977 @@
+diff --git a/node_modules/react-native-passkey/android/.classpath b/node_modules/react-native-passkey/android/.classpath
+new file mode 100644
+index 0000000..bbe97e5
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/.classpath
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<classpath>
++	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-17/"/>
++	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
++	<classpathentry kind="output" path="bin/default"/>
++</classpath>
+diff --git a/node_modules/react-native-passkey/android/.gradle/8.9/checksums/checksums.lock b/node_modules/react-native-passkey/android/.gradle/8.9/checksums/checksums.lock
+new file mode 100644
+index 0000000..bc91bfa
+Binary files /dev/null and b/node_modules/react-native-passkey/android/.gradle/8.9/checksums/checksums.lock differ
+diff --git a/node_modules/react-native-passkey/android/.gradle/8.9/dependencies-accessors/gc.properties b/node_modules/react-native-passkey/android/.gradle/8.9/dependencies-accessors/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native-passkey/android/.gradle/8.9/executionHistory/executionHistory.lock b/node_modules/react-native-passkey/android/.gradle/8.9/executionHistory/executionHistory.lock
+new file mode 100644
+index 0000000..0aae223
+Binary files /dev/null and b/node_modules/react-native-passkey/android/.gradle/8.9/executionHistory/executionHistory.lock differ
+diff --git a/node_modules/react-native-passkey/android/.gradle/8.9/fileChanges/last-build.bin b/node_modules/react-native-passkey/android/.gradle/8.9/fileChanges/last-build.bin
+new file mode 100644
+index 0000000..f76dd23
+Binary files /dev/null and b/node_modules/react-native-passkey/android/.gradle/8.9/fileChanges/last-build.bin differ
+diff --git a/node_modules/react-native-passkey/android/.gradle/8.9/fileHashes/fileHashes.lock b/node_modules/react-native-passkey/android/.gradle/8.9/fileHashes/fileHashes.lock
+new file mode 100644
+index 0000000..14765e3
+Binary files /dev/null and b/node_modules/react-native-passkey/android/.gradle/8.9/fileHashes/fileHashes.lock differ
+diff --git a/node_modules/react-native-passkey/android/.gradle/8.9/gc.properties b/node_modules/react-native-passkey/android/.gradle/8.9/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native-passkey/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock b/node_modules/react-native-passkey/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+new file mode 100644
+index 0000000..7f36600
+Binary files /dev/null and b/node_modules/react-native-passkey/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock differ
+diff --git a/node_modules/react-native-passkey/android/.gradle/buildOutputCleanup/cache.properties b/node_modules/react-native-passkey/android/.gradle/buildOutputCleanup/cache.properties
+new file mode 100644
+index 0000000..870c0a0
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/.gradle/buildOutputCleanup/cache.properties
+@@ -0,0 +1,2 @@
++#Wed May 20 11:51:24 IST 2026
++gradle.version=8.9
+diff --git a/node_modules/react-native-passkey/android/.gradle/vcs-1/gc.properties b/node_modules/react-native-passkey/android/.gradle/vcs-1/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native-passkey/android/.project b/node_modules/react-native-passkey/android/.project
+new file mode 100644
+index 0000000..1baf1b2
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/.project
+@@ -0,0 +1,23 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<projectDescription>
++	<name>react-native-passkey</name>
++	<comment>Project react-native-passkey created by Buildship.</comment>
++	<projects>
++	</projects>
++	<buildSpec>
++		<buildCommand>
++			<name>org.eclipse.jdt.core.javabuilder</name>
++			<arguments>
++			</arguments>
++		</buildCommand>
++		<buildCommand>
++			<name>org.eclipse.buildship.core.gradleprojectbuilder</name>
++			<arguments>
++			</arguments>
++		</buildCommand>
++	</buildSpec>
++	<natures>
++		<nature>org.eclipse.jdt.core.javanature</nature>
++		<nature>org.eclipse.buildship.core.gradleprojectnature</nature>
++	</natures>
++</projectDescription>
+diff --git a/node_modules/react-native-passkey/android/.settings/org.eclipse.buildship.core.prefs b/node_modules/react-native-passkey/android/.settings/org.eclipse.buildship.core.prefs
+new file mode 100644
+index 0000000..1675490
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/.settings/org.eclipse.buildship.core.prefs
+@@ -0,0 +1,2 @@
++connection.project.dir=../../../android
++eclipse.preferences.version=1
+diff --git a/node_modules/react-native-passkey/android/build/.transforms/8acec2525c406f8fe2f90ccd9eab40ea/results.bin b/node_modules/react-native-passkey/android/build/.transforms/8acec2525c406f8fe2f90ccd9eab40ea/results.bin
+new file mode 100644
+index 0000000..61a58fa
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/.transforms/8acec2525c406f8fe2f90ccd9eab40ea/results.bin
+@@ -0,0 +1 @@
++i/classes_dex
+diff --git a/node_modules/react-native-passkey/android/build/.transforms/ce2aa5e10d3a17cbb4733114af57efd3/results.bin b/node_modules/react-native-passkey/android/build/.transforms/ce2aa5e10d3a17cbb4733114af57efd3/results.bin
+new file mode 100644
+index 0000000..0d259dd
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/.transforms/ce2aa5e10d3a17cbb4733114af57efd3/results.bin
+@@ -0,0 +1 @@
++o/classes
+diff --git a/node_modules/react-native-passkey/android/build/.transforms/ce2aa5e10d3a17cbb4733114af57efd3/transformed/classes/classes_dex/classes.dex b/node_modules/react-native-passkey/android/build/.transforms/ce2aa5e10d3a17cbb4733114af57efd3/transformed/classes/classes_dex/classes.dex
+new file mode 100644
+index 0000000..6e5aedb
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/.transforms/ce2aa5e10d3a17cbb4733114af57efd3/transformed/classes/classes_dex/classes.dex differ
+diff --git a/node_modules/react-native-passkey/android/build/.transforms/d3833ddda68d421844b4b93121758413/results.bin b/node_modules/react-native-passkey/android/build/.transforms/d3833ddda68d421844b4b93121758413/results.bin
+new file mode 100644
+index 0000000..e3f0ff0
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/.transforms/d3833ddda68d421844b4b93121758413/results.bin
+@@ -0,0 +1 @@
++i/classes_global-synthetics
+diff --git a/node_modules/react-native-passkey/android/build/generated/source/buildConfig/debug/com/reactnativepasskey/BuildConfig.java b/node_modules/react-native-passkey/android/build/generated/source/buildConfig/debug/com/reactnativepasskey/BuildConfig.java
+new file mode 100644
+index 0000000..fe37b3b
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/generated/source/buildConfig/debug/com/reactnativepasskey/BuildConfig.java
+@@ -0,0 +1,12 @@
++/**
++ * Automatically generated file. DO NOT MODIFY
++ */
++package com.reactnativepasskey;
++
++public final class BuildConfig {
++  public static final boolean DEBUG = Boolean.parseBoolean("true");
++  public static final String LIBRARY_PACKAGE_NAME = "com.reactnativepasskey";
++  public static final String BUILD_TYPE = "debug";
++  // Field from default config.
++  public static final boolean IS_NEW_ARCHITECTURE_ENABLED = false;
++}
+diff --git a/node_modules/react-native-passkey/android/build/generated/source/buildConfig/release/com/reactnativepasskey/BuildConfig.java b/node_modules/react-native-passkey/android/build/generated/source/buildConfig/release/com/reactnativepasskey/BuildConfig.java
+new file mode 100644
+index 0000000..7048c54
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/generated/source/buildConfig/release/com/reactnativepasskey/BuildConfig.java
+@@ -0,0 +1,12 @@
++/**
++ * Automatically generated file. DO NOT MODIFY
++ */
++package com.reactnativepasskey;
++
++public final class BuildConfig {
++  public static final boolean DEBUG = false;
++  public static final String LIBRARY_PACKAGE_NAME = "com.reactnativepasskey";
++  public static final String BUILD_TYPE = "release";
++  // Field from default config.
++  public static final boolean IS_NEW_ARCHITECTURE_ENABLED = false;
++}
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/AndroidManifest.xml b/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/AndroidManifest.xml
+new file mode 100644
+index 0000000..3194fd9
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/AndroidManifest.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.reactnativepasskey" >
++
++    <uses-sdk android:minSdkVersion="21" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/output-metadata.json b/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/output-metadata.json
+new file mode 100644
+index 0000000..4e97f97
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/output-metadata.json
+@@ -0,0 +1,18 @@
++{
++  "version": 3,
++  "artifactType": {
++    "type": "AAPT_FRIENDLY_MERGED_MANIFESTS",
++    "kind": "Directory"
++  },
++  "applicationId": "com.reactnativepasskey",
++  "variantName": "debug",
++  "elements": [
++    {
++      "type": "SINGLE",
++      "filters": [],
++      "attributes": [],
++      "outputFile": "AndroidManifest.xml"
++    }
++  ],
++  "elementType": "File"
++}
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/AndroidManifest.xml b/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/AndroidManifest.xml
+new file mode 100644
+index 0000000..3194fd9
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/AndroidManifest.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.reactnativepasskey" >
++
++    <uses-sdk android:minSdkVersion="21" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/output-metadata.json b/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/output-metadata.json
+new file mode 100644
+index 0000000..bebe645
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/output-metadata.json
+@@ -0,0 +1,18 @@
++{
++  "version": 3,
++  "artifactType": {
++    "type": "AAPT_FRIENDLY_MERGED_MANIFESTS",
++    "kind": "Directory"
++  },
++  "applicationId": "com.reactnativepasskey",
++  "variantName": "release",
++  "elements": [
++    {
++      "type": "SINGLE",
++      "filters": [],
++      "attributes": [],
++      "outputFile": "AndroidManifest.xml"
++    }
++  ],
++  "elementType": "File"
++}
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/aar_metadata/debug/aar-metadata.properties b/node_modules/react-native-passkey/android/build/intermediates/aar_metadata/debug/aar-metadata.properties
+new file mode 100644
+index 0000000..1211b1e
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/aar_metadata/debug/aar-metadata.properties
+@@ -0,0 +1,6 @@
++aarFormatVersion=1.0
++aarMetadataVersion=1.0
++minCompileSdk=1
++minCompileSdkExtension=0
++minAndroidGradlePluginVersion=1.0.0
++coreLibraryDesugaringEnabled=false
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/aar_metadata/release/aar-metadata.properties b/node_modules/react-native-passkey/android/build/intermediates/aar_metadata/release/aar-metadata.properties
+new file mode 100644
+index 0000000..1211b1e
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/aar_metadata/release/aar-metadata.properties
+@@ -0,0 +1,6 @@
++aarFormatVersion=1.0
++aarMetadataVersion=1.0
++minCompileSdk=1
++minCompileSdkExtension=0
++minAndroidGradlePluginVersion=1.0.0
++coreLibraryDesugaringEnabled=false
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/annotation_processor_list/debug/annotationProcessors.json b/node_modules/react-native-passkey/android/build/intermediates/annotation_processor_list/debug/annotationProcessors.json
+new file mode 100644
+index 0000000..9e26dfe
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/annotation_processor_list/debug/annotationProcessors.json
+@@ -0,0 +1 @@
++{}
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/annotation_processor_list/release/annotationProcessors.json b/node_modules/react-native-passkey/android/build/intermediates/annotation_processor_list/release/annotationProcessors.json
+new file mode 100644
+index 0000000..9e26dfe
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/annotation_processor_list/release/annotationProcessors.json
+@@ -0,0 +1 @@
++{}
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/compile_library_classes_jar/debug/classes.jar b/node_modules/react-native-passkey/android/build/intermediates/compile_library_classes_jar/debug/classes.jar
+new file mode 100644
+index 0000000..8a61207
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/intermediates/compile_library_classes_jar/debug/classes.jar differ
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/compile_r_class_jar/debug/R.jar b/node_modules/react-native-passkey/android/build/intermediates/compile_r_class_jar/debug/R.jar
+new file mode 100644
+index 0000000..6ba5732
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/intermediates/compile_r_class_jar/debug/R.jar differ
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/compile_r_class_jar/release/R.jar b/node_modules/react-native-passkey/android/build/intermediates/compile_r_class_jar/release/R.jar
+new file mode 100644
+index 0000000..6ba5732
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/intermediates/compile_r_class_jar/release/R.jar differ
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/compile_symbol_list/debug/R.txt b/node_modules/react-native-passkey/android/build/intermediates/compile_symbol_list/debug/R.txt
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/compile_symbol_list/release/R.txt b/node_modules/react-native-passkey/android/build/intermediates/compile_symbol_list/release/R.txt
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties b/node_modules/react-native-passkey/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties
+new file mode 100644
+index 0000000..fee8088
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties
+@@ -0,0 +1 @@
++#Wed May 20 12:15:40 IST 2026
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml b/node_modules/react-native-passkey/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml
+new file mode 100644
+index 0000000..9b535a9
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main" generated-set="main$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="debug$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/debug/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="debug" generated-set="debug$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/debug/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/build/generated/res/resValues/debug"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated" generated-set="generated$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/build/generated/res/resValues/debug"/></dataSet><mergedItems/></merger>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/incremental/mergeDebugJniLibFolders/merger.xml b/node_modules/react-native-passkey/android/build/intermediates/incremental/mergeDebugJniLibFolders/merger.xml
+new file mode 100644
+index 0000000..10f590e
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/incremental/mergeDebugJniLibFolders/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/jniLibs"/></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/debug/jniLibs"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/incremental/mergeDebugShaders/merger.xml b/node_modules/react-native-passkey/android/build/intermediates/incremental/mergeDebugShaders/merger.xml
+new file mode 100644
+index 0000000..2fce310
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/incremental/mergeDebugShaders/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/shaders"/></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/debug/shaders"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/incremental/packageDebugAssets/merger.xml b/node_modules/react-native-passkey/android/build/intermediates/incremental/packageDebugAssets/merger.xml
+new file mode 100644
+index 0000000..a0e885f
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/incremental/packageDebugAssets/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/assets"/></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/debug/assets"/></dataSet><dataSet config="generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/build/intermediates/shader_assets/debug/out"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/incremental/release/packageReleaseResources/compile-file-map.properties b/node_modules/react-native-passkey/android/build/intermediates/incremental/release/packageReleaseResources/compile-file-map.properties
+new file mode 100644
+index 0000000..3725902
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/incremental/release/packageReleaseResources/compile-file-map.properties
+@@ -0,0 +1 @@
++#Wed May 20 13:37:31 IST 2026
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/incremental/release/packageReleaseResources/merger.xml b/node_modules/react-native-passkey/android/build/intermediates/incremental/release/packageReleaseResources/merger.xml
+new file mode 100644
+index 0000000..df5d705
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/incremental/release/packageReleaseResources/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main" generated-set="main$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="release$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/release/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="release" generated-set="release$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/release/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/build/generated/res/resValues/release"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated" generated-set="generated$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/build/generated/res/resValues/release"/></dataSet><mergedItems/></merger>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/java_res/debug/out/META-INF/react-native-passkey_debug.kotlin_module b/node_modules/react-native-passkey/android/build/intermediates/java_res/debug/out/META-INF/react-native-passkey_debug.kotlin_module
+new file mode 100644
+index 0000000..3aa6361
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/intermediates/java_res/debug/out/META-INF/react-native-passkey_debug.kotlin_module differ
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/javac/debug/classes/com/reactnativepasskey/BuildConfig.class b/node_modules/react-native-passkey/android/build/intermediates/javac/debug/classes/com/reactnativepasskey/BuildConfig.class
+new file mode 100644
+index 0000000..046d88d
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/intermediates/javac/debug/classes/com/reactnativepasskey/BuildConfig.class differ
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/local_only_symbol_list/debug/R-def.txt b/node_modules/react-native-passkey/android/build/intermediates/local_only_symbol_list/debug/R-def.txt
+new file mode 100644
+index 0000000..78ac5b8
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/local_only_symbol_list/debug/R-def.txt
+@@ -0,0 +1,2 @@
++R_DEF: Internal format may change without notice
++local
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/local_only_symbol_list/release/R-def.txt b/node_modules/react-native-passkey/android/build/intermediates/local_only_symbol_list/release/R-def.txt
+new file mode 100644
+index 0000000..78ac5b8
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/local_only_symbol_list/release/R-def.txt
+@@ -0,0 +1,2 @@
++R_DEF: Internal format may change without notice
++local
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/manifest_merge_blame_file/debug/manifest-merger-blame-debug-report.txt b/node_modules/react-native-passkey/android/build/intermediates/manifest_merge_blame_file/debug/manifest-merger-blame-debug-report.txt
+new file mode 100644
+index 0000000..b727af4
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/manifest_merge_blame_file/debug/manifest-merger-blame-debug-report.txt
+@@ -0,0 +1,7 @@
++1<?xml version="1.0" encoding="utf-8"?>
++2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++3    package="com.reactnativepasskey" >
++4
++5    <uses-sdk android:minSdkVersion="21" />
++6
++7</manifest>
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/manifest_merge_blame_file/release/manifest-merger-blame-release-report.txt b/node_modules/react-native-passkey/android/build/intermediates/manifest_merge_blame_file/release/manifest-merger-blame-release-report.txt
+new file mode 100644
+index 0000000..b727af4
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/manifest_merge_blame_file/release/manifest-merger-blame-release-report.txt
+@@ -0,0 +1,7 @@
++1<?xml version="1.0" encoding="utf-8"?>
++2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++3    package="com.reactnativepasskey" >
++4
++5    <uses-sdk android:minSdkVersion="21" />
++6
++7</manifest>
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/merged_manifest/debug/AndroidManifest.xml b/node_modules/react-native-passkey/android/build/intermediates/merged_manifest/debug/AndroidManifest.xml
+new file mode 100644
+index 0000000..3194fd9
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/merged_manifest/debug/AndroidManifest.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.reactnativepasskey" >
++
++    <uses-sdk android:minSdkVersion="21" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/merged_manifest/release/AndroidManifest.xml b/node_modules/react-native-passkey/android/build/intermediates/merged_manifest/release/AndroidManifest.xml
+new file mode 100644
+index 0000000..3194fd9
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/merged_manifest/release/AndroidManifest.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.reactnativepasskey" >
++
++    <uses-sdk android:minSdkVersion="21" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/navigation_json/debug/navigation.json b/node_modules/react-native-passkey/android/build/intermediates/navigation_json/debug/navigation.json
+new file mode 100644
+index 0000000..0637a08
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/navigation_json/debug/navigation.json
+@@ -0,0 +1 @@
++[]
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/navigation_json/release/navigation.json b/node_modules/react-native-passkey/android/build/intermediates/navigation_json/release/navigation.json
+new file mode 100644
+index 0000000..0637a08
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/navigation_json/release/navigation.json
+@@ -0,0 +1 @@
++[]
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/runtime_library_classes_jar/debug/classes.jar b/node_modules/react-native-passkey/android/build/intermediates/runtime_library_classes_jar/debug/classes.jar
+new file mode 100644
+index 0000000..4d6fac1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/intermediates/runtime_library_classes_jar/debug/classes.jar differ
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/symbol_list_with_package_name/debug/package-aware-r.txt b/node_modules/react-native-passkey/android/build/intermediates/symbol_list_with_package_name/debug/package-aware-r.txt
+new file mode 100644
+index 0000000..d0bf77e
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/symbol_list_with_package_name/debug/package-aware-r.txt
+@@ -0,0 +1 @@
++com.reactnativepasskey
+diff --git a/node_modules/react-native-passkey/android/build/intermediates/symbol_list_with_package_name/release/package-aware-r.txt b/node_modules/react-native-passkey/android/build/intermediates/symbol_list_with_package_name/release/package-aware-r.txt
+new file mode 100644
+index 0000000..d0bf77e
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/intermediates/symbol_list_with_package_name/release/package-aware-r.txt
+@@ -0,0 +1 @@
++com.reactnativepasskey
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab
+new file mode 100644
+index 0000000..93d00c1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream
+new file mode 100644
+index 0000000..31b5544
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream.len
+new file mode 100644
+index 0000000..340082e
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at
+new file mode 100644
+index 0000000..f1591b4
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i
+new file mode 100644
+index 0000000..6e26ab3
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab
+new file mode 100644
+index 0000000..409ca48
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream
+new file mode 100644
+index 0000000..9c25fac
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream.len
+new file mode 100644
+index 0000000..f8579f5
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at
+new file mode 100644
+index 0000000..fe23964
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i
+new file mode 100644
+index 0000000..7c98506
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab
+new file mode 100644
+index 0000000..19fd1fa
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream
+new file mode 100644
+index 0000000..9c25fac
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream.len
+new file mode 100644
+index 0000000..f8579f5
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at
+new file mode 100644
+index 0000000..66c19e9
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i
+new file mode 100644
+index 0000000..7c98506
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab
+new file mode 100644
+index 0000000..fb3d0d2
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream
+new file mode 100644
+index 0000000..dbabeca
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len
+new file mode 100644
+index 0000000..10d6e6e
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.len
+new file mode 100644
+index 0000000..93a595b
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at
+new file mode 100644
+index 0000000..ba204ce
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i
+new file mode 100644
+index 0000000..189b0af
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab
+new file mode 100644
+index 0000000..3e07786
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream
+new file mode 100644
+index 0000000..3b902fc
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream.len
+new file mode 100644
+index 0000000..36189d3
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.len
+new file mode 100644
+index 0000000..a9f80ae
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at
+new file mode 100644
+index 0000000..9368b9c
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i
+new file mode 100644
+index 0000000..4c2dad4
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab
+new file mode 100644
+index 0000000..6bb7d03
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream
+new file mode 100644
+index 0000000..50be170
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream.len
+new file mode 100644
+index 0000000..340082e
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at
+new file mode 100644
+index 0000000..20a1a2f
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i
+new file mode 100644
+index 0000000..95bbd47
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab
+new file mode 100644
+index 0000000..638590c
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream
+new file mode 100644
+index 0000000..b425921
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream.len
+new file mode 100644
+index 0000000..1cf91b4
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at
+new file mode 100644
+index 0000000..4d37a05
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i
+new file mode 100644
+index 0000000..13aca7b
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab
+new file mode 100644
+index 0000000..9189d9f
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream
+new file mode 100644
+index 0000000..9c25fac
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream.len
+new file mode 100644
+index 0000000..f8579f5
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at
+new file mode 100644
+index 0000000..f100717
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i
+new file mode 100644
+index 0000000..7c98506
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/counters.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/counters.tab
+new file mode 100644
+index 0000000..c393a51
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/counters.tab
+@@ -0,0 +1,2 @@
++3
++0
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab
+new file mode 100644
+index 0000000..41c3349
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream
+new file mode 100644
+index 0000000..50be170
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream.len
+new file mode 100644
+index 0000000..340082e
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at
+new file mode 100644
+index 0000000..9f383b5
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i
+new file mode 100644
+index 0000000..8b1430b
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab
+new file mode 100644
+index 0000000..517155a
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream
+new file mode 100644
+index 0000000..636f34a
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len
+new file mode 100644
+index 0000000..29ce11c
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len
+new file mode 100644
+index 0000000..a9f80ae
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at
+new file mode 100644
+index 0000000..66c19e9
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i
+new file mode 100644
+index 0000000..e9905b3
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab
+new file mode 100644
+index 0000000..cb2cdc1
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream
+new file mode 100644
+index 0000000..2482c57
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len
+new file mode 100644
+index 0000000..3411b98
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.len
+new file mode 100644
+index 0000000..468d8bb
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at
+new file mode 100644
+index 0000000..506f108
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i
+new file mode 100644
+index 0000000..54f206c
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i.len b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i.len differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/last-build.bin b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/last-build.bin
+new file mode 100644
+index 0000000..1520793
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/cacheable/last-build.bin differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/local-state/build-history.bin b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/local-state/build-history.bin
+new file mode 100644
+index 0000000..adf286c
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileDebugKotlin/local-state/build-history.bin differ
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileReleaseKotlin/cacheable/dirty-sources.txt b/node_modules/react-native-passkey/android/build/kotlin/compileReleaseKotlin/cacheable/dirty-sources.txt
+new file mode 100644
+index 0000000..22e07f5
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/kotlin/compileReleaseKotlin/cacheable/dirty-sources.txt
+@@ -0,0 +1,2 @@
++/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/java/com/reactnativepasskey/PasskeyPackage.kt
++/Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/java/com/reactnativepasskey/PasskeyModule.kt
+\ No newline at end of file
+diff --git a/node_modules/react-native-passkey/android/build/kotlin/compileReleaseKotlin/local-state/build-history.bin b/node_modules/react-native-passkey/android/build/kotlin/compileReleaseKotlin/local-state/build-history.bin
+new file mode 100644
+index 0000000..246f077
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/kotlin/compileReleaseKotlin/local-state/build-history.bin differ
+diff --git a/node_modules/react-native-passkey/android/build/outputs/logs/manifest-merger-debug-report.txt b/node_modules/react-native-passkey/android/build/outputs/logs/manifest-merger-debug-report.txt
+new file mode 100644
+index 0000000..bd12f16
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/outputs/logs/manifest-merger-debug-report.txt
+@@ -0,0 +1,17 @@
++-- Merging decision tree log ---
++manifest
++ADDED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml:1:1-4:12
++INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml:1:1-4:12
++	package
++		ADDED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml:2:11-43
++		INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
++	xmlns:android
++		ADDED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml:1:11-69
++uses-sdk
++INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
++INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
++INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
++	android:targetSdkVersion
++		INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
++	android:minSdkVersion
++		INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
+diff --git a/node_modules/react-native-passkey/android/build/outputs/logs/manifest-merger-release-report.txt b/node_modules/react-native-passkey/android/build/outputs/logs/manifest-merger-release-report.txt
+new file mode 100644
+index 0000000..bd12f16
+--- /dev/null
++++ b/node_modules/react-native-passkey/android/build/outputs/logs/manifest-merger-release-report.txt
+@@ -0,0 +1,17 @@
++-- Merging decision tree log ---
++manifest
++ADDED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml:1:1-4:12
++INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml:1:1-4:12
++	package
++		ADDED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml:2:11-43
++		INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
++	xmlns:android
++		ADDED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml:1:11-69
++uses-sdk
++INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
++INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
++INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
++	android:targetSdkVersion
++		INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
++	android:minSdkVersion
++		INJECTED from /Users/wrathcodetechnology/Desktop/AGCE/node_modules/react-native-passkey/android/src/main/AndroidManifest.xml
+diff --git a/node_modules/react-native-passkey/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin b/node_modules/react-native-passkey/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin
+new file mode 100644
+index 0000000..70a0ca7
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin differ
+diff --git a/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/META-INF/react-native-passkey_debug.kotlin_module b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/META-INF/react-native-passkey_debug.kotlin_module
+new file mode 100644
+index 0000000..3aa6361
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/META-INF/react-native-passkey_debug.kotlin_module differ
+diff --git a/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule$create$1.class b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule$create$1.class
+new file mode 100644
+index 0000000..6f9a0ad
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule$create$1.class differ
+diff --git a/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule$get$1.class b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule$get$1.class
+new file mode 100644
+index 0000000..88e6b58
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule$get$1.class differ
+diff --git a/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule.class b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule.class
+new file mode 100644
+index 0000000..3eef44e
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyModule.class differ
+diff --git a/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyPackage.class b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyPackage.class
+new file mode 100644
+index 0000000..adb9bdb
+Binary files /dev/null and b/node_modules/react-native-passkey/android/build/tmp/kotlin-classes/debug/com/reactnativepasskey/PasskeyPackage.class differ
+diff --git a/node_modules/react-native-passkey/android/src/main/java/com/reactnativepasskey/PasskeyModule.kt b/node_modules/react-native-passkey/android/src/main/java/com/reactnativepasskey/PasskeyModule.kt
+index ea99c83..15940ec 100644
+--- a/node_modules/react-native-passkey/android/src/main/java/com/reactnativepasskey/PasskeyModule.kt
++++ b/node_modules/react-native-passkey/android/src/main/java/com/reactnativepasskey/PasskeyModule.kt
+@@ -17,8 +17,14 @@ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.launch
+ 
++import android.hardware.biometrics.BiometricPrompt
++import android.os.Build
++import android.os.CancellationSignal
++import android.util.Log
++
+ class PasskeyModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
+   private val mainScope = CoroutineScope(Dispatchers.Default)
++  private val TAG = "PasskeyModule"
+ 
+   override fun getName(): String {
+     return "Passkey"
+@@ -72,8 +78,15 @@ class PasskeyModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
+   @ReactMethod
+   fun get(requestJson: String, forcePlatformKey: Boolean, forceSecurityKey: Boolean, promise: Promise) {
+       val credentialManager = CredentialManager.create(reactApplicationContext.applicationContext)
+-      val getCredentialRequest =
+-        GetCredentialRequest(listOf(GetPublicKeyCredentialOption(requestJson)))
++
++      // When forcePlatformKey is true, set preferImmediatelyAvailableCredentials = true
++      // This prevents the confusing "Sign in another way / Use another device" fallback UI.
++      val getCredentialRequest = GetCredentialRequest(
++        listOf(GetPublicKeyCredentialOption(requestJson)),
++        preferImmediatelyAvailableCredentials = forcePlatformKey
++      )
++
++      Log.d(TAG, "get() called - forcePlatformKey=$forcePlatformKey, preferImmediate=$forcePlatformKey")
+ 
+       mainScope.launch {
+         try {
+@@ -82,13 +95,77 @@ class PasskeyModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
+ 
+           val response =
+             result?.credential?.data?.getString("androidx.credentials.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON")
++          Log.d(TAG, "get() success - response length=${response?.length ?: 0}")
+           promise.resolve(response)
+         } catch (e: GetCredentialException) {
++          Log.e(TAG, "get() failed - type=${e.javaClass.simpleName}, message=${e.message}")
+           promise.reject("Passkey", handleAuthenticationException(e))
+         }
+       }
+   }
+ 
++  /**
++   * Direct biometric authentication using Android's BiometricPrompt API.
++   * Fallback for devices where Credential Manager can't retrieve passkeys.
++   * Shows fingerprint/face prompt directly without any Google "Sign in another way" UI.
++   */
++  @ReactMethod
++  fun biometricAuth(title: String, subtitle: String, promise: Promise) {
++    val activity = currentActivity
++    if (activity == null) {
++      promise.reject("Passkey", "NoActivity")
++      return
++    }
++
++    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
++      promise.reject("Passkey", "BiometricNotSupported")
++      return
++    }
++
++    activity.runOnUiThread {
++      try {
++        val executor = activity.mainExecutor
++        val cancellationSignal = CancellationSignal()
++
++        val callback = object : BiometricPrompt.AuthenticationCallback() {
++          override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
++            Log.d(TAG, "biometricAuth() succeeded")
++            promise.resolve(true)
++          }
++
++          override fun onAuthenticationFailed() {
++            // Called on each failed attempt (wrong finger etc), NOT final
++            Log.d(TAG, "biometricAuth() single attempt failed")
++          }
++
++          override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
++            Log.e(TAG, "biometricAuth() error - code=$errorCode, msg=$errString")
++            if (errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED ||
++                errorCode == 13 || // BIOMETRIC_ERROR_NEGATIVE_BUTTON
++                errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED) {
++              promise.reject("Passkey", "UserCancelled")
++            } else {
++              promise.reject("Passkey", "BiometricFailed: $errString")
++            }
++          }
++        }
++
++        val prompt = BiometricPrompt.Builder(activity)
++          .setTitle(title)
++          .setSubtitle(subtitle)
++          .setNegativeButton("Cancel", executor) { _, _ ->
++            promise.reject("Passkey", "UserCancelled")
++          }
++          .build()
++
++        prompt.authenticate(cancellationSignal, executor, callback)
++      } catch (e: Exception) {
++        Log.e(TAG, "biometricAuth() exception", e)
++        promise.reject("Passkey", "BiometricError: ${e.message}")
++      }
++    }
++  }
++
+   private fun handleAuthenticationException(e: GetCredentialException): String {
+     e.printStackTrace()
+     when (e) {

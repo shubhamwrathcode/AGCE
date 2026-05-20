@@ -12,7 +12,7 @@
 
     <!-- Specific domain config for your backend -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">backend.zillion.wrathcode.com</domain>
+        <domain includeSubdomains="true">agcebackend.wrathcode.com</domain>
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />

@@ -644,11 +644,10 @@ export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispat
       timeout: opts.timeout,
       userVerification: opts.userVerification || 'required',
     };
-    if (opts.allowCredentials?.length) {
+    if (Platform.OS !== 'android' && opts.allowCredentials?.length) {
       request.allowCredentials = opts.allowCredentials.map((c: any) => ({
         type: c.type || 'public-key',
         id: typeof c.id === 'string' ? maybeBase64ToBase64Url(c.id) : c.id,
-        transports: c.transports,
       }));
     }
     console.log('[Passkey][verifyPasskeyLogin] options', {
@@ -769,7 +768,7 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
       timeout: opts.timeout,
       userVerification: opts.userVerification || 'preferred',
     };
-    if (opts.allowCredentials?.length) {
+    if (Platform.OS !== 'android' && opts.allowCredentials?.length) {
       request.allowCredentials = opts.allowCredentials.map((c: any) => ({
         type: c.type || 'public-key',
         id: typeof c.id === 'string' ? maybeBase64ToBase64Url(c.id) : c.id,

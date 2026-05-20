@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, SafeAreaView, Platform, Modal, ScrollView, ActivityIndicator } from 'react-native';
-import { AppText, BOLD, FOURTEEN, SIXTEEN, TWENTY, SEMI_BOLD, TWELVE, EIGHT, EIGHTEEN, TWENTY_FOUR, TWENTY_TWO, MEDIUM } from '../../../shared';
+import { AppText, BOLD, FOURTEEN, SIXTEEN, TWENTY, SEMI_BOLD, TWELVE, EIGHT, EIGHTEEN, TWENTY_FOUR, TWENTY_TWO, MEDIUM, FIFTEEN } from '../../../shared';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
 import * as routes from '../../../navigation/routes';
 import FastImage from 'react-native-fast-image';
-import { back_ic, easyVerificaton, enablepasskey, headPhoneIcon, highsecurity, INFO, multidevice, googleAuthenticator, PHONE, right_ic, securityrisk } from '../../../helper/ImageAssets';
+import { back_ic, easyVerificaton, enablepasskey, headPhoneIcon, highsecurity, INFO, multidevice, googleAuthenticator, PHONE, right_ic, securityrisk, FINGERPRINT, menuIcon, REMOVE, binIcon, passkey_login, security_risk_vector } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import { useAppSelector, useAppDispatch } from '../../../store/hooks';
 import { Passkey } from 'react-native-passkey';
-import { getPasskeyList, getPasskeyRegistrationOptions, verifyPasskeyRegistration, verifySecurityPasskey, deletePasskey, getUserProfile } from '../../../actions/accountActions';
+import { getPasskeyList, getPasskeyRegistrationOptions, verifyPasskeyRegistration, verifySecurityPasskey, deletePasskey, getUserProfile, deleteAccount } from '../../../actions/accountActions';
 import { showError, showSuccess } from '../../../helper/logger';
+import { useFocusEffect } from '@react-navigation/native';
 
-const EnablePasskey = () => {
+const EnablePasskey = ({ route, navigation }) => {
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
 
@@ -24,6 +25,7 @@ const EnablePasskey = () => {
   const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedPasskey, setSelectedPasskey] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Check support on mount
   const [passkeySupported, setPasskeySupported] = useState(true);
@@ -51,24 +53,89 @@ const EnablePasskey = () => {
     }
   }, [dispatch]);
 
-  useEffect(() => {
-    fetchPasskeys();
-  }, [fetchPasskeys]);
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(getUserProfile(false, false, true));
+      fetchPasskeys();
+    }, [dispatch, fetchPasskeys])
+  );
 
-  const hasEmail = useMemo(() => !!(userData?.emailId || userData?.email_id), [userData]);
-  const hasMobile = useMemo(() => !!(userData?.mobileNumber || userData?.mobile_number), [userData]);
-  const hasGoogleAuth = useMemo(() => (userData?.['2fa'] ?? 0) === 2, [userData]);
+  const routeParams = route?.params;
+
+  useEffect(() => {
+    if (routeParams?.deletePasskeyId) {
+      const { deletePasskeyId, emailOtp, smsOtp, tofaCode } = routeParams;
+      
+      let verifyMethod = null;
+      let code = null;
+
+      if (tofaCode) {
+        verifyMethod = 'totp';
+        code = tofaCode;
+      } else if (emailOtp) {
+        verifyMethod = 'email';
+        code = emailOtp;
+      } else if (smsOtp) {
+        verifyMethod = 'mobile';
+        code = smsOtp;
+      }
+
+      if (verifyMethod && code) {
+        const executeDelete = async () => {
+          try {
+            setIsDeleting(true);
+            console.log(`[DEBUG][EnablePasskey] Callback delete triggering for ID: ${deletePasskeyId} with method: ${verifyMethod}`);
+            const success = await dispatch(deletePasskey(deletePasskeyId, verifyMethod, code, null));
+            console.log('[DEBUG][EnablePasskey] Callback delete result:', success);
+            
+            // Clear navigation parameters in all cases to prevent repeated delete triggers
+            navigation.setParams({
+              deletePasskeyId: undefined,
+              emailOtp: undefined,
+              smsOtp: undefined,
+              tofaCode: undefined,
+            });
+
+            if (success) {
+              setSelectedPasskey(null);
+              fetchPasskeys();
+            }
+          } catch (error) {
+            console.warn('[Passkey] Deletion callback error:', error);
+          } finally {
+            setIsDeleting(false);
+          }
+        };
+        executeDelete();
+      }
+    }
+  }, [routeParams, dispatch, fetchPasskeys, navigation]);
+
+  const emailId = userData?.emailId || "";
+  const mobileNumber = userData?.mobileNumber || "";
+  const hasGoogleAuth = Number(userData?.["2fa"] || 0) === 2;
   const hasPasskeys = passkeys.length > 0;
+
+  // “Email” factor: if API tracks emailVerifiedAt, need verified; otherwise having email is enough (match backend).
+  const isEmailSatisfied = useMemo(() => {
+    if (!emailId || emailId === "null" || emailId === "undefined") return false;
+    if (!Object.prototype.hasOwnProperty.call(userData || {}, "emailVerifiedAt")) {
+      return true;
+    }
+    return !!userData?.emailVerifiedAt;
+  }, [userData, emailId]);
+
+  const hasMobile = !!mobileNumber && mobileNumber !== "null" && mobileNumber !== "undefined";
 
   // Gate check: Any 2 active security factors (Email, Phone, Google Authenticator, or existing passkeys)
   const activeSecurityCount = useMemo(() => {
-    return [hasEmail, hasMobile, hasGoogleAuth, hasPasskeys].filter(Boolean).length;
-  }, [hasEmail, hasMobile, hasGoogleAuth, hasPasskeys]);
+    return [isEmailSatisfied, hasMobile, hasGoogleAuth, hasPasskeys].filter(Boolean).length;
+  }, [isEmailSatisfied, hasMobile, hasGoogleAuth, hasPasskeys]);
 
   // List only methods the user can still add to satisfy the gate requirements
   const missingMethods = useMemo(() => {
     const list = [];
-    if (!hasEmail) {
+    if (!isEmailSatisfied) {
       list.push({
         id: 'email',
         label: 'Email Address',
@@ -93,7 +160,7 @@ const EnablePasskey = () => {
       });
     }
     return list;
-  }, [hasEmail, hasGoogleAuth, hasMobile]);
+  }, [isEmailSatisfied, hasGoogleAuth, hasMobile]);
 
   // Add/Register Passkey Flow
   const handleAddPasskey = async () => {
@@ -104,6 +171,7 @@ const EnablePasskey = () => {
 
     if (activeSecurityCount >= 2) {
       try {
+        setIsCreating(true);
         const optionsResult = await dispatch(getPasskeyRegistrationOptions());
         if (!optionsResult) return;
 
@@ -120,7 +188,9 @@ const EnablePasskey = () => {
           rpId: optionsResult.rpId || optionsResult.rp?.id,
         };
 
+        console.warn('[Passkey] Native create request:', JSON.stringify(request, null, 2));
         const passkeyResponse = await Passkey.create(request);
+        console.warn('[Passkey] Native Passkey.create Response:', JSON.stringify(passkeyResponse, null, 2));
         if (passkeyResponse) {
           const emailId = userData?.emailId || userData?.email_id || '';
           const projectName = 'Arab Global Exchange';
@@ -142,6 +212,8 @@ const EnablePasskey = () => {
         } else {
           showError(error?.message || 'Failed to create passkey');
         }
+      } finally {
+        setIsCreating(false);
       }
       return;
     }
@@ -157,36 +229,82 @@ const EnablePasskey = () => {
   };
 
   const handleConfirmDelete = async () => {
-    if (!selectedPasskey) return;
+    console.log('[DEBUG][EnablePasskey] handleConfirmDelete called');
+    if (!selectedPasskey) {
+      console.log('[DEBUG][EnablePasskey] No selectedPasskey found, exiting delete flow');
+      return;
+    }
+    console.log('[DEBUG][EnablePasskey] Target passkey to delete:', JSON.stringify(selectedPasskey));
     try {
       setIsDeleting(true);
       const signId = userData?.emailId || userData?.email_id || userData?.mobileNumber || userData?.mobile_number;
+      console.log('[DEBUG][EnablePasskey] Verification signId identifier:', signId);
       if (!signId) {
+        console.log('[DEBUG][EnablePasskey] No verification identifier found in userData, exiting');
         showError('No verification identifier found');
         return;
       }
 
-      // 1. Verify identity with passkey first (WebAuthn)
-      const userId = await dispatch(verifySecurityPasskey(signId));
-      if (!userId) return; // verifySecurityPasskey handles error alerts
+      // 1. Verify identity with passkey (WebAuthn) or biometric fallback
+      console.log('[DEBUG][EnablePasskey] Dispatching verifySecurityPasskey...');
+      const result = await dispatch(verifySecurityPasskey(signId));
+      console.log('[DEBUG][EnablePasskey] verifySecurityPasskey result:', result);
+      
+      // On Android, if Credential Manager fails but biometric succeeds,
+      // verifySecurityPasskey returns 'BIOMETRIC_VERIFIED'.
+      const skipPasskeyVerify = result === 'BIOMETRIC_VERIFIED' || result === 'SKIP_VERIFICATION';
+      
+      if (skipPasskeyVerify) {
+        const availableFallbackMethods = [];
+        if (hasGoogleAuth) availableFallbackMethods.push('totp');
+        if (isEmailSatisfied) availableFallbackMethods.push('email');
+        if (hasMobile) availableFallbackMethods.push('mobile');
+
+        if (availableFallbackMethods.length > 0) {
+          setDeleteModalVisible(false);
+          NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+            purpose: 'delete_passkey',
+            verifyMethods: availableFallbackMethods,
+            targetScreen: route?.name || routes.PASSKEY_SCREEN,
+            targetParams: { deletePasskeyId: selectedPasskey._id },
+            skipDirectVerification: true,
+          });
+        } else {
+          showError('No active security method available for fallback verification.');
+        }
+        return;
+      }
+
+      const userId = result;
+      console.log('[DEBUG][EnablePasskey] userId:', userId);
+      
+      if (!userId) {
+        console.log('[DEBUG][EnablePasskey] Verification failed or cancelled by user, aborting deletion');
+        return;
+      }
 
       // 2. Perform delete passkey API request
+      console.log('[DEBUG][EnablePasskey] Calling deletePasskey API for ID:', selectedPasskey._id);
       const success = await dispatch(deletePasskey(selectedPasskey._id, 'passkey', null, userId));
+      console.log('[DEBUG][EnablePasskey] deletePasskey API response success status:', success);
       if (success) {
         setDeleteModalVisible(false);
         setSelectedPasskey(null);
         fetchPasskeys();
+        console.log('[DEBUG][EnablePasskey] Passkey successfully deleted, UI refreshed');
       }
     } catch (error) {
+      console.log('[DEBUG][EnablePasskey] Error caught in handleConfirmDelete:', error);
       console.warn('[Passkey] Delete failed:', error);
       showError(error?.message || 'Something went wrong');
     } finally {
       setIsDeleting(false);
+      console.log('[DEBUG][EnablePasskey] handleConfirmDelete flow finished');
     }
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background || colors.white }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.white }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F0' }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
@@ -229,10 +347,10 @@ const EnablePasskey = () => {
                 <View key={pk._id} style={[styles.passkeyCard, { backgroundColor: isDark ? '#1E1E22' : '#F9F9FB', borderColor: isDark ? '#2A2A2E' : '#EBEBF0' }]}>
                   <View style={styles.passkeyCardMain}>
                     <View style={[styles.passkeyIconWrap, { backgroundColor: isDark ? '#2A2A2E' : '#ECECF0' }]}>
-                      <FastImage source={highsecurity} tintColor={isDark ? colors.white : colors.black} style={{ width: 22, height: 22 }} resizeMode='contain' />
+                      <FastImage source={FINGERPRINT} tintColor={isDark ? colors.white : colors.black} style={{ width: 30, height: 30 }} resizeMode='contain' />
                     </View>
                     <View style={styles.passkeyCardBody}>
-                      <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                         {pk.name || 'Passkey'}
                       </AppText>
                       <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 4 }}>
@@ -249,7 +367,7 @@ const EnablePasskey = () => {
                     </View>
 
                     <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteClick(pk)}>
-                      <FastImage source={INFO} tintColor="#FF4D4D" style={{ width: 20, height: 20 }} resizeMode='contain' />
+                      <FastImage source={binIcon} tintColor={colors.red} style={{ width: 20, height: 20 }} resizeMode='contain' />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -326,10 +444,15 @@ const EnablePasskey = () => {
               style={[styles.addBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
               activeOpacity={0.8}
               onPress={handleAddPasskey}
+              disabled={isCreating}
             >
-              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
-                Add a Passkey
-              </AppText>
+              {isCreating ? (
+                <ActivityIndicator color={isDark ? '#000000' : '#FFFFFF'} size="small" />
+              ) : (
+                <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
+                  Add a Passkey
+                </AppText>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -385,42 +508,46 @@ const EnablePasskey = () => {
       {/* Delete Passkey Confirmation Modal */}
       <Modal
         visible={isDeleteModalVisible}
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         onRequestClose={() => setDeleteModalVisible(false)}
       >
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDeleteModalVisible(false)}>
-          <TouchableOpacity activeOpacity={1} style={[styles.deleteDialog, { backgroundColor: isDark ? '#1E1E22' : '#FFFFFF' }]}>
-            <AppText type={EIGHTEEN} weight={BOLD} style={[styles.deleteTitle, { color: themeColors.text }]}>
+          <TouchableOpacity activeOpacity={1} style={[styles.bottomSheet, { backgroundColor: isDark ? '#1E1E22' : '#FFFFFF' }]}>
+            <View style={styles.handleBar} />
+
+            <FastImage source={security_risk_vector} style={styles.modalIllustration} resizeMode="contain" />
+
+            <AppText type={TWENTY} weight={BOLD} style={[styles.modalTitle, { color: themeColors.text }]}>
               Remove Passkey?
             </AppText>
-            <AppText type={FOURTEEN} style={[styles.deleteMessage, { color: themeColors.secondaryText }]}>
-              Are you sure you want to remove "{selectedPasskey?.name || 'this passkey'}"? This action requires passkey authentication.
+            <AppText type={FOURTEEN} style={[styles.modalSubtitle, { color: themeColors.secondaryText, marginBottom: 24 }]}>
+              You're about to delete "{selectedPasskey?.name || 'this passkey'}". For your safety, please authenticate with your passkey to confirm.
             </AppText>
 
-            <View style={styles.deleteActionWrap}>
+            <View style={[styles.deleteActionWrap, { flexDirection: 'column' }]}>
               <TouchableOpacity
-                style={[styles.deleteActionBtn, styles.cancelBtn, { borderColor: isDark ? '#333' : '#EBEBF0' }]}
-                onPress={() => setDeleteModalVisible(false)}
-                disabled={isDeleting}
-              >
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                  Cancel
-                </AppText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.deleteActionBtn, styles.confirmBtn]}
+                style={[styles.deleteActionBtn, styles.confirmBtn, { width: '100%' }]}
                 onPress={handleConfirmDelete}
                 disabled={isDeleting}
               >
                 {isDeleting ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
+                  <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
                     Authenticate & Remove
                   </AppText>
                 )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.deleteActionBtn, { width: '100%', backgroundColor: 'transparent', height: 40 }]}
+                onPress={() => setDeleteModalVisible(false)}
+                disabled={isDeleting}
+              >
+                <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#767680' }}>
+                  Cancel
+                </AppText>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -487,15 +614,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+
   },
   passkeyCardMain: {
     flexDirection: 'row',
-    alignItems: 'center',
   },
   passkeyIconWrap: {
     width: 48,
@@ -641,7 +763,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   confirmBtn: {
-    backgroundColor: '#FF4D4D',
+    backgroundColor: colors.red,
   },
 });
 
