@@ -298,14 +298,26 @@ const EmergencyContactMain = () => {
                     </View>
 
                     <View style={styles.actionButtonsContainer}>
-                      <TouchableOpacity onPress={() => handleEdit(contact)} style={styles.iconBtn}>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: '#D4AF37' }}>
+                      <TouchableOpacity
+                        onPress={() => handleEdit(contact)}
+                        style={[
+                          styles.editBtn,
+                          { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }
+                        ]}
+                      >
+                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
                           Edit
                         </AppText>
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={() => handleDelete(contact)}
-                        style={[styles.iconBtn, { marginLeft: 12 }]}
+                        style={[
+                          styles.removeBtn,
+                          {
+                            backgroundColor: isDark ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255, 59, 48, 0.08)',
+                            marginLeft: 8,
+                          }
+                        ]}
                         disabled={deleteBusyId === contact._id}
                       >
                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: '#FF3B30' }}>
@@ -442,7 +454,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   userInfoContainer: {
     flexDirection: 'row',
@@ -460,9 +472,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 2,
+  editBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dividerLine: {
     height: 1,

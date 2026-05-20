@@ -53,6 +53,9 @@ const AccountDetails = () => {
   const userData = useAppSelector((state) => state.auth.userData);
   const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
   const hasFundPassword = fundPasswordStatus ?? !!(userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
+  const userHasPhone = !!(userData?.mobileNumber || userData?.mobile_number) &&
+    (userData?.mobileNumber || userData?.mobile_number) !== "null" &&
+    (userData?.mobileNumber || userData?.mobile_number) !== "undefined";
   const [activeTab, setActiveTab] = useState("Profile");
   const [securityMethods, setSecurityMethods] = useState({
     passkey: false,
@@ -150,12 +153,12 @@ const AccountDetails = () => {
   };
 
   const maskProfilePhone = (phone) => {
-    if (!phone) return "+91*****3";
+    if (!phone || phone === "null" || phone === "undefined") return "";
     const cleaned = String(phone).replace(/\s+/g, '');
     const isIndia = cleaned.startsWith("+91") || cleaned.startsWith("91");
     const prefix = isIndia ? "+91" : "";
     const digitsOnly = cleaned.replace(/^\+91|^91/, '');
-    if (digitsOnly.length < 2) return "+91*****3";
+    if (digitsOnly.length < 2) return "";
     return `${prefix}*****${digitsOnly.slice(-1)}`;
   };
 
@@ -312,11 +315,13 @@ const AccountDetails = () => {
                 value={userData?.emailId ? maskProfileEmail(userData.emailId) : "Not enabled"}
                 onPress={() => NavigationService.navigate(routes.ADD_EMAIL_SCREEN)}
               />
-              <MenuItem
-                label="Phone Number"
-                value={userData?.mobileNumber || userData?.mobile_number ? maskProfilePhone(userData.mobileNumber || userData.mobile_number) : "+91*****3"}
-                onPress={() => NavigationService.navigate(routes.ADD_PHONE_NUMBER_SCREEN)}
-              />
+              {userHasPhone ? (
+                <MenuItem
+                  label="Phone Number"
+                  value={maskProfilePhone(userData.mobileNumber || userData.mobile_number)}
+                  onPress={() => NavigationService.navigate(routes.ADD_PHONE_NUMBER_SCREEN)}
+                />
+              ) : null}
 
               {/* Advanced Security Section */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>

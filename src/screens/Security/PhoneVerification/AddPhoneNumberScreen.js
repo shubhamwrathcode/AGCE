@@ -60,14 +60,15 @@ const AddPhoneNumberScreen = () => {
   // Mask helper matching the mockup screenshot
   const profileMobile = userData?.mobileNumber ?? userData?.mobile_number ?? '';
   const rawEmail = userData?.emailId || userData?.email;
+  const userHasPhone = !!profileMobile && profileMobile !== "null" && profileMobile !== "undefined";
 
   const maskPhone = (phone) => {
-    if (!phone) return '+91*****3';
+    if (!phone || phone === "null" || phone === "undefined") return '';
     const cleaned = String(phone).replace(/\s/g, '');
     const isIndia = cleaned.startsWith("+91") || cleaned.startsWith("91");
     const prefix = isIndia ? "+91" : "";
     const digitsOnly = cleaned.replace(/^\+91|^91/, '');
-    if (digitsOnly.length < 2) return '+91*****3';
+    if (digitsOnly.length < 2) return '';
     return `${prefix}*****${digitsOnly.slice(-1)}`;
   };
 
@@ -104,14 +105,16 @@ const AddPhoneNumberScreen = () => {
         {/* Content List exactly matching screenshot */}
         <View style={{ paddingTop: 8 }}>
           {/* Phone Number Row */}
-          <View style={styles.row}>
-            <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
-              Phone Number
-            </AppText>
-            <AppText type={SIXTEEN} style={{ color: isDark ? '#8A8A93' : '#9E9EAE' }}>
-              {displayPhone}
-            </AppText>
-          </View>
+          {userHasPhone ? (
+            <View style={styles.row}>
+              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+                Phone Number
+              </AppText>
+              <AppText type={SIXTEEN} style={{ color: isDark ? '#8A8A93' : '#9E9EAE' }}>
+                {displayPhone}
+              </AppText>
+            </View>
+          ) : null}
 
           {/* Change Email Row */}
           <TouchableOpacity
