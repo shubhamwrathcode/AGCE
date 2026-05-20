@@ -143,7 +143,6 @@ import PanVerify from "../screens/kycScrrens/PanVerify";
 import AadharVerify from "../screens/kycScrrens/AadharVerify";
 import UploadSelfie from "../screens/kycScrrens/UploadSelfie";
 import CurrencyPrefer from "../screens/currencyPrefer/CurrencyPrefer";
-import Security from "../screens/supportSreen/Security";
 import SettingsScreen from "../screens/settings/Settings";
 import WithdrawInr from "../screens/other/WithdrawInr";
 import WebLink from "../screens/account/WebLink";
