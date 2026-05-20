@@ -26,7 +26,7 @@ import {
   setTwoFaData,
   setUserTickets,
 } from '../slices/homeSlice';
-import { AppDispatch } from '../store/store';
+import store, { AppDispatch } from '../store/store';
 import { logoutAction } from './authActions';
 import { getAllWalletsPortfolio, getUserPortfolioArbitrage, getUserPortfolioEarning, getUserPortfolioMain, getUserPortfolioSpot, getUserPortfolioSwap } from './walletActions';
 import { Alert, NativeModules, Platform } from 'react-native';
@@ -56,6 +56,7 @@ const prepareAllowCredentials = (allowCredentials: any[]) => {
       creds.push({
         type: c.type || 'public-key',
         id: b64url,
+        transports: c.transports || ['internal', 'hybrid'],
       });
       if (Platform.OS === 'android') {
         let stdB64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
@@ -65,12 +66,14 @@ const prepareAllowCredentials = (allowCredentials: any[]) => {
         creds.push({
           type: c.type || 'public-key',
           id: stdB64,
+          transports: c.transports || ['internal', 'hybrid'],
         });
       }
     } else {
       creds.push({
         type: c.type || 'public-key',
         id: c.id,
+        transports: c.transports || ['internal', 'hybrid'],
       });
     }
   });
@@ -1127,17 +1130,17 @@ export const verifySecurityTotp = (code: string, purpose: string) => async (disp
 };
 
 /** Verify identity via passkey for security flows (change email/mobile, etc). Returns userId or null. */
-export const verifySecurityPasskey = (signId: string) => async (dispatch: AppDispatch) => {
+export const verifySecurityPasskey = (signId: string, isDeletingPasskey: boolean = false, silent: boolean = false) => async (dispatch: AppDispatch) => {
   try {
     if (!Passkey.isSupported()) {
-      showError('Passkeys are not supported on this device');
+      if (!silent) showError('Passkeys are not supported on this device');
       return null;
     }
     dispatch(setLoading(true));
     const optionsRes: any = await appOperation.customer.passkeyGetAuthOptions(signId);
     console.warn('[Passkey][verifySecurityPasskey] Backend Raw Options Response:', JSON.stringify(optionsRes, null, 2));
     if (!optionsRes?.success || !optionsRes?.data) {
-      showError(optionsRes?.message || 'Failed to get passkey options');
+      if (!silent) showError(optionsRes?.message || 'Failed to get passkey options');
       return null;
     }
     const opts = optionsRes.data;
@@ -1149,7 +1152,7 @@ export const verifySecurityPasskey = (signId: string) => async (dispatch: AppDis
         server: rpIdFromServer,
         configured: PASSKEY_RP_ID,
       });
-      showError('Passkey is not configured for this app.');
+      if (!silent) showError('Passkey is not configured for this app.');
       return null;
     }
     const rpId =
@@ -1164,11 +1167,7 @@ export const verifySecurityPasskey = (signId: string) => async (dispatch: AppDis
     };
     // Include allowCredentials WITH transports so the system knows to look locally.
     if (opts.allowCredentials?.length) {
-      request.allowCredentials = opts.allowCredentials.map((c: any) => ({
-        type: c.type || 'public-key',
-        id: typeof c.id === 'string' ? maybeBase64ToBase64Url(c.id) : c.id,
-        transports: c.transports || ['internal', 'hybrid'],
-      }));
+      request.allowCredentials = prepareAllowCredentials(opts.allowCredentials);
     }
     console.warn('[Passkey][verifySecurityPasskey] Native Get Request:', JSON.stringify(request, null, 2));
 
@@ -1183,7 +1182,7 @@ export const verifySecurityPasskey = (signId: string) => async (dispatch: AppDis
         const msg1 = String(e1?.message ?? e1?.error ?? '');
         console.warn('[Passkey][verifySecurityPasskey] Step 1 failed:', msg1);
 
-        if (/NoCredentials|no.*credential/i.test(msg1)) {
+        if (/NoCredentials|no.*credential|no viable credential/i.test(msg1)) {
           // Step 2: getPlatformKey without allowCredentials (discoverable, no UI)
           try {
             const discoverableReq = {
@@ -1198,33 +1197,59 @@ export const verifySecurityPasskey = (signId: string) => async (dispatch: AppDis
             const msg2 = String(e2?.message ?? e2?.error ?? '');
             console.warn('[Passkey][verifySecurityPasskey] Step 2 failed:', msg2);
 
-            if (/NoCredentials|no.*credential/i.test(msg2)) {
-              // Credential Manager can't find passkeys on this device.
-              // Fall back to direct fingerprint/biometric prompt.
-              console.warn('[Passkey][verifySecurityPasskey] Falling back to direct biometric prompt...');
-              try {
-                await NativeModules.Passkey.biometricAuth(
-                  'Verify your identity',
-                  'Authenticate to remove this passkey'
-                );
-                console.warn('[Passkey][verifySecurityPasskey] Biometric verification succeeded!');
-                return 'BIOMETRIC_VERIFIED';
-              } catch (bioErr: any) {
-                const bioMsg = String(bioErr?.message ?? bioErr?.error ?? '');
-                console.warn('[Passkey][verifySecurityPasskey] Biometric failed:', bioMsg);
-                if (/cancelled|cancel/i.test(bioMsg)) {
-                  showError('Authentication was cancelled');
-                } else {
-                  showError('Biometric verification failed');
+            if (/NoCredentials|no.*credential|no viable credential/i.test(msg2)) {
+              if (isDeletingPasskey) {
+                console.warn('[Passkey][verifySecurityPasskey] Deletion/Verification bypass: skipping standard Passkey.get and falling back directly to biometric prompt...');
+                try {
+                  await NativeModules.Passkey.biometricAuth(
+                    'Verify your identity',
+                    'Authenticate using biometrics'
+                  );
+                  console.warn('[Passkey][verifySecurityPasskey] Biometric verification succeeded!');
+                  const fallbackUserId = store.getState()?.auth?.userData?.id || store.getState()?.auth?.userData?._id || 'BIOMETRIC_VERIFIED';
+                  return fallbackUserId;
+                } catch (bioErr: any) {
+                  const bioMsg = String(bioErr?.message ?? bioErr?.error ?? '');
+                  console.warn('[Passkey][verifySecurityPasskey] Biometric failed:', bioMsg);
+                  if (/cancelled|cancel/i.test(bioMsg)) {
+                    if (!silent) showError('Authentication was cancelled');
+                  } else {
+                    if (!silent) showError('Biometric verification failed');
+                  }
+                  return null;
                 }
-                return null;
+              }
+
+              // Step 3: try standard Passkey.get for system prompt (Credential Manager bottom sheet in discoverable mode without allowCredentials)
+              try {
+                console.warn('[Passkey][verifySecurityPasskey] Android Step 3: trying standard Passkey.get for system prompt (discoverable / no allowCredentials)');
+                const discoverableReq = {
+                  challenge: request.challenge,
+                  rpId: request.rpId,
+                  timeout: request.timeout,
+                  userVerification: request.userVerification,
+                };
+                credential = await Passkey.get(discoverableReq);
+              } catch (e3: any) {
+                const msg3 = String(e3?.message ?? e3?.error ?? '');
+                console.warn('[Passkey][verifySecurityPasskey] Step 3 failed:', msg3);
+
+                if (/NoCredentials|no.*credential|no viable credential/i.test(msg3)) {
+                  if (!silent) showError('Passkey credential not found on this device. Please use another verification method.');
+                  return null;
+                } else if (/cancelled|cancel/i.test(msg3)) {
+                  if (!silent) showError('Authentication was cancelled');
+                  return null;
+                } else {
+                  throw e3;
+                }
               }
             } else {
               throw e2;
             }
           }
         } else if (/cancelled|cancel/i.test(msg1)) {
-          showError('Authentication was cancelled');
+          if (!silent) showError('Authentication was cancelled');
           return null;
         } else {
           throw e1;
@@ -1237,13 +1262,13 @@ export const verifySecurityPasskey = (signId: string) => async (dispatch: AppDis
 
     console.warn('[Passkey][verifySecurityPasskey] Native Credential Received:', JSON.stringify(credential, null, 2));
     if (!credential) {
-      showError('Authentication was cancelled');
+      if (!silent) showError('Authentication was cancelled');
       return null;
     }
     const verifyRes: any = await appOperation.customer.passkeyVerifyAuth(signId, credential);
     console.warn('[Passkey][verifySecurityPasskey] Backend Verification Response:', JSON.stringify(verifyRes, null, 2));
     if (!verifyRes?.success) {
-      showError(verifyRes?.message || 'Passkey verification failed');
+      if (!silent) showError(verifyRes?.message || 'Passkey verification failed');
       return null;
     }
     return verifyRes?.data?.userId ?? null;
@@ -1252,9 +1277,128 @@ export const verifySecurityPasskey = (signId: string) => async (dispatch: AppDis
     logger(e);
     const msg = String(e?.message ?? e?.error ?? '');
     if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
-      showError('Authentication was cancelled');
+      if (!silent) showError('Authentication was cancelled');
     } else {
-      showError(e?.message || 'Passkey verification failed');
+      if (!silent) showError(e?.message || 'Passkey verification failed');
+    }
+    return null;
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+export const getPasskeyAuthCredential = (signId: string, silent: boolean = false) => async (dispatch: AppDispatch) => {
+  try {
+    if (!Passkey.isSupported()) {
+      if (!silent) showError('Passkeys are not supported on this device');
+      return null;
+    }
+    dispatch(setLoading(true));
+    const optionsRes: any = await appOperation.customer.passkeyGetAuthOptions(signId);
+    console.warn('[Passkey][getPasskeyAuthCredential] Backend Raw Options Response:', JSON.stringify(optionsRes, null, 2));
+    if (!optionsRes?.success || !optionsRes?.data) {
+      if (!silent) showError(optionsRes?.message || 'Failed to get passkey options');
+      return null;
+    }
+    const opts = optionsRes.data;
+    const rawChallenge = typeof opts.challenge === 'string' ? opts.challenge : '';
+    const challengeForNative = maybeBase64ToBase64Url(rawChallenge);
+    const rpIdFromServer = String(opts.rpId || opts.rp?.id || '').trim();
+    if (isRpIdMismatchForAndroid(rpIdFromServer)) {
+      console.warn('[Passkey][getPasskeyAuthCredential] rpId mismatch - skipping native prompt', {
+        server: rpIdFromServer,
+        configured: PASSKEY_RP_ID,
+      });
+      if (!silent) showError('Passkey is not configured for this app.');
+      return null;
+    }
+    const rpId =
+      rpIdFromServer ||
+      (PASSKEY_RP_ID && PASSKEY_RP_ID.trim() ? PASSKEY_RP_ID.trim() : '') ||
+      '';
+    const request: any = {
+      challenge: challengeForNative || rawChallenge || opts.challenge,
+      rpId: rpId || 'localhost',
+      timeout: opts.timeout,
+      userVerification: opts.userVerification || 'required',
+    };
+    if (opts.allowCredentials?.length) {
+      request.allowCredentials = prepareAllowCredentials(opts.allowCredentials);
+    }
+    console.warn('[Passkey][getPasskeyAuthCredential] Native Get Request:', JSON.stringify(request, null, 2));
+
+    let credential: any;
+    if (Platform.OS === 'android') {
+      try {
+        console.warn('[Passkey][getPasskeyAuthCredential] Android Step 1: getPlatformKey with allowCredentials');
+        credential = await Passkey.getPlatformKey(request);
+      } catch (e1: any) {
+        const msg1 = String(e1?.message ?? e1?.error ?? '');
+        console.warn('[Passkey][getPasskeyAuthCredential] Step 1 failed:', msg1);
+
+        if (/NoCredentials|no.*credential|no viable credential/i.test(msg1)) {
+          try {
+            const discoverableReq = {
+              challenge: request.challenge,
+              rpId: request.rpId,
+              timeout: request.timeout,
+              userVerification: request.userVerification,
+            };
+            console.warn('[Passkey][getPasskeyAuthCredential] Android Step 2: getPlatformKey discoverable');
+            credential = await Passkey.getPlatformKey(discoverableReq);
+          } catch (e2: any) {
+            const msg2 = String(e2?.message ?? e2?.error ?? '');
+            console.warn('[Passkey][getPasskeyAuthCredential] Step 2 failed:', msg2);
+
+            if (/NoCredentials|no.*credential|no viable credential/i.test(msg2)) {
+              // Try standard Passkey.get to trigger Android Credential Manager UI (discoverable mode without allowCredentials)
+              try {
+                console.warn('[Passkey][getPasskeyAuthCredential] Android Step 3: trying standard Passkey.get for system prompt (discoverable / no allowCredentials)');
+                const discoverableReq = {
+                  challenge: request.challenge,
+                  rpId: request.rpId,
+                  timeout: request.timeout,
+                  userVerification: request.userVerification,
+                };
+                credential = await Passkey.get(discoverableReq);
+              } catch (e3: any) {
+                const msg3 = String(e3?.message ?? e3?.error ?? '');
+                console.warn('[Passkey][getPasskeyAuthCredential] Step 3 failed:', msg3);
+                if (/NoCredentials|no.*credential|no viable credential/i.test(msg3)) {
+                  if (!silent) showError('Passkey credential not found on this device.');
+                  return null;
+                } else if (/cancelled|cancel/i.test(msg3)) {
+                  if (!silent) showError('Authentication was cancelled');
+                  return null;
+                } else {
+                  throw e3;
+                }
+              }
+            } else {
+              throw e2;
+            }
+          }
+        } else if (/cancelled|cancel/i.test(msg1)) {
+          if (!silent) showError('Authentication was cancelled');
+          return null;
+        } else {
+          throw e1;
+        }
+      }
+    } else {
+      credential = await Passkey.get(request);
+    }
+
+    console.warn('[Passkey][getPasskeyAuthCredential] Native Credential Received:', JSON.stringify(credential, null, 2));
+    return credential;
+  } catch (e: any) {
+    console.warn('[Passkey][getPasskeyAuthCredential] Exception caught:', e);
+    logger(e);
+    const msg = String(e?.message ?? e?.error ?? '');
+    if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
+      if (!silent) showError('Authentication was cancelled');
+    } else {
+      if (!silent) showError(e?.message || 'Passkey verification failed');
     }
     return null;
   } finally {

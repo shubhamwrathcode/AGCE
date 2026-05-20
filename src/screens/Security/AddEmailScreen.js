@@ -10,10 +10,20 @@ import {
   Easing,
   TextInput,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from "../../hooks/useTheme";
-import { useAppSelector } from "../../store/hooks";
+import { useAppSelector, useAppDispatch } from "../../store/hooks";
+import {
+  initiateEmailChange,
+  completeEmailChange,
+  getPasskeyList,
+  verifySecurityPasskey,
+} from '../../actions/accountActions';
+import { SpinnerSecond } from '../../shared/components/SpinnerSecond';
+import NavigationService from '../../navigation/NavigationService';
+import * as routes from '../../navigation/routes';
 import {
   AppSafeAreaView,
   AppText,
@@ -33,6 +43,7 @@ import { back_ic, right_ic, change_email_vector, securityrisk, warningImg } from
 import { colors } from '../../theme/colors';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import { showError, showSuccess } from '../../helper/logger';
+import { getEmailDomainSuggestions } from '../../helper/emailDomainSuggest';
 
 const ToggleSwitch = ({ value, onValueChange, isDark }) => {
   const animatedValue = React.useRef(new Animated.Value(value ? 1 : 0)).current;
@@ -81,8 +92,12 @@ const ToggleSwitch = ({ value, onValueChange, isDark }) => {
 
 const AddEmailScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
+  const isLoading = useAppSelector((state) => state.auth.loading);
+  const isLoadingOtp = useAppSelector((state) => state.auth.loadingOtp);
 
   const confirmSheetRef = useRef(null);
   const shouldNavigateRef = useRef(false);
@@ -99,10 +114,76 @@ const AddEmailScreen = () => {
   const [newEmail, setNewEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [isSendingCode, setIsSendingCode] = useState(false);
   const timerRef = useRef(null);
 
+  // Email suggestions states
+  const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
+  const emailSuggestBlurTimer = useRef(null);
+
+  const clearEmailSuggestBlurTimer = () => {
+    if (emailSuggestBlurTimer.current) {
+      clearTimeout(emailSuggestBlurTimer.current);
+      emailSuggestBlurTimer.current = null;
+    }
+  };
+
+  const emailDomainSuggestions = React.useMemo(
+    () => getEmailDomainSuggestions(newEmail),
+    [newEmail]
+  );
+
+  React.useEffect(() => {
+    return () => clearEmailSuggestBlurTimer();
+  }, []);
+
+  const applyEmailDomain = (domain) => {
+    clearEmailSuggestBlurTimer();
+    const s = String(newEmail || "");
+    const at = s.indexOf("@");
+    if (at < 0) return;
+    setNewEmail(`${s.slice(0, at)}@${domain}`);
+    setEmailSuggestListVisible(false);
+  };
+
+  // Identity verification parameters proof
+  const [identityProof, setIdentityProof] = useState(null);
+
+  // Passkey support states
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [hasPasskey, setHasPasskey] = useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    try {
+      const { Passkey } = require('react-native-passkey');
+      const supported = Passkey.isSupported();
+      if (active) setPasskeySupported(!!supported);
+    } catch {
+      if (active) setPasskeySupported(false);
+    }
+
+    const fetchPasskeys = async () => {
+      try {
+        const res = await dispatch(getPasskeyList());
+        if (res?.success && active) {
+          const list = res.data?.passkeys || [];
+          setHasPasskey(list.length > 0);
+        }
+      } catch (err) {
+        console.warn('[AddEmailScreen] Error fetching passkeys:', err);
+      }
+    };
+    void fetchPasskeys();
+
+    return () => {
+      active = false;
+    };
+  }, [dispatch]);
+
   // Fallback / Mask email exactly like screenshot
-  const rawEmail = userData?.emailId || 'r***9@gmail.com';
+  const rawEmail = userData?.emailId || userData?.email || '';
+  const hasEmail = !!rawEmail;
   const maskEmail = (email) => {
     if (!email) return '';
     const parts = email.split('@');
@@ -113,27 +194,94 @@ const AddEmailScreen = () => {
     return `${name.substring(0, 1)}***${name.slice(-1)}@${domain}`;
   };
 
-  const displayEmail = maskEmail(rawEmail);
+  const displayEmail = rawEmail ? maskEmail(rawEmail) : 'Not Linked';
 
-  const handleSendCode = () => {
+  const handleProceedAfterConsent = async () => {
+    // 1. Try silent passkey verification first if enrolled & supported
+    if (hasPasskey && passkeySupported) {
+      try {
+        const signId = rawEmail;
+        const result = await dispatch(verifySecurityPasskey(signId, true, true));
+        if (result && result !== 'BIOMETRIC_VERIFIED') {
+          showSuccess('Passkey verified successfully');
+          setIdentityProof({
+            passkeyVerified: true,
+            passkeyUserId: result,
+          });
+          setCurrentStep('change_email');
+          return;
+        }
+      } catch (err) {
+        console.warn('[AddEmailScreen] Silent passkey verification failed:', err);
+      }
+    }
+
+    // 2. Fallback to navigating to Security Verification screen
+    NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+      targetScreen: routes.ADD_EMAIL_SCREEN,
+      purpose: 'change_email',
+      verifyMethods: ['email', 'mobile', 'totp', 'passkey'],
+      skipDirectVerification: true,
+      targetParams: {
+        startChangeEmail: true,
+      },
+    });
+  };
+
+  // Watch for parameters when returning from SecurityVerification screen
+  React.useEffect(() => {
+    const params = route?.params || {};
+    if (params.startChangeEmail) {
+      setIdentityProof({
+        emailOtp: params.emailOtp,
+        smsOtp: params.smsOtp,
+        tofaCode: params.tofaCode,
+        passkeyVerified: params.passkeyVerified,
+        passkeyUserId: params.passkeyUserId,
+      });
+      setCurrentStep('change_email');
+      // Clear route parameters so it doesn't trigger on consecutive renders/refocus
+      navigation.setParams({ startChangeEmail: undefined });
+    }
+  }, [route?.params, navigation]);
+
+  const handleSendCode = async () => {
     if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
       showError('Please enter a valid email address');
       return;
     }
-    setCountdown(60);
-    showSuccess('Verification code sent to your new email! (Mock)');
-    timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+
+    const requestData = { newEmail: newEmail.trim() };
+    if (identityProof) {
+      if (identityProof.passkeyVerified) {
+        requestData.passkeyVerified = true;
+        requestData.passkeyUserId = identityProof.passkeyUserId;
+      } else {
+        if (identityProof.tofaCode) requestData.tofaCode = identityProof.tofaCode;
+        if (identityProof.emailOtp) requestData.currentEmailOtp = identityProof.emailOtp;
+        if (identityProof.smsOtp) requestData.currentMobileOtp = identityProof.smsOtp;
+      }
+    }
+
+    setIsSendingCode(true);
+    const ok = await dispatch(initiateEmailChange(requestData));
+    setIsSendingCode(false);
+
+    if (ok) {
+      setCountdown(60);
+      timerRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
   };
 
-  const handleConfirmChange = () => {
+  const handleConfirmChange = async () => {
     if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
       showError('Please enter a valid email address');
       return;
@@ -142,12 +290,16 @@ const AddEmailScreen = () => {
       showError('Please enter the 6-digit verification code');
       return;
     }
-    showSuccess('Email updated successfully! (Mock)');
-    setCurrentStep('settings');
-    setNewEmail('');
-    setVerificationCode('');
-    setCountdown(0);
-    if (timerRef.current) clearInterval(timerRef.current);
+
+    const ok = await dispatch(completeEmailChange(verificationCode));
+    if (ok) {
+      setCurrentStep('settings');
+      setNewEmail('');
+      setVerificationCode('');
+      setCountdown(0);
+      setIdentityProof(null);
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
   };
 
   React.useEffect(() => {
@@ -213,11 +365,15 @@ const AddEmailScreen = () => {
               activeOpacity={0.7}
               onPress={() => {
                 Keyboard.dismiss();
-                confirmSheetRef.current?.open();
+                if (hasEmail) {
+                  confirmSheetRef.current?.open();
+                } else {
+                  setCurrentStep('change_email');
+                }
               }}
             >
               <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
-                Change Email
+                {hasEmail ? 'Change Email' : 'Add Email'}
               </AppText>
               <FastImage
                 source={right_ic}
@@ -303,17 +459,48 @@ const AddEmailScreen = () => {
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
                 New Email
               </AppText>
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
-                <TextInput
-                  style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
-                  placeholder="Enter your new email address"
-                  placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
-                  value={newEmail}
-                  onChangeText={setNewEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+              <View style={[styles.emailSuggestWrap]}>
+                <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+                  <TextInput
+                    style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
+                    placeholder="Enter your new email address"
+                    placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                    value={newEmail}
+                    onChangeText={setNewEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    cursorColor={colors.black}
+                    onFocus={() => {
+                      clearEmailSuggestBlurTimer();
+                      setEmailSuggestListVisible(true);
+                    }}
+                    onBlur={() => {
+                      clearEmailSuggestBlurTimer();
+                      emailSuggestBlurTimer.current = setTimeout(() => {
+                        setEmailSuggestListVisible(false);
+                        emailSuggestBlurTimer.current = null;
+                      }, 200);
+                    }}
+                  />
+                </View>
+                {emailSuggestListVisible && emailDomainSuggestions.length > 0 ? (
+                  <View style={[
+                    styles.emailSuggestList,
+                    {
+                      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                      borderColor: isDark ? '#2C2C2E' : '#E5E5EA',
+                    }
+                  ]}>
+                    <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled style={styles.emailSuggestScroll}>
+                      {emailDomainSuggestions.map((domain) => (
+                        <TouchableOpacity key={domain} style={styles.emailSuggestRow} onPress={() => applyEmailDomain(domain)}>
+                          <AppText type={FOURTEEN} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>@{domain}</AppText>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : null}
               </View>
 
               {/* New Email Verification Code field */}
@@ -329,16 +516,21 @@ const AddEmailScreen = () => {
                   onChangeText={setVerificationCode}
                   keyboardType="number-pad"
                   maxLength={6}
+                  cursorColor={colors.black}
                 />
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={handleSendCode}
-                  disabled={countdown > 0}
+                  disabled={countdown > 0 || isSendingCode}
                   style={styles.sendBtn}
                 >
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: '#D1AA67' }}>
-                    {countdown > 0 ? `${countdown}s` : 'Send'}
-                  </AppText>
+                  {isSendingCode ? (
+                    <ActivityIndicator size="small" color="#D1AA67" />
+                  ) : (
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: countdown > 0 ? '#999' : '#D1AA67' }}>
+                      {countdown > 0 ? `${countdown}s` : 'Send'}
+                    </AppText>
+                  )}
                 </TouchableOpacity>
               </View>
 
@@ -376,8 +568,10 @@ const AddEmailScreen = () => {
         closeDuration={200}
         onClose={() => {
           if (shouldNavigateRef.current) {
-            setCurrentStep('change_email');
             shouldNavigateRef.current = false;
+            setTimeout(() => {
+              void handleProceedAfterConsent();
+            }, 300);
           }
         }}
         customStyles={{
@@ -463,6 +657,7 @@ const AddEmailScreen = () => {
           </View>
         </View>
       </RBSheet>
+      {(isLoading || isLoadingOtp) && <SpinnerSecond />}
     </AppSafeAreaView>
   );
 };
@@ -629,6 +824,25 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     paddingHorizontal: 16,
     justifyContent: 'center',
+  },
+  emailSuggestWrap: {
+    zIndex: 10,
+    marginBottom: 0,
+  },
+  emailSuggestList: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 8,
+    maxHeight: 220,
+    overflow: "hidden",
+  },
+  emailSuggestScroll: {
+    maxHeight: 220,
+  },
+  emailSuggestRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   textInput: {
     fontSize: 14,

@@ -598,6 +598,20 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/mobile/change/complete - body { newMobileOtp } */
   securityMobileChangeComplete: (data: { newMobileOtp: string }) =>
     appOperation.post('security/mobile/change/complete', data, CUSTOMER_TYPE),
+  getEmergencyContactList: () =>
+    appOperation.get('security/get-emergency-contact-list', undefined, undefined, CUSTOMER_TYPE),
+  getEmergencyContactCount: () =>
+    appOperation.get('security/get-emergency-contact-count', undefined, undefined, CUSTOMER_TYPE),
+  sendEmergencyContactOtp: (security_methods: 'email' | 'mobile') =>
+    appOperation.post('security/emergency-contact/send-otp', { security_methods }, CUSTOMER_TYPE),
+  addEmergencyContact: (data: { fullName: string; emailId: string; mobileNumber: string; type: string; code?: string; credential?: any }) =>
+    appOperation.post('security/add-emergency-contact', data, CUSTOMER_TYPE),
+  editEmergencyContact: (data: { contactId: string; fullName: string; emailId: string; mobileNumber: string; type: string; code?: string; credential?: any }) =>
+    appOperation.post('security/edit-emergency-contact', data, CUSTOMER_TYPE),
+  deleteEmergencyContact: (data: { contactId: string; type: string; code?: string; credential?: any }) =>
+    appOperation.post('security/delete-emergency-contact', data, CUSTOMER_TYPE),
+  saveEmergencyContactMessage: (data: { contactId: string; message: string; type: string; code?: string; credential?: any }) =>
+    appOperation.post('security/save-emergency-contact-message', data, CUSTOMER_TYPE),
   enable_two_fa: (data: any) =>
     appOperation.put('user/enable-2fa', data, CUSTOMER_TYPE),
   convert_history: () =>

@@ -27,51 +27,114 @@ import { back_ic, warningImg } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import { showSuccess, showError } from '../../../helper/logger';
 import * as routes from '../../../navigation/routes';
+import { useRoute } from '@react-navigation/native';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { appOperation } from '../../../appOperation';
+import { getUserProfile } from '../../../actions/accountActions';
 
 const ChangePhoneNumberScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
 
   const [newPhone, setNewPhone] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const timerRef = useRef(null);
 
-  const handleSendCode = () => {
-    // Validation commented out for UI testing
-    // if (!newPhone) {
-    //   showError('Please enter your new phone number first');
-    //   return;
-    // }
-    // if (newPhone.length < 8) {
-    //   showError('Please enter a valid phone number');
-    //   return;
-    // }
-    // showSuccess('Verification code sent! (Mock)');
-    setCountdown(60);
-    timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  // Extract upfront identity proof from SecurityVerification
+  const {
+    passkeyVerified,
+    passkeyUserId,
+    emailOtp,
+    tofaCode,
+  } = route.params || {};
+
+  const handleSendCode = async () => {
+    if (!newPhone) {
+      showError('Please enter your new phone number first');
+      return;
+    }
+    if (newPhone.length < 6) {
+      showError('Please enter a valid phone number');
+      return;
+    }
+    const fullPhone = `+91${newPhone}`; // Using static +91 for now as per UI
+    if (countdown > 0) return;
+
+    try {
+      setIsLoading(true);
+      const result = await appOperation.customer.securitySendOtp('new_mobile', 'change_mobile', fullPhone);
+      if (result?.success) {
+        showSuccess(result?.message || 'SMS code sent');
+        setCountdown(60);
+        timerRef.current = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timerRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        showError(result?.message || 'Failed to send SMS code');
+      }
+    } catch (error) {
+      showError(error?.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleConfirm = () => {
-    // Validation commented out for UI testing
-    // if (!newPhone) {
-    //   showError('Please enter your new phone number');
-    //   return;
-    // }
-    // if (!verificationCode) {
-    //   showError('Please enter the verification code');
-    //   return;
-    // }
-    // showSuccess('Phone number changed successfully! (Mock)');
-    navigation.navigate(routes.ADD_PHONE_NUMBER_SCREEN);
+  const handleConfirm = async () => {
+    if (!newPhone) {
+      showError('Please enter your new phone number');
+      return;
+    }
+    if (!verificationCode || verificationCode.length !== 6) {
+      showError('Please enter the 6-digit verification code');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const initData = {
+        newMobileNumber: newPhone,
+        newCountryCode: '+91', // Static for now as per UI
+      };
+
+      if (passkeyVerified) {
+        initData.passkeyVerified = true;
+        initData.passkeyUserId = passkeyUserId;
+      } else if (tofaCode) {
+        initData.tofaCode = tofaCode;
+      } else if (emailOtp) {
+        initData.currentEmailOtp = emailOtp;
+      }
+
+      const initResult = await appOperation.customer.securityMobileChangeInitiate(initData);
+      if (!initResult?.success) {
+        showError(initResult?.message || 'Failed to initiate mobile change');
+        return;
+      }
+
+      const completeResult = await appOperation.customer.securityMobileChangeComplete({ newMobileOtp: verificationCode });
+      if (completeResult?.success) {
+        showSuccess(completeResult?.message || 'Mobile number updated successfully');
+        dispatch(getUserProfile());
+        // Go back to the Account Details or Security Settings screen
+        navigation.navigate(routes.ACCOUNT_DETAILS_SCREEN);
+      } else {
+        showError(completeResult?.message || 'Failed to complete mobile change');
+      }
+    } catch (error) {
+      showError(error?.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -169,13 +232,13 @@ const ChangePhoneNumberScreen = () => {
             />
             <TouchableOpacity
               onPress={handleSendCode}
-              disabled={countdown > 0}
+              disabled={countdown > 0 || isLoading}
               style={styles.sendButton}
             >
               <AppText
                 type={FOURTEEN}
                 weight={MEDIUM}
-                style={{ color: countdown > 0 ? (isDark ? '#4E4E54' : '#C7C7CC') : colors.orangeTheme }}
+                style={{ color: (countdown > 0 || isLoading) ? (isDark ? '#4E4E54' : '#C7C7CC') : colors.orangeTheme }}
               >
                 {countdown > 0 ? `${countdown}s` : 'Send'}
               </AppText>
@@ -194,9 +257,10 @@ const ChangePhoneNumberScreen = () => {
             style={[styles.confirmButton, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
             activeOpacity={0.8}
             onPress={handleConfirm}
+            disabled={isLoading}
           >
             <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
-              Confirm
+              {isLoading ? 'Processing...' : 'Confirm'}
             </AppText>
           </TouchableOpacity>
         </View>

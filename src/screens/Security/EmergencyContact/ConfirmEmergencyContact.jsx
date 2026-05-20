@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Platform, Alert, ActivityIndicator } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
 import * as routes from '../../../navigation/routes';
@@ -21,10 +21,24 @@ import {
 } from '../../../shared';
 import { back_ic, editIcon, binIcon, peopleIcon, profileNewIcon } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
+import { appOperation } from '../../../appOperation';
+import { showError, showSuccess } from '../../../helper/logger';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { getPasskeyList, getPasskeyAuthCredential } from '../../../actions/accountActions';
 
 const ConfirmEmergencyContact = () => {
   const { colors: themeColors, isDark } = useTheme();
   const route = useRoute();
+  const navigation = useNavigation();
+  const dispatch = useAppDispatch();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const userData = useAppSelector((state) => state.auth.userData);
+  const emailId = userData?.emailId || userData?.email || '';
+  const profileMobile = userData?.mobileNumber || userData?.mobile_number || '';
+
+  const [hasPasskey, setHasPasskey] = useState(false);
+  const [checkingPasskey, setCheckingPasskey] = useState(true);
 
   // Retrieve contactData passed from the previous screen
   const contactData = route.params?.contactData || {
@@ -32,11 +46,171 @@ const ConfirmEmergencyContact = () => {
     email: 'agce12@gmail.com',
     phone: '',
     countryCode: '+91',
+    _id: null,
   };
 
-  const handleSaveContact = () => {
-    NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN, {
-      contactData,
+  useEffect(() => {
+    const checkPasskeys = async () => {
+      console.log('[DEBUG][ConfirmEmergencyContact] Checking passkey availability...');
+      try {
+        const res = await dispatch(getPasskeyList());
+        console.log('[DEBUG][ConfirmEmergencyContact] getPasskeyList Response:', JSON.stringify(res, null, 2));
+        if (res?.success && res.data?.passkeys?.length > 0) {
+          console.log('[DEBUG][ConfirmEmergencyContact] Passkey found on account!');
+          setHasPasskey(true);
+        } else {
+          console.log('[DEBUG][ConfirmEmergencyContact] No passkey found on account.');
+          setHasPasskey(false);
+        }
+      } catch (err) {
+        console.log('[DEBUG][ConfirmEmergencyContact] checkPasskeys Error:', err);
+        setHasPasskey(false);
+      } finally {
+        setCheckingPasskey(false);
+      }
+    };
+    checkPasskeys();
+  }, [dispatch]);
+
+  useEffect(() => {
+    const handleSaveTrigger = async () => {
+      if (route.params?.executeAction) {
+        const { contactData: returnedContactData, emailOtp, smsOtp, tofaCode, passkeyCredential } = route.params;
+        // Clean params immediately
+        navigation.setParams({ executeAction: undefined });
+
+        setIsSaving(true);
+        try {
+          const type = emailOtp ? 'email' : (smsOtp ? 'phone' : (tofaCode ? 'totp' : 'passkey'));
+          const code = emailOtp || smsOtp || tofaCode || '';
+          const credential = passkeyCredential;
+
+          let res;
+          if (returnedContactData._id) {
+            // Edit mode
+            res = await appOperation.customer.editEmergencyContact({
+              contactId: returnedContactData._id,
+              fullName: returnedContactData.name,
+              emailId: returnedContactData.email,
+              mobileNumber: `${returnedContactData.countryCode}${returnedContactData.phone}`,
+              type,
+              code,
+              credential,
+            });
+          } else {
+            // Add mode
+            res = await appOperation.customer.addEmergencyContact({
+              fullName: returnedContactData.name,
+              emailId: returnedContactData.email,
+              mobileNumber: `${returnedContactData.countryCode}${returnedContactData.phone}`,
+              type,
+              code,
+              credential,
+            });
+          }
+
+          if (res?.success) {
+            showSuccess(res.message || 'Emergency contact saved successfully.');
+            // Navigate back to EmergencyContactMain and trigger reload
+            NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN, { reload: true });
+          } else {
+            showError(res?.message || 'Failed to save contact.');
+          }
+        } catch (err) {
+          showError(err?.message || 'Failed to save contact.');
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    };
+
+    handleSaveTrigger();
+  }, [route.params, navigation]);
+
+  const handleSaveContact = async () => {
+    console.log('[DEBUG][ConfirmEmergencyContact] handleSaveContact triggered. hasPasskey:', hasPasskey);
+    if (isSaving) {
+      console.log('[DEBUG][ConfirmEmergencyContact] Already saving, skipping click.');
+      return;
+    }
+
+    if (hasPasskey) {
+      const signId = emailId || profileMobile;
+      console.log('[DEBUG][ConfirmEmergencyContact] Enrolled passkey found. signId:', signId);
+      if (signId) {
+        setIsSaving(true);
+        try {
+          console.log('[DEBUG][ConfirmEmergencyContact] Invoking getPasskeyAuthCredential...');
+          // Trigger the passkey biometric prompt directly (silent = true to suppress initial toast)
+          const credential = await dispatch(getPasskeyAuthCredential(signId, true));
+          console.log('[DEBUG][ConfirmEmergencyContact] getPasskeyAuthCredential Result:', JSON.stringify(credential, null, 2));
+
+          if (credential) {
+            let res;
+            if (contactData._id) {
+              // Edit mode
+              console.log('[DEBUG][ConfirmEmergencyContact] Invoking editEmergencyContact API with passkey...');
+              res = await appOperation.customer.editEmergencyContact({
+                contactId: contactData._id,
+                fullName: contactData.name,
+                emailId: contactData.email,
+                mobileNumber: `${contactData.countryCode}${contactData.phone}`,
+                type: 'passkey',
+                code: '',
+                credential,
+              });
+            } else {
+              // Add mode
+              console.log('[DEBUG][ConfirmEmergencyContact] Invoking addEmergencyContact API with passkey...');
+              res = await appOperation.customer.addEmergencyContact({
+                fullName: contactData.name,
+                emailId: contactData.email,
+                mobileNumber: `${contactData.countryCode}${contactData.phone}`,
+                type: 'passkey',
+                code: '',
+                credential,
+              });
+            }
+
+            console.log('[DEBUG][ConfirmEmergencyContact] Save Contact API Response:', JSON.stringify(res, null, 2));
+
+            if (res?.success) {
+              showSuccess(res.message || 'Emergency contact saved successfully.');
+              NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN, { reload: true });
+              return;
+            } else {
+              showError(res?.message || 'Failed to save contact.');
+            }
+          } else {
+            // Biometric prompt returned null (e.g. cancelled, or no credential found on local device).
+            // Fall back immediately to the general Security Verification page!
+            console.log('[DEBUG][ConfirmEmergencyContact] No credential returned. Falling back to Security Verification screen.');
+            navigateToSecurityVerification();
+          }
+        } catch (err) {
+          console.warn('[ConfirmEmergencyContact] Direct passkey verification failed:', err);
+          navigateToSecurityVerification();
+        } finally {
+          setIsSaving(false);
+        }
+        return;
+      }
+    }
+
+    console.log('[DEBUG][ConfirmEmergencyContact] No passkey or signId, directing to Security Verification screen.');
+    navigateToSecurityVerification();
+  };
+
+  const navigateToSecurityVerification = () => {
+    NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+      targetScreen: routes.CONFIRM_EMERGENCY_CONTACT_SCREEN,
+      skipDirectVerification: true,
+      returnRawCredential: true,
+      purpose: 'security_verification',
+      targetParams: {
+        executeAction: true,
+        contactData,
+      },
     });
   };
 
@@ -49,18 +223,16 @@ const ConfirmEmergencyContact = () => {
 
   const handleDelete = () => {
     Alert.alert(
-      "Delete Contact Info",
-      "Are you sure you want to delete this emergency contact info?",
+      "Discard Changes",
+      "Are you sure you want to discard this emergency contact?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete",
+          text: "Discard",
           style: "destructive",
           onPress: () => {
-            // Navigate back to the main unconfigured screen
-            NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN, {
-              contactData: null,
-            });
+            // Navigate back to main screen
+            NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN);
           }
         }
       ]
@@ -145,7 +317,7 @@ const ConfirmEmergencyContact = () => {
               Contact Email
             </AppText>
             <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-              {contactData.email || 'Not Provided'}
+              {contactData?.email || 'Not Provided'}
             </AppText>
           </View>
 
@@ -165,13 +337,18 @@ const ConfirmEmergencyContact = () => {
       {/* Footer Button: Save */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
-          style={[styles.continueBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
+          style={[styles.continueBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E', opacity: isSaving ? 0.6 : 1 }]}
           activeOpacity={0.8}
+          disabled={isSaving}
           onPress={handleSaveContact}
         >
-          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
-            Save
-          </AppText>
+          {isSaving ? (
+            <ActivityIndicator color={isDark ? '#000000' : '#FFFFFF'} />
+          ) : (
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
+              Save
+            </AppText>
+          )}
         </TouchableOpacity>
       </View>
     </AppSafeAreaView>

@@ -8,7 +8,7 @@ import { back_ic, pasteImg } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import * as routes from '../../../navigation/routes';
 import { useAppSelector, useAppDispatch } from '../../../store/hooks';
-import { sendSecurityOtp, verifySecurityOtp, verifySecurityTotp, getPasskeyList, verifySecurityPasskey } from '../../../actions/accountActions';
+import { sendSecurityOtp, verifySecurityOtp, verifySecurityTotp, getPasskeyList, verifySecurityPasskey, getPasskeyAuthCredential } from '../../../actions/accountActions';
 import { logoutAction } from '../../../actions/authActions';
 import { appOperation } from '../../../appOperation';
 import { showError, showSuccess } from '../../../helper/logger';
@@ -25,6 +25,7 @@ const SecurityVerification = ({ route }) => {
   const targetParams = params.targetParams || {};
   const purpose = params.purpose || 'security_verification';
   const skipDirectVerification = params.skipDirectVerification || false; // true if next screen handles final combined verification
+  const returnRawCredential = params.returnRawCredential || false;
 
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [passkeys, setPasskeys] = useState([]);
@@ -55,19 +56,30 @@ const SecurityVerification = ({ route }) => {
   const profileMobile = userData?.mobileNumber || userData?.mobile_number || '';
   const hasEmail = !!emailId;
   const hasMobile = !!profileMobile;
-  const hasGoogleAuth = (userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+  const hasGoogleAuth = useMemo(() => {
+    const twoFaVal = userData?.['2fa'];
+    return Number(twoFaVal) === 2 || userData?.twoFaEnabled === true;
+  }, [userData]);
 
   // Dynamic Verification Methods Initialization
   const initialVerifyMethods = useMemo(() => {
-    if (params.verifyMethods && params.verifyMethods.length > 0) {
-      return params.verifyMethods;
+    const raw = params.verifyMethods && params.verifyMethods.length > 0
+      ? params.verifyMethods
+      : ['passkey', 'totp', 'email', 'mobile'];
+
+    const filtered = raw.filter((method) => {
+      if (method === 'email') return hasEmail;
+      if (method === 'mobile') return hasMobile;
+      if (method === 'totp') return hasGoogleAuth;
+      if (method === 'passkey') return passkeySupported && passkeys.length > 0;
+      return true;
+    });
+
+    if (filtered.includes('passkey')) {
+      return ['passkey', ...filtered.filter(m => m !== 'passkey')];
     }
-    // Dynamic detection based on user's active channel if none specified
-    if (hasEmail) return ['email'];
-    if (hasMobile) return ['mobile'];
-    if (hasGoogleAuth) return ['totp'];
-    return ['email'];
-  }, [params.verifyMethods, hasEmail, hasMobile, hasGoogleAuth]);
+    return filtered.length > 0 ? filtered : ['email'];
+  }, [params.verifyMethods, hasEmail, hasMobile, hasGoogleAuth, passkeySupported, passkeys]);
 
   // Active methods in state so it can be changed dynamically by the user (only one active method is verified at a time)
   const [activeMethods, setActiveMethods] = useState([initialVerifyMethods[0]]);
@@ -78,6 +90,20 @@ const SecurityVerification = ({ route }) => {
       setActiveMethods([initialVerifyMethods[0]]);
     }
   }, [initialVerifyMethods]);
+
+  const fallbackToOtpMethod = () => {
+    const allowed = params.verifyMethods && params.verifyMethods.length > 0
+      ? params.verifyMethods
+      : ['totp', 'email', 'mobile'];
+    const filtered = allowed.filter(m => {
+      if (m === 'email') return hasEmail;
+      if (m === 'mobile') return hasMobile;
+      if (m === 'totp') return hasGoogleAuth;
+      return false;
+    });
+    const fallback = filtered[0] || (hasEmail ? 'email' : (hasMobile ? 'mobile' : 'email'));
+    setActiveMethods([fallback]);
+  };
 
   // Track keyboard active state to toggle justifyContent
   const [isKeyboardActive, setIsKeyboardActive] = useState(false);
@@ -225,9 +251,65 @@ const SecurityVerification = ({ route }) => {
     }
   };
 
+  const handlePasskeyVerificationDirect = async (silent = false) => {
+    const signId = emailId || profileMobile;
+    if (!signId) {
+      showError('No verification identifier found');
+      fallbackToOtpMethod();
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      if (returnRawCredential) {
+        const credential = await dispatch(getPasskeyAuthCredential(signId, silent));
+        if (credential) {
+          showSuccess('Verification successful');
+          NavigationService.navigate(targetScreen, {
+            ...targetParams,
+            passkeyVerified: true,
+            passkeyCredential: credential,
+          });
+        } else {
+          fallbackToOtpMethod();
+        }
+      } else {
+        const result = await dispatch(verifySecurityPasskey(signId, true, silent));
+        if (result) {
+          showSuccess('Verification successful');
+          NavigationService.navigate(targetScreen, {
+            ...targetParams,
+            passkeyVerified: true,
+            passkeyUserId: result,
+          });
+        } else {
+          fallbackToOtpMethod();
+        }
+      }
+    } catch (err) {
+      console.warn('[SecurityVerification] Passkey verification failed:', err);
+      fallbackToOtpMethod();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeMethods.includes('passkey')) {
+      const t = setTimeout(() => {
+        void handlePasskeyVerificationDirect(true);
+      }, 500);
+      return () => clearTimeout(t);
+    }
+  }, [activeMethods]);
+
   // Submit flow
   const handleConfirm = async () => {
     Keyboard.dismiss();
+
+    if (activeMethods.includes('passkey')) {
+      await handlePasskeyVerificationDirect(false);
+      return;
+    }
 
     // 1. Validation
     if (activeMethods.includes('email') && (!emailCode || emailCode.length !== 6)) {
@@ -446,6 +528,32 @@ const SecurityVerification = ({ route }) => {
               </View>
             </View>
           )}
+
+          {/* Dynamic Passkey Group */}
+          {activeMethods.includes('passkey') && (
+            <View style={styles.inputGroup}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
+                Passkey Verification
+              </AppText>
+              <TouchableOpacity
+                style={[styles.submitBtn, { backgroundColor: colors.orangeTheme, marginTop: 10 }]}
+                activeOpacity={0.8}
+                onPress={() => handlePasskeyVerificationDirect(false)}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size={'small'} color={'#FFF'} />
+                ) : (
+                  <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
+                    Verify with Passkey
+                  </AppText>
+                )}
+              </TouchableOpacity>
+              <View style={styles.inputFooter}>
+                <AppText type={TWELVE} style={{ color: '#999' }}>Authenticate using Face ID, Touch ID, or PIN</AppText>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.bottomSection}>
@@ -493,20 +601,39 @@ const SecurityVerification = ({ route }) => {
             const signId = emailId || profileMobile;
             if (!signId) {
               showError('No verification identifier found');
+              fallbackToOtpMethod();
               return;
             }
             try {
               setIsSubmitting(true);
-              const result = await dispatch(verifySecurityPasskey(signId));
-              if (result) {
-                showSuccess('Verification successful');
-                NavigationService.navigate(targetScreen, {
-                  ...targetParams,
-                  passkeyVerified: true,
-                });
+              if (returnRawCredential) {
+                const credential = await dispatch(getPasskeyAuthCredential(signId, false));
+                if (credential) {
+                  showSuccess('Verification successful');
+                  NavigationService.navigate(targetScreen, {
+                    ...targetParams,
+                    passkeyVerified: true,
+                    passkeyCredential: credential,
+                  });
+                } else {
+                  fallbackToOtpMethod();
+                }
+              } else {
+                const result = await dispatch(verifySecurityPasskey(signId, true, false));
+                if (result) {
+                  showSuccess('Verification successful');
+                  NavigationService.navigate(targetScreen, {
+                    ...targetParams,
+                    passkeyVerified: true,
+                    passkeyUserId: result,
+                  });
+                } else {
+                  fallbackToOtpMethod();
+                }
               }
             } catch (err) {
               console.warn('[SecurityVerification] Passkey verification failed:', err);
+              fallbackToOtpMethod();
             } finally {
               setIsSubmitting(false);
             }

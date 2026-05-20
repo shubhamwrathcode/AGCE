@@ -246,7 +246,7 @@ const EnablePasskey = ({ route, navigation }) => {
 
       // 1. Verify identity with passkey (WebAuthn) or biometric fallback
       console.log('[DEBUG][EnablePasskey] Dispatching verifySecurityPasskey...');
-      const result = await dispatch(verifySecurityPasskey(signId));
+      const result = await dispatch(verifySecurityPasskey(signId, true));
       console.log('[DEBUG][EnablePasskey] verifySecurityPasskey result:', result);
       
       // On Android, if Credential Manager fails but biometric succeeds,
