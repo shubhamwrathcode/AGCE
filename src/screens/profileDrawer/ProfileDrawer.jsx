@@ -113,7 +113,6 @@ import {
   NOTIFICATION_SCREEN,
   PAYMENT_OPTIONS_SCREEN,
   SETTING_SCREEN_New,
-  TWO_FACTOR_AUTHENTICATION,
   AIRDROP_HISTORY_SCREEN,
   WALLET_WITHDRAW_SCREEN,
   SELECT_COIN_SCREEN,
@@ -192,7 +191,7 @@ const getSupportToolsData = (theme) => [
     title: "Security",
     icon: theme !== "Dark" ? lockLight : lock,
     onPress: () =>
-      NavigationService.navigate(TWO_FACTOR_AUTHENTICATION, { from: "home" }),
+      NavigationService.navigate(ACCOUNT_SCREEN, { from: "home" }),
   },
   // {
   //   id: '5',
@@ -362,7 +361,7 @@ const getSecurityVerificationItems = (theme) => [
     title: "Security",
     icon: theme !== "Dark" ? lockLight : lock,
     onPress: showComingSoonToast,
-    // onPress: () => NavigationService.navigate(TWO_FACTOR_AUTHENTICATION),
+    // onPress: () => NavigationService.navigate(ACCOUNT_SCREEN),
   },
 ];
 

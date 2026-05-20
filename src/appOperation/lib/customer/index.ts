@@ -770,5 +770,10 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/anti-phishing/remove - body { verifyMethod, code?, passkeyUserId? } */
   remove_anti_phishing_code: (data: { verifyMethod: string; code?: string; passkeyUserId?: string }) =>
     appOperation.post('security/anti-phishing/remove', data, CUSTOMER_TYPE),
-
+  fetch_withdrawal_security_settings: () =>
+    appOperation.get('security/withdrawal-settings', undefined, undefined, CUSTOMER_TYPE),
+  update_withdrawal_security_settings: (data: any) =>
+    appOperation.post('security/withdrawal-settings', data, CUSTOMER_TYPE),
+  verify_and_toggle_withdrawal_setting: (data: { method: string; enable: boolean; code?: string; fund_password?: string }) =>
+    appOperation.post('security/withdrawal-settings/toggle', data, CUSTOMER_TYPE),
 });

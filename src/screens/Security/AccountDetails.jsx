@@ -35,10 +35,10 @@ import NavigationService from "../../navigation/NavigationService";
 import * as routes from "../../navigation/routes";
 import { back_ic, copyIcon, editIcon, right_arrow, right_ic } from "../../helper/ImageAssets";
 import { logoutAction } from "../../actions/authActions";
-import { getFundPasswordStatusAction } from "../../actions/accountActions";
+import { getFundPasswordStatusAction, disable2fa } from "../../actions/accountActions";
 import KycStepHeader from "./KycStepHeader";
 import { copyText } from "../../helper/utility";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useRoute, useNavigation } from "@react-navigation/native";
 import { appOperation } from "../../appOperation";
 
 const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
@@ -49,9 +49,12 @@ const showComingSoonToast = () =>
 
 const AccountDetails = () => {
   const dispatch = useDispatch();
+  const route = useRoute();
+  const navigation = useNavigation();
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
   const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
+  const [hasEmergencyContact, setHasEmergencyContact] = useState(false);
   const hasFundPassword = fundPasswordStatus ?? !!(userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
   const userHasPhone = !!(userData?.mobileNumber || userData?.mobile_number) &&
     (userData?.mobileNumber || userData?.mobile_number) !== "null" &&
@@ -83,6 +86,20 @@ const AccountDetails = () => {
       }
       const fundRes = await dispatch(getFundPasswordStatusAction());
       setFundPasswordStatus(!!fundRes);
+
+      try {
+        const countRes = await appOperation.customer.getEmergencyContactCount();
+        const count = countRes?.data?.count || countRes?.count || countRes?.data || 0;
+        if (typeof count === 'number' && count > 0) {
+          setHasEmergencyContact(true);
+        } else {
+          const listRes = await appOperation.customer.getEmergencyContactList();
+          const list = listRes?.data?.contacts || listRes?.contacts || listRes?.data || [];
+          setHasEmergencyContact(list.length > 0);
+        }
+      } catch (e) {
+        // silent fallback
+      }
     } catch (err) {
       console.log("Error fetching security methods:", err);
     }
@@ -93,6 +110,42 @@ const AccountDetails = () => {
       fetchMethods();
     }, [fetchMethods])
   );
+
+  React.useEffect(() => {
+    if (route.params?.pendingDisable) {
+      const { pendingDisable, emailOtp, smsOtp, tofaCode } = route.params;
+      
+      // Clear the params so they don't run again
+      navigation.setParams({
+        pendingDisable: null,
+        emailOtp: null,
+        smsOtp: null,
+        tofaCode: null,
+      });
+
+      const handleDisableAction = async () => {
+        try {
+          let success = false;
+          if (tofaCode) {
+            success = await dispatch(disable2fa(tofaCode));
+          } else if (emailOtp) {
+            success = await dispatch(disable2fa(null, emailOtp, 'email'));
+          } else if (smsOtp) {
+            success = await dispatch(disable2fa(null, smsOtp, 'mobile'));
+          }
+
+          if (success) {
+            Toast.showWithGravity("Authenticator App disabled successfully.", Toast.SHORT, Toast.BOTTOM);
+            fetchMethods();
+          }
+        } catch (e) {
+          Toast.showWithGravity("Disable failed. Please try again.", Toast.SHORT, Toast.BOTTOM);
+        }
+      };
+
+      handleDisableAction();
+    }
+  }, [route.params, fetchMethods, dispatch]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const logoutAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -304,9 +357,40 @@ const AccountDetails = () => {
                 value={securityMethods.totp ? "Disable" : "Not enabled"}
                 onPress={() => {
                   if (securityMethods.totp) {
-                    NavigationService.navigate(routes.DISABLE_2FA_SCREEN);
+                    const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true || securityMethods.totp;
+                    const hasEmail = !!(userData?.emailId || userData?.email);
+                    const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
+                    const methods = [];
+                    if (hasGA) methods.push('totp');
+                    if (hasEmail) methods.push('email');
+                    if (hasMobile) methods.push('mobile');
+                    if (methods.length === 0) methods.push('email');
+
+                    NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+                      targetScreen: routes.ACCOUNT_SCREEN,
+                      purpose: '2fa_disable',
+                      verifyMethods: methods,
+                      skipDirectVerification: true,
+                      targetParams: {
+                        pendingDisable: true
+                      }
+                    });
                   } else {
-                    NavigationService.navigate(routes.DOWNLOAD_AUTHENTICATOR_SCREEN);
+                    const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+                    const hasEmail = !!(userData?.emailId || userData?.email);
+                    const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
+                    const methods = [];
+                    if (hasGA) methods.push('totp');
+                    if (hasEmail) methods.push('email');
+                    if (hasMobile) methods.push('mobile');
+                    if (methods.length === 0) methods.push('email');
+
+                    NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+                      targetScreen: routes.PASSKEY_SETUP_AUTHENTICATOR_SCREEN,
+                      purpose: '2fa_setup',
+                      verifyMethods: methods,
+                      skipDirectVerification: false,
+                    });
                   }
                 }}
               />
@@ -315,13 +399,11 @@ const AccountDetails = () => {
                 value={userData?.emailId ? maskProfileEmail(userData.emailId) : "Not enabled"}
                 onPress={() => NavigationService.navigate(routes.ADD_EMAIL_SCREEN)}
               />
-              {userHasPhone ? (
-                <MenuItem
-                  label="Phone Number"
-                  value={maskProfilePhone(userData.mobileNumber || userData.mobile_number)}
-                  onPress={() => NavigationService.navigate(routes.ADD_PHONE_NUMBER_SCREEN)}
-                />
-              ) : null}
+              <MenuItem
+                label="Phone Number"
+                value={userHasPhone ? maskProfilePhone(userData.mobileNumber || userData.mobile_number) : "Not enabled"}
+                onPress={() => NavigationService.navigate(routes.ADD_PHONE_NUMBER_SCREEN)}
+              />
 
               {/* Advanced Security Section */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>
@@ -331,7 +413,7 @@ const AccountDetails = () => {
               </View>
               <MenuItem
                 label="Login 2-Step Verification"
-                value="Not configured"
+                value="Configured"
                 onPress={() => NavigationService.navigate(routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN)}
               />
               <MenuItem
@@ -341,17 +423,17 @@ const AccountDetails = () => {
               />
               <MenuItem
                 label="Withdrawal Settings"
-                value="Not configured"
+                value="Configured"
                 onPress={() => NavigationService.navigate(routes.WITHDRAWAL_SETTINGS_SCREEN)}
               />
               <MenuItem
                 label="Emergency Contact"
-                value="Not enabled"
+                value={hasEmergencyContact ? "Manage" : "Not enabled"}
                 onPress={() => NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN)}
               />
               <MenuItem
                 label="Account Connections"
-                value="Not configured"
+                value="Manage"
                 onPress={() => NavigationService.navigate(routes.ACCOUNT_CONNECTIONS_SCREEN)}
               />
 
@@ -380,7 +462,7 @@ const AccountDetails = () => {
               </View>
               <MenuItem
                 label="Authorized Devices"
-                value="Not configured"
+                value="Configured"
                 onPress={() => NavigationService.navigate(routes.AUTHORIZED_DEVICES_SCREEN)}
               />
               <MenuItem

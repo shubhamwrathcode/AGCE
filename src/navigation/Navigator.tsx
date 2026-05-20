@@ -55,7 +55,6 @@ import FeeSettings from "../screens/account/FeeSettings";
 import DownloadReport from "../screens/account/DownloadReport";
 import CoinDetailChart from "../screens/home/CoinDetailChart";
 import CoinTransactionHistory from "../screens/home/CoinTransactionHistory";
-import TwoFactor from "../screens/account/TwoFactor";
 import TwoFactorQr from "../screens/account/TwoFactorQr";
 import AddPhoneNumberScreen from "../screens/Security/PhoneVerification/AddPhoneNumberScreen";
 import ChangePhoneNumberScreen from "../screens/Security/PhoneVerification/ChangePhoneNumberScreen";
@@ -93,7 +92,6 @@ import DisableAccountScreen from "../screens/Security/AccountManagement/DisableA
 import ThirdPartyAccountAccessScreen from "../screens/Security/AccountManagement/ThirdPartyAccountAccessScreen";
 import CloseAccountReasonScreen from "../screens/Security/AccountManagement/CloseAccount/CloseAccountReasonScreen";
 import EmergencyContactVerification from "../screens/Security/EmergencyContact/EmergencyContactVerification";
-import DisableTwoFactorScreen from "../screens/account/DisableTwoFactorScreen";
 import EnterOtp from "../screens/account/EnterOtp";
 import ConvertHistory from "../screens/home/ConvertHistory";
 import LanguagePreference from "../screens/account/LanguagePreference";
@@ -387,10 +385,6 @@ const MyAuthLoadingStack = () => {
         component={CoinTransactionHistory}
       />
       <Stack.Screen
-        name={routes.TWO_FACTOR_AUTHENTICATION}
-        component={TwoFactor}
-      />
-      <Stack.Screen
         name={routes.TWO_FACTOR_QR_SCREEN}
         component={TwoFactorQr}
       />
@@ -522,10 +516,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.EMERGENCY_CONTACT_VERIFICATION_SCREEN}
         component={EmergencyContactVerification}
-      />
-      <Stack.Screen
-        name={routes.DISABLE_2FA_SCREEN}
-        component={DisableTwoFactorScreen}
       />
       <Stack.Screen name={routes.ENTER_OTP_SCREEN} component={EnterOtp} />
 

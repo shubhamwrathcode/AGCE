@@ -88,7 +88,7 @@ const SetupTwoFactorScreen = () => {
     }
     const ok = await dispatch(confirm2fa(gaCode, identityProof));
     if (ok) {
-      navigation.navigate(routes.TWO_FACTOR_AUTHENTICATION);
+      navigation.navigate(routes.ACCOUNT_SCREEN);
     }
   };
 

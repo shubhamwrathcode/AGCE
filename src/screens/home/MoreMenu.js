@@ -90,7 +90,6 @@ import {
   OPTIONS_SCREEN,
   SETTING_SCREEN_New,
   TRANSFER_SCREEN,
-  TWO_FACTOR_AUTHENTICATION,
   WALLET_SCREEN,
   WALLET_WITHDRAW_SCREEN,
 } from "../../navigation/routes";
@@ -415,7 +414,7 @@ const MoreMenu = () => {
             <TouchableOpacity
               style={{ alignItems: "center" }}
               onPress={() =>
-                NavigationService.navigate(TWO_FACTOR_AUTHENTICATION)
+                NavigationService.navigate(ACCOUNT_SCREEN)
               }
             >
               <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>

@@ -34,7 +34,6 @@ import { colors } from '../../theme/colors';
 import { back_ic, eye_open_icon, eye_close_icon, checkIc, closeIcon, minus } from '../../helper/ImageAssets';
 import { AuthPhoneInput } from '../../shared/components';
 import NavigationService from '../../navigation/NavigationService';
-import { TWO_FACTOR_AUTHENTICATION } from '../../navigation/routes';
 
 // ─── Password Rules (same as ChangePassword / SetPassword) ─────────
 const signupPasswordRules = (usernamePart: string) => [
