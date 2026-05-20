@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,6 +8,7 @@ import {
   Platform,
   TextInput,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import FastImage from 'react-native-fast-image';
@@ -16,10 +17,15 @@ import { useTheme } from "../../../hooks/useTheme";
 import { back_ic, eye_open_icon, eye_close_icon } from '../../../helper/ImageAssets';
 import { AppSafeAreaView, AppText, SEMI_BOLD, EIGHTEEN, FOURTEEN, SIXTEEN, TWELVE, BOLD, THIRTEEN, MEDIUM } from '../../../shared';
 import AgceGoldCard from './AgceGoldCard';
-import { showError, showSuccess } from '../../../helper/logger';
+import { showError } from '../../../helper/logger';
 import { colors } from '../../../theme/colors';
+import {
+  getAntiPhishingStatus,
+  addAntiPhishingCode,
+} from '../../../actions/accountActions';
+import * as routes from '../../../navigation/routes';
 
-const EditAntiPhishingScreen = () => {
+const EditAntiPhishingScreen = ({ route }) => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
@@ -28,78 +34,108 @@ const EditAntiPhishingScreen = () => {
   // States
   const [currentCode, setCurrentCode] = useState('');
   const [newCode, setNewCode] = useState('');
-  const [otp, setOtp] = useState('');
   const [secureEntry, setSecureEntry] = useState(true);
-  const [resendTimer, setResendTimer] = useState(0);
-  const [isOtpLoading, setIsOtpLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const timerRef = useRef(null);
+  // Micro-interactive Validation states
+  const isLenValid = newCode.length >= 6 && newCode.length <= 8;
+  const isCharValid = /^[A-Za-z0-9_]+$/.test(newCode);
+  const isNewCodeValid = isLenValid && isCharValid;
+
+  /** Fetch current anti-phishing status from API */
+  const fetchStatus = useCallback(async () => {
+    try {
+      const data = await dispatch(getAntiPhishingStatus());
+      if (data) {
+        setCurrentCode(data.antiPhishingCode || '');
+      }
+    } catch (e) {
+      console.log('Error fetching anti-phishing status:', e);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     fetchStatus();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
+  }, [fetchStatus]);
 
+  /**
+   * When SecurityVerification screen navigates back here with OTP codes,
+   * we pick them up from route.params and auto-submit.
+   */
   useEffect(() => {
-    if (resendTimer > 0) {
-      timerRef.current = setInterval(() => {
-        setResendTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [resendTimer]);
+    const params = route?.params || {};
+    const emailOtp = params.emailOtp;
+    const smsOtp = params.smsOtp;
+    const tofaCode = params.tofaCode;
+    const antiPhishingCodeFromParams = params.antiPhishingCode;
 
-  const fetchStatus = async () => {
-    // Simulated load
-    setCurrentCode('123456');
-  };
+    if (!antiPhishingCodeFromParams) return;
+    const code = emailOtp || smsOtp || tofaCode;
+    if (!code) return;
+
+    let verifyMethod = 'email';
+    if (tofaCode) verifyMethod = 'totp';
+    else if (smsOtp) verifyMethod = 'mobile';
+    else if (emailOtp) verifyMethod = 'email';
+
+    const submitCode = async () => {
+      setIsSubmitting(true);
+      try {
+        const payload = {
+          antiPhishingCode: antiPhishingCodeFromParams,
+          verifyMethod,
+          code,
+        };
+        const success = await dispatch(addAntiPhishingCode(payload));
+        if (success) {
+          navigation.navigate(routes.ANTI_PHISHING_CODE_SCREEN);
+        }
+      } catch (error) {
+        showError(error?.message || 'Something went wrong');
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    submitCode();
+  }, [route?.params]);
 
   const maskCode = (code) => {
-    if (!code) return '12******';
-    if (code.length <= 2) return `${code}******`;
-    return `${code.slice(0, 2)}******`;
+    if (!code) return 'X X X X X X';
+    if (code.length <= 2) return code.split('').join(' ');
+    const head = code.slice(0, 2);
+    const masked = '* '.repeat(Math.min(code.length - 2, 6)).trim();
+    return `${head.split('').join(' ')} ${masked}`;
   };
 
-  const handleSendOtp = async () => {
-    setIsOtpLoading(true);
-    setTimeout(() => {
-      setResendTimer(60);
-      showSuccess('Verification code sent successfully!');
-      setIsOtpLoading(false);
-    }, 500);
-  };
-
-  const handleConfirm = async () => {
-    if (!newCode || newCode.length < 6 || newCode.length > 8) {
-      showError('Anti-phishing code must be between 6 and 8 characters');
-      return;
-    }
-    if (!otp || otp.length < 6) {
-      showError('Please enter the 6-digit OTP verification code');
+  /** Navigate to SecurityVerification screen for OTP/TOTP verification */
+  const handleConfirm = () => {
+    if (!isNewCodeValid) {
+      showError('Please make sure all validation rules are met.');
       return;
     }
 
     Keyboard.dismiss();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      showSuccess('Anti-phishing code updated successfully!');
-      setIsSubmitting(false);
-      navigation.goBack();
-    }, 1000);
-  };
 
-  const userEmail = userData?.emailId || 'r***9@gmail.com';
+    const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+    const hasEmail = !!(userData?.emailId || userData?.email);
+    const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
+    const methods = [];
+    if (hasGA) methods.push('totp');
+    if (hasEmail) methods.push('email');
+    if (hasMobile) methods.push('mobile');
+    if (methods.length === 0) methods.push('email');
+
+    navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+      targetScreen: routes.EDIT_ANTI_PHISHING_SCREEN,
+      purpose: 'anti_phishing_edit',
+      verifyMethods: methods,
+      skipDirectVerification: true,
+      targetParams: {
+        antiPhishingCode: newCode,
+      },
+    });
+  };
 
   return (
     <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
@@ -129,105 +165,104 @@ const EditAntiPhishingScreen = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Reusable AGCE Gold Card */}
-          <AgceGoldCard code="X X X X X X" isDark={isDark} />
-
-          <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
-            This code identifies official AGCE emails.
-          </AppText>
-
-          {/* Current Code */}
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
-            Current Anti-phishing Code
-          </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', opacity: 0.7 }]}>
-            <TextInput
-              style={[styles.textInput, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
-              value={maskCode(currentCode)}
-              editable={false}
-            />
+        {isSubmitting ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={isDark ? '#D1AA67' : '#2A2A2E'} />
+            <AppText type={FOURTEEN} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 16 }}>
+              Updating anti-phishing code...
+            </AppText>
           </View>
-
-          {/* New Code */}
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 20 }]}>
-            New Anti-Phishing Code:
-          </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
-            <TextInput
-              style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
-              placeholder="Please enter"
-              placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
-              value={newCode}
-              onChangeText={(val) => setNewCode(val.replace(/[^A-Za-z0-9_]/g, ''))}
-              secureTextEntry={secureEntry}
-              maxLength={8}
-            />
-            <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)} style={styles.eyeBtn}>
-              <FastImage
-                source={secureEntry ? eye_close_icon : eye_open_icon}
-                style={styles.eyeIcon}
-                tintColor={isDark ? '#8A8A93' : '#9E9EAE'}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Code Sent To */}
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 20 }]}>
-            Code sent to: {userEmail}
-          </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
-            <TextInput
-              style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
-              placeholder="Please enter"
-              placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
-              value={otp}
-              onChangeText={setOtp}
-              keyboardType="number-pad"
-              maxLength={6}
-            />
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={handleSendOtp}
-              disabled={resendTimer > 0 || isOtpLoading}
-              style={styles.sendBtn}
+        ) : (
+          <>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: '#D1AA67' }}>
-                {resendTimer > 0 ? `${resendTimer}s` : 'Send'}
+              {/* Reusable AGCE Gold Card */}
+              <AgceGoldCard code={maskCode(currentCode)} isDark={isDark} />
+
+              <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
+                This code identifies official AGCE emails.
               </AppText>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
 
-        {/* Action Elements at the bottom */}
-        <View style={styles.bottomSection}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleConfirm}
-            disabled={isSubmitting}
-            style={[styles.confirmBtn, { backgroundColor: isDark ? '#2E2E32' : '#22252A' }]}
-          >
-            <AppText
-              type={SIXTEEN}
-              weight={BOLD}
-              style={{ color: '#FFFFFF' }}
-            >
-              {isSubmitting ? 'Confirming...' : 'Confirm'}
-            </AppText>
-          </TouchableOpacity>
+              {/* Current Code */}
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
+                Current Anti-phishing Code
+              </AppText>
+              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', opacity: 0.7 }]}>
+                <TextInput
+                  style={[styles.textInput, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
+                  value={maskCode(currentCode)}
+                  editable={false}
+                />
+              </View>
 
-          <TouchableOpacity style={styles.unableLink} activeOpacity={0.7}>
-            <AppText weight={MEDIUM} type={THIRTEEN} style={styles.unableText}>
-              Unable to Verify?
-            </AppText>
-          </TouchableOpacity>
-        </View>
+              {/* New Code */}
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 20 }]}>
+                New Anti-Phishing Code:
+              </AppText>
+              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
+                <TextInput
+                  style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+                  placeholder="6–8 characters"
+                  placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                  value={newCode}
+                  onChangeText={setNewCode}
+                  secureTextEntry={secureEntry}
+                  keyboardType="default"
+                  maxLength={8}
+                />
+                <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)} style={styles.eyeBtn}>
+                  <FastImage
+                    source={secureEntry ? eye_close_icon : eye_open_icon}
+                    style={styles.eyeIcon}
+                    tintColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Micro-interactive Validation Points */}
+              <View style={styles.valWrapper}>
+                <View style={styles.valRow}>
+                  <AppText style={[styles.checkmark, { color: isLenValid ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
+                  <AppText type={TWELVE} style={[styles.valText, { color: isLenValid ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
+                    6-8 characters
+                  </AppText>
+                </View>
+
+                <View style={styles.valRow}>
+                  <AppText style={[styles.checkmark, { color: isCharValid ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
+                  <AppText type={TWELVE} style={[styles.valText, { color: isCharValid ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
+                    Only letters, digits or underscore (A-Z, a-z, 0-9, _)
+                  </AppText>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Action button at bottom */}
+            <View style={styles.bottomSection}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleConfirm}
+                disabled={!isNewCodeValid}
+                style={[styles.confirmBtn, { backgroundColor: isDark ? '#2E2E32' : '#22252A', opacity: isNewCodeValid ? 1 : 0.5 }]}
+              >
+                <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
+                  Confirm
+                </AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.unableLink} activeOpacity={0.7}>
+                <AppText weight={MEDIUM} type={THIRTEEN} style={styles.unableText}>
+                  Unable to Verify?
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </KeyboardAvoidingView>
     </AppSafeAreaView>
   );
@@ -283,10 +318,6 @@ const styles = StyleSheet.create({
     padding: 0,
     flex: 1,
   },
-  sendBtn: {
-    paddingLeft: 12,
-    justifyContent: 'center',
-  },
   eyeBtn: {
     paddingLeft: 12,
     justifyContent: 'center',
@@ -297,6 +328,22 @@ const styles = StyleSheet.create({
   },
   validText: {
     textAlign: 'center',
+  },
+  valWrapper: {
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  valRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  checkmark: {
+    fontSize: 14,
+    marginRight: 8,
+  },
+  valText: {
+    lineHeight: 18,
   },
   bottomSection: {
     position: 'absolute',

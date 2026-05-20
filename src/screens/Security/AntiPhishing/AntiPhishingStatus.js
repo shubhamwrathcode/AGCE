@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from "../../../hooks/useTheme";
 import { useAppDispatch } from "../../../store/hooks";
 import {
@@ -23,23 +24,57 @@ import {
   NORMAL,
 } from '../../../shared';
 import FastImage from 'react-native-fast-image';
-import { antiphisinglock, back_ic, lock_ic, right_ic } from '../../../helper/ImageAssets';
+import { antiphisinglock, back_ic, right_ic } from '../../../helper/ImageAssets';
 import * as routes from '../../../navigation/routes';
 import AgceGoldCard from './AgceGoldCard';
+import { getAntiPhishingStatus } from '../../../actions/accountActions';
+import { showError } from '../../../helper/logger';
 
 const AntiPhishingStatus = () => {
   const navigation = useNavigation();
-  const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
 
-  const [hasCode, setHasCode] = useState(true);
-  const [currentCode, setCurrentCode] = useState('123456');
-  const [loading, setLoading] = useState(false);
+  const [hasCode, setHasCode] = useState(false);
+  const [currentCode, setCurrentCode] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
 
-  useEffect(() => {
-    // API Call removed as requested for pure UI testing
-  }, [isFocused]);
+  /** Fetch anti-phishing status from API — same as web's fetchStatus */
+  const fetchStatus = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await dispatch(getAntiPhishingStatus());
+      if (data) {
+        setHasCode(!!data.hasAntiPhishingCode);
+        setCurrentCode(data.antiPhishingCode || '');
+        if (typeof data.message === 'string') setStatusMessage(data.message);
+      } else {
+        setHasCode(false);
+        setCurrentCode('');
+      }
+    } catch (error) {
+      showError(error?.message || 'Failed to load anti-phishing status');
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch]);
+
+  /** Re-fetch every time the screen gets focus (same as web useEffect on mount) */
+  useFocusEffect(
+    useCallback(() => {
+      fetchStatus();
+    }, [fetchStatus])
+  );
+
+  /** Mask the anti-phishing code for display: show first 2 chars + asterisks */
+  const maskCode = (code) => {
+    if (!code) return 'X X X X X X';
+    if (code.length <= 2) return code.split('').join(' ');
+    const head = code.slice(0, 2);
+    const masked = '* '.repeat(Math.min(code.length - 2, 6)).trim();
+    return `${head.split('').join(' ')} ${masked}`;
+  };
 
   return (
     <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
@@ -65,103 +100,117 @@ const AntiPhishingStatus = () => {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {!hasCode ? (
-          <View style={styles.flex}>
-            {/* Reusable AGCE Gold Card showing verification state (Screenshot 3) */}
-            <AgceGoldCard code="X X X X X X" isDark={isDark} />
-
-            <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
-              This code identifies official AGCE emails.
-            </AppText>
-
-            {/* Edit Anti-Phishing Code Option Row */}
-            <TouchableOpacity
-              style={styles.row}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate(routes.EDIT_ANTI_PHISHING_SCREEN)}
-            >
-              <AppText type={SIXTEEN} weight={NORMAL} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
-                Edit Anti-Phishing Code
-              </AppText>
-              <FastImage
-                source={right_ic}
-                style={styles.chevronIcon}
-                tintColor={isDark ? '#8A8A93' : '#9E9EAE'}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-
-            <View style={[styles.divider, { backgroundColor: isDark ? '#1E1E22' : '#F5F5FA' }]} />
-
-            {/* Disable Anti-Phishing Code Option Row */}
-            <TouchableOpacity
-              style={styles.row}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate(routes.DISABLE_ANTI_PHISHING_SCREEN)}
-            >
-              <AppText type={SIXTEEN} weight={NORMAL} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
-                Disable Anti-Phishing Code
-              </AppText>
-              <FastImage
-                source={right_ic}
-                style={styles.chevronIcon}
-                tintColor={isDark ? '#8A8A93' : '#9E9EAE'}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.flex}>
-            {/* Anti-Phishing Illustration (padlock + asterisks dialog bubble) */}
-            <View style={styles.illustrationWrapper}>
-              <FastImage
-                source={antiphisinglock}
-                resizeMode="contain"
-                style={{ width: 150, height: 150 }}
-              />
-            </View>
-
-            <View style={styles.content}>
-              {/* Title */}
-              <AppText
-                type={SIXTEEN}
-                weight={SEMI_BOLD}
-                style={[styles.mainTitle, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
-              >
-                How Does the Anti-Phishing Code Work?
-              </AppText>
-
-              {/* Description */}
-              <AppText
-                type={THIRTEEN}
-                weight={NORMAL}
-                style={[styles.description, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
-              >
-                You can create your own anti-phishing code to appear in official AGCE emails and SMS messages. This feature helps you verify the authenticity of communications from AGCE.
-              </AppText>
-            </View>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Action Button at the bottom (only when disabled) */}
-      {hasCode && (
-        <View style={styles.bottomWrapper}>
-          <TouchableOpacity
-            style={[styles.confirmButton, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate(routes.CREATE_ANTI_PHISHING_SCREEN)}
-          >
-            <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
-              Create
-            </AppText>
-          </TouchableOpacity>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={isDark ? '#D1AA67' : '#2A2A2E'} />
         </View>
+      ) : (
+        <>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {hasCode ? (
+              <View style={styles.flex}>
+                {/* Reusable AGCE Gold Card showing the masked code */}
+                <AgceGoldCard code={maskCode(currentCode)} isDark={isDark} />
+
+                {statusMessage ? (
+                  <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
+                    {statusMessage}
+                  </AppText>
+                ) : (
+                  <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
+                    This code identifies official AGCE emails.
+                  </AppText>
+                )}
+
+                {/* Edit Anti-Phishing Code Option Row */}
+                <TouchableOpacity
+                  style={styles.row}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate(routes.EDIT_ANTI_PHISHING_SCREEN)}
+                >
+                  <AppText type={SIXTEEN} weight={NORMAL} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+                    Edit Anti-Phishing Code
+                  </AppText>
+                  <FastImage
+                    source={right_ic}
+                    style={styles.chevronIcon}
+                    tintColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+
+                <View style={[styles.divider, { backgroundColor: isDark ? '#1E1E22' : '#F5F5FA' }]} />
+
+                {/* Disable Anti-Phishing Code Option Row */}
+                <TouchableOpacity
+                  style={styles.row}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate(routes.DISABLE_ANTI_PHISHING_SCREEN)}
+                >
+                  <AppText type={SIXTEEN} weight={NORMAL} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+                    Disable Anti-Phishing Code
+                  </AppText>
+                  <FastImage
+                    source={right_ic}
+                    style={styles.chevronIcon}
+                    tintColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.flex}>
+                {/* Anti-Phishing Illustration (padlock + asterisks dialog bubble) */}
+                <View style={styles.illustrationWrapper}>
+                  <FastImage
+                    source={antiphisinglock}
+                    resizeMode="contain"
+                    style={{ width: 150, height: 150 }}
+                  />
+                </View>
+
+                <View style={styles.content}>
+                  {/* Title */}
+                  <AppText
+                    type={SIXTEEN}
+                    weight={SEMI_BOLD}
+                    style={[styles.mainTitle, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
+                  >
+                    How Does the Anti-Phishing Code Work?
+                  </AppText>
+
+                  {/* Description */}
+                  <AppText
+                    type={THIRTEEN}
+                    weight={NORMAL}
+                    style={[styles.description, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
+                  >
+                    You can create your own anti-phishing code to appear in official AGCE emails and SMS messages. This feature helps you verify the authenticity of communications from AGCE.
+                  </AppText>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Action Button at the bottom (only when no code is set) */}
+          {!hasCode && (
+            <View style={styles.bottomWrapper}>
+              <TouchableOpacity
+                style={[styles.confirmButton, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate(routes.CREATE_ANTI_PHISHING_SCREEN)}
+              >
+                <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
+                  Create
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
       )}
     </AppSafeAreaView>
   );

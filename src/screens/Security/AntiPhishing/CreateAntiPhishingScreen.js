@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,98 +8,108 @@ import {
   Platform,
   TextInput,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import FastImage from 'react-native-fast-image';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { useTheme } from "../../../hooks/useTheme";
 import { back_ic } from '../../../helper/ImageAssets';
 import { AppSafeAreaView, AppText, SEMI_BOLD, EIGHTEEN, FOURTEEN, SIXTEEN, TWELVE, BOLD, NORMAL } from '../../../shared';
 import * as routes from '../../../navigation/routes';
-import { showError, showSuccess } from '../../../helper/logger';
+import { showError } from '../../../helper/logger';
+import { addAntiPhishingCode } from '../../../actions/accountActions';
 
-const CreateAntiPhishingScreen = () => {
+const CreateAntiPhishingScreen = ({ route }) => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector(state => state.auth.userData);
 
-  // Step state: 1 (Screenshot 1) or 2 (Screenshot 2)
-  const [step, setStep] = useState(1);
-
   // Form State
   const [newCodeField, setNewCodeField] = useState('');
-  const [otp, setOtp] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
-  const [isOtpLoading, setIsOtpLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const timerRef = useRef(null);
-
-  // Real-time Validations matching Screenshot 1 criteria
+  // Micro-interactive Validation states
   const isLenValid = newCodeField.length >= 6 && newCodeField.length <= 8;
-  const isCharValid = newCodeField.length > 0 && /^[A-Za-z0-9_]+$/.test(newCodeField);
-  const isNotAllSame = newCodeField.length > 0 && !/^(.)\1+$/.test(newCodeField);
+  const isCharValid = /^[A-Za-z0-9_]+$/.test(newCodeField);
+  const isAntiCodeValid = isLenValid && isCharValid;
 
+  /**
+   * When SecurityVerification screen navigates back here with OTP codes,
+   * we pick them up from route.params and auto-submit.
+   */
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+    const params = route?.params || {};
+    const emailOtp = params.emailOtp;
+    const smsOtp = params.smsOtp;
+    const tofaCode = params.tofaCode;
+    const antiPhishingCodeFromParams = params.antiPhishingCode;
+
+    // Only proceed if we have a verification code AND the anti-phishing code
+    if (!antiPhishingCodeFromParams) return;
+    const code = emailOtp || smsOtp || tofaCode;
+    if (!code) return;
+
+    // Determine verifyMethod from which OTP was provided
+    let verifyMethod = 'email';
+    if (tofaCode) verifyMethod = 'totp';
+    else if (smsOtp) verifyMethod = 'mobile';
+    else if (emailOtp) verifyMethod = 'email';
+
+    // Auto-submit
+    const submitCode = async () => {
+      setIsSubmitting(true);
+      try {
+        const payload = {
+          antiPhishingCode: antiPhishingCodeFromParams,
+          verifyMethod,
+          code,
+        };
+        const success = await dispatch(addAntiPhishingCode(payload));
+        if (success) {
+          navigation.navigate(routes.ANTI_PHISHING_CODE_SCREEN);
+        }
+      } catch (error) {
+        showError(error?.message || 'Something went wrong');
+      } finally {
+        setIsSubmitting(false);
+      }
     };
-  }, []);
 
-  useEffect(() => {
-    if (resendTimer > 0) {
-      timerRef.current = setInterval(() => {
-        setResendTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    submitCode();
+  }, [route?.params]);
+
+  /** Navigate to SecurityVerification screen for OTP/TOTP verification */
+  const handleConfirmAndVerify = () => {
+    if (!isAntiCodeValid) {
+      showError('Please make sure all validation rules are met.');
+      return;
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [resendTimer]);
-
-  const handleConfirmStep1 = () => {
-    // Validation commented out for UI testing
-    // if (!isLenValid || !isCharValid || !isNotAllSame) {
-    //   showError('Please satisfy all anti-phishing code requirements.');
-    //   return;
-    // }
-    Keyboard.dismiss();
-    setStep(2);
-  };
-
-  const handleSendOtp = async () => {
-    setIsOtpLoading(true);
-    setTimeout(() => {
-      setResendTimer(60);
-      // showSuccess('Verification code sent successfully!');
-      setIsOtpLoading(false);
-    }, 500);
-  };
-
-  const handleSubmitStep2 = async () => {
-    // Validation commented out for UI testing
-    // if (!otp || otp.length < 6) {
-    //   showError('Please enter the 6-digit OTP verification code');
-    //   return;
-    // }
 
     Keyboard.dismiss();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      // showSuccess('Anti-phishing code created successfully!');
-      setIsSubmitting(false);
-      navigation.navigate(routes.ANTI_PHISHING_CODE_SCREEN);
-    }, 1000);
-  };
 
-  const userEmail = userData?.emailId || 'j***3@gmail.com';
+    // Build verifyMethods array based on user's security settings
+    const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+    const hasEmail = !!(userData?.emailId || userData?.email);
+    const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
+    const methods = [];
+    if (hasGA) methods.push('totp');
+    if (hasEmail) methods.push('email');
+    if (hasMobile) methods.push('mobile');
+    if (methods.length === 0) methods.push('email');
+
+    // Navigate to SecurityVerification — it will come back to this screen with OTP codes
+    navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+      targetScreen: routes.CREATE_ANTI_PHISHING_SCREEN,
+      purpose: 'anti_phishing_add',
+      verifyMethods: methods,
+      skipDirectVerification: true,
+      targetParams: {
+        antiPhishingCode: newCodeField,
+      },
+    });
+  };
 
   return (
     <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
@@ -110,13 +120,7 @@ const CreateAntiPhishingScreen = () => {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: isDark ? '#1E1E22' : '#F0F0F0' }]}>
           <TouchableOpacity
-            onPress={() => {
-              if (step === 2) {
-                setStep(1);
-              } else {
-                navigation.goBack();
-              }
-            }}
+            onPress={() => navigation.goBack()}
             style={styles.backBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
@@ -135,108 +139,75 @@ const CreateAntiPhishingScreen = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        {step === 1 ? (
-          /* Step 1 View: Screenshot 1 */
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 8 }]}>
-              Anti-Phishing Code
+        {isSubmitting ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={isDark ? '#D1AA67' : '#2A2A2E'} />
+            <AppText type={FOURTEEN} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 16 }}>
+              Setting anti-phishing code...
             </AppText>
-            <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
-              <TextInput
-                style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
-                placeholder="Please anti-phishing Code"
-                placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
-                value={newCodeField}
-                onChangeText={(val) => setNewCodeField(val.replace(/[^A-Za-z0-9_]/g, ''))}
-                maxLength={8}
-                autoCorrect={false}
-                autoCapitalize="none"
-              />
-            </View>
-
-            {/* Micro-interactive Validation Points */}
-            <View style={styles.valWrapper}>
-              <View style={styles.valRow}>
-                <AppText style={[styles.checkmark, { color: isLenValid ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
-                <AppText type={TWELVE} style={[styles.valText, { color: isLenValid ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
-                  6-8 characters
-                </AppText>
-              </View>
-
-              <View style={styles.valRow}>
-                <AppText style={[styles.checkmark, { color: isCharValid ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
-                <AppText type={TWELVE} style={[styles.valText, { color: isCharValid ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
-                  Only letters, digits or underscore (A-Z, a-z, 0-9, _)
-                </AppText>
-              </View>
-
-              <View style={styles.valRow}>
-                <AppText style={[styles.checkmark, { color: isNotAllSame ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
-                <AppText type={TWELVE} style={[styles.valText, { color: isNotAllSame ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
-                  Characters cannot be all the same
-                </AppText>
-              </View>
-            </View>
-          </ScrollView>
+          </View>
         ) : (
-          /* Step 2 View: Screenshot 2 */
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 8 }]}>
-              Email Verification Code
-            </AppText>
-            <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
-              <TextInput
-                style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
-                placeholder="Please Enter"
-                placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
-                value={otp}
-                onChangeText={setOtp}
-                keyboardType="number-pad"
-                maxLength={6}
-              />
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={handleSendOtp}
-                disabled={resendTimer > 0 || isOtpLoading}
-                style={styles.sendBtn}
-              >
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: '#D1AA67' }}>
-                  {resendTimer > 0 ? `${resendTimer}s` : 'Send'}
-                </AppText>
-              </TouchableOpacity>
-            </View>
+          <>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 8 }]}>
+                Anti-Phishing Code
+              </AppText>
+              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+                <TextInput
+                  style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
+                  placeholder="6–8 characters"
+                  placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                  value={newCodeField}
+                  onChangeText={setNewCodeField}
+                  keyboardType="default"
+                  maxLength={8}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+              </View>
 
-            <AppText type={TWELVE} style={[styles.subInfoText, { color: isDark ? '#8A8A93' : '#8E8E93' }]}>
-              Send the verification code to {userEmail}, and the code will be valid for 10 minutes
-            </AppText>
-          </ScrollView>
+              {/* Micro-interactive Validation Points */}
+              <View style={styles.valWrapper}>
+                <View style={styles.valRow}>
+                  <AppText style={[styles.checkmark, { color: isLenValid ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
+                  <AppText type={TWELVE} style={[styles.valText, { color: isLenValid ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
+                    6-8 characters
+                  </AppText>
+                </View>
+
+                <View style={styles.valRow}>
+                  <AppText style={[styles.checkmark, { color: isCharValid ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
+                  <AppText type={TWELVE} style={[styles.valText, { color: isCharValid ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
+                    Only letters, digits or underscore (A-Z, a-z, 0-9, _)
+                  </AppText>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Confirm button */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleConfirmAndVerify}
+              disabled={!isAntiCodeValid}
+              style={[
+                styles.confirmBtn,
+                {
+                  backgroundColor: isDark ? '#2E2E32' : '#22252A',
+                  opacity: isAntiCodeValid ? 1 : 0.5,
+                },
+              ]}
+            >
+              <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
+                Confirm
+              </AppText>
+            </TouchableOpacity>
+          </>
         )}
-
-        {/* Dynamic bottom button */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={step === 1 ? handleConfirmStep1 : handleSubmitStep2}
-          disabled={isSubmitting}
-          style={[styles.confirmBtn, { backgroundColor: isDark ? '#2E2E32' : '#22252A' }]}
-        >
-          <AppText
-            type={SIXTEEN}
-            weight={BOLD}
-            style={{ color: '#FFFFFF' }}
-          >
-            {step === 1 ? 'Confirm' : (isSubmitting ? 'Submitting...' : 'Submit')}
-          </AppText>
-        </TouchableOpacity>
       </KeyboardAvoidingView>
     </AppSafeAreaView>
   );
@@ -291,31 +262,20 @@ const styles = StyleSheet.create({
     padding: 0,
     flex: 1,
   },
-  sendBtn: {
-    paddingLeft: 12,
-    justifyContent: 'center',
-  },
   valWrapper: {
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 12,
   },
   valRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   checkmark: {
-    fontSize: 12,
+    fontSize: 14,
     marginRight: 8,
-    fontWeight: 'bold',
   },
   valText: {
-    lineHeight: 16,
-    fontFamily: NORMAL
-  },
-  subInfoText: {
-    marginHorizontal: 16,
-    marginTop: 10,
     lineHeight: 18,
   },
   confirmBtn: {

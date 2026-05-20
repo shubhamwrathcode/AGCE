@@ -347,6 +347,30 @@ const SecurityVerification = ({ route }) => {
           }
         }
 
+        if (purpose === 'login_2step_verification') {
+          const actionData = targetParams?.pendingAction;
+          if (actionData) {
+            const type = activeMethods[0];
+            const code = type === 'totp' ? totpCode : (type === 'email' ? emailCode : smsCode);
+            const payload = {
+              security_methods: actionData.method,
+              code: code,
+              action: actionData.action,
+            };
+            const res = await appOperation.customer.securityUpdateTwoLogin2Step(payload);
+            if (res?.success) {
+              showSuccess(res?.message || 'Setting updated successfully');
+              setIsSubmitting(false);
+              NavigationService.navigate(targetScreen);
+              return;
+            } else {
+              showError(res?.message || 'Verification failed');
+              setIsSubmitting(false);
+              return;
+            }
+          }
+        }
+
         if (activeMethods.includes('email')) {
           const ok = await dispatch(verifySecurityOtp('email', emailCode, purpose));
           if (!ok) {
@@ -370,14 +394,16 @@ const SecurityVerification = ({ route }) => {
         }
       } catch (err) {
         setIsSubmitting(false);
-        showError('Verification failed');
+        showError(err?.message || 'Verification failed');
         return;
       }
       setIsSubmitting(false);
     }
 
     // 3. Navigation to targetScreen with gathered codes
-    showSuccess('Verification successful');
+    if (!skipDirectVerification) {
+      showSuccess('Verification successful');
+    }
     NavigationService.navigate(targetScreen, {
       ...targetParams,
       emailOtp: activeMethods.includes('email') ? emailCode : undefined,
@@ -486,7 +512,7 @@ const SecurityVerification = ({ route }) => {
               <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
                 <TextInput
                   style={[styles.input, { color: themeColors.text }]}
-                  placeholder="Please enter 6-digit TOTP Code"
+                  placeholder="Please enter 6-digit OTP Code"
                   placeholderTextColor="#999"
                   value={totpCode}
                   onChangeText={(v) => setTotpCode(v.replace(/\D/g, '').slice(0, 6))}

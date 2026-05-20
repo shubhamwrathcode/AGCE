@@ -153,7 +153,11 @@ const SetupAuthenticator = ({ route }) => {
                 setSubmitting(true);
                 const ok = await dispatch(confirm2fa(code, identityProof));
                 if (ok) {
-                  NavigationService.navigate(routes.ACCOUNT_SCREEN);
+                  if (route.params?.fromScreen) {
+                    NavigationService.navigate(route.params.fromScreen);
+                  } else {
+                    NavigationService.navigate(routes.ACCOUNT_SCREEN);
+                  }
                 }
               } catch (error) {
                 console.warn('[SetupAuthenticator] Failed to confirm 2FA:', error);

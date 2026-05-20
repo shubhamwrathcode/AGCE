@@ -38,6 +38,9 @@ const ChangePhoneNumberScreen = () => {
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
 
+  const userData = useAppSelector((state) => state.auth.userData);
+  const isBinding = !userData?.mobileNumber && !userData?.mobile_number;
+
   const [newPhone, setNewPhone] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -123,10 +126,14 @@ const ChangePhoneNumberScreen = () => {
 
       const completeResult = await appOperation.customer.securityMobileChangeComplete({ newMobileOtp: verificationCode });
       if (completeResult?.success) {
-        showSuccess(completeResult?.message || 'Mobile number updated successfully');
+        showSuccess(isBinding ? 'Phone number bound successfully' : (completeResult?.message || 'Mobile number updated successfully'));
         dispatch(getUserProfile());
-        // Go back to the Account Details or Security Settings screen
-        navigation.navigate(routes.ACCOUNT_DETAILS_SCREEN);
+        // Go back to the previous screen or Security Settings screen
+        if (route.params?.fromScreen) {
+          navigation.navigate(route.params.fromScreen);
+        } else {
+          navigation.navigate(routes.ACCOUNT_DETAILS_SCREEN);
+        }
       } else {
         showError(completeResult?.message || 'Failed to complete mobile change');
       }
@@ -165,7 +172,7 @@ const ChangePhoneNumberScreen = () => {
           </TouchableOpacity>
           <View style={styles.titleContainer}>
             <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>
-              Change Phone Number
+              {isBinding ? 'Bind Phone Number' : 'Change Phone Number'}
             </AppText>
           </View>
           <View style={{ width: 24 }} />
@@ -195,7 +202,7 @@ const ChangePhoneNumberScreen = () => {
 
           {/* New Phone Number Section */}
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
-            New Phone Number
+            {isBinding ? 'Phone Number' : 'New Phone Number'}
           </AppText>
           <View style={[styles.phoneInputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
             <TouchableOpacity style={styles.countryPicker} activeOpacity={0.8}>
@@ -209,7 +216,7 @@ const ChangePhoneNumberScreen = () => {
             <View style={[styles.divider, { backgroundColor: isDark ? '#2D2D30' : '#E5E5EA' }]} />
             <TextInput
               style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
-              placeholder="Enter your new phone number"
+              placeholder={isBinding ? "Enter your phone number" : "Enter your new phone number"}
               placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
               keyboardType="number-pad"
               value={newPhone}
@@ -217,9 +224,9 @@ const ChangePhoneNumberScreen = () => {
             />
           </View>
 
-          {/* New Email Verification Code Section */}
+          {/* SMS Verification Code Section */}
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
-            New Email Verification Code
+            {isBinding ? 'SMS Verification Code' : 'New SMS Verification Code'}
           </AppText>
           <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
             <TextInput

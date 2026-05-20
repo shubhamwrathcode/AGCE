@@ -1072,6 +1072,10 @@ export const sendSecurityOtp = (target: string, purpose: string, value?: string 
       ? await appOperation.customer.securityClosedAccountSendOtp(target === 'mobile' ? 'phone' : target)
       : purpose === 'disable_account'
       ? await appOperation.customer.securityDisableAccountSendOtp(target === 'mobile' ? 'phone' : target)
+      : purpose === 'login_2step_verification'
+      ? await appOperation.customer.securitySendOtpForTwoLogin2Step(target === 'mobile' ? 'phone' : target)
+      : (purpose === 'anti_phishing_add' || purpose === 'anti_phishing_edit' || purpose === 'anti_phishing_remove')
+      ? await appOperation.customer.send_anti_phishing_otp(target === 'mobile' ? 'phone' : target)
       : await appOperation.customer.securitySendOtp(target, purpose, value ?? undefined);
     if (response?.success) {
       showSuccess(response?.message || 'OTP sent successfully');
@@ -1745,11 +1749,8 @@ export const sendAntiPhishingOtp = (target: string) => async (dispatch: AppDispa
 /** Anti-Phishing: SET code */
 export const addAntiPhishingCode = (data: { antiPhishingCode: string; verifyMethod: string; code?: string; passkeyUserId?: string }) => async (dispatch: AppDispatch) => {
   try {
+    // Same as web: pass params directly without any type conversion
     const payload = { ...data };
-    if (payload.code) {
-      payload.code = String(payload.code); // Backend might expect string or number, casting to ensure it's normalized.
-      // Or try: (payload as any).code = +payload.code;
-    }
     console.log('[API] addAntiPhishingCode request payload:', payload);
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.add_anti_phishing_code(payload);

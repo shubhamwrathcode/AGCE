@@ -35,7 +35,7 @@ import NavigationService from "../../navigation/NavigationService";
 import * as routes from "../../navigation/routes";
 import { back_ic, copyIcon, editIcon, right_arrow, right_ic } from "../../helper/ImageAssets";
 import { logoutAction } from "../../actions/authActions";
-import { getFundPasswordStatusAction, disable2fa } from "../../actions/accountActions";
+import { getFundPasswordStatusAction, disable2fa, getAntiPhishingStatus } from "../../actions/accountActions";
 import KycStepHeader from "./KycStepHeader";
 import { copyText } from "../../helper/utility";
 import { useFocusEffect, useRoute, useNavigation } from "@react-navigation/native";
@@ -55,6 +55,7 @@ const AccountDetails = () => {
   const userData = useAppSelector((state) => state.auth.userData);
   const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
   const [hasEmergencyContact, setHasEmergencyContact] = useState(false);
+  const [hasAntiPhishingCode, setHasAntiPhishingCode] = useState(false);
   const hasFundPassword = fundPasswordStatus ?? !!(userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
   const userHasPhone = !!(userData?.mobileNumber || userData?.mobile_number) &&
     (userData?.mobileNumber || userData?.mobile_number) !== "null" &&
@@ -97,6 +98,12 @@ const AccountDetails = () => {
           const list = listRes?.data?.contacts || listRes?.contacts || listRes?.data || [];
           setHasEmergencyContact(list.length > 0);
         }
+      } catch (e) {
+        // silent fallback
+      }
+      try {
+        const antiPhishingData = await dispatch(getAntiPhishingStatus());
+        setHasAntiPhishingCode(!!antiPhishingData?.hasAntiPhishingCode);
       } catch (e) {
         // silent fallback
       }
@@ -418,7 +425,7 @@ const AccountDetails = () => {
               />
               <MenuItem
                 label="Anti-Phishing Code"
-                value="Not enabled"
+                value={hasAntiPhishingCode ? "Change" : "Not enabled"}
                 onPress={() => NavigationService.navigate(routes.ANTI_PHISHING_CODE_SCREEN)}
               />
               <MenuItem

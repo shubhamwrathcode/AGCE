@@ -776,4 +776,10 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('security/withdrawal-settings', data, CUSTOMER_TYPE),
   verify_and_toggle_withdrawal_setting: (data: { method: string; enable: boolean; code?: string; fund_password?: string }) =>
     appOperation.post('security/withdrawal-settings/toggle', data, CUSTOMER_TYPE),
+  securityCheckTwoLogin2Step: () =>
+    appOperation.get('security/check-two-login-2-step', undefined, undefined, CUSTOMER_TYPE),
+  securityUpdateTwoLogin2Step: (data: { security_methods: string; code: string; action: string }) =>
+    appOperation.post('security/update-two-login-2-step', data, CUSTOMER_TYPE),
+  securitySendOtpForTwoLogin2Step: (security_methods: string) =>
+    appOperation.post('security/send-otp-for-two-login-2-step', { security_methods }, CUSTOMER_TYPE),
 });
