@@ -63,23 +63,12 @@ const SecurityVerification = ({ route }) => {
 
   // Dynamic Verification Methods Initialization
   const initialVerifyMethods = useMemo(() => {
-    const raw = params.verifyMethods && params.verifyMethods.length > 0
-      ? params.verifyMethods
-      : ['passkey', 'totp', 'email', 'mobile'];
-
-    const filtered = raw.filter((method) => {
-      if (method === 'email') return hasEmail;
-      if (method === 'mobile') return hasMobile;
-      if (method === 'totp') return hasGoogleAuth;
-      if (method === 'passkey') return passkeySupported && passkeys.length > 0;
-      return true;
-    });
-
-    if (filtered.includes('passkey')) {
-      return ['passkey', ...filtered.filter(m => m !== 'passkey')];
-    }
-    return filtered.length > 0 ? filtered : ['email'];
-  }, [params.verifyMethods, hasEmail, hasMobile, hasGoogleAuth, passkeySupported, passkeys]);
+    const list = [];
+    if (hasGoogleAuth) list.push('totp');
+    if (hasEmail) list.push('email');
+    if (hasMobile) list.push('mobile');
+    return list.length > 0 ? list : ['email'];
+  }, [hasEmail, hasMobile, hasGoogleAuth]);
 
   // Active methods in state so it can be changed dynamically by the user (only one active method is verified at a time)
   const [activeMethods, setActiveMethods] = useState([initialVerifyMethods[0]]);
@@ -92,16 +81,11 @@ const SecurityVerification = ({ route }) => {
   }, [initialVerifyMethods]);
 
   const fallbackToOtpMethod = () => {
-    const allowed = params.verifyMethods && params.verifyMethods.length > 0
-      ? params.verifyMethods
-      : ['totp', 'email', 'mobile'];
-    const filtered = allowed.filter(m => {
-      if (m === 'email') return hasEmail;
-      if (m === 'mobile') return hasMobile;
-      if (m === 'totp') return hasGoogleAuth;
-      return false;
-    });
-    const fallback = filtered[0] || (hasEmail ? 'email' : (hasMobile ? 'mobile' : 'email'));
+    const list = [];
+    if (hasGoogleAuth) list.push('totp');
+    if (hasEmail) list.push('email');
+    if (hasMobile) list.push('mobile');
+    const fallback = list[0] || 'email';
     setActiveMethods([fallback]);
   };
 
@@ -153,38 +137,30 @@ const SecurityVerification = ({ route }) => {
   // Calculate dynamic available methods that the user has enabled (always includes all active methods)
   const availableOptions = useMemo(() => {
     const list = [];
-    const allowed = params.verifyMethods || [];
 
-    if (hasEmail && (allowed.length === 0 || allowed.includes('email'))) {
+    if (hasEmail) {
       list.push({
         value: 'email',
         label: 'Email Verification',
         description: `Verify using code sent to ${displayEmail}`,
       });
     }
-    if (hasMobile && (allowed.length === 0 || allowed.includes('mobile'))) {
+    if (hasMobile) {
       list.push({
         value: 'mobile',
         label: 'Phone Verification',
         description: `Verify using code sent to ${displayPhone}`,
       });
     }
-    if (hasGoogleAuth && (allowed.length === 0 || allowed.includes('totp'))) {
+    if (hasGoogleAuth) {
       list.push({
         value: 'totp',
         label: 'Google Authenticator',
         description: 'Verify using your Google Authenticator 2FA code',
       });
     }
-    if (passkeySupported && passkeys.length > 0 && (allowed.length === 0 || allowed.includes('passkey'))) {
-      list.push({
-        value: 'passkey',
-        label: 'Passkey Verification',
-        description: 'Verify using your device biometric passkey',
-      });
-    }
     return list;
-  }, [hasEmail, hasMobile, hasGoogleAuth, displayEmail, displayPhone, params.verifyMethods, passkeySupported, passkeys]);
+  }, [hasEmail, hasMobile, hasGoogleAuth, displayEmail, displayPhone]);
 
   // Auto-send OTP when active methods change
   useEffect(() => {
@@ -531,27 +507,13 @@ const SecurityVerification = ({ route }) => {
 
           {/* Dynamic Passkey Group */}
           {activeMethods.includes('passkey') && (
-            <View style={styles.inputGroup}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
-                Passkey Verification
+            <View style={[styles.inputGroup, { alignItems: 'center', marginVertical: 40 }]}>
+              {isSubmitting ? (
+                <ActivityIndicator size={'large'} color={colors.orangeTheme} />
+              ) : null}
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: '#999', marginTop: 15, textAlign: 'center', lineHeight: 20 }}>
+                Please use your device's biometric prompt (Face ID, Touch ID, or PIN) to verify your identity.
               </AppText>
-              <TouchableOpacity
-                style={[styles.submitBtn, { backgroundColor: colors.orangeTheme, marginTop: 10 }]}
-                activeOpacity={0.8}
-                onPress={() => handlePasskeyVerificationDirect(false)}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size={'small'} color={'#FFF'} />
-                ) : (
-                  <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
-                    Verify with Passkey
-                  </AppText>
-                )}
-              </TouchableOpacity>
-              <View style={styles.inputFooter}>
-                <AppText type={TWELVE} style={{ color: '#999' }}>Authenticate using Face ID, Touch ID, or PIN</AppText>
-              </View>
             </View>
           )}
         </View>
