@@ -47,7 +47,6 @@ const EnablePasskey = ({ route, navigation }) => {
         setPasskeys(res.data?.passkeys || []);
       }
     } catch (err) {
-      console.warn('[Passkey] Error fetching list:', err);
     } finally {
       setLoadingPasskeys(false);
     }
