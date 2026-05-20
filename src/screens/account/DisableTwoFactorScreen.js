@@ -68,7 +68,7 @@ const DisableTwoFactorScreen = () => {
           >
             <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
-          <AppText weight={BOLD} type={EIGHTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>
+          <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text, marginLeft: 12 }}>
             Disable Google Authenticator
           </AppText>
         </View>

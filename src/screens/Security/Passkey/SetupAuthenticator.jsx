@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, SafeAreaView, Platform, TextInput, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, SafeAreaView, Platform, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import { AppText, BOLD, FOURTEEN, SIXTEEN, SEMI_BOLD, TWELVE, MEDIUM, EIGHTEEN, THIRTEEN } from '../../../shared';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
@@ -9,13 +9,33 @@ import { colors } from '../../../theme/colors';
 import Clipboard from '@react-native-community/clipboard';
 import { showSuccess } from '../../../helper/logger';
 import { fontFamilyMedium } from '../../../theme/typography';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { generateTwoFactorQr, confirm2fa } from '../../../actions/accountActions';
+import * as routes from '../../../navigation/routes';
 
-const SetupAuthenticator = () => {
+const SetupAuthenticator = ({ route }) => {
   const { colors: themeColors, isDark } = useTheme();
+  const dispatch = useAppDispatch();
+
+  // Fetch dynamic QR details from Redux state
+  const twoFaQrData = useAppSelector((state) => state.home.twoFaQrData);
+  const qrImage = twoFaQrData?.qr_code || '';
+  const setupKey = twoFaQrData?.secret?.base32 || '';
+
+  // Verification codes received from the previous gate screen
+  const params = route?.params || {};
+  const emailOtp = params.emailOtp;
+  const smsOtp = params.smsOtp;
+
   const [code, setCode] = useState('');
-  const setupKey = '0xb8a37c0ab0443734e84edc9993321';
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    dispatch(generateTwoFactorQr());
+  }, [dispatch]);
 
   const copyToClipboard = () => {
+    if (!setupKey) return;
     Clipboard.setString(setupKey);
     showSuccess('Setup key copied!');
   };
@@ -23,7 +43,7 @@ const SetupAuthenticator = () => {
   const pasteFromClipboard = async () => {
     const text = await Clipboard.getString();
     if (text) {
-      setCode(text);
+      setCode(text.replace(/\D/g, '').slice(0, 6));
     }
   };
 
@@ -57,7 +77,11 @@ const SetupAuthenticator = () => {
               </AppText>
 
               <View style={styles.qrContainer}>
-                <FastImage source={qrCodeIcon} style={styles.qrImage} resizeMode="contain" />
+                {qrImage ? (
+                  <FastImage source={{ uri: qrImage }} style={styles.qrImage} resizeMode="contain" />
+                ) : (
+                  <ActivityIndicator size="small" color="#999" />
+                )}
               </View>
 
               <View style={[styles.keyContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
@@ -94,6 +118,7 @@ const SetupAuthenticator = () => {
                   onChangeText={setCode}
                   keyboardType="number-pad"
                   maxLength={6}
+                  cursorColor={colors.black}
                 />
                 <TouchableOpacity onPress={pasteFromClipboard} style={styles.pasteBtn}>
                   <FastImage source={paste1} style={styles.pasteIcon} tintColor="#999" resizeMode="contain" />
@@ -110,13 +135,42 @@ const SetupAuthenticator = () => {
           <TouchableOpacity
             style={[styles.submitBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
             activeOpacity={0.8}
-            onPress={() => NavigationService.navigate('PASSKEY_SECURITY_VERIFICATION_SCREEN')}
-          >
-            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
-              Confirm
-            </AppText>
-          </TouchableOpacity>
+            onPress={async () => {
+              if (!code || code.length !== 6) {
+                const { showError } = require('../../../helper/logger');
+                showError('Please enter the 6-digit verification code');
+                return;
+              }
 
+              let identityProof = undefined;
+              if (emailOtp) {
+                identityProof = { otpCode: emailOtp, verifyMethod: 'email' };
+              } else if (smsOtp) {
+                identityProof = { otpCode: smsOtp, verifyMethod: 'phone' };
+              }
+
+              try {
+                setSubmitting(true);
+                const ok = await dispatch(confirm2fa(code, identityProof));
+                if (ok) {
+                  NavigationService.navigate(routes.ACCOUNT_SCREEN);
+                }
+              } catch (error) {
+                console.warn('[SetupAuthenticator] Failed to confirm 2FA:', error);
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color={isDark ? '#000000' : '#FFFFFF'} size="small" />
+            ) : (
+              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
+                Confirm
+              </AppText>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

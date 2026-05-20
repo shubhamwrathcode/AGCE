@@ -296,7 +296,17 @@ const AccountDetails = () => {
                 </AppText>
               </View>
               <MenuItem label="Passkey" value={securityMethods.passkey ? "Manage" : "Not enabled"} onPress={() => NavigationService.navigate(routes.PASSKEY_SCREEN)} />
-              <MenuItem label="Authenticator App" value={securityMethods.totp ? "Disable" : "Not enabled"} onPress={() => NavigationService.navigate(routes.DOWNLOAD_AUTHENTICATOR_SCREEN)} />
+              <MenuItem
+                label="Authenticator App"
+                value={securityMethods.totp ? "Disable" : "Not enabled"}
+                onPress={() => {
+                  if (securityMethods.totp) {
+                    NavigationService.navigate(routes.DISABLE_2FA_SCREEN);
+                  } else {
+                    NavigationService.navigate(routes.DOWNLOAD_AUTHENTICATOR_SCREEN);
+                  }
+                }}
+              />
               <MenuItem
                 label="Email Verification"
                 value={userData?.emailId ? maskProfileEmail(userData.emailId) : "Not enabled"}

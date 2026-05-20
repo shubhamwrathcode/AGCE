@@ -107,7 +107,7 @@ const OtpInput6Digit = forwardRef(function OtpInput6Digit(
           caretHidden
           contextMenuHidden
           selectionColor={themeColors.text + '40'}
-          cursorColor={themeColors.text}
+          cursorColor={colors.black}
         />
       </TouchableOpacity>
     </View>

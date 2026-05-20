@@ -580,7 +580,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={"AadharVerify"} component={AadharVerify} />
       <Stack.Screen name={"UploadSelfie"} component={UploadSelfie} />
       <Stack.Screen name={"CurrencyPrefer"} component={CurrencyPrefer} />
-      <Stack.Screen name={routes.SECURITY} component={Security} />
       <Stack.Screen
         name={routes.SETTING_SCREEN_New}
         component={SettingsScreen}

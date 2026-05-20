@@ -8,11 +8,12 @@ import { back_ic, pasteImg } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import * as routes from '../../../navigation/routes';
 import { useAppSelector, useAppDispatch } from '../../../store/hooks';
-import { sendSecurityOtp, verifySecurityOtp, verifySecurityTotp } from '../../../actions/accountActions';
+import { sendSecurityOtp, verifySecurityOtp, verifySecurityTotp, getPasskeyList, verifySecurityPasskey } from '../../../actions/accountActions';
 import { logoutAction } from '../../../actions/authActions';
 import { appOperation } from '../../../appOperation';
 import { showError, showSuccess } from '../../../helper/logger';
 import { VerificationOptionsSheet } from '../../../common/VerificationOptionsSheet';
+import { Passkey } from 'react-native-passkey';
 
 const SecurityVerification = ({ route }) => {
   const dispatch = useAppDispatch();
@@ -24,6 +25,30 @@ const SecurityVerification = ({ route }) => {
   const targetParams = params.targetParams || {};
   const purpose = params.purpose || 'security_verification';
   const skipDirectVerification = params.skipDirectVerification || false; // true if next screen handles final combined verification
+
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [passkeys, setPasskeys] = useState([]);
+
+  useEffect(() => {
+    try {
+      const supported = Passkey.isSupported();
+      setPasskeySupported(!!supported);
+    } catch {
+      setPasskeySupported(false);
+    }
+
+    const fetchPasskeys = async () => {
+      try {
+        const res = await dispatch(getPasskeyList());
+        if (res?.success) {
+          setPasskeys(res.data?.passkeys || []);
+        }
+      } catch (err) {
+        console.warn('[SecurityVerification] Error fetching passkeys:', err);
+      }
+    };
+    fetchPasskeys();
+  }, [dispatch]);
 
   const userData = useAppSelector((state) => state.auth.userData);
   const emailId = userData?.emailId || userData?.email || '';
@@ -125,8 +150,15 @@ const SecurityVerification = ({ route }) => {
         description: 'Verify using your Google Authenticator 2FA code',
       });
     }
+    if (passkeySupported && passkeys.length > 0 && (allowed.length === 0 || allowed.includes('passkey'))) {
+      list.push({
+        value: 'passkey',
+        label: 'Passkey Verification',
+        description: 'Verify using your device biometric passkey',
+      });
+    }
     return list;
-  }, [hasEmail, hasMobile, hasGoogleAuth, displayEmail, displayPhone, params.verifyMethods]);
+  }, [hasEmail, hasMobile, hasGoogleAuth, displayEmail, displayPhone, params.verifyMethods, passkeySupported, passkeys]);
 
   // Auto-send OTP when active methods change
   useEffect(() => {
@@ -336,6 +368,7 @@ const SecurityVerification = ({ route }) => {
                   onChangeText={(v) => setSmsCode(v.replace(/\D/g, '').slice(0, 6))}
                   keyboardType="number-pad"
                   maxLength={6}
+                  cursorColor={colors.black}
                 />
                 <TouchableOpacity onPress={handleSendSmsOtp} disabled={smsCountdown > 0} style={styles.actionBtn}>
                   <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: smsCountdown > 0 ? '#999' : colors.orangeTheme }}>
@@ -401,6 +434,7 @@ const SecurityVerification = ({ route }) => {
                   onChangeText={(v) => setTotpCode(v.replace(/\D/g, '').slice(0, 6))}
                   keyboardType="number-pad"
                   maxLength={6}
+                  cursorColor={colors.black}
                 />
               </View>
               <View style={styles.inputFooter}>
@@ -453,7 +487,32 @@ const SecurityVerification = ({ route }) => {
         sheetRef={sheetRef}
         options={availableOptions}
         selectedValue={activeMethods[0]}
-        onSelect={(val) => {
+        onSelect={async (val) => {
+          if (val === 'passkey') {
+            sheetRef.current?.close();
+            const signId = emailId || profileMobile;
+            if (!signId) {
+              showError('No verification identifier found');
+              return;
+            }
+            try {
+              setIsSubmitting(true);
+              const result = await dispatch(verifySecurityPasskey(signId));
+              if (result) {
+                showSuccess('Verification successful');
+                NavigationService.navigate(targetScreen, {
+                  ...targetParams,
+                  passkeyVerified: true,
+                });
+              }
+            } catch (err) {
+              console.warn('[SecurityVerification] Passkey verification failed:', err);
+            } finally {
+              setIsSubmitting(false);
+            }
+            return;
+          }
+
           // Switch active verification method
           setActiveMethods([val]);
           // Reset entered input fields
