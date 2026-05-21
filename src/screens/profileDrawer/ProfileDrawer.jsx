@@ -121,11 +121,14 @@ import {
   TRADE_SCREEN,
 } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
+import { getUserProfile } from "../../actions/accountActions";
+import { useFocusEffect } from "@react-navigation/native";
+import { appOperation } from "../../appOperation";
+import { BASE_URL } from "../../helper/Constants";
 import { colors, darkTheme } from "../../theme/colors";
 import { fontFamilySemiBold } from "../../theme/typography";
 import { useTheme } from "../../hooks/useTheme";
 import { useDispatch } from "react-redux";
-import { getUserProfile } from "../../actions/accountActions";
 import { logoutAction } from "../../actions/authActions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setTheme } from "../../slices/authSlice";
@@ -742,6 +745,39 @@ const ProfileDrawer = () => {
     dispatch(getUserProfile());
   }, [refresh]);
 
+  const [serverAvatar, setServerAvatar] = useState(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      const fetchAvatar = async () => {
+        try {
+          const resAvatar = await appOperation.customer.get_avatar_setting();
+          if (active && resAvatar?.success) {
+            const fetchedAvatar = resAvatar.data?.avatar || resAvatar.data?.data?.avatar;
+            if (fetchedAvatar) setServerAvatar(fetchedAvatar);
+          }
+        } catch (err) {
+          // ignore
+        }
+      };
+      fetchAvatar();
+      return () => { active = false; };
+    }, [])
+  );
+
+  const getFullAvatarUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('uploads/')) {
+      const baseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+      return `${baseUrl}${url}`;
+    }
+    return url;
+  };
+
+  const finalAvatarUri = getFullAvatarUrl(serverAvatar || userData?.profilepicture);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       Animated.parallel([
@@ -825,23 +861,29 @@ const ProfileDrawer = () => {
               bottom: 10
             }}
           >
-            {/* Forcing gradient for now as URL is not ready */}
-            <LinearGradient
-              colors={KYC_AVATAR_GRADIENT}
-              locations={KYC_AVATAR_GRADIENT_LOCATIONS}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                width: 56,
-                height: 56,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 18 }}>
-                {getInitials(userData)}
-              </AppText>
-            </LinearGradient>
+            {finalAvatarUri ? (
+              <FastImage 
+                source={{ uri: finalAvatarUri }} 
+                style={{ width: 56, height: 56, borderRadius: 28 }} 
+              />
+            ) : (
+              <LinearGradient
+                colors={KYC_AVATAR_GRADIENT}
+                locations={KYC_AVATAR_GRADIENT_LOCATIONS}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  width: 56,
+                  height: 56,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 18 }}>
+                  {getInitials(userData)}
+                </AppText>
+              </LinearGradient>
+            )}
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Animated.View style={{ opacity: emailTextOpacity, transform: [{ translateY: emailTextTranslateY }] }}>

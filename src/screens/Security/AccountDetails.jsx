@@ -40,6 +40,8 @@ import KycStepHeader from "./KycStepHeader";
 import { copyText } from "../../helper/utility";
 import { useFocusEffect, useRoute, useNavigation } from "@react-navigation/native";
 import { appOperation } from "../../appOperation";
+import EditAvatarModal from "../account/EditAvatarModal";
+import { BASE_URL } from "../../helper/Constants";
 
 const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
 const KYC_AVATAR_GRADIENT_LOCATIONS = [0, 0.5, 1];
@@ -135,7 +137,7 @@ const AccountDetails = () => {
   React.useEffect(() => {
     if (route.params?.pendingDisable) {
       const { pendingDisable, emailOtp, smsOtp, tofaCode } = route.params;
-      
+
       // Clear the params so they don't run again
       navigation.setParams({
         pendingDisable: null,
@@ -195,22 +197,29 @@ const AccountDetails = () => {
 
 
   const [serverNickname, setServerNickname] = useState(null);
+  const [serverAvatar, setServerAvatar] = useState(null);
+  const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-      const fetchNick = async () => {
+      const fetchNickAndAvatar = async () => {
         try {
           const res = await appOperation.customer.get_nickname_setting();
           if (active && res?.success) {
             const fetched = res.data?.nickname || res.data?.data?.nickname;
             if (fetched) setServerNickname(fetched);
           }
+          const resAvatar = await appOperation.customer.get_avatar_setting();
+          if (active && resAvatar?.success) {
+             const fetchedAvatar = resAvatar.data?.avatar || resAvatar.data?.data?.avatar;
+             if (fetchedAvatar) setServerAvatar(fetchedAvatar);
+          }
         } catch (err) {
           // ignore
         }
       };
-      fetchNick();
+      fetchNickAndAvatar();
       return () => { active = false; };
     }, [])
   );
@@ -293,6 +302,24 @@ const AccountDetails = () => {
     </TouchableOpacity>
   );
 
+  const getFullAvatarUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('uploads/')) {
+      const baseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+      return `${baseUrl}${url}`;
+    }
+    return url;
+  };
+
+  const finalAvatarUri = getFullAvatarUrl(serverAvatar || userData?.profilepicture);
+
+  console.log("==== AVATAR RENDER DATA ====", {
+    serverAvatar,
+    userDataProfilePic: userData?.profilepicture,
+    finalAvatarUri
+  });
+
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
       <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} onSwitchProfilePress={showComingSoonToast} />
@@ -311,21 +338,27 @@ const AccountDetails = () => {
           }]}
         >
           <View style={styles.avatarContainer}>
-            {/* Forcing gradient for now as URL is not ready */}
-            <LinearGradient
-              colors={KYC_AVATAR_GRADIENT}
-              locations={KYC_AVATAR_GRADIENT_LOCATIONS}
-              style={styles.avatar}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 20 }}>
-                {initials}
-              </AppText>
-            </LinearGradient>
-            {/* <TouchableOpacity style={styles.editBadge}>
+            {finalAvatarUri ? (
+              <FastImage 
+                source={{ uri: finalAvatarUri }} 
+                style={styles.avatar} 
+              />
+            ) : (
+              <LinearGradient
+                colors={KYC_AVATAR_GRADIENT}
+                locations={KYC_AVATAR_GRADIENT_LOCATIONS}
+                style={styles.avatar}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 20 }}>
+                  {initials}
+                </AppText>
+              </LinearGradient>
+            )}
+            <TouchableOpacity style={styles.editBadge} onPress={() => setIsAvatarModalVisible(true)}>
               <FastImage source={editIcon} style={{ width: 12, height: 12 }} tintColor={colors.black} />
-            </TouchableOpacity> */}
+            </TouchableOpacity>
           </View>
           <View style={{ bottom: 8 }}>
             <AppText type={TWENTY} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
@@ -373,20 +406,20 @@ const AccountDetails = () => {
               <MenuItem label="Identity Verification" badge="Unverified" />
               <MenuItem label="VIP Privilege" badge={`VIP ${userData?.vipLevel || 0}`} />
               <MenuItem label="Personal Page" />
-              <MenuItem 
-                label="Nickname" 
-                value={displayName} 
+              <MenuItem
+                label="Nickname"
+                value={displayName}
                 onPress={() => NavigationService.navigate(routes.NICKNAME_SETTINGS_SCREEN, { currentNickname: displayName })}
               />
               <MenuItem label="Username" value={displayName} />
               <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
               <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
-              <MenuItem 
-                label="Notification Setting" 
-                onPress={() => NavigationService.navigate(routes.NOTIFICATION_SETTINGS_SCREEN)} 
+              <MenuItem
+                label="Notification Setting"
+                onPress={() => NavigationService.navigate(routes.NOTIFICATION_SETTINGS_SCREEN)}
               />
-              <MenuItem 
-                label="Direct Message Management" 
+              <MenuItem
+                label="Direct Message Management"
                 onPress={() => NavigationService.navigate(routes.DIRECT_MESSAGE_MANAGEMENT_SCREEN)}
               />
               <MenuItem label="Switch Account" />
@@ -556,14 +589,14 @@ const AccountDetails = () => {
                   Account Management
                 </AppText>
               </View>
-              <MenuItem 
-                label="Disable Account" 
-                value="Not configured" 
-                onPress={() => NavigationService.navigate(routes.DISABLE_ACCOUNT_SCREEN)} 
+              <MenuItem
+                label="Disable Account"
+                value="Not configured"
+                onPress={() => NavigationService.navigate(routes.DISABLE_ACCOUNT_SCREEN)}
               />
-              <MenuItem 
-                label="Close Account" 
-                onPress={() => NavigationService.navigate(routes.CLOSE_ACCOUNT_REASON_SCREEN)} 
+              <MenuItem
+                label="Close Account"
+                onPress={() => NavigationService.navigate(routes.CLOSE_ACCOUNT_REASON_SCREEN)}
               />
 
               {/* Other Settings */}
@@ -572,9 +605,9 @@ const AccountDetails = () => {
                   Other Settings
                 </AppText>
               </View>
-              <MenuItem 
-                label="Third Party Account Access Management" 
-                onPress={() => NavigationService.navigate(routes.THIRD_PARTY_ACCOUNT_ACCESS_SCREEN)} 
+              <MenuItem
+                label="Third Party Account Access Management"
+                onPress={() => NavigationService.navigate(routes.THIRD_PARTY_ACCOUNT_ACCESS_SCREEN)}
               />
             </>
           )}
@@ -671,6 +704,14 @@ const AccountDetails = () => {
         </Animated.View>
       </Modal>
 
+      <EditAvatarModal 
+        isVisible={isAvatarModalVisible} 
+        onClose={() => setIsAvatarModalVisible(false)} 
+        currentAvatarUrl={serverAvatar || userData?.profilepicture}
+        onAvatarCommitted={(path) => {
+           if (path) setServerAvatar(path);
+        }}
+      />
     </AppSafeAreaView>
   );
 };
@@ -684,15 +725,16 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
     position: "relative",
+    width: 65,
+    height: 65,
+    marginVertical: 16,
+    marginRight: 16,
   },
   avatar: {
     width: 65,
     height: 65,
-    borderRadius: 40,
+    borderRadius: 32.5,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -731,7 +773,7 @@ const styles = StyleSheet.create({
   editBadge: {
     position: "absolute",
     bottom: 0,
-    right: 0,
+    right: -4,
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -740,6 +782,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   tabBar: {
     flexDirection: "row",

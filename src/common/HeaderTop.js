@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import FastImage from "react-native-fast-image";
 import {
@@ -11,30 +11,13 @@ import {
 import NavigationService from "../navigation/NavigationService";
 import { NOTIFICATION_SCREEN } from "../navigation/routes";
 import { useAppSelector } from "../store/hooks";
-import { IMAGE_BASE_URL } from "../helper/Constants";
+import { IMAGE_BASE_URL, BASE_URL } from "../helper/Constants";
 import { useTheme } from "../hooks/useTheme";
 import { AppText, BOLD, EIGHTEEN, SIXTEEN } from "./AppText";
 import { colors, lightTheme } from "../theme/colors";
+import { appOperation } from "../appOperation";
+import { useFocusEffect } from "@react-navigation/native";
 
-/** Resolves profile path from API (relative path, full URL, or alternate field names). */
-function resolveProfileSource(userData, fallback) {
-  const raw =
-    userData?.profilepicture ??
-    userData?.profilePicture ??
-    userData?.avatar ??
-    userData?.profile_image;
-  if (raw == null || typeof raw !== "string") return fallback;
-  const trimmed = raw.trim();
-  if (!trimmed) return fallback;
-  if (/^https?:\/\//i.test(trimmed)) {
-    return { uri: trimmed };
-  }
-  const base = IMAGE_BASE_URL.endsWith("/")
-    ? IMAGE_BASE_URL.slice(0, -1)
-    : IMAGE_BASE_URL;
-  const path = trimmed.replace(/^\//, "");
-  return { uri: `${base}/${path}` };
-}
 
 const HeaderTop = () => {
   const { colors: themeColors, isDark } = useTheme();
@@ -42,12 +25,38 @@ const HeaderTop = () => {
   const iconTint = isDark ? themeColors.text : "#000000";
   const titleColor = isDark ? themeColors.text : "#000000";
 
-  const avatarSource = useMemo(
-    () => resolveProfileSource(userData, defaultPic),
-    [userData],
+  const [serverAvatar, setServerAvatar] = useState(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      const fetchAvatar = async () => {
+        try {
+          const resAvatar = await appOperation.customer.get_avatar_setting();
+          if (active && resAvatar?.success) {
+            const fetchedAvatar = resAvatar.data?.avatar || resAvatar.data?.data?.avatar;
+            if (fetchedAvatar) setServerAvatar(fetchedAvatar);
+          }
+        } catch (err) {
+          // ignore
+        }
+      };
+      fetchAvatar();
+      return () => { active = false; };
+    }, [])
   );
 
+  const getFullAvatarUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('uploads/')) {
+      const baseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+      return `${baseUrl}${url}`;
+    }
+    return url;
+  };
 
+  const finalAvatarUri = getFullAvatarUrl(serverAvatar || userData?.profilepicture);
   return (
     <View style={[styles.headerBar,]}>
       <View style={styles.sideSlot}>
@@ -56,8 +65,7 @@ const HeaderTop = () => {
           style={[styles.avatarContainer, { borderColor: themeColors.border }]}
         >
           <FastImage
-            source={defaultPic}
-            // defaultSource={defaultPic}
+            source={finalAvatarUri ? { uri: finalAvatarUri } : defaultPic}
             resizeMode="cover"
             style={styles.avatar}
           />

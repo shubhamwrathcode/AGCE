@@ -50,6 +50,12 @@ export default (appOperation: AppOperation) => ({
     appOperation.get('setting/get-nickname', undefined, undefined, CUSTOMER_TYPE),
   edit_nickname_setting: (data: any) =>
     appOperation.post('setting/edit-nickname', data, CUSTOMER_TYPE),
+  get_avatar_setting: () =>
+    appOperation.get('setting/get-avatar', undefined, undefined, CUSTOMER_TYPE),
+  change_avatar_setting: (data: any) =>
+    appOperation.post('setting/change-avatar', data, CUSTOMER_TYPE, {
+      headers: { "Content-Type": "multipart/form-data" }
+    }),
   edit_email: (data: any) =>
     appOperation.put('user/edit-email', data, CUSTOMER_TYPE),
   edit_phone: (data: any) =>
