@@ -106,7 +106,7 @@ const AccountConnections = () => {
                 {
                   backgroundColor: googleConnected
                     ? (isDark ? '#2A2A2E' : '#F5F5F7')
-                    : colors.orangeTheme
+                    : colors.black
                 }
               ]}
             >
@@ -116,7 +116,7 @@ const AccountConnections = () => {
                 style={{
                   color: googleConnected
                     ? (isDark ? '#FFFFFF' : '#000000')
-                    : '#000000'
+                    : 'white'
                 }}
               >
                 {googleConnected ? 'Disconnect' : 'Connect'}
@@ -157,7 +157,7 @@ const AccountConnections = () => {
                 {
                   backgroundColor: appleConnected
                     ? (isDark ? '#2A2A2E' : '#F5F5F7')
-                    : colors.orangeTheme
+                    : colors.black
                 }
               ]}
             >
@@ -167,7 +167,7 @@ const AccountConnections = () => {
                 style={{
                   color: appleConnected
                     ? (isDark ? '#FFFFFF' : '#000000')
-                    : '#000000'
+                    : '#fff'
                 }}
               >
                 {appleConnected ? 'Disconnect' : 'Connect'}
