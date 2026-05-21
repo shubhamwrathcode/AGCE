@@ -13,13 +13,13 @@ import {
 import RBSheet from "react-native-raw-bottom-sheet";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { clearPending2FA } from "../../slices/authSlice";
-import { sendLoginOtp, verifyUser } from "../../actions/authActions";
+import { sendLoginOtp, verifyUser, verifyPasskeyLogin } from "../../actions/authActions";
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN } from "../../navigation/routes";
 import { AppText, AppSafeAreaView, Button, BOLD, FOURTEEN as FOURTEEN_CONST, SEMI_BOLD, THIRTEEN, EIGHTEEN, SIXTEEN, MEDIUM, TWENTY_SIX, TWELVE, FOURTEEN } from "../../shared";
 import { colors } from "../../theme/colors";
 import FastImage from "react-native-fast-image";
-import { closeIcon, EMAIL, PHONE, KEY_ICON, pasteImg, SHARE_NEW_ICON } from "../../helper/ImageAssets";
+import { closeIcon, EMAIL, PHONE, KEY_ICON, pasteImg, SHARE_NEW_ICON, passkey_login } from "../../helper/ImageAssets";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { OtpInput6Digit } from "../../shared";
 import { showError } from "../../helper/logger";
@@ -31,8 +31,9 @@ import { AuthHeader } from "../../shared/components";
 const getMethodIcon = (type: number) => {
   switch (type) {
     case 1: return EMAIL;
-    case 2: return "";
+    case 2: return KEY_ICON;
     case 3: return PHONE;
+    case 4: return passkey_login;
     default: return "";
   }
 };
@@ -52,20 +53,14 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
   const getFirstMethod = () => {
     if (!pending2FA) return 1;
-    const baseMethods = (pending2FA.availableMethods ?? []).filter((m: any) => m.type !== 4);
+    const baseMethods = pending2FA.availableMethods ?? [];
     const has = (t: number) => baseMethods.some((m: any) => m.type === t);
-    const loginSignId = (pending2FA.loginSignId ?? "").trim();
-    const loggedInWithEmail = loginSignId.includes("@");
 
-    if (loggedInWithEmail && has(1)) return 1;
-    if (!loggedInWithEmail && loginSignId && has(3)) return 3;
-
-    const dm = Number(pending2FA.defaultMethod);
-    if (Number.isFinite(dm) && dm !== 4 && has(dm)) return dm;
-
+    if (has(4)) return 4;
+    if (has(2)) return 2;
     if (has(1)) return 1;
     if (has(3)) return 3;
-    if (has(2)) return 2;
+
     return baseMethods[0]?.type ?? 1;
   };
 
@@ -161,6 +156,15 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     }
   }, [resendTimer]);
 
+  useEffect(() => {
+    if (selectedAuthMethod === 4 && pending2FA?.loginSignId) {
+      const triggerPasskey = async () => {
+        await dispatch(verifyPasskeyLogin(pending2FA.loginSignId, false));
+      };
+      triggerPasskey();
+    }
+  }, [selectedAuthMethod, pending2FA]);
+
   const getVerifySignId = (): string => {
     if (!pending2FA) return "";
     const { loginSignId: signId, availableMethods: methods } = pending2FA;
@@ -180,6 +184,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
       case 1: return "Email Verification";
       case 2: return "Authenticator Verification";
       case 3: return "Phone Verification";
+      case 4: return "Passkey Authentication";
       default: return "Verification";
     }
   };
@@ -190,6 +195,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     if (selectedAuthMethod === 1) return `Enter the 6-digit verification code sent to ${masked || "your email"}.`;
     if (selectedAuthMethod === 2) return "Enter the 6-digit code from your authenticator app.";
     if (selectedAuthMethod === 3) return `Enter the 6-digit verification code sent to ${masked || "your phone"}.`;
+    if (selectedAuthMethod === 4) return "Authenticate using Face ID, Touch ID, or your device biometrics.";
     return "Enter your verification code.";
   };
 
@@ -198,6 +204,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
       case 1: return "Email Verification Code";
       case 2: return "Authenticator Code";
       case 3: return "Phone Verification Code";
+      case 4: return "Passkey Authentication";
       default: return "Verification Code";
     }
   };
@@ -272,7 +279,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     return "****";
   };
 
-  const methodsForOptions = (pending2FA?.availableMethods ?? []).filter((m: any) => m.type !== 4);
+  const methodsForOptions = pending2FA?.availableMethods ?? [];
 
   const alternativeMethods = (methodsForOptions ?? []).filter((m: any) => m.type !== selectedAuthMethod);
   const hasAlternative = alternativeMethods.length > 0;
@@ -313,74 +320,76 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             </AppText>
           </>
 
-          <>
-            <OtpInput6Digit
-              ref={otpInputRef}
-              value={otpCode}
-              onChangeText={(v: string) => {
-                if (otpError) setOtpError(false);
-                setOtpCode(v);
-              }}
-              isDark={isDark}
-              hasError={otpError}
-            />
-            {selectedAuthMethod !== 2 ? (
-              <View style={styles.otpLinksRow}>
-                <TouchableOpacityView
-                  onPress={resendTimer > 0 ? undefined : handleGetOtp}
-                  disabled={resendTimer > 0}
-                >
-                  <AppText
-                    type={FOURTEEN}
-                    weight={MEDIUM}
-                    style={[
-                      { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
-                    ]}
+          {selectedAuthMethod === 4 ? (
+            <View style={styles.passkeyContainer}>
+              <FastImage
+                source={passkey_login}
+                style={styles.passkeyIcon}
+                resizeMode="contain"
+                tintColor={themeColors.text}
+              />
+              <AppText type={FOURTEEN} style={[styles.passkeyHint, { color: themeColors.secondaryText }]}>
+                Use your registered biometrics (Face ID, Touch ID, or fingerprint) to authenticate.
+              </AppText>
+              <Button
+                children="Authenticate with Passkey"
+                disabled={isLoading}
+                onPress={() => dispatch(verifyPasskeyLogin(pending2FA.loginSignId, false))}
+                loading={isLoading}
+                containerStyle={styles.submitBtn}
+              />
+            </View>
+          ) : (
+            <>
+              <OtpInput6Digit
+                ref={otpInputRef}
+                value={otpCode}
+                onChangeText={(v: string) => {
+                  if (otpError) setOtpError(false);
+                  setOtpCode(v);
+                }}
+                isDark={isDark}
+                hasError={otpError}
+              />
+              {selectedAuthMethod !== 2 ? (
+                <View style={styles.otpLinksRow}>
+                  <TouchableOpacityView
+                    onPress={resendTimer > 0 ? undefined : handleGetOtp}
+                    disabled={resendTimer > 0}
                   >
-                    {resendTimer > 0 ? `Resend (${resendTimer}s)` : "Resend"}
-                  </AppText>
-                </TouchableOpacityView>
+                    <AppText
+                      type={FOURTEEN}
+                      weight={MEDIUM}
+                      style={[
+                        { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
+                      ]}
+                    >
+                      {resendTimer > 0 ? `Resend (${resendTimer}s)` : "Resend"}
+                    </AppText>
+                  </TouchableOpacityView>
 
-                <TouchableOpacityView onPress={handlePasteOtp} style={styles.pasteBtn}>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
-                    Paste
-                  </AppText>
-                  <FastImage
-                    source={pasteImg}
-                    resizeMode="contain"
-                    style={{ width: 16, height: 16 }}
-                    tintColor={themeColors.text}
-                  />
-                </TouchableOpacityView>
-              </View>
-            ) : null}
-            <Button
-              children="Next"
-              disabled={false}
-              onPress={handleSubmit}
-              loading={showButtonLoading}
-              containerStyle={styles.submitBtn}
-            />
-
-            {/* {selectedAuthMethod !== 2 ? (
-              <TouchableOpacityView
-                style={styles.didntReceiveWrap}
-                onPress={resendTimer > 0 ? undefined : handleGetOtp}
-                disabled={resendTimer > 0}
-              >
-                <AppText
-                  type={FOURTEEN_CONST}
-                  weight={SEMI_BOLD}
-                  style={[
-                    styles.underlineText,
-                    { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
-                  ]}
-                >
-                  Didn't receive the code?
-                </AppText>
-              </TouchableOpacityView>
-            ) : null} */}
-          </>
+                  <TouchableOpacityView onPress={handlePasteOtp} style={styles.pasteBtn}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+                      Paste
+                    </AppText>
+                    <FastImage
+                      source={pasteImg}
+                      resizeMode="contain"
+                      style={{ width: 16, height: 16 }}
+                      tintColor={themeColors.text}
+                    />
+                  </TouchableOpacityView>
+                </View>
+              ) : null}
+              <Button
+                children="Next"
+                disabled={false}
+                onPress={handleSubmit}
+                loading={showButtonLoading}
+                containerStyle={styles.submitBtn}
+              />
+            </>
+          )}
 
           {hasAlternative ? (
             <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.switchRow}>
@@ -526,6 +535,22 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
+  },
+  passkeyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+    width: "100%",
+  },
+  passkeyIcon: {
+    width: 80,
+    height: 80,
+    marginBottom: 20,
+  },
+  passkeyHint: {
+    textAlign: "center",
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
 });
 

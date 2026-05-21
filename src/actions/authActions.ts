@@ -282,26 +282,53 @@ function loginFailMessage(response: any): string {
  * Post-login 2FA screen: do not use passkey (type 4) on the client. Prefer email / SMS when the
  * identifier matches, then any other non-passkey method the backend lists.
  */
+/**
+ * Normalize available methods from response data and inject Passkey (type 4)
+ * if it's enabled on the account and supported by the device.
+ */
+const getNormalizedAvailableMethods = (d: any) => {
+  let methods = d?.availableMethods ?? [];
+
+  // Normalize method types to numbers
+  methods = methods.map((m: any) => {
+    const type = Number(m?.type ?? m?.verificationType ?? m?.methodType);
+    return {
+      ...m,
+      type,
+    };
+  });
+
+  if (d?.hasPasskey && Passkey.isSupported()) {
+    const passkeyMethod = {
+      type: 4,
+      name: 'Passkey',
+      label: 'Passkey',
+      description: 'Use Face ID, Touch ID, or biometrics',
+      maskedValue: 'Biometric authentication'
+    };
+    // Put at the beginning, avoiding duplicates
+    methods = [passkeyMethod, ...methods.filter((m: any) => m.type !== 4)];
+  }
+  return methods;
+};
+
+/**
+ * Resolve the default 2FA method following strict priority order:
+ * Passkey (4) -> Google Authenticator (2) -> Email OTP (1) -> Phone OTP (3)
+ */
 function resolveLogin2FADefaultMethod(
-  methods: any[] | undefined,
-  backendPreferred: number | undefined,
+  methods: any[],
+  backendPreferred: any,
   loginIdentifier: string
 ): number {
-  const list = Array.isArray(methods) ? methods.filter((m: any) => Number(m?.type) !== 4) : [];
-  const has = (t: number) => list.some((m: any) => Number(m?.type) === t);
-  const id = String(loginIdentifier ?? '').trim();
-  const loggedInWithEmail = id.includes('@');
+  const has = (t: number) => methods.some((m: any) => m.type === t);
 
-  if (loggedInWithEmail && has(1)) return 1;
-  if (!loggedInWithEmail && id && has(3)) return 3;
-
-  const bd = Number(backendPreferred);
-  if (Number.isFinite(bd) && bd !== 4 && has(bd)) return bd;
-
+  if (has(4)) return 4;
+  if (has(2)) return 2;
   if (has(1)) return 1;
   if (has(3)) return 3;
-  if (has(2)) return 2;
-  return Number(list[0]?.type) && Number(list[0]?.type) !== 4 ? Number(list[0]?.type) : 1;
+
+  return methods[0]?.type ?? 1;
 }
 
 export type LoginThunkResult = {
@@ -354,7 +381,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
       NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
     } else if (webShape) {
       dispatch(setUserData(d));
-      const methods = d?.availableMethods ?? [];
+      const methods = getNormalizedAvailableMethods(d);
       dispatch(setPending2FA({
         loginSignId: d?.signId ?? data?.email_or_phone,
         availableMethods: methods,
@@ -364,7 +391,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
     } else {
       dispatch(setUserData(d));
-      const methods = d?.availableMethods ?? [];
+      const methods = getNormalizedAvailableMethods(d);
       dispatch(setPending2FA({
         loginSignId: data?.email_or_phone,
         availableMethods: methods,
@@ -421,7 +448,7 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
       } else if (webShape || (d?.['2fa'] && d?.['2fa'] !== 0)) {
         dispatch(setUserData(d));
         const signId = d?.signId ?? d?.emailId ?? d?.mobileNumber ?? '';
-        const methods = d?.availableMethods ?? [];
+        const methods = getNormalizedAvailableMethods(d);
         const loginHint = String(d?.emailId || d?.mobileNumber || signId || '');
         dispatch(setPending2FA({
           loginSignId: signId,
