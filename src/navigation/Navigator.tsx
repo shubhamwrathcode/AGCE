@@ -57,6 +57,7 @@ import CoinDetailChart from "../screens/home/CoinDetailChart";
 import CoinTransactionHistory from "../screens/home/CoinTransactionHistory";
 import TwoFactorQr from "../screens/account/TwoFactorQr";
 import AddPhoneNumberScreen from "../screens/Security/PhoneVerification/AddPhoneNumberScreen";
+import DirectMessageManagement from "../screens/account/DirectMessageManagement";
 import PhoneSettingsScreen from "../screens/Security/PhoneVerification/PhoneSettingsScreen";
 import ChangePhoneNumberScreen from "../screens/Security/PhoneVerification/ChangePhoneNumberScreen";
 import UnlinkPhoneNumberScreen from "../screens/Security/PhoneVerification/UnlinkPhoneNumberScreen";
@@ -321,6 +322,11 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.NOTIFICATION_SETTINGS_SCREEN}
         component={NotificationSettings}
+      />
+      <Stack.Screen
+        name={routes.DIRECT_MESSAGE_MANAGEMENT_SCREEN}
+        component={DirectMessageManagement}
+        options={{ headerShown: false }}
       />
       <Stack.Screen name={routes.SETTINGS_SCREEN} component={Settings} />
       <Stack.Screen

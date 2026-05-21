@@ -361,6 +361,10 @@ const AccountDetails = () => {
                 label="Notification Setting" 
                 onPress={() => NavigationService.navigate(routes.NOTIFICATION_SETTINGS_SCREEN)} 
               />
+              <MenuItem 
+                label="Direct Message Management" 
+                onPress={() => NavigationService.navigate(routes.DIRECT_MESSAGE_MANAGEMENT_SCREEN)}
+              />
               <MenuItem label="Switch Account" />
               <MenuItem
                 label="Log Out"

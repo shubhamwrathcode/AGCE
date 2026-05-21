@@ -42,6 +42,10 @@ export default (appOperation: AppOperation) => ({
     appOperation.get('admin/banner_list', undefined, undefined, CUSTOMER_TYPE),
   get_profile: () =>
     appOperation.get(`user/profile`, undefined, undefined, CUSTOMER_TYPE),
+  get_alert_settings_setting: () =>
+    appOperation.get('setting/get-alert-settings', undefined, undefined, CUSTOMER_TYPE),
+  update_alert_settings_setting: (data: any) =>
+    appOperation.post('setting/update-alert-settings', data, CUSTOMER_TYPE),
   edit_email: (data: any) =>
     appOperation.put('user/edit-email', data, CUSTOMER_TYPE),
   edit_phone: (data: any) =>
