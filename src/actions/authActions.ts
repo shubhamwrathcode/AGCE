@@ -593,11 +593,8 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
 const maybeBase64ToBase64Url = (s: string) => {
   const raw = String(s || '').trim();
   if (!raw) return raw;
-  if (raw.includes('+') || raw.includes('/')) {
-    // base64 -> base64url (keep padding to preserve bytes + server quirks)
-    return raw.replace(/\+/g, '-').replace(/\//g, '_');
-  }
-  return raw; // already base64url-ish
+  // base64 -> base64url and remove padding
+  return raw.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 };
 
 const isRpIdMismatchForAndroid = (rpIdFromServer: string) => {
@@ -609,16 +606,16 @@ const isRpIdMismatchForAndroid = (rpIdFromServer: string) => {
 };
 
 /** Passkey login using device biometrics (fingerprint/face). Same flow as web: get options → authenticate → verify → complete. */
-export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispatch) => {
+export const verifyPasskeyLogin = (signId: string, silent = false) => async (dispatch: AppDispatch) => {
   try {
     if (!Passkey.isSupported()) {
-      showError('Passkeys are not supported on this device');
+      if (!silent) showError('Passkeys are not supported on this device');
       return false;
     }
     dispatch(setLoading(true));
     const optionsRes: any = await appOperation.guest.passkeyGetAuthOptions(signId);
     if (!optionsRes?.success || !optionsRes?.data) {
-      showError(optionsRes?.message || 'Failed to get passkey options');
+      if (!silent) showError(optionsRes?.message || 'Failed to get passkey options');
       return false;
     }
     const opts = optionsRes.data;
@@ -631,7 +628,7 @@ export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispat
         server: rpIdFromServer,
         configured: PASSKEY_RP_ID,
       });
-      showError('Passkey is not configured for this app. Please sign in with password.');
+      if (!silent) showError('Passkey is not configured for this app. Please sign in with password.');
       return false;
     }
     const rpId =
@@ -644,11 +641,16 @@ export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispat
       timeout: opts.timeout,
       userVerification: opts.userVerification || 'required',
     };
-    if (Platform.OS !== 'android' && opts.allowCredentials?.length) {
-      request.allowCredentials = opts.allowCredentials.map((c: any) => ({
-        type: c.type || 'public-key',
-        id: typeof c.id === 'string' ? maybeBase64ToBase64Url(c.id) : c.id,
-      }));
+    if (opts.allowCredentials?.length) {
+      request.allowCredentials = opts.allowCredentials.map((c: any) => {
+        const idToPass = c.id;
+        console.log('[Passkey][verifyPasskeyLogin] Mapping allowCredential:', { originalId: c.id, idToPass, transports: c.transports });
+        return {
+          type: c.type || 'public-key',
+          id: idToPass,
+          transports: c.transports || ['internal', 'hybrid'],
+        };
+      });
     }
     console.log('[Passkey][verifyPasskeyLogin] options', {
       signId,
@@ -678,16 +680,16 @@ export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispat
       });
       // Common native error when RP ID / associated domain doesn't match device/app configuration.
       if (/incoming request cannot be validated/i.test(msg)) {
-        showError(
+        if (!silent) showError(
           'Passkey is not available for this environment. Please sign in with password (or ask backend to use the correct RP ID).'
         );
       } else {
-        showError(e?.message || 'Passkey prompt failed');
+        if (!silent) showError(e?.message || 'Passkey prompt failed');
       }
       return false;
     }
     if (!credential) {
-      showError('Authentication was cancelled');
+      if (!silent) showError('Authentication was cancelled');
       return false;
     }
     console.log('[Passkey][verifyPasskeyLogin] credential acquired', {
@@ -697,12 +699,12 @@ export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispat
     const verifyRes: any = await appOperation.guest.passkeyVerifyAuth(signId, credential);
     if (!verifyRes?.success) {
       console.warn('[Passkey][verifyPasskeyLogin] verify failed', verifyRes);
-      showError(verifyRes?.message || 'Passkey verification failed');
+      if (!silent) showError(verifyRes?.message || 'Passkey verification failed');
       return false;
     }
     const completeRes: any = await appOperation.guest.completePasskeyLogin(signId, verifyRes.data || {});
     if (!completeRes?.success || !completeRes?.data?.token) {
-      showError(completeRes?.message || 'Login failed');
+      if (!silent) showError(completeRes?.message || 'Login failed');
       return false;
     }
     showSuccess(completeRes?.message ?? 'Login successful');
@@ -717,9 +719,9 @@ export const verifyPasskeyLogin = (signId: string) => async (dispatch: AppDispat
     logger(e);
     const msg = String(e?.message ?? e?.error ?? '');
     if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
-      showError('Authentication was cancelled. Try again or use another method.');
+      if (!silent) showError('Authentication was cancelled. Try again or use another method.');
     } else {
-      showError(e?.message || 'Passkey authentication failed');
+      if (!silent) showError(e?.message || 'Passkey authentication failed');
     }
     if (e?.code == 403) {
       appOperation.setCustomerToken(e?.token);
@@ -771,7 +773,7 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
     if (Platform.OS !== 'android' && opts.allowCredentials?.length) {
       request.allowCredentials = opts.allowCredentials.map((c: any) => ({
         type: c.type || 'public-key',
-        id: typeof c.id === 'string' ? maybeBase64ToBase64Url(c.id) : c.id,
+        id: c.id,
         transports: c.transports,
       }));
     }

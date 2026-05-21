@@ -1202,28 +1202,6 @@ export const verifySecurityPasskey = (signId: string, isDeletingPasskey: boolean
             console.warn('[Passkey][verifySecurityPasskey] Step 2 failed:', msg2);
 
             if (/NoCredentials|no.*credential|no viable credential/i.test(msg2)) {
-              if (isDeletingPasskey) {
-                console.warn('[Passkey][verifySecurityPasskey] Deletion/Verification bypass: skipping standard Passkey.get and falling back directly to biometric prompt...');
-                try {
-                  await NativeModules.Passkey.biometricAuth(
-                    'Verify your identity',
-                    'Authenticate using biometrics'
-                  );
-                  console.warn('[Passkey][verifySecurityPasskey] Biometric verification succeeded!');
-                  const fallbackUserId = store.getState()?.auth?.userData?.id || store.getState()?.auth?.userData?._id || 'BIOMETRIC_VERIFIED';
-                  return fallbackUserId;
-                } catch (bioErr: any) {
-                  const bioMsg = String(bioErr?.message ?? bioErr?.error ?? '');
-                  console.warn('[Passkey][verifySecurityPasskey] Biometric failed:', bioMsg);
-                  if (/cancelled|cancel/i.test(bioMsg)) {
-                    if (!silent) showError('Authentication was cancelled');
-                  } else {
-                    if (!silent) showError('Biometric verification failed');
-                  }
-                  return null;
-                }
-              }
-
               // Step 3: try standard Passkey.get for system prompt (Credential Manager bottom sheet in discoverable mode without allowCredentials)
               try {
                 console.warn('[Passkey][verifySecurityPasskey] Android Step 3: trying standard Passkey.get for system prompt (discoverable / no allowCredentials)');

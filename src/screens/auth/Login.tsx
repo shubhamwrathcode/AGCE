@@ -14,8 +14,10 @@ import {
   googleLogin,
   login,
   passkeyDiscoverableLogin,
+  verifyPasskeyLogin,
   type LoginThunkResult,
 } from "../../actions/authActions";
+import { Passkey } from "react-native-passkey";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import { checkValue, validateEmail } from "../../helper/utility";
@@ -292,7 +294,7 @@ const Login = (): JSX.Element => {
     setEmailSuggestListVisible(false);
   };
 
-  const onNext = () => {
+  const onNext = async () => {
     if (index === 0) {
       if (!validateEmailOrUsername(signUpId)) return;
     } else {
@@ -311,6 +313,17 @@ const Login = (): JSX.Element => {
       }
       if (digits !== signUpId) {
         setSignUpId(digits);
+      }
+    }
+    const normalizedId = getNormalizedLoginId();
+
+    // Web Parity: If Passkey is supported, attempt silent passkey login before showing password
+    if (Passkey.isSupported()) {
+      setIsPasskeySignInInProgress(true);
+      const passkeyResult = await dispatch(verifyPasskeyLogin(normalizedId, true));
+      setIsPasskeySignInInProgress(false);
+      if (passkeyResult) {
+        return; // Login completed via passkey
       }
     }
 
