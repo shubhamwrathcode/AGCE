@@ -180,11 +180,18 @@ const EnablePasskey = ({ route, navigation }) => {
           user: optionsResult.user,
           pubKeyCredParams: optionsResult.pubKeyCredParams || [
             { alg: -7, type: 'public-key' }, // ES256 (Most compatible)
-            { alg: -257, type: 'public-key' }, // RS256
+            { alg: -257, type: 'public-key' }, // RS64
           ],
+          // Force use of platform authenticator (device biometrics)
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            residentKey: 'required',
+            userVerification: 'required',
+            ...(optionsResult.authenticatorSelection || {}),
+          },
           timeout: 60000,
           attestation: 'none',
-          rpId: optionsResult.rpId || optionsResult.rp?.id,
+
         };
 
         console.warn('[Passkey] Native create request:', JSON.stringify(request, null, 2));
