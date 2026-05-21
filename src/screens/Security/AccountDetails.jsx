@@ -194,18 +194,38 @@ const AccountDetails = () => {
   };
 
 
+  const [serverNickname, setServerNickname] = useState(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      const fetchNick = async () => {
+        try {
+          const res = await appOperation.customer.get_nickname_setting();
+          if (active && res?.success) {
+            const fetched = res.data?.nickname || res.data?.data?.nickname;
+            if (fetched) setServerNickname(fetched);
+          }
+        } catch (err) {
+          // ignore
+        }
+      };
+      fetchNick();
+      return () => { active = false; };
+    }, [])
+  );
+
   const getResolvedName = () => {
+    if (serverNickname) return serverNickname;
     if (userData?.firstName && userData?.lastName) return `${userData.firstName} ${userData.lastName}`;
     if (userData?.first_name && userData?.last_name) return `${userData.first_name} ${userData.last_name}`;
     return userData?.firstName || userData?.first_name || userData?.display_name || userData?.userName || userData?.user_login || userData?.user_nicename || "User";
   };
 
-
   const displayName = getResolvedName();
 
-
-  function getInitials(userData) {
-    const name = userData?.display_name || userData?.user_login || userData?.user_nicename || userData?.first_name || userData?.firstName || "User";
+  function getInitials(userData, serverNick) {
+    const name = serverNick || userData?.display_name || userData?.user_login || userData?.user_nicename || userData?.first_name || userData?.firstName || "User";
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -213,7 +233,7 @@ const AccountDetails = () => {
     return name.slice(0, 2).toUpperCase();
   }
 
-  const initials = getInitials(userData);
+  const initials = getInitials(userData, serverNickname);
 
   const maskProfileEmail = (email) => {
     if (!email || typeof email !== "string") return "";
@@ -353,7 +373,11 @@ const AccountDetails = () => {
               <MenuItem label="Identity Verification" badge="Unverified" />
               <MenuItem label="VIP Privilege" badge={`VIP ${userData?.vipLevel || 0}`} />
               <MenuItem label="Personal Page" />
-              <MenuItem label="Nickname" value={displayName} />
+              <MenuItem 
+                label="Nickname" 
+                value={displayName} 
+                onPress={() => NavigationService.navigate(routes.NICKNAME_SETTINGS_SCREEN, { currentNickname: displayName })}
+              />
               <MenuItem label="Username" value={displayName} />
               <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
               <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
