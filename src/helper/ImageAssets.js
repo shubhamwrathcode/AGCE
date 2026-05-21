@@ -471,6 +471,8 @@ export const Polygon = require('../../assets/images/Polygon.png');
 export const disableAccount = require('../../assets/images/disableAccount.png');
 export const closeAccountBanner = require('../../assets/images/closeAccountBanner.png');
 export const fundpassword = require('../../assets/images/fundpassword.png');
+export const switchprofile = require('../../assets/images/switchprofile.png');
+
 
 
 

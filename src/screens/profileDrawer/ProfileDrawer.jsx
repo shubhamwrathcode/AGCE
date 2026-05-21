@@ -360,8 +360,8 @@ const getSecurityVerificationItems = (theme) => [
     id: "sv1",
     title: "Security",
     icon: theme !== "Dark" ? lockLight : lock,
-    onPress: showComingSoonToast,
-    // onPress: () => NavigationService.navigate(ACCOUNT_SCREEN),
+    // onPress: showComingSoonToast,
+    onPress: () => NavigationService.navigate(ACCOUNT_SCREEN),
   },
 ];
 

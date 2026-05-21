@@ -4,7 +4,7 @@ import FastImage from "react-native-fast-image";
 import LinearGradient from "react-native-linear-gradient";
 import { AppText, FIFTEEN, SEMI_BOLD, SIXTEEN, TWENTY, BOLD, TWELVE } from "../../shared";
 import { colors } from "../../theme/colors";
-import { back_ic, headPhoneIcon, helpicon, INFO } from "../../helper/ImageAssets";
+import { back_ic, headPhoneIcon, helpicon, INFO, switchprofile } from "../../helper/ImageAssets";
 import { useAppSelector } from "../../store/hooks";
 import NavigationService from "../../navigation/NavigationService";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
@@ -23,7 +23,7 @@ const getInitials = (name) => {
 const BACK_ICON_SIZE = 18;
 const INFO_ICON_SIZE = 22;
 
-const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupportPress }) => {
+const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupportPress, onSwitchProfilePress }) => {
   const isDark = theme === "Dark";
   const textColor = colors.black;
   const onPress = onBackPress ?? (() => NavigationService.goBack());
@@ -58,41 +58,50 @@ const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupp
       </AppText>
 
       <View style={styles.rightActions}>
-        <TouchableOpacity
-          onPress={onInfoPress}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 6 }}
-          style={styles.actionBtn}
-          disabled={!onInfoPress}
-        >
-          {onInfoPress ? (
+        {onSwitchProfilePress && (
+          <TouchableOpacity
+            onPress={onSwitchProfilePress}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.actionBtn}
+          >
+            <FastImage
+              source={switchprofile}
+              resizeMode="contain"
+              tintColor={textColor}
+              style={{ width: 24, height: 24 }}
+            />
+          </TouchableOpacity>
+        )}
+
+        {onInfoPress && (
+          <TouchableOpacity
+            onPress={onInfoPress}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 6 }}
+            style={styles.actionBtn}
+          >
             <FastImage
               source={INFO}
               resizeMode="contain"
               style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }}
               tintColor={textColor}
             />
-          ) : (
-            <View style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }} />
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          onPress={onSupportPress}
-          hitSlop={{ top: 12, bottom: 12, left: 6, right: 12 }}
-          style={styles.actionBtn}
-          disabled={!onSupportPress}
-        >
-          {onSupportPress ? (
+        {onSupportPress && (
+          <TouchableOpacity
+            onPress={onSupportPress}
+            hitSlop={{ top: 12, bottom: 12, left: 6, right: 12 }}
+            style={styles.actionBtn}
+          >
             <FastImage
               source={headPhoneIcon}
               resizeMode="contain"
               style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }}
               tintColor={textColor}
             />
-          ) : (
-            <View style={{ width: INFO_ICON_SIZE, height: INFO_ICON_SIZE }} />
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

@@ -275,7 +275,7 @@ const AccountDetails = () => {
 
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
-      <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} />
+      <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} onSwitchProfilePress={showComingSoonToast} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <LinearGradient
@@ -357,6 +357,10 @@ const AccountDetails = () => {
               <MenuItem label="Username" value={displayName} />
               <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
               <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
+              <MenuItem 
+                label="Notification Setting" 
+                onPress={() => NavigationService.navigate(routes.NOTIFICATION_SETTINGS_SCREEN)} 
+              />
               <MenuItem label="Switch Account" />
               <MenuItem
                 label="Log Out"

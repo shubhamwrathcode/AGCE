@@ -271,7 +271,6 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('support/user-reply-ticket', data, CUSTOMER_TYPE),
   add_rating: (data: RatingProps) =>
     appOperation.post('user/rating', data, CUSTOMER_TYPE),
-  /** Same contract as web: `GET .../user-notifications?page=&limit=` (defaults match web behaviour). */
   notification_list: (opts?: { page?: number; limit?: number }) => {
     const page = Math.max(1, opts?.page ?? 1);
     const limit = Math.min(100, Math.max(1, opts?.limit ?? 50));
@@ -282,6 +281,10 @@ export default (appOperation: AppOperation) => ({
       CUSTOMER_TYPE,
     );
   },
+  get_notification_settings_setting: () =>
+    appOperation.get('setting/get-notification-settings', undefined, undefined, CUSTOMER_TYPE),
+  update_notification_settings_setting: (data: any) =>
+    appOperation.post('setting/update-notification-settings', data, CUSTOMER_TYPE),
   mark_as_read: (data: any) =>
     appOperation.post('notifications/mark-as-read', data, CUSTOMER_TYPE),
   /** GET `/v1/notifications/mark-all-as-read` — same as web `AuthService.markasAllRead`. */
