@@ -438,7 +438,18 @@ const AccountDetails = () => {
                     Toast.showWithGravity("To enhance your account security, please activate at least one additional verification method.", Toast.LONG, Toast.BOTTOM);
                     return;
                   }
-                  NavigationService.navigate(routes.ADD_PHONE_NUMBER_SCREEN);
+                  if (userHasPhone) {
+                    NavigationService.navigate(routes.PHONE_SETTINGS_SCREEN);
+                  } else {
+                    const methods = ['email'];
+                    // We only ask for email upfront. If GA is enabled, it will be asked at the end of the form.
+                    NavigationService.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+                      targetScreen: routes.ADD_PHONE_NUMBER_SCREEN,
+                      purpose: 'add_mobile',
+                      verifyMethods: methods,
+                      skipDirectVerification: true,
+                    });
+                  }
                 }}
               />
 

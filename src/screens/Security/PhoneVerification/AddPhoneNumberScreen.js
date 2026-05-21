@@ -1,18 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from "../../../hooks/useTheme";
-import { useAppSelector, useAppDispatch } from "../../../store/hooks";
-import { getPasskeyList, verifySecurityPasskey } from "../../../actions/accountActions";
-import { Passkey } from "react-native-passkey";
-import { showError, showSuccess } from "../../../helper/logger";
-import NavigationService from "../../../navigation/NavigationService";
 import {
   AppSafeAreaView,
   AppText,
@@ -20,59 +17,174 @@ import {
   EIGHTEEN,
   SIXTEEN,
   MEDIUM,
+  ELEVEN,
+  FOURTEEN,
+  TWELVE,
   SEMI_BOLD,
 } from '../../../shared';
 import FastImage from 'react-native-fast-image';
-import { back_ic, right_ic } from '../../../helper/ImageAssets';
+import { back_ic, warningImg } from '../../../helper/ImageAssets';
+import { colors } from '../../../theme/colors';
+import { showSuccess, showError } from '../../../helper/logger';
 import * as routes from '../../../navigation/routes';
+import { useRoute } from '@react-navigation/native';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { appOperation } from '../../../appOperation';
+import { getUserProfile } from '../../../actions/accountActions';
 
 const AddPhoneNumberScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
+
   const userData = useAppSelector((state) => state.auth.userData);
 
-  const [passkeySupported, setPasskeySupported] = React.useState(false);
-  const [hasPasskey, setHasPasskey] = React.useState(false);
+  const [newPhone, setNewPhone] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const timerRef = useRef(null);
+  const autoSubmitDone = useRef(false);
 
-  React.useEffect(() => {
-    let active = true;
-    setPasskeySupported(Passkey.isSupported());
+  // Extract upfront identity proof from SecurityVerification
+  const {
+    passkeyVerified,
+    passkeyUserId,
+    emailOtp,
+    tofaCode,
+  } = route.params || {};
 
-    const fetchPasskeys = async () => {
-      try {
-        const res = await dispatch(getPasskeyList());
-        if (res?.success && active) {
-          const list = res.data?.passkeys || [];
-          setHasPasskey(list.length > 0);
-        }
-      } catch (err) {
-        console.warn('[AddPhoneNumberScreen] Error fetching passkeys:', err);
+  const handleSendCode = async () => {
+    if (!newPhone) {
+      showError('Please enter your phone number first');
+      return;
+    }
+    if (newPhone.length < 6) {
+      showError('Please enter a valid phone number');
+      return;
+    }
+    const fullPhone = `+91${newPhone}`; // Using static +91 for now as per UI
+    if (countdown > 0) return;
+
+    try {
+      setIsLoading(true);
+      console.log('[AddPhone] securitySendOtp request -> purpose: add_mobile fullPhone:', fullPhone);
+      const result = await appOperation.customer.securitySendOtp('new_mobile', 'add_mobile', fullPhone);
+      console.log('[AddPhone] securitySendOtp response ->', result);
+      if (result?.success) {
+        showSuccess(result?.message || 'SMS code sent');
+        setCountdown(60);
+        timerRef.current = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timerRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        showError(result?.message || 'Failed to send SMS code');
       }
-    };
-    void fetchPasskeys();
-
-    return () => {
-      active = false;
-    };
-  }, [dispatch]);
-
-  // Mask helper matching the mockup screenshot
-  const profileMobile = userData?.mobileNumber ?? userData?.mobile_number ?? '';
-  const rawEmail = userData?.emailId || userData?.email;
-  const userHasPhone = !!profileMobile && profileMobile !== "null" && profileMobile !== "undefined";
-
-  const maskPhone = (phone) => {
-    if (!phone || phone === "null" || phone === "undefined") return '';
-    const cleaned = String(phone).replace(/\s/g, '');
-    const isIndia = cleaned.startsWith("+91") || cleaned.startsWith("91");
-    const prefix = isIndia ? "+91" : "";
-    const digitsOnly = cleaned.replace(/^\+91|^91/, '');
-    if (digitsOnly.length < 2) return '';
-    return `${prefix}*****${digitsOnly.slice(-1)}`;
+    } catch (error) {
+      showError(error?.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const displayPhone = maskPhone(profileMobile);
+  const handleConfirm = async (overridePhone, overrideSmsOtp) => {
+    const phoneToUse = typeof overridePhone === 'string' ? overridePhone : newPhone;
+    const smsToUse = typeof overrideSmsOtp === 'string' ? overrideSmsOtp : verificationCode;
+
+    if (!phoneToUse) {
+      showError('Please enter your phone number');
+      return;
+    }
+    if (!smsToUse || smsToUse.length !== 6) {
+      showError('Please enter the 6-digit verification code');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+      if (hasGA && !tofaCode) {
+        setIsLoading(false);
+        navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+          targetScreen: routes.ADD_PHONE_NUMBER_SCREEN,
+          purpose: 'add_mobile',
+          verifyMethods: ['totp'],
+          skipDirectVerification: true,
+          targetParams: {
+            savedPhone: phoneToUse,
+            savedSmsOtp: smsToUse,
+            emailOtp: emailOtp,
+            passkeyVerified: passkeyVerified,
+            passkeyUserId: passkeyUserId,
+            autoSubmit: true,
+          }
+        });
+        return;
+      }
+
+      const payload = {
+        mobileNumber: phoneToUse,
+        countryCode: '+91',
+        mobileOtp: smsToUse,
+      };
+
+      if (passkeyVerified) {
+        payload.passkeyVerified = true;
+        payload.passkeyUserId = passkeyUserId;
+      } else if (tofaCode) {
+        payload.tofaCode = tofaCode;
+      } else if (emailOtp) {
+        payload.emailOtp = emailOtp;
+      }
+
+      console.log('[AddPhone] securityMobileAdd request -> payload:', payload);
+      const result = await appOperation.customer.securityMobileAdd(payload);
+      console.log('[AddPhone] securityMobileAdd response ->', result);
+
+      if (result?.success) {
+        showSuccess(result?.message || 'Phone number added successfully');
+        dispatch(getUserProfile());
+        if (route.params?.fromScreen) {
+          navigation.navigate(route.params.fromScreen);
+        } else {
+          navigation.navigate(routes.ACCOUNT_SCREEN);
+        }
+      } else {
+        showError(result?.message || 'Failed to add mobile number');
+      }
+    } catch (error) {
+      showError(error?.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (route.params?.savedPhone && route.params?.savedSmsOtp) {
+      setNewPhone(route.params.savedPhone);
+      setVerificationCode(route.params.savedSmsOtp);
+      
+      if (route.params?.autoSubmit && route.params?.tofaCode && !autoSubmitDone.current) {
+        autoSubmitDone.current = true;
+        navigation.setParams({ autoSubmit: false }); // Prevent duplicate triggers
+        handleConfirm(route.params.savedPhone, route.params.savedSmsOtp);
+      }
+    }
+  }, [route.params?.savedPhone, route.params?.savedSmsOtp, route.params?.autoSubmit, route.params?.tofaCode]);
 
   return (
     <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
@@ -96,117 +208,103 @@ const AddPhoneNumberScreen = () => {
           </TouchableOpacity>
           <View style={styles.titleContainer}>
             <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>
-              Phone Number
+              Add Phone Number
             </AppText>
           </View>
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Content List exactly matching screenshot */}
-        <View style={{ paddingTop: 8 }}>
-          {/* Phone Number Row */}
-          {userHasPhone ? (
-            <View style={styles.row}>
-              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
-                Phone Number
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Warnings Box */}
+          <View style={[styles.warningBox, { backgroundColor: isDark ? '#1E1E22' : '#F5F5F7' }]}>
+            <FastImage source={warningImg} style={{ width: 18, height: 18, marginTop: 2 }} resizeMode="contain" />
+            <View style={styles.warningList}>
+              <AppText type={ELEVEN} style={[styles.warningPoint, { color: isDark ? '#D1D1D6' : '#4E4E54' }]}>
+                1. To protect your account, withdrawals and P2P transactions will be restricted for 24 hours after adding your phone number.
               </AppText>
-              <AppText type={SIXTEEN} style={{ color: isDark ? '#8A8A93' : '#9E9EAE' }}>
-                {displayPhone}
+              <AppText type={ELEVEN} style={[styles.warningPoint, { color: isDark ? '#D1D1D6' : '#4E4E54' }]}>
+                2. Phone number additions on the primary account will also sync across linked subaccounts.
               </AppText>
             </View>
-          ) : null}
+          </View>
 
-          {/* Change Email Row */}
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={async () => {
-              if (hasPasskey && passkeySupported) {
-                try {
-                  const signId = rawEmail || profileMobile;
-                  const result = await dispatch(verifySecurityPasskey(signId, true, true));
-                  if (result && result !== 'BIOMETRIC_VERIFIED') {
-                    showSuccess('Passkey verified successfully');
-                    navigation.navigate(routes.CHANGE_PHONE_NUMBER_SCREEN, {
-                      passkeyVerified: true,
-                      passkeyUserId: result,
-                    });
-                    return;
-                  }
-                } catch (err) {
-                  console.warn('[AddPhoneNumberScreen] Silent passkey verification failed:', err);
-                }
-              }
-
-              const methods = ['email'];
-              if (hasPasskey && passkeySupported) {
-                methods.push('passkey');
-              }
-              navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
-                targetScreen: routes.CHANGE_PHONE_NUMBER_SCREEN,
-                purpose: 'change_mobile',
-                verifyMethods: methods,
-                skipDirectVerification: true,
-              });
-            }}
-          >
-            <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
-              Change Phone Number
-            </AppText>
-            <FastImage
-              source={right_ic}
-              style={styles.chevronIcon}
-              tintColor={isDark ? '#8A8A93' : '#9E9EAE'}
-              resizeMode="contain"
+          {/* New Phone Number Section */}
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
+            Phone Number
+          </AppText>
+          <View style={[styles.phoneInputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+            <TouchableOpacity style={styles.countryPicker} activeOpacity={0.8}>
+              <AppText style={{ fontSize: 18 }}>🇮🇳</AppText>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.countryCode, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
+                +91
+              </AppText>
+            </TouchableOpacity>
+            <View style={[styles.divider, { backgroundColor: isDark ? '#2D2D30' : '#E5E5EA' }]} />
+            <TextInput
+              style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+              placeholder="Enter your phone number"
+              placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+              keyboardType="number-pad"
+              value={newPhone}
+              onChangeText={(val) => setNewPhone(val.replace(/\D/g, ''))}
+              cursorColor={colors.black}
             />
-          </TouchableOpacity>
+          </View>
 
-          {/* Unlink Phone Number Row */}
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={async () => {
-              if (hasPasskey && passkeySupported) {
-                try {
-                  const signId = rawEmail || profileMobile;
-                  const result = await dispatch(verifySecurityPasskey(signId, true, true));
-                  if (result && result !== 'BIOMETRIC_VERIFIED') {
-                    showSuccess('Passkey verified successfully');
-                    navigation.navigate(routes.UNLINK_PHONE_NUMBER_SCREEN, {
-                      passkeyVerified: true,
-                      passkeyUserId: result,
-                    });
-                    return;
-                  }
-                } catch (err) {
-                  console.warn('[AddPhoneNumberScreen] Silent passkey verification failed:', err);
-                }
-              }
-
-              const methods = ['email'];
-              if (hasPasskey && passkeySupported) {
-                methods.push('passkey');
-              }
-              navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
-                targetScreen: routes.UNLINK_PHONE_NUMBER_SCREEN,
-                purpose: 'delete_mobile',
-                verifyMethods: methods,
-                skipDirectVerification: true,
-              });
-            }}
-          >
-            <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
-              Unlink Phone Number
-            </AppText>
-            <FastImage
-              source={right_ic}
-              style={styles.chevronIcon}
-              tintColor={isDark ? '#8A8A93' : '#9E9EAE'}
-              resizeMode="contain"
+          {/* SMS Verification Code Section */}
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
+            SMS Verification Code
+          </AppText>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
+            <TextInput
+              style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+              placeholder="Enter the verification code"
+              placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+              value={verificationCode}
+              onChangeText={setVerificationCode}
+              keyboardType="number-pad"
+              cursorColor={colors.black}
+              maxLength={6}
             />
+            <TouchableOpacity
+              onPress={handleSendCode}
+              disabled={countdown > 0 || isLoading}
+              style={styles.sendButton}
+            >
+              <AppText
+                type={FOURTEEN}
+                weight={MEDIUM}
+                style={{ color: (countdown > 0 || isLoading) ? (isDark ? '#4E4E54' : '#C7C7CC') : colors.orangeTheme }}
+              >
+                {countdown > 0 ? `${countdown}s` : 'Send'}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Valid for 10 minutes */}
+          <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE' }]}>
+            Valid for 10 minutes
+          </AppText>
+        </ScrollView>
+
+        {/* Bottom anchored Confirm Button */}
+        <View style={styles.bottomWrapper}>
+          <TouchableOpacity
+            style={[styles.confirmButton, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
+            activeOpacity={0.8}
+            onPress={handleConfirm}
+            disabled={isLoading}
+          >
+            <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
+              {isLoading ? 'Processing...' : 'Confirm'}
+            </AppText>
           </TouchableOpacity>
         </View>
-
       </KeyboardAvoidingView>
     </AppSafeAreaView>
   );
@@ -216,37 +314,25 @@ export default AddPhoneNumberScreen;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  backBtn: {
-    padding: 6,
-  },
-  backIcon: {
-    width: 20,
-    height: 20
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    textAlign: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    height: 48,
-  },
-  chevronIcon: {
-    width: 14,
-    height: 14,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
+  backBtn: { padding: 6 },
+  backIcon: { width: 20, height: 20 },
+  titleContainer: { flex: 1, alignItems: 'center' },
+  headerTitle: { textAlign: 'center' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingTop: 16, paddingBottom: 100 },
+  warningBox: { flexDirection: 'row', marginHorizontal: 16, padding: 12, borderRadius: 12, marginBottom: 20 },
+  warningList: { flex: 1, marginLeft: 8 },
+  warningPoint: { lineHeight: 16, marginBottom: 8 },
+  fieldLabel: { marginHorizontal: 16, marginBottom: 8 },
+  phoneInputContainer: { flexDirection: 'row', alignItems: 'center', height: 48, borderRadius: 8, marginHorizontal: 16, marginBottom: 20, paddingHorizontal: 12 },
+  countryPicker: { flexDirection: 'row', alignItems: 'center', paddingRight: 8 },
+  countryCode: { marginLeft: 6 },
+  divider: { width: 1, height: 20, marginHorizontal: 8 },
+  inputContainer: { height: 48, borderRadius: 8, marginHorizontal: 16, paddingHorizontal: 12 },
+  textInput: { fontSize: 14, fontFamily: 'Inter-Regular', paddingVertical: 0 },
+  sendButton: { paddingLeft: 10, justifyContent: 'center' },
+  bottomWrapper: { position: 'absolute', bottom: Platform.OS === 'ios' ? 24 : 16, left: 0, right: 0, paddingHorizontal: 16 },
+  confirmButton: { height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  validText: { marginHorizontal: 16, marginTop: 8 },
 });

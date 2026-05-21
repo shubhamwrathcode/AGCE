@@ -39,13 +39,13 @@ const ChangePhoneNumberScreen = () => {
   const { colors: themeColors, isDark } = useTheme();
 
   const userData = useAppSelector((state) => state.auth.userData);
-  const isBinding = !userData?.mobileNumber && !userData?.mobile_number;
 
   const [newPhone, setNewPhone] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const timerRef = useRef(null);
+  const autoSubmitDone = useRef(false);
 
   // Extract upfront identity proof from SecurityVerification
   const {
@@ -69,7 +69,9 @@ const ChangePhoneNumberScreen = () => {
 
     try {
       setIsLoading(true);
+      console.log('[ChangePhone] securitySendOtp request -> purpose: change_mobile fullPhone:', fullPhone);
       const result = await appOperation.customer.securitySendOtp('new_mobile', 'change_mobile', fullPhone);
+      console.log('[ChangePhone] securitySendOtp response ->', result);
       if (result?.success) {
         showSuccess(result?.message || 'SMS code sent');
         setCountdown(60);
@@ -92,21 +94,45 @@ const ChangePhoneNumberScreen = () => {
     }
   };
 
-  const handleConfirm = async () => {
-    if (!newPhone) {
+  const handleConfirm = async (overridePhone, overrideSmsOtp) => {
+    const phoneToUse = typeof overridePhone === 'string' ? overridePhone : newPhone;
+    const smsToUse = typeof overrideSmsOtp === 'string' ? overrideSmsOtp : verificationCode;
+
+    if (!phoneToUse) {
       showError('Please enter your new phone number');
       return;
     }
-    if (!verificationCode || verificationCode.length !== 6) {
+    if (!smsToUse || smsToUse.length !== 6) {
       showError('Please enter the 6-digit verification code');
       return;
     }
 
     try {
       setIsLoading(true);
+
+      const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+      if (hasGA && !tofaCode) {
+        setIsLoading(false);
+        navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+          targetScreen: routes.CHANGE_PHONE_NUMBER_SCREEN,
+          purpose: 'change_mobile',
+          verifyMethods: ['totp'],
+          skipDirectVerification: true,
+          targetParams: {
+            savedPhone: phoneToUse,
+            savedSmsOtp: smsToUse,
+            emailOtp: emailOtp,
+            passkeyVerified: passkeyVerified,
+            passkeyUserId: passkeyUserId,
+            autoSubmit: true,
+          }
+        });
+        return;
+      }
+
       const initData = {
-        newMobileNumber: newPhone,
         newCountryCode: '+91', // Static for now as per UI
+        newMobileNumber: phoneToUse,
       };
 
       if (passkeyVerified) {
@@ -118,21 +144,24 @@ const ChangePhoneNumberScreen = () => {
         initData.currentEmailOtp = emailOtp;
       }
 
+      console.log('[ChangePhone] securityMobileChangeInitiate request -> initData:', initData);
       const initResult = await appOperation.customer.securityMobileChangeInitiate(initData);
+      console.log('[ChangePhone] securityMobileChangeInitiate response ->', initResult);
       if (!initResult?.success) {
         showError(initResult?.message || 'Failed to initiate mobile change');
         return;
       }
 
-      const completeResult = await appOperation.customer.securityMobileChangeComplete({ newMobileOtp: verificationCode });
+      console.log('[ChangePhone] securityMobileChangeComplete request -> newMobileOtp:', smsToUse);
+      const completeResult = await appOperation.customer.securityMobileChangeComplete({ newMobileOtp: smsToUse });
+      console.log('[ChangePhone] securityMobileChangeComplete response ->', completeResult);
       if (completeResult?.success) {
-        showSuccess(isBinding ? 'Phone number bound successfully' : (completeResult?.message || 'Mobile number updated successfully'));
+        showSuccess(completeResult?.message || 'Mobile number updated successfully');
         dispatch(getUserProfile());
-        // Go back to the previous screen or Security Settings screen
         if (route.params?.fromScreen) {
           navigation.navigate(route.params.fromScreen);
         } else {
-          navigation.navigate(routes.ACCOUNT_DETAILS_SCREEN);
+          navigation.navigate(routes.ACCOUNT_SCREEN);
         }
       } else {
         showError(completeResult?.message || 'Failed to complete mobile change');
@@ -149,6 +178,19 @@ const ChangePhoneNumberScreen = () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (route.params?.savedPhone && route.params?.savedSmsOtp) {
+      setNewPhone(route.params.savedPhone);
+      setVerificationCode(route.params.savedSmsOtp);
+
+      if (route.params?.autoSubmit && route.params?.tofaCode && !autoSubmitDone.current) {
+        autoSubmitDone.current = true;
+        navigation.setParams({ autoSubmit: false }); // Prevent duplicate triggers
+        handleConfirm(route.params.savedPhone, route.params.savedSmsOtp);
+      }
+    }
+  }, [route.params?.savedPhone, route.params?.savedSmsOtp, route.params?.autoSubmit, route.params?.tofaCode]);
 
   return (
     <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
@@ -172,7 +214,7 @@ const ChangePhoneNumberScreen = () => {
           </TouchableOpacity>
           <View style={styles.titleContainer}>
             <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>
-              {isBinding ? 'Bind Phone Number' : 'Change Phone Number'}
+              Change Phone Number
             </AppText>
           </View>
           <View style={{ width: 24 }} />
@@ -202,31 +244,30 @@ const ChangePhoneNumberScreen = () => {
 
           {/* New Phone Number Section */}
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
-            {isBinding ? 'Phone Number' : 'New Phone Number'}
+            New Phone Number
           </AppText>
           <View style={[styles.phoneInputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
             <TouchableOpacity style={styles.countryPicker} activeOpacity={0.8}>
-              {/* Indian Flag Placeholder or Emoji */}
               <AppText style={{ fontSize: 18 }}>🇮🇳</AppText>
               <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.countryCode, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
                 +91
               </AppText>
-              <AppText style={[styles.arrowDown, { color: isDark ? '#8A8A93' : '#9E9EAE' }]}>▼</AppText>
             </TouchableOpacity>
             <View style={[styles.divider, { backgroundColor: isDark ? '#2D2D30' : '#E5E5EA' }]} />
             <TextInput
               style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
-              placeholder={isBinding ? "Enter your phone number" : "Enter your new phone number"}
+              placeholder="Enter your new phone number"
               placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
               keyboardType="number-pad"
               value={newPhone}
               onChangeText={(val) => setNewPhone(val.replace(/\D/g, ''))}
+              cursorColor={colors.black}
             />
           </View>
 
           {/* SMS Verification Code Section */}
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
-            {isBinding ? 'SMS Verification Code' : 'New SMS Verification Code'}
+            New SMS Verification Code
           </AppText>
           <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
             <TextInput
@@ -236,6 +277,8 @@ const ChangePhoneNumberScreen = () => {
               value={verificationCode}
               onChangeText={setVerificationCode}
               keyboardType="number-pad"
+              cursorColor={colors.black}
+              maxLength={6}
             />
             <TouchableOpacity
               onPress={handleSendCode}
@@ -280,112 +323,25 @@ export default ChangePhoneNumberScreen;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  backBtn: {
-    padding: 6,
-  },
-  backIcon: {
-    width: 20,
-    height: 20,
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    textAlign: 'center',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 16,
-    paddingBottom: 100,
-  },
-  warningBox: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  warningList: {
-    flex: 1,
-    marginLeft: 8,
-  },
-  warningPoint: {
-    lineHeight: 16,
-    marginBottom: 8,
-  },
-  fieldLabel: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-  },
-  phoneInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-    borderRadius: 8,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    paddingHorizontal: 12,
-  },
-  countryPicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: 8,
-  },
-  countryCode: {
-    marginLeft: 6,
-  },
-  arrowDown: {
-    fontSize: 8,
-    marginLeft: 4,
-  },
-  divider: {
-    width: 1,
-    height: 20,
-    marginHorizontal: 8,
-  },
-  inputContainer: {
-    height: 48,
-    borderRadius: 8,
-    marginHorizontal: 16,
-    paddingHorizontal: 12,
-  },
-  textInput: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    paddingVertical: 0,
-  },
-  sendButton: {
-    paddingLeft: 10,
-    justifyContent: 'center',
-  },
-  validText: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginLeft: 19,
-  },
-  bottomWrapper: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 24 : 16,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-  },
-  confirmButton: {
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
+  backBtn: { padding: 6 },
+  backIcon: { width: 20, height: 20 },
+  titleContainer: { flex: 1, alignItems: 'center' },
+  headerTitle: { textAlign: 'center' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingTop: 16, paddingBottom: 100 },
+  warningBox: { flexDirection: 'row', marginHorizontal: 16, padding: 12, borderRadius: 12, marginBottom: 20 },
+  warningList: { flex: 1, marginLeft: 8 },
+  warningPoint: { lineHeight: 16, marginBottom: 8 },
+  fieldLabel: { marginHorizontal: 16, marginBottom: 8 },
+  phoneInputContainer: { flexDirection: 'row', alignItems: 'center', height: 48, borderRadius: 8, marginHorizontal: 16, marginBottom: 20, paddingHorizontal: 12 },
+  countryPicker: { flexDirection: 'row', alignItems: 'center', paddingRight: 8 },
+  countryCode: { marginLeft: 6 },
+  divider: { width: 1, height: 20, marginHorizontal: 8 },
+  inputContainer: { height: 48, borderRadius: 8, marginHorizontal: 16, paddingHorizontal: 12 },
+  textInput: { fontSize: 14, fontFamily: 'Inter-Regular', paddingVertical: 0 },
+  sendButton: { paddingLeft: 10, justifyContent: 'center' },
+  bottomWrapper: { position: 'absolute', bottom: Platform.OS === 'ios' ? 24 : 16, left: 0, right: 0, paddingHorizontal: 16 },
+  confirmButton: { height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  validText: { marginHorizontal: 16, marginTop: 8 },
 });

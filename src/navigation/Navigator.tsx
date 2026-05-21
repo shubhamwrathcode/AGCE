@@ -57,6 +57,7 @@ import CoinDetailChart from "../screens/home/CoinDetailChart";
 import CoinTransactionHistory from "../screens/home/CoinTransactionHistory";
 import TwoFactorQr from "../screens/account/TwoFactorQr";
 import AddPhoneNumberScreen from "../screens/Security/PhoneVerification/AddPhoneNumberScreen";
+import PhoneSettingsScreen from "../screens/Security/PhoneVerification/PhoneSettingsScreen";
 import ChangePhoneNumberScreen from "../screens/Security/PhoneVerification/ChangePhoneNumberScreen";
 import UnlinkPhoneNumberScreen from "../screens/Security/PhoneVerification/UnlinkPhoneNumberScreen";
 import UnlinkSuccessScreen from "../screens/Security/PhoneVerification/UnlinkSuccessScreen";
@@ -390,6 +391,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.ADD_PHONE_NUMBER_SCREEN}
         component={AddPhoneNumberScreen}
+      />
+      <Stack.Screen
+        name={routes.PHONE_SETTINGS_SCREEN}
+        component={PhoneSettingsScreen}
       />
       <Stack.Screen
         name={routes.UNLINK_PHONE_NUMBER_SCREEN}

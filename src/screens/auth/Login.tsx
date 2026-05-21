@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   googleLogin,
   login,
+  passkeyDiscoverableLogin,
   type LoginThunkResult,
 } from "../../actions/authActions";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
@@ -20,10 +21,11 @@ import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import { checkValue, validateEmail } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
 import { setLoading } from "../../slices/authSlice";
-import { apple, googleIcon } from "../../helper/ImageAssets";
+import { apple, googleIcon, passkey_login } from "../../helper/ImageAssets";
 import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/components";
 import NavigationService from "../../navigation/NavigationService";
 import Checkbox from "../../shared/components/Checkbox";
+import { colors } from "../../theme/colors";
 
 const Login = (): JSX.Element => {
   const dispatch = useAppDispatch();
@@ -46,6 +48,7 @@ const Login = (): JSX.Element => {
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] =
     useState(false);
   const [isAppleSignInInProgress, setIsAppleSignInInProgress] = useState(false);
+  const [isPasskeySignInInProgress, setIsPasskeySignInInProgress] = useState(false);
   const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
   const emailSuggestBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -90,8 +93,23 @@ const Login = (): JSX.Element => {
     return () => {
       // Reset Google Sign-In state when component unmounts
       setIsGoogleSignInInProgress(false);
+      setIsPasskeySignInInProgress(false);
     };
   }, []);
+
+  const signInWithPasskey = async () => {
+    // Prevent multiple simultaneous calls
+    if (isPasskeySignInInProgress || isGoogleSignInInProgress || isAppleSignInInProgress) {
+      return;
+    }
+
+    try {
+      setIsPasskeySignInInProgress(true);
+      await dispatch(passkeyDiscoverableLogin());
+    } finally {
+      setIsPasskeySignInInProgress(false);
+    }
+  };
 
   const signInWithGoogle = async () => {
     // Prevent multiple simultaneous calls
@@ -483,8 +501,23 @@ const Login = (): JSX.Element => {
 
           <TouchableOpacityView
             style={[styles.socialPill, { borderColor: themeColors.border }]}
+            onPress={signInWithPasskey}
+            disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isPasskeySignInInProgress || isLoading}
+          >
+            {isPasskeySignInInProgress ? (
+              <ActivityIndicator size={"small"} color={themeColors.text} />
+            ) : (
+              <FastImage source={passkey_login} resizeMode="contain" style={styles.socialBrandIcon} tintColor={colors.black} />
+            )}
+            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+              Continue with Passkey
+            </AppText>
+          </TouchableOpacityView>
+
+          <TouchableOpacityView
+            style={[styles.socialPill, { borderColor: themeColors.border }]}
             onPress={signInWithGoogle}
-            disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
+            disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isPasskeySignInInProgress || isLoading}
           >
             {isGoogleSignInInProgress ? (
               <ActivityIndicator size={"small"} color={themeColors.text} />
@@ -500,7 +533,7 @@ const Login = (): JSX.Element => {
             <TouchableOpacityView
               style={[styles.socialPill, { borderColor: themeColors.border }]}
               onPress={signInWithApple}
-              disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isLoading}
+              disabled={isGoogleSignInInProgress || isAppleSignInInProgress || isPasskeySignInInProgress || isLoading}
             >
               {isAppleSignInInProgress ? (
                 <ActivityIndicator size={"small"} color={themeColors.text} />
@@ -564,8 +597,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   socialBrandIcon: {
-    width: 28,
-    height: 28,
+    width: 26,
+    height: 26,
   },
   createAccountWrap: {
     marginTop: 2,
