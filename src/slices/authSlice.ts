@@ -16,6 +16,8 @@ export const initialState = {
   appVersion: '',
   /** When set, Login screen shows 2FA verification modals (web-style) instead of navigating to EnterOtp */
   pending2FA: null as Pending2FA,
+  /** Tracks if passkey was attempted and cancelled */
+  passkeyCancelled: false,
 };
 
 export const authSlice = createSlice({
@@ -45,8 +47,11 @@ export const authSlice = createSlice({
     clearPending2FA: (state) => {
       state.pending2FA = null;
     },
+    setPasskeyCancelled: (state, {payload}) => {
+      state.passkeyCancelled = !!payload;
+    },
   },
 });
-export const {setLoading, setLoadingOtp, setUserData, setTheme, setAppVersion, setPending2FA, clearPending2FA} = authSlice.actions;
+export const {setLoading, setLoadingOtp, setUserData, setTheme, setAppVersion, setPending2FA, clearPending2FA, setPasskeyCancelled} = authSlice.actions;
 // export const authSelector = state => state.auth;
 export const authReducer = authSlice.reducer;

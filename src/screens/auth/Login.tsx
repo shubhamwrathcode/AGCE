@@ -22,7 +22,7 @@ import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import { checkValue, validateEmail } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
-import { setLoading } from "../../slices/authSlice";
+import { setLoading, setPasskeyCancelled } from "../../slices/authSlice";
 import { apple, googleIcon, passkey_login } from "../../helper/ImageAssets";
 import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/components";
 import NavigationService from "../../navigation/NavigationService";
@@ -323,7 +323,12 @@ const Login = (): JSX.Element => {
       const passkeyResult = await dispatch(verifyPasskeyLogin(normalizedId, true));
       setIsPasskeySignInInProgress(false);
       if (passkeyResult) {
+        // Successful passkey login, ensure flag cleared
+        dispatch(setPasskeyCancelled(false));
         return; // Login completed via passkey
+      } else {
+        // Passkey login failed or cancelled – remember cancellation
+        dispatch(setPasskeyCancelled(true));
       }
     }
 
