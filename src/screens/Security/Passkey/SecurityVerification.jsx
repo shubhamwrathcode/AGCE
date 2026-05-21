@@ -63,12 +63,15 @@ const SecurityVerification = ({ route }) => {
 
   // Dynamic Verification Methods Initialization
   const initialVerifyMethods = useMemo(() => {
+    if (params.verifyMethods && Array.isArray(params.verifyMethods) && params.verifyMethods.length > 0) {
+      return params.verifyMethods;
+    }
     const list = [];
     if (hasGoogleAuth) list.push('totp');
     if (hasEmail) list.push('email');
     if (hasMobile) list.push('mobile');
     return list.length > 0 ? list : ['email'];
-  }, [hasEmail, hasMobile, hasGoogleAuth]);
+  }, [hasEmail, hasMobile, hasGoogleAuth, params.verifyMethods]);
 
   // Active methods in state so it can be changed dynamically by the user (only one active method is verified at a time)
   const [activeMethods, setActiveMethods] = useState([initialVerifyMethods[0]]);

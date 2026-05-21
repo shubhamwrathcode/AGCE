@@ -60,6 +60,20 @@ const AccountDetails = () => {
   const userHasPhone = !!(userData?.mobileNumber || userData?.mobile_number) &&
     (userData?.mobileNumber || userData?.mobile_number) !== "null" &&
     (userData?.mobileNumber || userData?.mobile_number) !== "undefined";
+
+  const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+  const hasPasskey = !!userData?.passkey_enabled; // Adjust based on actual field if needed
+
+  const getActiveMethodsCount = () => {
+    let count = 0;
+    if (userData?.emailId || userData?.email) count += 1;
+    if (userHasPhone) count += 1;
+    if (hasGA) count += 1;
+    if (hasPasskey) count += 1;
+    return count;
+  };
+
+  const canMakeSensitiveChanges = () => getActiveMethodsCount() >= 2;
   const [activeTab, setActiveTab] = useState("Profile");
   const [securityMethods, setSecurityMethods] = useState({
     passkey: false,
@@ -363,6 +377,10 @@ const AccountDetails = () => {
                 label="Authenticator App"
                 value={securityMethods.totp ? "Disable" : "Not enabled"}
                 onPress={() => {
+                  if (securityMethods.totp && !canMakeSensitiveChanges()) {
+                    Toast.showWithGravity("To enhance your account security, please activate at least one additional verification method.", Toast.LONG, Toast.BOTTOM);
+                    return;
+                  }
                   if (securityMethods.totp) {
                     const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true || securityMethods.totp;
                     const hasEmail = !!(userData?.emailId || userData?.email);
@@ -404,12 +422,24 @@ const AccountDetails = () => {
               <MenuItem
                 label="Email Verification"
                 value={userData?.emailId ? maskProfileEmail(userData.emailId) : "Not enabled"}
-                onPress={() => NavigationService.navigate(routes.ADD_EMAIL_SCREEN)}
+                onPress={() => {
+                  if (userData?.emailId && !canMakeSensitiveChanges()) {
+                    Toast.showWithGravity("To enhance your account security, please activate at least one additional verification method.", Toast.LONG, Toast.BOTTOM);
+                    return;
+                  }
+                  NavigationService.navigate(routes.ADD_EMAIL_SCREEN);
+                }}
               />
               <MenuItem
                 label="Phone Number"
                 value={userHasPhone ? maskProfilePhone(userData.mobileNumber || userData.mobile_number) : "Not enabled"}
-                onPress={() => NavigationService.navigate(routes.ADD_PHONE_NUMBER_SCREEN)}
+                onPress={() => {
+                  if (userHasPhone && !canMakeSensitiveChanges()) {
+                    Toast.showWithGravity("To enhance your account security, please activate at least one additional verification method.", Toast.LONG, Toast.BOTTOM);
+                    return;
+                  }
+                  NavigationService.navigate(routes.ADD_PHONE_NUMBER_SCREEN);
+                }}
               />
 
               {/* Advanced Security Section */}

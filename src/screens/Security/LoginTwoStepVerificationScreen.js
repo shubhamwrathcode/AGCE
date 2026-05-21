@@ -9,10 +9,12 @@ import {
   Animated,
   Easing,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from "../../hooks/useTheme";
-import { useAppSelector } from "../../store/hooks";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { updateTwoLogin2StepStatus } from "../../actions/accountActions";
 import {
   AppSafeAreaView,
   AppText,
@@ -102,7 +104,7 @@ const normalizeCheckTwoLogin2StepPayload = (raw) => {
   }
   const dPreFlatten = d;
   d = flattenOneLevelLogin2Step(d);
-  
+
   const reapplyTop = [
     ["totp", "totp"],
     ["TOTP", "totp"],
@@ -208,6 +210,7 @@ const ToggleSwitch = ({ value, onValueChange, isDark }) => {
 const LoginTwoStepVerificationScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
 
@@ -216,6 +219,14 @@ const LoginTwoStepVerificationScreen = () => {
   const [googleAuth, setGoogleAuth] = useState(false);
   const [smsVerification, setSmsVerification] = useState(false);
   const [emailVerification, setEmailVerification] = useState(false);
+
+  // Bind prompt state
+  const [bindPrompt, setBindPrompt] = useState({
+    visible: false,
+    title: '',
+    description: '',
+    onBind: null
+  });
 
 
 
@@ -228,13 +239,16 @@ const LoginTwoStepVerificationScreen = () => {
     try {
       setLoadingSettings(true);
       const res = await appOperation.customer.securityCheckTwoLogin2Step();
+      console.log('[Login2Step] syncSettings API response:', res);
       if (res?.success) {
         const n = normalizeCheckTwoLogin2StepPayload(res);
+        console.log('[Login2Step] syncSettings normalized payload:', n);
         setGoogleAuth(n.totp);
         setSmsVerification(n.mobile);
         setEmailVerification(n.email);
       }
     } catch (e) {
+      console.error('[Login2Step] syncSettings error:', e);
       // silent fallback
     } finally {
       setLoadingSettings(false);
@@ -247,9 +261,63 @@ const LoginTwoStepVerificationScreen = () => {
     }, [])
   );
 
+  useEffect(() => {
+    const processPendingAction = async () => {
+      const params = route?.params || {};
+      const { pendingAction, emailOtp, smsOtp, tofaCode, passkeyUserId } = params;
+
+      if (pendingAction && (emailOtp || smsOtp || tofaCode || passkeyUserId)) {
+        // Find which OTP was provided
+        let code = '';
+        if (passkeyUserId) code = passkeyUserId;
+        else if (tofaCode) code = tofaCode;
+        else if (smsOtp) code = smsOtp;
+        else if (emailOtp) code = emailOtp;
+
+        if (code) {
+          const payload = {
+            security_methods: pendingAction.method,
+            action: pendingAction.action,
+          };
+          if (passkeyUserId) {
+            payload.passkeyUserId = code;
+          } else {
+            payload.code = code;
+          }
+
+          const success = await dispatch(updateTwoLogin2StepStatus(payload));
+          if (success) {
+            // refresh
+            syncSettings();
+          }
+
+          // clear params to avoid infinite loop
+          navigation.setParams({
+            pendingAction: undefined,
+            emailOtp: undefined,
+            smsOtp: undefined,
+            tofaCode: undefined,
+            passkeyUserId: undefined,
+          });
+        }
+      }
+    };
+    processPendingAction();
+  }, [route?.params]);
+
   const handleToggleSwitch = async (method, enable) => {
-    // 1. Lockout protection: at least one method must remain active
+    console.log('[Login2Step] handleToggleSwitch called:', { method, enable });
+    
+    // 1. Lockout protection and Signup Method restriction
     if (!enable) {
+      if (method === 'email' && (userData?.registeredBy === 'email' || userData?.registeredBy === 'google')) {
+        Toast.showWithGravity("you cannot modify email as it is your signup method", Toast.LONG, Toast.BOTTOM);
+        return;
+      }
+      if (method === 'phone' && (userData?.registeredBy === 'phone' || userData?.registeredBy === 'mobile')) {
+        Toast.showWithGravity("you cannot modify phone as it is your signup method", Toast.LONG, Toast.BOTTOM);
+        return;
+      }
       const activeCount = [
         method !== 'totp' && googleAuth,
         method !== 'phone' && smsVerification,
@@ -266,24 +334,33 @@ const LoginTwoStepVerificationScreen = () => {
       }
     }
 
-    // 2. Unbound state redirects:
+    // 2. Unbound state redirects (with Bind Prompt):
     if (method === 'phone' && enable) {
       const isPhoneBound = !!(userData?.mobileNumber || userData?.mobile_number);
+      console.log('[Login2Step] Phone bound check:', isPhoneBound, 'userData:', userData?.mobileNumber, userData?.mobile_number);
       if (!isPhoneBound) {
-        const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
-        const hasEmail = !!(userData?.emailId || userData?.email);
-        const methods = [];
-        if (hasGA) methods.push('totp');
-        if (hasEmail) methods.push('email');
-        if (methods.length === 0) methods.push('email');
+        setBindPrompt({
+          visible: true,
+          title: 'Phone Unbound',
+          description: 'Phone verification is available only after the phone is bound.',
+          onBind: () => {
+            setBindPrompt(prev => ({ ...prev, visible: false }));
+            const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+            const hasEmail = !!(userData?.emailId || userData?.email);
+            const methods = [];
+            if (hasGA) methods.push('totp');
+            if (hasEmail) methods.push('email');
+            if (methods.length === 0) methods.push('email');
 
-        navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
-          targetScreen: routes.CHANGE_PHONE_NUMBER_SCREEN,
-          purpose: 'change_mobile',
-          verifyMethods: methods,
-          skipDirectVerification: true,
-          targetParams: {
-            fromScreen: routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN,
+            navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+              targetScreen: routes.CHANGE_PHONE_NUMBER_SCREEN,
+              purpose: 'change_mobile',
+              verifyMethods: methods,
+              skipDirectVerification: true,
+              targetParams: {
+                fromScreen: routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN,
+              }
+            });
           }
         });
         return;
@@ -292,21 +369,56 @@ const LoginTwoStepVerificationScreen = () => {
 
     if (method === 'totp' && enable) {
       const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
+      console.log('[Login2Step] GA bound check:', hasGA, 'userData:', userData?.['2fa'], userData?.twoFaEnabled);
       if (!hasGA) {
-        const hasEmail = !!(userData?.emailId || userData?.email);
-        const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
-        const methods = [];
-        if (hasEmail) methods.push('email');
-        if (hasMobile) methods.push('mobile');
-        if (methods.length === 0) methods.push('email');
+        setBindPrompt({
+          visible: true,
+          title: 'Bind Google Authenticator',
+          description: 'Please bind Google Authenticator first to enable this verification method.',
+          onBind: () => {
+            setBindPrompt(prev => ({ ...prev, visible: false }));
+            const hasEmail = !!(userData?.emailId || userData?.email);
+            const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
+            const methods = [];
+            if (hasEmail) methods.push('email');
+            if (hasMobile) methods.push('mobile');
+            if (methods.length === 0) methods.push('email');
 
-        navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
-          targetScreen: routes.PASSKEY_SETUP_AUTHENTICATOR_SCREEN,
-          purpose: '2fa_setup',
-          verifyMethods: methods,
-          skipDirectVerification: false,
-          targetParams: {
-            fromScreen: routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN,
+            navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+              targetScreen: routes.PASSKEY_SETUP_AUTHENTICATOR_SCREEN,
+              purpose: '2fa_setup',
+              verifyMethods: methods,
+              skipDirectVerification: false,
+              targetParams: {
+                fromScreen: routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN,
+              }
+            });
+          }
+        });
+        return;
+      }
+    }
+
+    if (method === 'email' && enable) {
+      const isEmailBound = !!(userData?.emailId || userData?.email);
+      console.log('[Login2Step] Email bound check:', isEmailBound, 'userData:', userData?.emailId, userData?.email);
+      if (!isEmailBound) {
+        setBindPrompt({
+          visible: true,
+          title: 'Email Unbound',
+          description: 'Email verification is available only after the email is bound.',
+          onBind: () => {
+            setBindPrompt(prev => ({ ...prev, visible: false }));
+            // Normally routes to change email flow
+            navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+              targetScreen: routes.CHANGE_EMAIL_SCREEN, // assuming this exists or similar
+              purpose: 'change_email',
+              verifyMethods: ['mobile', 'totp'], // fallback
+              skipDirectVerification: true,
+              targetParams: {
+                fromScreen: routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN,
+              }
+            });
           }
         });
         return;
@@ -314,10 +426,10 @@ const LoginTwoStepVerificationScreen = () => {
     }
 
     // 3. Navigate to verification screen with target codes skipping direct verification
-    const verifyMethods = 
+    const verifyMethods =
       method === 'email' ? ['email'] :
-      method === 'phone' ? ['mobile'] :
-      method === 'totp' ? ['totp'] : [];
+        method === 'phone' ? ['mobile'] :
+          method === 'totp' ? ['totp'] : [];
 
     if (verifyMethods.length > 0) {
       navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
@@ -411,6 +523,48 @@ const LoginTwoStepVerificationScreen = () => {
         )}
       </KeyboardAvoidingView>
 
+      {/* Bind Prompt Modal */}
+      <Modal
+        visible={bindPrompt.visible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setBindPrompt(prev => ({ ...prev, visible: false }))}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={() => setBindPrompt(prev => ({ ...prev, visible: false }))} 
+          />
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}>
+            <AppText type={EIGHTEEN} weight={BOLD} style={{ color: textColor, marginBottom: 12, textAlign: 'center' }}>
+              {bindPrompt.title}
+            </AppText>
+            <AppText type={FOURTEEN} style={{ color: subTextColor, marginBottom: 24, textAlign: 'center', lineHeight: 20 }}>
+              {bindPrompt.description}
+            </AppText>
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: isDark ? '#2A2A2E' : '#F5F5F5' }]}
+                onPress={() => setBindPrompt(prev => ({ ...prev, visible: false }))}
+              >
+                <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: textColor }}>
+                  Cancel
+                </AppText>
+              </TouchableOpacity>
+              <View style={{ width: 12 }} />
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: primaryColor }]}
+                onPress={bindPrompt.onBind}
+              >
+                <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
+                  Bind Now
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </AppSafeAreaView>
   );
@@ -477,6 +631,31 @@ const styles = StyleSheet.create({
   },
   centered: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    padding: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    alignItems: 'center',
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  modalBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },

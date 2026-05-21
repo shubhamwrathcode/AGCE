@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from "../../../hooks/useTheme";
-import { useAppDispatch } from "../../../store/hooks";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import {
   AppSafeAreaView,
   AppText,
@@ -27,23 +27,28 @@ import FastImage from 'react-native-fast-image';
 import { antiphisinglock, back_ic, right_ic } from '../../../helper/ImageAssets';
 import * as routes from '../../../navigation/routes';
 import AgceGoldCard from './AgceGoldCard';
-import { getAntiPhishingStatus } from '../../../actions/accountActions';
-import { showError } from '../../../helper/logger';
+import { getAntiPhishingStatus, removeAntiPhishingCode } from '../../../actions/accountActions';
+import { showError, showSuccess } from '../../../helper/logger';
 
-const AntiPhishingStatus = () => {
+const AntiPhishingStatus = ({ route }) => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
+  const userData = useAppSelector(state => state.auth.userData);
   const { colors: themeColors, isDark } = useTheme();
 
   const [hasCode, setHasCode] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isProcessingRemove, setIsProcessingRemove] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
+  const isDisableFlowRef = React.useRef(false);
+  isDisableFlowRef.current = !!route?.params?.isDisableFlow;
+
   /** Fetch anti-phishing status from API — same as web's fetchStatus */
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await dispatch(getAntiPhishingStatus());
       if (data) {
         setHasCode(!!data.hasAntiPhishingCode);
@@ -56,13 +61,15 @@ const AntiPhishingStatus = () => {
     } catch (error) {
       showError(error?.message || 'Failed to load anti-phishing status');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [dispatch]);
 
   /** Re-fetch every time the screen gets focus (same as web useEffect on mount) */
   useFocusEffect(
     useCallback(() => {
+      // Skip fetching if we are actively processing a remove flow payload
+      if (isDisableFlowRef.current) return;
       fetchStatus();
     }, [fetchStatus])
   );
@@ -75,6 +82,92 @@ const AntiPhishingStatus = () => {
     const masked = '* '.repeat(Math.min(code.length - 2, 6)).trim();
     return `${head.split('').join(' ')} ${masked}`;
   };
+
+  const handleDisablePress = () => {
+    const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true || userData?.isTwoFactorEnabled === true;
+    const hasEmail = !!(userData?.emailId || userData?.email);
+    const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
+    const methods = [];
+    if (hasGA) methods.push('totp');
+    if (hasEmail) methods.push('email');
+    if (hasMobile) methods.push('mobile');
+    if (methods.length === 0) methods.push('email');
+
+    navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
+      targetScreen: routes.ANTI_PHISHING_CODE_SCREEN,
+      purpose: 'anti_phishing_remove',
+      verifyMethods: methods,
+      skipDirectVerification: true,
+      targetParams: {
+        isDisableFlow: true,
+      },
+    });
+  };
+
+  React.useEffect(() => {
+    const params = route?.params || {};
+    const emailOtp = params.emailOtp;
+    const smsOtp = params.smsOtp;
+    const tofaCode = params.tofaCode;
+    const passkeyUserId = params.passkeyUserId;
+    const isDisableFlow = params.isDisableFlow;
+
+    if (!isDisableFlow) return;
+
+    let verifyMethod = '';
+    let verifyCode = '';
+
+    if (passkeyUserId) {
+      verifyMethod = 'passkey';
+      verifyCode = passkeyUserId;
+    } else if (tofaCode) {
+      verifyMethod = 'totp';
+      verifyCode = tofaCode;
+    } else if (smsOtp) {
+      verifyMethod = 'mobile';
+      verifyCode = smsOtp;
+    } else if (emailOtp) {
+      verifyMethod = 'email';
+      verifyCode = emailOtp;
+    }
+
+    if (!verifyMethod) return;
+
+    const submitRemove = async () => {
+      setIsProcessingRemove(true);
+      try {
+        const payload = { verifyMethod };
+        if (verifyMethod === 'passkey') {
+          payload.passkeyUserId = verifyCode;
+        } else {
+          payload.code = verifyCode;
+        }
+
+        const success = await dispatch(removeAntiPhishingCode(payload));
+        if (success) {
+          // Optimistically update the UI to prevent any blink
+          setHasCode(false);
+          setCurrentCode('');
+          setStatusMessage('');
+          // Silently sync the latest status from server
+          await fetchStatus(true);
+        }
+      } catch (error) {
+        showError(error?.message || 'Something went wrong');
+      } finally {
+        setIsProcessingRemove(false);
+        navigation.setParams({
+          isDisableFlow: undefined,
+          emailOtp: undefined,
+          smsOtp: undefined,
+          tofaCode: undefined,
+          passkeyUserId: undefined,
+        });
+      }
+    };
+
+    submitRemove();
+  }, [route?.params, dispatch, fetchStatus, navigation]);
 
   return (
     <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
@@ -100,9 +193,14 @@ const AntiPhishingStatus = () => {
         <View style={{ width: 24 }} />
       </View>
 
-      {loading ? (
+      {loading || isProcessingRemove ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={isDark ? '#D1AA67' : '#2A2A2E'} />
+          {isProcessingRemove && (
+            <AppText type={FOURTEEN} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 16 }}>
+              Removing anti-phishing code...
+            </AppText>
+          )}
         </View>
       ) : (
         <>
@@ -133,7 +231,7 @@ const AntiPhishingStatus = () => {
                   onPress={() => navigation.navigate(routes.EDIT_ANTI_PHISHING_SCREEN)}
                 >
                   <AppText type={SIXTEEN} weight={NORMAL} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
-                    Edit Anti-Phishing Code
+                    Change Anti-Phishing Code
                   </AppText>
                   <FastImage
                     source={right_ic}
@@ -149,7 +247,7 @@ const AntiPhishingStatus = () => {
                 <TouchableOpacity
                   style={styles.row}
                   activeOpacity={0.7}
-                  onPress={() => navigation.navigate(routes.DISABLE_ANTI_PHISHING_SCREEN)}
+                  onPress={handleDisablePress}
                 >
                   <AppText type={SIXTEEN} weight={NORMAL} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
                     Disable Anti-Phishing Code

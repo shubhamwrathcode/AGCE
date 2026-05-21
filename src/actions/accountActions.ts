@@ -503,7 +503,7 @@ export const getKycStatus = () => async () => {
       else if (errData?.status) payload = errData;
     }
   }
-  
+
   if (payload == null) {
     if (__DEV__) console.warn('[KYC API] get_kyc_status: no canonical payload found');
     return null;
@@ -1071,12 +1071,12 @@ export const sendSecurityOtp = (target: string, purpose: string, value?: string 
     const response: any = purpose === 'delete_account'
       ? await appOperation.customer.securityClosedAccountSendOtp(target === 'mobile' ? 'phone' : target)
       : purpose === 'disable_account'
-      ? await appOperation.customer.securityDisableAccountSendOtp(target === 'mobile' ? 'phone' : target)
-      : purpose === 'login_2step_verification'
-      ? await appOperation.customer.securitySendOtpForTwoLogin2Step(target === 'mobile' ? 'phone' : target)
-      : (purpose === 'anti_phishing_add' || purpose === 'anti_phishing_edit' || purpose === 'anti_phishing_remove')
-      ? await appOperation.customer.send_anti_phishing_otp(target === 'mobile' ? 'phone' : target)
-      : await appOperation.customer.securitySendOtp(target, purpose, value ?? undefined);
+        ? await appOperation.customer.securityDisableAccountSendOtp(target === 'mobile' ? 'phone' : target)
+        : purpose === 'login_2step_verification'
+          ? await appOperation.customer.securitySendOtpForTwoLogin2Step(target === 'mobile' ? 'phone' : target)
+          : (purpose === 'anti_phishing_add' || purpose === 'anti_phishing_edit' || purpose === 'anti_phishing_remove')
+            ? await appOperation.customer.send_anti_phishing_otp(target === 'mobile' ? 'phone' : target)
+            : await appOperation.customer.securitySendOtp(target, purpose, value ?? undefined);
     if (response?.success) {
       showSuccess(response?.message || 'OTP sent successfully');
       return true;
@@ -1756,17 +1756,17 @@ export const addAntiPhishingCode = (data: { antiPhishingCode: string; verifyMeth
     const response: any = await appOperation.customer.add_anti_phishing_code(payload);
     console.log('[API] addAntiPhishingCode response:', response);
     if (response?.success) {
-      showSuccess(response?.message || 'Anti-phishing code set successfully');
+      showSuccess(response?.message);
       return true;
     } else {
       console.warn('[API] addAntiPhishingCode FAILED:', response?.message || 'Unknown error');
-      showError(response?.message || 'Failed to set code');
+      showError(response?.message);
       return false;
     }
   } catch (e: any) {
     console.error('[API] addAntiPhishingCode CATCH error:', e);
     logger(e);
-    showError(e?.message || 'Something went wrong');
+    showError(e?.message);
     return false;
   } finally {
     dispatch(setLoading(false));
@@ -1778,11 +1778,37 @@ export const removeAntiPhishingCode = (data: { verifyMethod: string; code?: stri
   try {
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.remove_anti_phishing_code(data);
+    console.log('[API] removeAntiPhishingCode response:', response);
     if (response?.success) {
-      showSuccess(response?.message || 'Anti-phishing code removed successfully');
+      showSuccess(response?.message);
       return true;
     } else {
-      showError(response?.message || 'Failed to remove code');
+      showError(response?.message);
+      return false;
+    }
+  } catch (e: any) {
+    logger(e);
+    showError(e?.message);
+    return false;
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+/** Update Login 2-Step Verification */
+export const updateTwoLogin2StepStatus = (data: { security_methods: string; code?: string; passkeyUserId?: string; action: string }) => async (dispatch: AppDispatch) => {
+  try {
+    dispatch(setLoading(true));
+    const payload: any = { security_methods: data.security_methods, action: data.action };
+    if (data.code) payload.code = data.code;
+    if (data.passkeyUserId) payload.passkeyUserId = data.passkeyUserId;
+
+    const response: any = await appOperation.customer.securityUpdateTwoLogin2Step(payload);
+    if (response?.success) {
+      showSuccess(response?.message);
+      return true;
+    } else {
+      showError(response?.message);
       return false;
     }
   } catch (e: any) {
@@ -1793,4 +1819,3 @@ export const removeAntiPhishingCode = (data: { verifyMethod: string; code?: stri
     dispatch(setLoading(false));
   }
 };
-

@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
   },
   removeInfoTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   removeInfoTitle: { fontSize: 15, fontWeight: '600', color: colors.white, marginLeft: 10 },
-  removeInfoDesc: { fontSize: 13, color: colors.descText, lineHeight: 20 },
+  removeInfoDesc: { fontSize: 13, color: colors.descText, lineHeight: 20 }
 });
 
 export default AntiPhishingCode;

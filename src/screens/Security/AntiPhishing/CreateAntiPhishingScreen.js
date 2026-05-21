@@ -19,6 +19,7 @@ import { AppSafeAreaView, AppText, SEMI_BOLD, EIGHTEEN, FOURTEEN, SIXTEEN, TWELV
 import * as routes from '../../../navigation/routes';
 import { showError } from '../../../helper/logger';
 import { addAntiPhishingCode } from '../../../actions/accountActions';
+import { colors } from '../../../theme/colors';
 
 const CreateAntiPhishingScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -30,9 +31,9 @@ const CreateAntiPhishingScreen = ({ route }) => {
   const [newCodeField, setNewCodeField] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Micro-interactive Validation states
-  const isLenValid = newCodeField.length >= 6 && newCodeField.length <= 8;
-  const isCharValid = /^[A-Za-z0-9_]+$/.test(newCodeField);
+  // Validation states
+  const isLenValid = newCodeField.length >= 5 && newCodeField.length <= 8;
+  const isCharValid = /^\d+$/.test(newCodeField);
   const isAntiCodeValid = isLenValid && isCharValid;
 
   /**
@@ -45,17 +46,27 @@ const CreateAntiPhishingScreen = ({ route }) => {
     const smsOtp = params.smsOtp;
     const tofaCode = params.tofaCode;
     const antiPhishingCodeFromParams = params.antiPhishingCode;
+    const passkeyUserId = params.passkeyUserId;
 
     // Only proceed if we have a verification code AND the anti-phishing code
     if (!antiPhishingCodeFromParams) return;
-    const code = emailOtp || smsOtp || tofaCode;
+    const code = emailOtp || smsOtp || tofaCode || passkeyUserId;
     if (!code) return;
 
     // Determine verifyMethod from which OTP was provided
     let verifyMethod = 'email';
-    if (tofaCode) verifyMethod = 'totp';
-    else if (smsOtp) verifyMethod = 'mobile';
-    else if (emailOtp) verifyMethod = 'email';
+    let verifyCode = code;
+
+    if (passkeyUserId) {
+      verifyMethod = 'passkey';
+      verifyCode = passkeyUserId;
+    } else if (tofaCode) {
+      verifyMethod = 'totp';
+    } else if (smsOtp) {
+      verifyMethod = 'mobile';
+    } else if (emailOtp) {
+      verifyMethod = 'email';
+    }
 
     // Auto-submit
     const submitCode = async () => {
@@ -64,8 +75,13 @@ const CreateAntiPhishingScreen = ({ route }) => {
         const payload = {
           antiPhishingCode: antiPhishingCodeFromParams,
           verifyMethod,
-          code,
         };
+        if (verifyMethod === 'passkey') {
+          payload.passkeyUserId = verifyCode;
+        } else {
+          payload.code = verifyCode;
+        }
+
         const success = await dispatch(addAntiPhishingCode(payload));
         if (success) {
           navigation.navigate(routes.ANTI_PHISHING_CODE_SCREEN);
@@ -83,7 +99,7 @@ const CreateAntiPhishingScreen = ({ route }) => {
   /** Navigate to SecurityVerification screen for OTP/TOTP verification */
   const handleConfirmAndVerify = () => {
     if (!isAntiCodeValid) {
-      showError('Please make sure all validation rules are met.');
+      showError('Please enter a valid 5-8 digit Anti-Phishing code.');
       return;
     }
 
@@ -160,33 +176,22 @@ const CreateAntiPhishingScreen = ({ route }) => {
               <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
                 <TextInput
                   style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
-                  placeholder="6–8 characters"
+                  placeholder="5–8 digits"
                   placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
                   value={newCodeField}
-                  onChangeText={setNewCodeField}
-                  keyboardType="default"
+                  onChangeText={(t) => setNewCodeField(t.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
                   maxLength={8}
                   autoCorrect={false}
                   autoCapitalize="none"
+                  cursorColor={colors.black}
                 />
               </View>
 
-              {/* Micro-interactive Validation Points */}
-              <View style={styles.valWrapper}>
-                <View style={styles.valRow}>
-                  <AppText style={[styles.checkmark, { color: isLenValid ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
-                  <AppText type={TWELVE} style={[styles.valText, { color: isLenValid ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
-                    6-8 characters
-                  </AppText>
-                </View>
+              <AppText type={TWELVE} style={[styles.fieldLabel, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 8, fontWeight: 'normal' }]}>
+                Enter 5 to 8 digits only.
+              </AppText>
 
-                <View style={styles.valRow}>
-                  <AppText style={[styles.checkmark, { color: isCharValid ? '#4CD964' : '#8E8E93' }]}>✓</AppText>
-                  <AppText type={TWELVE} style={[styles.valText, { color: isCharValid ? (isDark ? '#FFFFFF' : '#1C1C1E') : '#8E8E93' }]}>
-                    Only letters, digits or underscore (A-Z, a-z, 0-9, _)
-                  </AppText>
-                </View>
-              </View>
             </ScrollView>
 
             {/* Confirm button */}
@@ -261,22 +266,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     padding: 0,
     flex: 1,
-  },
-  valWrapper: {
-    marginHorizontal: 16,
-    marginTop: 12,
-  },
-  valRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  checkmark: {
-    fontSize: 14,
-    marginRight: 8,
-  },
-  valText: {
-    lineHeight: 18,
   },
   confirmBtn: {
     height: 50,
