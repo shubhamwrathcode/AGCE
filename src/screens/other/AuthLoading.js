@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BackHandler, Linking, Modal, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import NavigationService from '../../navigation/NavigationService';
 import { NAVIGATION_AUTH_STACK } from '../../navigation/routes';
@@ -21,31 +21,41 @@ const AuthLoading = () => {
   const [CheckCurrent] = useState(getVersion());
   const appVersion = useAppSelector((state) => state.auth.appVersion);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [versionCheckDone, setVersionCheckDone] = useState(false);
+  const proceededRef = useRef(false);
 
   // --- CORRECTED LOGIC ---
 
-  // Effect 1: Fetch the app version from the API when the component mounts.
-  // The empty dependency array [] ensures this runs only once.
+  // 1) Fetch server version (silent — no full-screen loader on splash).
   useEffect(() => {
-    // dispatch(getAppVersion());
-  }, []);
+    dispatch(getAppVersion({ silent: true })).finally(() => {
+      setVersionCheckDone(true);
+    });
+  }, [dispatch]);
 
-  // Effect 2: Run the version check logic ONLY when the appVersion from the store changes.
+  // 2) After fetch settles: force-update if server `version` !== installed build; else continue boot.
   useEffect(() => {
-    // Add a guard clause to ensure we don't check an empty/initial value.
-    // if (appVersion && appVersion.version) {
-    //   console.log(`Checking versions: Current=${CheckCurrent}, Required=${appVersion.version}`);
-      
-    //   if (CheckCurrent !== appVersion.version) {
-    //     setShowUpdateModal(true);
-    //   } else {
-    //     checkUserLogin();
-    //     checkLanguage();
-    //   }
-    // }
+    if (!versionCheckDone || proceededRef.current) return;
+
+    const serverVersion =
+      appVersion && typeof appVersion === 'object' && appVersion.version != null
+        ? String(appVersion.version).trim()
+        : null;
+    const current = String(CheckCurrent || '').trim();
+
+    console.log(`[Version Check] API Called: "admin/getApk"`);
+    console.log(`[Version Check] API Response (appVersion):`, appVersion);
+    console.log(`[Version Check] Server Version: "${serverVersion}", Local/APK Version: "${current}"`);
+
+    if (serverVersion && current !== serverVersion) {
+      setShowUpdateModal(true);
+      return;
+    }
+
+    proceededRef.current = true;
     checkUserLogin();
     checkLanguage();
-  }, [appVersion]); // This effect now correctly depends on the appVersion object.
+  }, [versionCheckDone, appVersion, CheckCurrent]);
 
 
   const success = () => {
@@ -87,10 +97,10 @@ const AuthLoading = () => {
 
   const downloadApk = () => {
     if (appVersion?.apk) {
-        const apkDownloadUrl = BASE_URL + appVersion.apk;
-        Linking.openURL(apkDownloadUrl).catch((error) => {
-          console.error("Error opening download link:", error);
-        });
+      const apkDownloadUrl = BASE_URL + appVersion.apk;
+      Linking.openURL(apkDownloadUrl).catch((error) => {
+        console.error("Error opening download link:", error);
+      });
     }
   };
 
@@ -106,7 +116,7 @@ const AuthLoading = () => {
       <View style={commonStyles.center}>
         {/* Your logo or loader can go here */}
       </View>
-      
+
       <Modal transparent={true} visible={showUpdateModal} animationType="fade" statusBarTranslucent>
         <View style={styles.fullScreen}>
           <View style={styles.modalBox}>

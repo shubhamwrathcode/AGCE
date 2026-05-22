@@ -1,15 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {appOperation} from '../appOperation';
-import {logger, showError, showSuccess} from '../helper/logger';
+import { appOperation } from '../appOperation';
+import { logger, showError, showSuccess } from '../helper/logger';
 import {
   ForgotPasswordProps,
   LoginProps,
   RegistrationProps,
   SendOtpRegistrationProps,
 } from '../helper/types';
-import {setAppVersion, setLoading, setLoadingOtp, setUserData, setPending2FA, clearPending2FA} from '../slices/authSlice';
-import {AppDispatch} from '../store/store';
-import {USER_TOKEN_KEY} from '../helper/Constants';
+import { setAppVersion, setLoading, setLoadingOtp, setUserData, setPending2FA, clearPending2FA } from '../slices/authSlice';
+import { AppDispatch } from '../store/store';
+import { USER_TOKEN_KEY } from '../helper/Constants';
 import NavigationService from '../navigation/NavigationService';
 import {
   ACCOUNT_ACTIVATED_SCREEN,
@@ -22,11 +22,11 @@ import {
   REGISTER_SCREEN,
   VERIFY_ACCOUNT_SCREEN,
 } from '../navigation/routes';
-import {getUserProfile} from './accountActions';
-import {Passkey} from 'react-native-passkey';
-import {PASSKEY_RP_ID} from '../helper/Constants';
-import {socketService} from '../services/socket/SocketService';
-import {Platform} from 'react-native';
+import { getUserProfile } from './accountActions';
+import { Passkey } from 'react-native-passkey';
+import { PASSKEY_RP_ID } from '../helper/Constants';
+import { socketService } from '../services/socket/SocketService';
+import { Platform } from 'react-native';
 
 /** Persist signup/login JWT so customer APIs + socket work after register / verify-otp. */
 async function persistSignupSessionToken(token: unknown) {
@@ -52,70 +52,78 @@ function extractTokenFromAuthResponse(res: any): string | null {
 export const sendOtp =
   (
     data: SendOtpRegistrationProps,
-    setDisbaleBtn = (p0: boolean) => {},
-    setTimer = (p0: number) => {},
-    setAttemptLeft = (_: string | number) => {}
+    setDisbaleBtn = (p0: boolean) => { },
+    setTimer = (p0: number) => { },
+    setAttemptLeft = (_: string | number) => { }
   ) =>
-  async (dispatch: AppDispatch) => {
-    try {
-      dispatch(setLoading(true));
-      const response: any = await appOperation.guest.send_otp(data);
-      if (response.success) {
-        showError(response.message);
-        setDisbaleBtn(true);
-        setTimer(60);
-        setAttemptLeft(response?.attemptsLeft ?? "");
+    async (dispatch: AppDispatch) => {
+      try {
+        dispatch(setLoading(true));
+        const response: any = await appOperation.guest.send_otp(data);
+        if (response.success) {
+          showError(response.message);
+          setDisbaleBtn(true);
+          setTimer(60);
+          setAttemptLeft(response?.attemptsLeft ?? "");
+        }
+        return response;
+      } catch (e: any) {
+        logger(e);
+        showError(e?.message);
+        return { success: false, message: e?.message };
+      } finally {
+        dispatch(setLoading(false));
       }
-      return response;
-    } catch (e: any) {
-      logger(e);
-      showError(e?.message);
-      return { success: false, message: e?.message };
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
+    };
 
-  export const forgotOtp =
+export const forgotOtp =
   (data: any, isNavigate = false) =>
-  async (dispatch: AppDispatch) => {
-    try {
-      dispatch(setLoading(true));
-      const response: any = await appOperation.guest.forgot_otp(data);
-      if (response.success) {
-        showError(response.message);
-        // isNavigate
-        //   ? NavigationService.navigate(OTP_VERIFY_SCREEN, {data})
-        //   : null;
+    async (dispatch: AppDispatch) => {
+      try {
+        dispatch(setLoading(true));
+        const response: any = await appOperation.guest.forgot_otp(data);
+        if (response.success) {
+          showError(response.message);
+          // isNavigate
+          //   ? NavigationService.navigate(OTP_VERIFY_SCREEN, {data})
+          //   : null;
+        }
+      } catch (e: any) {
+        logger(e);
+        showError(e?.message);
+      } finally {
+        dispatch(setLoading(false));
       }
-    } catch (e: any) {
-      logger(e);
-      showError(e?.message);
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
+    };
 
-  export const getAppVersion =
-  () =>
-  async (dispatch: AppDispatch) => {
-    try {
-      dispatch(setLoading(true));
-      const response: any = await appOperation.guest.app_version();
-      if (response.success) {
-        // showError(response.message);
-        dispatch(setAppVersion(response.data));
-      } 
-    } catch (e: any) {
-      logger(e);
-      showError(e?.message);
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
+export const getAppVersion =
+  (opts?: { silent?: boolean }) =>
+    async (dispatch: AppDispatch) => {
+      try {
+        if (!opts?.silent) {
+          dispatch(setLoading(true));
+        }
+        const response: any = await appOperation.guest.app_version();
+        if (response.success) {
+          // showError(response.message);
+          console.log(response, '====response=====app version')
+
+          dispatch(setAppVersion(response.data));
+        }
+      } catch (e: any) {
+        logger(e);
+        if (!opts?.silent) {
+          showError(e?.message);
+        }
+      } finally {
+        if (!opts?.silent) {
+          dispatch(setLoading(false));
+        }
+      }
+    };
 
 export const register =
-  (data: RegistrationProps, setData = () => {}, setVerifyToken = (data: any) => {}, handleClearCaptcha = () => {}) => async (dispatch: AppDispatch) => {
+  (data: RegistrationProps, setData = () => { }, setVerifyToken = (data: any) => { }, handleClearCaptcha = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.guest.register_email(data);
@@ -146,8 +154,8 @@ export const register =
     }
   };
 
-  export const registerWithPhone =
-  (data: RegistrationProps, setData = () => {}, setVerifyToken = (data: any) => {}, handleClearCaptcha = () => {}) => async (dispatch: AppDispatch) => {
+export const registerWithPhone =
+  (data: RegistrationProps, setData = () => { }, setVerifyToken = (data: any) => { }, handleClearCaptcha = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.guest.register_phone(data);
@@ -180,8 +188,8 @@ export const register =
     }
   };
 
-  export const googleRegister =
-  (data: RegistrationProps, setData = () => {}, setVerifyToken = (_: boolean) => {}, handleClearCaptcha = () => {}) => async (dispatch: AppDispatch) => {
+export const googleRegister =
+  (data: RegistrationProps, setData = () => { }, setVerifyToken = (_: boolean) => { }, handleClearCaptcha = () => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.guest.register_google(data);
@@ -356,7 +364,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
           };
         }
         appOperation.setCustomerToken(response?.data);
-        NavigationService.navigate(REGISTER_SCREEN, {myToken: true, userData: data});
+        NavigationService.navigate(REGISTER_SCREEN, { myToken: true, userData: data });
         return {
           success: false,
           highlightPasswordField: false,
@@ -382,22 +390,42 @@ export const login = (data: LoginProps & { token?: string }) => async (
     } else if (webShape) {
       dispatch(setUserData(d));
       const methods = getNormalizedAvailableMethods(d);
+      const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, data?.email_or_phone);
       dispatch(setPending2FA({
         loginSignId: d?.signId ?? data?.email_or_phone,
         availableMethods: methods,
-        defaultMethod: resolveLogin2FADefaultMethod(methods, d?.defaultMethod, data?.email_or_phone),
+        defaultMethod: defaultMethod,
         data: d,
       }));
+      if (defaultMethod === 1 || defaultMethod === 3) {
+        const sendTo = defaultMethod === 3 ? 'mobile' : 'email';
+        const signId = d?.signId ?? data?.email_or_phone;
+        const m = methods?.find((x: any) => x.type === defaultMethod);
+        const identifier = m?.value ?? signId;
+        if (identifier) {
+          dispatch(sendLoginOtp(identifier, sendTo));
+        }
+      }
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
     } else {
       dispatch(setUserData(d));
       const methods = getNormalizedAvailableMethods(d);
+      const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.['2fa'], data?.email_or_phone);
       dispatch(setPending2FA({
         loginSignId: data?.email_or_phone,
         availableMethods: methods,
-        defaultMethod: resolveLogin2FADefaultMethod(methods, d?.['2fa'], data?.email_or_phone),
+        defaultMethod: defaultMethod,
         data: d?.['2fa'] === 2 ? data : d,
       }));
+      if (defaultMethod === 1 || defaultMethod === 3) {
+        const sendTo = defaultMethod === 3 ? 'mobile' : 'email';
+        const signId = data?.email_or_phone;
+        const m = methods?.find((x: any) => x.type === defaultMethod);
+        const identifier = m?.value ?? signId;
+        if (identifier) {
+          dispatch(sendLoginOtp(identifier, sendTo));
+        }
+      }
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
     }
     return { success: true };
@@ -414,7 +442,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
         };
       }
       appOperation.setCustomerToken(e?.data);
-      NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
+      NavigationService.navigate(REGISTER_SCREEN, { myToken: true });
       return {
         success: false,
         highlightPasswordField: false,
@@ -450,12 +478,21 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
         const signId = d?.signId ?? d?.emailId ?? d?.mobileNumber ?? '';
         const methods = getNormalizedAvailableMethods(d);
         const loginHint = String(d?.emailId || d?.mobileNumber || signId || '');
+        const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, loginHint);
         dispatch(setPending2FA({
           loginSignId: signId,
           availableMethods: methods,
-          defaultMethod: resolveLogin2FADefaultMethod(methods, d?.defaultMethod, loginHint),
+          defaultMethod: defaultMethod,
           data: d,
         }));
+        if (defaultMethod === 1 || defaultMethod === 3) {
+          const sendTo = defaultMethod === 3 ? 'mobile' : 'email';
+          const m = methods?.find((x: any) => x.type === defaultMethod);
+          const identifier = m?.value ?? signId;
+          if (identifier) {
+            dispatch(sendLoginOtp(identifier, sendTo));
+          }
+        }
         NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
       } else {
         appOperation.setCustomerToken(d?.token);
@@ -474,7 +511,7 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
         return;
       }
       appOperation.setCustomerToken(e?.data);
-      NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
+      NavigationService.navigate(REGISTER_SCREEN, { myToken: true });
       return;
     }
   } finally {
@@ -503,30 +540,30 @@ export const forgotPassword =
 
 export const sendLoginOtp =
   (signId: string, sendTo: 'email' | 'mobile', setResendTimer?: (s: number) => void) =>
-  async (dispatch: AppDispatch) => {
-    try {
-      dispatch(setLoading(true));
-      const response: any = await appOperation.guest.send_login_otp(signId, sendTo);
-      if (response?.success) {
-        showSuccess(response?.message ?? 'OTP sent successfully');
-        setResendTimer?.(60);
-      } else {
-        showError(response?.message ?? 'Failed to Send OTP');
+    async (dispatch: AppDispatch) => {
+      try {
+        dispatch(setLoading(true));
+        const response: any = await appOperation.guest.send_login_otp(signId, sendTo);
+        if (response?.success) {
+          showSuccess(response?.message ?? 'OTP sent successfully');
+          setResendTimer?.(60);
+        } else {
+          showError(response?.message ?? 'Failed to Send OTP');
+        }
+      } catch (e: any) {
+        logger(e);
+        showError(e?.message ?? 'Failed to Send OTP');
+      } finally {
+        dispatch(setLoading(false));
       }
-    } catch (e: any) {
-      logger(e);
-      showError(e?.message ?? 'Failed to Send OTP');
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
+    };
 
 /** Same as web RegistrationVerification handleLogin: verify-registration-otp API, success → Login (account activated) */
 export const verifyOtp = (
   data: any,
-  setOtp = (p0: string) => {},
-  setOtpError = (_: boolean) => {},
-  onBlocked = () => {}
+  setOtp = (p0: string) => { },
+  setOtpError = (_: boolean) => { },
+  onBlocked = () => { }
 ) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoadingOtp(true));
@@ -582,7 +619,7 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
       resend: false,
     };
     console.log(payload, "payloadotp");
-    
+
     const response: any = await appOperation.guest.verify_fac_otp(payload as any);
     if (response.success) {
       showSuccess(response?.message ?? 'Login successful');
@@ -601,7 +638,7 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
     showError(e?.message);
     if (e?.code == 403) {
       appOperation.setCustomerToken(e?.token);
-      NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
+      NavigationService.navigate(REGISTER_SCREEN, { myToken: true });
       return { success: false, code: 403, message: e?.message, token: e?.token };
     }
     return { success: false, message: e?.message };
@@ -752,7 +789,7 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
     }
     if (e?.code == 403) {
       appOperation.setCustomerToken(e?.token);
-      NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
+      NavigationService.navigate(REGISTER_SCREEN, { myToken: true });
       return false;
     }
     return false;
@@ -844,7 +881,7 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
     }
     if (e?.code == 403) {
       appOperation.setCustomerToken(e?.token);
-      NavigationService.navigate(REGISTER_SCREEN, {myToken: true});
+      NavigationService.navigate(REGISTER_SCREEN, { myToken: true });
       return false;
     }
     return false;

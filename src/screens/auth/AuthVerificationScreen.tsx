@@ -80,7 +80,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     return () => clearTimeout(t);
   }, []);
 
-  const lastAutoSentForMethod = useRef<number | null>(null);
   const isVerifyingRef = useRef(false);
   const prevSelectedMethod = useRef<number>(initialMethod);
   const autoSubmitEnabled = useRef<boolean>(true);
@@ -111,48 +110,41 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   // };
 
   useEffect(() => {
-    if (pending2FA) {
-      const firstMethod = getFirstMethod();
-      const baseMethods = pending2FA.availableMethods ?? [];
+    console.log("[AuthVerification] Hook 1 triggered. pending2FA:", !!pending2FA);
+    if (!pending2FA) return;
 
-      setSelectedAuthMethod(firstMethod);
-      setOtpCode("");
-      setOtpError(false);
-      prevSelectedMethod.current = firstMethod;
-      autoSubmitEnabled.current = true;
-      if (firstMethod !== 1 && firstMethod !== 3) {
-        setResendTimer(0);
-      }
+    const firstMethod = getFirstMethod();
 
-      if ((firstMethod === 1 || firstMethod === 3) && lastAutoSentForMethod.current !== firstMethod) {
-        const signId = pending2FA.loginSignId ?? "";
-        const m = baseMethods?.find((x: any) => x.type === firstMethod);
-        const identifier = m?.value ?? signId;
-        if (identifier) {
-          lastAutoSentForMethod.current = firstMethod;
-          const sendTo = firstMethod === 3 ? "mobile" : "email";
-          setResendTimer(60);
-          dispatch(sendLoginOtp(identifier, sendTo, setResendTimer));
-        }
-      }
+    setSelectedAuthMethod(firstMethod);
+    setOtpCode("");
+    setOtpError(false);
+    prevSelectedMethod.current = firstMethod;
+    autoSubmitEnabled.current = true;
+    if (firstMethod === 1 || firstMethod === 3) {
+      setResendTimer(60);
+    } else {
+      setResendTimer(0);
     }
   }, [pending2FA]);
 
   // Auto-send OTP when user switches between Email/Phone methods (no need to press Resend).
   useEffect(() => {
+    console.log(`[AuthVerification] Hook 2 triggered. selectedAuthMethod: ${selectedAuthMethod}, prevSelectedMethod: ${prevSelectedMethod.current}`);
     if (!pending2FA) return;
-    if (prevSelectedMethod.current === selectedAuthMethod) return;
+    if (prevSelectedMethod.current === selectedAuthMethod) {
+      console.log("[AuthVerification] Hook 2 - Skip because method is unchanged");
+      return;
+    }
 
     // Reset input when switching methods
     setOtpCode("");
     setOtpError(false);
 
-    // Allow re-auto-send when switching back later
-    lastAutoSentForMethod.current = null;
     // Re-enable auto-submit on a fresh method switch
     autoSubmitEnabled.current = true;
 
     if (selectedAuthMethod === 1 || selectedAuthMethod === 3) {
+      console.log(`[AuthVerification] Hook 2 - Auto-sending OTP for switched method: ${selectedAuthMethod}`);
       prevSelectedMethod.current = selectedAuthMethod;
       handleGetOtp();
       return;
@@ -226,6 +218,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
   const handleGetOtp = () => {
     const sendTo = selectedAuthMethod === 3 ? "mobile" : "email";
+    console.log(`[AuthVerification] handleGetOtp called. method: ${selectedAuthMethod}, sendTo: ${sendTo}`);
     setResendTimer(60);
     autoSubmitEnabled.current = true;
     dispatch(sendLoginOtp(getVerifySignId(), sendTo, setResendTimer));
