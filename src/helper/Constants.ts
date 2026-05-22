@@ -29,7 +29,9 @@ export const IMAGE_BASE_URL = 'https://backend.arabglobal.io/';
 // 'http://localhost:5001/' (same machine) | 'http://10.0.2.2:5001/' (Android emulator) | 'http://<your-ip>:5001/' (device)
 
 /** Passkey RP ID. Must match the domain that serves /.well-known/assetlinks.json (required on Android). */
-export const PASSKEY_RP_ID = 'agce.wrathcode.com';
+// export const PASSKEY_RP_ID = 'agce.wrathcode.com';
+export const PASSKEY_RP_ID = 'arabglobal.io';
+
 
 export const placeHolderText = {
   userName: 'Phone Number',

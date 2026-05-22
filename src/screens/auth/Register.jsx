@@ -89,23 +89,6 @@ const parseSignupEmailCheckResponse = (res) => {
   return { ok: true };
 };
 
-const parseSignupReferralResponse = (res) => {
-  if (res == null) return { ok: false, message: "" };
-  if (res.success === false) {
-    return { ok: false, message: res.message || res?.data?.message || "" };
-  }
-  const d = res.data != null && typeof res.data === "object" ? res.data : res;
-  if (typeof d === "object" && d) {
-    if (d.valid === false || d.isValid === false || d.is_valid === false) {
-      return { ok: false, message: res.message || d.message || "" };
-    }
-    if (d.exhausted === true || d.fullyUsed === true || d.noUsesLeft === true) {
-      return { ok: false, message: res.message || d.message || "" };
-    }
-  }
-  return { ok: true };
-};
-
 const isSkippablePrecheckError = (err) => {
   const code = Number(err?.code ?? err?.status ?? 0);
   const message = String(err?.message || "").toLowerCase();
@@ -189,6 +172,7 @@ const Register = () => {
   }, []);
 
   const onSubmit = async () => {
+    console.log("[Register] onSubmit triggered. Index:", index, "signUpId:", signUpId, "referCode:", referCode, "checkTermsEmail:", checkTermsEmail);
     if (index === 0) {
       if (!signUpId) {
         setSignUpIdError(true);
@@ -222,38 +206,20 @@ const Register = () => {
     if (index === 0) {
       try {
         setStep1Submitting(true);
-        const emailRes = await appOperation.guest.check_signup_email(signUpId.trim());
+        const ref = String(referCode || "").trim();
+        console.log("[Register] Calling check_signup_email with:", { email: signUpId.trim(), referral_code: ref });
+        const emailRes = await appOperation.guest.check_signup_email(signUpId.trim(), ref);
+        console.log("[Register] check_signup_email raw response:", emailRes);
         const emailCheck = parseSignupEmailCheckResponse(emailRes);
+        console.log("[Register] check_signup_email parsed check:", emailCheck);
         if (!emailCheck.ok) {
           showError(emailCheck.message || "Request failed");
           return;
         }
       } catch (e) {
+        console.log("[Register] check_signup_email caught error object:", e);
         if (isSkippablePrecheckError(e)) {
           console.warn("[Register] check-signup-email unavailable, skipping pre-check", e?.code || e?.message);
-        } else {
-          showError(e?.message || e?.response?.data?.message || "Request failed");
-          return;
-        }
-      } finally {
-        setStep1Submitting(false);
-      }
-    }
-
-    const ref = String(referCode || "").trim();
-    const shouldValidateReferral = ref.length > 0 && (showRefer || Boolean(refFromParams));
-    if (shouldValidateReferral) {
-      try {
-        setStep1Submitting(true);
-        const refRes = await appOperation.guest.validate_signup_referral(ref);
-        const refCheck = parseSignupReferralResponse(refRes);
-        if (!refCheck.ok) {
-          showError(refCheck.message || "Request failed");
-          return;
-        }
-      } catch (e) {
-        if (isSkippablePrecheckError(e)) {
-          console.warn("[Register] validate-signup-referral unavailable, skipping pre-check", e?.code || e?.message);
         } else {
           showError(e?.message || e?.response?.data?.message || "Request failed");
           return;

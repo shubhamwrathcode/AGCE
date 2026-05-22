@@ -17,16 +17,12 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('user/third-party-signup', data, GUEST_TYPE),
   register_phone: (data: RegistrationProps) =>
     appOperation.post('user/register-phone', data, GUEST_TYPE),
-  /** Web parity: step-1 email availability check */
-  check_signup_email: (email: string) =>
-    appOperation.post('check-signup-email', { email: String(email || '').trim() }, GUEST_TYPE),
-  /** Web parity: referral validity check */
-  validate_signup_referral: (referralCode: string) =>
-    appOperation.post(
-      'validate-signup-referral',
-      { referral_code: String(referralCode || '').trim() },
-      GUEST_TYPE
-    ),
+  check_signup_email: (email: string, referralCode?: string) => {
+    const params: Record<string, any> = { email: String(email || '').trim() };
+    const ref = String(referralCode || '').trim();
+    if (ref) params.referral_code = ref;
+    return appOperation.post('user/check-signup-email', params, GUEST_TYPE);
+  },
   login: (data: LoginProps) =>
     appOperation.post('user/login', data, GUEST_TYPE),
   google_login: (data: LoginProps) =>
