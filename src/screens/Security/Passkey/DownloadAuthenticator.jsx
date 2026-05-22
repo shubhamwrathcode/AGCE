@@ -12,7 +12,7 @@ import { getPasskeyList, verifySecurityPasskey } from '../../../actions/accountA
 import { showError } from '../../../helper/logger';
 import * as routes from '../../../navigation/routes';
 
-const DownloadAuthenticator = () => {
+const DownloadAuthenticator = ({ route }) => {
   const { colors: themeColors, isDark } = useTheme();
   const dispatch = useAppDispatch();
   const userData = useAppSelector((state) => state.auth.userData);
@@ -50,6 +50,17 @@ const DownloadAuthenticator = () => {
     // Prerequisite: email must be verified/exist to enable Google Authenticator (matches web page)
     if (!emailId) {
       showError('Please verify your email first before enabling Google Authenticator.');
+      return;
+    }
+
+    const { emailOtp, smsOtp, fromScreen } = route?.params || {};
+
+    if (emailOtp || smsOtp) {
+      NavigationService.navigate(routes.PASSKEY_SETUP_AUTHENTICATOR_SCREEN, {
+        emailOtp,
+        smsOtp,
+        fromScreen,
+      });
       return;
     }
 

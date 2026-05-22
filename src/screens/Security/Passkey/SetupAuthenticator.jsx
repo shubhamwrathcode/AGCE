@@ -56,7 +56,7 @@ const SetupAuthenticator = ({ route }) => {
 
         <AppText type={EIGHTEEN} weight={BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
           Google Authenticator
-        </AppText>
+        </AppText>4
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

@@ -64,7 +64,7 @@ const EnablePasskey = ({ route, navigation }) => {
   useEffect(() => {
     if (routeParams?.deletePasskeyId) {
       const { deletePasskeyId, emailOtp, smsOtp, tofaCode } = routeParams;
-      
+
       let verifyMethod = null;
       let code = null;
 
@@ -86,7 +86,7 @@ const EnablePasskey = ({ route, navigation }) => {
             console.log(`[DEBUG][EnablePasskey] Callback delete triggering for ID: ${deletePasskeyId} with method: ${verifyMethod}`);
             const success = await dispatch(deletePasskey(deletePasskeyId, verifyMethod, code, null));
             console.log('[DEBUG][EnablePasskey] Callback delete result:', success);
-            
+
             // Clear navigation parameters in all cases to prevent repeated delete triggers
             navigation.setParams({
               deletePasskeyId: undefined,
@@ -255,11 +255,11 @@ const EnablePasskey = ({ route, navigation }) => {
       console.log('[DEBUG][EnablePasskey] Dispatching verifySecurityPasskey...');
       const result = await dispatch(verifySecurityPasskey(signId, true));
       console.log('[DEBUG][EnablePasskey] verifySecurityPasskey result:', result);
-      
+
       // On Android, if Credential Manager fails but biometric succeeds,
       // verifySecurityPasskey returns 'BIOMETRIC_VERIFIED'.
       const skipPasskeyVerify = result === 'BIOMETRIC_VERIFIED' || result === 'SKIP_VERIFICATION';
-      
+
       if (skipPasskeyVerify) {
         const availableFallbackMethods = [];
         if (hasGoogleAuth) availableFallbackMethods.push('totp');
@@ -283,7 +283,7 @@ const EnablePasskey = ({ route, navigation }) => {
 
       const userId = result;
       console.log('[DEBUG][EnablePasskey] userId:', userId);
-      
+
       if (!userId) {
         console.log('[DEBUG][EnablePasskey] Verification failed or cancelled by user, aborting deletion');
         return;
@@ -498,6 +498,7 @@ const EnablePasskey = ({ route, navigation }) => {
                       purpose: method.id === 'phone' ? 'add_mobile' : 'totp_setup',
                       targetScreen: method.route,
                       skipDirectVerification: true,
+                      targetParams: { fromScreen: routes.PASSKEY_SCREEN },
                     });
                   }}
                 >

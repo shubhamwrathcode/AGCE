@@ -1,4 +1,4 @@
-import { ACCOUNT_SCREEN, KYC_STATUS_SCREEN, LOGIN_SCREEN } from './../navigation/routes';
+import { ACCOUNT_SCREEN, ANTI_PHISHING_CODE_SCREEN, KYC_STATUS_SCREEN, LOGIN_SCREEN } from './../navigation/routes';
 import { appOperation } from '../appOperation';
 import { logger, showError, showSuccess } from '../helper/logger';
 import {
@@ -1743,6 +1743,7 @@ export const addAntiPhishingCode = (data: { antiPhishingCode: string; verifyMeth
     }
   } catch (e: any) {
     console.error('[API] addAntiPhishingCode CATCH error:', e);
+    NavigationService.navigate(ANTI_PHISHING_CODE_SCREEN)
     logger(e);
     showError(e?.message);
     return false;
