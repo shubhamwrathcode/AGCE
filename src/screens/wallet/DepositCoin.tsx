@@ -1208,7 +1208,7 @@ const DepositCoin = () => {
             <View
                 style={[
                     styles.depositSectionHeader,
-                    { backgroundColor: themeColors.background },
+                    { backgroundColor: colors.white },
                 ]}
             >
                 <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.text }}>
@@ -1324,7 +1324,7 @@ const DepositCoin = () => {
     }, [selectedCurrency, selectedNetwork]);
 
     return (
-        <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+        <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
             <View style={styles.headerView}>
                 <TouchableOpacity onPress={handleHeaderBack}>
                     <FastImage
@@ -2413,7 +2413,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         padding: 10,
         borderRadius: 0,
-        borderWidth: 1,
+        // borderWidth: 1,
     },
     depositQrHint: {
         marginTop: 10,

@@ -367,22 +367,29 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                 isDark={isDark}
                 hasError={otpError}
               />
-              {selectedAuthMethod !== 2 ? (
-                <View style={styles.otpLinksRow}>
-                  <TouchableOpacityView
-                    onPress={resendTimer > 0 ? undefined : handleGetOtp}
-                    disabled={resendTimer > 0}
-                  >
-                    <AppText
-                      type={FOURTEEN}
-                      weight={MEDIUM}
-                      style={[
-                        { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
-                      ]}
+              {selectedAuthMethod === 1 || selectedAuthMethod === 2 || selectedAuthMethod === 3 ? (
+                <View
+                  style={[
+                    styles.otpLinksRow,
+                    selectedAuthMethod === 2 && { justifyContent: "flex-end" },
+                  ]}
+                >
+                  {(selectedAuthMethod === 1 || selectedAuthMethod === 3) && (
+                    <TouchableOpacityView
+                      onPress={resendTimer > 0 ? undefined : handleGetOtp}
+                      disabled={resendTimer > 0}
                     >
-                      {resendTimer > 0 ? `Resend (${resendTimer}s)` : "Resend"}
-                    </AppText>
-                  </TouchableOpacityView>
+                      <AppText
+                        type={FOURTEEN}
+                        weight={MEDIUM}
+                        style={[
+                          { color: resendTimer > 0 ? themeColors.secondaryText : themeColors.text },
+                        ]}
+                      >
+                        {resendTimer > 0 ? `Resend (${resendTimer}s)` : "Resend"}
+                      </AppText>
+                    </TouchableOpacityView>
+                  )}
 
                   <TouchableOpacityView onPress={handlePasteOtp} style={styles.pasteBtn}>
                     <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>

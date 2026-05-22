@@ -2432,6 +2432,10 @@ const Spot = () => {
   ]);
 
   const onSubmit = () => {
+    if (userData && Number(userData?.kycVerified) !== 2) {
+      showError("KYC not verified. Please complete KYC first.");
+      return;
+    }
     const { data, orderPriceForValidation } = buildSpotOrderPayload();
     if (!data.pair) {
       showError("Select a trading pair");
