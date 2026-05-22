@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import Modal from 'react-native-modal';
 import FastImage from 'react-native-fast-image';
@@ -41,6 +42,67 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
 
   const [uploadFile, setUploadFile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  const [nextAllowedAt, setNextAllowedAt] = useState<Date | null>(null);
+  const [timerText, setTimerText] = useState<string>('');
+
+  useEffect(() => {
+    const loadNextAllowedAt = async () => {
+      try {
+        // First try to load from local storage
+        const stored = await AsyncStorage.getItem('avatar_next_allowed_at');
+        if (stored) {
+          const date = new Date(stored);
+          if (date > new Date()) {
+            setNextAllowedAt(date);
+          } else {
+            await AsyncStorage.removeItem('avatar_next_allowed_at');
+          }
+        }
+        
+        // Then query the server just in case the user cleared app data
+        const res: any = await appOperation.customer.get_avatar_setting();
+        if (res?.data?.next_allowed_at) {
+          const serverDate = new Date(res.data.next_allowed_at);
+          if (serverDate > new Date()) {
+            setNextAllowedAt(serverDate);
+            AsyncStorage.setItem('avatar_next_allowed_at', serverDate.toISOString());
+          }
+        }
+      } catch (e) {}
+    };
+    if (isVisible) {
+      loadNextAllowedAt();
+    }
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (!nextAllowedAt) {
+      setTimerText('');
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date();
+      const diffMs = nextAllowedAt.getTime() - now.getTime();
+      if (diffMs <= 0) {
+        setNextAllowedAt(null);
+        setTimerText('');
+        AsyncStorage.removeItem('avatar_next_allowed_at');
+        return;
+      }
+
+      const totalMins = Math.floor(diffMs / 60000);
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      setTimerText(`Try again in ${h}h ${m}m`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000);
+
+    return () => clearInterval(interval);
+  }, [nextAllowedAt]);
 
   useEffect(() => {
     if (isVisible) {
@@ -129,6 +191,18 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
       }
 
       const result: any = await appOperation.customer.change_avatar_setting(fd);
+      console.log('Avatar upload response:', JSON.stringify(result, null, 2));
+
+      // Handle the 24-hour rate limit explicitly
+      if (result?.data?.next_allowed_at || result?.message?.toLowerCase().includes('once a day')) {
+        const nextDateStr = result?.data?.next_allowed_at;
+        const nextDate = nextDateStr ? new Date(nextDateStr) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+        setNextAllowedAt(nextDate);
+        AsyncStorage.setItem('avatar_next_allowed_at', nextDate.toISOString());
+        Toast.showWithGravity(result?.message || 'Avatar can only be changed once a day.', Toast.LONG, Toast.BOTTOM);
+        setLoading(false);
+        return;
+      }
 
       if (result?.success === true) {
         Toast.showWithGravity(result?.message || 'Avatar updated.', Toast.SHORT, Toast.BOTTOM);
@@ -149,10 +223,12 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
         onClose();
       } else {
         Toast.showWithGravity(result?.message || 'Could not update avatar.', Toast.LONG, Toast.BOTTOM);
+        onClose();
       }
-    } catch (e) {
+    } catch (e: any) {
       console.log('Avatar upload error:', e);
-      Toast.showWithGravity('Could not update avatar.', Toast.LONG, Toast.BOTTOM);
+      Toast.showWithGravity(e?.message || e?.error || 'Could not update avatar.', Toast.LONG, Toast.BOTTOM);
+      onClose();
     } finally {
       setLoading(false);
     }
@@ -273,12 +349,14 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
             <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 15 }}>Cancel</AppText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.footerBtn, { backgroundColor: canSave ? colors.black : (isDark ? '#3A3A3C' : '#D1D1D6') }]}
+            style={[styles.footerBtn, { backgroundColor: canSave && !nextAllowedAt ? colors.black : (isDark ? '#3A3A3C' : '#D1D1D6') }]}
             onPress={handleSave}
-            disabled={!canSave || loading}
+            disabled={!canSave || loading || !!nextAllowedAt}
           >
             {loading ? (
               <ActivityIndicator color={colors.white} />
+            ) : nextAllowedAt ? (
+              <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 13, textAlign: 'center' }}>{timerText}</AppText>
             ) : (
               <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 15 }}>Save</AppText>
             )}

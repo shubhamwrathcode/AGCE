@@ -88,15 +88,15 @@ const NicknameSettings = () => {
         <AppText weight={SEMI_BOLD} type={SIXTEEN} style={styles.headerTitle}>
           Nickname Settings
         </AppText>
-        <TouchableOpacity 
-          style={[styles.okButton, isDark && { backgroundColor: '#333' }]} 
+        <TouchableOpacity
+          style={[styles.okButton, isDark && { backgroundColor: '#333' }]}
           onPress={handleSave}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <AppText style={styles.okButtonText}>ok</AppText>
+            <AppText weight={SEMI_BOLD} style={styles.okButtonText}>Ok</AppText>
           )}
         </TouchableOpacity>
       </View>
@@ -119,21 +119,21 @@ const NicknameSettings = () => {
           <AppText weight={SEMI_BOLD} type={FOURTEEN} style={[styles.rulesHeader, { color: themeColors.secondaryText }]}>
             Nickname Rules
           </AppText>
-          
+
           <View style={styles.ruleItem}>
             <AppText style={[styles.ruleNumber, { color: themeColors.secondaryText }]}>1. </AppText>
             <AppText style={[styles.ruleText, { color: themeColors.secondaryText }]}>
               The nickname can only be modified once within 24 hours and will be displayed on the personal homepage, moments, etc.
             </AppText>
           </View>
-          
+
           <View style={styles.ruleItem}>
             <AppText style={[styles.ruleNumber, { color: themeColors.secondaryText }]}>2. </AppText>
             <AppText style={[styles.ruleText, { color: themeColors.secondaryText }]}>
               Don't use your real world name or contact to protect privacy.
             </AppText>
           </View>
-          
+
           <View style={styles.ruleItem}>
             <AppText style={[styles.ruleNumber, { color: themeColors.secondaryText }]}>3. </AppText>
             <AppText style={[styles.ruleText, { color: themeColors.secondaryText }]}>
