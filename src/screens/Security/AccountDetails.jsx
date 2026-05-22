@@ -212,8 +212,8 @@ const AccountDetails = () => {
           }
           const resAvatar = await appOperation.customer.get_avatar_setting();
           if (active && resAvatar?.success) {
-             const fetchedAvatar = resAvatar.data?.avatar || resAvatar.data?.data?.avatar;
-             if (fetchedAvatar) setServerAvatar(fetchedAvatar);
+            const fetchedAvatar = resAvatar.data?.avatar || resAvatar.data?.data?.avatar;
+            if (fetchedAvatar) setServerAvatar(fetchedAvatar);
           }
         } catch (err) {
           // ignore
@@ -265,6 +265,10 @@ const AccountDetails = () => {
     return `${prefix}*****${digitsOnly.slice(-1)}`;
   };
 
+  const maskedEmail = maskProfileEmail(userData?.emailId || userData?.email);
+  const maskedPhone = maskProfilePhone(userData?.phoneNo || userData?.mobile);
+
+
   const MenuItem = ({ label, value, badge, badgeBgColor, badgeTextColor, showArrow = true, onPress, isLogout }) => (
     <TouchableOpacity
       style={styles.menuItem}
@@ -313,16 +317,11 @@ const AccountDetails = () => {
   };
 
   const finalAvatarUri = getFullAvatarUrl(serverAvatar || userData?.profilepicture);
-
-  console.log("==== AVATAR RENDER DATA ====", {
-    serverAvatar,
-    userDataProfilePic: userData?.profilepicture,
-    finalAvatarUri
-  });
-
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
-      <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} onSwitchProfilePress={showComingSoonToast} />
+      <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} onSwitchProfilePress={() => {
+        NavigationService.navigate(routes.SWITCH_ACCOUNT_SCREEN);
+      }} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <LinearGradient
@@ -339,9 +338,9 @@ const AccountDetails = () => {
         >
           <View style={styles.avatarContainer}>
             {finalAvatarUri ? (
-              <FastImage 
-                source={{ uri: finalAvatarUri }} 
-                style={styles.avatar} 
+              <FastImage
+                source={{ uri: finalAvatarUri }}
+                style={styles.avatar}
               />
             ) : (
               <LinearGradient
@@ -405,14 +404,24 @@ const AccountDetails = () => {
             <>
               <MenuItem label="Identity Verification" badge="Unverified" />
               <MenuItem label="VIP Privilege" badge={`VIP ${userData?.vipLevel || 0}`} />
-              <MenuItem label="Personal Page" />
+              <MenuItem
+                label="Personal Page"
+                onPress={() => NavigationService.navigate(routes.PERSONAL_PAGE_SCREEN, {
+                  userData,
+                  serverAvatar,
+                  serverNickname,
+                  maskedEmail,
+                  maskedPhone,
+                  displayName
+                })}
+              />
               <MenuItem
                 label="Nickname"
                 value={displayName}
                 onPress={() => NavigationService.navigate(routes.NICKNAME_SETTINGS_SCREEN, { currentNickname: displayName })}
               />
               <MenuItem label="Username" value={displayName} />
-              <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
+              <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(202, 195, 182, 0.15)" badgeTextColor="#D1AA67" />
               <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
               <MenuItem
                 label="Notification Setting"
@@ -422,7 +431,18 @@ const AccountDetails = () => {
                 label="Direct Message Management"
                 onPress={() => NavigationService.navigate(routes.DIRECT_MESSAGE_MANAGEMENT_SCREEN)}
               />
-              <MenuItem label="Switch Account" />
+              <MenuItem
+                label="Switch Account"
+                onPress={() => NavigationService.navigate(routes.SWITCH_ACCOUNT_SCREEN, {
+                  userData,
+                  serverAvatar,
+                  serverNickname,
+                  maskedEmail,
+                  maskedPhone,
+                  displayName,
+                  initials
+                })}
+              />
               <MenuItem
                 label="Log Out"
                 isLogout
@@ -662,16 +682,16 @@ const AccountDetails = () => {
               },
             ]}
           >
-            <View style={styles.logoutLottieWrap}>
+            {/* <View style={styles.logoutLottieWrap}>
               <LottieView
                 source={require("../../../assets/lottie/logout.json")}
                 autoPlay
                 loop
                 style={styles.logoutLottie}
               />
-            </View>
+            </View> */}
 
-            <AppText style={[styles.logoutTitle, { color: themeColors.text }]}>Confirm Logout</AppText>
+            <AppText style={[styles.logoutTitle, { color: themeColors.text }]}>Logout</AppText>
             <AppText style={[styles.logoutDesc, { color: themeColors.secondaryText }]}>
               Are you sure you want to log out of your account?
             </AppText>
@@ -683,7 +703,7 @@ const AccountDetails = () => {
                   styles.logoutBtn,
                   styles.logoutBtnSecondary,
                   {
-                    borderColor: isDark ? "transparent" : colors.inputBorder,
+                    borderColor: 'transparent',
                     backgroundColor: isDark ? "rgba(255,255,255,0.06)" : colors.inputBackground,
                   },
                 ]}
@@ -704,12 +724,12 @@ const AccountDetails = () => {
         </Animated.View>
       </Modal>
 
-      <EditAvatarModal 
-        isVisible={isAvatarModalVisible} 
-        onClose={() => setIsAvatarModalVisible(false)} 
+      <EditAvatarModal
+        isVisible={isAvatarModalVisible}
+        onClose={() => setIsAvatarModalVisible(false)}
         currentAvatarUrl={serverAvatar || userData?.profilepicture}
         onAvatarCommitted={(path) => {
-           if (path) setServerAvatar(path);
+          if (path) setServerAvatar(path);
         }}
       />
     </AppSafeAreaView>
@@ -852,13 +872,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 8,
-    textAlign: "center",
   },
   logoutDesc: {
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 24,
-    textAlign: "center",
   },
   logoutActionsRow: {
     flexDirection: "row",

@@ -178,6 +178,8 @@ import SelectCoin from "../screens/wallet/Withdrawal/SelectCoin";
 import WithdrawForm from "../screens/wallet/Withdrawal/WithdrawForm";
 import AddFavouriteScreen from "../screens/other/AddFavouriteScreen";
 import AccountDetails from "../screens/Security/AccountDetails";
+import PersonalPage from "../screens/account/PersonalPage";
+import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -312,6 +314,8 @@ const MyAuthLoadingStack = () => {
         component={BottomNavigation}
       />
       <Stack.Screen name={routes.ACCOUNT_SCREEN} component={AccountDetails} />
+      <Stack.Screen name={routes.PERSONAL_PAGE_SCREEN} component={PersonalPage} />
+      <Stack.Screen name={routes.SWITCH_ACCOUNT_SCREEN} component={SwitchAccountScreen} />
       <Stack.Screen name={routes.EDIT_PROFILE_SCREEN} component={EditProfile} />
       <Stack.Screen
         name={routes.NOTIFICATION_SCREEN}
