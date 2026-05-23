@@ -3,19 +3,7 @@
  * `walletChainHelpers` + `WithdrawWallet` / `WithdrawCoinPickerPanel`.
  */
 
-const WALLET_CHAIN_TO_APP_CHAIN: Record<string, string> = {
-  BSC: "BEP20",
-  ETH: "ERC20",
-  ERC20: "ERC20",
-  BEP20: "BEP20",
-  TRC20: "TRC20",
-  TRON: "TRC20",
-  POLYGON: "POLYGON",
-  MATIC: "POLYGON",
-  BTC: "BTC",
-  SOL: "SOLANA",
-  SOLANA: "SOLANA",
-};
+
 
 /**
  * Same shape coverage as web `extractList` + mobile `extractDepositCoinsList`
@@ -57,7 +45,7 @@ export function mapDepositCoinsToWithdrawCatalog(depositCoins: any[]): any[] {
         if (!ch || typeof ch !== "object") continue;
         const rawCode = String(ch.chain || ch.network || "").trim().toUpperCase();
         if (!rawCode) continue;
-        const code = String(WALLET_CHAIN_TO_APP_CHAIN[rawCode] || rawCode).trim().toUpperCase();
+        const code = rawCode;
         if (!code) continue;
         if (ch.withdrawal_fee != null && ch.withdrawal_fee !== "") feeMap[code] = ch.withdrawal_fee;
       }
@@ -109,8 +97,7 @@ function normalizeWalletWithdrawalCoins(list: any[]): any[] {
         if (!ch || typeof ch !== "object") continue;
         const rawCode = String(ch.chain || ch.network || "").trim().toUpperCase();
         if (!rawCode) continue;
-        const mapped = WALLET_CHAIN_TO_APP_CHAIN[rawCode] || rawCode;
-        const code = String(mapped).trim().toUpperCase();
+        const code = rawCode;
         if (!code) continue;
 
         if (!out.chain.includes(code)) out.chain.push(code);
@@ -125,10 +112,12 @@ function normalizeWalletWithdrawalCoins(list: any[]): any[] {
 
         const full = ch.chain_full_name || ch.network_full_name || ch.chainFullName;
         if (full != null && String(full).trim()) out.chain_full_names[code] = String(full).trim();
+
       }
 
       for (const code of out.chain) {
-        if (!out.withdrawal_status[code]) out.withdrawal_status[code] = "ACTIVE";
+        // Do not force missing withdrawal_status to ACTIVE here. 
+        // We want the filter to exclude networks that don't explicitly have ACTIVE status.
       }
 
       return out;

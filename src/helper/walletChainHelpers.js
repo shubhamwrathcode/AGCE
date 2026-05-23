@@ -13,14 +13,16 @@ export const CHAIN_FULL_NAMES = {
 };
 
 export const WITHDRAW_NETWORK_LABELS = {
-    BEP20: "BNB Smart Chain (bsc)",
-    ERC20: "Ethereum (ETH)",
-    TRC20: "Tron (TRC20)",
+    BSC: "BNB Smart Chain (bsc)",
+    ETH: "Ethereum (ETH)",
+    TRX: "Tron (TRC20)",
     POLYGON: "Polygon (MATIC)",
     BTC: "Bitcoin (BTC)",
-    SOLANA: "Solana (SOL)",
+    SOL: "Solana (SOL)",
     ARBITRUM: "Arbitrum One",
     BASE: "Base",
+    TON: "TON (The Open Network)",
+    CELO: "Celo",
 };
 
 
@@ -44,20 +46,7 @@ export function networkKeysFromChain(chain) {
     return [];
 }
 
-/** Same chain code normalization as `withdrawCoinsNormalize` wallet `chains[]` rows. */
-const WALLET_CHAIN_TO_APP = {
-    BSC: 'BEP20',
-    ETH: 'ERC20',
-    ERC20: 'ERC20',
-    BEP20: 'BEP20',
-    TRC20: 'TRC20',
-    TRON: 'TRC20',
-    POLYGON: 'POLYGON',
-    MATIC: 'POLYGON',
-    BTC: 'BTC',
-    SOL: 'SOLANA',
-    SOLANA: 'SOLANA',
-};
+
 
 /** When `item.chain` is missing but API sends `chains: [{ chain, network, ... }]`. */
 export function networkKeysFromWalletChainsArray(chains) {
@@ -67,7 +56,7 @@ export function networkKeysFromWalletChainsArray(chains) {
         if (!ch || typeof ch !== 'object') continue;
         const raw = String(ch.chain || ch.network || '').trim().toUpperCase();
         if (!raw) continue;
-        const code = String(WALLET_CHAIN_TO_APP[raw] || raw).trim().toUpperCase();
+        const code = raw;
         if (code && !out.includes(code)) out.push(code);
     }
     return out;

@@ -4,19 +4,7 @@
  * Ported from `arab_global_exchange/src/ui/Pages/DepositPage/index.js`.
  */
 
-const WALLET_CHAIN_TO_APP_CHAIN: Record<string, string> = {
-  BSC: "BEP20",
-  ETH: "ERC20",
-  ERC20: "ERC20",
-  BEP20: "BEP20",
-  TRC20: "TRC20",
-  TRON: "TRC20",
-  POLYGON: "POLYGON",
-  MATIC: "POLYGON",
-  BTC: "BTC",
-  SOL: "SOLANA",
-  SOLANA: "SOLANA",
-};
+
 
 export function extractDepositCoinsList(res: any): any[] {
   if (!res || typeof res !== "object") return [];
@@ -51,8 +39,7 @@ function normalizeWalletDepositCoins(list: any[]): any[] {
         if (!ch || typeof ch !== "object") continue;
         const rawCode = String(ch.chain || "").trim().toUpperCase();
         if (!rawCode) continue;
-        const mapped = WALLET_CHAIN_TO_APP_CHAIN[rawCode] || rawCode;
-        const code = String(mapped).trim().toUpperCase();
+        const code = rawCode;
         if (!code) continue;
 
         if (!out.chain.includes(code)) out.chain.push(code);

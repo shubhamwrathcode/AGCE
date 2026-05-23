@@ -160,7 +160,7 @@ export class AppOperation {
               }
               const errData = { code: status, ...parsed };
               // Suppress known fallback 404 warnings to keep console clean
-              const isFallbackEndpoint = uri.includes('withdrawal-coins') || uri.includes('deposit-coins') || uri.includes('credential_options');
+              const isFallbackEndpoint = uri.includes('withdrawal-coins') || uri.includes('deposit-coins') || uri.includes('credential_options') || uri.includes('passkey-withdrawal-challenge');
               if (!(status === 404 && isFallbackEndpoint)) {
                 console.warn('[API] Error response:', status, JSON.stringify(errData));
               }
