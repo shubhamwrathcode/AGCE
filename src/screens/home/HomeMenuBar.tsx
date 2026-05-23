@@ -22,7 +22,7 @@ import {
   lockLight,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
-import { MORE_MENU_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
+import { ACCOUNT_SCREEN, MORE_MENU_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { checkValue } from "../../helper/utility";
 import { colors } from "../../theme/colors";
@@ -124,7 +124,7 @@ const HomeMenuBar = () => {
       id: "6",
       title: "Security",
       icon: lockLight,
-      onPress: showComingSoonToast,
+      onPress: () => NavigationService.navigate(ACCOUNT_SCREEN),
     },
 
   ];

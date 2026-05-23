@@ -75,6 +75,7 @@ import { useFocusEffect, useRoute } from "@react-navigation/native";
 import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import { SETTING_SCREEN_New, NOTIFICATION_SCREEN } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
+import { getPasskeyAuthCredential } from "../../actions/accountActions";
 import {
   getWithdrawActiveCoins,
   getUserMainWallet,
@@ -3603,6 +3604,148 @@ const WithdrawWallet = () => {
               }
               else if (saveAddrStep === "metamask") buttonText = "Sign with MetaMask";
 
+              const executeWhitelist = async (methodOverride, otpOverride, credentialOverride) => {
+                const method = methodOverride || selectedSaveAddrVerifyMethod || (saveAddrVerifyOptions.includes("email") ? "email" : (saveAddrVerifyOptions.includes("mobile") ? "mobile" : saveAddrVerifyOptions[0])) || "email";
+                const coinObj = withdrawCoinsList.find(c => String(c.short_name).toUpperCase() === String(saveAddrCoin).toUpperCase());
+
+                let tId = "";
+                if (coinObj?.networks) {
+                  // Find the network object that matches the selected chain (saveAddrNetwork)
+                  const net = coinObj.networks.find(n =>
+                    String(n.code).toUpperCase() === String(saveAddrNetwork).toUpperCase() ||
+                    String(n.short_name).toUpperCase() === String(saveAddrNetwork).toUpperCase()
+                  );
+                  if (net) {
+                    tId = net.tokenAssetId || net.assetId || net.id;
+                  }
+                }
+
+                // Fallback to token_asset_ids if networks list doesn't yield an ID
+                if (!tId && coinObj?.token_asset_ids) {
+                  const targetNet = String(saveAddrNetwork).toUpperCase();
+                  tId = coinObj.token_asset_ids[saveAddrNetwork] || coinObj.token_asset_ids[targetNet];
+                  if (!tId) {
+                    const fuzzyKey = Object.keys(coinObj.token_asset_ids).find(k =>
+                      k.toUpperCase().includes(targetNet) || targetNet.includes(k.toUpperCase())
+                    );
+                    if (fuzzyKey) tId = coinObj.token_asset_ids[fuzzyKey];
+                  }
+                }
+                const resolvedAssetId = tId || saveAddrNetwork;
+
+                const payload = {
+                  label: saveAddrLabel,
+                  coin: saveAddrCoin,
+                  chain: canonicalWithdrawalChainForValidateAddress(saveAddrNetwork),
+                  address: saveAddrAddress,
+                  memo: saveAddrMemo,
+                  ownership: saveAddrOwnership === "SELF" ? "SELF" : "OTHER",
+                  wallet_type: saveAddrWalletType === "SELF_HOSTED" ? "NON_CUSTODIAL" : "CUSTODIAL",
+                  exchange_name: saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? saveAddrExchangeManual.trim() : saveAddrExchange,
+                  ...(saveAddrOwnership === "OTHER" ? {
+                    other_person: {
+                      full_name: saveAddrBenFullName.trim(),
+                      national_id: saveAddrBenPan.trim(),
+                      country: saveAddrBenCountry.trim(),
+                      pincode: saveAddrBenPin.trim(),
+                      full_address: saveAddrBenAddress.trim(),
+                    }
+                  } : {}),
+                  verification_method: method,
+                  method: saveAddrProofMethod || "SATOSHI",
+                  verification_code: String(otpOverride || "").trim(),
+                  tokenAssetId: resolvedAssetId,
+                  ...(credentialOverride ? { credential: credentialOverride } : {})
+                };
+                console.warn("[API] Initiate Whitelist Payload:", JSON.stringify(payload, null, 2));
+                const res = await appOperation.customer.initiate_address_book_whitelist(payload);
+                console.warn("[API] Whitelist Response:", JSON.stringify(res, null, 2));
+                if (res?.success) {
+                  const d = res.data?.data || res.data || {};
+                  if (d.status?.toUpperCase() === "APPROVED") {
+                    showSuccess("Address added and verified successfully.");
+                    saveAddressSheetRef.current?.close();
+                    const res2 = await appOperation.customer.get_wallet_address_book();
+                    if (res2?.success && res2?.data) {
+                      const list = Array.isArray(res2.data) ? res2.data : (res2.data.rows || res2.data.addresses || []);
+                      setAddressBookEntries(list);
+                    }
+                  } else {
+                    // Web Parity: Attach resolvedAssetId and shortName manually
+                    const flowData = {
+                      ...d,
+                      tokenAssetId: resolvedAssetId,
+                      shortName: saveAddrCoin
+                    };
+                    setSaveAddrWhitelistData(flowData);
+
+                    const resMethod = String(d.method || "").toUpperCase();
+                    if (resMethod === "SATOSHI") {
+                      setSaveAddrStep("satoshi");
+                      setSatoshiDepositLoading(true);
+
+                      const coinObj = withdrawCoinsList.find(c => (c.coin || c.short_name || "").toUpperCase() === String(saveAddrCoin).toUpperCase());
+                      let finalId = resolvedAssetId;
+
+                      if (coinObj && d.proof_chain) {
+                        const targetNet = String(d.proof_chain).toUpperCase();
+                        // Priority 1: Check networks array for exact match or fuzzy match
+                        const net = coinObj.networks?.find(n =>
+                          String(n.code).toUpperCase() === targetNet ||
+                          String(n.short_name).toUpperCase() === targetNet ||
+                          String(n.tokenAssetId || "").toUpperCase().includes(targetNet)
+                        );
+
+                        if (net?.tokenAssetId || net?.assetId) {
+                          finalId = net.tokenAssetId || net.assetId;
+                        } else if (coinObj.token_asset_ids?.[d.proof_chain]) {
+                          finalId = coinObj.token_asset_ids[d.proof_chain];
+                        } else {
+                          finalId = coinObj.coin || coinObj.short_name || targetNet;
+                        }
+                      }
+
+                      (async () => {
+                        try {
+                          console.warn("[DEBUG] Fetching address for:", finalId);
+                          const addrRes = await appOperation.customer.get_and_generate_address({
+                            assetId: finalId,
+                            tokenAssetId: finalId,
+                            short_name: saveAddrCoin,
+                            generate: true
+                          });
+                          console.warn("[API] Satoshi Address Response:", JSON.stringify(addrRes, null, 2));
+                          if (addrRes?.success) {
+                            const dr = addrRes.data?.data || addrRes.data || {};
+                            const raw = dr.deposit_address || dr.address || dr.wallet_address || dr.walletAddress || dr.depositAddress || "";
+                            const mem = dr.memo || dr.tag || dr.destinationTag || dr.memoTag || "";
+                            if (raw) {
+                              setSaveAddrWhitelistData(prev => ({
+                                ...prev,
+                                deposit_address: String(raw),
+                                address: String(raw),
+                                memo: String(mem)
+                              }));
+                            }
+                          }
+                        } catch (e) {
+                          console.warn("Satoshi fetch failed", e);
+                        } finally {
+                          setSatoshiDepositLoading(false);
+                        }
+                      })();
+                    } else if (resMethod === "METAMASK") {
+                      setSaveAddrStep("metamask");
+                    } else {
+                      showSuccess("Address verification initiated.");
+                      saveAddressSheetRef.current?.close();
+                    }
+                  }
+                } else {
+                  showError(res?.message || "Verification failed");
+                }
+              };
+
               return (
                 <Button
                   children={saveAddrBusy ? "..." : buttonText}
@@ -3762,6 +3905,24 @@ const WithdrawWallet = () => {
                         } finally {
                           setSaveAddrBusy(false);
                         }
+                      } else if (method === "passkey") {
+                        const signId = userData?.emailId || userData?.email || userData?.mobileNumber || userData?.mobile_number;
+                        if (!signId) {
+                          showError("No identifier for passkey found");
+                          return;
+                        }
+                        setSaveAddrBusy(true);
+                        try {
+                          const credential = await dispatch(getPasskeyAuthCredential(signId, false));
+                          if (credential) {
+                            await executeWhitelist("passkey", "", credential);
+                          }
+                        } catch (e) {
+                          console.warn(e);
+                          showError("Passkey verification failed");
+                        } finally {
+                          setSaveAddrBusy(false);
+                        }
                       } else {
                         setSaveAddrStep("otp");
                       }
@@ -3776,143 +3937,7 @@ const WithdrawWallet = () => {
                       setSaveAddrBusy(true);
                       try {
                         const method = selectedSaveAddrVerifyMethod || (saveAddrVerifyOptions.includes("email") ? "email" : (saveAddrVerifyOptions.includes("mobile") ? "mobile" : saveAddrVerifyOptions[0])) || "email";
-                        const coinObj = withdrawCoinsList.find(c => String(c.short_name).toUpperCase() === String(saveAddrCoin).toUpperCase());
-
-                        let tId = "";
-                        if (coinObj?.networks) {
-                          // Find the network object that matches the selected chain (saveAddrNetwork)
-                          const net = coinObj.networks.find(n =>
-                            String(n.code).toUpperCase() === String(saveAddrNetwork).toUpperCase() ||
-                            String(n.short_name).toUpperCase() === String(saveAddrNetwork).toUpperCase()
-                          );
-                          if (net) {
-                            tId = net.tokenAssetId || net.assetId || net.id;
-                          }
-                        }
-
-                        // Fallback to token_asset_ids if networks list doesn't yield an ID
-                        if (!tId && coinObj?.token_asset_ids) {
-                          const targetNet = String(saveAddrNetwork).toUpperCase();
-                          tId = coinObj.token_asset_ids[saveAddrNetwork] || coinObj.token_asset_ids[targetNet];
-                          if (!tId) {
-                            const fuzzyKey = Object.keys(coinObj.token_asset_ids).find(k =>
-                              k.toUpperCase().includes(targetNet) || targetNet.includes(k.toUpperCase())
-                            );
-                            if (fuzzyKey) tId = coinObj.token_asset_ids[fuzzyKey];
-                          }
-                        }
-                        const resolvedAssetId = tId || saveAddrNetwork;
-
-                        const payload = {
-                          label: saveAddrLabel,
-                          coin: saveAddrCoin,
-                          chain: canonicalWithdrawalChainForValidateAddress(saveAddrNetwork),
-                          address: saveAddrAddress,
-                          memo: saveAddrMemo,
-                          ownership: saveAddrOwnership === "SELF" ? "SELF" : "OTHER",
-                          wallet_type: saveAddrWalletType === "SELF_HOSTED" ? "NON_CUSTODIAL" : "CUSTODIAL",
-                          exchange_name: saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? saveAddrExchangeManual.trim() : saveAddrExchange,
-                          ...(saveAddrOwnership === "OTHER" ? {
-                            other_person: {
-                              full_name: saveAddrBenFullName.trim(),
-                              national_id: saveAddrBenPan.trim(),
-                              country: saveAddrBenCountry.trim(),
-                              pincode: saveAddrBenPin.trim(),
-                              full_address: saveAddrBenAddress.trim(),
-                            }
-                          } : {}),
-                          verification_method: method,
-                          method: saveAddrProofMethod || "SATOSHI",
-                          verification_code: String(saveAddrOtp).trim(),
-                          tokenAssetId: resolvedAssetId
-                        };
-                        console.warn("[API] Initiate Whitelist Payload:", JSON.stringify(payload, null, 2));
-                        const res = await appOperation.customer.initiate_address_book_whitelist(payload);
-                        console.warn("[API] Whitelist Response:", JSON.stringify(res, null, 2));
-                        if (res?.success) {
-                          const d = res.data?.data || res.data || {};
-                          if (d.status?.toUpperCase() === "APPROVED") {
-                            showSuccess("Address added and verified successfully.");
-                            saveAddressSheetRef.current?.close();
-                            const res2 = await appOperation.customer.get_wallet_address_book();
-                            if (res2?.success && res2?.data) {
-                              const list = Array.isArray(res2.data) ? res2.data : (res2.data.rows || res2.data.addresses || []);
-                              setAddressBookEntries(list);
-                            }
-                          } else {
-                            // Web Parity: Attach resolvedAssetId and shortName manually
-                            const flowData = {
-                              ...d,
-                              tokenAssetId: resolvedAssetId,
-                              shortName: saveAddrCoin
-                            };
-                            setSaveAddrWhitelistData(flowData);
-
-                            const method = String(d.method || "").toUpperCase();
-                            if (method === "SATOSHI") {
-                              setSaveAddrStep("satoshi");
-                              setSatoshiDepositLoading(true);
-
-                              const coinObj = withdrawCoinsList.find(c => (c.coin || c.short_name || "").toUpperCase() === String(saveAddrCoin).toUpperCase());
-                              let finalId = resolvedAssetId;
-
-                              if (coinObj && d.proof_chain) {
-                                const targetNet = String(d.proof_chain).toUpperCase();
-                                // Priority 1: Check networks array for exact match or fuzzy match
-                                const net = coinObj.networks?.find(n =>
-                                  String(n.code).toUpperCase() === targetNet ||
-                                  String(n.short_name).toUpperCase() === targetNet ||
-                                  String(n.tokenAssetId || "").toUpperCase().includes(targetNet)
-                                );
-
-                                if (net?.tokenAssetId || net?.assetId) {
-                                  finalId = net.tokenAssetId || net.assetId;
-                                } else if (coinObj.token_asset_ids?.[d.proof_chain]) {
-                                  finalId = coinObj.token_asset_ids[d.proof_chain];
-                                } else {
-                                  finalId = coinObj.coin || coinObj.short_name || targetNet;
-                                }
-                              }
-
-                              (async () => {
-                                try {
-                                  console.warn("[DEBUG] Fetching address for:", finalId);
-                                  const addrRes = await appOperation.customer.get_and_generate_address({
-                                    assetId: finalId,
-                                    tokenAssetId: finalId,
-                                    short_name: saveAddrCoin,
-                                    generate: true
-                                  });
-                                  console.warn("[API] Satoshi Address Response:", JSON.stringify(addrRes, null, 2));
-                                  if (addrRes?.success) {
-                                    const dr = addrRes.data?.data || addrRes.data || {};
-                                    const raw = dr.deposit_address || dr.address || dr.wallet_address || dr.walletAddress || dr.depositAddress || "";
-                                    const mem = dr.memo || dr.tag || dr.destinationTag || dr.memoTag || "";
-                                    if (raw) {
-                                      setSaveAddrWhitelistData(prev => ({
-                                        ...prev,
-                                        deposit_address: String(raw),
-                                        address: String(raw),
-                                        memo: String(mem)
-                                      }));
-                                    }
-                                  }
-                                } catch (e) {
-                                  console.warn("Satoshi fetch failed", e);
-                                } finally {
-                                  setSatoshiDepositLoading(false);
-                                }
-                              })();
-                            } else if (method === "METAMASK") {
-                              setSaveAddrStep("metamask");
-                            } else {
-                              showSuccess("Address verification initiated.");
-                              saveAddressSheetRef.current?.close();
-                            }
-                          }
-                        } else {
-                          showError(res?.message || "Verification failed");
-                        }
+                        await executeWhitelist(method, saveAddrOtp, null);
                       } catch (e) {
                         showError(e?.message || "Error saving address");
                       } finally {

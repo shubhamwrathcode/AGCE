@@ -1388,6 +1388,124 @@ export const getPasskeyAuthCredential = (signId: string, silent: boolean = false
   }
 };
 
+export const getWithdrawalPasskeyCredential = (silent: boolean = false) => async (dispatch: AppDispatch) => {
+  try {
+    if (!Passkey.isSupported()) {
+      if (!silent) showError('Passkeys are not supported on this device');
+      return null;
+    }
+    dispatch(setLoading(true));
+    const optionsRes: any = await appOperation.customer.fetch_withdrawal_passkey_challenge();
+    console.warn('[Passkey][getWithdrawalPasskeyCredential] Backend Raw Options Response:', JSON.stringify(optionsRes, null, 2));
+    if (!optionsRes?.success || !optionsRes?.data) {
+      if (!silent) showError(optionsRes?.message || 'Failed to get passkey options');
+      return null;
+    }
+    const opts = optionsRes.data;
+    const rawChallenge = typeof opts.challenge === 'string' ? opts.challenge : '';
+    const challengeForNative = maybeBase64ToBase64Url(rawChallenge);
+    const rpIdFromServer = String(opts.rpId || opts.rp?.id || '').trim();
+    if (isRpIdMismatchForAndroid(rpIdFromServer)) {
+      console.warn('[Passkey][getWithdrawalPasskeyCredential] rpId mismatch - skipping native prompt', {
+        server: rpIdFromServer,
+        configured: PASSKEY_RP_ID,
+      });
+      if (!silent) showError('Passkey is not configured for this app.');
+      return null;
+    }
+    const rpId =
+      rpIdFromServer ||
+      (PASSKEY_RP_ID && PASSKEY_RP_ID.trim() ? PASSKEY_RP_ID.trim() : '') ||
+      '';
+    const request: any = {
+      challenge: challengeForNative || rawChallenge || opts.challenge,
+      rpId: rpId || 'localhost',
+      timeout: opts.timeout,
+      userVerification: opts.userVerification || 'required',
+    };
+    if (opts.allowCredentials?.length) {
+      request.allowCredentials = prepareAllowCredentials(opts.allowCredentials);
+    }
+    console.warn('[Passkey][getWithdrawalPasskeyCredential] Native Get Request:', JSON.stringify(request, null, 2));
+
+    let credential: any;
+    if (Platform.OS === 'android') {
+      try {
+        console.warn('[Passkey][getWithdrawalPasskeyCredential] Android Step 1: getPlatformKey with allowCredentials');
+        credential = await Passkey.getPlatformKey(request);
+      } catch (e1: any) {
+        const msg1 = String(e1?.message ?? e1?.error ?? '');
+        console.warn('[Passkey][getWithdrawalPasskeyCredential] Step 1 failed:', msg1);
+
+        if (/NoCredentials|no.*credential|no viable credential/i.test(msg1)) {
+          try {
+            const discoverableReq = {
+              challenge: request.challenge,
+              rpId: request.rpId,
+              timeout: request.timeout,
+              userVerification: request.userVerification,
+            };
+            console.warn('[Passkey][getWithdrawalPasskeyCredential] Android Step 2: getPlatformKey discoverable');
+            credential = await Passkey.getPlatformKey(discoverableReq);
+          } catch (e2: any) {
+            const msg2 = String(e2?.message ?? e2?.error ?? '');
+            console.warn('[Passkey][getWithdrawalPasskeyCredential] Step 2 failed:', msg2);
+
+            if (/NoCredentials|no.*credential|no viable credential/i.test(msg2)) {
+              try {
+                console.warn('[Passkey][getWithdrawalPasskeyCredential] Android Step 3: trying standard Passkey.get for system prompt (discoverable / no allowCredentials)');
+                const discoverableReq = {
+                  challenge: request.challenge,
+                  rpId: request.rpId,
+                  timeout: request.timeout,
+                  userVerification: request.userVerification,
+                };
+                credential = await Passkey.get(discoverableReq);
+              } catch (e3: any) {
+                const msg3 = String(e3?.message ?? e3?.error ?? '');
+                console.warn('[Passkey][getWithdrawalPasskeyCredential] Step 3 failed:', msg3);
+                if (/NoCredentials|no.*credential|no viable credential/i.test(msg3)) {
+                  if (!silent) showError('Passkey credential not found on this device.');
+                  return null;
+                } else if (/cancelled|cancel/i.test(msg3)) {
+                  if (!silent) showError('Authentication was cancelled');
+                  return null;
+                } else {
+                  throw e3;
+                }
+              }
+            } else {
+              throw e2;
+            }
+          }
+        } else if (/cancelled|cancel/i.test(msg1)) {
+          if (!silent) showError('Authentication was cancelled');
+          return null;
+        } else {
+          throw e1;
+        }
+      }
+    } else {
+      credential = await Passkey.get(request);
+    }
+
+    console.warn('[Passkey][getWithdrawalPasskeyCredential] Native Credential Received:', JSON.stringify(credential, null, 2));
+    return credential;
+  } catch (e: any) {
+    console.warn('[Passkey][getWithdrawalPasskeyCredential] Exception caught:', e);
+    logger(e);
+    const msg = String(e?.message ?? e?.error ?? '');
+    if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
+      if (!silent) showError('Authentication was cancelled');
+    } else {
+      if (!silent) showError(e?.message || 'Passkey verification failed');
+    }
+    return null;
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
 /** Same as web: GET security/passkeys - returns { success, data: { passkeys: [], count } }. Use to sync hasPasskey with API. */
 export const getPasskeyList = () => async (_dispatch: AppDispatch) => {
   try {

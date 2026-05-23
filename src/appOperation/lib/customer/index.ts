@@ -159,6 +159,8 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('api/v1/wallet/address-book/send-otp', data, CUSTOMER_TYPE),
   fetch_address_book_passkey_challenge: () =>
     appOperation.post('api/v1/wallet/address-book/passkey-challenge', {}, CUSTOMER_TYPE),
+  fetch_withdrawal_passkey_challenge: () =>
+    appOperation.get('api/v1/wallet/passkey/credential_options', undefined, undefined, CUSTOMER_TYPE),
   confirm_satoshi_address_book: (id: string) =>
     appOperation.post(`api/v1/wallet/address-book/${encodeURIComponent(String(id))}/confirm-satoshi`, {}, CUSTOMER_TYPE),
   verify_signature_address_book: (id: string, signature: string) =>

@@ -113,6 +113,8 @@ const SecurityVerification = ({ route }) => {
   const [smsCountdown, setSmsCountdown] = useState(0);
   const [emailCountdown, setEmailCountdown] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingSmsOtp, setIsSendingSmsOtp] = useState(false);
+  const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
 
   // RBSheet reference for switching methods
   const sheetRef = useRef(null);
@@ -171,8 +173,11 @@ const SecurityVerification = ({ route }) => {
       const key = `email-${purpose}`;
       if (!sentOtpRef.current.has(key)) {
         sentOtpRef.current.add(key);
+        setIsSendingEmailOtp(true);
         void dispatch(sendSecurityOtp('email', purpose)).then((ok) => {
+          setIsSendingEmailOtp(false);
           if (ok) setEmailCountdown(60);
+          else sentOtpRef.current.delete(key);
         });
       }
     }
@@ -180,8 +185,11 @@ const SecurityVerification = ({ route }) => {
       const key = `mobile-${purpose}`;
       if (!sentOtpRef.current.has(key)) {
         sentOtpRef.current.add(key);
+        setIsSendingSmsOtp(true);
         void dispatch(sendSecurityOtp('mobile', purpose)).then((ok) => {
+          setIsSendingSmsOtp(false);
           if (ok) setSmsCountdown(60);
+          else sentOtpRef.current.delete(key);
         });
       }
     }
@@ -202,16 +210,20 @@ const SecurityVerification = ({ route }) => {
 
   // Action handlers for resending OTPs
   const handleSendEmailOtp = async () => {
-    if (emailCountdown > 0) return;
+    if (emailCountdown > 0 || isSendingEmailOtp) return;
+    setIsSendingEmailOtp(true);
     const ok = await dispatch(sendSecurityOtp('email', purpose));
+    setIsSendingEmailOtp(false);
     if (ok) {
       setEmailCountdown(60);
     }
   };
 
   const handleSendSmsOtp = async () => {
-    if (smsCountdown > 0) return;
+    if (smsCountdown > 0 || isSendingSmsOtp) return;
+    setIsSendingSmsOtp(true);
     const ok = await dispatch(sendSecurityOtp('mobile', purpose));
+    setIsSendingSmsOtp(false);
     if (ok) {
       setSmsCountdown(60);
     }
@@ -457,10 +469,14 @@ const SecurityVerification = ({ route }) => {
                   maxLength={6}
                   cursorColor={colors.black}
                 />
-                <TouchableOpacity onPress={handleSendSmsOtp} disabled={smsCountdown > 0} style={styles.actionBtn}>
-                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: smsCountdown > 0 ? '#999' : colors.orangeTheme }}>
-                    {smsCountdown > 0 ? `${smsCountdown}s` : 'Send'}
-                  </AppText>
+                <TouchableOpacity onPress={handleSendSmsOtp} disabled={smsCountdown > 0 || isSendingSmsOtp} style={styles.actionBtn}>
+                  {isSendingSmsOtp ? (
+                    <ActivityIndicator size="small" color={colors.black} />
+                  ) : (
+                    <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: smsCountdown > 0 ? '#999' : colors.orangeTheme }}>
+                      {smsCountdown > 0 ? `${smsCountdown}s` : 'Send'}
+                    </AppText>
+                  )}
                 </TouchableOpacity>
               </View>
               <View style={styles.inputFooter}>
@@ -490,10 +506,14 @@ const SecurityVerification = ({ route }) => {
                   maxLength={6}
                   cursorColor={colors.black}
                 />
-                <TouchableOpacity onPress={handleSendEmailOtp} disabled={emailCountdown > 0} style={styles.actionBtn}>
-                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: emailCountdown > 0 ? '#999' : colors.orangeTheme }}>
-                    {emailCountdown > 0 ? `${emailCountdown}s` : 'Send'}
-                  </AppText>
+                <TouchableOpacity onPress={handleSendEmailOtp} disabled={emailCountdown > 0 || isSendingEmailOtp} style={styles.actionBtn}>
+                  {isSendingEmailOtp ? (
+                    <ActivityIndicator size="small" color={colors.black} />
+                  ) : (
+                    <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: emailCountdown > 0 ? '#999' : colors.orangeTheme }}>
+                      {emailCountdown > 0 ? `${emailCountdown}s` : 'Send'}
+                    </AppText>
+                  )}
                 </TouchableOpacity>
               </View>
               <View style={styles.inputFooter}>

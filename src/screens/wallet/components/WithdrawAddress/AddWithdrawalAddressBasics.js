@@ -3,7 +3,7 @@ import { View, TextInput, TouchableOpacity, ScrollView } from "react-native";
 import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN, BOLD, TEN, ELEVEN, Input, FIFTEEN } from "../../../../shared";
 import { colors, lightTheme } from "../../../../theme/colors";
 import FastImage from "react-native-fast-image";
-import { EMAIL, security_vector2 } from "../../../../helper/ImageAssets";
+import { EMAIL, FINGERPRINT, KEY_ICON, PHONE, security_vector2 } from "../../../../helper/ImageAssets";
 import { buildCoinImageUri } from "../../../../helper/coinIconUrl";
 
 const AddWithdrawalAddressBasics = ({
@@ -627,16 +627,15 @@ const AddWithdrawalAddressBasics = ({
                 {/* Confirm it's you */}
               </AppText>
               <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
-                Your account has a single verification option for this step. Tap Continue to open the secure prompt and finish saving this withdrawal address.
+                Select one option, then tap Continue. The next step is your code or passkey prompt—no second method picker.
               </AppText>
             </View>
 
             {(() => {
-              // Force web parity: If email is available, only show email for this user.
-              const methods = saveAddrVerifyOptions.includes("email") ? ["email"] : saveAddrVerifyOptions;
+              const methods = saveAddrVerifyOptions || [];
 
               return methods.map((method) => {
-                // Force isSelected if there's only one method (web parity)
+                // Force isSelected if there's only one method
                 const isSelected = methods.length === 1 ? true : (selectedSaveAddrVerifyMethod === method);
                 let icon = EMAIL;
                 let title = "Email";
@@ -647,15 +646,15 @@ const AddWithdrawalAddressBasics = ({
                   const [local, domain] = email.split("@");
                   sub = email ? `${local.slice(0, 2)}***@${domain}` : "";
                 } else if (method === "mobile") {
-                  icon = PHONE_VERIFY;
+                  icon = PHONE;
                   title = "Phone Number";
                   const phone = userData?.mobileNumber || "";
                   sub = phone ? `${phone.slice(0, 2)}*****${phone.slice(-2)}` : "";
                 } else if (method === "google_authenticator") {
-                  icon = GOOGLE_VERIFY;
+                  icon = KEY_ICON;
                   title = "Authenticator App";
                 } else if (method === "passkey") {
-                  icon = PASSKEY_VERIFY;
+                  icon = FINGERPRINT;
                   title = "Passkeys";
                 }
 

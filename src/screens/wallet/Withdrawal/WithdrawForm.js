@@ -439,12 +439,12 @@ const WithdrawForm = () => {
     if (withdrawToTab === "agce_user") {
       return "0";
     }
-    
+
     // If a specific network is selected, try using its min withdrawal value
     if (network && network !== "Select Network") {
       return formatWithdrawAmountDisplay(chainMinWithdrawal);
     }
-    
+
     return "";
   }, [withdrawToTab, network, chainMinWithdrawal]);
 
@@ -1655,8 +1655,6 @@ const WithdrawForm = () => {
 
       // Web parity: both flows open the confirmation/verification sheet.
       withdrawConfirmSheetRef.current?.open();
-      setWithdrawConfirmBusy(true);
-      setTimeout(() => setWithdrawConfirmBusy(false), 3000);
       Keyboard.dismiss();
       return;
     }
@@ -2723,7 +2721,7 @@ const WithdrawForm = () => {
         ref={withdrawConfirmSheetRef}
         closeOnDragDown
         closeOnPressMask
-        height={confirmSheetHeight}
+        height={withdrawToTab === "agce_user" ? confirmSheetHeight : 280}
         customStyles={{
           container: {
             backgroundColor: themeColors.background,
@@ -2746,7 +2744,7 @@ const WithdrawForm = () => {
             <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>
               Confirm Withdrawal
             </AppText>
-            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textAlign: "center", lineHeight: 20 }}>
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, textAlign: "center", lineHeight: 20 }}>
               {withdrawToTab === "agce_user"
                 ? "You are about to perform an internal transfer. Please ensure the recipient details are correct, as internal transfers are processed instantly."
                 : `You have chosen the ${saveAddrNetwork || network || "—"} network. Kindly verify that your withdrawal address is compatible with this network, as unsupported transfers may result in loss of funds.`
