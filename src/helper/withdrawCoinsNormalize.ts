@@ -91,6 +91,7 @@ function normalizeWalletWithdrawalCoins(list: any[]): any[] {
         withdrawal_fee: {} as Record<string, any>,
         withdrawal_status: {} as Record<string, string>,
         chain_full_names: {} as Record<string, string>,
+        token_asset_ids: {} as Record<string, string>,
       };
 
       for (const ch of chains) {
@@ -113,6 +114,12 @@ function normalizeWalletWithdrawalCoins(list: any[]): any[] {
         const full = ch.chain_full_name || ch.network_full_name || ch.chainFullName;
         if (full != null && String(full).trim()) out.chain_full_names[code] = String(full).trim();
 
+        const assetKey = ch.tokenAssetId ?? ch.token_asset_id;
+        if (assetKey != null && String(assetKey).trim()) {
+          out.token_asset_ids[code] = String(assetKey).trim();
+        } else if (coin.token_asset_ids && coin.token_asset_ids[rawCode]) {
+          out.token_asset_ids[code] = coin.token_asset_ids[rawCode];
+        }
       }
 
       for (const code of out.chain) {

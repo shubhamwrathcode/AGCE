@@ -663,7 +663,7 @@ export const withdrawCoin =
           const credential = await dispatch(getWithdrawalPasskeyCredential(false));
           if (!credential) {
             dispatch(setLoading(false));
-            return;
+            return Promise.reject(new Error("PASSKEY_CANCELLED"));
           }
           try {
             response = await appOperation.customer.withdraw_currency_v1({ ...data, passkey_credential: credential });
@@ -690,12 +690,17 @@ export const withdrawCoin =
       if (response.success) {
         showSuccess(String(response?.message ?? 'Withdrawal submitted'));
         NavigationService.goBack();
+        return Promise.resolve(response);
       } else {
         showError(response?.message);
+        return Promise.reject(new Error(response?.message || "Withdrawal failed"));
       }
-    } catch (e) {
-      logger(e);
-      showError((e as any)?.message);
+    } catch (e: any) {
+      if (e.message !== "PASSKEY_CANCELLED") {
+        logger(e);
+        showError((e as any)?.message);
+      }
+      return Promise.reject(e);
     } finally {
       dispatch(setLoading(false));
     }

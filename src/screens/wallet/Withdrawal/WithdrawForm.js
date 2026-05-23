@@ -164,6 +164,63 @@ const WithdrawForm = () => {
     if (!sym) return null;
     return withdrawCoinsList.find((c) => String(c.short_name || c.coin || "").toUpperCase() === sym) || selectedCurrency;
   }, [selectedCurrency, withdrawCoinsList]);
+
+  // Combined Verification Fallback State
+  const [withdrawSecuritySettings, setWithdrawSecuritySettings] = useState(null);
+  const [emailVerifyCode, setEmailVerifyCode] = useState("");
+  const [mobileVerifyCode, setMobileVerifyCode] = useState("");
+  const [authAppCode, setAuthAppCode] = useState("");
+  const [withdrawFundPassword, setWithdrawFundPassword] = useState("");
+  const [withdrawFundPasswordVisible, setWithdrawFundPasswordVisible] = useState(false);
+  const [isWithdrawVerifyCombinedOpen, setIsWithdrawVerifyCombinedOpen] = useState(false);
+
+  const [withdrawOtpSending, setWithdrawOtpSending] = useState({ email: false, mobile: false });
+  const [withdrawOtpResendSec, setWithdrawOtpResendSec] = useState({ email: 0, mobile: 0 });
+
+  const sendSingleWithdrawalOtp = async (method) => {
+    if (withdrawOtpSending[method] || withdrawOtpResendSec[method] > 0) return;
+    setWithdrawOtpSending((p) => ({ ...p, [method]: true }));
+    try {
+      const res = await appOperation.customer.withdrawal_verification_otp({ method });
+      if (res?.success) {
+        showSuccess(`Code sent to ${method}`);
+        setWithdrawOtpResendSec((p) => ({ ...p, [method]: 60 }));
+        let sec = 60;
+        const intId = setInterval(() => {
+          sec -= 1;
+          setWithdrawOtpResendSec((p) => ({ ...p, [method]: sec }));
+          if (sec <= 0) clearInterval(intId);
+        }, 1000);
+      } else {
+        showError(res?.message || `Could not send ${method} code`);
+      }
+    } catch (e) {
+      showError(e?.message || `Could not send ${method} code`);
+    } finally {
+      setWithdrawOtpSending((p) => ({ ...p, [method]: false }));
+    }
+  };
+
+  useEffect(() => {
+    appOperation.customer.fetch_withdrawal_security_settings()
+      .then((res) => {
+        if (res?.success) setWithdrawSecuritySettings(res.data?.settings || null);
+      })
+      .catch(() => { });
+  }, []);
+
+  const getNonPasskeyEnabledMethods = useCallback(() => {
+    const s = withdrawSecuritySettings;
+    if (!s) return ["email"];
+    if (!s.methods) return [];
+    const methods = [];
+    if (s.methods.email?.enabled) methods.push("email");
+    if (s.methods.mobile?.enabled) methods.push("mobile");
+    if (s.methods.google_authenticator?.enabled) methods.push("google_authenticator");
+    if (s.methods.fund_password?.enabled) methods.push("fund_password");
+    return methods;
+  }, [withdrawSecuritySettings]);
+
   /** Web parity: `WithdrawPageSteps12` — Address vs AGCE User under “Withdraw to”. */
   const [withdrawToTab, setWithdrawToTab] = useState("address");
   /** Web `agceRecipientTab`: email | phone | agce */
@@ -1583,12 +1640,72 @@ const WithdrawForm = () => {
     }
   };
 
-  const handleFinalWithdraw = () => {
+  const handleFinalWithdraw = async () => {
     withdrawConfirmSheetRef.current?.close();
-    // Transition to the summary sheet as per mobile UX
-    setTimeout(() => {
-      withdrawSummarySheetRef.current?.open();
-    }, 450);
+
+    const isAgce = withdrawToTab === "agce_user";
+    const chainForSubmit = isAgce ? "internal" : network;
+    const tokenFromMap = isAgce ? null : selectedCurrency?.token_asset_ids?.[network];
+    const tokenAssetId = tokenFromMap != null && String(tokenFromMap).trim() ? String(tokenFromMap).trim() : "";
+
+    let data = {
+      coinName: String(selectedCurrency?.short_name || selectedCurrency?.coin || "").toUpperCase(),
+      amount: withdrawAmount,
+      withdrawal_address: isAgce ? agceRecipientEmail || agceRecipientPhoneLocal || agceRecipientId : withdrawAddress,
+      chain: chainForSubmit,
+      tokenAssetId: tokenAssetId || chainForSubmit, // Web fallback
+    };
+
+    if (isAgce) {
+      if (agceRecipientTab === "agce") data.address = agceRecipientId;
+      else data.email_or_phone = agceRecipientEmail || agceRecipientPhoneLocal;
+    }
+
+    try {
+      await dispatch(withdrawCoin(data));
+      // Handled by withdrawCoin: showSuccess, goBack.
+    } catch (err) {
+      if (err.message === "PASSKEY_CANCELLED") {
+        // User cancelled passkey, open combined verify
+        setIsWithdrawVerifyCombinedOpen(true);
+      }
+    }
+  };
+
+  const submitWithdrawalWithEnabledMethods = async () => {
+    const isAgce = withdrawToTab === "agce_user";
+    const chainForSubmit = isAgce ? "internal" : network;
+    const tokenFromMap = isAgce ? null : selectedCurrency?.token_asset_ids?.[network];
+    const tokenAssetId = tokenFromMap != null && String(tokenFromMap).trim() ? String(tokenFromMap).trim() : "";
+
+    let data = {
+      coinName: String(selectedCurrency?.short_name || selectedCurrency?.coin || "").toUpperCase(),
+      amount: withdrawAmount,
+      withdrawal_address: isAgce ? agceRecipientEmail || agceRecipientPhoneLocal || agceRecipientId : withdrawAddress,
+      chain: chainForSubmit,
+      tokenAssetId: tokenAssetId || chainForSubmit,
+    };
+
+    if (isAgce) {
+      if (agceRecipientTab === "agce") data.address = agceRecipientId;
+      else data.email_or_phone = agceRecipientEmail || agceRecipientPhoneLocal;
+    }
+
+    const methods = getNonPasskeyEnabledMethods();
+    if (methods.includes("email")) data.email_code = emailVerifyCode;
+    if (methods.includes("mobile")) data.mobile_code = mobileVerifyCode;
+    if (methods.includes("google_authenticator")) data.google_authenticator_code = authAppCode;
+    if (methods.includes("fund_password")) data.fund_password = withdrawFundPassword;
+
+    setIsWithdrawVerifyCombinedOpen(false);
+
+    try {
+      await dispatch(withdrawCoin(data));
+    } catch (err) {
+      if (err.message === "PASSKEY_CANCELLED") {
+        setIsWithdrawVerifyCombinedOpen(true);
+      }
+    }
   };
   /** Web `WithdrawPageStep3Overlays`: first Withdrawal opens verify; OTP is not required to enable the first tap. */
   const handleWithdrawPrimaryPress = () => {
@@ -2120,6 +2237,176 @@ const WithdrawForm = () => {
     }
     return () => clearInterval(interval);
   }, [saveAddrOtpTimer]);
+
+  if (withdrawOtpPhaseActive) {
+    return renderOtpPhase();
+  }
+
+  if (isWithdrawVerifyCombinedOpen) {
+    return (
+      <AppSafeAreaView bg={themeColors.background} style={{ flex: 1 }}>
+        <View style={styles.headerView}>
+          <TouchableOpacity onPress={() => setIsWithdrawVerifyCombinedOpen(false)} style={{ padding: 10, paddingHorizontal: 20 }}>
+            <FastImage source={back_ic} style={{ width: 16, height: 16 }} resizeMode="contain" tintColor={themeColors.text} />
+          </TouchableOpacity>
+          <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>Security verification</AppText>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView style={{ paddingHorizontal: 24, marginTop: 20 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View style={{ alignItems: "center", marginBottom: 32 }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+              Complete all required steps. For email or SMS, tap Send code to receive your OTP.
+            </AppText>
+          </View>
+
+          {getNonPasskeyEnabledMethods().includes("email") && (
+            <View style={{ marginBottom: 20 }}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Email verification code</AppText>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
+                <Input
+                  mainContainer={{ flex: 1, marginBottom: 0 }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  inputStyle={{ fontSize: 14 }}
+                  placeholder="Enter email code"
+                  keyboardType="numeric"
+                  value={emailVerifyCode}
+                  onChangeText={setEmailVerifyCode}
+                />
+                <TouchableOpacity
+                  onPress={() => sendSingleWithdrawalOtp("email")}
+                  disabled={withdrawOtpSending.email || withdrawOtpResendSec.email > 0}
+                  style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
+                >
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.email || withdrawOtpResendSec.email > 0) ? themeColors.secondaryText : "#E2B24C" }}>
+                    {withdrawOtpSending.email ? "Sending..." : withdrawOtpResendSec.email > 0 ? `Resend in ${withdrawOtpResendSec.email}s` : "Send code"}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {getNonPasskeyEnabledMethods().includes("mobile") && (
+            <View style={{ marginBottom: 20 }}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Mobile verification code</AppText>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
+                <Input
+                  mainContainer={{ flex: 1, marginBottom: 0 }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  inputStyle={{ fontSize: 14 }}
+                  placeholder="Enter mobile code"
+                  keyboardType="numeric"
+                  value={mobileVerifyCode}
+                  onChangeText={setMobileVerifyCode}
+                />
+                <TouchableOpacity
+                  onPress={() => sendSingleWithdrawalOtp("mobile")}
+                  disabled={withdrawOtpSending.mobile || withdrawOtpResendSec.mobile > 0}
+                  style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
+                >
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.mobile || withdrawOtpResendSec.mobile > 0) ? themeColors.secondaryText : "#E2B24C" }}>
+                    {withdrawOtpSending.mobile ? "Sending..." : withdrawOtpResendSec.mobile > 0 ? `Resend in ${withdrawOtpResendSec.mobile}s` : "Send code"}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {getNonPasskeyEnabledMethods().includes("google_authenticator") && (
+            <View style={{ marginBottom: 20 }}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Authenticator app</AppText>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
+                <Input
+                  mainContainer={{ flex: 1, marginBottom: 0 }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  inputStyle={{ fontSize: 14 }}
+                  placeholder="Enter authenticator app code"
+                  keyboardType="numeric"
+                  value={authAppCode}
+                  onChangeText={setAuthAppCode}
+                />
+                <TouchableOpacity
+                  onPress={async () => {
+                    const Clipboard = require('react-native').Clipboard;
+                    const text = await Clipboard.getString();
+                    if (text) setAuthAppCode(text);
+                  }}
+                  style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
+                >
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: "#E2B24C" }}>Paste</AppText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {getNonPasskeyEnabledMethods().includes("fund_password") && (
+            <View style={{ marginBottom: 28 }}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Fund password</AppText>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#1E222D" : "#F3F4F6", borderRadius: 12, paddingRight: 16 }}>
+                <Input
+                  mainContainer={{ flex: 1, marginBottom: 0 }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: colors.iconBgColor, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  inputStyle={{ fontSize: 14 }}
+                  placeholder="Enter fund password"
+                  secureTextEntry={!withdrawFundPasswordVisible}
+                  value={withdrawFundPassword}
+                  onChangeText={setWithdrawFundPassword}
+                />
+                <TouchableOpacity onPress={() => setWithdrawFundPasswordVisible(!withdrawFundPasswordVisible)}>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
+                    {withdrawFundPasswordVisible ? "Hide" : "Show"}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={submitWithdrawalWithEnabledMethods}
+            disabled={
+              !(
+                (!getNonPasskeyEnabledMethods().includes("email") || (emailVerifyCode || "").trim().length > 0) &&
+                (!getNonPasskeyEnabledMethods().includes("mobile") || (mobileVerifyCode || "").trim().length > 0) &&
+                (!getNonPasskeyEnabledMethods().includes("google_authenticator") || (authAppCode || "").trim().length > 0) &&
+                (!getNonPasskeyEnabledMethods().includes("fund_password") || (withdrawFundPassword || "").trim().length > 0)
+              )
+            }
+            style={{
+              backgroundColor:
+                (!getNonPasskeyEnabledMethods().includes("email") || (emailVerifyCode || "").trim().length > 0) &&
+                  (!getNonPasskeyEnabledMethods().includes("mobile") || (mobileVerifyCode || "").trim().length > 0) &&
+                  (!getNonPasskeyEnabledMethods().includes("google_authenticator") || (authAppCode || "").trim().length > 0) &&
+                  (!getNonPasskeyEnabledMethods().includes("fund_password") || (withdrawFundPassword || "").trim().length > 0)
+                  ? colors.black
+                  : isDark ? colors.iconBgColor : "rgba(0, 0, 0, 0.05)",
+              height: 50,
+              borderRadius: 25,
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: 32,
+              marginTop: 8,
+            }}
+          >
+            <AppText
+              weight={SEMI_BOLD}
+              type={SIXTEEN}
+              style={{
+                color:
+                  (!getNonPasskeyEnabledMethods().includes("email") || (emailVerifyCode || "").trim().length > 0) &&
+                    (!getNonPasskeyEnabledMethods().includes("mobile") || (mobileVerifyCode || "").trim().length > 0) &&
+                    (!getNonPasskeyEnabledMethods().includes("google_authenticator") || (authAppCode || "").trim().length > 0) &&
+                    (!getNonPasskeyEnabledMethods().includes("fund_password") || (withdrawFundPassword || "").trim().length > 0)
+                    ? colors.white
+                    : isDark ? "#3A3F4B" : "#9CA3AF",
+              }}
+            >
+              Confirm withdrawal
+            </AppText>
+          </TouchableOpacity>
+        </ScrollView>
+      </AppSafeAreaView>
+    );
+  }
 
   return (
     <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
@@ -3681,6 +3968,8 @@ const WithdrawForm = () => {
           </View>
         </View>
       </RBSheet>
+
+      {/* Removed withdrawVerifyCombinedSheetRef as it is now a full screen view */}
 
       {/* KYC Mandatory Modal - Redesigned to match reference */}
       <Modal
