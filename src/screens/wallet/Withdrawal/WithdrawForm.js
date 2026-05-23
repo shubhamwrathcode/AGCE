@@ -1677,30 +1677,32 @@ const WithdrawForm = () => {
     const chainForSubmit = isAgce ? "internal" : network;
     const tokenFromMap = isAgce ? null : selectedCurrency?.token_asset_ids?.[network];
     const tokenAssetId = tokenFromMap != null && String(tokenFromMap).trim() ? String(tokenFromMap).trim() : "";
+    
+    const idempotency_key = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
     let data = {
       coinName: String(selectedCurrency?.short_name || selectedCurrency?.coin || "").toUpperCase(),
-      amount: withdrawAmount,
-      withdrawal_address: isAgce ? agceRecipientEmail || agceRecipientPhoneLocal || agceRecipientId : withdrawAddress,
+      amount: Number.parseFloat(String(withdrawAmount || "").replace(/,/g, "")),
+      withdrawal_address: isAgce ? (agceRecipientTab === "agce" ? agceRecipientId : agceRecipientEmail || agceRecipientPhoneLocal) : withdrawAddress,
+      address: isAgce ? (agceRecipientTab === "agce" ? agceRecipientId : agceRecipientEmail || agceRecipientPhoneLocal) : withdrawAddress,
       chain: chainForSubmit,
       tokenAssetId: tokenAssetId || chainForSubmit,
+      idempotency_key,
     };
 
     if (isAgce) {
-      if (agceRecipientTab === "agce") data.address = agceRecipientId;
-      else data.email_or_phone = agceRecipientEmail || agceRecipientPhoneLocal;
+      if (agceRecipientTab !== "agce") data.email_or_phone = agceRecipientEmail || agceRecipientPhoneLocal;
     }
 
     const methods = getNonPasskeyEnabledMethods();
-    if (methods.includes("email")) data.email_code = emailVerifyCode;
-    if (methods.includes("mobile")) data.mobile_code = mobileVerifyCode;
-    if (methods.includes("google_authenticator")) data.google_authenticator_code = authAppCode;
-    if (methods.includes("fund_password")) data.fund_password = withdrawFundPassword;
-
-    setIsWithdrawVerifyCombinedOpen(false);
+    if (methods.includes("email")) data.email_code = String(emailVerifyCode || "").trim();
+    if (methods.includes("mobile")) data.mobile_code = String(mobileVerifyCode || "").trim();
+    if (methods.includes("google_authenticator")) data.google_authenticator_code = String(authAppCode || "").trim();
+    if (methods.includes("fund_password")) data.fund_password = String(withdrawFundPassword || "").trim();
 
     try {
       await dispatch(withdrawCoin(data));
+      setIsWithdrawVerifyCombinedOpen(false);
     } catch (err) {
       if (err.message === "PASSKEY_CANCELLED") {
         setIsWithdrawVerifyCombinedOpen(true);
@@ -2254,7 +2256,7 @@ const WithdrawForm = () => {
         </View>
 
         <ScrollView style={{ paddingHorizontal: 24, marginTop: 20 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <View style={{ alignItems: "center", marginBottom: 32 }}>
+          <View style={{ alignItems: "center", marginBottom: 32, right: 10 }}>
             <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
               Complete all required steps. For email or SMS, tap Send code to receive your OTP.
             </AppText>
