@@ -2888,7 +2888,7 @@ const WithdrawForm = () => {
         height={480}
         customStyles={{
           container: {
-            backgroundColor: themeColors.background,
+            backgroundColor: colors.white,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
           },
@@ -2902,29 +2902,6 @@ const WithdrawForm = () => {
           <AppText type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18, marginBottom: 20 }}>
             Complete all required steps. For email or SMS, tap Send code to receive your OTP, then enter it below.
           </AppText>
-
-          {/* Verification Summary Parity */}
-          {/* <View style={{
-            padding: 12,
-            borderRadius: 12,
-            backgroundColor: isDark ? themeColors.card : "#F9FAFB",
-            borderWidth: 1,
-            borderColor: isDark ? themeColors.border : "#F3F4F6",
-            marginBottom: 24
-          }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8, alignItems: "flex-start" }}>
-              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginTop: 1 }}>Address</AppText>
-              <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text, flex: 1, textAlign: "right", marginLeft: 16 }} numberOfLines={2}>
-                {(withdrawAddress || "").trim() || "—"}
-              </AppText>
-            </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>Amount</AppText>
-              <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text }}>
-                {(withdrawAmount || "").trim() || "—"} {selectedCurrency?.short_name || "—"}
-              </AppText>
-            </View>
-          </View> */}
 
           <View style={{ marginBottom: 32 }}>
             <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text, marginBottom: 12 }}>Email verification code</AppText>
