@@ -159,7 +159,11 @@ export class AppOperation {
                 };
               }
               const errData = { code: status, ...parsed };
-              console.warn('[API] Error response:', status, JSON.stringify(errData));
+              // Suppress known fallback 404 warnings to keep console clean
+              const isFallbackEndpoint = uri.includes('withdrawal-coins') || uri.includes('deposit-coins') || uri.includes('credential_options');
+              if (!(status === 404 && isFallbackEndpoint)) {
+                console.warn('[API] Error response:', status, JSON.stringify(errData));
+              }
               reject(errData);
             });
         })

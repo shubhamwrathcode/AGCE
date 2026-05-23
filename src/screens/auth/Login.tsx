@@ -26,7 +26,6 @@ import { setLoading, setPasskeyCancelled } from "../../slices/authSlice";
 import { apple, googleIcon, passkey_login } from "../../helper/ImageAssets";
 import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/components";
 import NavigationService from "../../navigation/NavigationService";
-import Checkbox from "../../shared/components/Checkbox";
 import { colors } from "../../theme/colors";
 
 const Login = (): JSX.Element => {
@@ -34,14 +33,12 @@ const Login = (): JSX.Element => {
   const { colors: themeColors, isDark } = useTheme();
   const isLoading = useAppSelector((state) => state.auth.isLoading);
   const showButtonLoading = useAppSelector((state) => state.auth.isLoading && state.auth.loadingFor !== 'otp');
-  const languages = useAppSelector((state) => state.account.languages);
   const passwordInput = useRef<any>(null);
   const [signUpId, setSignUpId] = useState("");
   const [password, setPassword] = useState<string>("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(true);
   const [index, setIndex] = useState(0);
   const [showPassField, setShowPassField] = useState(false);
-  const [bindIp, setBindIp] = useState(false);
   const [countryCode, setCountryCode] = useState(["91"]);
   const [country, setCountry] = useState("IN");
   const [isValid, setIsValid] = useState(false);
@@ -264,6 +261,7 @@ const Login = (): JSX.Element => {
 
   const changeInput = (val: any) => {
     setSignUpId(val);
+    setShowPassField(false);
     if (identifierError) setIdentifierError(false);
     if (index === 0) {
       const raw = String(val || "").trim();
@@ -384,7 +382,6 @@ const Login = (): JSX.Element => {
                 returnKeyType="next"
                 onfocus={() => {
                   clearEmailSuggestBlurTimer();
-                  setShowPassField(false);
                   setEmailSuggestListVisible(true);
                 }}
                 onBlur={() => {

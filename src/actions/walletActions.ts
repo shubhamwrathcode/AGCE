@@ -659,18 +659,24 @@ export const withdrawCoin =
       } catch (err: any) {
         // If v1 returns a specific error (like Passkey required), handle it.
         const msg = String(err?.message || "").toLowerCase();
-        if (msg.includes('passkey credential is required') || msg.includes('/api/v1/wallet/passkey/credential_options')) {
-          const credential = await dispatch(getWithdrawalPasskeyCredential(false));
+        if (msg.includes('passkey credential is required') || msg.includes('/api/v1/wallet/passkey/credential_options') || msg.includes('passkey_credential')) {
+          const credential = await dispatch(getWithdrawalPasskeyCredential(true));
           if (!credential) {
-            dispatch(setLoading(false));
-            return;
-          }
-          try {
-            response = await appOperation.customer.withdraw_currency_v1({ ...data, credential });
-          } catch (retryErr: any) {
-            showError(retryErr?.message || "Withdrawal failed");
-            dispatch(setLoading(false));
-            return;
+            try {
+              response = await appOperation.customer.withdraw_currency(data);
+            } catch (err2: any) {
+              showError(err2?.message || "Withdrawal failed");
+              dispatch(setLoading(false));
+              return;
+            }
+          } else {
+            try {
+              response = await appOperation.customer.withdraw_currency_v1({ ...data, credential });
+            } catch (retryErr: any) {
+              showError(retryErr?.message || "Withdrawal failed");
+              dispatch(setLoading(false));
+              return;
+            }
           }
         } else if (err?.code !== 404 && err?.code !== 405) {
           showError(err?.message || "Withdrawal failed");

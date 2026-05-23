@@ -71,8 +71,10 @@ const NicknameSettings = () => {
       } else {
         Toast.showWithGravity(res?.message || "Could not update nickname.", Toast.LONG, Toast.BOTTOM);
       }
-    } catch (err) {
-      Toast.showWithGravity("Failed to update nickname. Please try again.", Toast.LONG, Toast.BOTTOM);
+    } catch (err: any) {
+      const apiMsg = err?.message || err?.data?.message || err?.error || err?.response?.data?.message;
+      const errorMessage = apiMsg ? String(apiMsg) : "Failed to update nickname. Please try again.";
+      Toast.showWithGravity(errorMessage, Toast.LONG, Toast.BOTTOM);
     } finally {
       setLoading(false);
     }
