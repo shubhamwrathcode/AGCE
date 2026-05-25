@@ -1,11 +1,11 @@
-import {appOperation} from '../appOperation';
-import {extractDepositCoinsList, normalizeDepositCoinsResponse} from '../helper/depositCoinsNormalize';
+import { appOperation } from '../appOperation';
+import { extractDepositCoinsList, normalizeDepositCoinsResponse } from '../helper/depositCoinsNormalize';
 import {
   extractWithdrawCoinsList,
   mapDepositCoinsToWithdrawCatalog,
   normalizeWithdrawCoinsResponse,
 } from '../helper/withdrawCoinsNormalize';
-import {logger, showError, showSuccess} from '../helper/logger';
+import { logger, showError, showSuccess } from '../helper/logger';
 import {
   GenerateAddressProps,
   WithdrawCurrencyProps,
@@ -14,7 +14,7 @@ import {
 import { transformCurrencyDataWithDistribution } from '../helper/utility';
 import NavigationService from '../navigation/NavigationService';
 import { Dashboard_Inner, DEPOSIT_SCREEN, WITHDRAW_SCREEN } from '../navigation/routes';
-import {setLoading} from '../slices/authSlice';
+import { setLoading } from '../slices/authSlice';
 import { setOpenOrders, clearOpenOrders } from '../slices/homeSlice';
 import {
   setAdminBankDetails,
@@ -70,7 +70,7 @@ import {
   setWalletBalanceFutures,
   setWalletBalanceOptions
 } from '../slices/walletSlice';
-import {AppDispatch} from '../store/store';
+import { AppDispatch } from '../store/store';
 import { getWithdrawalPasskeyCredential } from './accountActions';
 
 const useGlobalLoader = (opts?: { useGlobalLoader?: boolean }) => opts?.useGlobalLoader !== false;
@@ -233,7 +233,7 @@ export const getDepositActiveCoins = (id: any) => async (dispatch: AppDispatch) 
   } catch (e) {
     logger(e);
   } finally {
-    
+
     dispatch(setLoading(false));
   }
 };
@@ -298,7 +298,7 @@ export const getDepositFiatCoins = (id: any) => async (dispatch: AppDispatch) =>
   } catch (e) {
     logger(e);
   } finally {
-    
+
     dispatch(setLoading(false));
   }
 };
@@ -314,7 +314,7 @@ export const getAdminTrades = (skip: any, limit: any) => async (dispatch: AppDis
   } catch (e) {
     logger(e);
   } finally {
-    
+
     dispatch(setLoading(false));
   }
 };
@@ -331,7 +331,7 @@ export const getqbsHistory = (skip: any, limit: any) => async (dispatch: AppDisp
   } catch (e) {
     logger(e);
   } finally {
-    
+
     dispatch(setLoading(false));
   }
 };
@@ -367,7 +367,7 @@ export const getTradeHistory =
       if (useLoader) dispatch(setLoading(true));
       const lim = Math.min(100, Math.max(1, Number(limit) || 20));
       const pg = Math.floor(Number(skip) / lim) + 1 || 1;
-      const params: {page: number; page_size: number; pair?: string} = {
+      const params: { page: number; page_size: number; pair?: string } = {
         page: pg,
         page_size: lim,
       };
@@ -399,7 +399,7 @@ export const getInteralWalletHistory = (skip: any, limit: any) => async (dispatc
   } catch (e) {
     logger(e);
   } finally {
-    
+
     dispatch(setLoading(false));
   }
 };
@@ -420,34 +420,34 @@ export const getUserWallet = (id: string | undefined) => async (dispatch: AppDis
     if (response.success) {
       const wallets = response?.data || [];
 
-        // Parse balance to number and sort
-        const walletsWithBalance = wallets
-          .filter((wallet: { balance: string; }) => parseFloat(wallet.balance) > 0)
-          .sort((a: { balance: string; }, b: { balance: string; }) => parseFloat(b.balance) - parseFloat(a.balance));
+      // Parse balance to number and sort
+      const walletsWithBalance = wallets
+        .filter((wallet: { balance: string; }) => parseFloat(wallet.balance) > 0)
+        .sort((a: { balance: string; }, b: { balance: string; }) => parseFloat(b.balance) - parseFloat(a.balance));
 
-        let topWalletsList: any[] = [];
+      let topWalletsList: any[] = [];
 
-        if (walletsWithBalance.length >= 2) {
-          topWalletsList = walletsWithBalance;
-        } else {
-          // Add existing non-zero wallets
-          topWalletsList = [...walletsWithBalance];
+      if (walletsWithBalance.length >= 2) {
+        topWalletsList = walletsWithBalance;
+      } else {
+        // Add existing non-zero wallets
+        topWalletsList = [...walletsWithBalance];
 
-          // Fill remaining with top wallets regardless of balance
-          const remaining = 2 - topWalletsList.length;
-          const walletsSorted = wallets
-            .sort((a: { balance: string; }, b: { balance: string; }) => parseFloat(b.balance) - parseFloat(a.balance))
-            .filter((w: { currency_id: any; }) => !topWalletsList.find(tw => tw.currency_id === w.currency_id));
+        // Fill remaining with top wallets regardless of balance
+        const remaining = 2 - topWalletsList.length;
+        const walletsSorted = wallets
+          .sort((a: { balance: string; }, b: { balance: string; }) => parseFloat(b.balance) - parseFloat(a.balance))
+          .filter((w: { currency_id: any; }) => !topWalletsList.find(tw => tw.currency_id === w.currency_id));
 
-          topWalletsList = topWalletsList.concat(walletsSorted.slice(0, remaining));
-        }
+        topWalletsList = topWalletsList.concat(walletsSorted.slice(0, remaining));
+      }
 
-        // setfundData(wallets);
-        // if (currencyData?.length === 0) {
-        //   setCurrencyData(wallets);
-        //   setSelectedCurrency(wallets[0] || {})
-        // }
-        dispatch(setUserWallet(response?.data));
+      // setfundData(wallets);
+      // if (currencyData?.length === 0) {
+      //   setCurrencyData(wallets);
+      //   setSelectedCurrency(wallets[0] || {})
+      // }
+      dispatch(setUserWallet(response?.data));
       // dispatch(setUserWallet(response?.data));
     }
   } catch (e) {
@@ -488,7 +488,7 @@ export const getSwapCurrencyList = () => async (dispatch: AppDispatch) => {
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.swap_currency_list();
     if (response.success) {
-        dispatch(setSwapCurrencyList(response?.data));
+      dispatch(setSwapCurrencyList(response?.data));
     }
   } catch (e) {
     logger(e);
@@ -502,7 +502,7 @@ export const getConversionRate = (form: any, to: any) => async (dispatch: AppDis
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.get_conversion_rate(form, to);
     if (response.success) {
-        dispatch(setSwapConversionRate(response?.data));
+      dispatch(setSwapConversionRate(response?.data));
     }
   } catch (e) {
     logger(e);
@@ -519,7 +519,7 @@ export const getUserMainWallet = (id: any) => async (dispatch: AppDispatch) => {
     // dispatch(setLoading(true));
     const response: any = await appOperation.customer.user_main_wallet(id);
     if (response.success) {
-        dispatch(setUserMainWallet(response?.data));
+      dispatch(setUserMainWallet(response?.data));
     }
   } catch (e) {
     logger(e);
@@ -533,7 +533,7 @@ export const getUserSpotWallet = (id: any) => async (dispatch: AppDispatch) => {
     // dispatch(setLoading(true));
     const response: any = await appOperation.customer.user_main_wallet(id);
     if (response.success) {
-        dispatch(setUserSpotWallet(response?.data));
+      dispatch(setUserSpotWallet(response?.data));
     }
   } catch (e) {
     logger(e);
@@ -547,7 +547,7 @@ export const getUserSwapWallet = (id: any) => async (dispatch: AppDispatch) => {
     // dispatch(setLoading(true));
     const response: any = await appOperation.customer.user_main_wallet(id);
     if (response.success) {
-        dispatch(setUserSwapWallet(response?.data));
+      dispatch(setUserSwapWallet(response?.data));
     }
   } catch (e) {
     logger(e);
@@ -561,7 +561,7 @@ export const getUserEarningWallet = (id: any) => async (dispatch: AppDispatch) =
     // dispatch(setLoading(true));
     const response: any = await appOperation.customer.user_main_wallet(id);
     if (response.success) {
-        dispatch(setUserEarningWallet(response?.data));
+      dispatch(setUserEarningWallet(response?.data));
     }
   } catch (e) {
     logger(e);
@@ -570,20 +570,20 @@ export const getUserEarningWallet = (id: any) => async (dispatch: AppDispatch) =
   }
 };
 
-  export const getUserArbitrageWallet = (id: any) => async (dispatch: AppDispatch) => {
-    try {
-      // dispatch(setLoading(true));
-      const response: any = await appOperation.customer.user_main_wallet(id);
-      // console.log(response, "getUserArbitrageWallet");
-      if (response.success) {
-          dispatch(setUserArbitrageWallet(response?.data));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      // dispatch(setLoading(false));
+export const getUserArbitrageWallet = (id: any) => async (dispatch: AppDispatch) => {
+  try {
+    // dispatch(setLoading(true));
+    const response: any = await appOperation.customer.user_main_wallet(id);
+    // console.log(response, "getUserArbitrageWallet");
+    if (response.success) {
+      dispatch(setUserArbitrageWallet(response?.data));
     }
-  };
+  } catch (e) {
+    logger(e);
+  } finally {
+    // dispatch(setLoading(false));
+  }
+};
 
 export const getUserFuturesWallet = (id: any) => async (dispatch: AppDispatch) => {
 
@@ -592,7 +592,7 @@ export const getUserFuturesWallet = (id: any) => async (dispatch: AppDispatch) =
     const response: any = await appOperation.customer.user_main_wallet(id);
     // console.log(response, "getUserFuturesWallet");
     if (response.success) {
-        dispatch(setUserFuturesWallet(response?.data));
+      dispatch(setUserFuturesWallet(response?.data));
     }
   } catch (e) {
     logger(e);
@@ -606,7 +606,7 @@ export const getUserOptionsWallet = (id: any) => async (dispatch: AppDispatch) =
     // dispatch(setLoading(true));
     const response: any = await appOperation.customer.user_main_wallet(id);
     if (response.success) {
-        dispatch(setUserOptionsWallet(response?.data));
+      dispatch(setUserOptionsWallet(response?.data));
     }
   } catch (e) {
     logger(e);
@@ -633,21 +633,21 @@ export const generateAddress =
     }
   };
 
-  export const getParticularCoinBalance = (data: { fromWallet: any; toWallet: any; currencyId: any; }) => async (dispatch: AppDispatch) => {
-    try {
-      // dispatch(setLoading(true));
-      const response: any = await appOperation.customer.particular_coin_balance(data);
-      if (response.success) {
-          dispatch(setParticularCoinBalance(response?.data));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      // dispatch(setLoading(false));
+export const getParticularCoinBalance = (data: { fromWallet: any; toWallet: any; currencyId: any; }) => async (dispatch: AppDispatch) => {
+  try {
+    // dispatch(setLoading(true));
+    const response: any = await appOperation.customer.particular_coin_balance(data);
+    if (response.success) {
+      dispatch(setParticularCoinBalance(response?.data));
     }
-  };
+  } catch (e) {
+    logger(e);
+  } finally {
+    // dispatch(setLoading(false));
+  }
+};
 
-  
+
 
 export const withdrawCoin =
   (data: WithdrawCurrencyProps & Record<string, unknown>) => async (dispatch: AppDispatch) => {
@@ -706,7 +706,7 @@ export const withdrawCoin =
     }
   };
 
-  export const withdrawFiatCoin =
+export const withdrawFiatCoin =
   (data: WithdrawCurrencyProps) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
@@ -755,7 +755,7 @@ export const depositInr = (data: FormData) => async (dispatch: AppDispatch) => {
     dispatch(setLoading(false));
   }
 };
-export const handleTranferCoin = (data: any, setVisible = (p0: boolean) => {}, setAmount = (p0: string) => {}) => async (dispatch: AppDispatch) => {
+export const handleTranferCoin = (data: any, setVisible = (p0: boolean) => { }, setAmount = (p0: string) => { }) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.tranfer_coin(data);
@@ -764,8 +764,8 @@ export const handleTranferCoin = (data: any, setVisible = (p0: boolean) => {}, s
       showError(response?.message);
       setVisible(true);
       setAmount('');
-     dispatch(getUserDifferentWallet(data?.fromWallet));
-     dispatch(getUserDifferentWallet(data?.toWallet));
+      dispatch(getUserDifferentWallet(data?.fromWallet));
+      dispatch(getUserDifferentWallet(data?.toWallet));
     } else {
       showError(response?.message);
     }
@@ -779,7 +779,7 @@ export const handleTranferCoin = (data: any, setVisible = (p0: boolean) => {}, s
 
 
 export const swapCurrency =
-  (data: any, setVisible = (p0: boolean) => {}, setAmount = (p0: string) => {}) => async (dispatch: AppDispatch) => {
+  (data: any, setVisible = (p0: boolean) => { }, setAmount = (p0: string) => { }) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response = await appOperation.customer.qs_BuySell(data);
@@ -787,7 +787,7 @@ export const swapCurrency =
         showError(response?.message);
         dispatch(getSwapCurrencyList());
         setVisible(true);
-      setAmount('');
+        setAmount('');
         // dispatch(getTransactionHistory());
       } else {
         // dispatch(setConversion(''));
@@ -883,7 +883,7 @@ export const verifyDeposit = (data: any) => async (dispatch: AppDispatch) => {
         }
       }
     }
-   
+
   } catch (e) {
     logger(e);
   } finally {
@@ -907,7 +907,7 @@ export const verifyWithdraw = (data: any) => async (dispatch: AppDispatch) => {
   }
 };
 
-export const subscribeEarningPackage = (data: any, setVisible =(p0: boolean) => {}) => async (dispatch: AppDispatch) => {
+export const subscribeEarningPackage = (data: any, setVisible = (p0: boolean) => { }) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
     const response: any = await appOperation.customer.subscribe_earning_package(data);
@@ -978,7 +978,7 @@ export const getTransactionHistory =
     }
   };
 
-  export const getBotActivePackages =
+export const getBotActivePackages =
   () => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
@@ -986,10 +986,10 @@ export const getTransactionHistory =
 
       if (response.success) {
         dispatch(setBotActiveList(response?.data[0]));
-        if (response?.data?.length > 0){
+        if (response?.data?.length > 0) {
           NavigationService.navigate(Dashboard_Inner)
         }
-        
+
       }
     } catch (e) {
       logger(e);
@@ -998,7 +998,7 @@ export const getTransactionHistory =
     }
   };
 
-  export const getBotTrades =
+export const getBotTrades =
   () => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
@@ -1009,8 +1009,8 @@ export const getTransactionHistory =
         const total = response?.data.reduce((sum: any, trade: any) => {
           const profit = parseFloat(trade.profit) || 0;
           return sum + profit;
-      }, 0);
-      dispatch(setTotalProfit(total?.toFixed(2) || 0) );
+        }, 0);
+        dispatch(setTotalProfit(total?.toFixed(2) || 0));
       }
     } catch (e) {
       logger(e);
@@ -1019,30 +1019,30 @@ export const getTransactionHistory =
     }
   };
 
-  
 
-  export const getCoinDetails =
+
+export const getCoinDetails =
   (data: any, type: any, balance: any) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.customer.coin_details(data);
       if (response.success) {
         dispatch(setCoinDetails(response?.data));
-        if(type == "deposit") {
-if (response?.data?.deposit_status === 'ACTIVE') {
-            NavigationService.navigate(DEPOSIT_SCREEN, {walletDetail: response?.data});
-        } else {
-          showError('Deposit is Disable for Now');
-        }
+        if (type == "deposit") {
+          if (response?.data?.deposit_status === 'ACTIVE') {
+            NavigationService.navigate(DEPOSIT_SCREEN, { walletDetail: response?.data });
+          } else {
+            showError('Deposit is Disable for Now');
+          }
         } else if (type == "withdraw") {
           if (response?.data?.withdrawal_status === 'ACTIVE') {
 
-         NavigationService.navigate(WITHDRAW_SCREEN, {walletDetail: response?.data, balance: balance});
-    }else {
-      showError('Withdrawal is Disable for Now');
-    }
+            NavigationService.navigate(WITHDRAW_SCREEN, { walletDetail: response?.data, balance: balance });
+          } else {
+            showError('Withdrawal is Disable for Now');
+          }
         }
-        
+
       }
     } catch (e) {
       logger(e);
@@ -1052,126 +1052,126 @@ if (response?.data?.deposit_status === 'ACTIVE') {
   };
 
 
-  export const getPackageList = () => async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      const response: any = await appOperation.customer.package_list();
-      if (response.success) {
-        if (!response?.data || response?.data?.length === 0) {
-          dispatch(setPackageList([]));
-          return;
-        } else {
-          const transformed = transformCurrencyDataWithDistribution(response?.data);
-          dispatch(setPackageList(transformed));
-        }
-        
-        // console.log(filteredPackageList, "filteredPackageList");
+export const getPackageList = () => async (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response: any = await appOperation.customer.package_list();
+    if (response.success) {
+      if (!response?.data || response?.data?.length === 0) {
+        dispatch(setPackageList([]));
+        return;
+      } else {
+        const transformed = transformCurrencyDataWithDistribution(response?.data);
+        dispatch(setPackageList(transformed));
       }
-    } catch (e) {
-      logger(e);
-    } finally {
+
+      // console.log(filteredPackageList, "filteredPackageList");
+    }
+  } catch (e) {
+    logger(e);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+export const getBotPackageList = () => async (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response: any = await appOperation.customer.bot_package_list();
+    if (response.success) {
+      dispatch(setBotPackageList(response?.data));
+    }
+  } catch (e) {
+    logger(e);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+export const getUserPayList = () => async (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response: any = await appOperation.customer.user_payout_list();
+    if (response.success) {
+      dispatch(setUserPayoutList(response?.data));
+    }
+  } catch (e) {
+    logger(e);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+export const getEarningPortfolio = () => async (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response: any = await appOperation.customer.earning_portfolio();
+    if (response.success) {
+      dispatch(setEarningPortfolio(response?.data));
+    }
+  } catch (e) {
+    logger(e);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+export const getEarningPortfolioSummary = () => async (dispatch: AppDispatch) => {
+  try {
+    const response: any = await appOperation.customer.earning_portfolio_summary();
+    if (response?.success) {
+      dispatch(setEarningPortfolioSummary(response?.data));
+    }
+  } catch (e) {
+    logger(e);
+  }
+};
+
+export const getSubscribedPackageList = () => async (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response: any = await appOperation.customer.subscribed_packageList();
+    if (response.success) {
+      let completedPackage = response?.data?.filter((item: { status: string; }) => item?.status === "COMPLETED")
+      let activePackage = response?.data?.filter((item: { status: string; }) => item?.status === "ACTIVE")
+      let cancelledPackage = response?.data?.filter((item: { status: string; }) => item?.status === "CANCELLED")
+      dispatch(setSubscribedActivePackages(activePackage));
+      dispatch(setSubscribedCompletePackages(completedPackage));
+      dispatch(setSubscribedCancelPackages(cancelledPackage));
+    }
+  } catch (e) {
+    logger(e);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+
+export const getWalletBalance = (fromWallet: any, currencyId: any) => async (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response: any = await appOperation.customer.get_wallet_balance(fromWallet, currencyId);
+    if (response.success) {
+      dispatch(setEarnWalletBal(response?.data?.balance));
       dispatch(setLoading(false));
     }
-  };
+  } catch (e) {
+    logger(e);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
 
-  export const getBotPackageList = () => async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      const response: any = await appOperation.customer.bot_package_list();
-      if (response.success) {
-        dispatch(setBotPackageList(response?.data));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      dispatch(setLoading(false));
+export const getWalletType = () => async (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    const response: any = await appOperation.customer.get_wallet_type();
+    if (response.success) {
+      dispatch(setWalletTypes(response?.data));
     }
-  };
-
-  export const getUserPayList = () => async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      const response: any = await appOperation.customer.user_payout_list();
-      if (response.success) {
-        dispatch(setUserPayoutList(response?.data));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-
-  export const getEarningPortfolio = () => async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      const response: any = await appOperation.customer.earning_portfolio();
-      if (response.success) {
-        dispatch(setEarningPortfolio(response?.data));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-
-  export const getEarningPortfolioSummary = () => async (dispatch: AppDispatch) => {
-    try {
-      const response: any = await appOperation.customer.earning_portfolio_summary();
-      if (response?.success) {
-        dispatch(setEarningPortfolioSummary(response?.data));
-      }
-    } catch (e) {
-      logger(e);
-    }
-  };
-
-  export const getSubscribedPackageList = () => async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      const response: any = await appOperation.customer.subscribed_packageList();
-      if (response.success) {
-        let completedPackage = response?.data?.filter((item: { status: string; }) => item?.status === "COMPLETED")
-        let activePackage = response?.data?.filter((item: { status: string; }) => item?.status === "ACTIVE")
-        let cancelledPackage = response?.data?.filter((item: { status: string; }) => item?.status === "CANCELLED")
-        dispatch(setSubscribedActivePackages(activePackage));
-        dispatch(setSubscribedCompletePackages(completedPackage));
-        dispatch(setSubscribedCancelPackages(cancelledPackage));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-
-
-  export const getWalletBalance = (fromWallet: any, currencyId: any) => async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      const response: any = await appOperation.customer.get_wallet_balance(fromWallet, currencyId);
-      if (response.success) {
-        dispatch(setEarnWalletBal(response?.data?.balance));
-         dispatch(setLoading(false));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-
-  export const getWalletType = () => async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      const response: any = await appOperation.customer.get_wallet_type();
-      if (response.success) {
-        dispatch(setWalletTypes(response?.data));
-      }
-    } catch (e) {
-      logger(e);
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
+  } catch (e) {
+    logger(e);
+  } finally {
+    dispatch(setLoading(false));
+  }
+};

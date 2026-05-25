@@ -29,6 +29,8 @@ import { canonicalWithdrawalChainForValidateAddress, CHAIN_FULL_NAMES, formatFun
 import { useTheme } from "../../../hooks/useTheme";
 import { useAppSelector } from "../../../store/hooks";
 import { getInteralWalletHistory, getUserMainWallet, getWithdrawActiveCoins, verifyWithdraw, withdrawCoin } from "../../../actions/walletActions";
+import { getWithdrawalPasskeyCredential } from "../../../actions/accountActions";
+import { SpinnerSecond } from "../../../shared/components/SpinnerSecond";
 import { getEmailDomainSuggestions } from "../../../helper/emailDomainSuggest";
 import { buildCoinImageUri } from "../../../helper/coinIconUrl";
 import { account_restrictions, ARROW_REVERSE, back_ic, bitcoinIcon, checkIc, down_arrow, downIcon, editIcon, email_vector, EMAIL_VERIFY, GOOGLE_VERIFY, INFO, LOCKED, PASSKEY_VERIFY, PHONE_VERIFY, printIcon, Refresh, REMOVE, right_ic, searchIcon, SECURITY_SHEIELD, upIcon, user_withdarwal } from "../../../helper/ImageAssets";
@@ -1661,14 +1663,34 @@ const WithdrawForm = () => {
       else data.email_or_phone = agceRecipientEmail || agceRecipientPhoneLocal;
     }
 
-    try {
-      await dispatch(withdrawCoin(data));
-      // Handled by withdrawCoin: showSuccess, goBack.
-    } catch (err) {
-      if (err.message === "PASSKEY_CANCELLED") {
-        // User cancelled passkey, open combined verify
+    const passkeyEnabled = withdrawSecuritySettings?.passkey_enabled === true;
+    if (passkeyEnabled) {
+      try {
+        const credential = await dispatch(getWithdrawalPasskeyCredential(false));
+        if (credential) {
+          await dispatch(withdrawCoin({ ...data, passkey_credential: credential }));
+        } else {
+          // If user cancels or no credential found, open combined verify
+          setEmailVerifyCode("");
+          setMobileVerifyCode("");
+          setAuthAppCode("");
+          setWithdrawFundPassword("");
+          setIsWithdrawVerifyCombinedOpen(true);
+        }
+      } catch (err) {
+        setEmailVerifyCode("");
+        setMobileVerifyCode("");
+        setAuthAppCode("");
+        setWithdrawFundPassword("");
         setIsWithdrawVerifyCombinedOpen(true);
       }
+    } else {
+      // If passkey is not enabled, directly open the combined verification screen (same as web flow)
+      setEmailVerifyCode("");
+      setMobileVerifyCode("");
+      setAuthAppCode("");
+      setWithdrawFundPassword("");
+      setIsWithdrawVerifyCombinedOpen(true);
     }
   };
 
@@ -1677,7 +1699,7 @@ const WithdrawForm = () => {
     const chainForSubmit = isAgce ? "internal" : network;
     const tokenFromMap = isAgce ? null : selectedCurrency?.token_asset_ids?.[network];
     const tokenAssetId = tokenFromMap != null && String(tokenFromMap).trim() ? String(tokenFromMap).trim() : "";
-    
+
     const idempotency_key = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
     let data = {
@@ -2256,8 +2278,8 @@ const WithdrawForm = () => {
         </View>
 
         <ScrollView style={{ paddingHorizontal: 24, marginTop: 20 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <View style={{ alignItems: "center", marginBottom: 32, right: 10 }}>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>
+          <View style={{ alignItems: "center", marginBottom: 32, }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20, }}>
               Complete all required steps. For email or SMS, tap Send code to receive your OTP.
             </AppText>
           </View>
@@ -2269,7 +2291,7 @@ const WithdrawForm = () => {
                 <Input
                   mainContainer={{ flex: 1, marginBottom: 0 }}
                   containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
-                  inputStyle={{ fontSize: 14 }}
+                  inputStyle={{ fontSize: 14, color: colors.black }}
                   placeholder="Enter email code"
                   keyboardType="numeric"
                   value={emailVerifyCode}
@@ -2280,7 +2302,7 @@ const WithdrawForm = () => {
                   disabled={withdrawOtpSending.email || withdrawOtpResendSec.email > 0}
                   style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
                 >
-                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.email || withdrawOtpResendSec.email > 0) ? themeColors.secondaryText : "#E2B24C" }}>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.email || withdrawOtpResendSec.email > 0) ? themeColors.secondaryText : colors.black }}>
                     {withdrawOtpSending.email ? "Sending..." : withdrawOtpResendSec.email > 0 ? `Resend in ${withdrawOtpResendSec.email}s` : "Send code"}
                   </AppText>
                 </TouchableOpacity>
@@ -2295,7 +2317,7 @@ const WithdrawForm = () => {
                 <Input
                   mainContainer={{ flex: 1, marginBottom: 0 }}
                   containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
-                  inputStyle={{ fontSize: 14 }}
+                  inputStyle={{ fontSize: 14, color: colors.black }}
                   placeholder="Enter mobile code"
                   keyboardType="numeric"
                   value={mobileVerifyCode}
@@ -2306,7 +2328,7 @@ const WithdrawForm = () => {
                   disabled={withdrawOtpSending.mobile || withdrawOtpResendSec.mobile > 0}
                   style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
                 >
-                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.mobile || withdrawOtpResendSec.mobile > 0) ? themeColors.secondaryText : "#E2B24C" }}>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.mobile || withdrawOtpResendSec.mobile > 0) ? themeColors.secondaryText : colors.black }}>
                     {withdrawOtpSending.mobile ? "Sending..." : withdrawOtpResendSec.mobile > 0 ? `Resend in ${withdrawOtpResendSec.mobile}s` : "Send code"}
                   </AppText>
                 </TouchableOpacity>
@@ -2321,7 +2343,7 @@ const WithdrawForm = () => {
                 <Input
                   mainContainer={{ flex: 1, marginBottom: 0 }}
                   containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
-                  inputStyle={{ fontSize: 14 }}
+                  inputStyle={{ fontSize: 14, color: colors.black }}
                   placeholder="Enter authenticator app code"
                   keyboardType="numeric"
                   value={authAppCode}
@@ -2335,7 +2357,7 @@ const WithdrawForm = () => {
                   }}
                   style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
                 >
-                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: "#E2B24C" }}>Paste</AppText>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.black }}>Paste</AppText>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2348,7 +2370,7 @@ const WithdrawForm = () => {
                 <Input
                   mainContainer={{ flex: 1, marginBottom: 0 }}
                   containerStyle={{ borderWidth: 0, backgroundColor: colors.iconBgColor, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
-                  inputStyle={{ fontSize: 14 }}
+                  inputStyle={{ fontSize: 14, color: colors.black }}
                   placeholder="Enter fund password"
                   secureTextEntry={!withdrawFundPasswordVisible}
                   value={withdrawFundPassword}
@@ -4040,6 +4062,7 @@ const WithdrawForm = () => {
         </View>
       </Modal>
 
+      <SpinnerSecond />
     </AppSafeAreaView>
   );
 };
