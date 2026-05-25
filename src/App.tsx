@@ -9,7 +9,6 @@ import Navigator from "./navigation/Navigator";
 import { SocketProvider } from "./SocketProvider";
 import { ChartProvider } from "./ChartProvider";
 import FutureSocketContextProvider from "./screens/Futures/FutureSocket";
-import { OptionsContextProvider } from "./screens/Options/OptionsContext";
 import { useTheme } from "./hooks/useTheme";
 import { getUserProfile } from "./actions/accountActions";
 import NavigationService from "./navigation/NavigationService";
@@ -94,11 +93,9 @@ const MainApp = () => {
       />
       <SocketProvider>
         <FutureSocketContextProvider>
-          <OptionsContextProvider>
-            <ChartProvider>
-              <Navigator />
-            </ChartProvider>
-          </OptionsContextProvider>
+          <ChartProvider>
+            <Navigator />
+          </ChartProvider>
         </FutureSocketContextProvider>
       </SocketProvider>
     </SafeAreaProvider>

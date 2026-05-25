@@ -109,19 +109,11 @@ import {
 } from "../shared";
 import { Platform, StyleSheet, TouchableOpacity, View, Keyboard } from "react-native";
 import Toast from "react-native-simple-toast";
-import StakingSuccess from "../screens/Staking/StakingSuccess";
-import QsTransaction from "../screens/QuickBuySell/qsTransaction";
-import LackedStakes from "../screens/Staking/LackedStakes";
-import StakingHistory from "../screens/Staking/StakingHistory";
 import { useAppSelector } from "../store/hooks";
 import { ChartPreloaderProvider } from "../context/ChartPreloaderContext";
-import BuyByCrypto from "../screens/P2P/BuyByCrypto";
-import P2pFilter from "../screens/P2P/P2pFilter";
-import OrderCreated from "../screens/P2P/OrderCreated";
 import OrderHistory from "../screens/trades/OrderHistory";
 import SpotOrderHistoryDetail from "../screens/spotScreen/SpotOrderHistoryDetail";
 import CommitDetails from "../screens/trades/CommitDetails";
-import ActivityLogs from "../features/account/screens/ActivityLogsScreen";
 import ReferralList from "../features/account/screens/ReferralListScreen";
 import PaymentOptions from "../features/account/screens/PaymentOptionsScreen";
 import WalletHistory from "../features/wallet/screens/WalletHistoryScreen";
@@ -138,13 +130,8 @@ import DashboardInner from "../screens/dashboardInner/DashboardInner";
 import Spot from "../screens/spotScreen/Spot";
 import SpotChartScreen from "../screens/spotScreen/SpotChartScreen";
 import ProfileDrawer from "../screens/profileDrawer/ProfileDrawer";
-import { createDrawerNavigator } from "@react-navigation/drawer";
 import SupportIssueList from "../screens/supportSreen/SupportIssueList";
 import CreateTicket from "../screens/supportSreen/CreateTicket";
-import kycDetails from "../screens/kycScrrens/kycDetails";
-import PanVerify from "../screens/kycScrrens/PanVerify";
-import AadharVerify from "../screens/kycScrrens/AadharVerify";
-import UploadSelfie from "../screens/kycScrrens/UploadSelfie";
 import CurrencyPrefer from "../screens/currencyPrefer/CurrencyPrefer";
 import SettingsScreen from "../screens/settings/Settings";
 import WithdrawInr from "../screens/other/WithdrawInr";
@@ -160,15 +147,7 @@ import InternalWalletHistory from "../screens/account/InternalWalletHistory";
 import BuyPackage from "../screens/other/BuyPackage";
 import EarningPortfolio from "../screens/other/EarningPortfolio";
 import Futures from "../screens/Futures/index";
-import Launchpad from "../screens/Launchpad";
-import AllLiveProjects from "../screens/Launchpad/AllLiveProjects";
-import AllUpcomingProjects from "../screens/Launchpad/AllUpcomingProjects";
 import FutureOrderHistory from "../screens/Futures/FutureOrderHistory";
-import ProjectDetails from "../screens/Launchpad/ProjectDetails";
-import OptionsScreen from "../screens/Options";
-import BuyOptions from "../screens/Options/BuyOptions";
-import OptionsHistory from "../screens/Options/OptionsHistory";
-import AllEndedProjects from "../screens/Launchpad/AllEndedProjects";
 import TicketScreen from "../screens/supportSreen/TicketScreen";
 import { useTheme } from "../hooks/useTheme";
 import DepositHistoryDetailScreen from "../screens/account/DepositHistoryDetailScreen";
@@ -548,15 +527,6 @@ const MyAuthLoadingStack = () => {
         component={LanguagePreference}
       />
 
-      <Stack.Screen name={routes.QS_TRANSACTION} component={QsTransaction} />
-
-
-      <Stack.Screen name={routes.STAKING_SUCCESS} component={StakingSuccess} />
-      <Stack.Screen name={routes.LAKED_STAKING} component={LackedStakes} />
-      <Stack.Screen name={routes.STAKING_HISTORY} component={StakingHistory} />
-      <Stack.Screen name={routes.p2pFilter} component={P2pFilter} />
-      <Stack.Screen name={routes.BUY_CRYPTO} component={BuyByCrypto} />
-      <Stack.Screen name={routes.ORDER_CREATED} component={OrderCreated} />
       <Stack.Screen name={routes.ORDER_HISTORY} component={OrderHistory} />
       <Stack.Screen name={routes.SPOT_ORDER_HISTORY_DETAIL} component={SpotOrderHistoryDetail} />
       <Stack.Screen name={routes.COMMIT_DETAIL} component={CommitDetails} />
@@ -585,10 +555,7 @@ const MyAuthLoadingStack = () => {
 
       <Stack.Screen name={"Support"} component={SupportIssueList} />
       <Stack.Screen name={routes.CREATE_TICKET_SCREEN} component={CreateTicket} />
-      <Stack.Screen name={routes.kyc_Details} component={kycDetails} />
-      <Stack.Screen name={"PanVerify"} component={PanVerify} />
-      <Stack.Screen name={"AadharVerify"} component={AadharVerify} />
-      <Stack.Screen name={"UploadSelfie"} component={UploadSelfie} />
+
       <Stack.Screen name={"CurrencyPrefer"} component={CurrencyPrefer} />
       <Stack.Screen
         name={routes.SETTING_SCREEN_New}
@@ -607,18 +574,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={'BuyPackage'} component={BuyPackage} />
       {/* <Stack.Screen name={'EarningHistory'} component={EarningHistory} /> */}
       <Stack.Screen name={'EarningPortfolio'} component={EarningPortfolio} />
-      <Stack.Screen name={'Launchpad'} component={Launchpad} />
-      <Stack.Screen name={'AllLiveProjects'} component={AllLiveProjects} />
-      <Stack.Screen name={'AllUpcomingProjects'} component={AllUpcomingProjects} />
-      <Stack.Screen name={'AllEndedProjects'} component={AllEndedProjects} />
+
       <Stack.Screen
         name={routes.FUTURE_ORDER_HISTORY}
         component={FutureOrderHistory}
-      />
-      <Stack.Screen name={'ProjectDetails'} component={ProjectDetails} />
-      <Stack.Screen
-        name={routes.OPTIONS_SCREEN}
-        component={OptionsScreen}
       />
       <Stack.Screen
         name={routes.AUTHORIZED_DEVICES_SCREEN}
@@ -640,15 +599,6 @@ const MyAuthLoadingStack = () => {
         name={routes.CLOSE_ACCOUNT_REASON_SCREEN}
         component={CloseAccountReasonScreen}
       />
-      <Stack.Screen
-        name={routes.BUY_OPTIONS_SCREEN}
-        component={BuyOptions}
-      />
-      <Stack.Screen
-        name={routes.OPTIONS_HISTORY_SCREEN}
-        component={OptionsHistory}
-      />
-
       <Stack.Screen
         name={routes.ANTI_PHISHING_CODE_SCREEN}
         component={AntiPhishingStatus}
