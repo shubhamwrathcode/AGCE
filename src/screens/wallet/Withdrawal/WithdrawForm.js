@@ -175,6 +175,7 @@ const WithdrawForm = () => {
   const [withdrawFundPassword, setWithdrawFundPassword] = useState("");
   const [withdrawFundPasswordVisible, setWithdrawFundPasswordVisible] = useState(false);
   const [isWithdrawVerifyCombinedOpen, setIsWithdrawVerifyCombinedOpen] = useState(false);
+  const [isWithdrawSubmitLoading, setIsWithdrawSubmitLoading] = useState(false);
 
   const [withdrawOtpSending, setWithdrawOtpSending] = useState({ email: false, mobile: false });
   const [withdrawOtpResendSec, setWithdrawOtpResendSec] = useState({ email: 0, mobile: 0 });
@@ -1695,6 +1696,7 @@ const WithdrawForm = () => {
   };
 
   const submitWithdrawalWithEnabledMethods = async () => {
+    setIsWithdrawSubmitLoading(true);
     const isAgce = withdrawToTab === "agce_user";
     const chainForSubmit = isAgce ? "internal" : network;
     const tokenFromMap = isAgce ? null : selectedCurrency?.token_asset_ids?.[network];
@@ -1729,6 +1731,8 @@ const WithdrawForm = () => {
       if (err.message === "PASSKEY_CANCELLED") {
         setIsWithdrawVerifyCombinedOpen(true);
       }
+    } finally {
+      setIsWithdrawSubmitLoading(false);
     }
   };
   /** Web `WithdrawPageStep3Overlays`: first Withdrawal opens verify; OTP is not required to enable the first tap. */
@@ -2289,6 +2293,7 @@ const WithdrawForm = () => {
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Email verification code</AppText>
               <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
+                  maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
                   containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
                   inputStyle={{ fontSize: 14, color: colors.black }}
@@ -2315,6 +2320,7 @@ const WithdrawForm = () => {
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Mobile verification code</AppText>
               <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
+                  maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
                   containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
                   inputStyle={{ fontSize: 14, color: colors.black }}
@@ -2341,6 +2347,7 @@ const WithdrawForm = () => {
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Authenticator app</AppText>
               <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
+                  maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
                   containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
                   inputStyle={{ fontSize: 14, color: colors.black }}
@@ -2368,6 +2375,7 @@ const WithdrawForm = () => {
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Fund password</AppText>
               <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#1E222D" : "#F3F4F6", borderRadius: 12, paddingRight: 16 }}>
                 <Input
+                  maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
                   containerStyle={{ borderWidth: 0, backgroundColor: colors.iconBgColor, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
                   inputStyle={{ fontSize: 14, color: colors.black }}
@@ -2428,6 +2436,7 @@ const WithdrawForm = () => {
             </AppText>
           </TouchableOpacity>
         </ScrollView>
+        <SpinnerSecond loading={isWithdrawSubmitLoading} />
       </AppSafeAreaView>
     );
   }
@@ -4062,7 +4071,7 @@ const WithdrawForm = () => {
         </View>
       </Modal>
 
-      <SpinnerSecond />
+      <SpinnerSecond loading={isWithdrawSubmitLoading} />
     </AppSafeAreaView>
   );
 };

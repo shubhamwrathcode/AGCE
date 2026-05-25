@@ -7,6 +7,7 @@ import {
   Animated,
   Easing,
   Modal,
+  RefreshControl,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import LottieView from "lottie-react-native";
@@ -35,7 +36,7 @@ import NavigationService from "../../navigation/NavigationService";
 import * as routes from "../../navigation/routes";
 import { back_ic, copyIcon, editIcon, right_arrow, right_ic } from "../../helper/ImageAssets";
 import { logoutAction } from "../../actions/authActions";
-import { getFundPasswordStatusAction, disable2fa, getAntiPhishingStatus } from "../../actions/accountActions";
+import { getFundPasswordStatusAction, disable2fa, getAntiPhishingStatus, getUserProfile } from "../../actions/accountActions";
 import KycStepHeader from "./KycStepHeader";
 import { copyText } from "../../helper/utility";
 import { useFocusEffect, useRoute, useNavigation } from "@react-navigation/native";
@@ -199,6 +200,39 @@ const AccountDetails = () => {
   const [serverNickname, setServerNickname] = useState(null);
   const [serverAvatar, setServerAvatar] = useState(null);
   const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchMethods(),
+        dispatch(getUserProfile()),
+        (async () => {
+          try {
+            const res = await appOperation.customer.get_nickname_setting();
+            if (res?.success) {
+              const fetched = res.data?.nickname || res.data?.data?.nickname;
+              if (fetched) setServerNickname(fetched);
+            }
+          } catch {}
+        })(),
+        (async () => {
+          try {
+            const resAvatar = await appOperation.customer.get_avatar_setting();
+            if (resAvatar?.success) {
+              const fetchedAvatar = resAvatar.data?.avatar || resAvatar.data?.data?.avatar;
+              if (fetchedAvatar) setServerAvatar(fetchedAvatar);
+            }
+          } catch {}
+        })()
+      ]);
+    } catch (e) {
+      console.warn("Refresh failed:", e);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchMethods, dispatch]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -323,7 +357,13 @@ const AccountDetails = () => {
         NavigationService.navigate(routes.SWITCH_ACCOUNT_SCREEN);
       }} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <LinearGradient
           colors={isDark ? ["#23242a", "#1a1b21"] : ["#FFFFFF", "#FFFFFF"]}
           start={{ x: 0, y: 0 }}

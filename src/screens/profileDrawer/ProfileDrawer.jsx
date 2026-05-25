@@ -446,8 +446,8 @@ function maskProfileEmail(email) {
 const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
 const KYC_AVATAR_GRADIENT_LOCATIONS = [0, 0.5, 1];
 
-function getInitials(userData) {
-  const name = userData?.display_name || userData?.user_login || userData?.user_nicename || userData?.first_name || "User";
+function getInitials(userData, serverNick) {
+  const name = serverNick || userData?.display_name || userData?.user_login || userData?.user_nicename || userData?.first_name || userData?.firstName || "User";
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -736,22 +736,37 @@ const ProfileDrawer = () => {
     [userData?.kycVerified, userData?.kyc_verified, userData?.kyc_status, userData?.kycStatus, isDark]
   );
   const vipLevel = userData?.vipLevel ?? userData?.vip ?? 0;
+
+  const getResolvedName = () => {
+    if (serverNickname) return serverNickname;
+    if (userData?.firstName && userData?.lastName) return `${userData.firstName} ${userData.lastName}`;
+    if (userData?.first_name && userData?.last_name) return `${userData.first_name} ${userData.last_name}`;
+    return userData?.firstName || userData?.first_name || userData?.display_name || userData?.userName || userData?.user_login || userData?.user_nicename || "User";
+  };
+  const displayName = getResolvedName();
+
   const displayAccountLine = userData?.emailId
     ? maskProfileEmail(userData.emailId)
-    : `${userData?.country_code || ""} ${userData?.mobileNumber || ""}`.trim();
+    : displayName;
 
 
   useEffect(() => {
     dispatch(getUserProfile());
   }, [refresh]);
 
+  const [serverNickname, setServerNickname] = useState(null);
   const [serverAvatar, setServerAvatar] = useState(null);
 
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-      const fetchAvatar = async () => {
+      const fetchNickAndAvatar = async () => {
         try {
+          const res = await appOperation.customer.get_nickname_setting();
+          if (active && res?.success) {
+            const fetched = res.data?.nickname || res.data?.data?.nickname;
+            if (fetched) setServerNickname(fetched);
+          }
           const resAvatar = await appOperation.customer.get_avatar_setting();
           if (active && resAvatar?.success) {
             const fetchedAvatar = resAvatar.data?.avatar || resAvatar.data?.data?.avatar;
@@ -761,7 +776,7 @@ const ProfileDrawer = () => {
           // ignore
         }
       };
-      fetchAvatar();
+      fetchNickAndAvatar();
       return () => { active = false; };
     }, [])
   );
@@ -880,7 +895,7 @@ const ProfileDrawer = () => {
                 }}
               >
                 <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 18 }}>
-                  {getInitials(userData)}
+                  {getInitials(userData, serverNickname)}
                 </AppText>
               </LinearGradient>
             )}

@@ -164,8 +164,15 @@ const SecurityVerification = ({ route }) => {
         description: 'Verify using your Google Authenticator 2FA code',
       });
     }
+    if (passkeySupported && passkeys && passkeys.length > 0) {
+      list.push({
+        value: 'passkey',
+        label: 'Passkey Verification',
+        description: 'Verify using your device biometric authentication',
+      });
+    }
     return list;
-  }, [hasEmail, hasMobile, hasGoogleAuth, displayEmail, displayPhone]);
+  }, [hasEmail, hasMobile, hasGoogleAuth, displayEmail, displayPhone, passkeySupported, passkeys]);
 
   // Auto-send OTP when active methods change
   useEffect(() => {

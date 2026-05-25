@@ -9,7 +9,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from "../../../hooks/useTheme";
 import { useAppSelector, useAppDispatch } from "../../../store/hooks";
-import { getPasskeyList, verifySecurityPasskey } from "../../../actions/accountActions";
+import { getPasskeyList } from "../../../actions/accountActions";
 import { Passkey } from "react-native-passkey";
 import { showError, showSuccess } from "../../../helper/logger";
 import NavigationService from "../../../navigation/NavigationService";
@@ -120,23 +120,6 @@ const PhoneSettingsScreen = () => {
             style={styles.row}
             activeOpacity={0.7}
             onPress={async () => {
-              if (hasPasskey && passkeySupported) {
-                try {
-                  const signId = rawEmail || profileMobile;
-                  const result = await dispatch(verifySecurityPasskey(signId, true, true));
-                  if (result && result !== 'BIOMETRIC_VERIFIED') {
-                    showSuccess('Passkey verified successfully');
-                    navigation.navigate(routes.CHANGE_PHONE_NUMBER_SCREEN, {
-                      passkeyVerified: true,
-                      passkeyUserId: result,
-                    });
-                    return;
-                  }
-                } catch (err) {
-                  console.warn('[PhoneSettingsScreen] Silent passkey verification failed:', err);
-                }
-              }
-
               const methods = ['email'];
               if (hasPasskey && passkeySupported) {
                 methods.push('passkey');

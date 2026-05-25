@@ -670,19 +670,19 @@ export const withdrawCoin =
           } catch (retryErr: any) {
             showError(retryErr?.message || "Withdrawal failed");
             dispatch(setLoading(false));
-            return;
+            return Promise.reject(retryErr);
           }
         } else if (err?.code !== 404 && err?.code !== 405) {
           showError(err?.message || "Withdrawal failed");
           dispatch(setLoading(false));
-          return;
+          return Promise.reject(err);
         } else {
           try {
             response = await appOperation.customer.withdraw_currency(data);
           } catch (err2: any) {
             showError(err2?.message || "Withdrawal failed");
             dispatch(setLoading(false));
-            return;
+            return Promise.reject(err2);
           }
         }
       }
