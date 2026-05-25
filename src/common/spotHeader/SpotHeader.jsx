@@ -89,6 +89,8 @@ const SpotHeader = ({
   onBackPress,
   isDark: isDarkProp,
   pairLoading = false,
+  activeHeaderTab = "Spot",
+  setActiveHeaderTab,
 }) => {
   const [pairSheetVisible, setPairSheetVisible] = useState(false);
   const { colors: themeColors, theme, isDark: isDarkFromHook } = useTheme();
@@ -177,13 +179,14 @@ const SpotHeader = ({
           </TouchableOpacity>
           <View style={styles.topTabs}>
             {["Spot", "Margin", "Fiat", "P2P", "Convert"].map((t, idx, arr) => {
-              const active = t === "Spot";
+              const active = t === activeHeaderTab;
+              const isAvailableTab = t === "Spot" || t === "Margin";
               return (
                 <TouchableOpacity
                   key={t}
                   activeOpacity={0.75}
                   disabled={active}
-                  onPress={!active ? showComingSoon : undefined}
+                  onPress={isAvailableTab ? () => setActiveHeaderTab && setActiveHeaderTab(t) : showComingSoon}
                   style={[
                     styles.topTabItem,
                     // `gap` is not supported on all RN versions; use margins for consistent spacing

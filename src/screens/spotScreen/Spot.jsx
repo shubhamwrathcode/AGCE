@@ -33,6 +33,9 @@ import React, {
 
 import SpotHeader from "../../shared/components/spotHeader/SpotHeader";
 import FastImage from "react-native-fast-image";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
+import MarginBottomSection from "./MarginBottomSection";
 import {
   candle,
   checkIc,
@@ -1509,6 +1512,12 @@ const Spot = () => {
   );
 
   const [tab, setTab] = useState("Buy");
+  const [headerTab, setHeaderTab] = useState("Spot");
+  const [marginMode, setMarginMode] = useState("Isolated");
+  const [marginLeverage, setMarginLeverage] = useState("20x");
+  const [tpSlEnabled, setTpSlEnabled] = useState(false);
+  const [tpPrice, setTpPrice] = useState("");
+  const [slPrice, setSlPrice] = useState("");
   const [price, setPrice] = useState("");
   const [amount, setAmount] = useState("");
   const [stopPrice, setStopPrice] = useState("");
@@ -3150,6 +3159,8 @@ const Spot = () => {
             onCandlePress={handleCandlePress}
             onTrendPress={() => NavigationService.navigate(MARKET_SCREEN)}
             onBackPress={() => navigation.goBack()}
+            activeHeaderTab={headerTab}
+            setActiveHeaderTab={setHeaderTab}
           />
 
           <View style={styles.secondcontainer}>
@@ -3236,6 +3247,19 @@ const Spot = () => {
                   </ImageBackground>
                 </TouchableOpacity>
               </View>
+
+              {headerTab === "Margin" && (
+                <MarginHeaderDropdowns
+                  marginMode={marginMode}
+                  setMarginMode={setMarginMode}
+                  marginLeverage={marginLeverage}
+                  setMarginLeverage={setMarginLeverage}
+                  themeColors={themeColors}
+                  isDark={isDark}
+                  universalPaddingHorizontal={universalPaddingHorizontal}
+                  styles={styles}
+                />
+              )}
 
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <TouchableOpacity
@@ -3831,97 +3855,120 @@ const Spot = () => {
                 </View>
               ) : null}
 
-              {/* Coin Info */}
-              <View style={styles.assetBox}>
-                <View style={styles.assetRow}>
-                  <AppText
-                    style={[
-                      styles.assetLabel,
-                      { color: colors.placeholderColor },
-                    ]}
-                  >
-                    Coin
-                  </AppText>
-                  <AppText
-                    style={[
-                      styles.assetLabel,
-                      { color: colors.placeholderColor },
-                    ]}
-                  >
-                    Total Assets
-                  </AppText>
-                </View>
-                <View style={styles.assetRow}>
-                  <AppText style={[styles.assetValue, { color: colors.black }]}>{quote_currency}</AppText>
-                  <AppText style={[styles.assetValue, { color: colors.black }]}>
-                    {coinBalance?.quote_currency_balance || 0}
-                  </AppText>
-                </View>
-                <View style={styles.assetRow}>
-                  <AppText style={[styles.assetValue, { color: colors.black }]}>{base_currency}</AppText>
-                  <AppText style={[styles.assetValue, { color: colors.black }]}>
-                    {coinBalance?.base_currency_balance || 0}
-                  </AppText>
-                </View>
+              {headerTab === "Margin" ? (
+                <MarginBottomSection
+                  tpSlEnabled={tpSlEnabled}
+                  setTpSlEnabled={setTpSlEnabled}
+                  tpPrice={tpPrice}
+                  setTpPrice={setTpPrice}
+                  slPrice={slPrice}
+                  setSlPrice={setSlPrice}
+                  quote_currency={quote_currency}
+                  base_currency={base_currency}
+                  coinBalance={coinBalance}
+                  isBuy={isBuy}
+                  onSubmit={onSubmit}
+                  themeColors={themeColors}
+                  isDark={isDark}
+                  inputSelectionColor={inputSelectionColor}
+                  fontFamilySemiBold={fontFamilySemiBold}
+                  styles={styles}
+                />
+              ) : (
+                <>
+                  {/* Coin Info */}
+                  <View style={styles.assetBox}>
+                    <View style={styles.assetRow}>
+                      <AppText
+                        style={[
+                          styles.assetLabel,
+                          { color: colors.placeholderColor },
+                        ]}
+                      >
+                        Coin
+                      </AppText>
+                      <AppText
+                        style={[
+                          styles.assetLabel,
+                          { color: colors.placeholderColor },
+                        ]}
+                      >
+                        Total Assets
+                      </AppText>
+                    </View>
+                    <View style={styles.assetRow}>
+                      <AppText style={[styles.assetValue, { color: colors.black }]}>{quote_currency}</AppText>
+                      <AppText style={[styles.assetValue, { color: colors.black }]}>
+                        {coinBalance?.quote_currency_balance || 0}
+                      </AppText>
+                    </View>
+                    <View style={styles.assetRow}>
+                      <AppText style={[styles.assetValue, { color: colors.black }]}>{base_currency}</AppText>
+                      <AppText style={[styles.assetValue, { color: colors.black }]}>
+                        {coinBalance?.base_currency_balance || 0}
+                      </AppText>
+                    </View>
 
-                <View style={styles.assetActionRow}>
-                  {["Deposit", "Transfer", "Withdraw"].map((btn, i) => (
-                    <TouchableOpacity
-                      key={i}
-                      activeOpacity={0.75}
-                      style={[
-                        styles.assetActionBtn,
+                    <View style={styles.assetActionRow}>
+                      {["Deposit", "Transfer", "Withdraw"].map((btn, i) => (
+                        <TouchableOpacity
+                          key={i}
+                          activeOpacity={0.75}
+                          style={[
+                            styles.assetActionBtn,
+                            {
+                              backgroundColor: themeColors.input,
+                              borderColor: themeColors.themeBorderColor,
+                            },
+                          ]}
+                          onPress={() =>
+                            NavigationService.navigate(
+                              btn == "Withdraw"
+                                ? SELECT_COIN_SCREEN
+                                : btn == "Deposit"
+                                  ? DEPOSIT_COIN_SCREEN
+                                  : TRANSFER_SCREEN
+                            )
+                          }
+                        >
+                          <AppText weight={SEMI_BOLD} style={[styles.assetActionText, { color: themeColors.text }]}>{btn}</AppText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Buy Button */}
+                  <View style={styles.spotOrderSubmitWrap}>
+                    <Button
+                      children={
+                        isBuy
+                          ? `Buy ${base_currency}`
+                          : `Sell ${base_currency}`
+                      }
+                      disabled={false}
+                      activeOpacity={amount ? 0.75 : 1}
+                      containerStyle={[
+                        styles.spotOrderSubmitBtn,
                         {
-                          backgroundColor: themeColors.input,
-                          borderColor: themeColors.themeBorderColor,
+                          backgroundColor: amount
+                            ? (isBuy
+                              ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
+                              : (themeColors.spotTradeSell ?? colors.spotTradeSell))
+                            : (isBuy
+                              ? (isDark ? "#19402E" : "#A7E2C6")
+                              : (isDark ? "#4A1D20" : "#F2B2B4")),
                         },
                       ]}
-                      onPress={() =>
-                        NavigationService.navigate(
-                          btn == "Withdraw"
-                            ? SELECT_COIN_SCREEN
-                            : btn == "Deposit"
-                              ? DEPOSIT_COIN_SCREEN
-                              : TRANSFER_SCREEN
-                        )
-                      }
-                    >
-                      <AppText weight={SEMI_BOLD} style={[styles.assetActionText, { color: themeColors.text }]}>{btn}</AppText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Buy Button */}
-              <View style={styles.spotOrderSubmitWrap}>
-                <Button
-                  children={
-                    isBuy
-                      ? `Buy ${base_currency}`
-                      : `Sell ${base_currency}`
-                  }
-                  disabled={false}
-                  activeOpacity={amount ? 0.75 : 1}
-                  containerStyle={[
-                    styles.spotOrderSubmitBtn,
-                    {
-                      backgroundColor: amount
-                        ? (isBuy
-                          ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
-                          : (themeColors.spotTradeSell ?? colors.spotTradeSell))
-                        : (isBuy
-                          ? (isDark ? "#19402E" : "#A7E2C6")
-                          : (isDark ? "#4A1D20" : "#F2B2B4")),
-                    },
-                  ]}
-                  onPress={() => {
-                    if (amount) {
-                      onSubmit();
-                    }
-                  }}
-                  titleStyle={styles.spotOrderSubmitTitle}
-                />
-              </View>
+                      onPress={() => {
+                        if (amount) {
+                          onSubmit();
+                        }
+                      }}
+                      titleStyle={styles.spotOrderSubmitTitle}
+                    />
+                  </View>
+                </>
+              )}
 
               {/* Web TradeCenterSection: fees + staking row directly under Buy/Sell CTA */}
               <View style={styles.spotOrderFooterBelowCta}>
@@ -4234,6 +4281,8 @@ const Spot = () => {
         >
           {renderOrderTypeSheet()}
         </RBSheet>
+
+
 
         <ReactNativeModal
           isVisible={isCancelModalVisible}

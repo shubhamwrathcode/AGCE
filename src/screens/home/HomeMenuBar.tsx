@@ -12,8 +12,6 @@ import { useTheme } from "../../hooks/useTheme";
 const Width = Dimensions.get("window").width;
 import Toast from "react-native-simple-toast";
 import {
-  moreOption,
-  newHubIcon,
   swap,
   margin,
   wallet_ic,

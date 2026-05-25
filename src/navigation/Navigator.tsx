@@ -20,11 +20,8 @@ import FastImage from "react-native-fast-image";
 import { commonStyles } from "../theme/commonStyles";
 import { colors } from "../theme/colors";
 import {
-  earningIcon,
   futuresActiveIcon,
-  futuresIcon,
   homeIcon,
-  market_ic,
   marketIcon,
   tradeImg,
   wallet_ic,
@@ -101,11 +98,9 @@ import LanguagePreference from "../screens/account/LanguagePreference";
 import Search from "../features/trades/screens/MarketSearchScreen";
 import {
   AppText,
-  BLACK,
   BOLD,
   MEDIUM,
   TEN,
-  YELLOW,
 } from "../shared";
 import { Platform, StyleSheet, TouchableOpacity, View, Keyboard } from "react-native";
 import Toast from "react-native-simple-toast";
