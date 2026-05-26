@@ -176,28 +176,28 @@ const ChangeLoginPasswordScreen = () => {
   // Available options for RBSheet selector
   const availableOptions = useMemo(() => {
     const list = [];
-    if (availableMethods.includes('passkey') && verifyMethod !== 'passkey') {
+    if (availableMethods.includes('passkey')) {
       list.push({
         value: 'passkey',
         label: 'Passkey',
         description: 'Verify using Face ID, Touch ID, or device lock',
       });
     }
-    if (availableMethods.includes('email') && emailId && verifyMethod !== 'email') {
+    if (availableMethods.includes('email') && emailId) {
       list.push({
         value: 'email',
         label: 'Email Verification',
         description: `Verify using code sent to ${displayEmail}`,
       });
     }
-    if (availableMethods.includes('mobile') && profileMobile && verifyMethod !== 'mobile') {
+    if (availableMethods.includes('mobile') && profileMobile) {
       list.push({
         value: 'mobile',
         label: 'Phone Verification',
         description: `Verify using code sent to ${displayPhone}`,
       });
     }
-    if (availableMethods.includes('totp') && hasGoogleAuth && verifyMethod !== 'totp') {
+    if (availableMethods.includes('totp') && hasGoogleAuth) {
       list.push({
         value: 'totp',
         label: 'Google Authenticator',
@@ -205,7 +205,7 @@ const ChangeLoginPasswordScreen = () => {
       });
     }
     return list;
-  }, [availableMethods, emailId, profileMobile, hasGoogleAuth, displayEmail, displayPhone, verifyMethod]);
+  }, [availableMethods, emailId, profileMobile, hasGoogleAuth, displayEmail, displayPhone]);
 
   // Validation checks for password rule display (same as SetPassword / ChangePassword)
   const usernamePart = useMemo(() => {
@@ -853,7 +853,7 @@ const ChangeLoginPasswordScreen = () => {
                 <AppText type={TWELVE} style={{ color: '#999', marginBottom: 16 }}>
                   Verify your identity using Face ID, Touch ID, or device lock.
                 </AppText>
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   style={[styles.confirmBtn, { backgroundColor: colors.orangeTheme, alignSelf: 'stretch', width: '100%', marginTop: 8 }]}
                   activeOpacity={0.8}
                   onPress={async () => {
@@ -879,7 +879,7 @@ const ChangeLoginPasswordScreen = () => {
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
                     Verify with Passkey
                   </AppText>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             )}
           </View>

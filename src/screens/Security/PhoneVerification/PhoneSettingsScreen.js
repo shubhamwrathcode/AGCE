@@ -120,9 +120,23 @@ const PhoneSettingsScreen = () => {
             style={styles.row}
             activeOpacity={0.7}
             onPress={async () => {
-              const methods = ['email'];
+              const methods = [];
               if (hasPasskey && passkeySupported) {
                 methods.push('passkey');
+              }
+              const hasGoogleAuth = Number(userData?.['2fa']) === 2 || userData?.twoFaEnabled === true;
+              if (hasGoogleAuth) {
+                methods.push('totp');
+              }
+              const hasEmail = !!(userData?.emailId || userData?.email);
+              if (hasEmail) {
+                methods.push('email');
+              }
+              if (userHasPhone) {
+                methods.push('mobile');
+              }
+              if (methods.length === 0) {
+                methods.push('email');
               }
               navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
                 targetScreen: routes.CHANGE_PHONE_NUMBER_SCREEN,

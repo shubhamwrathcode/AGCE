@@ -6,7 +6,6 @@ import {
   LOCKED,
   back_ic,
   history,
-  zillionLogo,
   starFillIcon,
   starIcon,
 } from '../helper/ImageAssets';
@@ -86,13 +85,7 @@ const Toolbar = ({
         />
       </TouchableOpacityView>}
 
-      {isLogo && !isSecond && (
-        <FastImage
-          source={zillionLogo}
-          style={styles.mainLogo}
-          resizeMode="contain"
-        />
-      )}
+      {/*  */}
       {isSecond && (
         <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.title, { color: themeColors.text }]}>
           {title}

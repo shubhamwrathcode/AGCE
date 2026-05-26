@@ -66,7 +66,7 @@ const DisableAccountScreen = () => {
       return;
     }
 
-    const priority = ['totp', 'email', 'mobile'];
+    const priority = ['passkey', 'totp', 'email', 'mobile'];
     const activeList = priority.filter(k => resolvedMethods[k]);
     if (activeList.length === 0) {
       showError("Please enable a verification method first.");
@@ -133,7 +133,7 @@ const DisableAccountScreen = () => {
               Any pending withdrawal requests will be canceled.
             </AppText>
           </View>
-          
+
           <View style={[styles.bulletItemCard, { backgroundColor: cardBg, borderColor: borderCol }]}>
             <FastImage
               source={Polygon}
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === 'ios' ? 34 : 24,
     left: 0,
     right: 0,
-    paddingHorizontal: 24,
+    paddingHorizontal: 15,
   },
   disableBtn: {
     width: '100%',

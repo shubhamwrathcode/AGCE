@@ -1,7 +1,7 @@
 export const languages = {
   //login screen
   login_one: 'Welcome to',
-  login_two: ' Zillion Exchange',
+  login_two: ' AGCE Exchange',
   login_three: 'Enter your details to login account',
   login_four: 'Login',
   login_five: 'Not register yet ?',
@@ -14,13 +14,13 @@ export const languages = {
   welcome_four: 'exchange it and pay online with us',
   welcome_five: 'Get Started',
   welcome_six: 'Copyright 2024',
-  welcome_seven: 'Zillion Exchange.',
+  welcome_seven: 'AGCE Exchange.',
   welcome_eight: 'All rights reserved',
   //forgot
   forgot_one: 'Forgot',
   forgot_two: ' Password',
   forgot_three:
-    'Enter the Email address link with your\n Zillion Exchange Account.',
+    'Enter the Email address link with your\n AGCE Exchange Account.',
   forgot_four: 'Send OTP',
 
   //register
@@ -54,7 +54,7 @@ export const languages = {
   withdraw: 'Withdraw',
   earning: "Earning",
   buy_crypto: 'Quick\nBuy/Sell',
-  arbitatry: "Zillion Exchange Bot",
+  arbitatry: "AGCE Exchange Bot",
   swap: "Swap",
   reward: "Refferal",
   more: "More",

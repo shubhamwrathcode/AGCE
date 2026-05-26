@@ -565,7 +565,7 @@ const SecurityVerification = ({ route }) => {
           {activeMethods.includes('passkey') && (
             <View style={[styles.inputGroup, { alignItems: 'center', marginVertical: 40 }]}>
               {isSubmitting ? (
-                <ActivityIndicator size={'large'} color={colors.orangeTheme} />
+                <ActivityIndicator size={'large'} color={colors.black} />
               ) : null}
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: '#999', marginTop: 15, textAlign: 'center', lineHeight: 20 }}>
                 Please use your device's biometric prompt (Face ID, Touch ID, or PIN) to verify your identity.
@@ -590,11 +590,13 @@ const SecurityVerification = ({ route }) => {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.linkContainer} onPress={() => sheetRef.current?.open()}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: colors.black }]}>
-              Choose other verification method
-            </AppText>
-          </TouchableOpacity>
+          {!params.hideChooseOther && (
+            <TouchableOpacity style={styles.linkContainer} onPress={() => sheetRef.current?.open()}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: colors.black }]}>
+                Choose other verification method
+              </AppText>
+            </TouchableOpacity>
+          )}
 
           {/* <TouchableOpacity
             style={[styles.linkContainer, { marginTop: 12 }]}

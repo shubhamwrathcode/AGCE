@@ -379,7 +379,7 @@ module ActiveSupport
     #     thousand:
     #       one: "kilometer"
     #       other: "kilometers"
-    #     billion: "gazillion-distance"
+    #     billion: "distance"
     #
     # Then you could do:
     #

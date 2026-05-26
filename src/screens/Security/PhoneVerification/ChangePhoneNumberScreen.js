@@ -110,25 +110,6 @@ const ChangePhoneNumberScreen = () => {
     try {
       setIsLoading(true);
 
-      const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
-      if (hasGA && !tofaCode) {
-        setIsLoading(false);
-        navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
-          targetScreen: routes.CHANGE_PHONE_NUMBER_SCREEN,
-          purpose: 'change_mobile',
-          verifyMethods: ['totp'],
-          skipDirectVerification: true,
-          targetParams: {
-            savedPhone: phoneToUse,
-            savedSmsOtp: smsToUse,
-            emailOtp: emailOtp,
-            passkeyVerified: passkeyVerified,
-            passkeyUserId: passkeyUserId,
-            autoSubmit: true,
-          }
-        });
-        return;
-      }
 
       const initData = {
         newCountryCode: '+91', // Static for now as per UI

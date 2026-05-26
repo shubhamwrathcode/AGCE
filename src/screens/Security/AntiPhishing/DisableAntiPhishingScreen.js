@@ -63,7 +63,7 @@ const DisableAntiPhishingScreen = ({ route }) => {
       }
 
       const hasPasskeyVal = passkeyRes?.success && passkeyRes?.data?.passkeys?.length > 0;
-      
+
       let methods = statusData?.methods || [];
       if (methods.length === 0 && userData) {
         if (hasPasskeyVal) {
@@ -289,7 +289,7 @@ const DisableAntiPhishingScreen = ({ route }) => {
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 16 }]}>
                     {selectedMethod.value === 'passkey' ? 'Verify with Passkey' : `${selectedMethod.label} Code`}
                   </AppText>
-                  
+
                   {selectedMethod.value !== 'passkey' ? (
                     <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
                       <TextInput
@@ -345,7 +345,7 @@ const DisableAntiPhishingScreen = ({ route }) => {
                 activeOpacity={0.8}
                 onPress={handleConfirm}
                 style={[
-                  styles.confirmBtn, 
+                  styles.confirmBtn,
                   { backgroundColor: isDark ? '#2E2E32' : '#22252A' },
                   (!selectedMethod || (selectedMethod.value !== 'passkey' && otp.length < 6)) && { opacity: 0.5 }
                 ]}

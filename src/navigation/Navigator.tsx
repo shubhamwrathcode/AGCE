@@ -48,7 +48,6 @@ import KycVerificationScreen from "../screens/account/KycVerificationScreen";
 import KycResubmitScreen from "../screens/account/KycResubmitScreen";
 import { KycFormProvider } from "../context/KycFormContext";
 import TradeSettings from "../screens/account/TradeSettings";
-import FeeSettings from "../screens/account/FeeSettings";
 import DownloadReport from "../screens/account/DownloadReport";
 import CoinDetailChart from "../screens/home/CoinDetailChart";
 import CoinTransactionHistory from "../screens/home/CoinTransactionHistory";
@@ -109,7 +108,6 @@ import { ChartPreloaderProvider } from "../context/ChartPreloaderContext";
 import OrderHistory from "../screens/trades/OrderHistory";
 import SpotOrderHistoryDetail from "../screens/spotScreen/SpotOrderHistoryDetail";
 import CommitDetails from "../screens/trades/CommitDetails";
-import ReferralList from "../features/account/screens/ReferralListScreen";
 import PaymentOptions from "../features/account/screens/PaymentOptionsScreen";
 import WalletHistory from "../features/wallet/screens/WalletHistoryScreen";
 import Market from "../screens/other/Market";
@@ -120,7 +118,6 @@ import Transfer from "../features/wallet/screens/SendFundsScreen";
 import ConvertNew from "../screens/wallet/ConvertNew";
 import DepositWallet from "../screens/wallet/DepositWallet";
 import DepositCoin from "../screens/wallet/DepositCoin";
-import Earning from "../screens/other/Earning";
 import DashboardInner from "../screens/dashboardInner/DashboardInner";
 import Spot from "../screens/spotScreen/Spot";
 import SpotChartScreen from "../screens/spotScreen/SpotChartScreen";
@@ -132,8 +129,6 @@ import CurrencyPrefer from "../screens/currencyPrefer/CurrencyPrefer";
 import SettingsScreen from "../screens/settings/Settings";
 import WithdrawInr from "../screens/other/WithdrawInr";
 import WebLink from "../screens/account/WebLink";
-import RefferalReward from "../screens/account/RefferalReward";
-import ReferralTree from "../screens/account/ReferralTree";
 import TradeHistory from "../screens/account/TradeHistory";
 import OpenOrder from "../screens/account/OpenOrder";
 import NewWalletHistory from "../screens/account/NewWalletHistory";
@@ -141,7 +136,6 @@ import NewSwapHistory from "../screens/account/NewSwapHistory";
 import AdminTradeHistory from "../screens/account/AdminTradeHistory";
 import InternalWalletHistory from "../screens/account/InternalWalletHistory";
 import BuyPackage from "../screens/other/BuyPackage";
-import EarningPortfolio from "../screens/other/EarningPortfolio";
 import Futures from "../screens/Futures/index";
 import FutureOrderHistory from "../screens/Futures/FutureOrderHistory";
 import TicketScreen from "../screens/supportSreen/TicketScreen";
@@ -362,7 +356,6 @@ const MyAuthLoadingStack = () => {
         name={routes.TRADE_SETTINGS_SCREEN}
         component={TradeSettings}
       />
-      <Stack.Screen name={routes.FEE_SETTINGS_SCREEN} component={FeeSettings} />
       <Stack.Screen
         name={routes.DOWNLOAD_TRADE_REPORT_SCREEN}
         component={DownloadReport}
@@ -526,7 +519,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.ORDER_HISTORY} component={OrderHistory} />
       <Stack.Screen name={routes.SPOT_ORDER_HISTORY_DETAIL} component={SpotOrderHistoryDetail} />
       <Stack.Screen name={routes.COMMIT_DETAIL} component={CommitDetails} />
-      <Stack.Screen name={routes.REFERRAL_LIST} component={ReferralList} />
       <Stack.Screen
         name={routes.WALLET_HISTORY_SCREEN}
         component={WalletHistory}
@@ -559,8 +551,6 @@ const MyAuthLoadingStack = () => {
         component={SettingsScreen}
       />
       <Stack.Screen name={"WebLink"} component={WebLink} />
-      <Stack.Screen name={routes.INVITE_AND_EARN_SCREEN} component={RefferalReward} />
-      <Stack.Screen name={routes.REFFERAL_TREE} component={ReferralTree} />
       <Stack.Screen name={'Trade_History'} component={TradeHistory} />
       <Stack.Screen name={'Interanl_Trade_History'} component={InternalWalletHistory} />
       <Stack.Screen name={routes.OPEN_ORDER_SCREEN} component={OpenOrder} />
@@ -569,8 +559,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={'Admin_Trade'} component={AdminTradeHistory} />
       <Stack.Screen name={'Ticket_Screen'} component={TicketScreen} />
       <Stack.Screen name={'BuyPackage'} component={BuyPackage} />
-      {/* <Stack.Screen name={'EarningHistory'} component={EarningHistory} /> */}
-      <Stack.Screen name={'EarningPortfolio'} component={EarningPortfolio} />
 
       <Stack.Screen
         name={routes.FUTURE_ORDER_HISTORY}

@@ -121,6 +121,7 @@ const CreateAntiPhishingScreen = ({ route }) => {
       purpose: 'anti_phishing_add',
       verifyMethods: methods,
       skipDirectVerification: true,
+      hideChooseOther: true,
       targetParams: {
         antiPhishingCode: newCodeField,
       },

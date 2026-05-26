@@ -110,25 +110,6 @@ const AddPhoneNumberScreen = () => {
     try {
       setIsLoading(true);
 
-      const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
-      if (hasGA && !tofaCode) {
-        setIsLoading(false);
-        navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
-          targetScreen: routes.ADD_PHONE_NUMBER_SCREEN,
-          purpose: 'add_mobile',
-          verifyMethods: ['totp'],
-          skipDirectVerification: true,
-          targetParams: {
-            savedPhone: phoneToUse,
-            savedSmsOtp: smsToUse,
-            emailOtp: emailOtp,
-            passkeyVerified: passkeyVerified,
-            passkeyUserId: passkeyUserId,
-            autoSubmit: true,
-          }
-        });
-        return;
-      }
 
       const payload = {
         mobileNumber: phoneToUse,

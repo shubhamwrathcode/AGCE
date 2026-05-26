@@ -66,10 +66,10 @@ const CloseAccountReasonScreen = () => {
         setMethodsLoading(true);
 
         // Fetch portfolio balance
-        appOperation.customer.all_wallets_portfolio()
+        appOperation.customer.get_security_wallet_total_btc()
           .then(res => {
             if (res?.success) {
-              const raw = res?.data?.estimated_total_btc || res?.estimated_total_btc || '0';
+              const raw = res?.data?.estimated_total_btc ?? res?.data?.data?.estimated_total_btc ?? res?.estimated_total_btc ?? '0';
               setEstimatedTotalBtc(raw);
             }
           })
@@ -140,7 +140,7 @@ const CloseAccountReasonScreen = () => {
       return;
     }
 
-    const priority = ['totp', 'email', 'mobile'];
+    const priority = ['passkey', 'totp', 'email', 'mobile'];
     const activeList = priority.filter(k => resolvedMethods[k]);
     if (activeList.length === 0) {
       showError("Please enable a verification method first.");

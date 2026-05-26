@@ -27,8 +27,9 @@ import FastImage from 'react-native-fast-image';
 import { antiphisinglock, back_ic, right_ic } from '../../../helper/ImageAssets';
 import * as routes from '../../../navigation/routes';
 import AgceGoldCard from './AgceGoldCard';
-import { getAntiPhishingStatus, removeAntiPhishingCode } from '../../../actions/accountActions';
+import { getAntiPhishingStatus, removeAntiPhishingCode, getPasskeyList } from '../../../actions/accountActions';
 import { showError, showSuccess } from '../../../helper/logger';
+import { Passkey } from 'react-native-passkey';
 
 const AntiPhishingStatus = ({ route }) => {
   const navigation = useNavigation();
@@ -41,6 +42,35 @@ const AntiPhishingStatus = ({ route }) => {
   const [loading, setLoading] = useState(true);
   const [isProcessingRemove, setIsProcessingRemove] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [hasPasskey, setHasPasskey] = useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    try {
+      setPasskeySupported(Passkey.isSupported());
+    } catch {
+      setPasskeySupported(false);
+    }
+
+    const fetchPasskeys = async () => {
+      try {
+        const res = await dispatch(getPasskeyList());
+        if (res?.success && active) {
+          const list = res.data?.passkeys || [];
+          setHasPasskey(list.length > 0);
+        }
+      } catch (err) {
+        console.warn('[AntiPhishingStatus] Error fetching passkeys:', err);
+      }
+    };
+    void fetchPasskeys();
+
+    return () => {
+      active = false;
+    };
+  }, [dispatch]);
 
   const isDisableFlowRef = React.useRef(false);
   isDisableFlowRef.current = !!route?.params?.isDisableFlow;
@@ -88,6 +118,9 @@ const AntiPhishingStatus = ({ route }) => {
     const hasEmail = !!(userData?.emailId || userData?.email);
     const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
     const methods = [];
+    if (hasPasskey && passkeySupported) {
+      methods.push('passkey');
+    }
     if (hasGA) methods.push('totp');
     if (hasEmail) methods.push('email');
     if (hasMobile) methods.push('mobile');

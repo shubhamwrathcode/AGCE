@@ -357,6 +357,7 @@ const LoginTwoStepVerificationScreen = () => {
               purpose: 'change_mobile',
               verifyMethods: methods,
               skipDirectVerification: true,
+              hideChooseOther: true,
               targetParams: {
                 fromScreen: routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN,
               }
@@ -389,6 +390,7 @@ const LoginTwoStepVerificationScreen = () => {
               purpose: '2fa_setup',
               verifyMethods: methods,
               skipDirectVerification: false,
+              hideChooseOther: true,
               targetParams: {
                 fromScreen: routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN,
               }
@@ -415,6 +417,7 @@ const LoginTwoStepVerificationScreen = () => {
               purpose: 'change_email',
               verifyMethods: ['mobile', 'totp'], // fallback
               skipDirectVerification: true,
+              hideChooseOther: true,
               targetParams: {
                 fromScreen: routes.LOGIN_TWO_STEP_VERIFICATION_SCREEN,
               }
@@ -437,6 +440,7 @@ const LoginTwoStepVerificationScreen = () => {
         purpose: 'login_2step_verification',
         verifyMethods: verifyMethods,
         skipDirectVerification: false,
+        hideChooseOther: true,
         targetParams: {
           pendingAction: { method, action: enable ? 'enable' : 'disable' }
         }

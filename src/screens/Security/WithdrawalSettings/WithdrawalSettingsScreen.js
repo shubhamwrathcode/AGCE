@@ -112,7 +112,7 @@ const WithdrawalSettingsScreen = () => {
   const executeToggleAction = async (pendingToggle, codes) => {
     try {
       setLoadingSettings(true);
-      
+
       let code = '';
       if (pendingToggle.method === 'email') {
         code = codes.emailOtp;
@@ -135,7 +135,7 @@ const WithdrawalSettingsScreen = () => {
       };
 
       const res = await appOperation.customer.verify_and_toggle_withdrawal_setting(payload);
-      
+
       if (res?.success) {
         if (pendingToggle.type === 'emailVerify') setEmailVerify(pendingToggle.enable);
         else if (pendingToggle.type === 'smsVerify') setSmsVerify(pendingToggle.enable);
@@ -156,7 +156,7 @@ const WithdrawalSettingsScreen = () => {
   useEffect(() => {
     if (route.params?.pendingAction) {
       const { pendingAction, emailOtp, smsOtp, tofaCode } = route.params;
-      
+
       // Clear the params so they don't run again on subsequent focus
       navigation.setParams({
         pendingAction: null,
@@ -221,11 +221,11 @@ const WithdrawalSettingsScreen = () => {
       }
     }
 
-    const backendMethod = 
+    const backendMethod =
       type === 'emailVerify' ? 'email' :
-      type === 'smsVerify' ? 'mobile' :
-      type === 'googleVerify' ? 'google_authenticator' :
-      type === 'fundPassword' ? 'fund_password' : '';
+        type === 'smsVerify' ? 'mobile' :
+          type === 'googleVerify' ? 'google_authenticator' :
+            type === 'fundPassword' ? 'fund_password' : '';
 
     if (type === 'smsVerify' && enable) {
       const isPhoneBound = !!(userData?.mobileNumber || userData?.mobile_number);
@@ -281,10 +281,10 @@ const WithdrawalSettingsScreen = () => {
       return;
     }
 
-    const verifyMethods = 
+    const verifyMethods =
       backendMethod === 'email' ? ['email'] :
-      backendMethod === 'mobile' ? ['mobile'] :
-      backendMethod === 'google_authenticator' ? ['totp'] : [];
+        backendMethod === 'mobile' ? ['mobile'] :
+          backendMethod === 'google_authenticator' ? ['totp'] : [];
 
     if (verifyMethods.length > 0) {
       navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
@@ -292,6 +292,7 @@ const WithdrawalSettingsScreen = () => {
         purpose: 'verify_withdrawal_setting',
         verifyMethods: verifyMethods,
         skipDirectVerification: true,
+        hideChooseOther: true,
         targetParams: {
           pendingAction: { method: backendMethod, enable, type }
         }
@@ -401,9 +402,6 @@ const WithdrawalSettingsScreen = () => {
     if (sheetType === 'unbound_phone') {
       return (
         <View style={styles.alertContent}>
-          <View style={[styles.alertIconBg, { backgroundColor: 'rgba(255,149,0,0.1)' }]}>
-            <AppText type={EIGHTEEN} style={{ color: '#FF9500' }}>⚠️</AppText>
-          </View>
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={[styles.alertTitle, { color: textColor }]}>
             Phone Unbound
           </AppText>
@@ -427,6 +425,7 @@ const WithdrawalSettingsScreen = () => {
                 purpose: 'change_mobile',
                 verifyMethods: methods,
                 skipDirectVerification: true,
+                hideChooseOther: true,
               });
             }}
           >
@@ -441,9 +440,7 @@ const WithdrawalSettingsScreen = () => {
     if (sheetType === 'unbound_ga') {
       return (
         <View style={styles.alertContent}>
-          <View style={[styles.alertIconBg, { backgroundColor: 'rgba(0,122,255,0.1)' }]}>
-            <AppText type={EIGHTEEN} style={{ color: '#007AFF' }}>🛡️</AppText>
-          </View>
+
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={[styles.alertTitle, { color: textColor }]}>
             Bind Google Authenticator
           </AppText>
@@ -469,6 +466,7 @@ const WithdrawalSettingsScreen = () => {
                 purpose: '2fa_setup',
                 verifyMethods: methods,
                 skipDirectVerification: false,
+                hideChooseOther: true,
               });
             }}
           >
@@ -483,9 +481,7 @@ const WithdrawalSettingsScreen = () => {
     if (sheetType === 'missing_fund_password') {
       return (
         <View style={styles.alertContent}>
-          <View style={[styles.alertIconBg, { backgroundColor: 'rgba(255,59,48,0.1)' }]}>
-            <AppText type={EIGHTEEN} style={{ color: '#FF3B30' }}>🔑</AppText>
-          </View>
+
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={[styles.alertTitle, { color: textColor }]}>
             No Fund Password Set
           </AppText>
@@ -511,9 +507,7 @@ const WithdrawalSettingsScreen = () => {
     if (sheetType === 'missing_trusted_addresses') {
       return (
         <View style={styles.alertContent}>
-          <View style={[styles.alertIconBg, { backgroundColor: 'rgba(90,200,250,0.1)' }]}>
-            <AppText type={EIGHTEEN} style={{ color: '#5AC8FA' }}>📍</AppText>
-          </View>
+
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={[styles.alertTitle, { color: textColor }]}>
             No Trusted Address Set
           </AppText>
@@ -798,7 +792,7 @@ const WithdrawalSettingsScreen = () => {
             <View style={[styles.settingRow, { backgroundColor: cardBg, borderBottomColor: borderColor }]}>
               <View style={styles.textContainer}>
                 <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: textColor }}>
-                  Withdrawal Whitelist
+                  Withdraw Only to Trusted Addresses
                 </AppText>
                 <AppText type={TWELVE} style={{ color: subTextColor, marginTop: 4 }}>
                   Only allow withdrawals to saved trusted addresses in address book.
@@ -1015,7 +1009,7 @@ const styles = StyleSheet.create({
   alertDesc: {
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 28,
+    marginBottom: 20,
     paddingHorizontal: 10,
   },
 });
