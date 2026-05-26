@@ -1,4 +1,4 @@
-import {createSlice} from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 export type Pending2FA = {
   loginSignId: string;
@@ -24,34 +24,34 @@ export const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setLoading: (state, {payload}) => {
+    setLoading: (state, { payload }) => {
       state.isLoading = !!payload;
       state.loadingFor = payload ? 'primary' : null;
     },
-    setLoadingOtp: (state, {payload}) => {
+    setLoadingOtp: (state, { payload }) => {
       state.isLoading = !!payload;
       state.loadingFor = payload ? 'otp' : null;
     },
-    setUserData: (state, {payload}) => {
+    setUserData: (state, { payload }) => {
       state.userData = payload;
     },
-    setTheme: (state, {payload}) => {
+    setTheme: (state, { payload }) => {
       state.theme = payload;
     },
-    setAppVersion: (state, {payload}) => {
+    setAppVersion: (state, { payload }) => {
       state.appVersion = payload;
     },
-    setPending2FA: (state, {payload}: {payload: Pending2FA}) => {
+    setPending2FA: (state, { payload }: { payload: Pending2FA }) => {
       state.pending2FA = payload;
     },
     clearPending2FA: (state) => {
       state.pending2FA = null;
     },
-    setPasskeyCancelled: (state, {payload}) => {
+    setPasskeyCancelled: (state, { payload }) => {
       state.passkeyCancelled = !!payload;
     },
   },
 });
-export const {setLoading, setLoadingOtp, setUserData, setTheme, setAppVersion, setPending2FA, clearPending2FA, setPasskeyCancelled} = authSlice.actions;
+export const { setLoading, setLoadingOtp, setUserData, setTheme, setAppVersion, setPending2FA, clearPending2FA, setPasskeyCancelled } = authSlice.actions;
 // export const authSelector = state => state.auth;
 export const authReducer = authSlice.reducer;

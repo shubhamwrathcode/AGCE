@@ -96,6 +96,8 @@ import {
   checkIcon,
   arrowRightIcon,
   right_ic,
+  editnew,
+  softStaking,
 } from "../../helper/ImageAssets";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { AppText, BLACK, BOLD, DISCLAIMTEXT, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
@@ -292,7 +294,7 @@ const getShortcutMenuItems = (theme) => [
   {
     id: "sh5",
     title: "Edit",
-    icon: editIcon,
+    icon: editnew,
     onPress: showComingSoonToast,
   },
   {
@@ -344,7 +346,7 @@ const getPopularMenuItems = (theme) => [
   {
     id: "p7",
     title: "Soft Staking",
-    icon: stakingDrawer,
+    icon: softStaking,
     onPress: showComingSoonToast,
   },
 ];

@@ -346,6 +346,13 @@ export const newHistoryIcon = require('../../assets/images/newHistoryIcon.png');
 export const historyIcon = require('../../assets/images/newHistoryIcon.png');
 export const lockLight = require('../../assets/images/lockLight.png');
 export const kycixon = require('../../assets/images/kycixon.png');
+export const p2pIcon = require('../../assets/images/p2pIcon.png');
+export const editnew = require('../../assets/images/editnew.png');
+export const softStaking = require('../../assets/images/softStaking.png');
+
+
+
+
 
 
 
