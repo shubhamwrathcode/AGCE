@@ -33,7 +33,6 @@ import React, {
 
 import SpotHeader from "../../shared/components/spotHeader/SpotHeader";
 import FastImage from "react-native-fast-image";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
 import MarginBottomSection from "./MarginBottomSection";
 import {
@@ -129,6 +128,7 @@ import {
   TRANSFER_SCREEN,
   WALLET_WITHDRAW_SCREEN,
   SELECT_COIN_SCREEN,
+  MARGIN_BORROW_REPAY_SCREEN,
 } from "../../navigation/routes";
 import { cancelOrder, placeOrder } from "../../actions/homeActions";
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
@@ -543,6 +543,8 @@ const OrderBookPanel = memo(({
   sellKeyExtractor,
   buyKeyExtractor,
   getOrderItemLayout,
+  headerTab,
+  onBorrowingRatePress,
 }) => {
   const { colors: themeColors, theme, isDark } = useTheme();
   const isSingleSide = !(showAskSide && showBidSide);
@@ -599,8 +601,40 @@ const OrderBookPanel = memo(({
       )}
     </View>
   );
+  const containerHeight = headerTab === "Margin"
+    ? ORDER_BOOK_PANEL_FIXED_HEIGHT + 45
+    : ORDER_BOOK_PANEL_FIXED_HEIGHT;
+
   return (
-    <View style={{ height: ORDER_BOOK_PANEL_FIXED_HEIGHT, flexGrow: 0 }}>
+    <View style={{ height: containerHeight, flexGrow: 0 }}>
+      {headerTab === "Margin" && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onBorrowingRatePress}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingBottom: 6,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: themeColors.themeBorderColor,
+            marginBottom: 6,
+          }}
+        >
+          <View style={{
+            backgroundColor: isDark ? "#2C2C2E" : "#E5E5EA",
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 4,
+          }}>
+            <AppText weight={SEMI_BOLD} style={{ fontSize: 10, color: themeColors.text }}>B/R</AppText>
+          </View>
+          <View style={{ alignItems: "flex-end" }}>
+            <AppText style={{ fontSize: 9, color: themeColors.secondaryText, lineHeight: 11 }}>Hourly Rate (USD)...</AppText>
+            <AppText weight={SEMI_BOLD} style={{ fontSize: 10, color: themeColors.text, lineHeight: 12 }}>0.0000231%</AppText>
+          </View>
+        </TouchableOpacity>
+      )}
       <View style={ORDER_BOOK_HEADER_ROW_STYLE}>
         <View>
           <AppText weight={MEDIUM} style={ORDER_BOOK_HEADER_LABEL_STYLE}>Price</AppText>
@@ -731,6 +765,8 @@ const OrderBookSection = memo(({
   formatQuantity,
   tickSize,
   pairResetKey,
+  headerTab,
+  onBorrowingRatePress,
 }) => {
   const { theme, colors: themeColors, isDark } = useTheme();
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
@@ -932,6 +968,8 @@ const OrderBookSection = memo(({
         sellKeyExtractor={sellKeyExtractor}
         buyKeyExtractor={buyKeyExtractor}
         getOrderItemLayout={getOrderItemLayout}
+        headerTab={headerTab}
+        onBorrowingRatePress={onBorrowingRatePress}
       />
 
       <View style={[sty.ratioIndicatorBar, { marginVertical: 3, gap: 4 }]}>
@@ -1203,6 +1241,7 @@ const Spot = () => {
 
   const rbSheetNumber = useRef();
   const rbSheetlimit = useRef();
+  const rbSheetBorrowingRate = useRef();
   const latestSocketDataRef = useRef(null);
   const latestLocalBuyOrdersRef = useRef([]);
   const latestLocalSellOrdersRef = useRef([]);
@@ -3179,6 +3218,8 @@ const Spot = () => {
                 formatQuantity={formatQuantity}
                 tickSize={currencyData?.tick_size ?? spotSelectedPair?.tick_size ?? 0.01}
                 pairResetKey={`${base_currency_id ?? ""}_${quote_currency_id ?? ""}`}
+                headerTab={headerTab}
+                onBorrowingRatePress={() => rbSheetBorrowingRate.current?.open()}
               />
             </View>
 
@@ -3696,64 +3737,66 @@ const Spot = () => {
               ) : null}
               {/* Web parity: IOC/FOK toggles are visible for Spot form footer.
                     API uses them only for LIMIT / STOP_LIMIT (we only send then), but UI stays consistent. */}
-              <View style={styles.spotOrderTifRow}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setLimitIoc((v) => {
-                      const next = !v;
-                      if (next) setLimitFok(false);
-                      return next;
-                    });
-                  }}
-                  style={styles.spotOrderTifChip}
-                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                >
-                  <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
-                    {limitIoc ? (
-                      <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
-                    ) : null}
-                  </View>
-                  <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>IOC</AppText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setLimitFok((v) => {
-                      const next = !v;
-                      if (next) setLimitIoc(false);
-                      return next;
-                    });
-                  }}
-                  style={styles.spotOrderTifChip}
-                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                >
-                  <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
-                    {limitFok ? (
-                      <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
-                    ) : null}
-                  </View>
-                  <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
-                </TouchableOpacity>
-                {isMarketLikeOrder ? (
+              {headerTab !== "Margin" && (
+                <View style={styles.spotOrderTifRow}>
                   <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => setSlippageEnabled((v) => !v)}
+                    onPress={() => {
+                      setLimitIoc((v) => {
+                        const next = !v;
+                        if (next) setLimitFok(false);
+                        return next;
+                      });
+                    }}
                     style={styles.spotOrderTifChip}
                     hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                   >
-                    <View
-                      style={[
-                        styles.slippageCheckbox,
-                        { borderColor: themeColors.themeBorderColor },
-                      ]}
-                    >
-                      {slippageEnabled ? (
+                    <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
+                      {limitIoc ? (
                         <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
                       ) : null}
                     </View>
-                    <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>Slippage</AppText>
+                    <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>IOC</AppText>
                   </TouchableOpacity>
-                ) : null}
-              </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setLimitFok((v) => {
+                        const next = !v;
+                        if (next) setLimitIoc(false);
+                        return next;
+                      });
+                    }}
+                    style={styles.spotOrderTifChip}
+                    hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  >
+                    <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
+                      {limitFok ? (
+                        <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                      ) : null}
+                    </View>
+                    <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
+                  </TouchableOpacity>
+                  {isMarketLikeOrder ? (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setSlippageEnabled((v) => !v)}
+                      style={styles.spotOrderTifChip}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                    >
+                      <View
+                        style={[
+                          styles.slippageCheckbox,
+                          { borderColor: themeColors.themeBorderColor },
+                        ]}
+                      >
+                        {slippageEnabled ? (
+                          <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                        ) : null}
+                      </View>
+                      <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>Slippage</AppText>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              )}
 
               {isMarketLikeOrder && slippageEnabled ? (
                 <View style={{ marginBottom: SPOT_ORDER_V_GAP }}>
@@ -3873,6 +3916,9 @@ const Spot = () => {
                   inputSelectionColor={inputSelectionColor}
                   fontFamilySemiBold={fontFamilySemiBold}
                   styles={styles}
+                  onBorrowPress={() => {
+                    NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN)
+                  }}
                 />
               ) : (
                 <>
@@ -4007,11 +4053,18 @@ const Spot = () => {
                 ordersBottomTabBarWidthRef.current = e.nativeEvent.layout.width;
               }}
             >
-              {[
-                { id: 1, label: "Open Orders" },
-                { id: 2, label: "Order History" },
-                { id: 3, label: "Trade History" },
-              ].map((t) => (
+              {(headerTab === "Margin"
+                ? [
+                  { id: 1, label: "Positions" },
+                  { id: 2, label: "Orders" },
+                  { id: 3, label: "Assets" },
+                ]
+                : [
+                  { id: 1, label: "Open Orders" },
+                  { id: 2, label: "Order History" },
+                  { id: 3, label: "Trade History" },
+                ]
+              ).map((t) => (
                 <TouchableOpacity
                   key={t.id}
                   activeOpacity={0.8}
@@ -4054,95 +4107,7 @@ const Spot = () => {
             <Animated.View style={{ transform: [{ translateX: ordersTabsAnimX }] }}>
               {mountedOrdersTab === 1 ? (
                 <View style={styles.ordersTabPanel}>
-                  <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      nestedScrollEnabled
-                      keyboardShouldPersistTaps="handled"
-                      contentContainerStyle={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                        paddingVertical: 2,
-                        paddingRight: 14,
-                      }}
-                    >
-                      {SPOT_OPEN_ORDER_KINDS.map((k) => {
-                        const active = openOrderKindTab === k.id;
-                        return (
-                          <TouchableOpacity
-                            key={k.id}
-                            activeOpacity={0.85}
-                            onPress={() => setOpenOrderKindTab(k.id)}
-                            style={{
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              borderRadius: 6,
-                              backgroundColor: active ? themeColors.input : "transparent",
-                            }}
-                          >
-                            <AppText
-                              weight={MEDIUM}
-                              style={{
-                                fontSize: 12,
-                                color: active ? themeColors.text : themeColors.secondaryText,
-                              }}
-                            >
-                              {k.label}
-                            </AppText>
-                          </TouchableOpacity>
-                        );
-                      })}
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2, alignSelf: "flex-start" }}>
-                        <View style={{ width: 102 }}>
-                          <CustomDropdown
-                            compact
-                            data={SPOT_SIDE_DROPDOWN_LABELS}
-                            selected={spotDropdownLabelFromSideFilter(orderFilter)}
-                            onSelect={(label) => setOrderFilter(spotSideFilterFromDropdownLabel(label))}
-                          />
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => {
-                            setOpenOrderKindTab("all");
-                            setOrderFilter("All");
-                          }}
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            paddingVertical: 4,
-                            paddingLeft: 4,
-                            marginLeft: 2,
-                          }}
-                        >
-                          <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                          <AppText weight={MEDIUM} style={{ fontSize: 12, color: themeColors.secondaryText }}>Reset</AppText>
-                        </TouchableOpacity>
-                      </View>
-                    </ScrollView>
-                  </View>
-
-                  {filteredOpenOrders?.length > 0 ? (
-                    <>
-                      <View style={styles.scrollContent}>
-                        {openOrdersSlice.map((item, index) => (
-                          <View key={openOrderKeyExtractor(item)}>
-                            {renderOpenOrderItem({ item, index })}
-                          </View>
-                        ))}
-                      </View>
-                      {filteredOpenOrders?.length > 5 && (
-                        <TouchableOpacity
-                          style={styles.viewAllButton}
-                          onPress={() => NavigationService.navigate(OPEN_ORDER_SCREEN)}
-                        >
-                          <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View All</AppText>
-                        </TouchableOpacity>
-                      )}
-                    </>
-                  ) : (
+                  {headerTab === "Margin" ? (
                     <View style={styles.noDataRow}>
                       <FastImage
                         source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
@@ -4150,13 +4115,121 @@ const Spot = () => {
                         style={{ width: 80, height: 80 }}
                       />
                     </View>
+                  ) : (
+                    <>
+                      <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          nestedScrollEnabled
+                          keyboardShouldPersistTaps="handled"
+                          contentContainerStyle={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                            paddingVertical: 2,
+                            paddingRight: 14,
+                          }}
+                        >
+                          {SPOT_OPEN_ORDER_KINDS.map((k) => {
+                            const active = openOrderKindTab === k.id;
+                            return (
+                              <TouchableOpacity
+                                key={k.id}
+                                activeOpacity={0.85}
+                                onPress={() => setOpenOrderKindTab(k.id)}
+                                style={{
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 4,
+                                  borderRadius: 6,
+                                  backgroundColor: active ? themeColors.input : "transparent",
+                                }}
+                              >
+                                <AppText
+                                  weight={MEDIUM}
+                                  style={{
+                                    fontSize: 12,
+                                    color: active ? themeColors.text : themeColors.secondaryText,
+                                  }}
+                                >
+                                  {k.label}
+                                </AppText>
+                              </TouchableOpacity>
+                            );
+                          })}
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2, alignSelf: "flex-start" }}>
+                            <View style={{ width: 102 }}>
+                              <CustomDropdown
+                                compact
+                                data={SPOT_SIDE_DROPDOWN_LABELS}
+                                selected={spotDropdownLabelFromSideFilter(orderFilter)}
+                                onSelect={(label) => setOrderFilter(spotSideFilterFromDropdownLabel(label))}
+                              />
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setOpenOrderKindTab("all");
+                                setOrderFilter("All");
+                              }}
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 4,
+                                paddingVertical: 4,
+                                paddingLeft: 4,
+                                marginLeft: 2,
+                              }}
+                            >
+                              <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                              <AppText weight={MEDIUM} style={{ fontSize: 12, color: themeColors.secondaryText }}>Reset</AppText>
+                            </TouchableOpacity>
+                          </View>
+                        </ScrollView>
+                      </View>
+
+                      {filteredOpenOrders?.length > 0 ? (
+                        <>
+                          <View style={styles.scrollContent}>
+                            {openOrdersSlice.map((item, index) => (
+                              <View key={openOrderKeyExtractor(item)}>
+                                {renderOpenOrderItem({ item, index })}
+                              </View>
+                            ))}
+                          </View>
+                          {filteredOpenOrders?.length > 5 && (
+                            <TouchableOpacity
+                              style={styles.viewAllButton}
+                              onPress={() => NavigationService.navigate(OPEN_ORDER_SCREEN)}
+                            >
+                              <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View All</AppText>
+                            </TouchableOpacity>
+                          )}
+                        </>
+                      ) : (
+                        <View style={styles.noDataRow}>
+                          <FastImage
+                            source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                            resizeMode="contain"
+                            style={{ width: 80, height: 80 }}
+                          />
+                        </View>
+                      )}
+                    </>
                   )}
                 </View>
               ) : null}
 
               {mountedOrdersTab === 2 ? (
                 <View style={styles.ordersTabPanel}>
-                  {pastOrdersForSpotPair?.length > 0 ? (
+                  {headerTab === "Margin" ? (
+                    <View style={styles.noDataRow}>
+                      <FastImage
+                        source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                        resizeMode="contain"
+                        style={{ width: 80, height: 80 }}
+                      />
+                    </View>
+                  ) : pastOrdersForSpotPair?.length > 0 ? (
                     <>
                       <View style={styles.scrollContent}>
                         {(pastOrdersSlice ?? []).map((item, index) => (
@@ -4189,41 +4262,53 @@ const Spot = () => {
 
               {mountedOrdersTab === 3 ? (
                 <View style={styles.ordersTabPanel}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                      gap: 6,
-                      marginBottom: 4,
-                      paddingLeft: 2,
-                      paddingRight: 14,
-                      alignSelf: "flex-start",
-                    }}
-                  >
-                    <View style={{ width: 102 }}>
-                      <CustomDropdown
-                        compact
-                        data={SPOT_SIDE_DROPDOWN_LABELS}
-                        selected={spotDropdownLabelFromSideFilter(tradeHistorySideFilter)}
-                        onSelect={(label) => setTradeHistorySideFilter(spotSideFilterFromDropdownLabel(label))}
+                  {headerTab === "Margin" ? (
+                    <View style={styles.noDataRow}>
+                      <FastImage
+                        source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                        resizeMode="contain"
+                        style={{ width: 80, height: 80 }}
                       />
                     </View>
-                    <TouchableOpacity
-                      onPress={() => setTradeHistorySideFilter("All")}
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                        paddingVertical: 4,
-                        paddingLeft: 4,
-                      }}
-                    >
-                      <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
-                      <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
-                    </TouchableOpacity>
-                  </View>
-                  {renderTradeHistorySection()}
+                  ) : (
+                    <>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: 6,
+                          marginBottom: 4,
+                          paddingLeft: 2,
+                          paddingRight: 14,
+                          alignSelf: "flex-start",
+                        }}
+                      >
+                        <View style={{ width: 102 }}>
+                          <CustomDropdown
+                            compact
+                            data={SPOT_SIDE_DROPDOWN_LABELS}
+                            selected={spotDropdownLabelFromSideFilter(tradeHistorySideFilter)}
+                            onSelect={(label) => setTradeHistorySideFilter(spotSideFilterFromDropdownLabel(label))}
+                          />
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => setTradeHistorySideFilter("All")}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 4,
+                            paddingVertical: 4,
+                            paddingLeft: 4,
+                          }}
+                        >
+                          <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                          <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
+                        </TouchableOpacity>
+                      </View>
+                      {renderTradeHistorySection()}
+                    </>
+                  )}
                 </View>
               ) : null}
             </Animated.View>
@@ -4280,6 +4365,64 @@ const Spot = () => {
           }}
         >
           {renderOrderTypeSheet()}
+        </RBSheet>
+
+        {/* Borrowing Rate Sheet */}
+        <RBSheet
+          ref={rbSheetBorrowingRate}
+          closeOnDragDown={true}
+          closeOnPressMask={true}
+          height={320}
+          animationType="slide"
+          customStyles={{
+            container: {
+              backgroundColor: themeColors.themeElevationColor,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingHorizontal: universalPaddingHorizontal,
+              paddingTop: 12,
+              paddingBottom: 8,
+            },
+            wrapper: {
+              backgroundColor: "#0006",
+            },
+            draggableIcon: {
+              backgroundColor: themeColors.themeBorderColor,
+              width: 40,
+            },
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: themeColors.themeBorderColor }}>
+              <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>Borrowing Rate</AppText>
+              <TouchableOpacity style={{ right: 5 }} onPress={() => rbSheetBorrowingRate?.current?.close()}>
+                <FastImage source={REMOVE} style={{ width: 25, height: 25 }} resizeMode="contain" tintColor={colors.black} />
+              </TouchableOpacity>
+            </View>
+            <AppText weight={MEDIUM} style={{ color: themeColors.secondaryText, fontSize: 12, marginTop: 12, lineHeight: 18 }}>
+              Loan Interest for Margin Trading will be settled and charged on an hourly basis.
+            </AppText>
+
+            <View style={{
+              backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7",
+              borderRadius: 12,
+              padding: 16,
+              marginTop: 20,
+              gap: 12
+            }}>
+              <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>Current Hourly Rate:</AppText>
+
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 13 }}>BTC</AppText>
+                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>0.000058%</AppText>
+              </View>
+
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 13 }}>USDT</AppText>
+                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>0.000231%</AppText>
+              </View>
+            </View>
+          </View>
         </RBSheet>
 
 

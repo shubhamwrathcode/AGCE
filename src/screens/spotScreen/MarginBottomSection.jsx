@@ -3,7 +3,7 @@ import { View, TouchableOpacity, TextInput } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, SEMI_BOLD, Button } from "../../shared";
 import { colors, lightTheme } from "../../theme/colors";
-import { checkIc } from "../../helper/ImageAssets";
+import { checkIc, add } from "../../helper/ImageAssets";
 
 const MarginBottomSection = ({
   tpSlEnabled,
@@ -22,6 +22,7 @@ const MarginBottomSection = ({
   inputSelectionColor,
   fontFamilySemiBold,
   styles,
+  onBorrowPress,
 }) => {
   return (
     <View style={{ marginTop: 8 }}>
@@ -36,15 +37,15 @@ const MarginBottomSection = ({
             borderColor: tpSlEnabled ? colors.black : themeColors.themeBorderColor,
             backgroundColor: tpSlEnabled ? colors.black : "transparent",
             marginRight: 8,
-            width: 20,
-            height: 20,
+            width: 18,
+            height: 18,
             borderWidth: 1.5,
-            borderRadius: 5,
+            borderRadius: 3,
             alignItems: "center",
             justifyContent: "center"
           }}>
             {tpSlEnabled ? (
-              <FastImage source={checkIc} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={colors.white} />
+              <FastImage source={checkIc} style={{ width: 11, height: 11 }} resizeMode="contain" tintColor={colors.white} />
             ) : null}
           </View>
           <View style={{ borderBottomWidth: 1, borderBottomColor: themeColors.text, borderStyle: "dotted", paddingBottom: 1 }}>
@@ -121,6 +122,13 @@ const MarginBottomSection = ({
                 ? `${coinBalance?.quote_currency_balance != null ? coinBalance.quote_currency_balance : "--"} ${quote_currency}`
                 : `${coinBalance?.base_currency_balance != null ? coinBalance.base_currency_balance : "--"} ${base_currency}`}
             </AppText>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onBorrowPress}
+              style={{ marginLeft: 6 }}
+            >
+              <FastImage source={add} style={{ width: 14, height: 14 }} tintColor={themeColors.text} resizeMode="contain" />
+            </TouchableOpacity>
           </View>
         </View>
 

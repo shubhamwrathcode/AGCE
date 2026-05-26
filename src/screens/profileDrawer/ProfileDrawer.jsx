@@ -129,10 +129,7 @@ import { colors, darkTheme } from "../../theme/colors";
 import { fontFamilySemiBold } from "../../theme/typography";
 import { useTheme } from "../../hooks/useTheme";
 import { useDispatch } from "react-redux";
-import { logoutAction } from "../../actions/authActions";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { setTheme } from "../../slices/authSlice";
-import { IMAGE_BASE_URL } from "../../helper/Constants";
+
 
 const Width = Dimensions.get("window").width;
 
@@ -356,7 +353,7 @@ const getSecurityVerificationItems = (theme) => [
   {
     id: "sv2",
     title: "Identification",
-    icon: theme !== "Dark" ? kycixonLight : kycixon,
+    icon: kycixon,
     onPress: () => NavigationService.navigate(KYC_STATUS_SCREEN),
   },
   {
@@ -877,9 +874,9 @@ const ProfileDrawer = () => {
             }}
           >
             {finalAvatarUri ? (
-              <FastImage 
-                source={{ uri: finalAvatarUri }} 
-                style={{ width: 56, height: 56, borderRadius: 28 }} 
+              <FastImage
+                source={{ uri: finalAvatarUri }}
+                style={{ width: 56, height: 56, borderRadius: 28 }}
               />
             ) : (
               <LinearGradient

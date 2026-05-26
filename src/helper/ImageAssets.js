@@ -48,7 +48,6 @@ export const nomineeIcon = require('../../assets/images/nomineeIcon.png');
 export const mailIcon = require('../../assets/images/mailIcon.png');
 export const starIcon = require('../../assets/images/star_ic.png');
 export const starFillIcon = require('../../assets/images/starFill.png');
-export const historyIcon = require('../../assets/images/history_ic.png');
 export const depositIconWallet = require('../../assets/images/deposit_ic_wallet.png');
 export const withdrawIconWallet = require('../../assets/images/withdraw_ic_wallet.png');
 export const Exchange = require('../../assets/images/exchange.png');
@@ -342,15 +341,11 @@ export const closeAccountBanner = require('../../assets/images/closeAccountBanne
 export const fundpassword = require('../../assets/images/fundpassword.png');
 export const switchprofile = require('../../assets/images/switchprofile.png');
 export const earningAsset1 = require('../../assets/images/earningAsset1.png');
-
-
-
-
-
-
-
-
-
+export const borrowcheckic = require('../../assets/images/borrowcheckic.png');
+export const newHistoryIcon = require('../../assets/images/newHistoryIcon.png');
+export const historyIcon = require('../../assets/images/newHistoryIcon.png');
+export const lockLight = require('../../assets/images/lockLight.png');
+export const kycixon = require('../../assets/images/kycixon.png');
 
 
 
