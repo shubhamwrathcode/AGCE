@@ -19,7 +19,6 @@ import {
   historyIcon,
   bitcoinIcon,
   usdtIcon,
-  right_ic,
   add,
   transferNew,
   Polygon,
@@ -30,10 +29,6 @@ import {
   deliveryFuture,
   marginIc,
   optionIc,
-  newDepositIcon,
-  p2pIcon,
-  fiatDespositIcon,
-  fiatDespositDarkIcon,
   onchain_ic,
   p2p_ic,
   fiat_ic
@@ -42,7 +37,6 @@ import SimpleToast from "react-native-simple-toast";
 import { fontFamilyMedium } from "../../theme/typography";
 import { useAppSelector } from "../../store/hooks";
 import RBSheet from "react-native-raw-bottom-sheet";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import TradingDataModal from "../../common/TradingDataModal/TradingDataModal";
 
 const MarginTransfer = () => {

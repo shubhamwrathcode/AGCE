@@ -180,7 +180,7 @@ const SpotHeader = ({
           <View style={styles.topTabs}>
             {["Spot", "Margin", "Fiat", "P2P", "Convert"].map((t, idx, arr) => {
               const active = t === activeHeaderTab;
-              const isAvailableTab = t === "Spot" || t === "Margin";
+              const isAvailableTab = t === "Spot" || t === "Margin" || t === "Convert";
               return (
                 <TouchableOpacity
                   key={t}
@@ -203,59 +203,61 @@ const SpotHeader = ({
           </View>
         </View>
 
-        <View style={styles.pairRowMain}>
-          <View style={{ flex: 1 }}>
-            {leftContent}
+        {activeHeaderTab !== "Convert" && (
+          <View style={styles.pairRowMain}>
+            <View style={{ flex: 1 }}>
+              {leftContent}
+            </View>
+
+            {/* <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={showComingSoon}
+              style={styles.iconBtn}
+              accessibilityLabel="More options"
+            >
+              <FastImage
+                source={modes}
+                style={styles.headerIcon}
+                resizeMode="contain"
+                tintColor={iconTint}
+              />
+            </TouchableOpacity> */}
+
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={onCandlePress}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Open chart"
+            >
+              <FastImage
+                source={candle}
+                style={styles.headerIcon}
+                resizeMode="contain"
+                tintColor={iconTint}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => {
+                NavigationService.navigate('Trade_History')
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Open chart"
+            >
+              <FastImage
+                source={history_line}
+                style={styles.headerIcon}
+                resizeMode="contain"
+                tintColor={iconTint}
+              />
+            </TouchableOpacity>
+
+            {/* (removed duplicate more icon; Coming soon uses the above button) */}
           </View>
-
-          {/* <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={showComingSoon}
-            style={styles.iconBtn}
-            accessibilityLabel="More options"
-          >
-            <FastImage
-              source={modes}
-              style={styles.headerIcon}
-              resizeMode="contain"
-              tintColor={iconTint}
-            />
-          </TouchableOpacity> */}
-
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={onCandlePress}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Open chart"
-          >
-            <FastImage
-              source={candle}
-              style={styles.headerIcon}
-              resizeMode="contain"
-              tintColor={iconTint}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => {
-              NavigationService.navigate('Trade_History')
-            }}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Open chart"
-          >
-            <FastImage
-              source={history_line}
-              style={styles.headerIcon}
-              resizeMode="contain"
-              tintColor={iconTint}
-            />
-          </TouchableOpacity>
-
-          {/* (removed duplicate more icon; Coming soon uses the above button) */}
-        </View>
+        )}
       </View>
 
       <TradingDataModal

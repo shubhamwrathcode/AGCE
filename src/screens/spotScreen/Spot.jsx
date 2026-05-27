@@ -35,6 +35,7 @@ import SpotHeader from "../../shared/components/spotHeader/SpotHeader";
 import FastImage from "react-native-fast-image";
 import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
 import MarginBottomSection from "./MarginBottomSection";
+import ConvertSection from "./ConvertSection";
 import {
   candle,
   checkIc,
@@ -3195,7 +3196,6 @@ const Spot = () => {
           { backgroundColor: colors.white },
         ]}
       >
-        <>
           <SpotHeader
             title={`${base_currency ?? effectiveCurrency?.base_currency ?? "-"}/${quote_currency ?? effectiveCurrency?.quote_currency ?? "-"}`}
             setCurrency={handleCurrencyChange}
@@ -3209,7 +3209,11 @@ const Spot = () => {
             setActiveHeaderTab={setHeaderTab}
           />
 
-          <View style={styles.secondcontainer}>
+          {headerTab === "Convert" ? (
+            <ConvertSection />
+          ) : (
+            <>
+              <View style={styles.secondcontainer}>
             {/* Left: Order book (ratio + controls inside). */}
             <View style={styles.leftPanel}>
               <OrderBookSection
@@ -4042,7 +4046,6 @@ const Spot = () => {
             </View>
 
           </View>
-        </>
 
         {/* Bottom tabs: Open Orders / Order History / Trade History */}
         {(historyOnly || orderBookReady) && (
@@ -4325,6 +4328,8 @@ const Spot = () => {
             </Animated.View>
           </View>
         )}
+            </>
+          )}
         {/* Sweet Alert Style Modal */}
         {/* <PopupModal visible={visible} handleVisiblity={handlePopup} /> */}
         <RBSheet

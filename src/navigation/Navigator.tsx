@@ -92,7 +92,7 @@ import ThirdPartyAccountAccessScreen from "../screens/Security/AccountManagement
 import CloseAccountReasonScreen from "../screens/Security/AccountManagement/CloseAccount/CloseAccountReasonScreen";
 import EmergencyContactVerification from "../screens/Security/EmergencyContact/EmergencyContactVerification";
 import EnterOtp from "../screens/account/EnterOtp";
-import ConvertHistory from "../screens/home/ConvertHistory";
+import ConvertHistory from "../screens/spotScreen/ConvertHistory";
 import LanguagePreference from "../screens/account/LanguagePreference";
 import Search from "../features/trades/screens/MarketSearchScreen";
 import {

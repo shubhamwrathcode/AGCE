@@ -68,7 +68,6 @@ export const order = require('../../assets/images/order.png');
 export const ads = require('../../assets/images/ads.png');
 export const BACK_ICON = require('../../assets/images/backIcon.png');
 export const ARROW_REVERSE = require('../../assets/images/arrowReverse.png');
-export const filterIcon = require('../../assets/images/filterIcon.png');
 export const LikeButton = require('../../assets/images/LikeButton.png');
 export const watch = require('../../assets/images/watch.png');
 export const INR_CURRENCY = require('../../assets/images/inrCurrency.png');
@@ -359,6 +358,9 @@ export const btcPerp = require('../../assets/images/btcPerp.png');
 export const fiat_ic = require('../../assets/images/fiat_ic.png');
 export const p2p_ic = require('../../assets/images/p2p_ic.png');
 export const onchain_ic = require('../../assets/images/onchain_ic.png');
+export const infoNewIc = require('../../assets/images/infoNewIc.png');
+export const filterIcon = require('../../assets/images/filterIcon.png');
+
 
 
 
