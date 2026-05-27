@@ -349,11 +349,16 @@ export const kycixon = require('../../assets/images/kycixon.png');
 export const p2pIcon = require('../../assets/images/p2pIcon.png');
 export const editnew = require('../../assets/images/editnew.png');
 export const softStaking = require('../../assets/images/softStaking.png');
-
-
-
-
-
+export const transferNew = require('../../assets/images/transferNew.png');
+export const deliveryFuture = require('../../assets/images/deliveryFuture.png');
+export const marginIc = require('../../assets/images/marginIc.png');
+export const optionIc = require('../../assets/images/optionIc.png');
+export const tradeFi = require('../../assets/images/tradeFi.png');
+export const usdtPerp = require('../../assets/images/usdtPerp.png');
+export const btcPerp = require('../../assets/images/btcPerp.png');
+export const fiat_ic = require('../../assets/images/fiat_ic.png');
+export const p2p_ic = require('../../assets/images/p2p_ic.png');
+export const onchain_ic = require('../../assets/images/onchain_ic.png');
 
 
 

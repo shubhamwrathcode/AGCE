@@ -122,6 +122,7 @@ import DashboardInner from "../screens/dashboardInner/DashboardInner";
 import Spot from "../screens/spotScreen/Spot";
 import SpotChartScreen from "../screens/spotScreen/SpotChartScreen";
 import MarginBorrowRepay from "../screens/spotScreen/MarginBorrowRepay";
+import MarginTransfer from "../screens/spotScreen/MarginTransfer";
 import ProfileDrawer from "../screens/profileDrawer/ProfileDrawer";
 import SupportIssueList from "../screens/supportSreen/SupportIssueList";
 import CreateTicket from "../screens/supportSreen/CreateTicket";
@@ -526,6 +527,7 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.SPOT_MARKET_SCREEN} component={SpotMarket as any} />
       <Stack.Screen name={routes.SPOT_CHART_SCREEN} component={SpotChartScreen} />
       <Stack.Screen name={routes.MARGIN_BORROW_REPAY_SCREEN} component={MarginBorrowRepay} />
+      <Stack.Screen name={routes.MARGIN_TRANSFER_SCREEN} component={MarginTransfer} />
       <Stack.Screen name={routes.MORE_MENU_SCREEN} component={MoreMenu} />
       <Stack.Screen name={routes.TRANSFER_SCREEN} component={Transfer} />
       <Stack.Screen

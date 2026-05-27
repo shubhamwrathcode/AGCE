@@ -547,6 +547,7 @@ const OrderBookPanel = memo(({
   onBorrowingRatePress,
 }) => {
   const { colors: themeColors, theme, isDark } = useTheme();
+  const navigation = useNavigation();
   const isSingleSide = !(showAskSide && showBidSide);
   const singleSideListStyle = useMemo(
     () => ({ height: ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 10, flexGrow: 0 }),
@@ -608,9 +609,7 @@ const OrderBookPanel = memo(({
   return (
     <View style={{ height: containerHeight, flexGrow: 0 }}>
       {headerTab === "Margin" && (
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={onBorrowingRatePress}
+        <View
           style={{
             flexDirection: "row",
             alignItems: "center",
@@ -621,19 +620,27 @@ const OrderBookPanel = memo(({
             marginBottom: 6,
           }}
         >
-          <View style={{
-            backgroundColor: isDark ? "#2C2C2E" : "#E5E5EA",
-            paddingHorizontal: 6,
-            paddingVertical: 2,
-            borderRadius: 4,
-          }}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}` })}
+            style={{
+              backgroundColor: isDark ? "#2C2C2E" : "#E5E5EA",
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              borderRadius: 4,
+            }}
+          >
             <AppText weight={SEMI_BOLD} style={{ fontSize: 10, color: themeColors.text }}>B/R</AppText>
-          </View>
-          <View style={{ alignItems: "flex-end" }}>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onBorrowingRatePress}
+            style={{ alignItems: "flex-end" }}
+          >
             <AppText style={{ fontSize: 9, color: themeColors.secondaryText, lineHeight: 11 }}>Hourly Rate (USD)...</AppText>
             <AppText weight={SEMI_BOLD} style={{ fontSize: 10, color: themeColors.text, lineHeight: 12 }}>0.0000231%</AppText>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       )}
       <View style={ORDER_BOOK_HEADER_ROW_STYLE}>
         <View>
@@ -3737,45 +3744,49 @@ const Spot = () => {
               ) : null}
               {/* Web parity: IOC/FOK toggles are visible for Spot form footer.
                     API uses them only for LIMIT / STOP_LIMIT (we only send then), but UI stays consistent. */}
-              {headerTab !== "Margin" && (
+              {(headerTab !== "Margin" || isMarketLikeOrder) && (
                 <View style={styles.spotOrderTifRow}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setLimitIoc((v) => {
-                        const next = !v;
-                        if (next) setLimitFok(false);
-                        return next;
-                      });
-                    }}
-                    style={styles.spotOrderTifChip}
-                    hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                  >
-                    <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
-                      {limitIoc ? (
-                        <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
-                      ) : null}
-                    </View>
-                    <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>IOC</AppText>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setLimitFok((v) => {
-                        const next = !v;
-                        if (next) setLimitIoc(false);
-                        return next;
-                      });
-                    }}
-                    style={styles.spotOrderTifChip}
-                    hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                  >
-                    <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
-                      {limitFok ? (
-                        <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
-                      ) : null}
-                    </View>
-                    <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
-                  </TouchableOpacity>
-                  {isMarketLikeOrder ? (
+                  {headerTab !== "Margin" && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setLimitIoc((v) => {
+                            const next = !v;
+                            if (next) setLimitFok(false);
+                            return next;
+                          });
+                        }}
+                        style={styles.spotOrderTifChip}
+                        hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                      >
+                        <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
+                          {limitIoc ? (
+                            <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                          ) : null}
+                        </View>
+                        <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>IOC</AppText>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setLimitFok((v) => {
+                            const next = !v;
+                            if (next) setLimitIoc(false);
+                            return next;
+                          });
+                        }}
+                        style={styles.spotOrderTifChip}
+                        hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                      >
+                        <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
+                          {limitFok ? (
+                            <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                          ) : null}
+                        </View>
+                        <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {isMarketLikeOrder && (
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => setSlippageEnabled((v) => !v)}
@@ -3794,7 +3805,7 @@ const Spot = () => {
                       </View>
                       <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>Slippage</AppText>
                     </TouchableOpacity>
-                  ) : null}
+                  )}
                 </View>
               )}
 
@@ -3917,7 +3928,7 @@ const Spot = () => {
                   fontFamilySemiBold={fontFamilySemiBold}
                   styles={styles}
                   onBorrowPress={() => {
-                    NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN)
+                    NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}` })
                   }}
                 />
               ) : (
@@ -4372,7 +4383,7 @@ const Spot = () => {
           ref={rbSheetBorrowingRate}
           closeOnDragDown={true}
           closeOnPressMask={true}
-          height={320}
+          height={250}
           animationType="slide"
           customStyles={{
             container: {
@@ -4380,7 +4391,7 @@ const Spot = () => {
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingHorizontal: universalPaddingHorizontal,
-              paddingTop: 12,
+              paddingTop: 8,
               paddingBottom: 8,
             },
             wrapper: {
@@ -4392,34 +4403,34 @@ const Spot = () => {
             },
           }}
         >
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: themeColors.themeBorderColor }}>
+          <View style={{ flex: 1, paddingHorizontal: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 8, }}>
               <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>Borrowing Rate</AppText>
-              <TouchableOpacity style={{ right: 5 }} onPress={() => rbSheetBorrowingRate?.current?.close()}>
-                <FastImage source={REMOVE} style={{ width: 25, height: 25 }} resizeMode="contain" tintColor={colors.black} />
-              </TouchableOpacity>
+
             </View>
-            <AppText weight={MEDIUM} style={{ color: themeColors.secondaryText, fontSize: 12, marginTop: 12, lineHeight: 18 }}>
+            <AppText weight={MEDIUM} style={{ color: themeColors.secondaryText, fontSize: 12, marginTop: 8, lineHeight: 16 }}>
               Loan Interest for Margin Trading will be settled and charged on an hourly basis.
             </AppText>
 
             <View style={{
-              backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7",
+              backgroundColor: 'transparent',
               borderRadius: 12,
-              padding: 16,
-              marginTop: 20,
-              gap: 12
+              padding: 12,
+              marginTop: 12,
+              gap: 8,
+              borderWidth: 1,
+              borderColor: themeColors.themeBorderColor
             }}>
-              <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>Current Hourly Rate:</AppText>
+              <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>Current Hourly Rate:</AppText>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 13 }}>BTC</AppText>
-                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>0.000058%</AppText>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>BTC</AppText>
+                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 12 }}>0.000058%</AppText>
               </View>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 13 }}>USDT</AppText>
-                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>0.000231%</AppText>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>USDT</AppText>
+                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 12 }}>0.000231%</AppText>
               </View>
             </View>
           </View>

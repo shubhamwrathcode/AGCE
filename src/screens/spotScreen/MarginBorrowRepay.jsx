@@ -20,16 +20,25 @@ import {
   tick,
   usdtIcon,
   swap,
-  borrowcheckic
+  borrowcheckic,
+  right_ic,
+  Polygon,
+  bitcoinIcon
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import SimpleToast from "react-native-simple-toast";
-import { TRANSFER_SCREEN } from "../../navigation/routes";
+import { MARGIN_TRANSFER_SCREEN } from "../../navigation/routes";
+import { fontFamilyMedium } from "../../theme/typography";
+import { useRoute } from "@react-navigation/native";
 
 const MarginBorrowRepay = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const route = useRoute();
+  const pair = route?.params?.pair || "BTC/USDT";
+  const [baseSymbol, quoteSymbol] = pair.split("/");
+
   const [activeTab, setActiveTab] = useState("Borrow"); // "Borrow" or "Repay"
-  const [selectedAsset, setSelectedAsset] = useState("BTC"); // "BTC" or "USDT"
+  const [selectedAsset, setSelectedAsset] = useState(route?.params?.coin || baseSymbol || "BTC");
   const [amount, setAmount] = useState("");
   const [sliderPercentage, setSliderPercentage] = useState(25); // default 25% like screenshot
   const [isReminderVisible, setIsReminderVisible] = useState(false);
@@ -38,15 +47,27 @@ const MarginBorrowRepay = () => {
   const caps = {
     BTC: 77.14214,
     USDT: 50000.0,
+    OG: 250000.0,
   };
   const hourlyRates = {
     BTC: "0.000058% / 0.5%",
     USDT: "0.000231% / 2.0%",
+    OG: "0.000150% / 1.3%",
+  };
+
+  const assetDetails = {
+    BTC: { fullName: "Bitcoin", icon: bitcoinIcon, color: "#F7931A", accentColor: "#D1AA67" },
+    USDT: { fullName: "Tether", icon: usdtIcon, color: "#26A17B", accentColor: "#26A17B" },
+    OG: { fullName: "Zero A...", icon: Polygon, color: "#8247E5", accentColor: "#D1AA67" },
+  };
+
+  const getAssetDetail = (symbol) => {
+    return assetDetails[symbol] || { fullName: symbol, icon: undefined, color: "#99A6AF", accentColor: "#D1AA67" };
   };
 
   const handlePercentageSelect = (pct) => {
     setSliderPercentage(pct);
-    const cap = caps[selectedAsset];
+    const cap = caps[selectedAsset] || 10000.0;
     const calcVal = ((cap * pct) / 100).toFixed(selectedAsset === "BTC" ? 5 : 2);
     setAmount(String(calcVal));
   };
@@ -61,17 +82,17 @@ const MarginBorrowRepay = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? "#171a20" : colors.white }}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: themeColors.themeBorderColor }]}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 24 }}>
+      <View style={[styles.header]}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 18 }}>
           <TouchableOpacity
             onPress={() => NavigationService.goBack()}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <FastImage
               source={back_ic}
-              style={{ width: 22, height: 22 }}
+              style={{ width: 20, height: 20 }}
               resizeMode="contain"
               tintColor={themeColors.text}
             />
@@ -86,7 +107,7 @@ const MarginBorrowRepay = () => {
               <AppText
                 weight={SEMI_BOLD}
                 style={{
-                  fontSize: 18,
+                  fontSize: 17,
                   color: activeTab === "Borrow" ? themeColors.text : themeColors.secondaryText,
                 }}
               >
@@ -100,7 +121,7 @@ const MarginBorrowRepay = () => {
               <AppText
                 weight={SEMI_BOLD}
                 style={{
-                  fontSize: 18,
+                  fontSize: 17,
                   color: activeTab === "Repay" ? themeColors.text : themeColors.secondaryText,
                 }}
               >
@@ -125,19 +146,20 @@ const MarginBorrowRepay = () => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}
       >
         {/* Pair row */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <AppText weight={MEDIUM} style={{ fontSize: 14, color: themeColors.text }}>Pair</AppText>
-          <TouchableOpacity onPress={() => SimpleToast.show("Borrowing info screen coming soon")}>
-            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Borrowing Info &gt;</AppText>
+          <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }} onPress={() => SimpleToast.show("Borrowing info screen coming soon")}>
+            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Borrowing Info </AppText>
+            <FastImage source={right_ic} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
           </TouchableOpacity>
         </View>
 
         {/* Dropdown BTC/USDT */}
         <View style={[styles.cardDropdown, { backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7" }]}>
-          <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 15 }}>BTC/USDT</AppText>
+          <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 15 }}>{pair}</AppText>
           <FastImage
             source={downIcon}
             style={{ width: 12, height: 12 }}
@@ -147,72 +169,55 @@ const MarginBorrowRepay = () => {
         </View>
 
         {/* Asset Boxes Row */}
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 24, marginTop: 12 }}>
-          {/* BTC Box */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => {
-              setSelectedAsset("BTC");
-              setAmount("");
-            }}
-            style={[
-              styles.assetBox,
-              {
-                borderColor: selectedAsset === "BTC" ? '#D1AA67' : themeColors.themeBorderColor,
-                backgroundColor: '#FCF2E1',
-                borderWidth: 1,
-              },
-            ]}
-          >
-            <View style={styles.assetInner}>
-              <View style={[styles.coinIconPlaceholder, { backgroundColor: "#F7931A" }]}>
-                <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 15 }}>B</AppText>
-              </View>
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>BTC</AppText>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Bitcoin</AppText>
-              </View>
-              {selectedAsset === 'BTC' && <FastImage source={borrowcheckic} style={{ width: 20, height: 20 }} resizeMode="contain" />}
-            </View>
-          </TouchableOpacity>
-
-          {/* USDT Box */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => {
-              setSelectedAsset("USDT");
-              setAmount("");
-            }}
-            style={[
-              styles.assetBox,
-              {
-                borderColor: selectedAsset === "USDT" ? "#26A17B" : themeColors.themeBorderColor,
-                backgroundColor: isDark ? themeColors.themeElevationColor : "#FCFCFC",
-                borderWidth: selectedAsset === "USDT" ? 1.5 : 1,
-              },
-            ]}
-          >
-            <View style={styles.assetInner}>
-              <FastImage source={usdtIcon} style={{ width: 32, height: 32 }} resizeMode="contain" />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>USDT</AppText>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Tether</AppText>
-              </View>
-              <View
+        <View style={{ flexDirection: "row", gap: 12, marginBottom: 10, marginTop: 12 }}>
+          {[baseSymbol, quoteSymbol].map((symbol) => {
+            if (!symbol) return null;
+            const isSelected = selectedAsset === symbol;
+            const assetInfo = getAssetDetail(symbol);
+            return (
+              <TouchableOpacity
+                key={symbol}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setSelectedAsset(symbol);
+                  setAmount("");
+                }}
                 style={[
-                  styles.checkCircle,
+                  styles.assetBox,
                   {
-                    borderColor: selectedAsset === "USDT" ? "#26A17B" : themeColors.themeBorderColor,
-                    backgroundColor: selectedAsset === "USDT" ? "#26A17B" : "transparent",
+                    borderColor: isSelected ? assetInfo.accentColor : themeColors.themeBorderColor,
+                    backgroundColor: isSelected
+                      ? (isDark ? "#2A241C" : "#FCF2E1")
+                      : (isDark ? themeColors.themeElevationColor : "#FCFCFC"),
+                    borderWidth: isSelected ? 1.5 : 1,
                   },
                 ]}
               >
-                {selectedAsset === "USDT" && (
-                  <FastImage source={tick} style={{ width: 8, height: 8 }} tintColor={colors.white} resizeMode="contain" />
-                )}
-              </View>
-            </View>
-          </TouchableOpacity>
+                <View style={styles.assetInner}>
+                  {assetInfo.icon ? (
+                    <FastImage source={assetInfo.icon} style={{ width: 32, height: 32 }} resizeMode="contain" />
+                  ) : (
+                    <View style={[styles.coinIconPlaceholder, { backgroundColor: assetInfo.color }]}>
+                      <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 15 }}>
+                        {symbol.charAt(0)}
+                      </AppText>
+                    </View>
+                  )}
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>{symbol}</AppText>
+                    <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>{assetInfo.fullName}</AppText>
+                  </View>
+                  {isSelected && (
+                    <FastImage
+                      source={borrowcheckic}
+                      style={{ width: 20, height: 20 }}
+                      resizeMode="contain"
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Input Block */}
@@ -226,11 +231,12 @@ const MarginBorrowRepay = () => {
             value={amount}
             onChangeText={setAmount}
             keyboardType="numeric"
+            cursorColor={colors.black}
             style={{
               flex: 1,
               color: themeColors.text,
-              fontSize: 15,
-              fontWeight: "600",
+              fontSize: 14,
+              fontFamily: fontFamilyMedium,
               paddingVertical: Platform.OS === "ios" ? 8 : 4,
             }}
           />
@@ -244,9 +250,12 @@ const MarginBorrowRepay = () => {
         </View>
 
         {/* Custom Slider */}
-        <View style={{ marginVertical: 24 }}>
-          {/* Slider track line */}
-          <View style={{ height: 2, backgroundColor: "#E5E5EA", position: "relative", justifyContent: "center" }}>
+        <View style={{ marginVertical: 20 }}>
+          {/* Track container */}
+          <View style={{ height: 16, justifyContent: "center", position: "relative" }}>
+            {/* Slider track line */}
+            <View style={{ height: 2, backgroundColor: "#E5E5EA", width: "100%", position: "absolute" }} />
+            {/* Progress line */}
             <View
               style={{
                 height: 2,
@@ -261,6 +270,7 @@ const MarginBorrowRepay = () => {
               <TouchableOpacity
                 key={pct}
                 onPress={() => handlePercentageSelect(pct)}
+                activeOpacity={0.8}
                 style={{
                   position: "absolute",
                   left: `${pct}%`,
@@ -271,6 +281,7 @@ const MarginBorrowRepay = () => {
                   borderWidth: 2,
                   borderColor: colors.black,
                   backgroundColor: sliderPercentage >= pct ? colors.black : colors.white,
+                  zIndex: 10,
                 }}
               />
             ))}
@@ -300,7 +311,7 @@ const MarginBorrowRepay = () => {
               <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Borrowing Info</AppText>
             </View>
             <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-              {selectedAsset === "BTC" ? "0 BTC" : "0 USDT"}
+              {`0 ${selectedAsset}`}
             </AppText>
           </View>
 
@@ -308,10 +319,15 @@ const MarginBorrowRepay = () => {
             <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Available</AppText>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-                {selectedAsset === "BTC" ? "0.00000000 BTC" : "0.00 USDT"}
+                {selectedAsset === "BTC" ? "0.00000000 BTC" : `0.00 ${selectedAsset}`}
               </AppText>
               <TouchableOpacity
-                onPress={() => setIsReminderVisible(true)}
+                onPress={() => {
+                  NavigationService.navigate(MARGIN_TRANSFER_SCREEN, {
+                    pair: pair,
+                    coin: selectedAsset
+                  });
+                }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <FastImage source={swap} style={{ width: 14, height: 14 }} tintColor={themeColors.text} resizeMode="contain" />
@@ -322,14 +338,14 @@ const MarginBorrowRepay = () => {
           <View style={styles.detailRow}>
             <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Borrowed</AppText>
             <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-              {selectedAsset === "BTC" ? "0 BTC" : "0 USDT"}
+              {`0 ${selectedAsset}`}
             </AppText>
           </View>
 
           <View style={styles.detailRow}>
             <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Hourly Rate/APR</AppText>
             <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-              {hourlyRates[selectedAsset]}
+              {hourlyRates[selectedAsset] || "0.0001% / 1.0%"}
             </AppText>
           </View>
 
@@ -337,16 +353,25 @@ const MarginBorrowRepay = () => {
             <View style={{ borderBottomWidth: 1, borderBottomColor: themeColors.secondaryText, borderStyle: "dotted", paddingBottom: 1 }}>
               <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Loan Cap</AppText>
             </View>
-            <TouchableOpacity onPress={() => SimpleToast.show("Loan cap request submitted")}>
+            <TouchableOpacity
+              onPress={() => SimpleToast.show("Loan cap request submitted")}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
               <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-                {selectedAsset === "BTC" ? `${caps.BTC} BTC / Increase >` : `${caps.USDT} USDT / Increase >`}
+                {`${caps[selectedAsset] || 10000.0} ${selectedAsset} / Increase`}
               </AppText>
+              <FastImage
+                source={right_ic}
+                style={{ width: 10, height: 10 }}
+                resizeMode="contain"
+                tintColor={themeColors.text}
+              />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Warning Note */}
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center", marginBottom: 32 }}>
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center", marginBottom: 24 }}>
           <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: "#E67E22", alignItems: "center", justifyContent: "center" }}>
             <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 11 }}>!</AppText>
           </View>
@@ -354,18 +379,16 @@ const MarginBorrowRepay = () => {
             Interest is calculated and deducted every hour on the hour.
           </AppText>
         </View>
-      </ScrollView>
 
-      {/* Button at the Bottom */}
-      <View style={[styles.bottomBtnWrap, { borderTopColor: themeColors.themeBorderColor }]}>
+        {/* Confirm Button */}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={handleConfirm}
-          style={[styles.confirmBtn, { backgroundColor: isDark ? "#4E4E50" : "#B2B2B2" }]}
+          style={[styles.confirmBtn, { backgroundColor: isDark ? "#4E4E50" : "#B2B2B2", marginBottom: 16 }]}
         >
           <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 16 }}>Confirm</AppText>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* Reminder Modal */}
       <Modal
@@ -405,9 +428,8 @@ const MarginBorrowRepay = () => {
               <TouchableOpacity
                 onPress={() => {
                   setIsReminderVisible(false);
-                  NavigationService.navigate(TRANSFER_SCREEN, {
-                    fromWalletType: "spot",
-                    toWalletType: "margin",
+                  NavigationService.navigate(MARGIN_TRANSFER_SCREEN, {
+                    pair: pair,
                     coin: selectedAsset
                   });
                 }}
@@ -440,11 +462,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTabsContainer: {
     flexDirection: "row",
-    gap: 16,
+    gap: 15,
   },
   headerTabBtn: {
     paddingVertical: 8,
