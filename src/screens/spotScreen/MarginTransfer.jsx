@@ -414,9 +414,7 @@ const MarginTransfer = () => {
       <View style={[styles.bottomBtnWrap, { borderTopColor: themeColors.themeBorderColor }]}>
         <Button
           onPress={handleConfirm}
-          containerStyle={{
-            backgroundColor: colors.blueThemeColor || "#1e56f5",
-          }}
+
         >
           Confirm
         </Button>
