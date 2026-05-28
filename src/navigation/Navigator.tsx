@@ -688,7 +688,6 @@ function BottomNavigation() {
           tabBarActiveTintColor: activeIcon,
           tabBarInactiveTintColor: inactive,
           tabBarStyle: {
-            // Real UI handled by CustomBottomTabBar
             height: tabBarHeight,
             backgroundColor: "transparent",
             borderTopWidth: 0,

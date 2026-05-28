@@ -22,7 +22,6 @@ import {
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import SimpleToast from "react-native-simple-toast";
-import Ionicons from "react-native-vector-icons/Ionicons";
 
 const ConvertHistory = () => {
   const { colors: themeColors, isDark } = useTheme();
