@@ -1559,7 +1559,12 @@ const Spot = () => {
   );
 
   const [tab, setTab] = useState("Buy");
-  const [headerTab, setHeaderTab] = useState("Spot");
+  const [headerTab, setHeaderTab] = useState(route?.params?.activeTab || "Spot");
+  useEffect(() => {
+    if (route?.params?.activeTab) {
+      setHeaderTab(route.params.activeTab);
+    }
+  }, [route?.params?.activeTab]);
   const [marginMode, setMarginMode] = useState("Isolated");
   const [marginLeverage, setMarginLeverage] = useState("20x");
   const [tpSlEnabled, setTpSlEnabled] = useState(false);

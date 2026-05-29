@@ -153,8 +153,6 @@ import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-const P2PTab = createBottomTabNavigator();
-const P2PStack = createStackNavigator();
 
 const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
   const [visible, setVisible] = React.useState(true);

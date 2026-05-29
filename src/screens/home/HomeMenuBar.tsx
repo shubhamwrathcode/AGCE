@@ -98,7 +98,7 @@ const HomeMenuBar = () => {
       id: "2",
       title: "Margin",
       icon: margin,
-      onPress: showComingSoonToast,
+      onPress: () => NavigationService.navigate(TRADE_SCREEN, { activeTab: "Margin" }),
     },
     {
       id: "3",
