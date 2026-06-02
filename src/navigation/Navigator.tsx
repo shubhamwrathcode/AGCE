@@ -149,6 +149,7 @@ import WithdrawForm from "../screens/wallet/Withdrawal/WithdrawForm";
 import AddFavouriteScreen from "../screens/other/AddFavouriteScreen";
 import AccountDetails from "../screens/Security/AccountDetails";
 import PersonalPage from "../screens/account/PersonalPage";
+import MarginHistoryScreen from "../screens/account/MarginHistoryScreen";
 import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 
 const Stack = createStackNavigator();
@@ -516,6 +517,7 @@ const MyAuthLoadingStack = () => {
       />
 
       <Stack.Screen name={routes.ORDER_HISTORY} component={OrderHistory} />
+      <Stack.Screen name={routes.MARGIN_HISTORY_SCREEN} component={MarginHistoryScreen} />
       <Stack.Screen name={routes.SPOT_ORDER_HISTORY_DETAIL} component={SpotOrderHistoryDetail} />
       <Stack.Screen name={routes.COMMIT_DETAIL} component={CommitDetails} />
       <Stack.Screen

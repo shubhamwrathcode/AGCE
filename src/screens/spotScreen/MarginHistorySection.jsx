@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  Animated,
   Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { showMessage } from "react-native-flash-message";
 import FastImage from "react-native-fast-image";
 import moment from "moment";
 import { useSelector } from "react-redux";
+import SimpleToast from "react-native-simple-toast";
 import NavigationService from "../../navigation/NavigationService";
 import { SPOT_ORDER_HISTORY_DETAIL } from "../../navigation/routes";
 import CustomDropdown from "../../shared/components/CustomDropdown";
@@ -68,19 +72,19 @@ const aggregateExecutedLegs = (rawExecutions) => {
     if (!Number.isFinite(n)) return `s:${String(p ?? "")}`;
     return `n:${n.toFixed(14)}`;
   };
-  
+
   const buckets = new Map();
   const keysInOrder = [];
-  
+
   rawExecutions.forEach((trade) => {
     const pRaw = unwrapDecimal(trade?.price) || unwrapDecimal(trade?.p);
     const qRaw = unwrapDecimal(trade?.quantity) || unwrapDecimal(trade?.q) || unwrapDecimal(trade?.amount) || unwrapDecimal(trade?.a);
     const fRaw = unwrapDecimal(trade?.fee) || unwrapDecimal(trade?.f);
-    
+
     const price = pRaw;
     const qty = Number(qRaw) || 0;
     const fee = Number(fRaw) || 0;
-    
+
     const gk = priceGroupKey(price);
     if (!buckets.has(gk)) {
       keysInOrder.push(gk);
@@ -138,18 +142,102 @@ const fmtHistDate = (iso) => {
   };
 };
 
-const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
-  const [activeTab, setActiveTab] = useState("size");
+const CustomDraggableSlider = ({ value, onValueChange, themeColors, isDark }) => {
+  const [trackWidth, setTrackWidth] = useState(0);
+
+  const updateValue = (locationX) => {
+    if (trackWidth > 0) {
+      let newX = locationX;
+      if (newX < 0) newX = 0;
+      if (newX > trackWidth) newX = trackWidth;
+      const newPct = Math.round((newX / trackWidth) * 100);
+      onValueChange(newPct);
+    }
+  };
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <View
+        onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={(evt) => updateValue(evt.nativeEvent.locationX)}
+        onResponderMove={(evt) => updateValue(evt.nativeEvent.locationX)}
+        style={{
+          height: 30,
+          justifyContent: "center",
+          paddingVertical: 10,
+        }}
+      >
+        {/* Background Track */}
+        <View style={{ height: 6, backgroundColor: isDark ? "#2A2A2A" : "#E5E7EB", borderRadius: 3, width: "100%" }} />
+        {/* Active Track */}
+        <View style={{ height: 6, backgroundColor: themeColors.spotTradeBuy || colors.green, borderRadius: 3, width: `${value}%`, position: "absolute", left: 0 }} />
+        {/* Thumb */}
+        <View
+          style={{
+            position: "absolute",
+            left: `${value}%`,
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: themeColors.spotTradeBuy || colors.green,
+            marginLeft: -8, // Center thumb
+          }}
+          pointerEvents="none"
+        />
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4, paddingHorizontal: 4 }}>
+        {[0, 25, 50, 75, 100].map((pct) => (
+          <TouchableOpacity key={pct} onPress={() => onValueChange(pct)} hitSlop={{top:10,bottom:10,left:10,right:10}}>
+            <AppText style={{ fontSize: 11, color: value >= pct ? themeColors.text : themeColors.secondaryText }}>
+              {pct}%
+            </AppText>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullScreen = false, initialTab = "size" }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [subTab, setSubTab] = useState("borrow"); // used in Asset History tab
-  const [dataList, setDataList] = useState([]);
+  const [tabData, setTabData] = useState({});
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Close Position Modal states
+  const [closePositionModal, setClosePositionModal] = useState(false);
+  const [selectedPosToClose, setSelectedPosToClose] = useState(null);
+  const [closePositionType, setClosePositionType] = useState("MARKET");
+  const [closePositionQty, setClosePositionQty] = useState("");
+  const [closePositionPrice, setClosePositionPrice] = useState("");
+  const [closePositionSliderPct, setClosePositionSliderPct] = useState(0);
+
+  const screenW = Dimensions.get("window").width;
+  const slideWidth = screenW - 16; // Account for container paddingHorizontal: 8
+  const pagerX = useRef(new Animated.Value(0)).current;
+
+  const activeTabIndex = useMemo(() => {
+    return Math.max(0, TABS.findIndex(t => t.id === activeTab));
+  }, [activeTab]);
+
+  useEffect(() => {
+    Animated.timing(pagerX, {
+      toValue: -activeTabIndex * slideWidth,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [activeTabIndex, pagerX, slideWidth]);
+
+  const setDataList = useCallback((newList) => {
+    setTabData(prev => ({ ...prev, [activeTab]: newList }));
+  }, [activeTab]);
 
   const [openOrderTypeFilter, setOpenOrderTypeFilter] = useState("All");
   const [openOrderSideFilter, setOpenOrderSideFilter] = useState("All Sides");
 
   const [orderHistoryTypeFilter, setOrderHistoryTypeFilter] = useState("All");
-  const [showExecutedTrades, setShowExecutedTrades] = useState({});
 
   const { orderData } = useSelector((state) => state.home);
 
@@ -162,9 +250,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
   const textThemeColor = themeColors.text || colors.black;
   const secondaryTextThemeColor = themeColors.secondaryText || colors.placeholderColor;
 
-  const fetchTabDetails = useCallback(async () => {
+  const fetchTabDetails = useCallback(async (isSilent = false) => {
     if (!pairSymbol) return;
-    setLoading(true);
+    if (!isSilent) setLoading(true);
     try {
       let res;
       if (activeTab === "size") {
@@ -230,14 +318,14 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
       console.warn("[MarginHistory] Fetch details error:", e);
       setDataList([]);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [activeTab, subTab, pairSymbol, pairId]);
 
-  const getFilteredDataList = () => {
-    let list = dataList;
+  const getFilteredDataList = (tabId) => {
+    let list = tabData[tabId] || [];
 
-    if (activeTab === "orderHistory") {
+    if (tabId === "orderHistory") {
       if (orderHistoryTypeFilter !== "All") {
         list = list.filter(o => {
           const type = (o.type || o.order_type || "LIMIT").toUpperCase();
@@ -251,7 +339,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
       return list;
     }
 
-    if (activeTab !== "positions") return list;
+    if (tabId !== "positions") return list;
     if (openOrderTypeFilter === "Limit") {
       list = list.filter(o => {
         const type = (o.type || o.order_type || "LIMIT").toUpperCase();
@@ -275,7 +363,11 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
   useFocusEffect(
     useCallback(() => {
       fetchTabDetails();
-    }, [fetchTabDetails, orderData])
+      const intervalId = setInterval(() => {
+        fetchTabDetails(true);
+      }, 3000);
+      return () => clearInterval(intervalId);
+    }, [fetchTabDetails])
   );
 
   // Cancel order handler (Open Orders tab)
@@ -306,42 +398,61 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
   };
 
   // Close position handler (Size tab)
-  const handleClosePosition = async (pos) => {
+  const handleClosePosition = (pos) => {
     if (!pos?.pair) return;
-    Alert.alert("Close Position", "Are you sure you want to close this position at Market Price?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Yes",
-        onPress: async () => {
-          setActionLoading(true);
-          try {
-            const res = await appOperation.post(
-              `margin/position/${encodeURIComponent(pos.pair)}/close`,
-              { type: "MARKET" },
-              CUSTOMER_TYPE
-            );
-            if (res?.success) {
-              Alert.alert("Success", "Position close request submitted");
-              fetchTabDetails();
-            } else {
-              Alert.alert("Error", res?.message || "Failed to close position");
-            }
-          } catch (err) {
-            Alert.alert("Error", err?.message || "Failed to close position");
-          } finally {
-            setActionLoading(false);
-          }
-        },
-      },
-    ]);
+    setSelectedPosToClose(pos);
+    setClosePositionType("MARKET");
+    setClosePositionQty("");
+    setClosePositionPrice("");
+    setClosePositionSliderPct(0);
+    setClosePositionModal(true);
   };
 
-  const getSideColor = (side) => {
+  const submitClosePosition = async () => {
+    if (!selectedPosToClose?.pair) return;
+    setActionLoading(true);
+    try {
+      const payload = { type: closePositionType };
+      if (closePositionType === "LIMIT") {
+        if (!closePositionPrice || isNaN(Number(closePositionPrice)) || Number(closePositionPrice) <= 0) {
+          Alert.alert("Error", "Please enter a valid price");
+          setActionLoading(false);
+          return;
+        }
+        if (!closePositionQty || isNaN(Number(closePositionQty)) || Number(closePositionQty) <= 0) {
+          Alert.alert("Error", "Please enter a valid quantity");
+          setActionLoading(false);
+          return;
+        }
+        payload.price = closePositionPrice;
+        payload.quantity = closePositionQty;
+      }
+
+      const res = await appOperation.post(
+        `margin/position/${encodeURIComponent(selectedPosToClose.pair)}/close`,
+        payload,
+        CUSTOMER_TYPE
+      );
+      if (res?.success) {
+        setClosePositionModal(false);
+        SimpleToast.show("Position close request submitted");
+        fetchTabDetails();
+      } else {
+        Alert.alert("Error", res?.message || "Failed to close position");
+      }
+    } catch (err) {
+      Alert.alert("Error", err?.message || "Failed to close position");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const getSideColor = useCallback((side) => {
     const s = String(side || "").toUpperCase().trim();
     if (s === "BUY" || s === "LONG") return themeColors.spotTradeBuy || colors.green;
     if (s === "SELL" || s === "SHORT") return themeColors.spotTradeSell || colors.red;
     return textThemeColor;
-  };
+  }, [themeColors.spotTradeBuy, themeColors.spotTradeSell, textThemeColor]);
 
   const fmtDate = (iso) => {
     if (!iso) return "---";
@@ -360,8 +471,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
     </View>
   );
 
-  const renderItemCard = (item, index) => {
-    if (activeTab === "size") {
+  const renderItemCard = (item, index, tabId) => {
+    if (tabId === "size") {
       const ml = item?.margin_level != null ? parseFloat(item.margin_level) : null;
       const marginLevelDisplay = ml === null ? "—" : ml >= 999 ? "∞" : ml.toFixed(2);
       const isLong = item?.side === "LONG";
@@ -374,10 +485,10 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
               </AppText>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
                 <View style={{
-                  borderWidth: 1, 
+                  borderWidth: 1,
                   borderColor: isLong ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red,
-                  borderRadius: 3, 
-                  paddingHorizontal: 5, 
+                  borderRadius: 3,
+                  paddingHorizontal: 5,
                   paddingVertical: 1,
                   justifyContent: 'center',
                   alignItems: 'center'
@@ -425,7 +536,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Est. Liq. Price</AppText>
-              <AppText style={[styles.value, { color: colors.orangeTheme }]} weight={SEMI_BOLD}>{toFixedTwo(item?.liquidation_price)}</AppText>
+              <AppText style={[styles.value, { color: colors.orangeTheme }]} weight={SEMI_BOLD}>
+                {(item?.liquidation_price != null || item?.warning_price != null) ? toFixedTwo(item?.liquidation_price ?? item?.warning_price) : "—"}
+              </AppText>
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Maint. Margin Ratio</AppText>
@@ -450,7 +563,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
       );
     }
 
-    if (activeTab === "positionHistory") {
+    if (tabId === "positionHistory") {
       const isLong = item?.side === "LONG";
       const statusMap = { CLOSED: "Close All", LIQUIDATED: "Liquidated", OPEN: "Open Position" };
       const statusText = statusMap[item?.status] || item?.status || "—";
@@ -557,7 +670,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
       );
     }
 
-    if (activeTab === "positions") {
+    if (tabId === "positions") {
       // Open Orders
       const orderId = item?._id || item?.id;
       const m = moment(item?.created_at || item?.timestamp);
@@ -569,8 +682,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
       const qtyStr = toFixedEight(item?.quantity || item?.amount);
 
       return (
-        <TouchableOpacity 
-          key={orderId || index} 
+        <TouchableOpacity
+          key={orderId || index}
           style={[styles.card, { borderBottomColor: borderThemeColor }]}
           activeOpacity={0.8}
           onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
@@ -629,177 +742,83 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
       );
     }
 
-    if (activeTab === "orderHistory") {
-      const orderId = item?._id || item?.order_id || index;
-      const isExpanded = showExecutedTrades[orderId];
-      const m = moment(item?.created_at || item?.timestamp);
-      const dateStr = m.isValid() ? m.format("YYYY-MM-DD") : "—";
-      const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
-      const typeStr = (item?.type || item?.order_type || "LIMIT").toUpperCase();
-      const sideStr = (item?.side || "").toUpperCase();
-      const isMarket = typeStr === "MARKET" || typeStr === "STOP_MARKET";
-      const priceStr = isMarket ? "Smart Market" : `${toFixedEight(item?.price)} ${quoteSymbol}`;
-      const fillPxStr = item?.avg_execution_price ? `${toFixedEight(item?.avg_execution_price)} ${quoteSymbol}` : "—";
-      
-      const filledNum = parseNum(item?.filled_quantity ?? item?.filled) || 0;
-      const qtyNum = parseNum(item?.quantity) || 0;
-      const fillPctRaw = qtyNum > 0 ? ((filledNum / qtyNum) * 100).toFixed(2) : "0.00";
-      const fillPctStr = `${fillPctRaw}%`;
-      
-      const tifLabel = item?.time_in_force || item?.tif;
-      const finalTif = tifLabel ? String(tifLabel).toUpperCase() : "—";
-
-      const rawExecutions = (Array.isArray(item?.executed_prices) && item.executed_prices.length > 0)
-        ? item.executed_prices
-        : (Array.isArray(item?.executions) ? item.executions : []);
-      const executions = aggregateExecutedLegs(rawExecutions);
-
+    if (tabId === "orderHistory") {
       return (
-        <TouchableOpacity 
-          key={orderId || index} 
-          style={[styles.card, { borderBottomColor: borderThemeColor }]}
-          activeOpacity={0.8}
-          onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item, isMargin: true })}
-        >
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }}>
-              <AppText style={{ color: textThemeColor, fontSize: 16 }} weight={BOLD}>
-                {`${baseSymbol}/${quoteSymbol}`}
-              </AppText>
-              <FastImage source={right_ic} tintColor={textThemeColor} style={{ width: 12, height: 12, marginLeft: 6, marginTop: 2 }} resizeMode="contain" />
-            </TouchableOpacity>
-          </View>
-          <AppText style={{ color: getSideColor(item?.side), marginBottom: 12, marginTop: -4 }} weight={SEMI_BOLD} type={TWELVE}>
-            {sideStr} · {finalTif}
-          </AppText>
-          <View style={styles.grid}>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Creation Time</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{dateStr} {timeStr}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Fill Price</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{fillPxStr}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Price</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{priceStr}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Filled/Amount</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.filled_quantity ?? item?.filled)}/{toFixedEight(item?.quantity)} · {fillPctStr}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Status</AppText>
-              <AppText style={[styles.value, { color: getSideColor("LONG") }]} weight={SEMI_BOLD}>{item?.status || "—"}</AppText>
-            </View>
-          </View>
-          
-          {executions.length > 0 && (
-            <View style={{ marginTop: 8 }}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={{
-                  alignSelf: "flex-end",
-                  paddingVertical: 4,
-                  paddingHorizontal: 5,
-                  borderWidth: 1,
-                  borderColor: isDark ? "#333" : "#EAEAEA",
-                  borderRadius: 5,
-                }}
-                onPress={() => setShowExecutedTrades(prev => ({ ...prev, [orderId]: !prev[orderId] }))}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <FastImage
-                    source={downIcon}
-                    tintColor={colors.lightGrey}
-                    style={[
-                      { width: 10, height: 10, marginRight: 4 },
-                      { transform: [{ rotate: isExpanded ? "180deg" : "0deg" }] },
-                    ]}
-                    resizeMode="contain"
-                  />
-                  <AppText style={{ color: textThemeColor, fontSize: 12 }} weight={SEMI_BOLD}>
-                    Executed trades
-                  </AppText>
-                </View>
-              </TouchableOpacity>
-              
-              {isExpanded && (
-                <View style={{ marginTop: 8, backgroundColor: isDark ? "rgba(128, 128, 128, 0.08)" : "rgba(128, 128, 128, 0.08)", paddingVertical: 8, paddingHorizontal: 8, borderRadius: 8 }}>
-                  {executions.map((leg, i) => (
-                    <View key={i} style={[{ backgroundColor: "transparent" }, i < executions.length - 1 ? { borderBottomWidth: 1, borderBottomColor: borderThemeColor, marginBottom: 8, paddingBottom: 8 } : null]}>
-                      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-                        <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }} weight={MEDIUM}>
-                          Trade #{i + 1}:
-                        </AppText>
-                      </View>
-
-                      <View style={{ gap: 4, marginTop: 4 }}>
-                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
-                          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price:</AppText>
-                          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.price)} {quoteSymbol}</AppText>
-                        </View>
-                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
-                          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Executed:</AppText>
-                          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.quantity)} {baseSymbol}</AppText>
-                        </View>
-                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
-                          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee:</AppText>
-                          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.fee)} {quoteSymbol}</AppText>
-                        </View>
-                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
-                          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total:</AppText>
-                          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(leg.price) * Number(leg.quantity))}</AppText>
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-        </TouchableOpacity>
+        <OrderHistoryCard
+          key={item?._id || item?.order_id || index}
+          item={item}
+          index={index}
+          baseSymbol={baseSymbol}
+          quoteSymbol={quoteSymbol}
+          borderThemeColor={borderThemeColor}
+          textThemeColor={textThemeColor}
+          secondaryTextThemeColor={secondaryTextThemeColor}
+          isDark={isDark}
+          themeColors={themeColors}
+          getSideColor={getSideColor}
+        />
       );
     }
 
-    if (activeTab === "tradeHistory") {
+    if (tabId === "tradeHistory") {
+      const fillPxStr = toFixedEight(item?.price);
+      const qtyStr = toFixedEight(item?.quantity ?? item?.amount);
+      const totalStr = toFixedEight(item?.quote_quantity ?? (parseFloat(item?.quantity || item?.amount || 0) * parseFloat(item?.price || 0)));
+
+      const isMaker = item?.maker ?? item?.isMaker ?? item?.is_maker;
+      const roleStr = isMaker != null ? (isMaker ? "Maker" : "Taker") : (item?.role || "—");
+
+      const feeStr = `${toFixedEight(item?.fee)} ${item?.fee_asset || item?.fee_currency || quoteSymbol}`;
+
+      const tDate = item?.executed_at || item?.executedAt || item?.created_at || item?.createdAt || item?.time || item?.timestamp;
+      const timeMoment = tDate ? moment(tDate) : null;
+      const timeStr = timeMoment?.isValid() ? timeMoment.format("YYYY-MM-DD HH:mm:ss") : "---";
+
       return (
         <View key={item?._id || index} style={[styles.card, { borderBottomColor: borderThemeColor }]}>
           <View style={styles.cardHeader}>
             <AppText style={[styles.pairText, { color: textThemeColor }]} weight={BOLD}>
               {`${baseSymbol}/${quoteSymbol}`}
             </AppText>
-            <AppText style={[styles.timeText, { color: secondaryTextThemeColor }]} weight={MEDIUM}>
-              {fmtDate(item?.created_at || item?.timestamp)}
-            </AppText>
           </View>
           <AppText style={{ color: getSideColor(item?.side), marginBottom: 6 }} weight={SEMI_BOLD} type={TWELVE}>
-            {item?.side}
+            {item?.side} · {roleStr}
           </AppText>
           <View style={styles.grid}>
             <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Price</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.price)}</AppText>
+              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Side</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{item?.side || "—"}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Fill Price</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{fillPxStr} {quoteSymbol}</AppText>
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Amount</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.amount)}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Fee</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.fee)} {item?.fee_currency || quoteSymbol}</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{qtyStr} {baseSymbol}</AppText>
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Total</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.total || (parseFloat(item?.amount || 0) * parseFloat(item?.price || 0)))} {quoteSymbol}</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{totalStr} {quoteSymbol}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Time</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{timeStr}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Role</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{roleStr}</AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Fee</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{feeStr}</AppText>
             </View>
           </View>
         </View>
       );
     }
 
-    if (activeTab === "loanManagement") {
+    if (tabId === "loanManagement") {
       return (
         <View key={item?._id || index} style={[styles.card, { borderBottomColor: borderThemeColor }]}>
           <View style={styles.cardHeader}>
@@ -828,27 +847,30 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
       );
     }
 
-    if (activeTab === "assetHistory") {
+    if (tabId === "assetHistory") {
+      const rawPair = item?.pair || pairSymbol;
+      const displayPair = rawPair ? (rawPair.endsWith("USDT") ? rawPair.slice(0, -4) + "/USDT" : rawPair.endsWith("USDC") ? rawPair.slice(0, -4) + "/USDC" : rawPair) : "—";
+      const displayAsset = item?.asset || item?.coin || "—";
       return (
         <View key={item?.id || index} style={[styles.card, { borderBottomColor: borderThemeColor }]}>
           <View style={styles.cardHeader}>
             <AppText style={[styles.pairText, { color: textThemeColor }]} weight={BOLD}>
-              {item?.coin || "—"}
+              {displayPair}
             </AppText>
             <AppText style={[styles.timeText, { color: secondaryTextThemeColor }]} weight={MEDIUM}>
-              {fmtDate(item?.time || item?.created_at || item?.timestamp)}
+              {fmtDate(item?.time || item?.created_at || item?.timestamp || item?.createdAt || item?.executed_at)}
             </AppText>
           </View>
           <View style={styles.grid}>
             <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Pair</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{item?.pair || "—"}</AppText>
+              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Coin</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{displayAsset !== "—" ? displayAsset : displayPair}</AppText>
             </View>
             {subTab === "transfer" && (
               <>
                 <View style={styles.kvRow}>
                   <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Type</AppText>
-                  <AppText style={[styles.value, { color: getSideColor(item?.transferType === "Transfer In" ? "LONG" : "SHORT") }]} weight={SEMI_BOLD}>
+                  <AppText style={[styles.value, { color: getSideColor((item?.transferType || item?.type || "").toLowerCase().includes("in") ? "LONG" : "SHORT") }]} weight={SEMI_BOLD}>
                     {item?.transferType || item?.type || "—"}
                   </AppText>
                 </View>
@@ -865,24 +887,20 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
             {subTab === "interest" && (
               <>
                 <View style={styles.kvRow}>
-                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Hourly Rate</AppText>
-                  <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{item?.hourlyRate || "—"}</AppText>
+                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Amount</AppText>
+                  <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.amount || item?.amount_charged)}</AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Loan Amt</AppText>
+                  <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.loanAmount || item?.loan_amount)}</AppText>
                 </View>
                 <View style={styles.kvRow}>
                   <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>APR</AppText>
-                  <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{item?.apr || "—"}</AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Loan Amount</AppText>
-                  <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.loanAmount)}</AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Charged Interest</AppText>
-                  <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.amount)}</AppText>
+                  <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{item?.apr != null ? (String(item.apr).includes("%") ? item.apr : (parseFloat(item.apr) * 100).toFixed(4) + "%") : "—"}</AppText>
                 </View>
               </>
             )}
-            {(subTab !== "transfer" && subTab !== "interest") && (
+            {subTab !== "interest" && (
               <View style={styles.kvRow}>
                 <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Amount</AppText>
                 <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.amount)}</AppText>
@@ -915,7 +933,6 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
                 activeOpacity={0.8}
                 onPress={() => {
                   setActiveTab(tab.id);
-                  setDataList([]);
                 }}
               >
                 <AppText
@@ -997,7 +1014,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
               onSelect={(label) => setOpenOrderSideFilter(label)}
             />
             <TouchableOpacity onPress={() => { setOpenOrderTypeFilter("All"); setOpenOrderSideFilter("All Sides"); fetchTabDetails(); }} style={{ flexDirection: 'row', alignItems: 'center' }}>
-               <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }} weight={MEDIUM}>Reset</AppText>
+              <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }} weight={MEDIUM}>Reset</AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -1025,17 +1042,250 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark }) => {
       )}
 
       {/* Content panel */}
-      {loading || actionLoading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="small" color={colors.black} />
-        </View>
-      ) : getFilteredDataList().length === 0 ? (
-        renderNoData()
-      ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-          {getFilteredDataList().map((item, index) => renderItemCard(item, index))}
-        </ScrollView>
-      )}
+      <View style={[{ overflow: 'hidden', minHeight: 150 }, isFullScreen && { flex: 1 }]}>
+        <Animated.View style={[{ flexDirection: 'row', width: slideWidth * TABS.length, transform: [{ translateX: pagerX }] }, isFullScreen && { flex: 1 }]}>
+          {TABS.map((tab, idx) => {
+            const listData = getFilteredDataList(tab.id);
+            const dataToRender = isFullScreen ? listData : listData.slice(0, 5);
+            return (
+              <View key={tab.id} style={[{ width: slideWidth }, isFullScreen && { flex: 1 }]}>
+                {dataToRender.length === 0 ? (
+                  (loading && tab.id === activeTab) ? null : renderNoData()
+                ) : (
+                  <>
+                    <FlatList
+                      style={{ flexGrow: 0 }}
+                      data={dataToRender}
+                      renderItem={({ item, index }) => renderItemCard(item, index, tab.id)}
+                      keyExtractor={(item, index) => item?._id || item?.id || item?.order_id || index.toString()}
+                      showsVerticalScrollIndicator={false}
+                      contentContainerStyle={{ paddingBottom: 24 }}
+                      initialNumToRender={isFullScreen ? 10 : 5}
+                      windowSize={5}
+                      maxToRenderPerBatch={isFullScreen ? 10 : 5}
+                      removeClippedSubviews={true}
+                    />
+                    {!isFullScreen && listData.length > 5 && (
+                      <TouchableOpacity
+                        style={styles.viewAllButton}
+                        onPress={() => NavigationService.navigate("MARGIN_HISTORY_SCREEN", { activeTab: tab.id, currencyData })}
+                      >
+                        <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
+              </View>
+            );
+          })}
+        </Animated.View>
+
+        {(loading || actionLoading) && !closePositionModal && (
+          <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)', zIndex: 10 }]}>
+            <ActivityIndicator size="small" color={colors.black} />
+          </View>
+        )}
+
+        {/* Close Position Modal */}
+        <Modal
+          visible={closePositionModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setClosePositionModal(false)}
+        >
+          <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+            <View style={{
+              backgroundColor: isDark ? colors.bottomsheetDark || "#1E1E1E" : colors.white,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              padding: 16,
+              paddingBottom: 32,
+            }}>
+              {/* Header */}
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <AppText style={{ color: textThemeColor, fontSize: 18 }} weight={BOLD}>
+                  Close by {closePositionType === "MARKET" ? "Market" : "Limit"}
+                </AppText>
+                <TouchableOpacity onPress={() => setClosePositionModal(false)} style={{ padding: 4 }}>
+                  <AppText style={{ color: secondaryTextThemeColor, fontSize: 20 }}>✕</AppText>
+                </TouchableOpacity>
+              </View>
+
+              {/* Pair + Side Subtitle */}
+              {(() => {
+                const isLong = selectedPosToClose?.side === "LONG";
+                return (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 16 }}>
+                    <AppText style={{ color: textThemeColor, fontSize: 13 }} weight={SEMI_BOLD}>
+                      {selectedPosToClose?.pair ? `${selectedPosToClose.pair.slice(0, -4)}/${selectedPosToClose.pair.slice(-4)}` : "—"}
+                    </AppText>
+                    <AppText style={{ color: secondaryTextThemeColor }}>·</AppText>
+                    <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }}>Isolated</AppText>
+                    <AppText style={{ color: secondaryTextThemeColor }}>·</AppText>
+                    <AppText style={{ color: isLong ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red, fontSize: 13 }} weight={BOLD}>
+                      {isLong ? "L" : "S"}
+                    </AppText>
+                  </View>
+                );
+              })()}
+
+              {/* Type Toggle */}
+              <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+                {["MARKET", "LIMIT"].map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    onPress={() => {
+                      setClosePositionType(t);
+                      if (t === "LIMIT") {
+                        const maxQty = parseFloat(selectedPosToClose?.quantity || 0);
+                        setClosePositionQty(maxQty > 0 ? maxQty.toFixed(8).replace(/\.?0+$/, "") : "");
+                        setClosePositionSliderPct(100);
+                      } else {
+                        setClosePositionQty("");
+                        setClosePositionSliderPct(0);
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      alignItems: "center",
+                      backgroundColor: closePositionType === t ? (isDark ? colors.white : "#111827") : (isDark ? "#2A2A2A" : "#f3f4f6"),
+                      borderWidth: closePositionType === t ? 0 : 1,
+                      borderColor: isDark ? "#444" : "#e5e7eb",
+                    }}
+                  >
+                    <AppText style={{ color: closePositionType === t ? (isDark ? colors.black : colors.white) : textThemeColor, fontSize: 13 }} weight={MEDIUM}>
+                      {t === "MARKET" ? "Market" : "Limit"}
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Limit Price Input */}
+              {closePositionType === "LIMIT" && (
+                <View style={{ marginBottom: 12, position: "relative" }}>
+                  <TextInput
+                    style={{
+                      backgroundColor: isDark ? "#2A2A2A" : "#f9fafb",
+                      borderWidth: 1,
+                      borderColor: isDark ? "#444" : "#e5e7eb",
+                      borderRadius: 10,
+                      padding: 12,
+                      color: textThemeColor,
+                      fontSize: 14,
+                    }}
+                    placeholder="Price"
+                    placeholderTextColor={secondaryTextThemeColor}
+                    keyboardType="numeric"
+                    value={closePositionPrice}
+                    onChangeText={setClosePositionPrice}
+                  />
+                  <View style={{ position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center" }}>
+                    <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>
+                      {selectedPosToClose?.pair ? selectedPosToClose.pair.slice(-4) : ""}
+                    </AppText>
+                  </View>
+                </View>
+              )}
+
+              {/* Size Input */}
+              <View style={{ marginBottom: closePositionType === "LIMIT" ? 4 : 16, position: "relative" }}>
+                <AppText style={{ color: secondaryTextThemeColor, fontSize: 12, marginBottom: 4 }}>Size</AppText>
+                <View style={{ position: "relative" }}>
+                  <TextInput
+                    style={{
+                      backgroundColor: isDark ? "#2A2A2A" : "#f9fafb",
+                      borderWidth: 1,
+                      borderColor: isDark ? "#444" : "#e5e7eb",
+                      borderRadius: 10,
+                      padding: 12,
+                      color: textThemeColor,
+                      fontSize: 14,
+                    }}
+                    placeholder="0"
+                    placeholderTextColor={secondaryTextThemeColor}
+                    keyboardType="numeric"
+                    editable={closePositionType === "LIMIT"}
+                    value={closePositionType === "MARKET" ? (selectedPosToClose?.quantity || "") : closePositionQty}
+                    onChangeText={(val) => {
+                      setClosePositionQty(val);
+                      const maxQty = parseFloat(selectedPosToClose?.quantity || 0);
+                      const v = parseFloat(val || 0);
+                      if (maxQty > 0) {
+                        setClosePositionSliderPct(Math.min(100, Math.round((v / maxQty) * 100)));
+                      }
+                    }}
+                  />
+                  <View style={{ position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center" }}>
+                    <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>
+                      {selectedPosToClose?.pair ? selectedPosToClose.pair.slice(0, -4) : ""}
+                    </AppText>
+                  </View>
+                </View>
+              </View>
+
+              {/* Slider (Limit only) */}
+              {closePositionType === "LIMIT" && (
+                <View style={{ marginBottom: 16, marginTop: 12 }}>
+                  <CustomDraggableSlider
+                    value={closePositionSliderPct}
+                    onValueChange={(pct) => {
+                      const maxQty = parseFloat(selectedPosToClose?.quantity || 0);
+                      const qty = maxQty > 0 ? (maxQty * pct / 100) : 0;
+                      setClosePositionQty(qty.toFixed(8).replace(/\.?0+$/, "") || "0");
+                      setClosePositionSliderPct(pct);
+                    }}
+                    themeColors={themeColors}
+                    isDark={isDark}
+                  />
+                </View>
+              )}
+
+              {/* Info Rows */}
+              <View style={{ borderTopWidth: 1, borderTopColor: isDark ? "#444" : "#f3f4f6", paddingTop: 12, marginBottom: 16 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
+                  <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>Holding</AppText>
+                  <AppText style={{ color: textThemeColor, fontSize: 12 }} weight={MEDIUM}>
+                    {selectedPosToClose?.quantity || "—"} {selectedPosToClose?.pair ? selectedPosToClose.pair.slice(0, -4) : ""}
+                  </AppText>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
+                  <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>Notional</AppText>
+                  <AppText style={{ color: textThemeColor, fontSize: 12 }} weight={MEDIUM}>
+                    {selectedPosToClose?.notional ? parseFloat(selectedPosToClose.notional).toFixed(4) : "—"} {selectedPosToClose?.pair ? selectedPosToClose.pair.slice(-4) : ""}
+                  </AppText>
+                </View>
+              </View>
+
+              {/* Warning */}
+              {closePositionType === "MARKET" && (
+                <AppText style={{ color: "#d97706", fontSize: 12, marginBottom: 16 }}>
+                  The system will cancel position orders and execute the position assets as a market order.
+                </AppText>
+              )}
+
+              {/* Footer */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: isDark ? colors.white : "#111827",
+                  paddingVertical: 14,
+                  borderRadius: 10,
+                  alignItems: "center",
+                }}
+                disabled={actionLoading}
+                onPress={submitClosePosition}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color={isDark ? colors.black : colors.white} />
+                ) : (
+                  <AppText style={{ color: isDark ? colors.black : colors.white, fontSize: 15 }} weight={BOLD}>Confirm</AppText>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
     </View>
   );
 };
@@ -1152,6 +1402,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
+  viewAllButton: {
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+    backgroundColor: 'transparent',
+    borderRadius: 8,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
   histCellLeft: {
     flex: 1,
     alignItems: "flex-start",
@@ -1198,4 +1461,139 @@ const styles = StyleSheet.create({
   statusTagText: {
     fontSize: 12,
   },
+});
+
+const OrderHistoryCard = React.memo(({ item, index, baseSymbol, quoteSymbol, borderThemeColor, textThemeColor, secondaryTextThemeColor, isDark, themeColors, getSideColor }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const orderId = item?._id || item?.order_id || index;
+  const m = moment(item?.created_at || item?.timestamp);
+  const dateStr = m.isValid() ? m.format("YYYY-MM-DD") : "—";
+  const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
+  const typeStr = (item?.type || item?.order_type || "LIMIT").toUpperCase();
+  const sideStr = (item?.side || "").toUpperCase();
+  const isMarket = typeStr === "MARKET" || typeStr === "STOP_MARKET";
+  const priceStr = isMarket ? "Smart Market" : `${toFixedEight(item?.price)} ${quoteSymbol}`;
+  const fillPxStr = item?.avg_execution_price ? `${toFixedEight(item?.avg_execution_price)} ${quoteSymbol}` : "—";
+
+  const filledNum = parseNum(item?.filled_quantity ?? item?.filled) || 0;
+  const qtyNum = parseNum(item?.quantity) || 0;
+  const fillPctRaw = qtyNum > 0 ? ((filledNum / qtyNum) * 100).toFixed(2) : "0.00";
+  const fillPctStr = `${fillPctRaw}%`;
+
+  const tifLabel = item?.time_in_force || item?.tif;
+  const finalTif = tifLabel ? String(tifLabel).toUpperCase() : "—";
+
+  const rawExecutions = (Array.isArray(item?.executed_prices) && item.executed_prices.length > 0)
+    ? item.executed_prices
+    : (Array.isArray(item?.executions) ? item.executions : []);
+  const executions = useMemo(() => aggregateExecutedLegs(rawExecutions), [rawExecutions]);
+
+  return (
+    <TouchableOpacity
+      key={orderId || index}
+      style={[styles.card, { borderBottomColor: borderThemeColor }]}
+      activeOpacity={0.8}
+      onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item, isMargin: true })}
+    >
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }}>
+          <AppText style={{ color: textThemeColor, fontSize: 16 }} weight={BOLD}>
+            {`${baseSymbol}/${quoteSymbol}`}
+          </AppText>
+          <FastImage source={right_ic} tintColor={textThemeColor} style={{ width: 12, height: 12, marginLeft: 6, marginTop: 2 }} resizeMode="contain" />
+        </TouchableOpacity>
+      </View>
+      <AppText style={{ color: getSideColor(item?.side), marginBottom: 12, marginTop: -4 }} weight={SEMI_BOLD} type={TWELVE}>
+        {sideStr} · {finalTif}
+      </AppText>
+      <View style={styles.grid}>
+        <View style={styles.kvRow}>
+          <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Creation Time</AppText>
+          <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{dateStr} {timeStr}</AppText>
+        </View>
+        <View style={styles.kvRow}>
+          <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Fill Price</AppText>
+          <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{fillPxStr}</AppText>
+        </View>
+        <View style={styles.kvRow}>
+          <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Price</AppText>
+          <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{priceStr}</AppText>
+        </View>
+        <View style={styles.kvRow}>
+          <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Filled/Amount</AppText>
+          <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.filled_quantity ?? item?.filled)}/{toFixedEight(item?.quantity)} · {fillPctStr}</AppText>
+        </View>
+        <View style={styles.kvRow}>
+          <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Status</AppText>
+          <AppText style={[styles.value, { color: getSideColor("LONG") }]} weight={SEMI_BOLD}>{item?.status || "—"}</AppText>
+        </View>
+      </View>
+
+      {executions.length > 0 && (
+        <View style={{ marginTop: 8 }}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={{
+              alignSelf: "flex-end",
+              paddingVertical: 4,
+              paddingHorizontal: 5,
+              borderWidth: 1,
+              borderColor: isDark ? "#333" : "#EAEAEA",
+              borderRadius: 5,
+            }}
+            onPress={() => setIsExpanded(prev => !prev)}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <FastImage
+                source={downIcon}
+                tintColor={colors.lightGrey}
+                style={[
+                  { width: 10, height: 10, marginRight: 4 },
+                  { transform: [{ rotate: isExpanded ? "180deg" : "0deg" }] },
+                ]}
+                resizeMode="contain"
+              />
+              <AppText style={{ color: textThemeColor, fontSize: 12 }} weight={SEMI_BOLD}>
+                Executed trades
+              </AppText>
+            </View>
+          </TouchableOpacity>
+
+          {isExpanded && (
+            <View style={{ marginTop: 8, backgroundColor: isDark ? "rgba(128, 128, 128, 0.08)" : "rgba(128, 128, 128, 0.08)", paddingVertical: 8, paddingHorizontal: 8, borderRadius: 8 }}>
+              {executions.map((leg, i) => (
+                <View key={i} style={[{ backgroundColor: "transparent" }, i < executions.length - 1 ? { borderBottomWidth: 1, borderBottomColor: borderThemeColor, marginBottom: 8, paddingBottom: 8 } : null]}>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                    <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }} weight={MEDIUM}>
+                      Trade #{i + 1}:
+                    </AppText>
+                  </View>
+
+                  <View style={{ gap: 4, marginTop: 4 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price:</AppText>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.price)} {quoteSymbol}</AppText>
+                    </View>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Executed:</AppText>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.quantity)} {baseSymbol}</AppText>
+                    </View>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee:</AppText>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.fee)} {quoteSymbol}</AppText>
+                    </View>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total:</AppText>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(leg.price) * Number(leg.quantity))}</AppText>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 });

@@ -90,6 +90,7 @@ const SpotHeader = ({
   pairLoading = false,
   activeHeaderTab = "Spot",
   setActiveHeaderTab,
+  currencyData,
 }) => {
   const [pairSheetVisible, setPairSheetVisible] = useState(false);
   const { colors: themeColors, theme, isDark: isDarkFromHook } = useTheme();
@@ -240,7 +241,11 @@ const SpotHeader = ({
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={() => {
-                NavigationService.navigate('Trade_History')
+                if (activeHeaderTab === "Margin") {
+                  NavigationService.navigate("MARGIN_HISTORY_SCREEN", { currencyData });
+                } else {
+                  NavigationService.navigate('Trade_History');
+                }
               }}
               activeOpacity={0.7}
               accessibilityRole="button"
