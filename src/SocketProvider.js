@@ -56,25 +56,25 @@ export const SocketProvider = ({ children }) => {
     }
   }, []);
 
-  const subscribeToExchange = useCallback((baseCurrencyId, quoteCurrencyId) => {
+  const subscribeToExchange = useCallback((baseCurrencyId, quoteCurrencyId, extraParams = {}) => {
     if (!baseCurrencyId || !quoteCurrencyId) {
       return;
     }
-    const subKey = `${baseCurrencyId}-${quoteCurrencyId}`;
+    const tradeType = extraParams.tradeType || "spot";
+    const subKey = `${baseCurrencyId}-${quoteCurrencyId}-${tradeType}`;
     if (currentExchangeSubscription.current === subKey) {
       return;
     }
     currentExchangeSubscription.current = subKey;
-    pendingSubscriptions.current.exchange = {
+    const payload = {
       base_currency_id: baseCurrencyId,
       quote_currency_id: quoteCurrencyId,
+      limit: 20,
+      ...extraParams,
     };
+    pendingSubscriptions.current.exchange = payload;
     if (socketService.getSocket()?.connected) {
-      socketService.emit("exchange:subscribe", {
-        base_currency_id: baseCurrencyId,
-        quote_currency_id: quoteCurrencyId,
-        limit: 20,
-      });
+      socketService.emit("exchange:subscribe", payload);
     }
   }, []);
 

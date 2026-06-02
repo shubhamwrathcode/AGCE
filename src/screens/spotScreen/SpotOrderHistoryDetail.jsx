@@ -28,17 +28,24 @@ const SpotOrderHistoryDetail = () => {
     (typeof pair === "string" && pair.includes("/") ? pair.split("/")[1]?.trim() : "") ||
     "";
 
-  const price = Number(order?.price) || 0;
-  const qty = Number(order?.quantity) || 0;
-  const filled = Number(order?.filled_quantity ?? order?.filled ?? 0);
-  const remaining = Number(order?.remaining_quantity ?? order?.remaining ?? 0);
-  const avgPrice = Number(order?.avg_execution_price ?? order?.avgPrice ?? order?.average_price ?? price);
-  const value = Number(order?.executed_value ?? order?.executedValue ?? (avgPrice * filled));
-  const fee = Number(order?.total_fee ?? order?.fee ?? 0);
-  const tds = Number(order?.total_tds ?? order?.tds ?? 0);
+  const isMargin = route?.params?.isMargin === true;
+
+  const parseNum = (val) => {
+    if (val && val.$numberDecimal != null) return parseFloat(val.$numberDecimal);
+    return parseFloat(val);
+  };
+
+  const price = parseNum(order?.price) || 0;
+  const qty = parseNum(order?.quantity) || 0;
+  const filled = parseNum(order?.filled_quantity ?? order?.filled) || 0;
+  const remaining = parseNum(order?.remaining_quantity ?? order?.remaining) || 0;
+  const avgPrice = parseNum(order?.avg_execution_price ?? order?.avgPrice ?? order?.average_price) || price;
+  const value = parseNum(order?.executed_value ?? order?.executedValue) || (avgPrice * filled);
+  const fee = parseNum(order?.total_fee ?? order?.fee) || 0;
+  const tds = parseNum(order?.total_tds ?? order?.tds) || 0;
   const status = String(order?.status || "").toUpperCase();
   const side = String(order?.side || "").toUpperCase();
-  const type = String(order?.order_type || order?.type || "MARKET").toUpperCase();
+  const type = String(order?.order_type || order?.type || "LIMIT").toUpperCase();
   const role = order?.is_maker === true ? "Maker" : order?.is_maker === false ? "Taker" : "—";
 
   const isTradeFill =
@@ -108,34 +115,46 @@ const SpotOrderHistoryDetail = () => {
 
         {/* List of Details (Matches Screenshot) */}
         <View style={styles.listSection}>
-          <Row label="Date" value={dateStr} />
-          <Row label="Time" value={timeStr} />
-          <Row label="Market" value={pair} />
-          <Row label="Side" value={side} valueColor={getSideColor(side)} />
-          {isTradeFill ? (
+          {isMargin ? (
             <>
-              <Row label="Role" value={role} />
-              <Row label="Price" value={toFixedEight(price)} />
-              <Row label="Quantity" value={toFixedEight(qty)} />
-              <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
-              <Row label="Total" value={toFixedEight(price * qty)} />
-              {order?.trade_id != null ? <Row label="Trade ID" value={String(order.trade_id)} /> : null}
-              {order?.order_id != null ? <Row label="Order ID" value={String(order.order_id)} /> : null}
+              <Row label="Creation Time" value={`${dateStr} ${timeStr}`} />
+              <Row label="Fill Price" value={order?.avg_execution_price ? `${toFixedEight(avgPrice)} ${quoteCurrency}` : "—"} />
+              <Row label="Price" value={type === "MARKET" ? "Smart Market" : `${toFixedEight(price)} ${quoteCurrency}`} />
+              <Row label="Filled/Amount" value={`${toFixedEight(filled)}/${toFixedEight(qty)} · ${qty > 0 ? ((filled / qty) * 100).toFixed(2) : "0.00"}%`} />
+              <Row label="Status" value={status} valueColor={getStatusColor(status)} />
             </>
           ) : (
             <>
-              <Row label="Type" value={type} />
-              <Row label="TIF" value={tifDisplay} />
-              <Row label="Price" value={type === "MARKET" ? "Market" : toFixedEight(price)} />
-              <Row label="Avg" value={toFixedEight(avgPrice)} />
-              <Row label="Quantity" value={toFixedEight(qty)} />
-              <Row label="Filled" value={toFixedEight(filled)} />
-              <Row label="Remaining" value={toFixedEight(remaining)} />
-              <Row label="Fill %" value={order?.fill_percent || (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%")} />
-              <Row label="Value" value={toFixedEight(value)} />
-              <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
-              <Row label="TDS" value={toFixedEight(tds)} />
-              <Row label="Status" value={status} valueColor={getStatusColor(status)} />
+              <Row label="Date" value={dateStr} />
+              <Row label="Time" value={timeStr} />
+              <Row label="Market" value={pair} />
+              <Row label="Side" value={side} valueColor={getSideColor(side)} />
+              {isTradeFill ? (
+                <>
+                  <Row label="Role" value={role} />
+                  <Row label="Price" value={toFixedEight(price)} />
+                  <Row label="Quantity" value={toFixedEight(qty)} />
+                  <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
+                  <Row label="Total" value={toFixedEight(price * qty)} />
+                  {order?.trade_id != null ? <Row label="Trade ID" value={String(order.trade_id)} /> : null}
+                  {order?.order_id != null ? <Row label="Order ID" value={String(order.order_id)} /> : null}
+                </>
+              ) : (
+                <>
+                  <Row label="Type" value={type} />
+                  <Row label="TIF" value={tifDisplay} />
+                  <Row label="Price" value={type === "MARKET" ? "Market" : toFixedEight(price)} />
+                  <Row label="Avg" value={toFixedEight(avgPrice)} />
+                  <Row label="Quantity" value={toFixedEight(qty)} />
+                  <Row label="Filled" value={toFixedEight(filled)} />
+                  <Row label="Remaining" value={toFixedEight(remaining)} />
+                  <Row label="Fill %" value={order?.fill_percent || (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%")} />
+                  <Row label="Value" value={toFixedEight(value)} />
+                  <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
+                  <Row label="TDS" value={toFixedEight(tds)} />
+                  <Row label="Status" value={status} valueColor={getStatusColor(status)} />
+                </>
+              )}
             </>
           )}
         </View>

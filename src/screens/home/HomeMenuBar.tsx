@@ -7,7 +7,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
-import { AppText, ELEVEN, TEN, THIRTEEN, TWELVE } from "../../shared";
+import { AppText, THIRTEEN, } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
 const Width = Dimensions.get("window").width;
 import Toast from "react-native-simple-toast";
@@ -20,7 +20,7 @@ import {
   lockLight,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
-import { ACCOUNT_SCREEN, MORE_MENU_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
+import { ACCOUNT_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { checkValue } from "../../helper/utility";
 import { colors } from "../../theme/colors";

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Dimensions, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { AppSafeAreaView, AppText, BLACK, BOLD, Button, DISCLAIMTEXT, FOURTEEN, MEDIUM, SEMI_BOLD, SIXTEEN, TEN, TWELVE, TWENTY, WHITE } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
@@ -29,12 +29,28 @@ const formatWalletName = (name) => {
   if (lower === "futures") return "Futures Wallet";
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() + " Wallet";
 };
+
+const normalizeWalletTypes = (rawList) => {
+  if (!Array.isArray(rawList)) return [];
+  return rawList
+    .map(item => {
+      if (item == null) return null;
+      if (typeof item === "string") return item.trim().toLowerCase();
+      if (typeof item === "object") {
+        return (item.wallet_type ?? item.walletType ?? item.type ?? item.key ?? item.slug ?? item.id ?? item.name ?? "").toString().trim().toLowerCase();
+      }
+      return String(item).trim().toLowerCase();
+    })
+    .filter(Boolean);
+};
+
 const Transfer = () => {
   const dispatch = useDispatch();
   const route = useRoute();
   const { colors: themeColors, isDark } = useTheme();
   const theme = isDark ? "Dark" : "Light";
-  const WalletTypes = useAppSelector(state => state.wallet.walletTypes);
+  const rawWalletTypes = useAppSelector(state => state.wallet.walletTypes);
+  const WalletTypes = useMemo(() => normalizeWalletTypes(rawWalletTypes), [rawWalletTypes]);
   const userWallet = useAppSelector(state => state.wallet.userMainWallet);
   const [coin, setCoin] = useState(userWallet[0]);
   const particularCoinBalance = useAppSelector(state => state.wallet.particularCoinBalance);

@@ -13,7 +13,6 @@ import TradingDataModal from "../TradingDataModal/TradingDataModal";
 import { AppText, SEMI_BOLD } from "../AppText";
 import { toFixedThree } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import { colors } from "../../theme/colors";
 import { Alert, Platform, ToastAndroid } from "react-native";
 import NavigationService from "../../navigation/NavigationService";

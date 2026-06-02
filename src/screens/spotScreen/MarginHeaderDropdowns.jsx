@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { View, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
@@ -15,25 +15,46 @@ const MarginHeaderDropdowns = ({
   isDark,
   universalPaddingHorizontal,
   styles,
+  coinBalance = {},
+  currencyData = {},
+  formatTotal,
 }) => {
   const rbSheetMarginMode = useRef();
   const rbSheetMarginLeverage = useRef();
 
-  const leverageList = ["1x", "2x", "3x", "5x", "10x", "20x"];
+  const [leverageDraft, setLeverageDraft] = useState(parseInt(marginLeverage, 10) || 5);
+
+  const quoteSymbol = currencyData?.quote_currency || "USDT";
+  const netEquity = coinBalance?.quote_currency_balance || 0;
+  const currentLoan = coinBalance?.quote_currency_borrowed || 0;
+  const minLeverage = currencyData?.margin_config?.min_leverage ?? 2;
+  const maxLeverage = currencyData?.margin_config?.max_leverage ?? 20;
+
+  const fmt = (n) => {
+    const val = Number(n) || 0;
+    if (formatTotal) {
+      const res = formatTotal(val);
+      if (res === "" || res == null) return "0";
+      return res;
+    }
+    return val.toFixed(2).replace(/\.?0+$/, "") || "0";
+  };
+
+  const clamp = (n) => {
+    const x = Number(n);
+    if (!Number.isFinite(x) || x < minLeverage) return minLeverage;
+    return Math.min(Math.round(x), maxLeverage);
+  };
 
   const handleDecrement = () => {
-    const num = parseInt(marginLeverage, 10) || 1;
-    if (num > 1) {
-      setMarginLeverage(`${num - 1}x`);
-    }
+    setLeverageDraft((prev) => clamp(prev - 1));
   };
 
   const handleIncrement = () => {
-    const num = parseInt(marginLeverage, 10) || 1;
-    if (num < 20) {
-      setMarginLeverage(`${num + 1}x`);
-    }
+    setLeverageDraft((prev) => clamp(prev + 1));
   };
+
+  const leverageList = ["1x", "2x", "3x", "5x", "10x", "20x"];
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -190,6 +211,9 @@ const MarginHeaderDropdowns = ({
         closeOnPressMask={true}
         height={430}
         animationType="slide"
+        onOpen={() => {
+          setLeverageDraft(parseInt(marginLeverage, 10) || 5);
+        }}
         customStyles={{
           container: {
             backgroundColor: themeColors.themeElevationColor,
@@ -241,7 +265,7 @@ const MarginHeaderDropdowns = ({
                 />
               </TouchableOpacity>
               <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text }}>
-                {marginLeverage}
+                {leverageDraft}x
               </AppText>
               <TouchableOpacity onPress={handleIncrement} style={{ padding: 4 }}>
                 <FastImage
@@ -255,71 +279,80 @@ const MarginHeaderDropdowns = ({
 
             {/* Quick selector row */}
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-              {leverageList.map((lev) => {
-                const isSelected = marginLeverage === lev;
-                return (
-                  <TouchableOpacity
-                    key={lev}
-                    onPress={() => setMarginLeverage(lev)}
-                    style={{
-                      flex: 1,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      paddingVertical: 6,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: isSelected ? themeColors.text : "transparent",
-                      backgroundColor: "#F2F2F7"
-                    }}
-                  >
-                    <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 12 }}>
-                      {lev}
-                    </AppText>
-                  </TouchableOpacity>
-                );
-              })}
+              {leverageList
+                .map((lev) => parseInt(lev, 10))
+                .filter((x) => x >= minLeverage && x <= maxLeverage)
+                .map((x) => {
+                  const levStr = `${x}x`;
+                  const isSelected = leverageDraft === x;
+                  return (
+                    <TouchableOpacity
+                      key={levStr}
+                      onPress={() => setLeverageDraft(x)}
+                      style={{
+                        flex: 1,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        paddingVertical: 6,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: isSelected ? themeColors.text : "transparent",
+                        backgroundColor: "#F2F2F7"
+                      }}
+                    >
+                      <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 12 }}>
+                        {levStr}
+                      </AppText>
+                    </TouchableOpacity>
+                  );
+                })}
             </View>
 
             {/* Details List */}
             <View style={{ marginBottom: 8, marginTop: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
                 <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Allow to Open</AppText>
-                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>0 USDT</AppText>
+                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{fmt(netEquity * leverageDraft)} {quoteSymbol}</AppText>
               </View>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
                 <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Maximum Borrowable</AppText>
-                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>0 USDT</AppText>
+                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{fmt(Math.max(0, netEquity * (maxLeverage - 1) - currentLoan))} {quoteSymbol}</AppText>
               </View>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Maximum Leverage</AppText>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Leverage Range</AppText>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{marginLeverage}</AppText>
-                  <FastImage
+                  <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{minLeverage}x – {maxLeverage}x</AppText>
+                  {/* <FastImage
                     source={right_ic}
                     resizeMode="contain"
                     style={{ width: 10, height: 10 }}
                     tintColor={themeColors.secondaryText}
-                  />
+                  /> */}
                 </View>
               </View>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Current Loan Limit</AppText>
-                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>0 USDT</AppText>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Current Loan</AppText>
+                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{fmt(currentLoan)} {quoteSymbol}</AppText>
               </View>
             </View>
 
             {/* Warning Message */}
-            <AppText weight={MEDIUM} style={{ color: colors.orangeTheme, fontSize: 11, marginTop: 4, lineHeight: 14 }}>
-              The current available margin ≤ 0. You can increase the leverage or add margin.
-            </AppText>
+            {netEquity <= 0 && (
+              <AppText weight={MEDIUM} style={{ color: colors.orangeTheme, fontSize: 11, marginTop: 4, lineHeight: 14 }}>
+                The current available margin ≤ 0. You can increase the leverage or add margin.
+              </AppText>
+            )}
           </ScrollView>
 
           {/* Confirm Button */}
           <Button
-            onPress={() => rbSheetMarginLeverage?.current?.close()}
+            onPress={() => {
+              setMarginLeverage(`${leverageDraft}x`);
+              rbSheetMarginLeverage?.current?.close();
+            }}
             containerStyle={{
               marginTop: 12,
               marginBottom: 8,
