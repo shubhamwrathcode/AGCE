@@ -95,6 +95,7 @@ import SwapWalletTab from "./tabs/SwapWalletTab";
 import EarningWalletTab from "./tabs/EarningWalletTab";
 import FuturesWalletTab from "./tabs/FuturesWalletTab";
 import MarginWalletTab from "./tabs/MarginWalletTab";
+import CrossMarginWalletTab from "./tabs/CrossMarginWalletTab";
 import WalletTabQuickActions from "./WalletTabQuickActions";
 import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
@@ -160,6 +161,7 @@ const WalletNew = () => {
       { key: "Spot", title: "Spot" },
       { key: "Main", title: "Main" },
       { key: "Margin", title: "Isolated" },
+      { key: "Cross", title: "Cross Margin" },
       { key: "P2P", title: "P2P" },
       { key: "Futures", title: "Futures" },
       { key: "Swap", title: "Swap" },
@@ -199,6 +201,7 @@ const WalletNew = () => {
   const accountDetailSheet = useRef(null);
   const [accountSheetHeight, setAccountSheetHeight] = useState(340);
   const [marginSummary, setMarginSummary] = useState(null);
+  const [crossMarginSummary, setCrossMarginSummary] = useState(null);
   const [globalPortfolio, setGlobalPortfolio] = useState(null);
 
   const currentBalance = useMemo(() => {
@@ -530,6 +533,7 @@ const WalletNew = () => {
       earning: walletBalanceEarning,
       futures: walletBalanceFutures,
       margin: marginSummary ? { dollarPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, currencyPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, Currency: "USD" } : null,
+      cross: crossMarginSummary ? { dollarPrice: crossMarginSummary?.net_equity || crossMarginSummary?.account_equity_usd || 0, currencyPrice: crossMarginSummary?.net_equity || crossMarginSummary?.account_equity_usd || 0, Currency: "USD" } : null,
     };
 
     const usdFor = (bal) => safeNum(portfolioUsdtEstimate(bal));
@@ -557,6 +561,7 @@ const WalletNew = () => {
       mk("earning", "Earning", balancesByKey.earning),
       mk("futures", "Futures", balancesByKey.futures),
       mk("margin", "Isolated Margin", balancesByKey.margin),
+      mk("cross", "Cross Margin", balancesByKey.cross),
     ];
   }, [walletBalance, walletBalanceMain, walletBalanceSpot, walletBalanceSwap, walletBalanceEarning, walletBalanceFutures, marginSummary, safeNum]);
 
@@ -621,6 +626,9 @@ const WalletNew = () => {
     appOperation.get("margin/portfolio-summary", undefined, undefined, CUSTOMER_TYPE)
       .then((res) => { if (res?.success) setMarginSummary(res?.data); })
       .catch(() => { });
+    appOperation.get("cross/risk", undefined, undefined, CUSTOMER_TYPE)
+      .then((res) => { if (res?.success) setCrossMarginSummary(res?.data); })
+      .catch(() => { });
   }, [dispatch, noGlobalLoader]);
 
   useFocusEffect(
@@ -666,6 +674,8 @@ const WalletNew = () => {
           return "#F44336"; // red
         case "margin":
           return "#00BCD4"; // cyan
+        case "cross":
+          return "#9C27B0"; // purple
         default:
           return themeColors.text;
       }
@@ -1045,6 +1055,16 @@ const WalletNew = () => {
                       setSelectedCoinSheetWalletType("margin");
                       coinDetailSheet.current?.open?.();
                     }}
+                  />
+                );
+              }
+
+              if (route.key === "Cross") {
+                return (
+                  <CrossMarginWalletTab
+                    theme={theme}
+                    themeColors={themeColors}
+                    buildCoinIconUri={buildCoinIconUri}
                   />
                 );
               }
