@@ -94,7 +94,7 @@ const MarginBottomSection = ({
       {/* Submit Button */}
       <View style={styles.spotOrderSubmitWrap}>
         <Button
-          children={`Margin ${base_currency}`}
+          children={`${isBuy ? "Buy" : "Sell"} ${base_currency}`}
           disabled={false}
           activeOpacity={0.75}
           containerStyle={[

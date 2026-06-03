@@ -18,7 +18,7 @@ import moment from "moment";
 import { useSelector } from "react-redux";
 import SimpleToast from "react-native-simple-toast";
 import NavigationService from "../../navigation/NavigationService";
-import { SPOT_ORDER_HISTORY_DETAIL } from "../../navigation/routes";
+import { SPOT_ORDER_HISTORY_DETAIL, MARGIN_BORROW_REPAY_SCREEN } from "../../navigation/routes";
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, FIFTEEN, FOURTEEN, THIRTEEN, TWELVE } from "../../shared";
 import { colors } from "../../theme/colors";
@@ -851,7 +851,12 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 borderRadius: 4,
               }}
               onPress={() => {
-                SimpleToast.show("Repay feature coming soon");
+                NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, {
+                  pair: `${baseSymbol}/${quoteSymbol}`,
+                  coin: item?.coin || item?.asset,
+                  activeTab: "Repay",
+                  loan: item
+                });
               }}
               activeOpacity={0.8}
             >

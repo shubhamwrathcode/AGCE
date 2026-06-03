@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   TouchableOpacity,
@@ -7,78 +7,154 @@ import {
   StyleSheet,
   Platform,
   SafeAreaView,
-  Modal
+  ActivityIndicator
 } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppText, SEMI_BOLD, MEDIUM } from "../../shared";
+import {
+  AppText,
+  SEMI_BOLD,
+  MEDIUM,
+  fontFamilyMedium,
+  fontFamilyRegular,
+  BOLD
+} from "../../shared";
+import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { useTheme } from "../../hooks/useTheme";
-import { colors, lightTheme } from "../../theme/colors";
+import { colors } from "../../theme/colors";
 import {
   back_ic,
   historyIcon,
-  downIcon,
   tick,
-  usdtIcon,
   swap,
-  borrowcheckic,
-  right_ic,
-  Polygon,
-  bitcoinIcon
+  usdtIcon,
+  bitcoinIcon,
+  bnbIcon,
+  trxIcon
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import SimpleToast from "react-native-simple-toast";
-import { MARGIN_TRANSFER_SCREEN } from "../../navigation/routes";
-import { fontFamilyMedium } from "../../theme/typography";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useFocusEffect } from "@react-navigation/native";
+import { useSelector } from "react-redux";
+import { appOperation } from "../../appOperation";
+import { CUSTOMER_TYPE } from "../../appOperation/types";
 
 const MarginBorrowRepay = () => {
   const { colors: themeColors, isDark } = useTheme();
   const route = useRoute();
+
   const pair = route?.params?.pair || "BTC/USDT";
   const [baseSymbol, quoteSymbol] = pair.split("/");
 
-  const [activeTab, setActiveTab] = useState("Borrow"); // "Borrow" or "Repay"
+  const initialTab = route?.params?.activeTab || "Borrow";
+  const loan = route?.params?.loan;
+
+  const [activeTab, setActiveTab] = useState(initialTab); // "Borrow" or "Repay"
+
   const [selectedAsset, setSelectedAsset] = useState(route?.params?.coin || baseSymbol || "BTC");
   const [amount, setAmount] = useState("");
-  const [sliderPercentage, setSliderPercentage] = useState(25); // default 25% like screenshot
-  const [isReminderVisible, setIsReminderVisible] = useState(false);
 
-  // Mock Caps and Available Balances
-  const caps = {
-    BTC: 77.14214,
-    USDT: 50000.0,
-    OG: 250000.0,
-  };
-  const hourlyRates = {
-    BTC: "0.000058% / 0.5%",
-    USDT: "0.000231% / 2.0%",
-    OG: "0.000150% / 1.3%",
-  };
+  const [liveData, setLiveData] = useState(null);
+  const [busy, setBusy] = useState(false);
 
-  const assetDetails = {
-    BTC: { fullName: "Bitcoin", icon: bitcoinIcon, color: "#F7931A", accentColor: "#D1AA67" },
-    USDT: { fullName: "Tether", icon: usdtIcon, color: "#26A17B", accentColor: "#26A17B" },
-    OG: { fullName: "Zero A...", icon: Polygon, color: "#8247E5", accentColor: "#D1AA67" },
-  };
+  const currencyData = useSelector((state) => state.home.currencyData);
+  const coinPairs = useSelector((state) => state.home.coinPairs);
+  const spotSelectedPair = useSelector((state) => state.home.spotSelectedPair);
 
-  const getAssetDetail = (symbol) => {
-    return assetDetails[symbol] || { fullName: symbol, icon: undefined, color: "#99A6AF", accentColor: "#D1AA67" };
-  };
+  const coinBalance = useSelector((state) => state.home.coinBalance);
 
-  const handlePercentageSelect = (pct) => {
-    setSliderPercentage(pct);
-    const cap = caps[selectedAsset] || 10000.0;
-    const calcVal = ((cap * pct) / 100).toFixed(selectedAsset === "BTC" ? 5 : 2);
-    setAmount(String(calcVal));
-  };
+  const currentPairItem = useMemo(() => {
+    if (!coinPairs || !Array.isArray(coinPairs)) return null;
+    return coinPairs.find(p => p.base_currency === baseSymbol && p.quote_currency === quoteSymbol) || null;
+  }, [coinPairs, baseSymbol, quoteSymbol]);
 
-  const handleConfirm = () => {
-    if (!amount || Number(amount) <= 0) {
-      SimpleToast.show("Please enter a valid amount");
+  const pairId = currentPairItem?._id || currencyData?._id || spotSelectedPair?._id || loan?.pair_id || "";
+
+  const isBorrow = activeTab === "Borrow";
+  const isCoinBase = selectedAsset === baseSymbol;
+
+  const fetchLive = useCallback(() => {
+    if (!pairId) {
+      console.warn("MarginBorrowRepay: Missing pairId. Cannot fetch live data.");
       return;
     }
-    // Available is always 0.00 in mock, so show transfer reminder popup
-    setIsReminderVisible(true);
+    appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
+      .then((res) => { if (res?.success) setLiveData(res.data); })
+      .catch(() => { });
+  }, [pairId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchLive();
+    }, [fetchLive])
+  );
+
+  const borrowable = isCoinBase
+    ? (liveData?.borrowable?.base ?? "0")
+    : (liveData?.borrowable?.quote ?? "0");
+
+  const borrowed = isCoinBase
+    ? (liveData?.balances?.base_borrowed ?? loan?.outstanding ?? "0")
+    : (liveData?.balances?.quote_borrowed ?? loan?.outstanding ?? "0");
+
+  const sellCoinBal = coinBalance?.base_currency_balance;
+  const buyCoinBal = coinBalance?.quote_currency_balance;
+
+  // Margin balances take precedence over spot balance
+  const available = isCoinBase
+    ? (liveData?.balances?.base_available ?? sellCoinBal ?? "0")
+    : (liveData?.balances?.quote_available ?? buyCoinBal ?? "0");
+
+  const ml = liveData?.margin_level != null ? parseFloat(liveData.margin_level) : null;
+  const marginLevelDisplay = ml === null ? "13.52" : ml >= 999 ? "∞" : ml.toFixed(2);
+  const liqPriceRaw = liveData?.est_liq_price ?? "";
+  const liqPrice = liqPriceRaw ? parseFloat(liqPriceRaw).toFixed(2) : "—";
+
+  const hourlyRate = liveData?.interest?.hourly_pct != null
+    ? `${liveData.interest.hourly_pct}%`
+    : loan?.hourly_rate_pct != null
+      ? `${loan.hourly_rate_pct}%`
+      : selectedAsset === "BTC" ? "0.00125000%" : "0.00200000%";
+
+  const annualRate = liveData?.interest?.annualized_pct != null
+    ? `${liveData.interest.annualized_pct}%`
+    : loan?.apr_pct != null
+      ? `${loan.apr_pct}%`
+      : selectedAsset === "BTC" ? "10.950000%" : "17.520000%";
+
+  const handleConfirm = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      SimpleToast.show(`Please enter a valid ${isBorrow ? "loan" : "repayment"} amount`);
+      return;
+    }
+    if (isBorrow && parseFloat(amount) > parseFloat(borrowable || 0)) {
+      SimpleToast.show("Amount exceeds borrowable limit");
+      return;
+    }
+    if (!isBorrow && parseFloat(amount) > parseFloat(borrowed || 0)) {
+      SimpleToast.show("Amount exceeds outstanding loan");
+      return;
+    }
+    setBusy(true);
+    try {
+      const assetType = isCoinBase ? "base" : "quote";
+      const endpoint = isBorrow ? "margin/borrow" : "margin/repay";
+      const pairIdToUse = loan?.pair_id || pairId;
+      const payload = { pairId: pairIdToUse, assetType, amount: String(amount) };
+      console.log("[MarginBorrowRepay] Payload:", payload);
+      const res = await appOperation.post(endpoint, payload, CUSTOMER_TYPE);
+      if (res?.success) {
+        SimpleToast.show(res.message || `${isBorrow ? "Borrowed" : "Repaid"} ${amount} ${selectedAsset} successfully`);
+        setAmount("");
+        fetchLive();
+        if (!isBorrow) NavigationService.goBack();
+      } else {
+        SimpleToast.show(res?.message || "Operation failed");
+      }
+    } catch (err) {
+      SimpleToast.show(err?.message || "Operation failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -98,30 +174,23 @@ const MarginBorrowRepay = () => {
             />
           </TouchableOpacity>
 
-          {/* Tabs next to back arrow */}
           <View style={styles.headerTabsContainer}>
-            <TouchableOpacity
-              onPress={() => setActiveTab("Borrow")}
-              style={styles.headerTabBtn}
-            >
+            <TouchableOpacity onPress={() => { setActiveTab("Borrow"); setAmount(""); }} style={styles.headerTabBtn}>
               <AppText
                 weight={SEMI_BOLD}
                 style={{
-                  fontSize: 17,
+                  fontSize: 18,
                   color: activeTab === "Borrow" ? themeColors.text : themeColors.secondaryText,
                 }}
               >
                 Borrow
               </AppText>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setActiveTab("Repay")}
-              style={styles.headerTabBtn}
-            >
+            <TouchableOpacity onPress={() => { setActiveTab("Repay"); setAmount(""); }} style={styles.headerTabBtn}>
               <AppText
                 weight={SEMI_BOLD}
                 style={{
-                  fontSize: 17,
+                  fontSize: 18,
                   color: activeTab === "Repay" ? themeColors.text : themeColors.secondaryText,
                 }}
               >
@@ -148,235 +217,211 @@ const MarginBorrowRepay = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}
       >
-        {/* Pair row */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <AppText weight={MEDIUM} style={{ fontSize: 14, color: themeColors.text }}>Pair</AppText>
-          <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }} onPress={() => SimpleToast.show("Borrowing info screen coming soon")}>
-            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Borrowing Info </AppText>
-            <FastImage source={right_ic} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Dropdown BTC/USDT */}
-        <View style={[styles.cardDropdown, { backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7" }]}>
+        {/* Pairs */}
+        <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text, marginBottom: 8 }}>Pairs</AppText>
+        <View style={[styles.inputContainer, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9", marginBottom: 16 }]}>
           <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 15 }}>{pair}</AppText>
-          <FastImage
-            source={downIcon}
-            style={{ width: 12, height: 12 }}
-            tintColor={themeColors.secondaryText}
-            resizeMode="contain"
-          />
         </View>
 
-        {/* Asset Boxes Row */}
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 10, marginTop: 12 }}>
-          {[baseSymbol, quoteSymbol].map((symbol) => {
-            if (!symbol) return null;
-            const isSelected = selectedAsset === symbol;
-            const assetInfo = getAssetDetail(symbol);
-            return (
-              <TouchableOpacity
-                key={symbol}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setSelectedAsset(symbol);
-                  setAmount("");
-                }}
-                style={[
-                  styles.assetBox,
-                  {
-                    borderColor: isSelected ? assetInfo.accentColor : themeColors.themeBorderColor,
-                    backgroundColor: isSelected
-                      ? (isDark ? "#2A241C" : "#FCF2E1")
-                      : (isDark ? themeColors.themeElevationColor : "#FCFCFC"),
-                    borderWidth: isSelected ? 1.5 : 1,
-                  },
-                ]}
-              >
-                <View style={styles.assetInner}>
-                  {assetInfo.icon ? (
-                    <FastImage source={assetInfo.icon} style={{ width: 32, height: 32 }} resizeMode="contain" />
-                  ) : (
-                    <View style={[styles.coinIconPlaceholder, { backgroundColor: assetInfo.color }]}>
-                      <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 15 }}>
-                        {symbol.charAt(0)}
+        {/* Coin Selection (Pairs) */}
+        <View style={{ marginBottom: 24 }}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            {[baseSymbol, quoteSymbol].map((symbol) => {
+              if (!symbol) return null;
+              const isSelected = selectedAsset === symbol;
+              const isBase = symbol === baseSymbol;
+
+              const getFullName = (sym) => {
+                if (isBase) {
+                  const baseName = currencyData?.base_currency_fullname || currencyData?.base_currency_name;
+                  if (baseName) return baseName;
+                } else {
+                  const quoteName = currencyData?.quote_currency_fullname || currencyData?.quote_currency_name;
+                  if (quoteName) return quoteName;
+                }
+
+                // Static fallbacks in case API data is missing full name
+                if (sym === "BTC") return "Bitcoin";
+                if (sym === "USDT") return "Tether";
+                if (sym === "ETH") return "Ethereum";
+                if (sym === "USDC") return "USD Coin";
+                if (sym === "BNB") return "BNB";
+                if (sym === "SOL") return "Solana";
+                if (sym === "XRP") return "XRP";
+                if (sym === "ADA") return "Cardano";
+                if (sym === "DOGE") return "Dogecoin";
+                return sym;
+              };
+              const fullName = getFullName(symbol);
+
+              return (
+                <TouchableOpacity
+                  key={symbol}
+                  onPress={() => { setSelectedAsset(symbol); setAmount(""); }}
+                  style={{
+                    flex: 1,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 12,
+                    paddingHorizontal: 10,
+                    borderRadius: 12,
+                    borderWidth: 1.5,
+                    borderColor: isSelected ? "#D9B37E" : (isDark ? "#2C2C2E" : "#F3F4F6"),
+                    backgroundColor: isSelected ? (isDark ? "#2A2218" : "#FDF6ED") : (isDark ? "#1C1C1E" : "#FFFFFF"),
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 2,
+                    elevation: 1,
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    {/* Coin Text */}
+                    <View>
+                      <AppText weight={BOLD} style={{ fontSize: 14, color: themeColors.text }}>
+                        {symbol}
+                      </AppText>
+                      <AppText style={{ fontSize: 11, color: themeColors.secondaryText, marginTop: 1 }}>
+                        {fullName}
                       </AppText>
                     </View>
-                  )}
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>{symbol}</AppText>
-                    <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>{assetInfo.fullName}</AppText>
                   </View>
-                  {isSelected && (
-                    <FastImage
-                      source={borrowcheckic}
-                      style={{ width: 20, height: 20 }}
-                      resizeMode="contain"
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+
+                  {/* Radio Indicator */}
+                  <View style={{
+                    width: 18, height: 18, borderRadius: 9,
+                    borderWidth: isSelected ? 0 : 1.5,
+                    borderColor: isDark ? "#4A4A4C" : "#E5E7EB",
+                    backgroundColor: isSelected ? "#C69C6D" : "transparent",
+                    alignItems: "center", justifyContent: "center"
+                  }}>
+                    {isSelected && (
+                      <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={colors.white} resizeMode="contain" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
-        {/* Input Block */}
-        <AppText weight={MEDIUM} style={{ fontSize: 14, color: themeColors.text, marginBottom: 8 }}>
-          {activeTab}
+        {/* Outstanding Loan (Repay Tab Only) */}
+        {!isBorrow && (
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }}>
+            <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Outstanding Loan</AppText>
+            <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
+              {parseFloat(borrowed || 0).toFixed(8)} {selectedAsset}
+            </AppText>
+          </View>
+        )}
+
+        {/* Loan Amount Label */}
+        <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text, marginBottom: 8 }}>
+          {isBorrow ? "Loan Amount" : "Repayment Amount"}
         </AppText>
-        <View style={[styles.inputContainer, { backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7" }]}>
+
+        {/* Input */}
+        <View style={[styles.inputContainer, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9", marginBottom: isBorrow ? 20 : 8 }]}>
           <TextInput
-            placeholder={selectedAsset === "BTC" ? "Min 0.00001" : "Min 1"}
+            placeholder={`Enter ${isBorrow ? "borrow" : "repayment"} amount`}
             placeholderTextColor="#8E8E93"
             value={amount}
             onChangeText={setAmount}
             keyboardType="numeric"
-            cursorColor={colors.black}
-            style={{
-              flex: 1,
-              color: themeColors.text,
-              fontSize: 14,
-              fontFamily: fontFamilyMedium,
-              paddingVertical: Platform.OS === "ios" ? 8 : 4,
-            }}
+            cursorColor={themeColors.text}
+            style={{ flex: 1, color: themeColors.text, fontSize: 14, fontFamily: fontFamilyMedium, paddingVertical: Platform.OS === "ios" ? 12 : 8 }}
           />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>{selectedAsset}</AppText>
-            <View style={{ width: 1, height: 16, backgroundColor: themeColors.themeBorderColor }} />
-            <TouchableOpacity onPress={() => handlePercentageSelect(100)}>
-              <AppText weight={SEMI_BOLD} style={{ color: "#F7931A", fontSize: 13 }}>MAX</AppText>
+            <AppText style={{ color: themeColors.text, fontSize: 14 }}>{selectedAsset}</AppText>
+            <TouchableOpacity onPress={() => setAmount(String(parseFloat(isBorrow ? borrowable : borrowed)))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <AppText style={{ color: themeColors.text, fontSize: 14 }}>All</AppText>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Custom Slider */}
-        <View style={{ marginVertical: 20 }}>
-          {/* Track container */}
-          <View style={{ height: 16, justifyContent: "center", position: "relative" }}>
-            {/* Slider track line */}
-            <View style={{ height: 2, backgroundColor: "#E5E5EA", width: "100%", position: "absolute" }} />
-            {/* Progress line */}
-            <View
-              style={{
-                height: 2,
-                backgroundColor: colors.black,
-                width: `${sliderPercentage}%`,
-                position: "absolute",
-                left: 0,
-              }}
-            />
-            {/* Dots */}
-            {[0, 25, 50, 75, 100].map((pct) => (
-              <TouchableOpacity
-                key={pct}
-                onPress={() => handlePercentageSelect(pct)}
-                activeOpacity={0.8}
-                style={{
-                  position: "absolute",
-                  left: `${pct}%`,
-                  transform: [{ translateX: -6 }],
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  borderWidth: 2,
-                  borderColor: colors.black,
-                  backgroundColor: sliderPercentage >= pct ? colors.black : colors.white,
-                  zIndex: 10,
-                }}
-              />
-            ))}
+        {/* Available Balance (Repay Tab Only) */}
+        {!isBorrow && (
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Available: </AppText>
+            <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text, marginRight: 6 }}>
+              {parseFloat(available || 0).toFixed(8)} {selectedAsset}
+            </AppText>
+
           </View>
-          {/* Labels */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
-            {[0, 25, 50, 75, 100].map((pct) => (
-              <TouchableOpacity key={pct} onPress={() => handlePercentageSelect(pct)}>
-                <AppText
-                  weight={MEDIUM}
-                  style={{
-                    fontSize: 11,
-                    color: sliderPercentage === pct ? themeColors.text : themeColors.secondaryText,
-                  }}
-                >
-                  {pct}%
+        )}
+
+        {/* Detail Rows */}
+        <View style={{ gap: 12, marginBottom: 20 }}>
+          {isBorrow ? (
+            <>
+              <View style={styles.detailRow}>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Maximum Borrow Amount</AppText>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
+                  {parseFloat(borrowable || 0).toFixed(8)} {selectedAsset}
                 </AppText>
-              </TouchableOpacity>
-            ))}
-          </View>
+              </View>
+              <View style={styles.detailRow}>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Est. Liq Price</AppText>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
+                  {liqPrice} {quoteSymbol}
+                </AppText>
+              </View>
+              <View style={styles.detailRow}>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Hourly Interest Rate</AppText>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
+                  {hourlyRate}
+                </AppText>
+              </View>
+
+              {/* Note text between hourly and annual */}
+              <AppText style={{ fontSize: 13, color: themeColors.secondaryText, lineHeight: 18, marginTop: 4, marginBottom: 4 }}>
+                * Interest starts accruing immediately when tokens are borrowed. The first charge is prorated based on the actual time elapsed. Subsequent interest is charged once per hour until fully repaid.
+              </AppText>
+
+              <View style={styles.detailRow}>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Annualized Interest Rate</AppText>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
+                  {annualRate}
+                </AppText>
+              </View>
+              <View style={styles.detailRow}>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Borrowed</AppText>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
+                  {parseFloat(borrowed || 0).toFixed(8)} {selectedAsset}
+                </AppText>
+              </View>
+              <View style={styles.detailRow}>
+                <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Borrow Margin Level</AppText>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <FastImage source={tick} style={{ width: 14, height: 14 }} tintColor={themeColors.secondaryText} resizeMode="contain" />
+                  <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
+                    {marginLevelDisplay}
+                  </AppText>
+                </View>
+              </View>
+            </>
+          ) : null}
         </View>
 
-        {/* Detailed Rows */}
-        <View style={{ gap: 12, marginBottom: 24 }}>
-          <View style={styles.detailRow}>
-            <View style={{ borderBottomWidth: 1, borderBottomColor: themeColors.secondaryText, borderStyle: "dotted", paddingBottom: 1 }}>
-              <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Borrowing Info</AppText>
-            </View>
-            <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-              {`0 ${selectedAsset}`}
-            </AppText>
+        {/* Blue Info Box */}
+        <View style={{
+          flexDirection: "row",
+          backgroundColor: isDark ? "#1C273D" : "#EEF4FF",
+          padding: 12,
+          borderRadius: 8,
+          marginBottom: 24,
+          alignItems: "flex-start",
+          gap: 10
+        }}>
+          <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: "#3375E0", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
+            <AppText weight={MEDIUM} style={{ color: colors.white, fontSize: 10, }}>i</AppText>
           </View>
-
-          <View style={styles.detailRow}>
-            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Available</AppText>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-                {selectedAsset === "BTC" ? "0.00000000 BTC" : `0.00 ${selectedAsset}`}
-              </AppText>
-              <TouchableOpacity
-                onPress={() => {
-                  NavigationService.navigate(MARGIN_TRANSFER_SCREEN, {
-                    pair: pair,
-                    coin: selectedAsset
-                  });
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <FastImage source={swap} style={{ width: 14, height: 14 }} tintColor={themeColors.text} resizeMode="contain" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.detailRow}>
-            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Borrowed</AppText>
-            <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-              {`0 ${selectedAsset}`}
-            </AppText>
-          </View>
-
-          <View style={styles.detailRow}>
-            <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Hourly Rate/APR</AppText>
-            <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-              {hourlyRates[selectedAsset] || "0.0001% / 1.0%"}
-            </AppText>
-          </View>
-
-          <View style={styles.detailRow}>
-            <View style={{ borderBottomWidth: 1, borderBottomColor: themeColors.secondaryText, borderStyle: "dotted", paddingBottom: 1 }}>
-              <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Loan Cap</AppText>
-            </View>
-            <TouchableOpacity
-              onPress={() => SimpleToast.show("Loan cap request submitted")}
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
-                {`${caps[selectedAsset] || 10000.0} ${selectedAsset} / Increase`}
-              </AppText>
-              <FastImage
-                source={right_ic}
-                style={{ width: 10, height: 10 }}
-                resizeMode="contain"
-                tintColor={themeColors.text}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Warning Note */}
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center", marginBottom: 24 }}>
-          <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: "#E67E22", alignItems: "center", justifyContent: "center" }}>
-            <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 11 }}>!</AppText>
-          </View>
-          <AppText style={{ flex: 1, fontSize: 12, color: "#E67E22" }}>
-            Interest is calculated and deducted every hour on the hour.
+          <AppText style={{ flex: 1, fontSize: 13, color: isDark ? "#A0B5D8" : "#4A5A7B", lineHeight: 18 }} weight={MEDIUM}>
+            {isBorrow
+              ? "Borrowed funds are subject to hourly interest charges starting immediately. If your margin level falls below the maintenance threshold, your position may be automatically liquidated. Only borrow what you can afford to repay."
+              : "Interest is settled first from your repayment amount, with the remainder applied to the principal. You may repay partially or in full at any time. After repayment, your margin level and liquidation price will update accordingly."}
           </AppText>
         </View>
 
@@ -384,71 +429,16 @@ const MarginBorrowRepay = () => {
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={handleConfirm}
-          style={[styles.confirmBtn, { backgroundColor: isDark ? "#4E4E50" : "#B2B2B2", marginBottom: 16 }]}
+          disabled={busy}
+          style={[styles.actionBtn, { backgroundColor: isDark ? "#1C1C1E" : "#11141D", marginBottom: 16, flexDirection: "row", gap: 8 }]}
         >
-          <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 16 }}>Confirm</AppText>
+          {busy && <ActivityIndicator color={colors.white} size="small" />}
+          <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 16 }}>
+            {busy ? "Confirming..." : "Confirm"}
+          </AppText>
         </TouchableOpacity>
-      </ScrollView>
 
-      {/* Reminder Modal */}
-      <Modal
-        visible={isReminderVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsReminderVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: isDark ? "#1C1C1E" : colors.white }]}>
-            <AppText
-              weight={SEMI_BOLD}
-              style={[styles.modalTitle, { color: themeColors.text }]}
-            >
-              Reminder
-            </AppText>
-            <AppText
-              style={[styles.modalMessage, { color: isDark ? "#AEAEB2" : "#3A3A3C" }]}
-            >
-              {"no assets in the margin account.\nPlease transfer"}
-            </AppText>
-            <View style={styles.modalButtonsRow}>
-              <TouchableOpacity
-                onPress={() => setIsReminderVisible(false)}
-                style={[
-                  styles.modalBtnCancel,
-                  { backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7" }
-                ]}
-              >
-                <AppText
-                  weight={SEMI_BOLD}
-                  style={{ color: themeColors.text, fontSize: 16 }}
-                >
-                  Cancel
-                </AppText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setIsReminderVisible(false);
-                  NavigationService.navigate(MARGIN_TRANSFER_SCREEN, {
-                    pair: pair,
-                    coin: selectedAsset
-                  });
-                }}
-                style={[
-                  styles.modalBtnTransfer,
-                  { backgroundColor: isDark ? colors.white : "#2C2C2E" }
-                ]}
-              >
-                <AppText
-                  weight={SEMI_BOLD}
-                  style={{ color: isDark ? colors.black : colors.white, fontSize: 16 }}
-                >
-                  Transfer
-                </AppText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -470,43 +460,9 @@ const styles = StyleSheet.create({
   headerTabBtn: {
     paddingVertical: 8,
   },
-  cardDropdown: {
-    height: 48,
-    borderRadius: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-  },
-  assetBox: {
-    flex: 1,
-    height: 60,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    justifyContent: "center",
-  },
-  assetInner: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  coinIconPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   inputContainer: {
-    height: 48,
-    borderRadius: 10,
+    height: 50,
+    borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
@@ -516,57 +472,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  bottomBtnWrap: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    backgroundColor: "transparent",
-  },
-  confirmBtn: {
+  actionBtn: {
+    flex: 1,
     height: 50,
     borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 28,
-  },
-  modalContent: {
-    width: "100%",
-    borderRadius: 24,
-    padding: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    marginBottom: 12,
-  },
-  modalMessage: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  modalButtonsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  modalBtnCancel: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalBtnTransfer: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
   },
