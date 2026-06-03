@@ -188,7 +188,7 @@ const CustomDraggableSlider = ({ value, onValueChange, themeColors, isDark }) =>
       </View>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4, paddingHorizontal: 4 }}>
         {[0, 25, 50, 75, 100].map((pct) => (
-          <TouchableOpacity key={pct} onPress={() => onValueChange(pct)} hitSlop={{top:10,bottom:10,left:10,right:10}}>
+          <TouchableOpacity key={pct} onPress={() => onValueChange(pct)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <AppText style={{ fontSize: 11, color: value >= pct ? themeColors.text : themeColors.secondaryText }}>
               {pct}%
             </AppText>
@@ -820,28 +820,61 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
 
     if (tabId === "loanManagement") {
       return (
-        <View key={item?._id || index} style={[styles.card, { borderBottomColor: borderThemeColor }]}>
-          <View style={styles.cardHeader}>
-            <AppText style={[styles.pairText, { color: textThemeColor }]} weight={BOLD}>
-              {item?.coin || "—"}
-            </AppText>
-            <AppText style={{ color: colors.orangeTheme }} weight={BOLD} type={TWELVE}>
-              {item?.status || "Active"}
+        <View
+          key={item?.loan_id || item?._id || index}
+          style={{
+            backgroundColor: isDark ? colors.bottomsheetDark || "#1E1E1E" : colors.white,
+            borderRadius: 8,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            marginBottom: 8,
+            borderBottomColor: borderThemeColor,
+            borderBottomWidth: 1,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <AppText style={{ color: textThemeColor, fontSize: 16 }} weight={BOLD}>
+                {item?.coin || "—"}
+              </AppText>
+              {item?.contract && (
+                <AppText style={{ color: secondaryTextThemeColor, fontSize: 14 }}>
+                  {item.contract.endsWith("USDT") || item.contract.endsWith("USDC") ? `${item.contract.slice(0, -4)}/${item.contract.slice(-4)}` : item.contract}
+                </AppText>
+              )}
+            </View>
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#374151",
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: 4,
+              }}
+              onPress={() => {
+                SimpleToast.show("Repay feature coming soon");
+              }}
+              activeOpacity={0.8}
+            >
+              <AppText style={{ color: colors.white, fontSize: 12 }} weight={MEDIUM}>
+                Repay
+              </AppText>
+            </TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+            <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }}>Hourly Rate / APR</AppText>
+            <AppText style={{ color: textThemeColor, fontSize: 13 }} weight={MEDIUM}>
+              {item?.hourly_rate_pct != null ? `${item.hourly_rate_pct}%` : (item?.hourly_rate != null ? `${(parseFloat(item.hourly_rate) * 100).toFixed(6)}%` : "—")}
+              {" / "}
+              {item?.apr_pct != null ? `${item.apr_pct}%` : "—"}
             </AppText>
           </View>
-          <View style={styles.grid}>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Outstanding Loan</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{parseFloat(item?.outstanding || 0).toFixed(6)}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Interest Accrued</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{parseFloat(item?.interest_accrued || 0).toFixed(6)}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Hourly Rate</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{item?.hourly_rate != null ? `${(parseFloat(item.hourly_rate) * 100).toFixed(6)}%` : "—"}</AppText>
-            </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }}>Outstanding Loan</AppText>
+            <AppText style={{ color: textThemeColor, fontSize: 13 }} weight={MEDIUM}>
+              {item?.outstanding != null
+                ? `${parseFloat(item.outstanding).toFixed(8)} ${item?.coin || ""}`
+                : "—"}
+            </AppText>
           </View>
         </View>
       );
@@ -932,6 +965,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 style={styles.tabButton}
                 activeOpacity={0.8}
                 onPress={() => {
+                  setTabData(prev => ({ ...prev, [tab.id]: [] }));
                   setActiveTab(tab.id);
                 }}
               >
@@ -1081,7 +1115,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         </Animated.View>
 
         {(loading || actionLoading) && !closePositionModal && (
-          <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)', zIndex: 10 }]}>
+          <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-start', paddingTop: 60, alignItems: 'center', backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)', zIndex: 10 }]}>
             <ActivityIndicator size="small" color={colors.black} />
           </View>
         )}
