@@ -20,7 +20,7 @@ import {
   ARBITORY_SCREEN,
   CONVERT_SCREEN,
   DEPOSIT_WALLET_SCREEN,
-  TRANSFER_SCREEN,
+  MARGIN_TRANSFER_SCREEN,
   WALLET_WITHDRAW_SCREEN,
 } from "../../navigation/routes";
 import { useRef } from "react";
@@ -93,7 +93,7 @@ const WalletMenu = ({ onDeposit, onWithdraw }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={{ alignItems: "center" }}
-          onPress={() => NavigationService.navigate(TRANSFER_SCREEN)}
+          onPress={() => NavigationService.navigate(MARGIN_TRANSFER_SCREEN)}
         >
           <FastImage
             source={theme !== 'Dark' ? transferDarkIcon : transferIcon}

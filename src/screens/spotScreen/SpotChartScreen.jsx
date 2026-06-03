@@ -1638,7 +1638,7 @@ const SpotChartScreen = () => {
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                       style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
-                                      onPress={() => NavigationService.navigate(routes.TRANSFER_SCREEN)}
+                                      onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
                                     >
                                       <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                                         Transfer
@@ -1808,7 +1808,7 @@ const SpotChartScreen = () => {
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                       style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
-                                      onPress={() => NavigationService.navigate(routes.TRANSFER_SCREEN)}
+                                      onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
                                     >
                                       <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                                         Transfer
@@ -1971,7 +1971,7 @@ const SpotChartScreen = () => {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                   style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
-                                  onPress={() => NavigationService.navigate(routes.TRANSFER_SCREEN)}
+                                  onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
                                 >
                                   <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                                     Transfer

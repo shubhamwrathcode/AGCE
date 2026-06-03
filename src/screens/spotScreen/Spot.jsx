@@ -126,7 +126,7 @@ import {
   OPEN_ORDER_SCREEN,
   SPOT_ORDER_HISTORY_DETAIL,
   SPOT_CHART_SCREEN,
-  TRANSFER_SCREEN,
+  MARGIN_TRANSFER_SCREEN,
   WALLET_WITHDRAW_SCREEN,
   SELECT_COIN_SCREEN,
   MARGIN_BORROW_REPAY_SCREEN,
@@ -4003,7 +4003,7 @@ const Spot = () => {
                                   ? SELECT_COIN_SCREEN
                                   : btn == "Deposit"
                                     ? DEPOSIT_COIN_SCREEN
-                                    : TRANSFER_SCREEN
+                                    : MARGIN_TRANSFER_SCREEN
                               )
                             }
                           >

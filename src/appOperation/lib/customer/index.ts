@@ -181,6 +181,16 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('wallet/deposit_inr', data, CUSTOMER_TYPE),
   tranfer_coin: (data: any) =>
     appOperation.post('wallet/wallet-transfer', data, CUSTOMER_TYPE),
+  margin_wallet_transfer: (data: any) =>
+    appOperation.post('margin/wallet-transfer', data, CUSTOMER_TYPE),
+  margin_max_transfer: (data: any) =>
+    appOperation.get(`margin/max-transfer?pairId=${data.pairId}&assetType=${data.assetType}&direction=${data.direction}&walletType=${data.walletType}`, undefined, undefined, CUSTOMER_TYPE),
+  margin_accounts: () =>
+    appOperation.get('margin/accounts', undefined, undefined, CUSTOMER_TYPE),
+  margin_pairs: () =>
+    appOperation.get('margin/pairs', undefined, undefined, CUSTOMER_TYPE),
+  cross_transfer: (data: any) =>
+    appOperation.post('cross/transfer', data, CUSTOMER_TYPE),
   user_commit_project: (data: FormData) =>
     appOperation.post('user/launchpad/commit_project', data, CUSTOMER_TYPE),
   transfer_funds: (data: any) =>

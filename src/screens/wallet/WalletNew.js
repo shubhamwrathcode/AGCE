@@ -70,7 +70,11 @@ import {
 import { useAppSelector } from "../../store/hooks";
 import { getUserBankDetails } from "../../actions/accountActions";
 import { toFixedFive } from "../../helper/utility";
-import { ACCOUNT_SCREEN, CONVERT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN, EARING_SCREEN, TRANSFER_SCREEN, WALLET_HISTORY_SCREEN, WALLET_SCREEN, WALLET_WITHDRAW_SCREEN, SELECT_COIN_SCREEN } from "../../navigation/routes";
+import {
+  ACCOUNT_SCREEN, CONVERT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN, EARING_SCREEN, TRANSFER_SCREEN,
+  WALLET_SCREEN, SELECT_COIN_SCREEN,
+  MARGIN_TRANSFER_SCREEN
+} from "../../navigation/routes";
 import WalletSkeleton from "./WalletSkeleton";
 import RBSheet from "react-native-raw-bottom-sheet";
 import DepositSheet from "../../shared/components/DepositSheet";
@@ -90,7 +94,10 @@ import P2PWalletTab from "./tabs/P2PWalletTab";
 import SwapWalletTab from "./tabs/SwapWalletTab";
 import EarningWalletTab from "./tabs/EarningWalletTab";
 import FuturesWalletTab from "./tabs/FuturesWalletTab";
+import MarginWalletTab from "./tabs/MarginWalletTab";
 import WalletTabQuickActions from "./WalletTabQuickActions";
+import { appOperation } from "../../appOperation";
+import { CUSTOMER_TYPE } from "../../appOperation/types";
 
 const WalletNew = () => {
   const dispatch = useDispatch();
@@ -152,6 +159,7 @@ const WalletNew = () => {
       { key: "Overview", title: "Overview" },
       { key: "Spot", title: "Spot" },
       { key: "Main", title: "Main" },
+      { key: "Margin", title: "Isolated" },
       { key: "P2P", title: "P2P" },
       { key: "Futures", title: "Futures" },
       { key: "Swap", title: "Swap" },
@@ -190,10 +198,12 @@ const WalletNew = () => {
   const [selectedAccountForSheet, setSelectedAccountForSheet] = useState(null);
   const accountDetailSheet = useRef(null);
   const [accountSheetHeight, setAccountSheetHeight] = useState(340);
+  const [marginSummary, setMarginSummary] = useState(null);
+  const [globalPortfolio, setGlobalPortfolio] = useState(null);
 
   const currentBalance = useMemo(() => {
     switch (activeTab) {
-      case "Overview": return walletBalance;
+      case "Overview": return globalPortfolio || walletBalance;
       case "Main": return walletBalanceMain;
       case "Spot": return walletBalanceSpot;
       case "Swap": return walletBalanceSwap;
@@ -267,16 +277,9 @@ const WalletNew = () => {
 
   const portfolioPreferredAmount = useCallback((p) => {
     if (!p || typeof p !== "object") return undefined;
-    // app parity: some responses store preferred amount under the currency code key
-    const cur = portfolioPreferredCurrency(p);
-    const byKey = cur && Object.prototype.hasOwnProperty.call(p, cur) ? p[cur] : undefined;
-    const pref =
-      p.estimated_total_preferred ??
-      p.estimatedTotalPreferred ??
-      p.currencyPrice ??
-      byKey;
-    return pref != null && pref !== "" ? pref : portfolioUsdtEstimate(p);
-  }, [portfolioPreferredCurrency, portfolioUsdtEstimate]);
+    const pref = p.estimated_total_preferred ?? p.estimatedTotalPreferred;
+    return pref !== undefined && pref !== null && pref !== "" ? pref : portfolioUsdtEstimate(p);
+  }, [portfolioUsdtEstimate]);
 
   const buildCoinIconUri = useCallback((iconPath) => {
     const raw = iconPath === undefined || iconPath === null ? "" : String(iconPath).trim();
@@ -406,7 +409,7 @@ const WalletNew = () => {
               items={[
                 { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
                 { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
-                { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
+                { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN) },
                 { key: "history", label: "History", variant: "history", onPress: () => { NavigationService.navigate("Wallet_History") } },
               ]}
             />
@@ -526,6 +529,7 @@ const WalletNew = () => {
       swap: walletBalanceSwap,
       earning: walletBalanceEarning,
       futures: walletBalanceFutures,
+      margin: marginSummary ? { dollarPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, currencyPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, Currency: "USD" } : null,
     };
 
     const usdFor = (bal) => safeNum(portfolioUsdtEstimate(bal));
@@ -552,8 +556,9 @@ const WalletNew = () => {
       mk("swap", "Swap", balancesByKey.swap),
       mk("earning", "Earning", balancesByKey.earning),
       mk("futures", "Futures", balancesByKey.futures),
+      mk("margin", "Isolated Margin", balancesByKey.margin),
     ];
-  }, [walletBalance, walletBalanceMain, walletBalanceSpot, walletBalanceSwap, walletBalanceEarning, walletBalanceFutures, safeNum]);
+  }, [walletBalance, walletBalanceMain, walletBalanceSpot, walletBalanceSwap, walletBalanceEarning, walletBalanceFutures, marginSummary, safeNum]);
 
   const handleSheetOpen = () => {
     depsoitSheet.current?.open();
@@ -588,6 +593,13 @@ const WalletNew = () => {
   ]);
 
   const fetchWalletData = useCallback(() => {
+    const noGlobalLoader = { useGlobalLoader: false };
+
+    // Fetch global portfolio explicitly for "Overview" tab (like web estimatedPortfolio(""))
+    appOperation.customer.user_portfolio("")
+      .then((res) => { if (res.success) setGlobalPortfolio(res.data); })
+      .catch(() => { });
+
     dispatch(getAllWalletsPortfolio(noGlobalLoader));
     dispatch(getUserPortfolioMain("main", noGlobalLoader));
     dispatch(getUserPortfolioSpot("spot", noGlobalLoader));
@@ -605,6 +617,10 @@ const WalletNew = () => {
     dispatch(getUserArbitrageWallet("p2p"));
     dispatch(getUserFuturesWallet("futures"));
     dispatch(getUserOptionsWallet("options"));
+
+    appOperation.get("margin/portfolio-summary", undefined, undefined, CUSTOMER_TYPE)
+      .then((res) => { if (res?.success) setMarginSummary(res?.data); })
+      .catch(() => { });
   }, [dispatch, noGlobalLoader]);
 
   useFocusEffect(
@@ -648,6 +664,8 @@ const WalletNew = () => {
           return "#FF9800"; // orange
         case "futures":
           return "#F44336"; // red
+        case "margin":
+          return "#00BCD4"; // cyan
         default:
           return themeColors.text;
       }
@@ -657,7 +675,7 @@ const WalletNew = () => {
 
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white }}>
-      <KeyBoardAware 
+      <KeyBoardAware
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}
@@ -707,15 +725,15 @@ const WalletNew = () => {
                         <View style={{ marginTop: 5 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
                             <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>
-                              {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5)}{" "}
+                              {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(currentBalance), 5)}{" "}
                             </AppText>
                             <AppText color={DISCLAIMTEXT} type={FIFTEEN} style={{ top: 5 }}>
-                              {portfolioPreferredCurrency(walletBalance)}
+                              {portfolioPreferredCurrency(currentBalance)}
                             </AppText>
                           </View>
                           <View style={{ marginTop: 6 }}>
                             <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
-                              ≈ {!showBalance ? "****" : formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5)} USD
+                              ≈ {!showBalance ? "****" : formatEstimateHeader(portfolioUsdtEstimate(currentBalance), 5)} USD
                             </AppText>
                           </View>
                           {/* <TouchableOpacity
@@ -736,7 +754,7 @@ const WalletNew = () => {
                         items={[
                           { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
                           { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
-                          { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(TRANSFER_SCREEN) },
+                          { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN) },
                           { key: "history", label: "History", variant: "history", onPress: () => { NavigationService.navigate("Wallet_History") } },
                         ]}
                       />
@@ -985,7 +1003,7 @@ const WalletNew = () => {
                     onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
                     onBuyCrypto={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
                     onTransfer={() =>
-                      NavigationService.navigate(TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "main" })
+                      NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "main" })
                     }
                     onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
                     onOpenCoinSheet={(coin) => {
@@ -995,6 +1013,38 @@ const WalletNew = () => {
                     }}
                     eyeCloseIcon={eye_close_icon}
                     eyeOpenIcon={eye_open_icon}
+                  />
+                );
+              }
+
+              if (route.key === "Margin") {
+                return (
+                  <MarginWalletTab
+                    theme={theme}
+                    themeColors={themeColors}
+                    showBalance={showBalance}
+                    setShowBalance={setShowBalance}
+                    marginSummary={marginSummary}
+                    walletBalance={marginSummary ? { dollarPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, currencyPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, Currency: "USD" } : null}
+                    portfolioPreferredAmount={portfolioPreferredAmount}
+                    portfolioPreferredCurrency={portfolioPreferredCurrency}
+                    portfolioUsdtEstimate={portfolioUsdtEstimate}
+                    formatEstimateHeader={formatEstimateHeader}
+                    safeRound={safeRound}
+                    safeNum={safeNum}
+                    totalWalletQty={totalWalletQty}
+                    approxUsdLine={approxUsdLine}
+                    buildCoinIconUri={buildCoinIconUri}
+                    failedIconMap={failedIconMap}
+                    setFailedIconMap={setFailedIconMap}
+                    userWalletRows={[]}
+                    eyeCloseIcon={eye_close_icon}
+                    eyeOpenIcon={eye_open_icon}
+                    onOpenCoinSheet={(coin) => {
+                      setSelectedCoinForSheet(coin);
+                      setSelectedCoinSheetWalletType("margin");
+                      coinDetailSheet.current?.open?.();
+                    }}
                   />
                 );
               }
@@ -1025,7 +1075,7 @@ const WalletNew = () => {
                       {
                         key: "transfer",
                         label: "Transfer",
-                        onPress: () => NavigationService.navigate(TRANSFER_SCREEN, { fromWalletType: "main", toWalletType: "spot" }),
+                        onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "main", toWalletType: "spot" }),
                       },
                     ]}
                     eyeCloseIcon={eye_close_icon}
@@ -1064,7 +1114,7 @@ const WalletNew = () => {
                       {
                         key: "transfer",
                         label: "Transfer",
-                        onPress: () => NavigationService.navigate(TRANSFER_SCREEN, { fromWalletType: "p2p", toWalletType: "main" }),
+                        onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "p2p", toWalletType: "main" }),
                       },
                     ]}
                     eyeCloseIcon={eye_close_icon}
@@ -1103,7 +1153,7 @@ const WalletNew = () => {
                       {
                         key: "transfer",
                         label: "Transfer",
-                        onPress: () => NavigationService.navigate(TRANSFER_SCREEN, { fromWalletType: "swap", toWalletType: "main" }),
+                        onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "swap", toWalletType: "main" }),
                       },
                     ]}
                     eyeCloseIcon={eye_close_icon}
@@ -1142,7 +1192,7 @@ const WalletNew = () => {
                       {
                         key: "transfer",
                         label: "Transfer",
-                        onPress: () => NavigationService.navigate(TRANSFER_SCREEN, { fromWalletType: "earning", toWalletType: "main" }),
+                        onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "earning", toWalletType: "main" }),
                       },
                     ]}
                     eyeCloseIcon={eye_close_icon}
@@ -1181,7 +1231,7 @@ const WalletNew = () => {
                       {
                         key: "transfer",
                         label: "Transfer",
-                        onPress: () => NavigationService.navigate(TRANSFER_SCREEN, { fromWalletType: "futures", toWalletType: "main" }),
+                        onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "futures", toWalletType: "main" }),
                       },
                     ]}
                     eyeCloseIcon={eye_close_icon}
@@ -1265,7 +1315,7 @@ const WalletNew = () => {
         usdApproxFromPrice={usdApproxFromPrice}
         spotUsdPriceLabel={spotUsdPriceLabel}
         onTrade={(coin) => NavigationService.navigate(WALLET_SCREEN, { coin })}
-        onTransfer={(coin) => NavigationService.navigate(TRANSFER_SCREEN, { coin })}
+        onTransfer={(coin) => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { coin })}
         onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
         onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
         onP2PTrade={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
@@ -1286,7 +1336,7 @@ const WalletNew = () => {
         onTransfer={(acc) => {
           const from = acc?.key === "main" ? "main" : acc?.key;
           const to = acc?.key === "main" ? "spot" : "main";
-          NavigationService.navigate(TRANSFER_SCREEN, { fromWalletType: from, toWalletType: to });
+          NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: from, toWalletType: to });
         }}
       />
 

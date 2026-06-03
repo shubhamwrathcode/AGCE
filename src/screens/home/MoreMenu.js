@@ -89,7 +89,7 @@ import {
   NOTIFICATION_SCREEN,
   OPTIONS_SCREEN,
   SETTING_SCREEN_New,
-  TRANSFER_SCREEN,
+  MARGIN_TRANSFER_SCREEN,
   WALLET_SCREEN,
   WALLET_WITHDRAW_SCREEN,
 } from "../../navigation/routes";
@@ -174,7 +174,7 @@ const MoreMenu = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={{ alignItems: "center" }}
-              onPress={() => NavigationService.navigate(TRANSFER_SCREEN)}
+              onPress={() => NavigationService.navigate(MARGIN_TRANSFER_SCREEN)}
             >
               <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
                 <FastImage

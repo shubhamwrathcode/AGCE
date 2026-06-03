@@ -2704,7 +2704,7 @@ const Futures = () => {
                       <AppText type={TWELVE} style={{ color: colors.green }}>Deposit Crypto</AppText>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      onPress={() => NavigationService.navigate(routes.TRANSFER_SCREEN)}
+                      onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
                     >
                       <AppText type={TWELVE} style={{ color: colors.green }}>Transfer</AppText>
                     </TouchableOpacity>
