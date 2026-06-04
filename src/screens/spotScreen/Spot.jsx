@@ -1302,6 +1302,15 @@ const Spot = () => {
     [pricePrecision]
   );
 
+  const formatPriceThousands = useCallback(
+    (raw) => {
+      const n = parseFloat(String(raw).replace(/,/g, ""));
+      if (Number.isNaN(n)) return raw === undefined || raw === null ? "" : String(raw);
+      return n.toLocaleString("en-US", { maximumFractionDigits: pricePrecision, minimumFractionDigits: 0 });
+    },
+    [pricePrecision]
+  );
+
   const formatQuantity = useCallback(
     (qty) => {
       if (qty === undefined || qty === null || isNaN(qty)) return "0";
@@ -1358,7 +1367,9 @@ const Spot = () => {
       currentCurrencyRef.current?.quote_currency !== spotSelectedPair.quote_currency) {
       setCurrency(spotSelectedPair);
       currentCurrencyRef.current = spotSelectedPair;
-      setPrice(formatPrice(spotSelectedPair.buy_price).toString());
+      const initialPrice = spotSelectedPair.buy_price ? formatPrice(spotSelectedPair.buy_price).toString() : "";
+      setPrice(initialPrice);
+      setStaticBuyPrice(initialPrice);
       setActivePercentage("");
       setLastSocketData(null);
       setLocalBuyOrders([]);
@@ -1375,6 +1386,21 @@ const Spot = () => {
       setMarginLeverage("5x");
     }
   }, [spotSelectedPair?.base_currency, spotSelectedPair?.quote_currency, dispatch, formatPrice]);
+
+  useEffect(() => {
+    if (!staticBuyPrice && buy_price) {
+      const p = formatPrice(buy_price).toString();
+      setStaticBuyPrice(p);
+      if (!price) setPrice(p);
+    }
+  }, [buy_price, staticBuyPrice, price, formatPrice]);
+
+  useEffect(() => {
+    // When switching between Spot and Margin tabs, reset price to capture the latest market price for the new mode.
+    setStaticBuyPrice("");
+    setPrice("");
+    setStopPrice("");
+  }, [headerTab]);
 
   // Manual change (TradingDataModal): dispatch to Redux - sync effect will handle rest
   // Clear order book so we don't show previous pair's data; new data will replace when socket responds
@@ -1459,6 +1485,7 @@ const Spot = () => {
       high: pair.high ?? high,
       low: pair.low ?? low,
       volume: pair.volume ?? volume,
+      tradeType: headerTab,
     });
   }, [
     spotSelectedPair,
@@ -1473,6 +1500,7 @@ const Spot = () => {
     low,
     volume,
     currencyData,
+    headerTab,
   ]);
 
   /** Web TradePage: Maker / Taker % under CTA; fall back 0.2 when pair has no fee fields yet */
@@ -1572,6 +1600,7 @@ const Spot = () => {
   const [tpSlEnabled, setTpSlEnabled] = useState(false);
   const [tpPrice, setTpPrice] = useState("");
   const [slPrice, setSlPrice] = useState("");
+  const [staticBuyPrice, setStaticBuyPrice] = useState("");
   const [price, setPrice] = useState("");
   const [amount, setAmount] = useState("");
   const [stopPrice, setStopPrice] = useState("");
@@ -3436,7 +3465,11 @@ const Spot = () => {
                             placeholder={""}
                             placeholderTextColor={themeColors.secondaryText}
                             selectionColor={inputSelectionColor}
-                            value={price || formatTotal(buy_price)}
+                            value={
+                              isPriceFocused
+                                ? (price !== "" ? price : staticBuyPrice)
+                                : formatPriceThousands(price !== "" ? price : staticBuyPrice)
+                            }
                             onChangeText={(text) => handlePriceInput(text, setPrice)}
                             onBlur={() => {
                               setIsPriceFocused(false);

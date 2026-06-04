@@ -8,8 +8,6 @@ import {
   Platform,
   ScrollView,
   Animated,
-  LayoutAnimation,
-  UIManager,
   AppState,
   ActivityIndicator,
   Modal,
@@ -437,6 +435,7 @@ const SpotChartScreen = () => {
   const { colors: themeColors, theme, isDark } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
+  const tradeType = route.params?.tradeType || "Spot";
   const insets = useSafeAreaInsets();
   const tabScrollBottomPadding =
     TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
@@ -617,6 +616,198 @@ const SpotChartScreen = () => {
 
   const filteredWallets = getFilteredWallets();
 
+  const renderAssetsTabContent = () => {
+    if (tradeType === "Margin") {
+      const mb = lastSocketData?.coin_balance || {};
+      const fmtVal = (v) => {
+        if (v == null || !Number.isFinite(Number(v))) return "0";
+        const res = parseFloat(Number(v).toFixed(8)).toString();
+        return res === "NaN" ? "0" : res;
+      };
+
+      const quoteBal = fmtVal(mb.quote_currency_balance);
+      const baseBal = fmtVal(mb.base_currency_balance);
+      const quoteLocked = fmtVal(mb.quote_currency_locked);
+      const baseLocked = fmtVal(mb.base_currency_locked);
+      const quoteBorrowed = fmtVal(mb.quote_currency_borrowed);
+      const baseBorrowed = fmtVal(mb.base_currency_borrowed);
+
+      return (
+        <View style={{ flex: 1, paddingBottom: 20 }}>
+          <View style={styles.assetsHeader}>
+            <View style={styles.assetsHeaderTitleRow}>
+              <View>
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                  Assets
+                </AppText>
+                <AppText type={TEN} style={{ color: colors.placeholderColor, marginTop: 2 }}>
+                  Isolated · {pairBase}/{pairQuote}
+                </AppText>
+              </View>
+              <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
+                <FastImage source={Refresh} style={{ width: 14, height: 14 }} resizeMode="contain" tintColor={themeColors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+              <AppText type={ELEVEN} style={{ color: colors.placeholderColor }}>{pairQuote} Balance</AppText>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                {quoteBal} {pairQuote}
+              </AppText>
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+              <AppText type={ELEVEN} style={{ color: colors.placeholderColor }}>{pairBase} Balance</AppText>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                {baseBal} {pairBase}
+              </AppText>
+            </View>
+          </View>
+
+          <View style={[styles.assetsActionRow, { paddingHorizontal: 16 }]}>
+            <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}>
+              <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Deposit</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.SWAP_SCREEN)}>
+              <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Convert</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}>
+              <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Transfer</AppText>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 24, padding: 12, borderRadius: 8, backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", marginBottom: 12 }}>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{pairBase}/{pairQuote}</AppText>
+              <View style={{ backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                <AppText type={TEN} style={{ color: colors.placeholderColor }}>Isolated</AppText>
+              </View>
+            </View>
+
+            <View style={{ marginBottom: 16 }}>
+              <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>{pairQuote}</AppText>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                <AppText type={TEN} style={{ color: colors.placeholderColor }}>Available</AppText>
+                <AppText type={TEN} style={{ color: themeColors.text }}>{quoteBal}</AppText>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                <AppText type={TEN} style={{ color: colors.placeholderColor }}>In Order</AppText>
+                <AppText type={TEN} style={{ color: themeColors.text }}>{quoteLocked}</AppText>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <AppText type={TEN} style={{ color: colors.placeholderColor }}>Borrowed</AppText>
+                <AppText type={TEN} style={{ color: themeColors.red }}>{quoteBorrowed}</AppText>
+              </View>
+            </View>
+
+            <View>
+              <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>{pairBase}</AppText>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                <AppText type={TEN} style={{ color: colors.placeholderColor }}>Available</AppText>
+                <AppText type={TEN} style={{ color: themeColors.text }}>{baseBal}</AppText>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                <AppText type={TEN} style={{ color: colors.placeholderColor }}>In Order</AppText>
+                <AppText type={TEN} style={{ color: themeColors.text }}>{baseLocked}</AppText>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <AppText type={TEN} style={{ color: colors.placeholderColor }}>Borrowed</AppText>
+                <AppText type={TEN} style={{ color: themeColors.red }}>{baseBorrowed}</AppText>
+              </View>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <>
+        <View style={styles.assetsHeader}>
+          <View style={styles.assetsHeaderTitleRow}>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+              Spot Wallets
+            </AppText>
+            <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
+              <FastImage
+                source={Refresh}
+                style={{ width: 14, height: 14 }}
+                resizeMode="contain"
+                tintColor={themeColors.text}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.assetsActionRow}>
+          <TouchableOpacity
+            style={[styles.assetActionBtn, { backgroundColor: themeColors.green }]}
+            onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}
+          >
+            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+              Deposit
+            </AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
+            onPress={() => NavigationService.navigate(routes.SELECT_COIN_SCREEN)}
+          >
+            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+              Withdraw
+            </AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
+            onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
+          >
+            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
+              Transfer
+            </AppText>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.assetsListHeader}>
+          <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
+            Asset
+          </AppText>
+          <AppText
+            type={TWELVE}
+            style={[
+              styles.mtCell,
+              { color: themeColors.secondaryText, textAlign: "right" },
+            ]}
+          >
+            Balance
+          </AppText>
+        </View>
+
+        {filteredWallets.length > 0 ? (
+          filteredWallets.map((wallet, index) => (
+            <View key={wallet?._id || index} style={styles.assetRow}>
+              <View style={styles.assetInfo}>
+                <FastImage
+                  source={{ uri: `${IMAGE_BASE_URL}${wallet?.icon_path}` }}
+                  style={styles.assetIcon}
+                  resizeMode="contain"
+                />
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                  {wallet?.short_name}
+                </AppText>
+              </View>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
+                {parseFloat(Number(wallet?.balance || 0).toFixed(8))}
+              </AppText>
+            </View>
+          ))
+        ) : (
+          <View style={styles.noDataContainer}>
+            <FastImage source={NO_NOTIFICATION_ICON} resizeMode="contain" style={{ width: 80, height: 80 }} />
+          </View>
+        )}
+      </>
+    );
+  };
+
   const handleTabChange = (tab) => {
     if (!CHART_BOTTOM_TABS.includes(tab)) return;
     if (bottomSlidePair) return;
@@ -725,21 +916,22 @@ const SpotChartScreen = () => {
     if (!isFocused) return;
 
     // Manage exchange socket subscriptions reactively on pair change
+    const extraParams = tradeType === "Margin" ? { tradeType: "margin" } : {};
     const last = lastSubscribedExchangeRef.current;
-    if (last && (last.base_currency_id !== base || last.quote_currency_id !== quote)) {
-      unsubscribeFromExchange?.(last.base_currency_id, last.quote_currency_id);
+    if (last && (last.base_currency_id !== base || last.quote_currency_id !== quote || last.tradeType !== tradeType)) {
+      unsubscribeFromExchange?.(last.base_currency_id, last.quote_currency_id, last.extraParams);
     }
 
-    subscribeToExchange?.(base, quote);
-    lastSubscribedExchangeRef.current = { base_currency_id: base, quote_currency_id: quote };
+    subscribeToExchange?.(base, quote, extraParams);
+    lastSubscribedExchangeRef.current = { base_currency_id: base, quote_currency_id: quote, tradeType, extraParams };
 
-  }, [isFocused, mergedPair?.base_currency_id, mergedPair?.quote_currency_id, subscribeToExchange, unsubscribeFromExchange, dispatch]);
+  }, [isFocused, mergedPair?.base_currency_id, mergedPair?.quote_currency_id, subscribeToExchange, unsubscribeFromExchange, dispatch, tradeType]);
 
   useEffect(() => {
     return () => {
       const last = lastSubscribedExchangeRef.current;
       if (last?.base_currency_id != null && last?.quote_currency_id != null) {
-        unsubscribeFromExchange?.(last.base_currency_id, last.quote_currency_id);
+        unsubscribeFromExchange?.(last.base_currency_id, last.quote_currency_id, last.extraParams);
         lastSubscribedExchangeRef.current = null;
       }
     };
@@ -1194,11 +1386,11 @@ const SpotChartScreen = () => {
         name: routes.NAVIGATION_BOTTOM_TAB_STACK,
         params: {
           screen: routes.TRADE_SCREEN,
-          params: { spotTradeSide: side },
+          params: { spotTradeSide: side, activeTab: tradeType },
         },
       });
     },
-    [navigation]
+    [navigation, tradeType]
   );
 
   return (
@@ -1601,99 +1793,7 @@ const SpotChartScreen = () => {
                                     </AppText>
                                   </TouchableOpacity>
                                 </View>
-                              ) : (
-                                <>
-                                  <View style={styles.assetsHeader}>
-                                    <View style={styles.assetsHeaderTitleRow}>
-                                      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                                        Spot Wallets
-                                      </AppText>
-                                      <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
-                                        <FastImage
-                                          source={Refresh}
-                                          style={{ width: 14, height: 14 }}
-                                          resizeMode="contain"
-                                          tintColor={themeColors.text}
-                                        />
-                                      </TouchableOpacity>
-                                    </View>
-                                  </View>
-
-                                  <View style={styles.assetsActionRow}>
-                                    <TouchableOpacity
-                                      style={[styles.assetActionBtn, { backgroundColor: themeColors.green }]}
-                                      onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}
-                                    >
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                        Deposit
-                                      </AppText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
-                                      onPress={() => NavigationService.navigate(routes.SELECT_COIN_SCREEN)}
-                                    >
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                        Withdraw
-                                      </AppText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
-                                      onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
-                                    >
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                        Transfer
-                                      </AppText>
-                                    </TouchableOpacity>
-                                  </View>
-
-                                  <View style={styles.assetsListHeader}>
-                                    <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
-                                      Asset
-                                    </AppText>
-                                    <AppText
-                                      type={TWELVE}
-                                      style={[
-                                        styles.mtCell,
-                                        { color: themeColors.secondaryText, textAlign: "right" },
-                                      ]}
-                                    >
-                                      Balance
-                                    </AppText>
-                                  </View>
-
-                                  {filteredWallets.length > 0 ? (
-                                    filteredWallets.map((wallet, index) => (
-                                      <View key={wallet?._id || index} style={styles.assetRow}>
-                                        <View style={styles.assetInfo}>
-                                          <FastImage
-                                            source={{ uri: `${IMAGE_BASE_URL}${wallet?.icon_path}` }}
-                                            style={styles.assetIcon}
-                                            resizeMode="contain"
-                                          />
-                                          <AppText
-                                            type={TWELVE}
-                                            weight={SEMI_BOLD}
-                                            style={{ color: themeColors.text }}
-                                          >
-                                            {wallet?.short_name}
-                                          </AppText>
-                                        </View>
-                                        <AppText
-                                          type={TWELVE}
-                                          weight={SEMI_BOLD}
-                                          style={{ color: themeColors.text, textAlign: "right" }}
-                                        >
-                                          {parseFloat(Number(wallet?.balance || 0).toFixed(8))}
-                                        </AppText>
-                                      </View>
-                                    ))
-                                  ) : (
-                                    <View style={styles.noDataContainer}>
-                                      <FastImage source={NO_NOTIFICATION_ICON} resizeMode="contain" style={{ width: 80, height: 80 }} />
-                                    </View>
-                                  )}
-                                </>
-                              )}
+                              ) : renderAssetsTabContent()}
                             </View>
                           </View>
                         )}
@@ -1772,84 +1872,7 @@ const SpotChartScreen = () => {
                                     </AppText>
                                   </TouchableOpacity>
                                 </View>
-                              ) : (
-                                <>
-                                  <View style={styles.assetsHeader}>
-                                    <View style={styles.assetsHeaderTitleRow}>
-                                      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                                        Spot Wallets
-                                      </AppText>
-                                      <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
-                                        <FastImage
-                                          source={Refresh}
-                                          style={{ width: 14, height: 14 }}
-                                          resizeMode="contain"
-                                          tintColor={themeColors.text}
-                                        />
-                                      </TouchableOpacity>
-                                    </View>
-                                  </View>
-                                  <View style={styles.assetsActionRow}>
-                                    <TouchableOpacity
-                                      style={[styles.assetActionBtn, { backgroundColor: themeColors.green }]}
-                                      onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}
-                                    >
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                        Deposit
-                                      </AppText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
-                                      onPress={() => NavigationService.navigate(routes.SELECT_COIN_SCREEN)}
-                                    >
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                        Withdraw
-                                      </AppText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
-                                      onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
-                                    >
-                                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                        Transfer
-                                      </AppText>
-                                    </TouchableOpacity>
-                                  </View>
-                                  <View style={styles.assetsListHeader}>
-                                    <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
-                                      Asset
-                                    </AppText>
-                                    <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
-                                      Balance
-                                    </AppText>
-                                  </View>
-                                  {filteredWallets.length > 0 ? (
-                                    filteredWallets.map((wallet, index) => (
-                                      <View key={wallet?._id || index} style={styles.assetRow}>
-                                        <View style={styles.assetInfo}>
-                                          <FastImage
-                                            source={{ uri: `${IMAGE_BASE_URL}${wallet?.icon_path}` }}
-                                            style={styles.assetIcon}
-                                            resizeMode="contain"
-                                          />
-                                          <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                                            {wallet?.short_name}
-                                          </AppText>
-                                        </View>
-                                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
-                                          {parseFloat(Number(wallet?.balance || 0).toFixed(8))}
-                                        </AppText>
-                                      </View>
-                                    ))
-                                  ) : (
-                                    <View style={styles.noDataContainer}>
-                                      <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                                        No assets in spot wallet
-                                      </AppText>
-                                    </View>
-                                  )}
-                                </>
-                              )}
+                              ) : renderAssetsTabContent()}
                             </View>
                           </View>
                         )}
@@ -1935,84 +1958,7 @@ const SpotChartScreen = () => {
                                 </AppText>
                               </TouchableOpacity>
                             </View>
-                          ) : (
-                            <>
-                              <View style={styles.assetsHeader}>
-                                <View style={styles.assetsHeaderTitleRow}>
-                                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                                    Spot Wallets
-                                  </AppText>
-                                  <TouchableOpacity onPress={() => dispatch(getUserSpotWallet("spot"))}>
-                                    <FastImage
-                                      source={Refresh}
-                                      style={{ width: 14, height: 14 }}
-                                      resizeMode="contain"
-                                      tintColor={themeColors.text}
-                                    />
-                                  </TouchableOpacity>
-                                </View>
-                              </View>
-                              <View style={styles.assetsActionRow}>
-                                <TouchableOpacity
-                                  style={[styles.assetActionBtn, { backgroundColor: themeColors.green }]}
-                                  onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}
-                                >
-                                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                    Deposit
-                                  </AppText>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
-                                  onPress={() => NavigationService.navigate(routes.SELECT_COIN_SCREEN)}
-                                >
-                                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                    Withdraw
-                                  </AppText>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
-                                  onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
-                                >
-                                  <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
-                                    Transfer
-                                  </AppText>
-                                </TouchableOpacity>
-                              </View>
-                              <View style={styles.assetsListHeader}>
-                                <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText }]}>
-                                  Asset
-                                </AppText>
-                                <AppText type={TWELVE} style={[styles.mtCell, { color: themeColors.secondaryText, textAlign: "right" }]}>
-                                  Balance
-                                </AppText>
-                              </View>
-                              {filteredWallets.length > 0 ? (
-                                filteredWallets.map((wallet, index) => (
-                                  <View key={wallet?._id || index} style={styles.assetRow}>
-                                    <View style={styles.assetInfo}>
-                                      <FastImage
-                                        source={{ uri: `${IMAGE_BASE_URL}${wallet?.icon_path}` }}
-                                        style={styles.assetIcon}
-                                        resizeMode="contain"
-                                      />
-                                      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                                        {wallet?.short_name}
-                                      </AppText>
-                                    </View>
-                                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right" }}>
-                                      {parseFloat(Number(wallet?.balance || 0).toFixed(8))}
-                                    </AppText>
-                                  </View>
-                                ))
-                              ) : (
-                                <View style={styles.noDataContainer}>
-                                  <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                                    No assets in spot wallet
-                                  </AppText>
-                                </View>
-                              )}
-                            </>
-                          )}
+                          ) : renderAssetsTabContent()}
                         </View>
                       </View>
                     ) : null}
@@ -2123,7 +2069,7 @@ const SpotChartScreen = () => {
             activeOpacity={0.88}
           >
             <AppText weight={SEMI_BOLD} style={{ color: themePalette.white }}>
-              Buy
+              {tradeType === "Margin" ? "Margin Buy" : "Buy"}
             </AppText>
           </TouchableOpacity>
           <TouchableOpacity
@@ -2136,7 +2082,7 @@ const SpotChartScreen = () => {
             activeOpacity={0.88}
           >
             <AppText weight={SEMI_BOLD} style={{ color: themePalette.white }}>
-              Sell
+              {tradeType === "Margin" ? "Margin Sell" : "Sell"}
             </AppText>
           </TouchableOpacity>
         </View>
