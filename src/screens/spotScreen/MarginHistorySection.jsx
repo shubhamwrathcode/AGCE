@@ -199,7 +199,7 @@ const CustomDraggableSlider = ({ value, onValueChange, themeColors, isDark }) =>
   );
 };
 
-const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullScreen = false, initialTab = "size" }) => {
+const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullScreen = false, initialTab = "size", marginMode = "Isolated" }) => {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [subTab, setSubTab] = useState("borrow"); // used in Asset History tab
   const [tabData, setTabData] = useState({});
@@ -255,23 +255,36 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
     if (!isSilent) setLoading(true);
     try {
       let res;
+      const isCross = marginMode === "Cross";
+      
       if (activeTab === "size") {
-        res = await appOperation.get(`margin/position/${pairSymbol}`, undefined, undefined, CUSTOMER_TYPE);
-        if (res?.success) {
-          setDataList(res.data ? [res.data] : []);
+        if (isCross) {
+            res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
         } else {
-          setDataList([]);
+            res = await appOperation.get(`margin/position/${pairSymbol}`, undefined, undefined, CUSTOMER_TYPE);
         }
-      } else if (activeTab === "positionHistory") {
-        res = await appOperation.get(`margin/position/${pairSymbol}/history`, { page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
         if (res?.success) {
-          const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
+          const list = isCross ? (Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : [])) : (res.data ? [res.data] : []);
           setDataList(list);
         } else {
           setDataList([]);
         }
-      } else if (activeTab === "positions") {
-        res = await appOperation.get(`margin/orders/open`, { pair: pairSymbol, page: 1, limit: 100 }, undefined, CUSTOMER_TYPE);
+      } else if (activeTab === "positionHistory") {
+        // cross margin might not have positionHistory or it's named something else. Let's assume it doesn't or it uses margin/position history
+        if (isCross) {
+            setDataList([]); // Or a specific cross position history endpoint if it exists
+        } else {
+            res = await appOperation.get(`margin/position/${pairSymbol}/history`, { page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
+            if (res?.success) {
+              const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
+              setDataList(list);
+            } else {
+              setDataList([]);
+            }
+        }
+      } else if (activeTab === "positions") { // Open Orders
+        const endpoint = isCross ? `cross/orders/open` : `margin/orders/open`;
+        res = await appOperation.get(endpoint, { pair: pairSymbol, page: 1, limit: 100 }, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -279,7 +292,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
           setDataList([]);
         }
       } else if (activeTab === "orderHistory") {
-        res = await appOperation.get(`margin/orders/history`, { pair: pairSymbol, page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
+        const endpoint = isCross ? `cross/orders/history` : `margin/orders/history`;
+        res = await appOperation.get(endpoint, { pair: pairSymbol, page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -287,7 +301,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
           setDataList([]);
         }
       } else if (activeTab === "tradeHistory") {
-        res = await appOperation.get(`margin/trades`, { pair: pairSymbol, page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
+        const endpoint = isCross ? `cross/trades` : `margin/trades`;
+        res = await appOperation.get(endpoint, { pair: pairSymbol, page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -295,7 +310,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
           setDataList([]);
         }
       } else if (activeTab === "loanManagement") {
-        res = await appOperation.get(`margin/loans`, { pair: pairSymbol }, undefined, CUSTOMER_TYPE);
+        const endpoint = isCross ? `cross/debts` : `margin/loans`;
+        res = await appOperation.get(endpoint, { pair: pairSymbol }, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -303,10 +319,10 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
           setDataList([]);
         }
       } else if (activeTab === "assetHistory") {
-        const path = `margin/history/${subTab}`;
+        const endpoint = isCross ? `cross/history/${subTab}` : `margin/history/${subTab}`;
         const query = { page: 1, limit: 50 };
         if (pairId) query.pairId = pairId;
-        res = await appOperation.get(path, query, undefined, CUSTOMER_TYPE);
+        res = await appOperation.get(endpoint, query, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -320,7 +336,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
     } finally {
       if (!isSilent) setLoading(false);
     }
-  }, [activeTab, subTab, pairSymbol, pairId]);
+  }, [activeTab, subTab, pairSymbol, pairId, marginMode]);
 
   const getFilteredDataList = (tabId) => {
     let list = tabData[tabId] || [];
@@ -855,7 +871,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                   pair: `${baseSymbol}/${quoteSymbol}`,
                   coin: item?.coin || item?.asset,
                   activeTab: "Repay",
-                  loan: item
+                  loan: item,
+                  marginMode
                 });
               }}
               activeOpacity={0.8}

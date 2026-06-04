@@ -19,10 +19,13 @@ const AddFundsSheet = ({
   currencyData = {},
   themeColors,
   isDark,
+  marginMode = "Isolated",
   onClose,
 }) => {
   const quoteSymbol = currencyData?.quote_currency || "USDT";
   const quoteAvailable = coinBalance?.quote_currency_balance || 0;
+  
+  const isCross = marginMode === "Cross";
 
   const items = [
     {
@@ -33,7 +36,10 @@ const AddFundsSheet = ({
       icon: convertIcon,
       onPress: () => {
         onClose?.();
-        NavigationService.navigate(MARGIN_TRANSFER_SCREEN);
+        NavigationService.navigate(MARGIN_TRANSFER_SCREEN, {
+          fromWalletType: "spot",
+          toWalletType: isCross ? "cross_margin" : "margin"
+        });
       },
     },
     {

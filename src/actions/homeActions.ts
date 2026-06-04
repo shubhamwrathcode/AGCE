@@ -47,10 +47,14 @@ import {
   setSingleProject,
   setUserProjectTotalCommit,
   setUserProjectUpdateCommit,
+  setBuyOrders,
+  setSellOrders,
   setCommitDetails,
   setActivityLogs,
   setReferralList,
-  setMemeList
+  setMemeList,
+  setCrossAccount,
+  setCrossBorrowable,
 } from '../slices/homeSlice';
 import { AppDispatch } from '../store/store';
 import { getOpenOrders, getUserWallet } from './walletActions';
@@ -241,13 +245,22 @@ export const addToFavorites =
   };
 
 export const getPastOrders =
-  (data: PastOrdersProps, options?: { useGlobalLoader?: boolean }) =>
+  (data: PastOrdersProps & { tradeType?: string }, options?: { useGlobalLoader?: boolean }) =>
     async (dispatch: AppDispatch) => {
       const useLoader = options?.useGlobalLoader !== false;
       try {
         if (useLoader) dispatch(setLoading(true));
-        const response: any = await appOperation.customer.past_orders(data);
-        // console.log(response, "getPastOrders");
+        let response: any;
+        if (data.tradeType === "cross") {
+          response = await appOperation.customer.crossOrderHistory({
+            pair: data.pair,
+            page: 1,
+            limit: 20
+          });
+        } else {
+          response = await appOperation.customer.past_orders(data);
+        }
+        
         if (response.success) {
           const items = Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.items) ? response.data.items : (Array.isArray(response?.data?.data) ? response.data.data : []));
           dispatch(setPastOrders(items));
@@ -283,14 +296,22 @@ export const getHistoricData =
   };
 
 export const cancelOrder =
-  (data: CancelOrderProps) => async (dispatch: AppDispatch) => {
+  (data: CancelOrderProps & { tradeType?: string }) => async (dispatch: AppDispatch) => {
     try {
-      const response: any = await appOperation.customer.cancel_order(data);
+      let response: any;
+      if (data.tradeType === 'cross') {
+        response = await appOperation.customer.crossCancelOrder(data.order_id);
+      } else {
+        response = await appOperation.customer.cancel_order(data);
+      }
+      
       // Web parity: TradePage/index.js `cancelOrder` — `if (result?.success) { … } else { alertErrorMessage(result?.message); }`
       if (response?.success) {
         showSuccess("Order Cancelled Successfully");
         dispatch(onCancelOrder(data.order_id));
-        dispatch(getOpenOrders(0, 10));
+        if (data.tradeType !== 'cross') {
+          dispatch(getOpenOrders(0, 10)); // Maybe we'll need crossOpenOrders later
+        }
         return { ...response, success: true };
       }
       showError(response?.message || "Failed to cancel order");
@@ -303,11 +324,17 @@ export const cancelOrder =
   };
 
 export const placeOrder =
-  (data: PlaceOrderProps, setVisible: any) => async (dispatch: AppDispatch) => {
+  (data: PlaceOrderProps & { tradeType?: string }, setVisible: any) => async (dispatch: AppDispatch) => {
     try {
       dispatch(setLoading(true));
-      const { total: _orderTotalUi, ...spotOrderBody } = data;
-      const response: any = await appOperation.customer.place_order(spotOrderBody);
+      const { total: _orderTotalUi, tradeType, ...spotOrderBody } = data;
+      let response: any;
+      
+      if (tradeType === 'cross') {
+        response = await appOperation.customer.crossPlaceOrder(spotOrderBody);
+      } else {
+        response = await appOperation.customer.place_order(spotOrderBody);
+      }
 
       if (response.success) {
         dispatch(setOrderData(data));
@@ -323,6 +350,28 @@ export const placeOrder =
       dispatch(setLoading(false));
     }
   };
+
+export const getCrossAccount = () => async (dispatch: AppDispatch) => {
+  try {
+    const response: any = await appOperation.customer.crossAccount();
+    if (response?.success) {
+      dispatch(setCrossAccount(response?.data));
+    }
+  } catch (e) {
+    logger(e);
+  }
+};
+
+export const getCrossBorrowable = (currency_id: string) => async (dispatch: AppDispatch) => {
+  try {
+    const response: any = await appOperation.customer.crossBorrowable(currency_id);
+    if (response?.success) {
+      dispatch(setCrossBorrowable({ currency_id, data: response?.data }));
+    }
+  } catch (e) {
+    logger(e);
+  }
+};
 
 export const closePosition =
   (data: any) => async (dispatch: AppDispatch) => {

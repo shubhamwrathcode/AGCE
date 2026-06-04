@@ -429,6 +429,101 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('user/favorite-coin', data, CUSTOMER_TYPE),
 
   // ============================================================================
+  // Cross Margin APIs
+  // ============================================================================
+  crossAccount: () =>
+    appOperation.get('cross/account', undefined, undefined, CUSTOMER_TYPE),
+  crossTransfer: (data: any) =>
+    appOperation.post('cross/transfer', data, CUSTOMER_TYPE),
+  crossTransferHistory: (opts?: { page?: number; limit?: number; direction?: string; currency_id?: string }) => {
+    const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 20) });
+    if (opts?.direction) p.set("direction", opts.direction);
+    if (opts?.currency_id) p.set("currency_id", opts.currency_id);
+    return appOperation.get(`cross/transfer-history?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  crossBorrow: (data: { currency_id: string; amount: string | number }) =>
+    appOperation.post('cross/borrow', { currency_id: data.currency_id, amount: String(data.amount) }, CUSTOMER_TYPE),
+  crossRepay: (data: { currency_id: string; amount?: string | number }) => {
+    const body: any = { currency_id: data.currency_id };
+    if (data.amount != null) body.amount = String(data.amount);
+    return appOperation.post('cross/repay', body, CUSTOMER_TYPE);
+  },
+  crossDebts: () =>
+    appOperation.get('cross/debts', undefined, undefined, CUSTOMER_TYPE),
+  crossBorrowable: (currency_id: string) =>
+    appOperation.get(`cross/borrowable?currency_id=${currency_id}`, undefined, undefined, CUSTOMER_TYPE),
+  crossPositions: () =>
+    appOperation.get('cross/positions', undefined, undefined, CUSTOMER_TYPE),
+  crossRisk: () =>
+    appOperation.get('cross/risk', undefined, undefined, CUSTOMER_TYPE),
+  crossPnl: (period: string = "all") =>
+    appOperation.get(`cross/pnl?period=${period}`, undefined, undefined, CUSTOMER_TYPE),
+  crossPlaceOrder: (payload: any) =>
+    appOperation.post('cross/order', payload, CUSTOMER_TYPE),
+  crossClosePosition: (data: { pair?: string; pair_id?: string; quantity?: string | number }) => {
+    const body: any = {};
+    if (data.pair) body.pair = data.pair;
+    if (data.pair_id) body.pair_id = data.pair_id;
+    if (data.quantity != null) body.quantity = String(data.quantity);
+    return appOperation.post('cross/position/close', body, CUSTOMER_TYPE);
+  },
+  crossCancelOrder: (orderId: string) =>
+    appOperation.delete(`cross/order/${orderId}`, null, CUSTOMER_TYPE),
+  crossOpenOrders: (opts?: { pair?: string; page?: number; limit?: number }) => {
+    const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 100) });
+    if (opts?.pair) p.set("pair", opts.pair);
+    return appOperation.get(`cross/orders/open?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  crossOrderHistory: (opts?: { pair?: string; status?: string; start_date?: string; end_date?: string; page?: number; limit?: number }) => {
+    const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 20) });
+    if (opts?.pair) p.set("pair", opts.pair);
+    if (opts?.status) p.set("status", opts.status);
+    if (opts?.start_date) p.set("start_date", opts.start_date);
+    if (opts?.end_date) p.set("end_date", opts.end_date);
+    return appOperation.get(`cross/orders/history?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  crossTrades: (opts?: { pair?: string; side?: string; start_date?: string; end_date?: string; page?: number; limit?: number }) => {
+    const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 20) });
+    if (opts?.pair) p.set("pair", opts.pair);
+    if (opts?.side && opts.side !== "All") p.set("side", opts.side);
+    if (opts?.start_date) p.set("start_date", opts.start_date);
+    if (opts?.end_date) p.set("end_date", opts.end_date);
+    return appOperation.get(`cross/trades?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  crossBorrowHistory: (opts?: { page?: number; limit?: number; asset?: string; currency_id?: string; start_date?: string; end_date?: string }) => {
+    const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 100) });
+    if (opts?.asset) p.set("asset", opts.asset);
+    if (opts?.currency_id) p.set("currency_id", opts.currency_id);
+    if (opts?.start_date) p.set("start_date", opts.start_date);
+    if (opts?.end_date) p.set("end_date", opts.end_date);
+    return appOperation.get(`cross/history/borrow?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  crossRepayHistory: (opts?: { page?: number; limit?: number; asset?: string; currency_id?: string; start_date?: string; end_date?: string }) => {
+    const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 100) });
+    if (opts?.asset) p.set("asset", opts.asset);
+    if (opts?.currency_id) p.set("currency_id", opts.currency_id);
+    if (opts?.start_date) p.set("start_date", opts.start_date);
+    if (opts?.end_date) p.set("end_date", opts.end_date);
+    return appOperation.get(`cross/history/repay?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  crossInterestHistory: (opts?: { page?: number; limit?: number; asset?: string; currency_id?: string; start_date?: string; end_date?: string }) => {
+    const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 100) });
+    if (opts?.asset) p.set("asset", opts.asset);
+    if (opts?.currency_id) p.set("currency_id", opts.currency_id);
+    if (opts?.start_date) p.set("start_date", opts.start_date);
+    if (opts?.end_date) p.set("end_date", opts.end_date);
+    return appOperation.get(`cross/history/interest?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  crossLedger: (opts?: { page?: number; limit?: number; asset?: string; currency_id?: string; start_date?: string; end_date?: string }) => {
+    const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 100) });
+    if (opts?.asset) p.set("asset", opts.asset);
+    if (opts?.currency_id) p.set("currency_id", opts.currency_id);
+    if (opts?.start_date) p.set("start_date", opts.start_date);
+    if (opts?.end_date) p.set("end_date", opts.end_date);
+    return appOperation.get(`cross/history/ledger?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+
+  // ============================================================================
   // AirDrop (same as web AirDrop page)
   // ============================================================================
   /** Same as web: GET /v1/user/getOtherSettings */

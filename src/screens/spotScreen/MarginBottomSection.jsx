@@ -9,6 +9,9 @@ const MarginBottomSection = ({
   quote_currency,
   base_currency,
   coinBalance,
+  marginMode,
+  crossAccount,
+  crossBorrowable,
   isBuy,
   onSubmit,
   themeColors,
@@ -25,13 +28,36 @@ const MarginBottomSection = ({
 }) => {
   const leverage = parseInt(marginLeverage, 10) || 5;
 
-  const netEquity = Number(coinBalance?.net_equity) || 0;
-  const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance?.quote_remaining_capacity) : null;
-  const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance?.base_remaining_capacity) : null;
-  const baseEquityVal = coinBalance?.base_equity != null ? Number(coinBalance?.base_equity) : Math.max(0, bCap || 0);
+  const isCross = marginMode === "Cross";
 
-  const quoteAvailable = netEquity;
-  const baseAvailable = baseEquityVal;
+  // Isolated Margin Extract
+  const isoNetEquity = Number(coinBalance?.net_equity) || 0;
+  const isoQCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance?.quote_remaining_capacity) : null;
+  const isoBCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance?.base_remaining_capacity) : null;
+  const isoBaseEquityVal = coinBalance?.base_equity != null ? Number(coinBalance?.base_equity) : Math.max(0, isoBCap || 0);
+
+  // Cross Margin Extract
+  const crossSummary = crossAccount?.summary || {};
+  const crossAssets = crossAccount?.assets || [];
+  const crossNetEquity = Number(crossSummary?.net_equity) || 0;
+  
+  // Find base and quote assets in crossAccount
+  const baseAsset = crossAssets.find(a => a.currency === base_currency) || {};
+  const quoteAsset = crossAssets.find(a => a.currency === quote_currency) || {};
+  const crossBaseEquityVal = Number(baseAsset.available) || 0; // Using available for cross base equity roughly
+  const crossQuoteEquityVal = Number(quoteAsset.available) || 0;
+  
+  const bBorrowableData = crossBorrowable && base_currency ? crossBorrowable[coinBalance?.base_currency_id] : null;
+  const qBorrowableData = crossBorrowable && quote_currency ? crossBorrowable[coinBalance?.quote_currency_id] : null;
+  const crossBCap = bBorrowableData?.borrowable ?? bBorrowableData?.max_borrow ?? null;
+  const crossQCap = qBorrowableData?.borrowable ?? qBorrowableData?.max_borrow ?? null;
+
+  const netEquity = isCross ? crossNetEquity : isoNetEquity;
+  const qCap = isCross ? crossQCap : isoQCap;
+  const bCap = isCross ? crossBCap : isoBCap;
+  
+  const quoteAvailable = isCross ? crossQuoteEquityVal : netEquity;
+  const baseAvailable = isCross ? crossBaseEquityVal : isoBaseEquityVal;
 
   const fmt = (val) => {
     if (val == null || !Number.isFinite(Number(val))) return "0";
@@ -49,11 +75,19 @@ const MarginBottomSection = ({
   const baseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
 
   let borrowingVal = 0;
-  if (isBuy) {
-    const V = inputQty * inputPx;
-    borrowingVal = V > 0 ? Math.max(0, V * (1 - 1 / leverage)) : 0;
+  if (isCross) {
+    if (isBuy) {
+        borrowingVal = qCap || 0;
+    } else {
+        borrowingVal = bCap || 0;
+    }
   } else {
-    borrowingVal = inputQty > 0 ? Math.max(0, inputQty - baseAvailable) : 0;
+    if (isBuy) {
+      const V = inputQty * inputPx;
+      borrowingVal = V > 0 ? Math.max(0, V * (1 - 1 / leverage)) : 0;
+    } else {
+      borrowingVal = inputQty > 0 ? Math.max(0, inputQty - baseAvailable) : 0;
+    }
   }
 
   const availValue = isBuy ? quoteAvailable : baseAvailable;

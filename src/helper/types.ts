@@ -17,6 +17,8 @@ export interface HomeSliceProps {
   referCount: number;
   spotOpenOrders: [];
   socketLoading: boolean;
+  crossAccount?: any;
+  crossBorrowable?: any;
   favoriteArray: string[];
   favoriteArrayLoaded: boolean;
   openOrders: any[] | null;

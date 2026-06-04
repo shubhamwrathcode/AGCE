@@ -16,6 +16,8 @@ const MarginHeaderDropdowns = ({
   universalPaddingHorizontal,
   styles,
   coinBalance = {},
+  crossAccount,
+  crossBorrowable,
   currencyData = {},
   formatTotal,
 }) => {
@@ -25,10 +27,22 @@ const MarginHeaderDropdowns = ({
   const [leverageDraft, setLeverageDraft] = useState(parseInt(marginLeverage, 10) || 5);
 
   const quoteSymbol = currencyData?.quote_currency || "USDT";
-  const netEquity = coinBalance?.quote_currency_balance || 0;
-  const currentLoan = coinBalance?.quote_currency_borrowed || 0;
+  
+  // Isolated Margin Data
+  const isolatedNetEquity = coinBalance?.quote_currency_balance || 0;
+  const isolatedCurrentLoan = coinBalance?.quote_currency_borrowed || 0;
   const minLeverage = currencyData?.margin_config?.min_leverage ?? 2;
   const maxLeverage = currencyData?.margin_config?.max_leverage ?? 20;
+
+  // Cross Margin Data
+  const isCross = marginMode === "Cross";
+  const crossSummary = crossAccount?.summary || {};
+  const crossNetEquity = crossSummary?.net_equity || 0;
+  const crossCurrentLoan = crossSummary?.total_liability || 0;
+  const crossMarginLevel = crossSummary?.margin_level || 0;
+  
+  const netEquity = isCross ? crossNetEquity : isolatedNetEquity;
+  const currentLoan = isCross ? crossCurrentLoan : isolatedCurrentLoan;
 
   const fmt = (n) => {
     const val = Number(n) || 0;

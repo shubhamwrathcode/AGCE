@@ -72,15 +72,24 @@ const MarginBorrowRepay = () => {
   const isBorrow = activeTab === "Borrow";
   const isCoinBase = selectedAsset === baseSymbol;
 
+  const marginMode = route?.params?.marginMode || "Isolated";
+  const isCross = marginMode === "Cross";
+
   const fetchLive = useCallback(() => {
-    if (!pairId) {
-      console.warn("MarginBorrowRepay: Missing pairId. Cannot fetch live data.");
-      return;
+    if (isCross) {
+      appOperation.get(`cross/account`, undefined, undefined, CUSTOMER_TYPE)
+        .then((res) => { if (res?.success) setLiveData(res.data); })
+        .catch(() => { });
+    } else {
+      if (!pairId) {
+        console.warn("MarginBorrowRepay: Missing pairId. Cannot fetch live data.");
+        return;
+      }
+      appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
+        .then((res) => { if (res?.success) setLiveData(res.data); })
+        .catch(() => { });
     }
-    appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
-      .then((res) => { if (res?.success) setLiveData(res.data); })
-      .catch(() => { });
-  }, [pairId]);
+  }, [pairId, isCross]);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,45 +97,56 @@ const MarginBorrowRepay = () => {
     }, [fetchLive])
   );
 
-  const borrowable = isCoinBase
-    ? (liveData?.borrowable?.base ?? "0")
-    : (liveData?.borrowable?.quote ?? "0");
+  const borrowable = isCross
+    ? (isCoinBase ? (liveData?.borrowable?.base ?? "0") : (liveData?.borrowable?.quote ?? "0")) // Note: Cross account might not return borrowable directly like this. It requires cross/borrowable API. Let's see if we have crossBorrowable in redux.
+    : (isCoinBase ? (liveData?.borrowable?.base ?? "0") : (liveData?.borrowable?.quote ?? "0"));
+    
+  // Wait, I will use redux crossBorrowable instead if isCross
+  const crossBorrowableMap = useSelector((state) => state.home.crossBorrowable) || {};
+  const selectedCurrencyId = isCoinBase ? currentPairItem?.base_currency_id : currentPairItem?.quote_currency_id;
+  const crossBorrowData = crossBorrowableMap[selectedCurrencyId] || {};
+  const cBorrowable = crossBorrowData?.borrowable ?? crossBorrowData?.max_borrow ?? "0";
 
-  const borrowed = isCoinBase
-    ? (liveData?.balances?.base_borrowed ?? loan?.outstanding ?? "0")
-    : (liveData?.balances?.quote_borrowed ?? loan?.outstanding ?? "0");
+  const finalBorrowable = isCross ? cBorrowable : borrowable;
+
+  const getCrossAsset = (symbol) => {
+    if (!liveData?.assets) return null;
+    return liveData.assets.find(a => a.currency === symbol) || null;
+  };
+
+  const borrowed = isCross
+    ? (getCrossAsset(selectedAsset)?.borrowed || "0")
+    : (isCoinBase ? (liveData?.balances?.base_borrowed ?? loan?.outstanding ?? "0") : (liveData?.balances?.quote_borrowed ?? loan?.outstanding ?? "0"));
 
   const sellCoinBal = coinBalance?.base_currency_balance;
   const buyCoinBal = coinBalance?.quote_currency_balance;
 
   // Margin balances take precedence over spot balance
-  const available = isCoinBase
-    ? (liveData?.balances?.base_available ?? sellCoinBal ?? "0")
-    : (liveData?.balances?.quote_available ?? buyCoinBal ?? "0");
+  const available = isCross
+    ? (getCrossAsset(selectedAsset)?.available || "0")
+    : (isCoinBase ? (liveData?.balances?.base_available ?? sellCoinBal ?? "0") : (liveData?.balances?.quote_available ?? buyCoinBal ?? "0"));
 
-  const ml = liveData?.margin_level != null ? parseFloat(liveData.margin_level) : null;
-  const marginLevelDisplay = ml === null ? "13.52" : ml >= 999 ? "∞" : ml.toFixed(2);
-  const liqPriceRaw = liveData?.est_liq_price ?? "";
+  const ml = isCross ? (liveData?.summary?.margin_level != null ? parseFloat(liveData.summary.margin_level) : null) : (liveData?.margin_level != null ? parseFloat(liveData.margin_level) : null);
+  const marginLevelDisplay = ml === null ? (isCross ? "—" : "13.52") : ml >= 999 ? "∞" : ml.toFixed(2);
+  const liqPriceRaw = isCross ? (liveData?.summary?.est_liq_price ?? "") : (liveData?.est_liq_price ?? "");
   const liqPrice = liqPriceRaw ? parseFloat(liqPriceRaw).toFixed(2) : "—";
 
-  const hourlyRate = liveData?.interest?.hourly_pct != null
-    ? `${liveData.interest.hourly_pct}%`
-    : loan?.hourly_rate_pct != null
-      ? `${loan.hourly_rate_pct}%`
-      : selectedAsset === "BTC" ? "0.00125000%" : "0.00200000%";
+  const crossInterest = getCrossAsset(selectedAsset);
+  
+  const hourlyRate = isCross
+    ? (crossInterest?.hourly_interest_rate_pct != null ? `${crossInterest.hourly_interest_rate_pct}%` : "0.00200000%")
+    : (liveData?.interest?.hourly_pct != null ? `${liveData.interest.hourly_pct}%` : loan?.hourly_rate_pct != null ? `${loan.hourly_rate_pct}%` : selectedAsset === "BTC" ? "0.00125000%" : "0.00200000%");
 
-  const annualRate = liveData?.interest?.annualized_pct != null
-    ? `${liveData.interest.annualized_pct}%`
-    : loan?.apr_pct != null
-      ? `${loan.apr_pct}%`
-      : selectedAsset === "BTC" ? "10.950000%" : "17.520000%";
+  const annualRate = isCross
+    ? (crossInterest?.annual_interest_rate_pct != null ? `${crossInterest.annual_interest_rate_pct}%` : "17.520000%")
+    : (liveData?.interest?.annualized_pct != null ? `${liveData.interest.annualized_pct}%` : loan?.apr_pct != null ? `${loan.apr_pct}%` : selectedAsset === "BTC" ? "10.950000%" : "17.520000%");
 
   const handleConfirm = async () => {
     if (!amount || parseFloat(amount) <= 0) {
       SimpleToast.show(`Please enter a valid ${isBorrow ? "loan" : "repayment"} amount`);
       return;
     }
-    if (isBorrow && parseFloat(amount) > parseFloat(borrowable || 0)) {
+    if (isBorrow && parseFloat(amount) > parseFloat(finalBorrowable || 0)) {
       SimpleToast.show("Amount exceeds borrowable limit");
       return;
     }
@@ -136,12 +156,23 @@ const MarginBorrowRepay = () => {
     }
     setBusy(true);
     try {
-      const assetType = isCoinBase ? "base" : "quote";
-      const endpoint = isBorrow ? "margin/borrow" : "margin/repay";
-      const pairIdToUse = loan?.pair_id || pairId;
-      const payload = { pairId: pairIdToUse, assetType, amount: String(amount) };
-      console.log("[MarginBorrowRepay] Payload:", payload);
-      const res = await appOperation.post(endpoint, payload, CUSTOMER_TYPE);
+      let res;
+      if (isCross) {
+        if (!selectedCurrencyId) throw new Error("Currency ID not found");
+        if (isBorrow) {
+            res = await appOperation.customer.crossBorrow({ currency_id: selectedCurrencyId, amount });
+        } else {
+            res = await appOperation.customer.crossRepay({ currency_id: selectedCurrencyId, amount });
+        }
+      } else {
+        const assetType = isCoinBase ? "base" : "quote";
+        const endpoint = isBorrow ? "margin/borrow" : "margin/repay";
+        const pairIdToUse = loan?.pair_id || pairId;
+        const payload = { pairId: pairIdToUse, assetType, amount: String(amount) };
+        console.log("[MarginBorrowRepay] Payload:", payload);
+        res = await appOperation.post(endpoint, payload, CUSTOMER_TYPE);
+      }
+      
       if (res?.success) {
         SimpleToast.show(res.message || `${isBorrow ? "Borrowed" : "Repaid"} ${amount} ${selectedAsset} successfully`);
         setAmount("");
@@ -335,7 +366,7 @@ const MarginBorrowRepay = () => {
           />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <AppText style={{ color: themeColors.text, fontSize: 14 }}>{selectedAsset}</AppText>
-            <TouchableOpacity onPress={() => setAmount(String(parseFloat(isBorrow ? borrowable : borrowed)))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={() => setAmount(String(parseFloat(isBorrow ? finalBorrowable : borrowed)))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <AppText style={{ color: themeColors.text, fontSize: 14 }}>All</AppText>
             </TouchableOpacity>
           </View>
@@ -359,7 +390,7 @@ const MarginBorrowRepay = () => {
               <View style={styles.detailRow}>
                 <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Maximum Borrow Amount</AppText>
                 <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
-                  {parseFloat(borrowable || 0).toFixed(8)} {selectedAsset}
+                  {parseFloat(finalBorrowable || 0).toFixed(8)} {selectedAsset}
                 </AppText>
               </View>
               <View style={styles.detailRow}>

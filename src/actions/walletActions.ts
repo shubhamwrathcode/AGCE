@@ -825,17 +825,28 @@ function spotMeOpenOrdersItemsFromResponse(response: any): any[] {
   return [];
 }
 
-export const getOpenOrders = (skip: any, limit: any) => async (dispatch: AppDispatch) => {
+export const getOpenOrders = (skip: any, limit: any, tradeType?: string, pair?: string) => async (dispatch: AppDispatch) => {
   try {
     if (skip === 0) dispatch(clearOpenOrders());
     dispatch(setLoading(true));
     const lim = Number(limit) > 0 ? Number(limit) : 10;
     const sk = Number(skip) >= 0 ? Number(skip) : 0;
     const page = Math.floor(sk / lim) + 1;
-    const response: any = await appOperation.customer.spot_me_orders_open({
-      page,
-      page_size: lim,
-    });
+    let response: any;
+    
+    if (tradeType === "cross") {
+      response = await appOperation.customer.crossOpenOrders({
+        page,
+        limit: lim,
+        pair
+      });
+    } else {
+      response = await appOperation.customer.spot_me_orders_open({
+        page,
+        page_size: lim,
+      });
+    }
+    
     const items = spotMeOpenOrdersItemsFromResponse(response);
     if (response.success) {
       dispatch(setOpenOrders(items));

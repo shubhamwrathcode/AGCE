@@ -1,4 +1,3 @@
-
 import {
   View,
   StyleSheet,
@@ -17,7 +16,6 @@ import {
   Modal,
   Pressable,
 } from "react-native";
-
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -31,7 +29,6 @@ import React, {
   useMemo,
   memo,
 } from "react";
-
 import SpotHeader from "../../shared/components/spotHeader/SpotHeader";
 import FastImage from "react-native-fast-image";
 import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
@@ -40,10 +37,8 @@ import ConvertSection from "./ConvertSection";
 import {
   checkIc,
   downIcon,
-  folder,
   INFO,
   limitTrade,
-  linkIcon,
   market_ic,
   NO_NOTIFICATION_ICON,
   NO_NOTIFICATION_ICON_LIGHT,
@@ -53,14 +48,10 @@ import {
   Refresh,
   REMOVE,
   right_ic,
-  buyImage,
-  selImage,
   spotLimitTrade,
   spotMarket,
   tick,
   trade_btn,
-  upDownIc,
-  upIcon,
 } from "../../helper/ImageAssets";
 import AddFundsSheet from "./AddFundsSheet";
 import MarginHistorySection from "./MarginHistorySection";
@@ -69,10 +60,6 @@ import {
   multiply,
   percentCalculation,
   toFixedEight,
-  toFixedFive,
-  toFixedSix,
-  toFixedThree,
-  twoFixedTwo,
   spotOpenOrderMarketLabel,
   tradeHistoryBaseAsset,
 } from "../../helper/utility";
@@ -81,15 +68,12 @@ import { fontFamily, fontFamilyMedium, fontFamilySemiBold } from "../../theme/ty
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { universalPaddingHorizontal, borderWidth } from "../../theme/dimens";
-
 /** Same vertical space between Buy/Sell column sections (tabs → fields → slider → IOC → assets → CTA → footer). */
 const SPOT_ORDER_V_GAP = 8;
 import {
   AppText,
   BOLD,
   Button,
-  CommonModal,
-  Input,
   MEDIUM,
   SEMI_BOLD,
   TEN,
@@ -104,12 +88,9 @@ import { getPastOrders } from "../../actions/homeActions";
 import { getTradeHistory } from "../../actions/walletActions";
 import {
   setBuyOrders,
-  setCoinData,
-  setOpenOrders,
   setPastOrders,
-  setRandom, setRecentTrades,
+  setRecentTrades,
   setSellOrders,
-  setSocket,
   setSpotSelectedPair,
 } from "../../slices/homeSlice";
 import { clearTradeHistory } from "../../slices/walletSlice";
@@ -118,28 +99,22 @@ import { useFocusEffect, useIsFocused, useRoute, useNavigation } from "@react-na
 import { useDispatch, useSelector } from "react-redux";
 import LinearGradient from "react-native-linear-gradient";
 import {
-  ACCOUNT_SCREEN,
   DEPOSIT_COIN_SCREEN,
-  DEPOSIT_WALLET_SCREEN,
-  KYC_STATUS_SCREEN,
   MARKET_SCREEN,
   OPEN_ORDER_SCREEN,
   SPOT_ORDER_HISTORY_DETAIL,
   SPOT_CHART_SCREEN,
   MARGIN_TRANSFER_SCREEN,
-  WALLET_WITHDRAW_SCREEN,
   SELECT_COIN_SCREEN,
   MARGIN_BORROW_REPAY_SCREEN,
 } from "../../navigation/routes";
-import { cancelOrder, placeOrder } from "../../actions/homeActions";
+import { cancelOrder, placeOrder, getCrossAccount, getCrossBorrowable } from "../../actions/homeActions";
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
 import NavigationService from "../../navigation/NavigationService";
 import moment from "moment";
 import { useTheme } from "../../hooks/useTheme";
 import { SocketContext } from "../../SocketProvider";
-import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { showError } from "../../helper/logger";
-
 const { width: Width, height: WindowHeight } = Dimensions.get("window");
 
 export const DataLimit = [
@@ -211,11 +186,6 @@ function matchesOpenOrderKind(item, kind) {
 
 function tradeHistoryMarketLabel(item, selectedBase, selectedQuote) {
   return spotOpenOrderMarketLabel(item, selectedBase, selectedQuote);
-}
-
-function tradeHistoryQuoteAsset(item, selectedBase, selectedQuote) {
-  const parts = spotOpenOrderMarketLabel(item, selectedBase, selectedQuote).split("/");
-  return parts.length === 2 ? parts[1] : "";
 }
 
 /**
@@ -623,7 +593,7 @@ const OrderBookPanel = memo(({
         >
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => navigation.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}` })}
+            onPress={() => navigation.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}`, marginMode })}
             style={{
               backgroundColor: isDark ? "#2C2C2E" : "#E5E5EA",
               paddingHorizontal: 6,
@@ -779,7 +749,6 @@ const OrderBookSection = memo(({
   const { theme, colors: themeColors, isDark } = useTheme();
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
   const sellOrders = useAppSelector((state) => state.home.sellOrders);
-
   const orderBookAggOptions = useMemo(() => getSpotOrderBookAggOptionsForPair(tickSize), [tickSize]);
   const [orderBookAggStep, setOrderBookAggStep] = useState(SPOT_ORDER_BOOK_AGG_DEFAULTS[0]);
   const [orderBookAggOpen, setOrderBookAggOpen] = useState(false);
@@ -1097,6 +1066,8 @@ const Spot = () => {
   const coinData = useAppSelector((state) => state.home.coinData);
   const spotSelectedPair = useAppSelector((state) => state.home.spotSelectedPair);
   const coinBalance = useAppSelector((state) => state.home.coinBalance);
+  const crossAccount = useAppSelector((state) => state.home.crossAccount);
+  const crossBorrowable = useAppSelector((state) => state.home.crossBorrowable);
   const userData = useAppSelector((state) => state.auth.userData);
   const socket = useAppSelector((state) => state.home.socket);
   const openOrders = useAppSelector((state) => state.home.spotOpenOrders);
@@ -1597,6 +1568,21 @@ const Spot = () => {
   }, [route?.params?.activeTab]);
   const [marginMode, setMarginMode] = useState("Isolated");
   const [marginLeverage, setMarginLeverage] = useState("5x");
+
+  useEffect(() => {
+    if (headerTab === "Margin" && marginMode === "Cross") {
+      dispatch(getCrossAccount());
+
+      const baseId = currencyData?.base_currency_id || currentCurrencyRef.current?.base_currency_id;
+      const quoteId = currencyData?.quote_currency_id || currentCurrencyRef.current?.quote_currency_id;
+      if (baseId) {
+        dispatch(getCrossBorrowable(baseId));
+      }
+      if (quoteId) {
+        dispatch(getCrossBorrowable(quoteId));
+      }
+    }
+  }, [headerTab, marginMode, currencyData?.base_currency_id, currencyData?.quote_currency_id, dispatch]);
   const [tpSlEnabled, setTpSlEnabled] = useState(false);
   const [tpPrice, setTpPrice] = useState("");
   const [slPrice, setSlPrice] = useState("");
@@ -1738,7 +1724,7 @@ const Spot = () => {
       }
       const currentPair = currentCurrencyRef.current || currency;
       if (currentPair?.base_currency_id && currentPair?.quote_currency_id) {
-        const tradeType = headerTab === "Margin" ? "margin" : "spot";
+        const tradeType = headerTab === "Margin" ? (marginMode === "Cross" ? "cross" : "margin") : "spot";
         const newKey = `${currentPair.base_currency_id}-${currentPair.quote_currency_id}-${tradeType}`;
         const lastExchange = lastSubscribedExchangeRef.current;
         const alreadySubscribed =
@@ -1755,7 +1741,7 @@ const Spot = () => {
           if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
             unsubscribeFromExchange(lastExchange.base_currency_id, lastExchange.quote_currency_id);
           }
-          const extraParams = headerTab === "Margin" ? { tradeType: "margin", pairId: currentPair?._id } : {};
+          const extraParams = headerTab === "Margin" ? { tradeType, pairId: currentPair?._id } : {};
           subscribeToExchange(currentPair.base_currency_id, currentPair.quote_currency_id, extraParams);
           lastSubscribedExchangeRef.current = {
             base_currency_id: currentPair.base_currency_id,
@@ -1811,7 +1797,7 @@ const Spot = () => {
         /** Do not unsubscribe or clear the order book on blur (e.g. opening SpotChartScreen).
          *  SocketProvider keeps one exchange subscription; Redux keeps last book until pair changes or Spot unmounts. */
       };
-    }, [subscribeToExchange, unsubscribeFromExchange, currency, dispatch, headerTab])
+    }, [subscribeToExchange, unsubscribeFromExchange, currency, dispatch, headerTab, marginMode])
   );
 
   /** Tear down exchange subscription only when Spot screen unmounts (leave trading stack), not on blur. */
@@ -2511,6 +2497,11 @@ const Spot = () => {
     if (Number.isFinite(amtNum) && Number.isFinite(pxForNotional)) {
       data.total = String(pxForNotional * amtNum);
     }
+
+    if (headerTab === "Margin") {
+      data.tradeType = marginMode === "Cross" ? "cross" : "margin";
+    }
+
     return { data, orderPriceForValidation };
   }, [
     amount,
@@ -2526,6 +2517,8 @@ const Spot = () => {
     slippagePct,
     spotOrderType,
     stopPrice,
+    headerTab,
+    marginMode,
   ]);
 
   const onSubmit = () => {
@@ -3353,6 +3346,8 @@ const Spot = () => {
                     universalPaddingHorizontal={universalPaddingHorizontal}
                     styles={styles}
                     coinBalance={coinBalance}
+                    crossAccount={crossAccount}
+                    crossBorrowable={crossBorrowable}
                     currencyData={currencyData}
                     formatTotal={formatTotal}
                   />
@@ -3967,6 +3962,9 @@ const Spot = () => {
                     quote_currency={quote_currency}
                     base_currency={base_currency}
                     coinBalance={coinBalance}
+                    marginMode={marginMode}
+                    crossAccount={crossAccount}
+                    crossBorrowable={crossBorrowable}
                     isBuy={isBuy}
                     onSubmit={onSubmit}
                     themeColors={themeColors}
@@ -4099,6 +4097,7 @@ const Spot = () => {
                 currencyData={currencyData}
                 themeColors={themeColors}
                 isDark={isDark}
+                marginMode={marginMode}
               />
             ) : (
               <>
@@ -4491,6 +4490,7 @@ const Spot = () => {
             currencyData={currencyData}
             themeColors={themeColors}
             isDark={isDark}
+            marginMode={marginMode}
             onClose={() => rbSheetAddFunds?.current?.close()}
           />
         </RBSheet>

@@ -21,6 +21,8 @@ export const initialState: HomeSliceProps = {
   referCode: undefined,
   referCount: 0,
   socketLoading: true,
+  crossAccount: undefined,
+  crossBorrowable: undefined,
   favoriteArray: [],
   favoriteArrayLoaded: false,
   openOrders: [],
@@ -200,6 +202,15 @@ export const homeSlice = createSlice({
     setSocketLoading: (state, {payload}) => {
       state.socketLoading = payload;
     },
+    setCrossAccount: (state, {payload}) => {
+      state.crossAccount = payload;
+    },
+    setCrossBorrowable: (state, {payload}) => {
+      if (!state.crossBorrowable) {
+        state.crossBorrowable = {};
+      }
+      state.crossBorrowable[payload.currency_id] = payload.data;
+    },
     setFavoriteArray: (state, {payload}) => {
       state.favoriteArray = payload;
     },
@@ -364,6 +375,8 @@ export const {
   setReferCode,
   setReferCount,
   setSocketLoading,
+  setCrossAccount,
+  setCrossBorrowable,
   setFavoriteArray,
   setFavoriteArrayLoaded,
   setOpenOrders,
