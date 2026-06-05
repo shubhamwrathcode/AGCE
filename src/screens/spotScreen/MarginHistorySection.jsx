@@ -31,9 +31,18 @@ import {
 import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
 
-const TABS = [
+const ISOLATED_TABS = [
   { id: "size", label: "Size" },
   { id: "positionHistory", label: "Position History" },
+  { id: "positions", label: "Open Orders" },
+  { id: "orderHistory", label: "Order History" },
+  { id: "tradeHistory", label: "Trade History" },
+  { id: "loanManagement", label: "Loan Management" },
+  { id: "assetHistory", label: "Asset History" },
+];
+
+const CROSS_TABS = [
+  { id: "size", label: "Positions" },
   { id: "positions", label: "Open Orders" },
   { id: "orderHistory", label: "Order History" },
   { id: "tradeHistory", label: "Trade History" },
@@ -218,9 +227,17 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
   const slideWidth = screenW - 16; // Account for container paddingHorizontal: 8
   const pagerX = useRef(new Animated.Value(0)).current;
 
+  const currentTabs = marginMode === "Cross" ? CROSS_TABS : ISOLATED_TABS;
+
   const activeTabIndex = useMemo(() => {
-    return Math.max(0, TABS.findIndex(t => t.id === activeTab));
-  }, [activeTab]);
+    return Math.max(0, currentTabs.findIndex(t => t.id === activeTab));
+  }, [activeTab, currentTabs]);
+
+  useEffect(() => {
+    if (!currentTabs.find(t => t.id === activeTab)) {
+      setActiveTab(currentTabs[0].id);
+    }
+  }, [currentTabs, activeTab]);
 
   useEffect(() => {
     Animated.timing(pagerX, {
@@ -396,7 +413,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         onPress: async () => {
           setActionLoading(true);
           try {
-            const res = await appOperation.delete(`margin/order/${orderId}`, undefined, CUSTOMER_TYPE);
+            const endpoint = marginMode === "Cross" ? `cross/order/${orderId}` : `margin/order/${orderId}`;
+            const res = await appOperation.delete(endpoint, undefined, CUSTOMER_TYPE);
             if (res?.success) {
               Alert.alert("Success", "Order canceled successfully");
               fetchTabDetails();
@@ -444,11 +462,21 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         payload.quantity = closePositionQty;
       }
 
-      const res = await appOperation.post(
-        `margin/position/${encodeURIComponent(selectedPosToClose.pair)}/close`,
-        payload,
-        CUSTOMER_TYPE
-      );
+      let res;
+      if (marginMode === "Cross") {
+        payload.pair = selectedPosToClose.pair;
+        res = await appOperation.post(
+          `cross/position/close`,
+          payload,
+          CUSTOMER_TYPE
+        );
+      } else {
+        res = await appOperation.post(
+          `margin/position/${encodeURIComponent(selectedPosToClose.pair)}/close`,
+          payload,
+          CUSTOMER_TYPE
+        );
+      }
       if (res?.success) {
         setClosePositionModal(false);
         SimpleToast.show("Position close request submitted");
@@ -513,7 +541,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                     {isLong ? "L" : "S"}
                   </AppText>
                 </View>
-                <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>Isolated</AppText>
+                <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{marginMode}</AppText>
                 {!!item?.leverage && (
                   <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{item.leverage}x</AppText>
                 )}
@@ -979,7 +1007,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       {/* Primary Tab Bar */}
       <View style={[styles.tabsContainer, {}]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10 }}>
-          {TABS.map((tab) => {
+          {currentTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <TouchableOpacity
@@ -1099,8 +1127,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
 
       {/* Content panel */}
       <View style={[{ overflow: 'hidden', minHeight: 150 }, isFullScreen && { flex: 1 }]}>
-        <Animated.View style={[{ flexDirection: 'row', width: slideWidth * TABS.length, transform: [{ translateX: pagerX }] }, isFullScreen && { flex: 1 }]}>
-          {TABS.map((tab, idx) => {
+        <Animated.View style={[{ flexDirection: 'row', width: slideWidth * currentTabs.length, transform: [{ translateX: pagerX }] }, isFullScreen && { flex: 1 }]}>
+          {currentTabs.map((tab, idx) => {
             const listData = getFilteredDataList(tab.id);
             const dataToRender = isFullScreen ? listData : listData.slice(0, 5);
             return (
