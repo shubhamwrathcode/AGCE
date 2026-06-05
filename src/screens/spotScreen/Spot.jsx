@@ -3992,6 +3992,8 @@ const Spot = () => {
                     buy_price={buy_price}
                     formatTotal={formatTotal}
                     styles={styles}
+                    currencyData={currencyData}
+                    loading={isPlacingOrder}
                   />
                 ) : (
                   <>

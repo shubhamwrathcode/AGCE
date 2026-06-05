@@ -189,6 +189,8 @@ const ConvertSection = () => {
   };
 
   const handlePreview = () => {
+    SimpleToast.show("Coming Soon");
+    return
     let activeSpend = spendAmount;
     let activeReceive = receiveAmount;
 
@@ -280,7 +282,7 @@ const ConvertSection = () => {
 
           <TouchableOpacity
             onPress={() => {
-              setIsConvertActive(false); c
+              setIsConvertActive(false);
               SimpleToast.show("Auto-Invest coming soon");
               setIsConvertActive(true);
             }}
@@ -335,7 +337,7 @@ const ConvertSection = () => {
               <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>
                 Available: {getBalance(spendCoin)} {spendCoin}
               </AppText>
-              <TouchableOpacity onPress={() => rbSheetAddFunds.current?.open()}>
+              <TouchableOpacity onPress={() => NavigationService.navigate("DEPOSIT_COIN_SCREEN")}>
                 <FastImage
                   source={add}
                   style={{ width: 14, height: 14 }}

@@ -274,15 +274,15 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
     try {
       let res;
       const isCross = marginMode === "Cross";
-      
+
       if (activeTab === "size") {
         if (isCross) {
-            res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
+          res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
         } else {
-            res = await appOperation.get(`margin/position/${pairSymbol}`, undefined, undefined, CUSTOMER_TYPE);
+          res = await appOperation.get(`margin/position/${pairSymbol}`, undefined, undefined, CUSTOMER_TYPE);
         }
         if (res?.success) {
-          const list = isCross 
+          const list = isCross
             ? (Array.isArray(res.data?.positions) ? res.data.positions : Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [])
             : (res.data ? [res.data] : []);
           setDataList(list);
@@ -292,21 +292,21 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       } else if (activeTab === "positionHistory") {
         // cross margin might not have positionHistory or it's named something else. Let's assume it doesn't or it uses margin/position history
         if (isCross) {
-            res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
-            if (res?.success) {
-              const positions = Array.isArray(res.data?.positions) ? res.data.positions : Array.isArray(res.data) ? res.data : [];
-              setDataList(positions.map(p => ({ ...p, status: "OPEN" })));
-            } else {
-              setDataList([]);
-            }
+          res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
+          if (res?.success) {
+            const positions = Array.isArray(res.data?.positions) ? res.data.positions : Array.isArray(res.data) ? res.data : [];
+            setDataList(positions.map(p => ({ ...p, status: "OPEN" })));
+          } else {
+            setDataList([]);
+          }
         } else {
-            res = await appOperation.get(`margin/position/${pairSymbol}/history`, { page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
-            if (res?.success) {
-              const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
-              setDataList(list);
-            } else {
-              setDataList([]);
-            }
+          res = await appOperation.get(`margin/position/${pairSymbol}/history`, { page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
+          if (res?.success) {
+            const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
+            setDataList(list);
+          } else {
+            setDataList([]);
+          }
         }
       } else if (activeTab === "positions") { // Open Orders
         const endpoint = isCross ? `cross/orders/open` : `margin/orders/open`;
@@ -345,7 +345,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         const endpoint = isCross ? `cross/debts` : `margin/loans`;
         res = await appOperation.get(endpoint, undefined, undefined, CUSTOMER_TYPE);
         if (res?.success) {
-          const list = isCross 
+          const list = isCross
             ? (Array.isArray(res.data?.debts) ? res.data.debts : Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [])
             : (Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -433,7 +433,6 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
             const endpoint = marginMode === "Cross" ? `cross/order/${orderId}` : `margin/order/${orderId}`;
             const res = await appOperation.delete(endpoint, undefined, CUSTOMER_TYPE);
             if (res?.success) {
-              Alert.alert("Success", "Order canceled successfully");
               fetchTabDetails();
             } else {
               Alert.alert("Error", res?.message || "Failed to cancel order");

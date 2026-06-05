@@ -24,7 +24,7 @@ const AddFundsSheet = ({
 }) => {
   const quoteSymbol = currencyData?.quote_currency || "USDT";
   const quoteAvailable = coinBalance?.quote_currency_balance || 0;
-  
+
   const isCross = marginMode === "Cross";
 
   const items = [
@@ -32,7 +32,7 @@ const AddFundsSheet = ({
       id: "transfer",
       title: "Transfer",
       desc: "Transfer assets among different accounts",
-      meta: `Transferable: ${quoteAvailable} ${quoteSymbol}`,
+      // meta: `Transferable: ${quoteAvailable} ${quoteSymbol}`,
       icon: convertIcon,
       onPress: () => {
         onClose?.();

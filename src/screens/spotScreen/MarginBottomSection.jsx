@@ -15,9 +15,6 @@ const MarginBottomSection = ({
   isBuy,
   onSubmit,
   themeColors,
-  isDark,
-  inputSelectionColor,
-  fontFamilySemiBold,
   styles,
   onBorrowPress,
   marginLeverage,
@@ -26,39 +23,34 @@ const MarginBottomSection = ({
   buy_price,
   formatTotal,
   loading,
+  currencyData,
 }) => {
   const leverage = parseInt(marginLeverage, 10) || 5;
 
   const isCross = marginMode === "Cross";
 
-  // Isolated Margin Extract
-  const isoNetEquity = Number(coinBalance?.net_equity) || 0;
-  const isoQCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance?.quote_remaining_capacity) : null;
-  const isoBCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance?.base_remaining_capacity) : null;
-  const isoBaseEquityVal = coinBalance?.base_equity != null ? Number(coinBalance?.base_equity) : Math.max(0, isoBCap || 0);
+  const Qf = Number(coinBalance?.quote_currency_balance) || 0;
+  const Bf = Number(coinBalance?.base_currency_balance) || 0;
+  const Qb = Number(coinBalance?.quote_currency_borrowed) || 0;
+  const Bb = Number(coinBalance?.base_currency_borrowed) || 0;
 
-  // Cross Margin Extract
-  const crossSummary = crossAccount?.summary || {};
-  const crossAssets = crossAccount?.assets || [];
-  const crossNetEquity = Number(crossSummary?.net_equity) || 0;
+  const socketNetEquity = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
+  const refPrice = parseFloat(buy_price) || parseFloat(price) || 0;
   
-  // Find base and quote assets in crossAccount
-  const baseAsset = crossAssets.find(a => a.currency === base_currency) || {};
-  const quoteAsset = crossAssets.find(a => a.currency === quote_currency) || {};
-  const crossBaseEquityVal = Number(baseAsset.available) || 0; // Using available for cross base equity roughly
-  const crossQuoteEquityVal = Number(quoteAsset.available) || 0;
-  
-  const bBorrowableData = crossBorrowable && base_currency ? crossBorrowable[coinBalance?.base_currency_id] : null;
-  const qBorrowableData = crossBorrowable && quote_currency ? crossBorrowable[coinBalance?.quote_currency_id] : null;
-  const crossBCap = bBorrowableData?.borrowable ?? bBorrowableData?.max_borrow ?? null;
-  const crossQCap = qBorrowableData?.borrowable ?? qBorrowableData?.max_borrow ?? null;
+  const netEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
+    ? socketNetEquity
+    : Math.max(0, (Qf - Qb) + (Bf - Bb) * refPrice);
 
-  const netEquity = isCross ? crossNetEquity : isoNetEquity;
-  const qCap = isCross ? crossQCap : isoQCap;
-  const bCap = isCross ? crossBCap : isoBCap;
-  
-  const quoteAvailable = isCross ? crossQuoteEquityVal : netEquity;
-  const baseAvailable = isCross ? crossBaseEquityVal : isoBaseEquityVal;
+  const baseEquity = Math.max(0, Bf - Bb);
+
+  const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance.quote_remaining_capacity) : null;
+  const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance.base_remaining_capacity) : null;
+
+  const quoteAvailable = isCross && coinBalance?.buy_available != null ? Number(coinBalance.buy_available) : netEquity;
+  const baseAvailable = isCross && coinBalance?.sell_available != null ? Number(coinBalance.sell_available) : baseEquity;
+
+  const grossQuoteMax = netEquity * leverage;
+  const quoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
 
   const fmt = (val) => {
     if (val == null || !Number.isFinite(Number(val))) return "0";
@@ -69,26 +61,15 @@ const MarginBottomSection = ({
   const inputQty = parseFloat(amount) || 0;
   const inputPx = parseFloat(price) || parseFloat(buy_price) || 0;
 
-  const grossQuoteMax = netEquity * leverage;
-  const quoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + quoteAvailable) : grossQuoteMax;
-
   const grossSellMax = inputPx > 0 ? grossQuoteMax / inputPx : 0;
-  const baseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap + baseAvailable) : grossSellMax;
+  const baseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
 
   let borrowingVal = 0;
-  if (isCross) {
-    if (isBuy) {
-        borrowingVal = qCap || 0;
-    } else {
-        borrowingVal = bCap || 0;
-    }
+  if (isBuy) {
+    const V = inputQty * inputPx;
+    borrowingVal = V > 0 ? Math.max(0, V * (1 - 1 / leverage)) : 0;
   } else {
-    if (isBuy) {
-      const V = inputQty * inputPx;
-      borrowingVal = V > 0 ? Math.max(0, V * (1 - 1 / leverage)) : 0;
-    } else {
-      borrowingVal = inputQty > 0 ? Math.max(0, inputQty - baseAvailable) : 0;
-    }
+    borrowingVal = inputQty > 0 ? Math.max(0, inputQty - baseAvailable) : 0;
   }
 
   const availValue = isBuy ? quoteAvailable : baseAvailable;
