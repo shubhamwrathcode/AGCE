@@ -133,13 +133,24 @@ const MarginBorrowRepay = () => {
 
   const crossInterest = getCrossAsset(selectedAsset);
   
+  const formatRate = (rate, fallback) => {
+    if (rate == null) return fallback;
+    return `${String(rate).replace(/%/g, "")}%`;
+  };
+
   const hourlyRate = isCross
-    ? (crossInterest?.hourly_interest_rate_pct != null ? `${crossInterest.hourly_interest_rate_pct}%` : "0.00200000%")
-    : (liveData?.interest?.hourly_pct != null ? `${liveData.interest.hourly_pct}%` : loan?.hourly_rate_pct != null ? `${loan.hourly_rate_pct}%` : selectedAsset === "BTC" ? "0.00125000%" : "0.00200000%");
+    ? formatRate(crossInterest?.hourly_interest_rate_pct, "0.00200000%")
+    : formatRate(
+        liveData?.interest?.hourly_pct ?? loan?.hourly_rate_pct,
+        selectedAsset === "BTC" ? "0.00125000%" : "0.00200000%"
+      );
 
   const annualRate = isCross
-    ? (crossInterest?.annual_interest_rate_pct != null ? `${crossInterest.annual_interest_rate_pct}%` : "17.520000%")
-    : (liveData?.interest?.annualized_pct != null ? `${liveData.interest.annualized_pct}%` : loan?.apr_pct != null ? `${loan.apr_pct}%` : selectedAsset === "BTC" ? "10.950000%" : "17.520000%");
+    ? formatRate(crossInterest?.annual_interest_rate_pct, "17.520000%")
+    : formatRate(
+        liveData?.interest?.annualized_pct ?? loan?.apr_pct,
+        selectedAsset === "BTC" ? "10.950000%" : "17.520000%"
+      );
 
   const handleConfirm = async () => {
     if (!amount || parseFloat(amount) <= 0) {

@@ -115,6 +115,8 @@ import moment from "moment";
 import { useTheme } from "../../hooks/useTheme";
 import { SocketContext } from "../../SocketProvider";
 import { showError } from "../../helper/logger";
+import { appOperation } from "../../appOperation";
+import { CUSTOMER_TYPE } from "../../appOperation/types";
 const { width: Width, height: WindowHeight } = Dimensions.get("window");
 
 export const DataLimit = [
@@ -515,7 +517,8 @@ const OrderBookPanel = memo(({
   buyKeyExtractor,
   getOrderItemLayout,
   headerTab,
-  onBorrowingRatePress,
+  marginMode,
+  quoteHourlyRate,
 }) => {
   const { colors: themeColors, theme, isDark } = useTheme();
   const navigation = useNavigation();
@@ -605,11 +608,11 @@ const OrderBookPanel = memo(({
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={onBorrowingRatePress}
+            onPress={() => navigation.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}`, marginMode })}
             style={{ alignItems: "flex-end" }}
           >
-            <AppText style={{ fontSize: 9, color: themeColors.secondaryText, lineHeight: 11 }}>Hourly Rate (USD)...</AppText>
-            <AppText weight={SEMI_BOLD} style={{ fontSize: 10, color: themeColors.text, lineHeight: 12 }}>0.0000231%</AppText>
+            <AppText style={{ fontSize: 9, color: themeColors.secondaryText, lineHeight: 11 }}>Hourly Rate ({quote_currency})...</AppText>
+            <AppText weight={SEMI_BOLD} style={{ fontSize: 10, color: themeColors.text, lineHeight: 12 }}>{quoteHourlyRate}</AppText>
           </TouchableOpacity>
         </View>
       )}
@@ -744,7 +747,8 @@ const OrderBookSection = memo(({
   tickSize,
   pairResetKey,
   headerTab,
-  onBorrowingRatePress,
+  marginMode,
+  quoteHourlyRate,
 }) => {
   const { theme, colors: themeColors, isDark } = useTheme();
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
@@ -946,7 +950,8 @@ const OrderBookSection = memo(({
         buyKeyExtractor={buyKeyExtractor}
         getOrderItemLayout={getOrderItemLayout}
         headerTab={headerTab}
-        onBorrowingRatePress={onBorrowingRatePress}
+        marginMode={marginMode}
+        quoteHourlyRate={quoteHourlyRate}
       />
 
       <View style={[sty.ratioIndicatorBar, { marginVertical: 3, gap: 4 }]}>
@@ -1095,6 +1100,9 @@ const Spot = () => {
   const appStateRef = useRef(AppState.currentState);
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const [isCancelLoading, setIsCancelLoading] = useState(false);
+  const [marginAccountData, setMarginAccountData] = useState(null);
+
+
   const [orderToCancel, setOrderToCancel] = useState(null);
   const isSpotFocused = useIsFocused();
   const recentTrades = useAppSelector((state) => state.home.recentTrades);
@@ -1220,7 +1228,6 @@ const Spot = () => {
 
   const rbSheetNumber = useRef();
   const rbSheetlimit = useRef();
-  const rbSheetBorrowingRate = useRef();
   const rbSheetAddFunds = useRef();
   const latestSocketDataRef = useRef(null);
   const latestLocalBuyOrdersRef = useRef([]);
@@ -1416,6 +1423,53 @@ const Spot = () => {
     volume,
   } = currencyData ?? {};
   const { skip_buy_sell, id, kycVerified } = userData ?? "";
+
+  // Dynamic Margin Account Data for Hourly Rates
+  useEffect(() => {
+    if (headerTab === "Margin" && effectiveCurrency) {
+      const isCross = marginMode === "Cross";
+      if (isCross) {
+        appOperation.get(`cross/account`, undefined, undefined, CUSTOMER_TYPE)
+          .then((res) => { if (res?.success) setMarginAccountData(res.data); })
+          .catch(() => { });
+      } else {
+        const pairId = effectiveCurrency._id;
+        if (pairId) {
+          appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
+            .then((res) => { if (res?.success) setMarginAccountData(res.data); })
+            .catch(() => { });
+        }
+      }
+    }
+  }, [headerTab, effectiveCurrency, marginMode]);
+
+  const getCrossAsset = useCallback((symbol) => {
+    if (!marginAccountData?.assets) return null;
+    return marginAccountData.assets.find((a) => a.currency === symbol) || null;
+  }, [marginAccountData]);
+
+  const getHourlyRate = useCallback((symbol) => {
+    const isCross = marginMode === "Cross";
+    let rawRate = null;
+    let fallback = symbol === "BTC" ? "0.00125000" : "0.00200000";
+
+    if (isCross) {
+      const crossInterest = getCrossAsset(symbol);
+      rawRate = crossInterest?.hourly_interest_rate_pct;
+    } else {
+      rawRate = marginAccountData?.interest?.hourly_pct;
+    }
+
+    if (rawRate != null) {
+      return `${String(rawRate).replace(/%/g, "")}%`;
+    }
+    return `${fallback}%`;
+  }, [marginMode, marginAccountData, getCrossAsset]);
+
+  const safeBaseCurrency = base_currency || effectiveCurrency?.base_currency || "BTC";
+  const safeQuoteCurrency = quote_currency || effectiveCurrency?.quote_currency || "USDT";
+  const baseHourlyRate = getHourlyRate(safeBaseCurrency);
+  const quoteHourlyRate = getHourlyRate(safeQuoteCurrency);
 
   /** Chart opens immediately — do not wait for order book / socket; resolve symbols from pair, coin list, or row metadata. */
   const handleCandlePress = useCallback(() => {
@@ -3319,7 +3373,8 @@ const Spot = () => {
                   tickSize={currencyData?.tick_size ?? spotSelectedPair?.tick_size ?? 0.01}
                   pairResetKey={`${base_currency_id ?? ""}_${quote_currency_id ?? ""}`}
                   headerTab={headerTab}
-                  onBorrowingRatePress={() => rbSheetBorrowingRate.current?.open()}
+                  marginMode={marginMode}
+                  quoteHourlyRate={quoteHourlyRate}
                 />
               </View>
 
@@ -4484,64 +4539,6 @@ const Spot = () => {
           }}
         >
           {renderOrderTypeSheet()}
-        </RBSheet>
-
-        {/* Borrowing Rate Sheet */}
-        <RBSheet
-          ref={rbSheetBorrowingRate}
-          closeOnDragDown={true}
-          closeOnPressMask={true}
-          height={250}
-          animationType="slide"
-          customStyles={{
-            container: {
-              backgroundColor: themeColors.themeElevationColor,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              paddingHorizontal: universalPaddingHorizontal,
-              paddingTop: 8,
-              paddingBottom: 8,
-            },
-            wrapper: {
-              backgroundColor: "#0006",
-            },
-            draggableIcon: {
-              backgroundColor: themeColors.themeBorderColor,
-              width: 40,
-            },
-          }}
-        >
-          <View style={{ flex: 1, paddingHorizontal: 10 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 8, }}>
-              <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>Borrowing Rate</AppText>
-
-            </View>
-            <AppText weight={MEDIUM} style={{ color: themeColors.secondaryText, fontSize: 12, marginTop: 8, lineHeight: 16 }}>
-              Loan Interest for Margin Trading will be settled and charged on an hourly basis.
-            </AppText>
-
-            <View style={{
-              backgroundColor: 'transparent',
-              borderRadius: 12,
-              padding: 12,
-              marginTop: 12,
-              gap: 8,
-              borderWidth: 1,
-              borderColor: themeColors.themeBorderColor
-            }}>
-              <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>Current Hourly Rate:</AppText>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>BTC</AppText>
-                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 12 }}>0.000058%</AppText>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>USDT</AppText>
-                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 12 }}>0.000231%</AppText>
-              </View>
-            </View>
-          </View>
         </RBSheet>
 
         {/* Add Funds Bottom Sheet */}
