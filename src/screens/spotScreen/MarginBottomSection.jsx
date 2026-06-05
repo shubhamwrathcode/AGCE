@@ -25,6 +25,7 @@ const MarginBottomSection = ({
   amount,
   buy_price,
   formatTotal,
+  loading,
 }) => {
   const leverage = parseInt(marginLeverage, 10) || 5;
 
@@ -69,10 +70,10 @@ const MarginBottomSection = ({
   const inputPx = parseFloat(price) || parseFloat(buy_price) || 0;
 
   const grossQuoteMax = netEquity * leverage;
-  const quoteMax = qCap != null && Number.isFinite(qCap) ? qCap : grossQuoteMax;
+  const quoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + quoteAvailable) : grossQuoteMax;
 
   const grossSellMax = inputPx > 0 ? grossQuoteMax / inputPx : 0;
-  const baseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
+  const baseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap + baseAvailable) : grossSellMax;
 
   let borrowingVal = 0;
   if (isCross) {
@@ -137,7 +138,8 @@ const MarginBottomSection = ({
       <View style={styles.spotOrderSubmitWrap}>
         <Button
           children={`${isBuy ? "Buy" : "Sell"} ${base_currency}`}
-          disabled={false}
+          disabled={loading}
+          loading={loading}
           activeOpacity={0.75}
           containerStyle={[
             styles.spotOrderSubmitBtn,

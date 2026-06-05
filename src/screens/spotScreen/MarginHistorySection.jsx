@@ -27,6 +27,7 @@ import {
   NO_NOTIFICATION_ICON_LIGHT,
   right_ic,
   downIcon,
+  Refresh,
 } from "../../helper/ImageAssets";
 import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
@@ -281,7 +282,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
             res = await appOperation.get(`margin/position/${pairSymbol}`, undefined, undefined, CUSTOMER_TYPE);
         }
         if (res?.success) {
-          const list = isCross ? (Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : [])) : (res.data ? [res.data] : []);
+          const list = isCross 
+            ? (Array.isArray(res.data?.positions) ? res.data.positions : Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [])
+            : (res.data ? [res.data] : []);
           setDataList(list);
         } else {
           setDataList([]);
@@ -289,7 +292,13 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       } else if (activeTab === "positionHistory") {
         // cross margin might not have positionHistory or it's named something else. Let's assume it doesn't or it uses margin/position history
         if (isCross) {
-            setDataList([]); // Or a specific cross position history endpoint if it exists
+            res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
+            if (res?.success) {
+              const positions = Array.isArray(res.data?.positions) ? res.data.positions : Array.isArray(res.data) ? res.data : [];
+              setDataList(positions.map(p => ({ ...p, status: "OPEN" })));
+            } else {
+              setDataList([]);
+            }
         } else {
             res = await appOperation.get(`margin/position/${pairSymbol}/history`, { page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
             if (res?.success) {
@@ -301,7 +310,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         }
       } else if (activeTab === "positions") { // Open Orders
         const endpoint = isCross ? `cross/orders/open` : `margin/orders/open`;
-        res = await appOperation.get(endpoint, { pair: pairSymbol, page: 1, limit: 100 }, undefined, CUSTOMER_TYPE);
+        const params = { page: 1, limit: 100 };
+        if (!isCross) params.pair = pairSymbol;
+        res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -310,7 +321,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         }
       } else if (activeTab === "orderHistory") {
         const endpoint = isCross ? `cross/orders/history` : `margin/orders/history`;
-        res = await appOperation.get(endpoint, { pair: pairSymbol, page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
+        const params = { page: 1, limit: 50 };
+        if (!isCross) params.pair = pairSymbol;
+        res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -319,7 +332,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         }
       } else if (activeTab === "tradeHistory") {
         const endpoint = isCross ? `cross/trades` : `margin/trades`;
-        res = await appOperation.get(endpoint, { pair: pairSymbol, page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
+        const params = { page: 1, limit: 50 };
+        if (!isCross) params.pair = pairSymbol;
+        res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
@@ -328,9 +343,11 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         }
       } else if (activeTab === "loanManagement") {
         const endpoint = isCross ? `cross/debts` : `margin/loans`;
-        res = await appOperation.get(endpoint, { pair: pairSymbol }, undefined, CUSTOMER_TYPE);
+        res = await appOperation.get(endpoint, undefined, undefined, CUSTOMER_TYPE);
         if (res?.success) {
-          const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
+          const list = isCross 
+            ? (Array.isArray(res.data?.debts) ? res.data.debts : Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [])
+            : (Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : []);
           setDataList(list);
         } else {
           setDataList([]);
@@ -338,7 +355,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       } else if (activeTab === "assetHistory") {
         const endpoint = isCross ? `cross/history/${subTab}` : `margin/history/${subTab}`;
         const query = { page: 1, limit: 50 };
-        if (pairId) query.pairId = pairId;
+        if (!isCross && pairId) query.pairId = pairId;
         res = await appOperation.get(endpoint, query, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
@@ -520,12 +537,15 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       const ml = item?.margin_level != null ? parseFloat(item.margin_level) : null;
       const marginLevelDisplay = ml === null ? "—" : ml >= 999 ? "∞" : ml.toFixed(2);
       const isLong = item?.side === "LONG";
+      const itemPairStr = item?.pair || "";
+      const cardBaseSymbol = itemPairStr ? itemPairStr.slice(0, -4) : baseSymbol;
+      const cardQuoteSymbol = itemPairStr ? itemPairStr.slice(-4) : quoteSymbol;
       return (
         <View key={item?._id || index} style={[styles.card, { borderBottomColor: borderThemeColor }]}>
           <View style={[styles.cardHeader, { alignItems: "flex-start", marginBottom: 12 }]}>
             <View>
               <AppText style={[styles.pairText, { color: textThemeColor }]} weight={BOLD}>
-                {`${baseSymbol}/${quoteSymbol}`}
+                {`${cardBaseSymbol}/${cardQuoteSymbol}`}
               </AppText>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
                 <View style={{
@@ -568,7 +588,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Value</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedFour(item?.notional || item?.value)}</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>
+                {toFixedFour(item?.notional || item?.value)} {cardQuoteSymbol || ""}
+              </AppText>
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Entry Price</AppText>
@@ -578,18 +600,22 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Index Price</AppText>
               <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedFour(item?.index_price ?? item?.mark_price)}</AppText>
             </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Est. Liq. Price</AppText>
-              <AppText style={[styles.value, { color: colors.orangeTheme }]} weight={SEMI_BOLD}>
-                {(item?.liquidation_price != null || item?.warning_price != null) ? toFixedTwo(item?.liquidation_price ?? item?.warning_price) : "—"}
-              </AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Maint. Margin Ratio</AppText>
-              <AppText style={[styles.value, { color: themeColors.spotTradeBuy || colors.green }]} weight={SEMI_BOLD}>
-                {item?.maintenance_margin_ratio != null ? `${(parseFloat(item.maintenance_margin_ratio) * 100).toFixed(2)}%` : (ml != null ? `${ml >= 999 ? "999+" : ml.toFixed(0)}%` : "—")}
-              </AppText>
-            </View>
+            {marginMode !== "Cross" && (
+              <>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Est. Liq. Price</AppText>
+                  <AppText style={[styles.value, { color: colors.orangeTheme }]} weight={SEMI_BOLD}>
+                    {(item?.liquidation_price != null || item?.warning_price != null) ? toFixedTwo(item?.liquidation_price ?? item?.warning_price) : "—"}
+                  </AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Maint. Margin Ratio</AppText>
+                  <AppText style={[styles.value, { color: themeColors.spotTradeBuy || colors.green }]} weight={SEMI_BOLD}>
+                    {item?.maintenance_margin_ratio != null ? `${(parseFloat(item.maintenance_margin_ratio) * 100).toFixed(2)}%` : (ml != null ? `${ml >= 999 ? "999+" : ml.toFixed(0)}%` : "—")}
+                  </AppText>
+                </View>
+              </>
+            )}
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Unrealized PnL</AppText>
               <AppText style={[styles.value, { color: getSideColor(parseFloat(item?.unrealized_pnl) >= 0 ? "LONG" : "SHORT") }]} weight={SEMI_BOLD}>
@@ -1090,15 +1116,32 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
               </TouchableOpacity>
             ))}
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <CustomDropdown
-              width={100}
-              data={["All Sides", "Buy", "Sell"]}
-              selected={openOrderSideFilter}
-              onSelect={(label) => setOpenOrderSideFilter(label)}
-            />
-            <TouchableOpacity onPress={() => { setOpenOrderTypeFilter("All"); setOpenOrderSideFilter("All Sides"); fetchTabDetails(); }} style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }} weight={MEDIUM}>Reset</AppText>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2, alignSelf: "flex-start" }}>
+            <View style={{ width: 102 }}>
+              <CustomDropdown
+                compact
+                data={["All Sides", "Buy", "Sell"]}
+                selected={openOrderSideFilter}
+                onSelect={(label) => setOpenOrderSideFilter(label)}
+              />
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                setOpenOrderTypeFilter("All");
+                setOpenOrderSideFilter("All Sides");
+                fetchTabDetails();
+              }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                paddingVertical: 4,
+                paddingLeft: 4,
+                marginLeft: 2,
+              }}
+            >
+              <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+              <AppText weight={MEDIUM} style={{ fontSize: 12, color: secondaryTextThemeColor }}>Reset</AppText>
             </TouchableOpacity>
           </View>
         </View>

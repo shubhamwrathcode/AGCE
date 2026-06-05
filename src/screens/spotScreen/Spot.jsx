@@ -1598,11 +1598,17 @@ const Spot = () => {
   const inputSelectionColor = "#000";
   const [isBuy, setIsBuy] = useState(true);
   const [total, setTotal] = useState("");
+
+  useEffect(() => {
+    setAmount("");
+    setTotal("");
+  }, [headerTab, marginMode]);
   // const [chartLoading, setChartLoading] = useState(true);
   // const [preloadedUrl, setPreloadedUrl] = useState(null);
   // const [showPlaceholder, setShowPlaceholder] = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [numberSelectLimit, setNumberLimit] = useState("Limit");
   const spotOrderType = useMemo(() => {
     switch (numberSelectLimit) {
@@ -2521,7 +2527,7 @@ const Spot = () => {
     marginMode,
   ]);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (userData && Number(userData?.kycVerified) !== 2) {
       showError("KYC not verified. Please complete KYC first.");
       return;
@@ -2539,7 +2545,12 @@ const Spot = () => {
     if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType)) {
       return;
     }
-    dispatch(placeOrder(data, setVisible));
+    setIsPlacingOrder(true);
+    try {
+      await dispatch(placeOrder(data, setVisible));
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   const handleCancelOrder = (orderId) => {
@@ -3350,6 +3361,7 @@ const Spot = () => {
                     crossBorrowable={crossBorrowable}
                     currencyData={currencyData}
                     formatTotal={formatTotal}
+                    loading={isPlacingOrder}
                   />
                 )}
 
@@ -4052,7 +4064,8 @@ const Spot = () => {
                             ? `Buy ${base_currency}`
                             : `Sell ${base_currency}`
                         }
-                        disabled={false}
+                        disabled={isPlacingOrder}
+                        loading={isPlacingOrder}
                         activeOpacity={amount ? 0.75 : 1}
                         containerStyle={[
                           styles.spotOrderSubmitBtn,

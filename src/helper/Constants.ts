@@ -6,6 +6,9 @@ export const SELECTED_LANGUAGE = 'SELECTED_LANGUAGE';
  * Primary API host — same role as web `appUrl` in `apiConfig.js`
  * (`https://agcebackend.wrathcode.com`). Used by AppOperation for `v1/...` calls.
  */
+
+// export const BASE_URL = 'http://192.168.29.246:9503/';
+
 export const BASE_URL = 'https://agcebackend.wrathcode.com/';
 // export const BASE_URL = 'https://backend.arabglobal.io/';
 
@@ -20,6 +23,9 @@ export const CHART_WEB_BASE_URL = 'https://agce.wrathcode.com/';
  * `baseImage` / `appUrl2` (`https://backend.demoexchange.wrathcode.com`).
  * Build URLs as `${IMAGE_BASE_URL}${icon_path}` (path from API, e.g. `icons/...`).
  */
+
+// export const IMAGE_BASE_URL = 'http://192.168.29.246:9503/';
+
 export const IMAGE_BASE_URL = 'https://backend.demoexchange.wrathcode.com/';
 // export const IMAGE_BASE_URL = 'https://backend.arabglobal.io/';
 
