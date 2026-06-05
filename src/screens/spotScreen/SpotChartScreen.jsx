@@ -450,6 +450,7 @@ const SpotChartScreen = () => {
   const recentTrades = useAppSelector((state) => state.home.recentTrades);
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const favoriteArrayLoaded = useAppSelector((state) => state.home.favoriteArrayLoaded);
+  const coinBalance = useAppSelector((state) => state.home.coinBalance);
 
   const params = route.params || {};
   /** Redux pair wins over stale navigation params after user changes pair in `TradingDataModal`. */
@@ -618,7 +619,7 @@ const SpotChartScreen = () => {
 
   const renderAssetsTabContent = () => {
     if (tradeType === "Margin") {
-      const mb = lastSocketData?.coin_balance || {};
+      const mb = coinBalance || {};
       const fmtVal = (v) => {
         if (v == null || !Number.isFinite(Number(v))) return "0";
         const res = parseFloat(Number(v).toFixed(8)).toString();

@@ -1583,12 +1583,12 @@ const Spot = () => {
       }
     }
   }, [headerTab, marginMode, currencyData?.base_currency_id, currencyData?.quote_currency_id, dispatch]);
-  const [tpSlEnabled, setTpSlEnabled] = useState(false);
   const [tpPrice, setTpPrice] = useState("");
   const [slPrice, setSlPrice] = useState("");
   const [staticBuyPrice, setStaticBuyPrice] = useState("");
   const [price, setPrice] = useState("");
   const [amount, setAmount] = useState("");
+  const [amtDenom, setAmtDenom] = useState("BASE");
   const [stopPrice, setStopPrice] = useState("");
   const [limitIoc, setLimitIoc] = useState(false);
   const [limitFok, setLimitFok] = useState(false);
@@ -2267,23 +2267,48 @@ const Spot = () => {
 
   const handleTotalPercentage = (value) => {
     setActivePercentage(value);
-    if (isBuy) {
-      const val = percentCalculation(
-        coinBalance?.quote_currency_balance || 0,
-        value
-      );
-      const finalQuantity = toFixed8(
-        val / (!isMarketLikeOrder ? price || buy_price : buy_price)
-      );
 
-      const amtStr = finalQuantity.toString() || "0";
-      syncAmountAnimForQuantityString(amtStr);
-      setAmount(amtStr);
-      Animated.timing(totalAnim, {
-        toValue: amtStr.trim() !== "" ? 1 : 0,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
+    const balToUse = isBuy
+      ? (coinBalance?.quote_currency_balance || 0)
+      : (coinBalance?.base_currency_balance || 0);
+
+    const val = percentCalculation(balToUse, value);
+
+    if (showAmtDenomSelect && amtDenom === "QUOTE") {
+      if (isBuy) {
+        const amtStr = val.toString();
+        syncAmountAnimForQuantityString(amtStr);
+        setAmount(amtStr);
+        Animated.timing(totalAnim, {
+          toValue: amtStr.trim() !== "" ? 1 : 0,
+          duration: 200,
+          useNativeDriver: false,
+        }).start();
+      } else {
+        const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+        const quoteAmt = toFixed8(val * refPx);
+        const amtStr = quoteAmt.toString();
+        syncAmountAnimForQuantityString(amtStr);
+        setAmount(amtStr);
+      }
+    } else {
+      if (isBuy) {
+        const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+        const finalQuantity = refPx > 0 ? toFixed8(val / refPx) : 0;
+        const amtStr = finalQuantity.toString() || "0";
+        syncAmountAnimForQuantityString(amtStr);
+        setAmount(amtStr);
+        Animated.timing(totalAnim, {
+          toValue: amtStr.trim() !== "" ? 1 : 0,
+          duration: 200,
+          useNativeDriver: false,
+        }).start();
+      } else {
+        const finalQuantity = toFixed8(val);
+        const amtStr = finalQuantity.toString() || "0";
+        syncAmountAnimForQuantityString(amtStr);
+        setAmount(amtStr);
+      }
     }
   };
 
@@ -2473,11 +2498,22 @@ const Spot = () => {
     const quoteSym = String(quote_currency ?? "").trim().toUpperCase();
     const pair = baseSym && quoteSym ? `${baseSym}${quoteSym}` : "";
 
+    const amtNum = parseFloat(String(amount)) || 0;
+    let baseQty = amtNum;
+    if (showAmtDenomSelect && amtDenom === "QUOTE") {
+      const refPx = orderPriceForValidation || Number(buy_price) || 0;
+      if (refPx > 0 && amtNum > 0) {
+        baseQty = toFixed8(amtNum / refPx);
+      } else {
+        baseQty = 0;
+      }
+    }
+
     const data = {
       pair,
       type: spotOrderType,
       side: isBuy ? "BUY" : "SELL",
-      quantity: String(amount),
+      quantity: String(baseQty),
     };
     if (spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT") {
       data.price = String(orderPriceForApi);
@@ -2495,13 +2531,20 @@ const Spot = () => {
         data.max_slippage_percent = n;
       }
     }
-    const amtNum = parseFloat(String(amount)) || 0;
+    const amtNumForTotal = parseFloat(String(amount)) || 0;
     const pxForNotional =
       spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT"
         ? orderPriceForApi
         : refPrice;
-    if (Number.isFinite(amtNum) && Number.isFinite(pxForNotional)) {
-      data.total = String(pxForNotional * amtNum);
+
+    if (showAmtDenomSelect && amtDenom === "QUOTE") {
+      if (amtNumForTotal > 0) {
+        data.total = String(amtNumForTotal);
+      }
+    } else {
+      if (Number.isFinite(amtNumForTotal) && Number.isFinite(pxForNotional)) {
+        data.total = String(pxForNotional * amtNumForTotal);
+      }
     }
 
     if (headerTab === "Margin") {
@@ -3653,7 +3696,7 @@ const Spot = () => {
                             fontWeight: "500",
                           }}
                         >
-                          Amount ({base_currency})
+                          {showAmtDenomSelect ? "Amount" : `Amount (${base_currency})`}
                         </Animated.Text>
                       </Animated.View>
                       <View
@@ -3671,13 +3714,15 @@ const Spot = () => {
                           },
                         ]}
                       >
-                        <TouchableOpacity
-                          onPress={() => handleAmountStep(-1)}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                          style={{ width: 34, alignItems: 'center', justifyContent: 'center', }}
-                        >
-                          <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>-</AppText>
-                        </TouchableOpacity>
+                        {(!showAmtDenomSelect) && (
+                          <TouchableOpacity
+                            onPress={() => handleAmountStep(-1)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            style={{ width: 34, alignItems: 'center', justifyContent: 'center', }}
+                          >
+                            <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>-</AppText>
+                          </TouchableOpacity>
+                        )}
                         <TextInput
                           ref={amountInputRef}
                           placeholder={""}
@@ -3697,6 +3742,7 @@ const Spot = () => {
                               flex: 1,
                               color: themeColors.text,
                               textAlign: "center",
+                              paddingLeft: 0,
                               fontSize: 13,
                               fontWeight: "bold",
                               paddingVertical: 0,
@@ -3705,13 +3751,28 @@ const Spot = () => {
                             },
                           ]}
                         />
-                        <TouchableOpacity
-                          onPress={() => handleAmountStep(1)}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                          style={{ width: 34, alignItems: 'center', justifyContent: 'center', }}
-                        >
-                          <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>+</AppText>
-                        </TouchableOpacity>
+                        {showAmtDenomSelect ? (
+                          <View style={{ position: "absolute", right: -5, marginTop: 8, zIndex: 10 }}>
+                            <CustomDropdown
+                              data={[base_currency, quote_currency]}
+                              selected={amtDenom === "BASE" ? base_currency : quote_currency}
+                              onSelect={(item) => {
+                                setAmtDenom(item === base_currency ? "BASE" : "QUOTE");
+                              }}
+                              icon={downIcon}
+                              compact
+                              triggerStyle={{ backgroundColor: 'transparent', borderWidth: 0, minWidth: 60 }}
+                            />
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            onPress={() => handleAmountStep(1)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            style={{ width: 34, alignItems: 'center', justifyContent: 'center', }}
+                          >
+                            <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>+</AppText>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </View>
                   </View>
@@ -3997,6 +4058,14 @@ const Spot = () => {
                   />
                 ) : (
                   <>
+                    {/* Available Info */}
+                    <View style={{ marginBottom: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 2 }}>
+                      <AppText style={{ fontSize: 13, color: colors.placeholderColor }}>Available</AppText>
+                      <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600" }}>
+                        {`${isBuy ? (coinBalance?.quote_currency_balance || 0) : (coinBalance?.base_currency_balance || 0)} ${isBuy ? quote_currency : base_currency}`}
+                      </AppText>
+                    </View>
+
                     {/* Coin Info */}
                     <View style={styles.assetBox}>
                       <View style={styles.assetRow}>

@@ -15,7 +15,7 @@ import { useTheme } from '../hooks/useTheme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const CustomDropdown = ({ data = [], onSelect, selected, compact = false }) => {
+const CustomDropdown = ({ data = [], onSelect, selected, compact = false, triggerStyle, icon }) => {
   const { colors: themeColors, isDark } = useTheme();
   const [visible, setVisible] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
@@ -28,10 +28,16 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false }) => {
 
   const openDropdown = () => {
     buttonRef.current?.measureInWindow((x, y, width, height) => {
+      const dropdownWidth = Math.max(width, 100);
+      let left = x;
+      if (left + dropdownWidth > Dimensions.get('window').width - 10) {
+        left = x + width - dropdownWidth;
+      }
+
       setDropdownPos({
         top: y + height + 2,
-        left: x,
-        width: width,
+        left: left,
+        width: dropdownWidth,
       });
       setVisible(true);
     });
@@ -57,6 +63,7 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false }) => {
                 borderColor: themeColors.border,
                 borderWidth: 1,
               },
+          triggerStyle,
         ]}
         onPress={openDropdown}
         activeOpacity={0.8}
@@ -72,7 +79,7 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false }) => {
           {selected || 'Select option'}
         </AppText>
         <FastImage
-          source={DOWN_ARROW}
+          source={icon || DOWN_ARROW}
           style={[
             compact ? styles.arrowCompact : styles.arrow,
             { transform: [{ rotate: visible ? '180deg' : '0deg' }] },
@@ -105,12 +112,13 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false }) => {
               data={data}
               keyExtractor={(item, index) => index.toString()}
               showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
+              renderItem={({ item, index }) => (
                 <TouchableOpacity
                   onPress={() => handleSelect(item)}
                   style={[
                     styles.option,
-                    { borderBottomColor: themeColors.border }
+                    { borderBottomColor: themeColors.border },
+                    index === data.length - 1 && { borderBottomWidth: 0 }
                   ]}
                 >
                   <AppText
