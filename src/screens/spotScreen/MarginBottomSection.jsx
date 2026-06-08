@@ -21,6 +21,7 @@ const MarginBottomSection = ({
   price,
   amount,
   buy_price,
+  amountIsQuote,
   formatTotal,
   loading,
   currencyData,
@@ -66,10 +67,11 @@ const MarginBottomSection = ({
 
   let borrowingVal = 0;
   if (isBuy) {
-    const V = inputQty * inputPx;
+    const V = amountIsQuote ? inputQty : inputQty * inputPx;
     borrowingVal = V > 0 ? Math.max(0, V * (1 - 1 / leverage)) : 0;
   } else {
-    borrowingVal = inputQty > 0 ? Math.max(0, inputQty - baseAvailable) : 0;
+    const baseQty = amountIsQuote ? (inputPx > 0 ? inputQty / inputPx : 0) : inputQty;
+    borrowingVal = baseQty > 0 ? Math.max(0, baseQty - baseAvailable) : 0;
   }
 
   const availValue = isBuy ? quoteAvailable : baseAvailable;
@@ -119,18 +121,26 @@ const MarginBottomSection = ({
       <View style={styles.spotOrderSubmitWrap}>
         <Button
           children={`${isBuy ? "Buy" : "Sell"} ${base_currency}`}
-          disabled={loading}
+          disabled={loading || !amount || parseFloat(amount) <= 0}
           loading={loading}
-          activeOpacity={0.75}
+          activeOpacity={(loading || !amount || parseFloat(amount) <= 0) ? 1 : 0.75}
           containerStyle={[
             styles.spotOrderSubmitBtn,
             {
-              backgroundColor: isBuy
-                ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
-                : (themeColors.spotTradeSell ?? colors.spotTradeSell),
+              backgroundColor: (amount && parseFloat(amount) > 0)
+                ? (isBuy
+                  ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
+                  : (themeColors.spotTradeSell ?? colors.spotTradeSell))
+                : (isBuy
+                  ? (themeColors.isDark ? "#19402E" : "#A7E2C6")
+                  : (themeColors.isDark ? "#4A1D20" : "#F2B2B4")),
             },
           ]}
-          onPress={onSubmit}
+          onPress={() => {
+            if (amount && parseFloat(amount) > 0) {
+              onSubmit();
+            }
+          }}
           titleStyle={styles.spotOrderSubmitTitle}
         />
       </View>

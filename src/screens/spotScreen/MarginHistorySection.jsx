@@ -566,34 +566,38 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 )}
               </View>
             </View>
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#374151",
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 4,
-              }}
-              onPress={() => handleClosePosition(item)}
-              activeOpacity={0.8}
-            >
-              <AppText style={{ color: colors.white, fontSize: 12 }} weight={MEDIUM}>Market Close</AppText>
-            </TouchableOpacity>
+            {marginMode !== "Cross" && (
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#374151",
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 4,
+                }}
+                onPress={() => handleClosePosition(item)}
+                activeOpacity={0.8}
+              >
+                <AppText style={{ color: colors.white, fontSize: 12 }} weight={MEDIUM}>Market Close</AppText>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.grid}>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Holding</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.quantity || item?.size)}</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedEight(item?.quantity ?? item?.net_quantity ?? item?.size)}</AppText>
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Value</AppText>
               <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>
-                {toFixedFour(item?.notional || item?.value)} {cardQuoteSymbol || ""}
+                {toFixedFour(item?.notional ?? item?.value_usdt ?? item?.value)} {cardQuoteSymbol || ""}
               </AppText>
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Entry Price</AppText>
-              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>{toFixedFour(item?.entry_price)}</AppText>
+              <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>
+                {(!item?.entry_price || parseFloat(item?.entry_price) === 0) ? "—" : toFixedFour(item?.entry_price)}
+              </AppText>
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Index Price</AppText>
@@ -617,14 +621,14 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
             )}
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Unrealized PnL</AppText>
-              <AppText style={[styles.value, { color: getSideColor(parseFloat(item?.unrealized_pnl) >= 0 ? "LONG" : "SHORT") }]} weight={SEMI_BOLD}>
-                {item?.unrealized_pnl ? `${parseFloat(item.unrealized_pnl) > 0 ? "+" : ""}${parseFloat(item.unrealized_pnl).toFixed(4)} (${parseFloat(item.unrealized_pnl_pct || 0) > 0 ? "+" : ""}${parseFloat(item.unrealized_pnl_pct || 0).toFixed(2)}%)` : "0.0000"}
+              <AppText style={[styles.value, { color: getSideColor(parseFloat(item?.unrealized_pnl || 0) >= 0 ? "LONG" : "SHORT") }]} weight={SEMI_BOLD}>
+                {`${parseFloat(item?.unrealized_pnl || 0) >= 0 ? "+" : ""}${parseFloat(item?.unrealized_pnl || 0).toFixed(4)} (${parseFloat(item?.unrealized_pnl_pct || 0) >= 0 ? "+" : ""}${parseFloat(item?.unrealized_pnl_pct || 0).toFixed(2)}%)`}
               </AppText>
             </View>
             <View style={styles.kvRow}>
               <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Realized PnL</AppText>
               <AppText style={[styles.value, { color: textThemeColor }]} weight={SEMI_BOLD}>
-                {item?.realized_pnl ? parseFloat(item.realized_pnl).toFixed(4) : "0.0000"}
+                {parseFloat(item?.realized_pnl || 0).toFixed(4)}
               </AppText>
             </View>
           </View>
@@ -1613,7 +1617,6 @@ const OrderHistoryCard = React.memo(({ item, index, baseSymbol, quoteSymbol, bor
   const rawExecutions = (Array.isArray(item?.executed_prices) && item.executed_prices.length > 0)
     ? item.executed_prices
     : (Array.isArray(item?.executions) ? item.executions : []);
-  const executions = useMemo(() => aggregateExecutedLegs(rawExecutions), [rawExecutions]);
 
   return (
     <TouchableOpacity
@@ -1656,7 +1659,7 @@ const OrderHistoryCard = React.memo(({ item, index, baseSymbol, quoteSymbol, bor
         </View>
       </View>
 
-      {executions.length > 0 && (
+      {rawExecutions.length > 0 && (
         <View style={{ marginTop: 8 }}>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -1688,8 +1691,8 @@ const OrderHistoryCard = React.memo(({ item, index, baseSymbol, quoteSymbol, bor
 
           {isExpanded && (
             <View style={{ marginTop: 8, backgroundColor: isDark ? "rgba(128, 128, 128, 0.08)" : "rgba(128, 128, 128, 0.08)", paddingVertical: 8, paddingHorizontal: 8, borderRadius: 8 }}>
-              {executions.map((leg, i) => (
-                <View key={i} style={[{ backgroundColor: "transparent" }, i < executions.length - 1 ? { borderBottomWidth: 1, borderBottomColor: borderThemeColor, marginBottom: 8, paddingBottom: 8 } : null]}>
+              {rawExecutions.map((leg, i) => (
+                <View key={i} style={[{ backgroundColor: "transparent" }, i < rawExecutions.length - 1 ? { borderBottomWidth: 1, borderBottomColor: borderThemeColor, marginBottom: 8, paddingBottom: 8 } : null]}>
                   <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
                     <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }} weight={MEDIUM}>
                       Trade #{i + 1}:
@@ -1699,19 +1702,19 @@ const OrderHistoryCard = React.memo(({ item, index, baseSymbol, quoteSymbol, bor
                   <View style={{ gap: 4, marginTop: 4 }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
                       <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price:</AppText>
-                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.price)} {quoteSymbol}</AppText>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg?.price || leg?.p)} {quoteSymbol}</AppText>
                     </View>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
                       <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Executed:</AppText>
-                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.quantity)} {baseSymbol}</AppText>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg?.quantity || leg?.q || leg?.amount || leg?.a)} {baseSymbol}</AppText>
                     </View>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
                       <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee:</AppText>
-                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg.fee)} {quoteSymbol}</AppText>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(leg?.fee || leg?.f)} {quoteSymbol}</AppText>
                     </View>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 }}>
                       <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total:</AppText>
-                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(leg.price) * Number(leg.quantity))}</AppText>
+                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textThemeColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(parseNum(leg?.price || leg?.p || 0) * parseNum(leg?.quantity || leg?.q || leg?.amount || leg?.a || 0))}</AppText>
                     </View>
                   </View>
                 </View>

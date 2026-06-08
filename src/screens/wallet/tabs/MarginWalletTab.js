@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import FastImage from "react-native-fast-image";
 import { AppText, BOLD, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
 import { colors } from "../../../theme/colors";
@@ -49,6 +50,7 @@ function buildPairRows(balanceRows, accounts) {
       icon_path: acc.icon_path || "",
       mmr: mlDisplay !== "—" ? mlDisplay : null,
       marginLevel: mlDisplay,
+      status: acc.status || "NOT_OPENED",
       availableBase: fmt(base?.available ?? acc.base_balance ?? "0"),
       availableQuote: fmt(quote?.available ?? acc.quote_balance ?? "0"),
       borrowableBase: fmt(base?.borrowable ?? acc.base_borrowable ?? "0"),
@@ -74,26 +76,28 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
   const [pairs, setPairs] = useState([]);
   const [search, setSearch] = useState("");
   const [liabilitiesOnly, setLiabilitiesOnly] = useState(false);
-  const [hideSmall, setHideSmall] = useState(true);
+  const [hideSmall, setHideSmall] = useState(false);
   const [selectedPair, setSelectedPair] = useState(null);
   const sheetRef = useRef(null);
 
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        const [balRes, accRes] = await Promise.all([
-          appOperation.get("margin/wallet-balances", undefined, undefined, CUSTOMER_TYPE).catch(() => null),
-          appOperation.get("margin/accounts", undefined, undefined, CUSTOMER_TYPE).catch(() => null),
-        ]);
-        if (balRes?.success || accRes?.success) {
-          const accs = accRes?.data || [];
-          const bals = balRes?.data || [];
-          setPairs(buildPairRows(bals, accs));
-        }
-      } catch (e) { }
-    };
-    fetchAccounts();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchAccounts = async () => {
+        try {
+          const [balRes, accRes] = await Promise.all([
+            appOperation.get("margin/wallet-balances", undefined, undefined, CUSTOMER_TYPE).catch(() => null),
+            appOperation.get("margin/accounts", undefined, undefined, CUSTOMER_TYPE).catch(() => null),
+          ]);
+          if (balRes?.success || accRes?.success) {
+            const accs = accRes?.data || [];
+            const bals = balRes?.data || [];
+            setPairs(buildPairRows(bals, accs));
+          }
+        } catch (e) { }
+      };
+      fetchAccounts();
+    }, [])
+  );
 
   const filtered = useMemo(() => {
     let rows = pairs;
@@ -134,6 +138,30 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
           >
             <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.black }}>Transfer</AppText>
           </TouchableOpacity>
+        </View>
+
+        <View style={{ marginTop: 15, flexDirection: "row", alignItems: "center" }}>
+          <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Today's PnL </AppText>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: parseFloat(marginSummary?.today_pnl_usd || 0) < 0 ? "#e45561" : "#01bc8d" }}>
+            {marginSummary?.today_pnl_usd ?? "0.00"} USD
+          </AppText>
+        </View>
+
+        <View style={{ marginTop: 15, flexDirection: "row", justifyContent: "space-between" }}>
+          <View style={{ flex: 1 }}>
+            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Account Equity</AppText>
+            <View style={{ flexDirection: "row", alignItems: "flex-end", marginTop: 4 }}>
+              <AppText type={EIGHTEEN} weight={SEMI_BOLD}>{marginSummary?.account_equity_usd ?? "0.00"} </AppText>
+              <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginBottom: 2 }}>USD</AppText>
+            </View>
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Total Liabilities</AppText>
+            <View style={{ flexDirection: "row", alignItems: "flex-end", marginTop: 4 }}>
+              <AppText type={EIGHTEEN} weight={SEMI_BOLD}>{marginSummary?.total_liabilities_usd ?? "0.00"} </AppText>
+              <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginBottom: 2 }}>USD</AppText>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -182,13 +210,26 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
               />
               <View>
                 <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.pair}</AppText>
+                {item.status === "NOT_OPENED" ? (
+                  <View style={{ backgroundColor: theme === "Dark" ? "rgba(142,148,158,0.2)" : "rgba(142,148,158,0.1)", borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2, alignSelf: "flex-start", marginTop: 4 }}>
+                    <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ fontSize: 10, lineHeight: 12 }}>Not opened</AppText>
+                  </View>
+                ) : item.mmr ? (
+                  <View style={{ backgroundColor: "rgba(1,188,141,0.1)", borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2, alignSelf: "flex-start", marginTop: 4 }}>
+                    <AppText type={TWELVE} style={{ color: "#01bc8d", fontSize: 10, lineHeight: 12 }}>{item.mmr}</AppText>
+                  </View>
+                ) : (
+                  <View style={{ backgroundColor: "rgba(1,188,141,0.1)", borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2, alignSelf: "flex-start", marginTop: 4 }}>
+                    <AppText type={TWELVE} style={{ color: "#01bc8d", fontSize: 10, lineHeight: 12 }}>{item.status}</AppText>
+                  </View>
+                )}
               </View>
             </View>
 
             <View style={styles.rowRight}>
               <View style={{ alignItems: "flex-end", marginRight: 10 }}>
                 <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.availableBase}</AppText>
-                <AppText type={TWELVE} color={DISCLAIMTEXT}>{item.availableQuote}</AppText>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.availableQuote}</AppText>
               </View>
               <TouchableOpacity onPress={() => { setSelectedPair(item); sheetRef.current?.open(); }} style={styles.moreBtn}>
                 <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={DISCLAIMTEXT} />

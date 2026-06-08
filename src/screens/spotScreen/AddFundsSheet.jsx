@@ -72,8 +72,8 @@ const AddFundsSheet = ({
     },
     {
       id: "redeem",
-      title: "Redeem GateCode",
-      desc: "For asset transfer among Gate accounts only",
+      title: "Redeem AGCE Code",
+      desc: "For asset transfer among AGCE accounts only",
       icon: printIcon,
       onPress: () => {
         Alert.alert("Coming soon");

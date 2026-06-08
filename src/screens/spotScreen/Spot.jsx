@@ -35,6 +35,7 @@ import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
 import MarginBottomSection from "./MarginBottomSection";
 import ConvertSection from "./ConvertSection";
 import {
+  add,
   checkIc,
   downIcon,
   INFO,
@@ -1229,6 +1230,9 @@ const Spot = () => {
   const rbSheetNumber = useRef();
   const rbSheetlimit = useRef();
   const rbSheetAddFunds = useRef();
+  const rbSheetMarginConfirm = useRef();
+  const [marginConfirmPayload, setMarginConfirmPayload] = useState(null);
+  const [dontShowMarginConfirm, setDontShowMarginConfirm] = useState(false);
   const latestSocketDataRef = useRef(null);
   const latestLocalBuyOrdersRef = useRef([]);
   const latestLocalSellOrdersRef = useRef([]);
@@ -1649,7 +1653,8 @@ const Spot = () => {
   const [slippageEnabled, setSlippageEnabled] = useState(false);
   const [slippagePct, setSlippagePct] = useState("");
   const [isSlippageInputFocused, setIsSlippageInputFocused] = useState(false);
-  const inputSelectionColor = "#000";
+  // Fixed pitch black selection highlight on long press copy/paste
+  const inputSelectionColor = themeColors.spotTradeBuy ? `${themeColors.spotTradeBuy}40` : "rgba(0,0,0,0.2)";
   const [isBuy, setIsBuy] = useState(true);
   const [total, setTotal] = useState("");
 
@@ -2122,7 +2127,7 @@ const Spot = () => {
     }).start();
   }, [isLimit, formatPrice, formatQuantity, syncAmountAnimForQuantityString]);
 
-  const validateOrder = (price, quantity, side, orderKind = "LIMIT") => {
+  const validateOrder = (price, quantity, side, orderKind = "LIMIT", amountIsQuote = false) => {
     const tick_size = currencyData?.tick_size || 0.01;
     const step_size = currencyData?.step_size || 0.00001;
     const min_notional = currencyData?.min_notional || 5;
@@ -2132,7 +2137,14 @@ const Spot = () => {
 
     const numPrice = parseFloat(price);
     const numQuantity = parseFloat(quantity);
-    const total = numPrice * numQuantity;
+
+    if (!Number.isFinite(numPrice) || !Number.isFinite(numQuantity)) {
+      showError("Invalid price or amount");
+      return false;
+    }
+
+    const baseQty = amountIsQuote && numPrice > 0 ? numQuantity / numPrice : numQuantity;
+    const total = amountIsQuote ? numQuantity : numPrice * numQuantity;
 
     if (!skipPriceTick) {
       const pricePrecisionVal = getDecimalPlaces(tick_size);
@@ -2143,14 +2155,19 @@ const Spot = () => {
       }
     }
 
+    if (amountIsQuote && numPrice <= 0) {
+      showError("Price is required to size this order");
+      return false;
+    }
+
     const qtyPrecision = getDecimalPlaces(step_size);
     const qtyMultiplier = Math.pow(10, qtyPrecision);
-    if (Math.round(numQuantity * qtyMultiplier) % Math.round(step_size * qtyMultiplier) !== 0) {
+    if (Math.round(baseQty * qtyMultiplier) % Math.round(step_size * qtyMultiplier) !== 0) {
       showError(`Quantity must be a multiple of ${step_size}`);
       return false;
     }
 
-    if (numQuantity > max_order_qty) {
+    if (baseQty > max_order_qty) {
       showError(`Maximum order quantity is ${max_order_qty} ${currencyData?.base_currency}`);
       return false;
     }
@@ -2160,17 +2177,27 @@ const Spot = () => {
       return false;
     }
 
-    if (side === "BUY") {
-      const availableBalance = coinBalance?.quote_currency_balance || 0;
-      if (total > availableBalance) {
-        showError("Insufficient funds");
-        return false;
-      }
-    } else if (side === "SELL") {
-      const availableBalance = coinBalance?.base_currency_balance || 0;
-      if (numQuantity > availableBalance) {
-        showError("Insufficient funds");
-        return false;
+    if (headerTab !== "Margin") {
+      if (side === "BUY") {
+        const availableBalance = coinBalance?.quote_currency_balance || 0;
+        let spend;
+        if (amountIsQuote) {
+          spend = numQuantity;
+        } else if (orderKind === "MARKET" || orderKind === "STOP_MARKET") {
+          spend = baseQty * numPrice * 1.02;
+        } else {
+          spend = baseQty * numPrice;
+        }
+        if (spend > availableBalance) {
+          showError("Insufficient funds");
+          return false;
+        }
+      } else if (side === "SELL") {
+        const availableBalance = coinBalance?.base_currency_balance || 0;
+        if (baseQty > availableBalance) {
+          showError("Insufficient funds");
+          return false;
+        }
       }
     }
 
@@ -2322,9 +2349,38 @@ const Spot = () => {
   const handleTotalPercentage = (value) => {
     setActivePercentage(value);
 
-    const balToUse = isBuy
-      ? (coinBalance?.quote_currency_balance || 0)
-      : (coinBalance?.base_currency_balance || 0);
+    let balToUse = 0;
+    const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+
+    if (headerTab === "Margin") {
+      const leverage = parseInt(marginLeverage, 10) || 5;
+      const Qf = Number(coinBalance?.quote_currency_balance) || 0;
+      const Bf = Number(coinBalance?.base_currency_balance) || 0;
+      const Qb = Number(coinBalance?.quote_currency_borrowed) || 0;
+      const Bb = Number(coinBalance?.base_currency_borrowed) || 0;
+      const socketNetEquity = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
+      const netEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
+        ? socketNetEquity
+        : Math.max(0, (Qf - Qb) + (Bf - Bb) * refPx);
+
+      const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance.quote_remaining_capacity) : null;
+      const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance.base_remaining_capacity) : null;
+
+      const grossQuoteMax = netEquity * leverage;
+      const quoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
+
+      if (isBuy) {
+        balToUse = Math.max(0, quoteMax);
+      } else {
+        const grossSellMax = refPx > 0 ? grossQuoteMax / refPx : 0;
+        balToUse = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
+        balToUse = Math.max(0, balToUse);
+      }
+    } else {
+      balToUse = isBuy
+        ? (coinBalance?.quote_currency_balance || 0)
+        : (coinBalance?.base_currency_balance || 0);
+    }
 
     const val = percentCalculation(balToUse, value);
 
@@ -2367,11 +2423,20 @@ const Spot = () => {
   };
 
   const handleTotal = (text) => {
-    const qty = Number(text) / Number(price);
-    const qStr = qty?.toString();
-    syncAmountAnimForQuantityString(qStr);
-    setAmount(qStr);
-    setTotal(multiply(price, qty));
+    setTotal(text);
+    const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+    if (refPx > 0) {
+      const val = parseFloat(text);
+      if (Number.isFinite(val) && val > 0) {
+        const qty = toFixed8(val / refPx);
+        const qStr = qty.toString();
+        syncAmountAnimForQuantityString(qStr);
+        setAmount(qStr);
+      } else if (!text || text === "0") {
+        syncAmountAnimForQuantityString("");
+        setAmount("");
+      }
+    }
   };
 
   const selectNumberLimitOn = (item) => {
@@ -2634,20 +2699,140 @@ const Spot = () => {
       showError("Select a trading pair");
       return;
     }
+    if (headerTab === "Margin" && !dontShowMarginConfirm) {
+      setMarginConfirmPayload(data);
+      rbSheetMarginConfirm.current?.open();
+      return;
+    }
+
+    const amountIsQuote = showAmtDenomSelect && amtDenom === "QUOTE";
+
     if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
       if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) {
         return;
       }
     }
-    if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType)) {
+    if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType, amountIsQuote)) {
       return;
     }
+
     setIsPlacingOrder(true);
     try {
       await dispatch(placeOrder(data, setVisible));
     } finally {
       setIsPlacingOrder(false);
     }
+  };
+
+  const handleConfirmMarginOrder = async () => {
+    rbSheetMarginConfirm.current?.close();
+    if (!marginConfirmPayload) return;
+
+    const { orderPriceForValidation } = buildSpotOrderPayload();
+    const amountIsQuote = showAmtDenomSelect && amtDenom === "QUOTE";
+
+    if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
+      if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) {
+        return;
+      }
+    }
+    if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType, amountIsQuote)) {
+      return;
+    }
+
+    setIsPlacingOrder(true);
+    try {
+      await dispatch(placeOrder(marginConfirmPayload, setVisible));
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
+  const renderMarginConfirmSheet = () => {
+    if (!marginConfirmPayload) return null;
+    const { side, type, price: orderPrice, quantity, stop_price } = marginConfirmPayload;
+
+    // Derived display values
+    const isBuyMode = side === "BUY";
+    const orderTypeLabel = type === "MARKET" ? "MARKET" : type === "LIMIT" ? "LIMIT" : type === "STOP_LIMIT" ? "STOP LIMIT" : "STOP MARKET";
+    const displayPrice = type === "MARKET" || type === "STOP_MARKET" ? "Market" : orderPrice;
+    const baseAsset = currencyData?.base_currency || "BTC";
+
+    return (
+      <View style={{ flex: 1, paddingTop: 10 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, }}>
+          <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>Order Confirmation</AppText>
+          <TouchableOpacity onPress={() => rbSheetMarginConfirm.current?.close()}>
+            <FastImage source={REMOVE} style={{ width: 20, height: 20 }} tintColor={themeColors.iconColor} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{
+          flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15,
+          paddingHorizontal: 10
+        }}>
+          <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>{currencyData?.base_currency}/{currencyData?.quote_currency}</AppText>
+          <View style={{ backgroundColor: isBuyMode ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 }}>
+            <AppText style={{ color: colors.white, fontSize: 12 }} weight={SEMI_BOLD}>{isBuyMode ? "Buy" : "Sell"}</AppText>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15, paddingHorizontal: 10 }}>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Order Type</AppText>
+          <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>{orderTypeLabel}</AppText>
+        </View>
+
+        {type.startsWith("STOP_") && (
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15, paddingHorizontal: 10 }}>
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Stop Price</AppText>
+            <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>{stop_price}</AppText>
+          </View>
+        )}
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15, paddingHorizontal: 10 }}>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Price</AppText>
+          <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>{displayPrice}</AppText>
+        </View>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15, paddingHorizontal: 10 }}>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Amount</AppText>
+          <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>{quantity} {baseAsset}</AppText>
+        </View>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20, paddingHorizontal: 10 }}>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Leverage</AppText>
+          <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>
+            {String(marginLeverage).endsWith("x") ? marginLeverage : `${marginLeverage}x`}
+          </AppText>
+        </View>
+
+        <TouchableOpacity
+          style={{ flexDirection: "row", alignItems: "center", marginBottom: 30, paddingHorizontal: 10 }}
+          onPress={() => setDontShowMarginConfirm(!dontShowMarginConfirm)}
+        >
+          <View style={{ width: 18, height: 18, borderWidth: 1, borderColor: dontShowMarginConfirm ? (themeColors.spotTradeBuy || colors.green) : themeColors.secondaryText, borderRadius: 3, justifyContent: "center", alignItems: "center", marginRight: 10, backgroundColor: dontShowMarginConfirm ? (themeColors.spotTradeBuy || colors.green) : 'transparent' }}>
+            {dontShowMarginConfirm && <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor={colors.white} />}
+          </View>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Don't show confirmation for future orders</AppText>
+        </TouchableOpacity>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: isDark ? "#2a2d35" : "#f3f4f6", paddingVertical: 14, borderRadius: 8, alignItems: "center", marginRight: 10 }}
+            onPress={() => rbSheetMarginConfirm.current?.close()}
+          >
+            <AppText style={{ color: themeColors.text, fontSize: 16 }} weight={SEMI_BOLD}>Cancel</AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: isBuyMode ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red, paddingVertical: 14, borderRadius: 8, alignItems: "center", marginLeft: 10 }}
+            onPress={handleConfirmMarginOrder}
+          >
+            <AppText style={{ color: colors.white, fontSize: 16 }} weight={SEMI_BOLD}>Confirm {isBuyMode ? "Buy" : "Sell"}</AppText>
+          </TouchableOpacity>
+        </View>
+
+      </View>
+    );
   };
 
   const handleCancelOrder = (orderId) => {
@@ -2777,12 +2962,17 @@ const Spot = () => {
       const id = raw._id || raw.id || raw.order_id || raw.client_order_id;
       if (!id) return null;
 
+      const parseNumVal = (v) => {
+        if (v != null && typeof v === 'object' && v.$numberDecimal != null) return parseFloat(v.$numberDecimal);
+        return v !== undefined && v !== null ? parseFloat(v) : undefined;
+      };
+
       // Ensure executions (executed_prices) are present
       const executions = Array.isArray(raw.executions) ? raw.executions : (Array.isArray(raw.executed_prices) ? raw.executed_prices : []);
       const executed_prices = executions.map((ex) => {
-        const p = ex?.price ?? ex?.execution_price;
-        const q = ex?.quantity ?? ex?.filled_quantity;
-        const f = ex?.fee ?? "0";
+        const p = parseNumVal(ex?.price ?? ex?.execution_price);
+        const q = parseNumVal(ex?.quantity ?? ex?.filled_quantity);
+        const f = parseNumVal(ex?.fee ?? "0");
         return {
           price: p,
           quantity: q,
@@ -2790,9 +2980,12 @@ const Spot = () => {
         };
       });
 
-      const qty = Number(raw.quantity ?? 0);
-      const filled = Number(raw.filled_quantity ?? raw.filled ?? 0);
-      const remaining = Number(raw.remaining_quantity ?? raw.remaining ?? Math.max(0, qty - filled));
+      const qty = parseNumVal(raw.quantity) ?? 0;
+      const filled = parseNumVal(raw.filled_quantity ?? raw.filled) ?? 0;
+      const remaining = parseNumVal(raw.remaining_quantity ?? raw.remaining) ?? Math.max(0, qty - filled);
+
+      const avgExecutionPrice = parseNumVal(raw.avg_execution_price ?? raw.avgPrice ?? raw.average_price);
+      const executedValue = parseNumVal(raw.executed_value ?? raw.executedValue) ?? ((avgExecutionPrice || 0) * filled);
 
       return {
         ...raw,
@@ -2806,9 +2999,9 @@ const Spot = () => {
         quantity: qty,
         remaining_quantity: remaining,
         filled_quantity: filled,
-        avg_execution_price: raw.avg_execution_price ?? raw.avgPrice ?? raw.average_price,
-        executed_value: raw.executed_value ?? raw.executedValue ?? (Number(raw.avg_execution_price || 0) * filled),
-        price: raw.price ?? raw.limit_price ?? raw.stop_price ?? raw.trigger_price,
+        avg_execution_price: avgExecutionPrice,
+        executed_value: executedValue,
+        price: parseNumVal(raw.price ?? raw.limit_price ?? raw.stop_price ?? raw.trigger_price),
         time_in_force: raw.time_in_force || raw.tif || raw.timeInForce,
         tif: raw.tif || raw.time_in_force || raw.timeInForce,
         fill_percent: raw.fill_percent ?? raw.fillPercent ?? (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%"),
@@ -2816,7 +3009,8 @@ const Spot = () => {
         pair: raw.pair,
         ask_currency: raw.ask_currency,
         pay_currency: raw.pay_currency,
-        total_fee: raw.total_fee ?? raw.fee,
+        total_fee: parseNumVal(raw.total_fee ?? raw.fee),
+
         total_tds: raw.total_tds ?? raw.tds,
         updatedAt: raw.updatedAt || raw.updated_at || raw.created_at || raw.createdAt,
         createdAt: raw.createdAt || raw.created_at || raw.updatedAt || raw.updated_at,
@@ -3894,7 +4088,8 @@ const Spot = () => {
                             placeholder={""}
                             placeholderTextColor={themeColors.secondaryText}
                             selectionColor={inputSelectionColor}
-                            value={amount ? formatTotal(totalDisplayValue) : ""}
+                            value={isTotalFocused ? total : (amount ? formatTotal(totalDisplayValue) : "")}
+                            onChangeText={handleTotal}
                             onBlur={() => setIsTotalFocused(false)}
                             onFocus={() => setIsTotalFocused(true)}
                             keyboardType="numeric"
@@ -3911,7 +4106,7 @@ const Spot = () => {
                                 ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
                               },
                             ]}
-                            editable={false}
+                            editable={true}
                           />
                         </View>
                       </View>
@@ -4106,6 +4301,7 @@ const Spot = () => {
                     price={price}
                     amount={amount}
                     buy_price={buy_price}
+                    amountIsQuote={showAmtDenomSelect && amtDenom === "QUOTE"}
                     formatTotal={formatTotal}
                     styles={styles}
                     currencyData={currencyData}
@@ -4113,72 +4309,41 @@ const Spot = () => {
                   />
                 ) : (
                   <>
-                    {/* Available Info */}
-                    <View style={{ marginBottom: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 2 }}>
-                      <AppText style={{ fontSize: 13, color: colors.placeholderColor }}>Available</AppText>
-                      <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600" }}>
-                        {`${isBuy ? (coinBalance?.quote_currency_balance || 0) : (coinBalance?.base_currency_balance || 0)} ${isBuy ? quote_currency : base_currency}`}
-                      </AppText>
-                    </View>
+                    <View style={{ marginTop: 8 }}>
+                      {/* Available / Max */}
+                      <View style={{ marginBottom: 16, gap: 6 }}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <AppText style={{ fontSize: 13, color: colors.placeholderColor, flexShrink: 0, marginTop: 2 }}>Available</AppText>
+                          <View style={{ flexDirection: "row", alignItems: "flex-end", flexShrink: 1, paddingLeft: 10 }}>
+                            <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600", flexShrink: 1, textAlign: "right" }}>
+                              {(() => {
+                                const val = isBuy ? (coinBalance?.quote_currency_balance || 0) : (coinBalance?.base_currency_balance || 0);
+                                const res = parseFloat(Number(val).toFixed(8)).toString();
+                                return (res === "NaN" ? "0" : res).replace('.', '.\u200B');
+                              })()} {isBuy ? quote_currency : base_currency}
+                            </AppText>
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => {
+                                navigation.navigate(DEPOSIT_COIN_SCREEN);
+                              }}
+                              style={{ marginLeft: 6, flexShrink: 0, marginBottom: 2 }}
+                            >
+                              <FastImage source={add} style={{ width: 14, height: 14 }} tintColor={themeColors.text} resizeMode="contain" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
 
-                    {/* Coin Info */}
-                    <View style={styles.assetBox}>
-                      <View style={styles.assetRow}>
-                        <AppText
-                          style={[
-                            styles.assetLabel,
-                            { color: colors.placeholderColor },
-                          ]}
-                        >
-                          Coin
-                        </AppText>
-                        <AppText
-                          style={[
-                            styles.assetLabel,
-                            { color: colors.placeholderColor },
-                          ]}
-                        >
-                          Total Assets
-                        </AppText>
-                      </View>
-                      <View style={styles.assetRow}>
-                        <AppText style={[styles.assetValue, { color: colors.black }]}>{quote_currency}</AppText>
-                        <AppText style={[styles.assetValue, { color: colors.black }]}>
-                          {coinBalance?.quote_currency_balance || 0}
-                        </AppText>
-                      </View>
-                      <View style={styles.assetRow}>
-                        <AppText style={[styles.assetValue, { color: colors.black }]}>{base_currency}</AppText>
-                        <AppText style={[styles.assetValue, { color: colors.black }]}>
-                          {coinBalance?.base_currency_balance || 0}
-                        </AppText>
-                      </View>
-
-                      <View style={styles.assetActionRow}>
-                        {["Deposit", "Transfer", "Withdraw"].map((btn, i) => (
-                          <TouchableOpacity
-                            key={i}
-                            activeOpacity={0.75}
-                            style={[
-                              styles.assetActionBtn,
-                              {
-                                backgroundColor: themeColors.input,
-                                borderColor: themeColors.themeBorderColor,
-                              },
-                            ]}
-                            onPress={() =>
-                              NavigationService.navigate(
-                                btn == "Withdraw"
-                                  ? SELECT_COIN_SCREEN
-                                  : btn == "Deposit"
-                                    ? DEPOSIT_COIN_SCREEN
-                                    : MARGIN_TRANSFER_SCREEN
-                              )
-                            }
-                          >
-                            <AppText weight={SEMI_BOLD} style={[styles.assetActionText, { color: themeColors.text }]}>{btn}</AppText>
-                          </TouchableOpacity>
-                        ))}
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <AppText style={{ fontSize: 13, color: colors.placeholderColor, flexShrink: 0, marginTop: 2 }}>Max</AppText>
+                          <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600", flexShrink: 1, paddingLeft: 10, textAlign: "right" }}>
+                            {(() => {
+                              const val = isBuy ? (coinBalance?.quote_currency_balance || 0) : (coinBalance?.base_currency_balance || 0);
+                              const res = formatTotal(Number(val)) || "0";
+                              return res.replace('.', '.\u200B');
+                            })()} {isBuy ? quote_currency : base_currency}
+                          </AppText>
+                        </View>
                       </View>
                     </View>
 
@@ -4576,7 +4741,33 @@ const Spot = () => {
           />
         </RBSheet>
 
-
+        {/* Margin Order Confirm Bottom Sheet */}
+        <RBSheet
+          ref={rbSheetMarginConfirm}
+          closeOnDragDown={true}
+          closeOnPressMask={true}
+          height={460}
+          animationType="slide"
+          customStyles={{
+            container: {
+              backgroundColor: themeColors.themeElevationColor,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingHorizontal: universalPaddingHorizontal,
+              paddingTop: 12,
+              paddingBottom: 8,
+            },
+            wrapper: {
+              backgroundColor: "#0006",
+            },
+            draggableIcon: {
+              backgroundColor: themeColors.themeBorderColor,
+              width: 40,
+            },
+          }}
+        >
+          {renderMarginConfirmSheet()}
+        </RBSheet>
 
         <ReactNativeModal
           isVisible={isCancelModalVisible}

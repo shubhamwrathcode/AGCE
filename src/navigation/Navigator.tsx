@@ -790,7 +790,7 @@ function BottomNavigation() {
               </View>
             ),
           }}
-          // initialParams={__DEV__ ? { historyOnly: true } : undefined}
+          initialParams={__DEV__ ? { historyOnly: true } : undefined}
           component={Spot}
         />
         <Tab.Screen
