@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import FastImage from "react-native-fast-image";
 import { AppText, BOLD, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
@@ -74,6 +74,7 @@ function buildPairRows(balanceRows, accounts) {
 
 const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }) => {
   const [pairs, setPairs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [liabilitiesOnly, setLiabilitiesOnly] = useState(false);
   const [hideSmall, setHideSmall] = useState(false);
@@ -94,6 +95,7 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
             setPairs(buildPairRows(bals, accs));
           }
         } catch (e) { }
+        setIsLoading(false);
       };
       fetchAccounts();
     }, [])
@@ -237,12 +239,21 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
             </View>
           </View>
         )}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <FastImage source={NO_NOTIFICATION_ICON} style={styles.emptyIcon} resizeMode="contain" />
-            <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Data Found</AppText>
-          </View>
-        )}
+        ListEmptyComponent={() => {
+          if (isLoading) {
+            return (
+              <View style={[styles.emptyContainer, { justifyContent: "center", marginTop: 60 }]}>
+                <ActivityIndicator size="large" color={themeColors.text} />
+              </View>
+            );
+          }
+          return (
+            <View style={styles.emptyContainer}>
+              <FastImage source={NO_NOTIFICATION_ICON} style={styles.emptyIcon} resizeMode="contain" />
+              <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Data Found</AppText>
+            </View>
+          );
+        }}
       />
 
       <MarginPairDetailSheet

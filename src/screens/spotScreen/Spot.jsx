@@ -67,8 +67,10 @@ import {
 import { colors, lightTheme } from "../../theme/colors";
 import { fontFamily, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 import CustomDropdown from "../../shared/components/CustomDropdown";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { universalPaddingHorizontal, borderWidth } from "../../theme/dimens";
+import { IMAGE_BASE_URL } from "../../helper/Constants";
 /** Same vertical space between Buy/Sell column sections (tabs → fields → slider → IOC → assets → CTA → footer). */
 const SPOT_ORDER_V_GAP = 8;
 import {
@@ -2771,7 +2773,15 @@ const Spot = () => {
           flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15,
           paddingHorizontal: 10
         }}>
-          <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>{currencyData?.base_currency}/{currencyData?.quote_currency}</AppText>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {!!currencyData?.icon_path && (
+              <FastImage 
+                source={{ uri: `${IMAGE_BASE_URL}${currencyData.icon_path}` }} 
+                style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }} 
+              />
+            )}
+            <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>{currencyData?.base_currency}/{currencyData?.quote_currency}</AppText>
+          </View>
           <View style={{ backgroundColor: isBuyMode ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 }}>
             <AppText style={{ color: colors.white, fontSize: 12 }} weight={SEMI_BOLD}>{isBuyMode ? "Buy" : "Sell"}</AppText>
           </View>
@@ -3654,6 +3664,8 @@ const Spot = () => {
                     currencyData={currencyData}
                     formatTotal={formatTotal}
                     loading={isPlacingOrder}
+                    price={price}
+                    buy_price={buy_price}
                   />
                 )}
 
