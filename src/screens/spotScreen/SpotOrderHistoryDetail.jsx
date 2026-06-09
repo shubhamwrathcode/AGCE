@@ -135,6 +135,7 @@ const SpotOrderHistoryDetail = () => {
                   <Row label="Price" value={toFixedEight(price)} />
                   <Row label="Quantity" value={toFixedEight(qty)} />
                   <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
+                  <Row label="TDS" value={toFixedEight(tds)} />
                   <Row label="Total" value={toFixedEight(price * qty)} />
                   {order?.trade_id != null ? <Row label="Trade ID" value={String(order.trade_id)} /> : null}
                   {order?.order_id != null ? <Row label="Order ID" value={String(order.order_id)} /> : null}
@@ -151,7 +152,6 @@ const SpotOrderHistoryDetail = () => {
                   <Row label="Fill %" value={order?.fill_percent || (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%")} />
                   <Row label="Value" value={toFixedEight(value)} />
                   <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
-                  <Row label="TDS" value={toFixedEight(tds)} />
                   <Row label="Status" value={status} valueColor={getStatusColor(status)} />
                 </>
               )}
