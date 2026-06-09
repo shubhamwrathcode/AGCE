@@ -1173,8 +1173,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
 
       {/* Content panel */}
       <View style={[{ overflow: 'hidden', minHeight: 150 }, isFullScreen && { flex: 1 }]}>
-        <Animated.View style={[{ flexDirection: 'row', width: slideWidth * currentTabs.length, transform: [{ translateX: pagerX }] }, isFullScreen && { flex: 1 }]}>
+        <View style={[{ width: "100%" }, isFullScreen && { flex: 1 }]}>
           {currentTabs.map((tab, idx) => {
+            if (tab.id !== activeTab) return null;
             const listData = getFilteredDataList(tab.id);
             const dataToRender = isFullScreen ? listData : listData.slice(0, 5);
             return (
@@ -1208,7 +1209,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
               </View>
             );
           })}
-        </Animated.View>
+        </View>
 
         {(loading || actionLoading) && !closePositionModal && (
           <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-start', paddingTop: 60, alignItems: 'center', backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)', zIndex: 10 }]}>
