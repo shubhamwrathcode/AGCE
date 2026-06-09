@@ -7,7 +7,9 @@ import {
   TextInput,
   Platform,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  Animated,
+  Dimensions
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -34,22 +36,103 @@ import {
 } from "../../helper/ImageAssets";
 import SimpleToast from "react-native-simple-toast";
 import { fontFamilyMedium } from "../../theme/typography";
-import { useAppSelector, useAppDispatch } from "../../store/hooks";
-import { getParticularCoinBalance } from "../../actions/walletActions";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { appOperation } from "../../appOperation";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import LinearGradient from "react-native-linear-gradient";
 
-const AVAILABLE_WALLETS = [
-  { key: "main", label: "Main Wallet", icon: tradeFi },
-  { key: "spot", label: "Spot Wallet", icon: onchain_ic },
-  // { key: "p2p", label: "P2P Wallet", icon: p2p_ic },
-  // { key: "futures", label: "Futures Wallet", icon: deliveryFuture },
-  // { key: "swap", label: "Swap Wallet", icon: fiat_ic },
-  // { key: "earning", label: "Earning Wallet", icon: btcPerp },
-  { key: "margin", label: "Isolated Margin Wallet", icon: marginIc },
-  { key: "cross_margin", label: "Cross Margin Wallet", icon: usdtPerp },
-];
+const SHIMMER_STRIP = 160;
+function ShimmerCell({ width: w, height, borderRadius = 6, style }) {
+  const shimmerX = useRef(new Animated.Value(-SHIMMER_STRIP)).current;
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    const run = () => {
+      if (!mounted.current) return;
+      shimmerX.setValue(-SHIMMER_STRIP);
+      Animated.timing(shimmerX, {
+        toValue: Math.max(w, 1) + SHIMMER_STRIP,
+        duration: 1100,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (mounted.current && finished) run();
+      });
+    };
+    const t = setTimeout(run, 50);
+    return () => {
+      mounted.current = false;
+      clearTimeout(t);
+      shimmerX.stopAnimation();
+    };
+  }, [shimmerX, w]);
+  const { isDark } = useTheme();
+  const boneColor = isDark ? "#2A2A2A" : "#E1E9EE";
+  const shimmerColors = isDark
+    ? ["transparent", "rgba(255,255,255,0.08)", "transparent"]
+    : ["transparent", "rgba(255,255,255,0.6)", "transparent"];
+
+  return (
+    <View
+      style={[
+        { width: w, height, borderRadius, overflow: "hidden", backgroundColor: boneColor },
+        style,
+      ]}
+    >
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          width: SHIMMER_STRIP,
+          transform: [{ translateX: shimmerX }],
+        }}
+      >
+        <LinearGradient
+          colors={shimmerColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{ flex: 1, width: SHIMMER_STRIP }}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+function MarginTransferSkeleton() {
+  const { isDark } = useTheme();
+  const screenWidth = Dimensions.get("window").width;
+  const cardWidth = (screenWidth - 40 - 36) / 2;
+  
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <ShimmerCell width={cardWidth} height={80} borderRadius={12} />
+        <ShimmerCell width={36} height={36} borderRadius={18} />
+        <ShimmerCell width={cardWidth} height={80} borderRadius={12} />
+      </View>
+
+      <ShimmerCell width={80} height={14} borderRadius={4} style={{ marginBottom: 10 }} />
+      <ShimmerCell width={screenWidth - 40} height={52} borderRadius={10} style={{ marginBottom: 16 }} />
+
+      <ShimmerCell width={80} height={14} borderRadius={4} style={{ marginBottom: 10 }} />
+      <ShimmerCell width={screenWidth - 40} height={52} borderRadius={10} style={{ marginBottom: 10 }} />
+
+      <ShimmerCell width={120} height={12} borderRadius={4} />
+    </View>
+  );
+}
+
+const WALLET_ICONS = {
+  main: tradeFi,
+  spot: onchain_ic,
+  p2p: p2p_ic,
+  futures: deliveryFuture,
+  swap: fiat_ic,
+  earning: btcPerp,
+  margin: marginIc,
+  cross_margin: usdtPerp,
+};
 
 const MarginTransfer = () => {
   const { colors: themeColors, isDark } = useTheme();
@@ -61,9 +144,9 @@ const MarginTransfer = () => {
 
   const [transferAmount, setTransferAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isScreenLoading, setIsScreenLoading] = useState(true);
 
-  const dispatch = useAppDispatch();
-  const particularCoinBalance = useAppSelector(state => state.wallet.particularCoinBalance);
+  const [transferableBalance, setTransferableBalance] = useState("0.00");
 
   const buildCoinIconUri = useCallback((iconPath) => {
     const raw = iconPath === undefined || iconPath === null ? "" : String(iconPath).trim();
@@ -75,14 +158,15 @@ const MarginTransfer = () => {
   }, []);
 
   // Coins / Pairs State
-  const currencyData = useAppSelector((state) => state.wallet.userMainWallet || []);
+  const [currencyData, setCurrencyData] = useState([]);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [coinSearch, setCoinSearch] = useState("");
+  const [availableWallets, setAvailableWallets] = useState([]);
 
   const [marginPairs, setMarginPairs] = useState([]);
   const [selectedMarginPair, setSelectedMarginPair] = useState(null);
   const [marginAssetType, setMarginAssetType] = useState("base"); // 'base' | 'quote'
-  const [marginMaxAmount, setMarginMaxAmount] = useState("0");
+
 
   // Bottom Sheets
   const rbSheetWallet = useRef();
@@ -93,6 +177,40 @@ const MarginTransfer = () => {
 
   const isMarginTransfer = fromWalletType === "margin" || toWalletType === "margin";
   const isCrossMarginTransfer = fromWalletType === "cross_margin" || toWalletType === "cross_margin";
+
+  // Fetch Available Wallets
+  useEffect(() => {
+    appOperation.customer.get_wallet_type().then((res) => {
+      if (res?.success && Array.isArray(res.data)) {
+        const mapped = res.data.map(w => {
+          if (typeof w === "string") return { key: w, label: w };
+          return { key: w.type || w.key, label: w.label || w.name || w.type || w.key };
+        }).filter(w => w.key);
+        setAvailableWallets(mapped);
+      }
+      setIsScreenLoading(false);
+    }).catch((e) => {
+      console.log(e);
+      setIsScreenLoading(false);
+    });
+  }, []);
+
+  // Fetch specific coin list based on fromWalletType
+  useEffect(() => {
+    if (fromWalletType) {
+      const wt = (fromWalletType === "margin" || fromWalletType === "cross_margin") ? "spot" : fromWalletType;
+      appOperation.customer.user_main_wallet(wt).then((res) => {
+        if (res?.success && Array.isArray(res.data)) {
+          setCurrencyData(res.data);
+        } else {
+          setCurrencyData([]);
+        }
+      }).catch((e) => {
+        console.log(e);
+        setCurrencyData([]);
+      });
+    }
+  }, [fromWalletType]);
 
   // Pre-select coin
   useEffect(() => {
@@ -119,40 +237,39 @@ const MarginTransfer = () => {
     }
   }, [isMarginTransfer, marginPairs.length, selectedMarginPair]);
 
-  // Fetch Max Transfer for Isolated Margin
+  // Fetch Unified Transfer Balance
   useEffect(() => {
-    if (!isMarginTransfer || !selectedMarginPair?.pair_id) return;
-    const direction = fromWalletType === "margin" ? "FROM_MARGIN" : "TO_MARGIN";
-    const wt = fromWalletType === "margin" ? toWalletType : fromWalletType;
+    if (!fromWalletType || !toWalletType) return;
 
-    appOperation.customer.margin_max_transfer({
-      pairId: selectedMarginPair.pair_id,
-      assetType: marginAssetType,
-      direction,
-      walletType: wt
+    // Determine effective currency ID
+    let effCurrencyId = selectedCurrency?.currency_id;
+    if (isMarginTransfer && selectedMarginPair) {
+      const assetName = marginAssetType === "base" ? selectedMarginPair.base_asset : selectedMarginPair.quote_asset;
+      const coinInfo = currencyData.find(c => c.short_name === assetName);
+      if (coinInfo) effCurrencyId = coinInfo.currency_id;
+    }
+
+    if (!effCurrencyId && !isMarginTransfer) return;
+
+    appOperation.customer.get_transfer_balance({
+      from_wallet: fromWalletType,
+      to_wallet: toWalletType,
+      currency_id: effCurrencyId,
+      pair_id: isMarginTransfer ? selectedMarginPair?.pair_id : undefined,
+      asset_type: isMarginTransfer ? marginAssetType : undefined,
     }).then((res) => {
-      if (res?.success) setMarginMaxAmount(res.data?.max_amount ?? "0");
-    }).catch(console.log);
-  }, [isMarginTransfer, selectedMarginPair, marginAssetType, fromWalletType, toWalletType]);
+      if (res?.success && res.data) {
+        setTransferableBalance(res.data.transferable ?? "0.00");
+      } else {
+        setTransferableBalance("0.00");
+      }
+    }).catch((e) => {
+      console.log(e);
+      setTransferableBalance("0.00");
+    });
+  }, [fromWalletType, toWalletType, selectedCurrency, isMarginTransfer, selectedMarginPair, marginAssetType, currencyData]);
 
-  // Fetch Particular Coin Balance for Spot/Main/Cross Margin
-  useEffect(() => {
-    if (!isMarginTransfer && selectedCurrency?.currency_id && fromWalletType && toWalletType) {
-      dispatch(getParticularCoinBalance({
-        fromWallet: fromWalletType,
-        toWallet: toWalletType,
-        currencyId: selectedCurrency.currency_id
-      }));
-    }
-  }, [selectedCurrency, fromWalletType, toWalletType, isMarginTransfer, dispatch]);
-
-  const transferable = useMemo(() => {
-    if (isMarginTransfer) return marginMaxAmount || "0.00";
-    if (fromWalletType === "cross_margin") {
-      return particularCoinBalance?.fromWallet?.max_transferable ?? particularCoinBalance?.fromWallet?.balance ?? "0.00";
-    }
-    return particularCoinBalance?.fromWallet?.balance || "0.00";
-  }, [isMarginTransfer, marginMaxAmount, fromWalletType, particularCoinBalance]);
+  const transferable = transferableBalance;
 
   // Get selected coin for margin display
   const marginSelectedCoinName = useMemo(() => {
@@ -189,51 +306,39 @@ const MarginTransfer = () => {
       return;
     }
 
+    if (isMarginTransfer && !selectedMarginPair?.pair_id) {
+      SimpleToast.show("Please select a margin pair");
+      return;
+    }
+
+    let effCurrencyId = selectedCurrency?.currency_id;
+    if (isMarginTransfer && selectedMarginPair) {
+      const assetName = marginAssetType === "base" ? selectedMarginPair.base_asset : selectedMarginPair.quote_asset;
+      const coinInfo = currencyData.find(c => c.short_name === assetName);
+      if (coinInfo) effCurrencyId = coinInfo.currency_id;
+    }
+
+    if (!effCurrencyId) {
+      SimpleToast.show(isMarginTransfer ? "Please select pair and asset" : "Please select a coin");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      if (isMarginTransfer) {
-        if (!selectedMarginPair?.pair_id) throw new Error("Please select a margin pair");
-        const direction = fromWalletType === "margin" ? "FROM_MARGIN" : "TO_MARGIN";
-        const wt = fromWalletType === "margin" ? toWalletType : fromWalletType;
-        const result = await appOperation.customer.margin_wallet_transfer({
-          pairId: selectedMarginPair.pair_id,
-          assetType: marginAssetType,
-          amount: transferAmount,
-          direction,
-          walletType: wt
-        });
-        if (result?.success) {
-          SimpleToast.show(result?.message || "Transfer successful");
-          navigation.goBack();
-        } else {
-          SimpleToast.show(result?.message || "Transfer failed");
-        }
-      } else if (isCrossMarginTransfer) {
-        const result = await appOperation.customer.cross_transfer({
-          currency_id: selectedCurrency?.currency_id,
-          amount: transferAmount,
-          direction: fromWalletType === "cross_margin" ? "FROM_CROSS" : "TO_CROSS",
-          walletType: "spot"
-        });
-        if (result?.success) {
-          SimpleToast.show(result?.message || "Transfer successful");
-          navigation.goBack();
-        } else {
-          SimpleToast.show(result?.message || "Transfer failed");
-        }
+      const result = await appOperation.customer.wallet_transfer_unified({
+        from_wallet: fromWalletType,
+        to_wallet: toWalletType,
+        currency_id: effCurrencyId,
+        amount: transferAmount,
+        pair_id: isMarginTransfer ? selectedMarginPair?.pair_id : undefined,
+        asset_type: isMarginTransfer ? marginAssetType : undefined,
+      });
+
+      if (result?.success) {
+        SimpleToast.show(result?.message || "Transfer successful");
+        navigation.goBack();
       } else {
-        const result = await appOperation.customer.tranfer_coin({
-          fromWallet: fromWalletType,
-          toWallet: toWalletType,
-          currencyId: selectedCurrency?.currency_id,
-          amount: transferAmount
-        });
-        if (result?.success) {
-          SimpleToast.show(result?.message || "Transfer successful");
-          navigation.goBack();
-        } else {
-          SimpleToast.show(result?.message || "Transfer failed");
-        }
+        SimpleToast.show(result?.message || "Transfer failed");
       }
     } catch (e) {
       SimpleToast.show(e?.message || "Transfer failed");
@@ -241,7 +346,12 @@ const MarginTransfer = () => {
       setIsLoading(false);
     }
   };
-  const getWalletLabel = (key) => AVAILABLE_WALLETS.find(w => w.key === key)?.label || "Wallet";
+  const getWalletLabel = (key) => {
+    const found = availableWallets.find(w => w.key === key);
+    if (found && found.label) return found.label;
+    const fallbacks = { main: "Main Wallet", spot: "Spot Wallet", margin: "Isolated Margin Wallet", cross_margin: "Cross Margin Wallet", p2p: "P2P Wallet", futures: "Futures Wallet", swap: "Swap Wallet", earning: "Earning Wallet" };
+    return fallbacks[key] || "Wallet";
+  };
 
   const renderWalletCard = (type, labelText, onPress) => {
     return (
@@ -270,157 +380,163 @@ const MarginTransfer = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}>
-        {/* Direction Cards */}
-        <View style={styles.directionContainer}>
-          {renderWalletCard(fromWalletType, "From", () => { setSelectingWalletFor("from"); rbSheetWallet.current?.open(); })}
-          <View style={styles.swapBtnWrapper}>
-            <TouchableOpacity activeOpacity={0.9} onPress={handleSwapDirection} style={[styles.swapCircle, { backgroundColor: colors.iconBgColor, borderColor: isDark ? "#171a20" : colors.white }]}>
-              <FastImage source={transferNew} style={{ width: 18, height: 18 }} resizeMode="contain" />
-            </TouchableOpacity>
-          </View>
-          {renderWalletCard(toWalletType, "To", () => { setSelectingWalletFor("to"); rbSheetWallet.current?.open(); })}
-        </View>
-
-        {/* Dynamic Selection: Margin Pair or Currency */}
-        {isMarginTransfer ? (
-          <>
-            <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Margin Pair</AppText>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => rbSheetMarginPairs.current?.open()}
-              style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7", marginBottom: 16 }]}
-            >
-              {selectedMarginPair?.icon_path && (
-                <FastImage
-                  source={{ uri: buildCoinIconUri(selectedMarginPair.icon_path) }}
-                  style={{ width: 24, height: 24, marginRight: 8, borderRadius: 12 }}
-                  resizeMode="contain"
-                />
-              )}
-              <AppText weight={MEDIUM} style={{ flex: 1, color: themeColors.text, fontSize: 15 }}>
-                {selectedMarginPair ? `${selectedMarginPair.base_asset}/${selectedMarginPair.quote_asset}` : "Select Pair"}
-              </AppText>
-              <FastImage source={downIcon} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
-            </TouchableOpacity>
-
-            {selectedMarginPair && (
-              <>
-                <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
-                  {["base", "quote"].map((assetType) => {
-                    const isSelected = marginAssetType === assetType;
-                    const assetName = assetType === "base" ? selectedMarginPair.base_asset : selectedMarginPair.quote_asset;
-                    const coinInfo = currencyData.find(c => c.short_name === assetName);
-                    const coinFullName = coinInfo?.currency || assetName;
-                    const coinIcon = coinInfo?.icon_path;
-
-                    return (
-                      <TouchableOpacity
-                        key={assetType}
-                        onPress={() => setMarginAssetType(assetType)}
-                        style={[
-                          styles.coinBox,
-                          {
-                            flex: 1,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "flex-start",
-                            paddingHorizontal: 12,
-                            paddingVertical: 12,
-                            borderColor: isSelected ? "#D1AA67" : themeColors.themeBorderColor,
-                            backgroundColor: isSelected ? (isDark ? "#2A241C" : "#FCF2E1") : (isDark ? "#1C1C1E" : colors.white),
-                          }
-                        ]}
-                      >
-                        {coinIcon ? (
-                          <FastImage
-                            source={{ uri: buildCoinIconUri(coinIcon) }}
-                            style={{ width: 26, height: 26, borderRadius: 13 }}
-                            resizeMode="contain"
-                          />
-                        ) : (
-                          <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: "#E5E5E5" }} />
-                        )}
-                        <View style={{ marginLeft: 8, flex: 1, alignItems: "flex-start" }}>
-                          <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>
-                            {assetName}
-                          </AppText>
-                          {coinFullName !== assetName && (
-                            <AppText style={{ color: themeColors.secondaryText, fontSize: 11, marginTop: 1 }}>
-                              {coinFullName}
-                            </AppText>
-                          )}
-                        </View>
-                        {isSelected ? (
-                          <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: "#D1AA67", alignItems: "center", justifyContent: "center" }}>
-                            <FastImage source={checkIc} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor="#FFF" />
-                          </View>
-                        ) : (
-                          <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: "#E5E5EA" }} />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </>
-            )}
-          </>
+        {isScreenLoading ? (
+          <MarginTransferSkeleton />
         ) : (
           <>
-            <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Coin</AppText>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => rbSheetCoins.current?.open()}
-              style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7", marginBottom: 16 }]}
-            >
-              {selectedCurrency ? (
-                <FastImage
-                  source={buildCoinIconUri(selectedCurrency?.icon_path) ? { uri: buildCoinIconUri(selectedCurrency?.icon_path) } : bitcoin_ic}
-                  style={{ width: 24, height: 24, marginRight: 10 }}
-                  resizeMode="contain"
-                />
-              ) : null}
-              <AppText weight={MEDIUM} style={{ flex: 1, color: themeColors.text, fontSize: 15 }}>
-                {selectedCurrency?.short_name || "Select Coin"}
+            {/* Direction Cards */}
+            <View style={styles.directionContainer}>
+              {renderWalletCard(fromWalletType, "From", () => { setSelectingWalletFor("from"); rbSheetWallet.current?.open(); })}
+              <View style={styles.swapBtnWrapper}>
+                <TouchableOpacity activeOpacity={0.9} onPress={handleSwapDirection} style={[styles.swapCircle, { backgroundColor: colors.iconBgColor, borderColor: isDark ? "#171a20" : colors.white }]}>
+                  <FastImage source={transferNew} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                </TouchableOpacity>
+              </View>
+              {renderWalletCard(toWalletType, "To", () => { setSelectingWalletFor("to"); rbSheetWallet.current?.open(); })}
+            </View>
+
+            {/* Dynamic Selection: Margin Pair or Currency */}
+            {isMarginTransfer ? (
+              <>
+                <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Margin Pair</AppText>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => rbSheetMarginPairs.current?.open()}
+                  style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7", marginBottom: 16 }]}
+                >
+                  {selectedMarginPair?.icon_path && (
+                    <FastImage
+                      source={{ uri: buildCoinIconUri(selectedMarginPair.icon_path) }}
+                      style={{ width: 24, height: 24, marginRight: 8, borderRadius: 12 }}
+                      resizeMode="contain"
+                    />
+                  )}
+                  <AppText weight={MEDIUM} style={{ flex: 1, color: themeColors.text, fontSize: 15 }}>
+                    {selectedMarginPair ? `${selectedMarginPair.base_asset}/${selectedMarginPair.quote_asset}` : "Select Pair"}
+                  </AppText>
+                  <FastImage source={downIcon} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                </TouchableOpacity>
+
+                {selectedMarginPair && (
+                  <>
+                    <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
+                      {["base", "quote"].map((assetType) => {
+                        const isSelected = marginAssetType === assetType;
+                        const assetName = assetType === "base" ? selectedMarginPair.base_asset : selectedMarginPair.quote_asset;
+                        const coinInfo = currencyData.find(c => c.short_name === assetName);
+                        const coinFullName = coinInfo?.currency || assetName;
+                        const coinIcon = coinInfo?.icon_path;
+
+                        return (
+                          <TouchableOpacity
+                            key={assetType}
+                            onPress={() => setMarginAssetType(assetType)}
+                            style={[
+                              styles.coinBox,
+                              {
+                                flex: 1,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "flex-start",
+                                paddingHorizontal: 12,
+                                paddingVertical: 12,
+                                borderColor: isSelected ? "#D1AA67" : themeColors.themeBorderColor,
+                                backgroundColor: isSelected ? (isDark ? "#2A241C" : "#FCF2E1") : (isDark ? "#1C1C1E" : colors.white),
+                              }
+                            ]}
+                          >
+                            {coinIcon ? (
+                              <FastImage
+                                source={{ uri: buildCoinIconUri(coinIcon) }}
+                                style={{ width: 26, height: 26, borderRadius: 13 }}
+                                resizeMode="contain"
+                              />
+                            ) : (
+                              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: "#E5E5E5" }} />
+                            )}
+                            <View style={{ marginLeft: 8, flex: 1, alignItems: "flex-start" }}>
+                              <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>
+                                {assetName}
+                              </AppText>
+                              {coinFullName !== assetName && (
+                                <AppText style={{ color: themeColors.secondaryText, fontSize: 11, marginTop: 1 }}>
+                                  {coinFullName}
+                                </AppText>
+                              )}
+                            </View>
+                            {isSelected ? (
+                              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: "#D1AA67", alignItems: "center", justifyContent: "center" }}>
+                                <FastImage source={checkIc} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor="#FFF" />
+                              </View>
+                            ) : (
+                              <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: "#E5E5EA" }} />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Coin</AppText>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => rbSheetCoins.current?.open()}
+                  style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7", marginBottom: 16 }]}
+                >
+                  {selectedCurrency ? (
+                    <FastImage
+                      source={buildCoinIconUri(selectedCurrency?.icon_path) ? { uri: buildCoinIconUri(selectedCurrency?.icon_path) } : bitcoin_ic}
+                      style={{ width: 24, height: 24, marginRight: 10 }}
+                      resizeMode="contain"
+                    />
+                  ) : null}
+                  <AppText weight={MEDIUM} style={{ flex: 1, color: themeColors.text, fontSize: 15 }}>
+                    {selectedCurrency?.short_name || "Select Coin"}
+                  </AppText>
+                  <FastImage source={downIcon} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Amount Input Section */}
+            <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Amount</AppText>
+            <View style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7" }]}>
+              <TextInput
+                placeholder="0.00"
+                placeholderTextColor={isDark ? "#5A5A5C" : "#C7C7CC"}
+                value={transferAmount}
+                onChangeText={setTransferAmount}
+                keyboardType="numeric"
+                cursorColor={colors.black}
+                style={{
+                  flex: 1,
+                  color: themeColors.text,
+                  fontSize: 15,
+                  fontFamily: fontFamilyMedium,
+                  paddingVertical: Platform.OS === "ios" ? 8 : 4,
+                }}
+              />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>
+                  {isMarginTransfer ? marginSelectedCoinName : selectedCurrency?.short_name || ""}
+                </AppText>
+                <View style={{ width: 1, height: 16, backgroundColor: themeColors.themeBorderColor }} />
+                <TouchableOpacity onPress={handleAll}>
+                  <AppText weight={SEMI_BOLD} style={{ color: "#D1AA67", fontSize: 14 }}>All</AppText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 }}>
+              <AppText style={{ fontSize: 12, color: themeColors.secondaryText }}>
+                Balance: {transferable} {isMarginTransfer ? marginSelectedCoinName : selectedCurrency?.short_name || ""}
               </AppText>
-              <FastImage source={downIcon} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
-            </TouchableOpacity>
+            </View>
           </>
         )}
-
-        {/* Amount Input Section */}
-        <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Amount</AppText>
-        <View style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7" }]}>
-          <TextInput
-            placeholder="0.00"
-            placeholderTextColor={isDark ? "#5A5A5C" : "#C7C7CC"}
-            value={transferAmount}
-            onChangeText={setTransferAmount}
-            keyboardType="numeric"
-            cursorColor={colors.black}
-            style={{
-              flex: 1,
-              color: themeColors.text,
-              fontSize: 15,
-              fontFamily: fontFamilyMedium,
-              paddingVertical: Platform.OS === "ios" ? 8 : 4,
-            }}
-          />
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>
-              {isMarginTransfer ? marginSelectedCoinName : selectedCurrency?.short_name || ""}
-            </AppText>
-            <View style={{ width: 1, height: 16, backgroundColor: themeColors.themeBorderColor }} />
-            <TouchableOpacity onPress={handleAll}>
-              <AppText weight={SEMI_BOLD} style={{ color: "#D1AA67", fontSize: 14 }}>All</AppText>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 }}>
-          <AppText style={{ fontSize: 12, color: themeColors.secondaryText }}>
-            Balance: {transferable} {isMarginTransfer ? marginSelectedCoinName : selectedCurrency?.short_name || ""}
-          </AppText>
-        </View>
       </ScrollView>
 
       {/* Confirm Button */}
@@ -452,23 +568,44 @@ const MarginTransfer = () => {
           Select Wallet
         </AppText>
         <ScrollView showsVerticalScrollIndicator={false}>
-          {AVAILABLE_WALLETS.filter(w => w.key !== fromWalletType && w.key !== toWalletType).map((item) => (
-            <TouchableOpacity
-              key={item.key}
-              style={[styles.accountCard, { borderColor: lightTheme.input, backgroundColor: isDark ? "#1C1C1E" : colors.white }]}
-              onPress={() => {
-                if (selectingWalletFor === "from") setFromWalletType(item.key);
-                else setToWalletType(item.key);
-                rbSheetWallet.current?.close();
-                setTransferAmount("");
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <FastImage source={item.icon} style={{ width: 24, height: 24 }} resizeMode="contain" />
-                <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: themeColors.text, marginLeft: 12 }}>{item.label}</AppText>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {availableWallets.filter(w => w.key !== (selectingWalletFor === "from" ? toWalletType : fromWalletType)).map((item) => {
+            const isSelected = item.key === (selectingWalletFor === "from" ? fromWalletType : toWalletType);
+            return (
+              <TouchableOpacity
+                key={item.key}
+                style={[
+                  styles.accountCard,
+                  {
+                    borderColor: lightTheme.input,
+                    backgroundColor: isDark ? "#1C1C1E" : colors.white,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between"
+                  }
+                ]}
+                onPress={() => {
+                  if (selectingWalletFor === "from") setFromWalletType(item.key);
+                  else setToWalletType(item.key);
+                  rbSheetWallet.current?.close();
+                  setTransferAmount("");
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  {WALLET_ICONS[item.key] ? (
+                    <FastImage source={WALLET_ICONS[item.key]} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                  ) : (
+                    <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "#E5E5E5" }} />
+                  )}
+                  <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: themeColors.text, marginLeft: 12 }}>{item.label}</AppText>
+                </View>
+                {isSelected && (
+                  <View style={{ width: 18, height: 18, borderRadius: 10, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}>
+                    <FastImage source={checkIc} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor="#FFF" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            )
+          })}
         </ScrollView>
       </RBSheet>
 

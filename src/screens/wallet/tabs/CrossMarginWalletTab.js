@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { View, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator } from "react-native";
+import { View, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator, Animated, Dimensions } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import FastImage from "react-native-fast-image";
 import Svg, { Path, Circle, Text as SvgText } from "react-native-svg";
 import { AppText, BOLD, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
@@ -15,14 +16,14 @@ import Toast from "react-native-simple-toast";
 
 function fmt(val, decimals = 8) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return (0).toFixed(decimals);
-  return n.toFixed(decimals);
+  if (!val || isNaN(n) || n === 0) return "0";
+  return parseFloat(n.toFixed(decimals)).toString();
 }
 
 function fmtPrice(val) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return "";
-  return n.toFixed(2);
+  if (!val || isNaN(n) || n === 0) return "0";
+  return parseFloat(n.toFixed(2)).toString();
 }
 
 function MarginLevelGauge({ level, mmr = 1.1, warningRate = 1.15 }) {
@@ -63,6 +64,117 @@ function MarginLevelGauge({ level, mmr = 1.1, warningRate = 1.15 }) {
           {isNum ? fmtPrice(level) : "—"}
         </SvgText>
       </Svg>
+    </View>
+  );
+}
+
+const SHIMMER_STRIP = 160;
+function ShimmerCell({ width: w, height, borderRadius = 6, style, isDark }) {
+  const shimmerX = useRef(new Animated.Value(-SHIMMER_STRIP)).current;
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    const run = () => {
+      if (!mounted.current) return;
+      shimmerX.setValue(-SHIMMER_STRIP);
+      Animated.timing(shimmerX, {
+        toValue: Math.max(w, 1) + SHIMMER_STRIP,
+        duration: 1100,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (mounted.current && finished) run();
+      });
+    };
+    const t = setTimeout(run, 50);
+    return () => {
+      mounted.current = false;
+      clearTimeout(t);
+      shimmerX.stopAnimation();
+    };
+  }, [shimmerX, w]);
+
+  const boneColor = isDark ? "#2A2A2A" : "#E1E9EE";
+  const shimmerColors = isDark
+    ? ["transparent", "rgba(255,255,255,0.08)", "transparent"]
+    : ["transparent", "rgba(255,255,255,0.6)", "transparent"];
+
+  return (
+    <View style={[{ width: w, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
+      <Animated.View
+        pointerEvents="none"
+        style={{ position: "absolute", top: 0, bottom: 0, width: SHIMMER_STRIP, transform: [{ translateX: shimmerX }] }}
+      >
+        <LinearGradient colors={shimmerColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, width: SHIMMER_STRIP }} />
+      </Animated.View>
+    </View>
+  );
+}
+
+function CrossMarginSkeleton({ theme }) {
+  const isDark = theme === "Dark";
+  const screenWidth = Dimensions.get("window").width;
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <ShimmerCell isDark={isDark} width={180} height={22} borderRadius={4} />
+      </View>
+      <View style={[styles.summaryCard, { padding: 20, backgroundColor: isDark ? "#1C1C1E" : colors.white }]}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View>
+            <ShimmerCell isDark={isDark} width={100} height={16} borderRadius={4} style={{ marginBottom: 8 }} />
+            <ShimmerCell isDark={isDark} width={140} height={32} borderRadius={8} style={{ marginBottom: 6 }} />
+            <ShimmerCell isDark={isDark} width={80} height={14} borderRadius={4} />
+          </View>
+          <View style={{ alignItems: "flex-end" }}>
+            <ShimmerCell isDark={isDark} width={60} height={20} borderRadius={10} style={{ marginBottom: 8 }} />
+            <ShimmerCell isDark={isDark} width={80} height={20} borderRadius={10} />
+          </View>
+        </View>
+        <View style={[styles.equityGrid, { marginTop: 20 }]}>
+           <View style={{ flex: 1, gap: 6 }}>
+             <ShimmerCell isDark={isDark} width={80} height={14} borderRadius={4} />
+             <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
+             <ShimmerCell isDark={isDark} width={120} height={12} borderRadius={4} />
+           </View>
+           <View style={{ flex: 1, alignItems: "flex-end", gap: 6 }}>
+             <ShimmerCell isDark={isDark} width={120} height={14} borderRadius={4} />
+             <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
+             <ShimmerCell isDark={isDark} width={100} height={12} borderRadius={4} />
+           </View>
+        </View>
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: isDark ? "#2C2C2E" : "#E5E7EB" }}>
+           <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+           <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+           <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+        </View>
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 20, marginTop: 20 }}>
+        <ShimmerCell isDark={isDark} width={60} height={20} borderRadius={4} />
+        <ShimmerCell isDark={isDark} width={80} height={20} borderRadius={4} />
+      </View>
+
+      <View style={[styles.filtersRow, { marginTop: 20 }]}>
+        <ShimmerCell isDark={isDark} width={screenWidth - 40} height={42} borderRadius={12} />
+      </View>
+
+      <View style={{ marginTop: 20, gap: 16 }}>
+        {[1, 2, 3, 4].map(i => (
+          <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+              <ShimmerCell isDark={isDark} width={28} height={28} borderRadius={14} />
+              <View style={{ gap: 6 }}>
+                <ShimmerCell isDark={isDark} width={60} height={16} borderRadius={4} />
+                <ShimmerCell isDark={isDark} width={40} height={12} borderRadius={4} />
+              </View>
+            </View>
+            <View style={{ alignItems: "flex-end", gap: 6 }}>
+              <ShimmerCell isDark={isDark} width={80} height={16} borderRadius={4} />
+              <ShimmerCell isDark={isDark} width={60} height={12} borderRadius={4} />
+            </View>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -175,11 +287,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
   }, [positions, search, hideSmall]);
 
   if (loading && !account) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", marginTop: 50 }}>
-        <ActivityIndicator size="large" color={colors.buttonBg} />
-      </View>
-    );
+    return <CrossMarginSkeleton theme={theme} />;
   }
 
   return (
@@ -426,12 +534,13 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
           keyExtractor={(item) => item.asset}
           style={{ marginTop: 10 }}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const hasBorrow = parseFloat(item.borrowed) > 0;
             const debt = debtByAsset[item.asset] || null;
             const totalBal = (parseFloat(item.balance || 0) + parseFloat(item.locked || 0)).toString();
+            const isLast = index === filteredFunds.length - 1;
             return (
-              <View style={[styles.row, { borderBottomColor: themeColors.border }]}>
+              <View style={[styles.row, { borderBottomColor: themeColors.border }, isLast && { borderBottomWidth: 0 }]}>
                 <View style={styles.rowLeft}>
                   <View>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.asset}</AppText>
@@ -467,6 +576,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
               <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Funds Found</AppText>
             </View>
           )}
+          ListFooterComponent={() => <View style={{ height: 120 }} />}
         />
       ) : (
         <FlatList
@@ -474,7 +584,8 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
           keyExtractor={(item) => item.position_id || item.asset}
           style={{ marginTop: 10 }}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => {
+          scrollEnabled={false}
+          renderItem={({ item, index }) => {
             const isLong = item.side === "LONG";
             const sideColor = isLong ? colors.green : colors.red;
             const valNum = parseFloat(item.value_usdt || 0);
@@ -484,9 +595,10 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
             const sideColorText = isLong ? "GREEN" : "RED";
             const assetRow = assets.find((a) => a.asset === item.asset);
             const debt = debtByAsset[item.asset] || null;
+            const isLast = index === filteredPositions.length - 1;
 
             return (
-              <View style={[styles.row, { borderBottomColor: themeColors.border }]}>
+              <View style={[styles.row, { borderBottomColor: themeColors.border }, isLast && { borderBottomWidth: 0 }]}>
                 <View style={styles.rowLeft}>
                   <View style={{ gap: 4 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -527,6 +639,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
               <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Positions Found</AppText>
             </View>
           )}
+          ListFooterComponent={() => <View style={{ height: 120 }} />}
         />
       )}
 

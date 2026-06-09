@@ -71,7 +71,7 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
           <View style={styles.actions}>
             <ActionBtn label="Borrow" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, { defaultTab: "borrow", pairId: selectedPair.pair_id }); }} />
             <ActionBtn label="Repay" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, { defaultTab: "repay", pairId: selectedPair.pair_id }); }} />
-            <ActionBtn label="Transfer" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "margin" }); }} />
+            <ActionBtn label="Transfer" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "margin", coin: selectedPair?.base }); }} />
             <ActionBtn label="Trade" onPress={() => { ref.current?.close(); NavigationService.navigate(TRADE_SCREEN, { trade_pair: selectedPair.pairRaw }); }} />
           </View>
         </View>

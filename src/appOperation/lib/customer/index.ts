@@ -181,6 +181,14 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('wallet/deposit_inr', data, CUSTOMER_TYPE),
   tranfer_coin: (data: any) =>
     appOperation.post('wallet/wallet-transfer', data, CUSTOMER_TYPE),
+  get_transfer_balance: (data: any) => {
+    let query = `from_wallet=${data.from_wallet}&to_wallet=${data.to_wallet}&currency_id=${data.currency_id}`;
+    if (data.pair_id) query += `&pair_id=${data.pair_id}`;
+    if (data.asset_type) query += `&asset_type=${data.asset_type}`;
+    return appOperation.get(`wallet/transfer-balance?${query}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  wallet_transfer_unified: (data: any) =>
+    appOperation.post('wallet/transfer', data, CUSTOMER_TYPE),
   margin_wallet_transfer: (data: any) =>
     appOperation.post('margin/wallet-transfer', data, CUSTOMER_TYPE),
   margin_max_transfer: (data: any) =>

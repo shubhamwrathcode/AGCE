@@ -147,10 +147,12 @@ const SpotWalletTab = ({
         style={{ marginTop: 10 }}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => {
+        scrollEnabled={false}
+        renderItem={({ item, index }) => {
           const total = totalWalletQty(item);
+          const isLast = index === spotRows.length - 1;
           return (
-            <View style={[styles.row, { borderBottomColor: themeColors.border }]}>
+            <View style={[styles.row, { borderBottomColor: themeColors.border }, isLast && { borderBottomWidth: 0 }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
                 <View style={{ borderRadius: 16, overflow: "hidden" }}>
                   <FastImage
@@ -193,6 +195,7 @@ const SpotWalletTab = ({
             <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Data Found</AppText>
           </View>
         )}
+        ListFooterComponent={() => <View style={{ height: 120 }} />}
       />
     </View>
   );

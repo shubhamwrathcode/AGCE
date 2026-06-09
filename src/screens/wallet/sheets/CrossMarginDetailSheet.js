@@ -14,14 +14,14 @@ import { CUSTOMER_TYPE } from "../../../appOperation/types";
 
 function fmt(val, decimals = 8) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return (0).toFixed(decimals);
-  return n.toFixed(decimals);
+  if (!val || isNaN(n) || n === 0) return "0";
+  return parseFloat(n.toFixed(decimals)).toString();
 }
 
 function fmtPrice(val) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return "";
-  return n.toFixed(2);
+  if (!val || isNaN(n) || n === 0) return "0";
+  return parseFloat(n.toFixed(2)).toString();
 }
 
 const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, assets, debtByAsset, buildCoinIconUri, onSuccess }, ref) => {
@@ -162,7 +162,7 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
                 label="Transfer"
                 onPress={() => {
                   ref.current?.close();
-                  NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "cross_margin" });
+                  NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "cross_margin", coin: d?.asset });
                 }}
               />
               <ActionBtn

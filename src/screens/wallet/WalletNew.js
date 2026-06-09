@@ -165,7 +165,7 @@ const WalletNew = () => {
       { key: "Spot", title: "Spot" },
       { key: "Main", title: "Main" },
       { key: "Margin", title: "Isolated" },
-      { key: "Cross", title: "Cross Margin" },
+      { key: "Cross", title: "Cross" },
       { key: "P2P", title: "P2P" },
       { key: "Futures", title: "Futures" },
       { key: "Swap", title: "Swap" },
@@ -565,7 +565,7 @@ const WalletNew = () => {
       mk("earning", "Earning", balancesByKey.earning),
       mk("futures", "Futures", balancesByKey.futures),
       mk("margin", "Isolated Margin", balancesByKey.margin),
-      mk("cross", "Cross Margin", balancesByKey.cross),
+      mk("cross", "Cross", balancesByKey.cross),
     ];
   }, [walletBalance, walletBalanceMain, walletBalanceSpot, walletBalanceSwap, walletBalanceEarning, walletBalanceFutures, marginSummary, safeNum]);
 
@@ -641,6 +641,13 @@ const WalletNew = () => {
         setContentLoading(true);
         fetchWalletData();
         isFirstLoad.current = false;
+      } else {
+        // Silent background refresh on subsequent focuses
+        // Delay to allow backend DB replication after actions
+        const timer = setTimeout(() => {
+          fetchWalletData();
+        }, 1000);
+        return () => clearTimeout(timer);
       }
     }, [fetchWalletData])
   );
@@ -692,6 +699,7 @@ const WalletNew = () => {
       <KeyBoardAware
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 200, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}
       >
 
@@ -709,7 +717,7 @@ const WalletNew = () => {
             renderScene={({ route }) => {
               if (route.key === "Overview") {
                 return (
-                  <View style={{ marginVertical: 10, paddingHorizontal: 20 }}>
+                  <View style={{ marginVertical: 10, paddingHorizontal: 20, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <View>
 
 
@@ -886,10 +894,12 @@ const WalletNew = () => {
                                   style={{ marginTop: 14 }}
                                   showsVerticalScrollIndicator={false}
                                   showsHorizontalScrollIndicator={false}
-                                  renderItem={({ item }) => {
+                                  scrollEnabled={false}
+                                  renderItem={({ item, index }) => {
                                     const total = totalWalletQty(item);
+                                    const isLast = index === overviewCryptoRows.length - 1;
                                     return (
-                                      <View style={styles.aoRow}>
+                                      <View style={[styles.aoRow, isLast && { borderBottomWidth: 0 }]}>
                                         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
                                           <View style={{ borderRadius: 16, overflow: "hidden" }}>
                                             <FastImage
@@ -930,6 +940,7 @@ const WalletNew = () => {
                                       </View>
                                     );
                                   }}
+                                  ListFooterComponent={() => <View style={{ height: 120 }} />}
                                   ListEmptyComponent={() => (
                                     <View style={{ alignItems: "center", marginTop: 60, gap: 10 }}>
                                       <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 80, height: 80 }} resizeMode="contain" />
@@ -1002,297 +1013,313 @@ const WalletNew = () => {
 
               if (route.key === "Spot") {
                 return (
-                  <DeferredTabScene>
-                    <SpotWalletTab
-                      theme={theme}
-                      themeColors={themeColors}
-                      showBalance={showBalance}
-                      setShowBalance={setShowBalance}
-                      walletBalanceSpot={walletBalanceSpot}
-                      portfolioPreferredAmount={portfolioPreferredAmount}
-                      portfolioPreferredCurrency={portfolioPreferredCurrency}
-                      portfolioUsdtEstimate={portfolioUsdtEstimate}
-                      formatEstimateHeader={formatEstimateHeader}
-                      safeRound={safeRound}
-                      safeNum={safeNum}
-                      totalWalletQty={totalWalletQty}
-                      approxUsdLine={approxUsdLine}
-                      buildCoinIconUri={buildCoinIconUri}
-                      failedIconMap={failedIconMap}
-                      setFailedIconMap={setFailedIconMap}
-                      userSpotWallet={userSpotWallet}
-                      onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
-                      onBuyCrypto={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
-                      onTransfer={() =>
-                        NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "main" })
-                      }
-                      onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
-                      onOpenCoinSheet={(coin) => {
-                        setSelectedCoinForSheet(coin);
-                        setSelectedCoinSheetWalletType("spot");
-                        coinDetailSheet.current?.open?.();
-                      }}
-                      eyeCloseIcon={eye_close_icon}
-                      eyeOpenIcon={eye_open_icon}
-                    />
-                  </DeferredTabScene>
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <SpotWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        showBalance={showBalance}
+                        setShowBalance={setShowBalance}
+                        walletBalanceSpot={walletBalanceSpot}
+                        portfolioPreferredAmount={portfolioPreferredAmount}
+                        portfolioPreferredCurrency={portfolioPreferredCurrency}
+                        portfolioUsdtEstimate={portfolioUsdtEstimate}
+                        formatEstimateHeader={formatEstimateHeader}
+                        safeRound={safeRound}
+                        safeNum={safeNum}
+                        totalWalletQty={totalWalletQty}
+                        approxUsdLine={approxUsdLine}
+                        buildCoinIconUri={buildCoinIconUri}
+                        failedIconMap={failedIconMap}
+                        setFailedIconMap={setFailedIconMap}
+                        userSpotWallet={userSpotWallet}
+                        onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
+                        onBuyCrypto={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
+                        onTransfer={() =>
+                          NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "main" })
+                        }
+                        onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
+                        onOpenCoinSheet={(coin) => {
+                          setSelectedCoinForSheet(coin);
+                          setSelectedCoinSheetWalletType("spot");
+                          coinDetailSheet.current?.open?.();
+                        }}
+                        eyeCloseIcon={eye_close_icon}
+                        eyeOpenIcon={eye_open_icon}
+                      />
+                    </DeferredTabScene>
+                  </View>
                 );
               }
 
               if (route.key === "Margin") {
                 return (
-                  <DeferredTabScene>
-                    <MarginWalletTab
-                      theme={theme}
-                      themeColors={themeColors}
-                      showBalance={showBalance}
-                      setShowBalance={setShowBalance}
-                      marginSummary={marginSummary}
-                      walletBalance={marginSummary ? { dollarPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, currencyPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, Currency: "USD" } : null}
-                      portfolioPreferredAmount={portfolioPreferredAmount}
-                      portfolioPreferredCurrency={portfolioPreferredCurrency}
-                      portfolioUsdtEstimate={portfolioUsdtEstimate}
-                      formatEstimateHeader={formatEstimateHeader}
-                      safeRound={safeRound}
-                      safeNum={safeNum}
-                      totalWalletQty={totalWalletQty}
-                      approxUsdLine={approxUsdLine}
-                      buildCoinIconUri={buildCoinIconUri}
-                      failedIconMap={failedIconMap}
-                      setFailedIconMap={setFailedIconMap}
-                      userWalletRows={[]}
-                      eyeCloseIcon={eye_close_icon}
-                      eyeOpenIcon={eye_open_icon}
-                      onOpenCoinSheet={(coin) => {
-                        setSelectedCoinForSheet(coin);
-                        setSelectedCoinSheetWalletType("margin");
-                        coinDetailSheet.current?.open?.();
-                      }}
-                    />
-                  </DeferredTabScene>
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <MarginWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        showBalance={showBalance}
+                        setShowBalance={setShowBalance}
+                        marginSummary={marginSummary}
+                        walletBalance={marginSummary ? { dollarPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, currencyPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, Currency: "USD" } : null}
+                        portfolioPreferredAmount={portfolioPreferredAmount}
+                        portfolioPreferredCurrency={portfolioPreferredCurrency}
+                        portfolioUsdtEstimate={portfolioUsdtEstimate}
+                        formatEstimateHeader={formatEstimateHeader}
+                        safeRound={safeRound}
+                        safeNum={safeNum}
+                        totalWalletQty={totalWalletQty}
+                        approxUsdLine={approxUsdLine}
+                        buildCoinIconUri={buildCoinIconUri}
+                        failedIconMap={failedIconMap}
+                        setFailedIconMap={setFailedIconMap}
+                        userWalletRows={[]}
+                        eyeCloseIcon={eye_close_icon}
+                        eyeOpenIcon={eye_open_icon}
+                        onOpenCoinSheet={(coin) => {
+                          setSelectedCoinForSheet(coin);
+                          setSelectedCoinSheetWalletType("margin");
+                          coinDetailSheet.current?.open?.();
+                        }}
+                      />
+                    </DeferredTabScene>
+                  </View>
                 );
               }
 
               if (route.key === "Cross") {
                 return (
-                  <DeferredTabScene>
-                    <CrossMarginWalletTab
-                      theme={theme}
-                      themeColors={themeColors}
-                      buildCoinIconUri={buildCoinIconUri}
-                    />
-                  </DeferredTabScene>
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <CrossMarginWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        buildCoinIconUri={buildCoinIconUri}
+                      />
+                    </DeferredTabScene>
+                  </View>
                 );
               }
 
               if (route.key === "Main") {
                 return (
-                  <DeferredTabScene>
-                    <MainWalletTab
-                      theme={theme}
-                      themeColors={themeColors}
-                      showBalance={showBalance}
-                      setShowBalance={setShowBalance}
-                      walletBalance={walletBalanceMain}
-                      portfolioPreferredAmount={portfolioPreferredAmount}
-                      portfolioPreferredCurrency={portfolioPreferredCurrency}
-                      portfolioUsdtEstimate={portfolioUsdtEstimate}
-                      formatEstimateHeader={formatEstimateHeader}
-                      safeRound={safeRound}
-                      safeNum={safeNum}
-                      totalWalletQty={totalWalletQty}
-                      approxUsdLine={approxUsdLine}
-                      buildCoinIconUri={buildCoinIconUri}
-                      failedIconMap={failedIconMap}
-                      setFailedIconMap={setFailedIconMap}
-                      userWalletRows={userMainWallet}
-                      actions={[
-                        { key: "deposit", label: "Deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
-                        { key: "withdraw", label: "Withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
-                        {
-                          key: "transfer",
-                          label: "Transfer",
-                          onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "main", toWalletType: "spot" }),
-                        },
-                      ]}
-                      eyeCloseIcon={eye_close_icon}
-                      eyeOpenIcon={eye_open_icon}
-                      onOpenCoinSheet={(coin) => {
-                        setSelectedCoinForSheet(coin);
-                        setSelectedCoinSheetWalletType("main");
-                        coinDetailSheet.current?.open?.();
-                      }}
-                    />
-                  </DeferredTabScene>
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <MainWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        showBalance={showBalance}
+                        setShowBalance={setShowBalance}
+                        walletBalance={walletBalanceMain}
+                        portfolioPreferredAmount={portfolioPreferredAmount}
+                        portfolioPreferredCurrency={portfolioPreferredCurrency}
+                        portfolioUsdtEstimate={portfolioUsdtEstimate}
+                        formatEstimateHeader={formatEstimateHeader}
+                        safeRound={safeRound}
+                        safeNum={safeNum}
+                        totalWalletQty={totalWalletQty}
+                        approxUsdLine={approxUsdLine}
+                        buildCoinIconUri={buildCoinIconUri}
+                        failedIconMap={failedIconMap}
+                        setFailedIconMap={setFailedIconMap}
+                        userWalletRows={userMainWallet}
+                        actions={[
+                          { key: "deposit", label: "Deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
+                          { key: "withdraw", label: "Withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
+                          {
+                            key: "transfer",
+                            label: "Transfer",
+                            onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "main", toWalletType: "spot" }),
+                          },
+                        ]}
+                        eyeCloseIcon={eye_close_icon}
+                        eyeOpenIcon={eye_open_icon}
+                        onOpenCoinSheet={(coin) => {
+                          setSelectedCoinForSheet(coin);
+                          setSelectedCoinSheetWalletType("main");
+                          coinDetailSheet.current?.open?.();
+                        }}
+                      />
+                    </DeferredTabScene>
+                  </View>
                 );
               }
 
               if (route.key === "P2P") {
                 return (
-                  <DeferredTabScene>
-                    <P2PWalletTab
-                      theme={theme}
-                      themeColors={themeColors}
-                      showBalance={showBalance}
-                      setShowBalance={setShowBalance}
-                      walletBalance={walletBalanceArbitrage}
-                      portfolioPreferredAmount={portfolioPreferredAmount}
-                      portfolioPreferredCurrency={portfolioPreferredCurrency}
-                      portfolioUsdtEstimate={portfolioUsdtEstimate}
-                      formatEstimateHeader={formatEstimateHeader}
-                      safeRound={safeRound}
-                      safeNum={safeNum}
-                      totalWalletQty={totalWalletQty}
-                      approxUsdLine={approxUsdLine}
-                      buildCoinIconUri={buildCoinIconUri}
-                      failedIconMap={failedIconMap}
-                      setFailedIconMap={setFailedIconMap}
-                      userWalletRows={userArbitrageWallet}
-                      actions={[
-                        { key: "p2p", label: "P2P Trade", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
-                        {
-                          key: "transfer",
-                          label: "Transfer",
-                          onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "p2p", toWalletType: "main" }),
-                        },
-                      ]}
-                      eyeCloseIcon={eye_close_icon}
-                      eyeOpenIcon={eye_open_icon}
-                      onOpenCoinSheet={(coin) => {
-                        setSelectedCoinForSheet(coin);
-                        setSelectedCoinSheetWalletType("p2p");
-                        coinDetailSheet.current?.open?.();
-                      }}
-                    />
-                  </DeferredTabScene>
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <P2PWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        showBalance={showBalance}
+                        setShowBalance={setShowBalance}
+                        walletBalance={walletBalanceArbitrage}
+                        portfolioPreferredAmount={portfolioPreferredAmount}
+                        portfolioPreferredCurrency={portfolioPreferredCurrency}
+                        portfolioUsdtEstimate={portfolioUsdtEstimate}
+                        formatEstimateHeader={formatEstimateHeader}
+                        safeRound={safeRound}
+                        safeNum={safeNum}
+                        totalWalletQty={totalWalletQty}
+                        approxUsdLine={approxUsdLine}
+                        buildCoinIconUri={buildCoinIconUri}
+                        failedIconMap={failedIconMap}
+                        setFailedIconMap={setFailedIconMap}
+                        userWalletRows={userArbitrageWallet}
+                        actions={[
+                          { key: "p2p", label: "P2P Trade", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
+                          {
+                            key: "transfer",
+                            label: "Transfer",
+                            onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "p2p", toWalletType: "main" }),
+                          },
+                        ]}
+                        eyeCloseIcon={eye_close_icon}
+                        eyeOpenIcon={eye_open_icon}
+                        onOpenCoinSheet={(coin) => {
+                          setSelectedCoinForSheet(coin);
+                          setSelectedCoinSheetWalletType("p2p");
+                          coinDetailSheet.current?.open?.();
+                        }}
+                      />
+                    </DeferredTabScene>
+                  </View>
                 );
               }
 
               if (route.key === "Swap") {
                 return (
-                  <DeferredTabScene>
-                    <SwapWalletTab
-                      theme={theme}
-                      themeColors={themeColors}
-                      showBalance={showBalance}
-                      setShowBalance={setShowBalance}
-                      walletBalance={walletBalanceSwap}
-                      portfolioPreferredAmount={portfolioPreferredAmount}
-                      portfolioPreferredCurrency={portfolioPreferredCurrency}
-                      portfolioUsdtEstimate={portfolioUsdtEstimate}
-                      formatEstimateHeader={formatEstimateHeader}
-                      safeRound={safeRound}
-                      safeNum={safeNum}
-                      totalWalletQty={totalWalletQty}
-                      approxUsdLine={approxUsdLine}
-                      buildCoinIconUri={buildCoinIconUri}
-                      failedIconMap={failedIconMap}
-                      setFailedIconMap={setFailedIconMap}
-                      userWalletRows={userSwapWallet}
-                      actions={[
-                        { key: "swap", label: "Swap", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
-                        {
-                          key: "transfer",
-                          label: "Transfer",
-                          onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "swap", toWalletType: "main" }),
-                        },
-                      ]}
-                      eyeCloseIcon={eye_close_icon}
-                      eyeOpenIcon={eye_open_icon}
-                      onOpenCoinSheet={(coin) => {
-                        setSelectedCoinForSheet(coin);
-                        setSelectedCoinSheetWalletType("swap");
-                        coinDetailSheet.current?.open?.();
-                      }}
-                    />
-                  </DeferredTabScene>
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <SwapWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        showBalance={showBalance}
+                        setShowBalance={setShowBalance}
+                        walletBalance={walletBalanceSwap}
+                        portfolioPreferredAmount={portfolioPreferredAmount}
+                        portfolioPreferredCurrency={portfolioPreferredCurrency}
+                        portfolioUsdtEstimate={portfolioUsdtEstimate}
+                        formatEstimateHeader={formatEstimateHeader}
+                        safeRound={safeRound}
+                        safeNum={safeNum}
+                        totalWalletQty={totalWalletQty}
+                        approxUsdLine={approxUsdLine}
+                        buildCoinIconUri={buildCoinIconUri}
+                        failedIconMap={failedIconMap}
+                        setFailedIconMap={setFailedIconMap}
+                        userWalletRows={userSwapWallet}
+                        actions={[
+                          { key: "swap", label: "Swap", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
+                          {
+                            key: "transfer",
+                            label: "Transfer",
+                            onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "swap", toWalletType: "main" }),
+                          },
+                        ]}
+                        eyeCloseIcon={eye_close_icon}
+                        eyeOpenIcon={eye_open_icon}
+                        onOpenCoinSheet={(coin) => {
+                          setSelectedCoinForSheet(coin);
+                          setSelectedCoinSheetWalletType("swap");
+                          coinDetailSheet.current?.open?.();
+                        }}
+                      />
+                    </DeferredTabScene>
+                  </View>
                 );
               }
 
               if (route.key === "Earning") {
                 return (
-                  <DeferredTabScene>
-                    <EarningWalletTab
-                      theme={theme}
-                      themeColors={themeColors}
-                      showBalance={showBalance}
-                      setShowBalance={setShowBalance}
-                      walletBalance={walletBalanceEarning}
-                      portfolioPreferredAmount={portfolioPreferredAmount}
-                      portfolioPreferredCurrency={portfolioPreferredCurrency}
-                      portfolioUsdtEstimate={portfolioUsdtEstimate}
-                      formatEstimateHeader={formatEstimateHeader}
-                      safeRound={safeRound}
-                      safeNum={safeNum}
-                      totalWalletQty={totalWalletQty}
-                      approxUsdLine={approxUsdLine}
-                      buildCoinIconUri={buildCoinIconUri}
-                      failedIconMap={failedIconMap}
-                      setFailedIconMap={setFailedIconMap}
-                      userWalletRows={userEarningWallet}
-                      actions={[
-                        { key: "earning", label: "Earning", onPress: () => NavigationService.navigate(ACCOUNT_SCREEN) },
-                        {
-                          key: "transfer",
-                          label: "Transfer",
-                          onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "earning", toWalletType: "main" }),
-                        },
-                      ]}
-                      eyeCloseIcon={eye_close_icon}
-                      eyeOpenIcon={eye_open_icon}
-                      onOpenCoinSheet={(coin) => {
-                        setSelectedCoinForSheet(coin);
-                        setSelectedCoinSheetWalletType("earning");
-                        coinDetailSheet.current?.open?.();
-                      }}
-                    />
-                  </DeferredTabScene>
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <EarningWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        showBalance={showBalance}
+                        setShowBalance={setShowBalance}
+                        walletBalance={walletBalanceEarning}
+                        portfolioPreferredAmount={portfolioPreferredAmount}
+                        portfolioPreferredCurrency={portfolioPreferredCurrency}
+                        portfolioUsdtEstimate={portfolioUsdtEstimate}
+                        formatEstimateHeader={formatEstimateHeader}
+                        safeRound={safeRound}
+                        safeNum={safeNum}
+                        totalWalletQty={totalWalletQty}
+                        approxUsdLine={approxUsdLine}
+                        buildCoinIconUri={buildCoinIconUri}
+                        failedIconMap={failedIconMap}
+                        setFailedIconMap={setFailedIconMap}
+                        userWalletRows={userEarningWallet}
+                        actions={[
+                          { key: "earning", label: "Earning", onPress: () => NavigationService.navigate(ACCOUNT_SCREEN) },
+                          {
+                            key: "transfer",
+                            label: "Transfer",
+                            onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "earning", toWalletType: "main" }),
+                          },
+                        ]}
+                        eyeCloseIcon={eye_close_icon}
+                        eyeOpenIcon={eye_open_icon}
+                        onOpenCoinSheet={(coin) => {
+                          setSelectedCoinForSheet(coin);
+                          setSelectedCoinSheetWalletType("earning");
+                          coinDetailSheet.current?.open?.();
+                        }}
+                      />
+                    </DeferredTabScene>
+                  </View>
                 );
               }
 
               if (route.key === "Futures") {
                 return (
-                  <DeferredTabScene>
-                    <FuturesWalletTab
-                      theme={theme}
-                      themeColors={themeColors}
-                      showBalance={showBalance}
-                      setShowBalance={setShowBalance}
-                      walletBalance={walletBalanceFutures}
-                      portfolioPreferredAmount={portfolioPreferredAmount}
-                      portfolioPreferredCurrency={portfolioPreferredCurrency}
-                      portfolioUsdtEstimate={portfolioUsdtEstimate}
-                      formatEstimateHeader={formatEstimateHeader}
-                      safeRound={safeRound}
-                      safeNum={safeNum}
-                      totalWalletQty={totalWalletQty}
-                      approxUsdLine={approxUsdLine}
-                      buildCoinIconUri={buildCoinIconUri}
-                      failedIconMap={failedIconMap}
-                      setFailedIconMap={setFailedIconMap}
-                      userWalletRows={userFuturesWallet}
-                      actions={[
-                        { key: "futures", label: "Futures", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
-                        {
-                          key: "transfer",
-                          label: "Transfer",
-                          onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "futures", toWalletType: "main" }),
-                        },
-                      ]}
-                      eyeCloseIcon={eye_close_icon}
-                      eyeOpenIcon={eye_open_icon}
-                      onOpenCoinSheet={(coin) => {
-                        setSelectedCoinForSheet(coin);
-                        setSelectedCoinSheetWalletType("futures");
-                        coinDetailSheet.current?.open?.();
-                      }}
-                    />
-                  </DeferredTabScene>
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <FuturesWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        showBalance={showBalance}
+                        setShowBalance={setShowBalance}
+                        walletBalance={walletBalanceFutures}
+                        portfolioPreferredAmount={portfolioPreferredAmount}
+                        portfolioPreferredCurrency={portfolioPreferredCurrency}
+                        portfolioUsdtEstimate={portfolioUsdtEstimate}
+                        formatEstimateHeader={formatEstimateHeader}
+                        safeRound={safeRound}
+                        safeNum={safeNum}
+                        totalWalletQty={totalWalletQty}
+                        approxUsdLine={approxUsdLine}
+                        buildCoinIconUri={buildCoinIconUri}
+                        failedIconMap={failedIconMap}
+                        setFailedIconMap={setFailedIconMap}
+                        userWalletRows={userFuturesWallet}
+                        actions={[
+                          { key: "futures", label: "Futures", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
+                          {
+                            key: "transfer",
+                            label: "Transfer",
+                            onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "futures", toWalletType: "main" }),
+                          },
+                        ]}
+                        eyeCloseIcon={eye_close_icon}
+                        eyeOpenIcon={eye_open_icon}
+                        onOpenCoinSheet={(coin) => {
+                          setSelectedCoinForSheet(coin);
+                          setSelectedCoinSheetWalletType("futures");
+                          coinDetailSheet.current?.open?.();
+                        }}
+                      />
+                    </DeferredTabScene>
+                  </View>
                 );
               }
 
               return (
-                <View>
+                <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                   {renderWalletTypeScene(route.key)}
                 </View>
               );
@@ -1361,7 +1388,7 @@ const WalletNew = () => {
         usdApproxFromPrice={usdApproxFromPrice}
         spotUsdPriceLabel={spotUsdPriceLabel}
         onTrade={(coin) => NavigationService.navigate(WALLET_SCREEN, { coin })}
-        onTransfer={(coin) => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { coin })}
+        onTransfer={(coin) => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { coin: coin?.short_name || coin?.currency || coin?.asset })}
         onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
         onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
         onP2PTrade={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}

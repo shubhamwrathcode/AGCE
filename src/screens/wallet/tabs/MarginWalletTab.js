@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator, Animated, Dimensions } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import { useFocusEffect } from "@react-navigation/native";
 import FastImage from "react-native-fast-image";
 import { AppText, BOLD, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
@@ -13,13 +14,13 @@ import { MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
 
 function fmt(val, decimals = 8) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return "0.00";
+  if (!val || isNaN(n) || n === 0) return "0";
   return parseFloat(n.toFixed(decimals)).toString();
 }
 
 function fmtPrice(val) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return "";
+  if (!val || isNaN(n) || n === 0) return "0";
   return parseFloat(n.toFixed(2)).toString();
 }
 
@@ -70,6 +71,48 @@ function buildPairRows(balanceRows, accounts) {
       liqPrice: fmtPrice(base?.est_liquidation_price ?? quote?.est_liquidation_price ?? ""),
     };
   });
+}
+
+const SHIMMER_STRIP = 160;
+function ShimmerCell({ width: w, height, borderRadius = 6, style, isDark }) {
+  const shimmerX = useRef(new Animated.Value(-SHIMMER_STRIP)).current;
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    const run = () => {
+      if (!mounted.current) return;
+      shimmerX.setValue(-SHIMMER_STRIP);
+      Animated.timing(shimmerX, {
+        toValue: Math.max(w, 1) + SHIMMER_STRIP,
+        duration: 1100,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (mounted.current && finished) run();
+      });
+    };
+    const t = setTimeout(run, 50);
+    return () => {
+      mounted.current = false;
+      clearTimeout(t);
+      shimmerX.stopAnimation();
+    };
+  }, [shimmerX, w]);
+
+  const boneColor = isDark ? "#2A2A2A" : "#E1E9EE";
+  const shimmerColors = isDark
+    ? ["transparent", "rgba(255,255,255,0.08)", "transparent"]
+    : ["transparent", "rgba(255,255,255,0.6)", "transparent"];
+
+  return (
+    <View style={[{ width: w, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
+      <Animated.View
+        pointerEvents="none"
+        style={{ position: "absolute", top: 0, bottom: 0, width: SHIMMER_STRIP, transform: [{ translateX: shimmerX }] }}
+      >
+        <LinearGradient colors={shimmerColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, width: SHIMMER_STRIP }} />
+      </Animated.View>
+    </View>
+  );
 }
 
 const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }) => {
@@ -203,8 +246,11 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
         keyExtractor={(item) => item.pair}
         style={{ marginTop: 10 }}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View style={[styles.row, { borderBottomColor: themeColors.border }]}>
+        scrollEnabled={false}
+        renderItem={({ item, index }) => {
+          const isLast = index === filtered.length - 1;
+          return (
+            <View style={[styles.row, { borderBottomColor: themeColors.border }, isLast && { borderBottomWidth: 0 }]}>
             <View style={styles.rowLeft}>
               <FastImage
                 source={buildCoinIconUri(item.icon_path) ? { uri: buildCoinIconUri(item.icon_path) } : bitcoin_ic}
@@ -238,12 +284,27 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
               </TouchableOpacity>
             </View>
           </View>
-        )}
+        );
+      }}
         ListEmptyComponent={() => {
           if (isLoading) {
             return (
-              <View style={[styles.emptyContainer, { justifyContent: "center", marginTop: 60 }]}>
-                <ActivityIndicator size="large" color={themeColors.text} />
+              <View style={{ marginTop: 10, gap: 16 }}>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+                      <ShimmerCell isDark={theme === "Dark"} width={28} height={28} borderRadius={14} />
+                      <View style={{ gap: 6 }}>
+                        <ShimmerCell isDark={theme === "Dark"} width={60} height={16} borderRadius={4} />
+                        <ShimmerCell isDark={theme === "Dark"} width={40} height={12} borderRadius={4} />
+                      </View>
+                    </View>
+                    <View style={{ alignItems: "flex-end", gap: 6 }}>
+                      <ShimmerCell isDark={theme === "Dark"} width={80} height={16} borderRadius={4} />
+                      <ShimmerCell isDark={theme === "Dark"} width={60} height={12} borderRadius={4} />
+                    </View>
+                  </View>
+                ))}
               </View>
             );
           }
@@ -254,6 +315,7 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
             </View>
           );
         }}
+        ListFooterComponent={() => <View style={{ height: 120 }} />}
       />
 
       <MarginPairDetailSheet

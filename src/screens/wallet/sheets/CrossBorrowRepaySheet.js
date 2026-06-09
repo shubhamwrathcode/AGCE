@@ -11,8 +11,8 @@ import { CUSTOMER_TYPE } from "../../../appOperation/types";
 
 function fmt(val, decimals = 8) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return (0).toFixed(decimals);
-  return n.toFixed(decimals);
+  if (!val || isNaN(n) || n === 0) return "0";
+  return parseFloat(n.toFixed(decimals)).toString();
 }
 
 const CrossBorrowRepaySheet = forwardRef(({ theme, themeColors, asset, currencyId, debt, freeBalance, defaultMode = "borrow", onSuccess }, ref) => {
