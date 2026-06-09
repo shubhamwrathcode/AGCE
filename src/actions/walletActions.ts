@@ -15,7 +15,7 @@ import { transformCurrencyDataWithDistribution } from '../helper/utility';
 import NavigationService from '../navigation/NavigationService';
 import { Dashboard_Inner, DEPOSIT_SCREEN, WITHDRAW_SCREEN } from '../navigation/routes';
 import { setLoading } from '../slices/authSlice';
-import { setOpenOrders, clearOpenOrders } from '../slices/homeSlice';
+import { setOpenOrders, clearOpenOrders, setCoinData } from '../slices/homeSlice';
 import {
   setAdminBankDetails,
   setTradeHistory,
@@ -840,6 +840,12 @@ export const getOpenOrders = (skip: any, limit: any, tradeType?: string, pair?: 
         limit: lim,
         pair
       });
+    } else if (tradeType === "margin") {
+      response = await appOperation.customer.margin_open_orders({
+        page,
+        limit: lim,
+        pair
+      });
     } else {
       response = await appOperation.customer.spot_me_orders_open({
         page,
@@ -850,12 +856,15 @@ export const getOpenOrders = (skip: any, limit: any, tradeType?: string, pair?: 
     const items = spotMeOpenOrdersItemsFromResponse(response);
     if (response.success) {
       dispatch(setOpenOrders(items));
+      dispatch(setCoinData({ open_orders: items }));
     } else {
       dispatch(setOpenOrders([]));
+      dispatch(setCoinData({ open_orders: [] }));
     }
   } catch (e) {
     logger(e);
     dispatch(setOpenOrders([]));
+    dispatch(setCoinData({ open_orders: [] }));
   } finally {
     dispatch(setLoading(false));
   }

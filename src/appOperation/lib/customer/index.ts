@@ -604,6 +604,23 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('options/cancelOrder', data, CUSTOMER_TYPE),
   place_order: (data: PlaceOrderProps) =>
     appOperation.post('spot/v1/orders', data, CUSTOMER_TYPE),
+  margin_place_order: (data: any) =>
+    appOperation.post('margin/order', data, CUSTOMER_TYPE),
+  margin_cancel_order: (orderId: string) =>
+    appOperation.delete(`margin/order/${encodeURIComponent(String(orderId))}`, null, CUSTOMER_TYPE),
+  margin_open_orders: (params: { pair?: string; page?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({ page: String(params.page ?? 1), limit: String(params.limit ?? 100) });
+    if (params.pair) p.append("pair", params.pair);
+    return appOperation.get(`margin/orders/open?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  margin_order_history: (params: { pair?: string; status?: string; start_date?: string; end_date?: string; page?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({ page: String(params.page ?? 1), limit: String(params.limit ?? 20) });
+    if (params.pair) p.append("pair", params.pair);
+    if (params.status) p.append("status", params.status);
+    if (params.start_date) p.append("start_date", params.start_date);
+    if (params.end_date) p.append("end_date", params.end_date);
+    return appOperation.get(`margin/orders/history?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
   place_reverse_order: (data: any) =>
     appOperation.post('futures/order', data, CUSTOMER_TYPE),
   close_position: (data: any) =>

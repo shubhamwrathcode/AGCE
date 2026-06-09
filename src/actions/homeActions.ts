@@ -257,6 +257,12 @@ export const getPastOrders =
             page: 1,
             limit: 20
           });
+        } else if (data.tradeType === "margin") {
+          response = await appOperation.customer.margin_order_history({
+            pair: data.pair,
+            page: 1,
+            limit: 20
+          });
         } else {
           response = await appOperation.customer.past_orders(data);
         }
@@ -301,6 +307,8 @@ export const cancelOrder =
       let response: any;
       if (data.tradeType === 'cross') {
         response = await appOperation.customer.crossCancelOrder(data.order_id);
+      } else if (data.tradeType === 'margin') {
+        response = await appOperation.customer.margin_cancel_order(data.order_id);
       } else {
         response = await appOperation.customer.cancel_order(data);
       }
@@ -309,8 +317,12 @@ export const cancelOrder =
       if (response?.success) {
         showSuccess("Order Cancelled Successfully");
         dispatch(onCancelOrder(data.order_id));
-        if (data.tradeType !== 'cross') {
-          dispatch(getOpenOrders(0, 10)); // Maybe we'll need crossOpenOrders later
+        if (data.tradeType === 'cross') {
+          dispatch(getOpenOrders(0, 10, 'cross')); // Maybe we'll need crossOpenOrders later
+        } else if (data.tradeType === 'margin') {
+          dispatch(getOpenOrders(0, 10, 'margin'));
+        } else {
+          dispatch(getOpenOrders(0, 10, 'spot'));
         }
         return { ...response, success: true };
       }
@@ -332,6 +344,8 @@ export const placeOrder =
       
       if (tradeType === 'cross') {
         response = await appOperation.customer.crossPlaceOrder(spotOrderBody);
+      } else if (tradeType === 'margin') {
+        response = await appOperation.customer.margin_place_order(spotOrderBody);
       } else {
         response = await appOperation.customer.place_order(spotOrderBody);
       }
@@ -340,6 +354,13 @@ export const placeOrder =
         dispatch(setOrderData(data));
         showSuccess(response?.message || 'Order placed successfully');
         setVisible(true);
+        if (tradeType === 'cross') {
+          dispatch(getOpenOrders(0, 50, 'cross', spotOrderBody.pair));
+        } else if (tradeType === 'margin') {
+          dispatch(getOpenOrders(0, 50, 'margin', spotOrderBody.pair));
+        } else {
+          dispatch(getOpenOrders(0, 50, 'spot', spotOrderBody.pair));
+        }
       } else {
         showError(response?.message);
       }

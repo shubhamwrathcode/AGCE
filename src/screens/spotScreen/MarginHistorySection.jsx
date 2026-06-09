@@ -375,6 +375,10 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
   const getFilteredDataList = (tabId) => {
     let list = tabData[tabId] || [];
 
+    if (tabId === "positions") {
+      list = currencyData?.open_orders || tabData[tabId] || [];
+    }
+
     if (tabId === "orderHistory") {
       if (orderHistoryTypeFilter !== "All") {
         list = list.filter(o => {

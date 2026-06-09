@@ -168,7 +168,7 @@ const SpotOrderHistoryDetail = () => {
               if (!oid) return;
               setCancelLoading(true);
               try {
-                const res = await dispatch(cancelOrder({ order_id: oid }));
+                const res = await dispatch(cancelOrder({ order_id: oid, tradeType: isMargin ? "margin" : undefined }));
                 if (res?.success) {
                   NavigationService.goBack();
                 }

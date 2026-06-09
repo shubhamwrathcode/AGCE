@@ -1439,7 +1439,12 @@ const Spot = () => {
           .then((res) => { if (res?.success) setMarginAccountData(res.data); })
           .catch(() => { });
       } else {
-        const pairId = effectiveCurrency._id;
+        // Resolve pairId robustly like MarginBorrowRepay
+        let pairId = effectiveCurrency?._id;
+        if (!pairId && effectiveCurrency && Array.isArray(coinData)) {
+          const match = coinData.find(p => p.base_currency === effectiveCurrency.base_currency && p.quote_currency === effectiveCurrency.quote_currency);
+          pairId = match?._id;
+        }
         if (pairId) {
           appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
             .then((res) => { if (res?.success) setMarginAccountData(res.data); })
@@ -1447,17 +1452,27 @@ const Spot = () => {
         }
       }
     }
-  }, [headerTab, effectiveCurrency, marginMode]);
+  }, [headerTab, effectiveCurrency, marginMode, coinData]);
 
   const getCrossAsset = useCallback((symbol) => {
     if (!marginAccountData?.assets) return null;
     return marginAccountData.assets.find((a) => a.currency === symbol) || null;
   }, [marginAccountData]);
 
+  const COIN_RATES = {
+    BNB: { hourly: "0.00034929", annual: "3.05977500" },
+    USDT: { hourly: "0.00038596", annual: "3.38099500" },
+    BTC: { hourly: "0.00004663", annual: "0.40843500" },
+    ETH: { hourly: "0.00008219", annual: "0.71998440" },
+    "0G": { hourly: "0.00050000", annual: "4.38000000" },
+    "1INCH": { hourly: "0.00037917", annual: "3.32150000" },
+    "2Z": { hourly: "0.00062500", annual: "5.47500000" },
+  };
+
   const getHourlyRate = useCallback((symbol) => {
     const isCross = marginMode === "Cross";
     let rawRate = null;
-    let fallback = symbol === "BTC" ? "0.00125000" : "0.00200000";
+    let fallback = COIN_RATES[symbol]?.hourly || "0.00200000";
 
     if (isCross) {
       const crossInterest = getCrossAsset(symbol);
@@ -2041,7 +2056,8 @@ const Spot = () => {
     spotHistoryPrefetchRef.current = { pair, ts: now };
 
     // Prefetch order history (tab 2)
-    dispatch(getPastOrders({ page: 1, page_size: 50, pair }, { useGlobalLoader: false }));
+    const tt = headerTab === "Margin" ? (marginMode === "Cross" ? "cross" : "margin") : undefined;
+    dispatch(getPastOrders({ page: 1, page_size: 50, pair, tradeType: tt }, { useGlobalLoader: false }));
 
     // Prefetch trade fills (tab 3) — do NOT clear on focus return (avoids list flicker/reload when coming back from detail).
     dispatch(
@@ -2057,8 +2073,10 @@ const Spot = () => {
     if (!isSpotFocused) return undefined;
     if (mountedOrdersTab !== 2) return undefined;
     const pair = `${base_currency}${quote_currency}`.toUpperCase();
-    const tick = () =>
-      dispatch(getPastOrders({ page: 1, page_size: 50, pair }, { useGlobalLoader: false }));
+    const tick = () => {
+      const tt = headerTab === "Margin" ? (marginMode === "Cross" ? "cross" : "margin") : undefined;
+      dispatch(getPastOrders({ page: 1, page_size: 50, pair, tradeType: tt }, { useGlobalLoader: false }));
+    };
     tick();
     const id = setInterval(tick, SPOT_HIST_POLL_MS);
     return () => clearInterval(id);
@@ -2775,9 +2793,9 @@ const Spot = () => {
         }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             {!!currencyData?.icon_path && (
-              <FastImage 
-                source={{ uri: `${IMAGE_BASE_URL}${currencyData.icon_path}` }} 
-                style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }} 
+              <FastImage
+                source={{ uri: `${IMAGE_BASE_URL}${currencyData.icon_path}` }}
+                style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
               />
             )}
             <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>{currencyData?.base_currency}/{currencyData?.quote_currency}</AppText>
@@ -2846,8 +2864,9 @@ const Spot = () => {
   };
 
   const handleCancelOrder = (orderId) => {
-    dispatch(cancelOrder({ order_id: orderId }));
-    // Automatic socket emit (every 1 second) will handle data refresh
+    let tt = undefined;
+    if (headerTab === "Margin") tt = marginMode === "Cross" ? "cross" : "margin";
+    dispatch(cancelOrder({ order_id: orderId, tradeType: tt }));
   };
 
   const selectNumber = (item) => {
@@ -4856,7 +4875,9 @@ const Spot = () => {
                   const orderId = orderToCancel?._id || orderToCancel?.id;
                   if (orderId) {
                     setIsCancelLoading(true);
-                    const res = await dispatch(cancelOrder({ order_id: orderId }));
+                    let tt = undefined;
+                    if (headerTab === "Margin") tt = marginMode === "Cross" ? "cross" : "margin";
+                    const res = await dispatch(cancelOrder({ order_id: orderId, tradeType: tt }));
                     setIsCancelLoading(false);
                     if (res?.success) {
                       setIsCancelModalVisible(false);
