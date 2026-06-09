@@ -150,6 +150,7 @@ import AddFavouriteScreen from "../screens/other/AddFavouriteScreen";
 import AccountDetails from "../screens/Security/AccountDetails";
 import PersonalPage from "../screens/account/PersonalPage";
 import MarginHistoryScreen from "../screens/account/MarginHistoryScreen";
+import MarginBorrowRepayHistory from "../screens/spotScreen/MarginBorrowRepayHistory";
 import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 
 const Stack = createStackNavigator();
@@ -527,6 +528,7 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.SPOT_MARKET_SCREEN} component={SpotMarket as any} />
       <Stack.Screen name={routes.SPOT_CHART_SCREEN} component={SpotChartScreen} />
       <Stack.Screen name={routes.MARGIN_BORROW_REPAY_SCREEN} component={MarginBorrowRepay} />
+      <Stack.Screen name={routes.MARGIN_BORROW_REPAY_HISTORY_SCREEN} component={MarginBorrowRepayHistory} />
       <Stack.Screen name={routes.MARGIN_TRANSFER_SCREEN} component={MarginTransfer} />
       <Stack.Screen name={routes.MORE_MENU_SCREEN} component={MoreMenu} />
       <Stack.Screen name={routes.TRANSFER_SCREEN} component={Transfer} />

@@ -217,8 +217,8 @@ const MarginTransfer = () => {
     if (currencyData.length > 0 && !selectedCurrency) {
       const defaultCoin = route?.params?.coin;
       const found = defaultCoin
-        ? currencyData.find(c => c.short_name === defaultCoin || c.currency === defaultCoin)
-        : currencyData.find(c => c.short_name === "BTC");
+        ? currencyData.find(c => String(c.short_name).toUpperCase() === String(defaultCoin).toUpperCase() || String(c.currency).toUpperCase() === String(defaultCoin).toUpperCase())
+        : currencyData.find(c => String(c.short_name).toUpperCase() === "BTC");
       setSelectedCurrency(found || currencyData[0]);
     }
   }, [currencyData, selectedCurrency, route?.params?.coin]);
@@ -230,7 +230,18 @@ const MarginTransfer = () => {
         if (res?.success) {
           setMarginPairs(res.data);
           if (res.data.length > 0 && !selectedMarginPair) {
-            setSelectedMarginPair(res.data[0]);
+            const defaultCoin = route?.params?.coin;
+            if (defaultCoin) {
+              const pairWithCoin = res.data.find(p => String(p.base_asset).toUpperCase() === String(defaultCoin).toUpperCase() || String(p.quote_asset).toUpperCase() === String(defaultCoin).toUpperCase());
+              if (pairWithCoin) {
+                setSelectedMarginPair(pairWithCoin);
+                setMarginAssetType(String(pairWithCoin.base_asset).toUpperCase() === String(defaultCoin).toUpperCase() ? "base" : "quote");
+              } else {
+                setSelectedMarginPair(res.data[0]);
+              }
+            } else {
+              setSelectedMarginPair(res.data[0]);
+            }
           }
         }
       }).catch(console.log);

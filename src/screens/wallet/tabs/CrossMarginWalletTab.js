@@ -9,9 +9,9 @@ import { appOperation } from "../../../appOperation";
 import { CUSTOMER_TYPE } from "../../../appOperation/types";
 import { searchIcon, checkIc, NO_NOTIFICATION_ICON, moreOption, bitcoin_ic } from "../../../helper/ImageAssets";
 import NavigationService from "../../../navigation/NavigationService";
-import { MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
+import { MARGIN_BORROW_REPAY_SCREEN, MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
 import CrossMarginDetailSheet from "../sheets/CrossMarginDetailSheet";
-import CrossBorrowRepaySheet from "../sheets/CrossBorrowRepaySheet";
+
 import Toast from "react-native-simple-toast";
 
 function fmt(val, decimals = 8) {
@@ -131,21 +131,21 @@ function CrossMarginSkeleton({ theme }) {
           </View>
         </View>
         <View style={[styles.equityGrid, { marginTop: 20 }]}>
-           <View style={{ flex: 1, gap: 6 }}>
-             <ShimmerCell isDark={isDark} width={80} height={14} borderRadius={4} />
-             <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
-             <ShimmerCell isDark={isDark} width={120} height={12} borderRadius={4} />
-           </View>
-           <View style={{ flex: 1, alignItems: "flex-end", gap: 6 }}>
-             <ShimmerCell isDark={isDark} width={120} height={14} borderRadius={4} />
-             <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
-             <ShimmerCell isDark={isDark} width={100} height={12} borderRadius={4} />
-           </View>
+          <View style={{ flex: 1, gap: 6 }}>
+            <ShimmerCell isDark={isDark} width={80} height={14} borderRadius={4} />
+            <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
+            <ShimmerCell isDark={isDark} width={120} height={12} borderRadius={4} />
+          </View>
+          <View style={{ flex: 1, alignItems: "flex-end", gap: 6 }}>
+            <ShimmerCell isDark={isDark} width={120} height={14} borderRadius={4} />
+            <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
+            <ShimmerCell isDark={isDark} width={100} height={12} borderRadius={4} />
+          </View>
         </View>
         <View style={{ flexDirection: "row", gap: 10, marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: isDark ? "#2C2C2E" : "#E5E7EB" }}>
-           <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
-           <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
-           <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+          <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+          <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+          <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
         </View>
       </View>
 
@@ -196,9 +196,6 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
 
   const [selectedRowPopup, setSelectedRowPopup] = useState(null); // { type: "fund"|"position", data: row }
   const detailSheetRef = useRef(null);
-
-  const [borrowRepayData, setBorrowRepayData] = useState(null);
-  const borrowRepaySheetRef = useRef(null);
 
   const fetchPnl = useCallback(async (period) => {
     try {
@@ -443,32 +440,23 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
         {/* Action Buttons Row */}
         <View style={{ flexDirection: "row", gap: 10, marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: themeColors.border }}>
           <TouchableOpacity
-            style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBgColor }}
-            onPress={() => {
-              const firstAsset = assets[0];
-              if (firstAsset) {
-                setBorrowRepayData({ mode: "borrow", asset: firstAsset.asset, currencyId: firstAsset.currency_id, debt: debtByAsset[firstAsset.asset] || null, freeBalance: firstAsset.balance || "0" });
-                borrowRepaySheetRef.current?.open();
-              } else {
-                Toast.showWithGravity("No assets available to borrow against.", Toast.SHORT, Toast.BOTTOM);
-              }
-            }}
-          >
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Borrow</AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBgColor }}
+            style={{ flex: 1.5, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBgColor }}
             onPress={() => {
               const firstDebt = debts[0] ?? assets.find((a) => parseFloat(a.borrowed) > 0);
-              if (firstDebt) {
-                setBorrowRepayData({ mode: "repay", asset: firstDebt.asset, currencyId: firstDebt.currency_id, debt: debtByAsset[firstDebt.asset] || null, freeBalance: assets.find((a) => a.asset === firstDebt.asset)?.balance || "0" });
-                borrowRepaySheetRef.current?.open();
+              const firstAsset = assets[0];
+              const targetAsset = firstDebt || firstAsset;
+              if (targetAsset) {
+                NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, {
+                  marginMode: "Cross",
+                  coin: targetAsset.asset,
+                  activeTab: firstDebt ? "Repay" : "Borrow"
+                });
               } else {
-                Toast.showWithGravity("You have no outstanding debts to repay.", Toast.SHORT, Toast.BOTTOM);
+                Toast.showWithGravity("No assets available.", Toast.SHORT, Toast.BOTTOM);
               }
             }}
           >
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Repay</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Borrow / Repay</AppText>
           </TouchableOpacity>
           <TouchableOpacity
             style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBgColor }}
@@ -653,18 +641,8 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
         buildCoinIconUri={buildCoinIconUri}
         onSuccess={fetchAll}
       />
-      
-      <CrossBorrowRepaySheet
-        ref={borrowRepaySheetRef}
-        theme={theme}
-        themeColors={themeColors}
-        asset={borrowRepayData?.asset}
-        currencyId={borrowRepayData?.currencyId}
-        debt={borrowRepayData?.asset ? debtByAsset[borrowRepayData.asset] : null}
-        freeBalance={borrowRepayData?.asset ? (assets.find((a) => a.asset === borrowRepayData.asset)?.balance || "0") : "0"}
-        defaultMode={borrowRepayData?.mode || "borrow"}
-        onSuccess={fetchAll}
-      />
+
+
     </View>
   );
 };

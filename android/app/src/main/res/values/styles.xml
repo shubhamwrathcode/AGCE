@@ -14,7 +14,12 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:colorAccent">#1e56f5</item>
         <item name="android:autofilledHighlight">@android:color/transparent</item>
+        <item name="android:datePickerDialogTheme">@style/CustomDatePickerTheme</item>
+    </style>
 
+    <style name="CustomDatePickerTheme" parent="Theme.AppCompat.Light.Dialog">
+        <item name="colorAccent">#000000</item>
+        <item name="android:colorAccent">#000000</item>
     </style>
 
 </resources>

@@ -5,9 +5,8 @@ import RBSheet from "react-native-raw-bottom-sheet";
 import { AppText, BOLD, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_TWO } from "../../../shared";
 import { colors } from "../../../theme/colors";
 import NavigationService from "../../../navigation/NavigationService";
-import { MARGIN_TRANSFER_SCREEN, TRADE_SCREEN } from "../../../navigation/routes";
 import { bitcoin_ic, close_ic } from "../../../helper/ImageAssets";
-import CrossBorrowRepaySheet from "./CrossBorrowRepaySheet";
+import { MARGIN_TRANSFER_SCREEN, TRADE_SCREEN, MARGIN_BORROW_REPAY_SCREEN } from "../../../navigation/routes";
 import Toast from "react-native-simple-toast";
 import { appOperation } from "../../../appOperation";
 import { CUSTOMER_TYPE } from "../../../appOperation/types";
@@ -168,8 +167,12 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
               <ActionBtn
                 label="Borrow / Repay"
                 onPress={() => {
-                  setBorrowRepayMode(hasBorrow || debtRow ? "repay" : "borrow");
-                  borrowRepaySheetRef.current?.open();
+                  ref.current?.close();
+                  NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, {
+                    marginMode: "Cross",
+                    coin: d?.asset,
+                    activeTab: hasBorrow || debtRow ? "Repay" : "Borrow"
+                  });
                 }}
               />
             </View>
@@ -178,19 +181,7 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
       </RBSheet>
 
       {d && (
-        <CrossBorrowRepaySheet
-          ref={borrowRepaySheetRef}
-          theme={theme}
-          themeColors={themeColors}
-          asset={d.asset}
-          currencyId={d.currency_id}
-          debt={debtRow}
-          freeBalance={freeBalance}
-          defaultMode={borrowRepayMode}
-          onSuccess={() => {
-            if (onSuccess) onSuccess();
-          }}
-        />
+        <View />
       )}
     </>
   );

@@ -1,5 +1,7 @@
-import React, { forwardRef } from "react";
+import React, { forwardRef, useState, useEffect } from "react";
 import { View, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { appOperation } from "../../../appOperation";
+import { CUSTOMER_TYPE } from "../../../appOperation/types";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { AppText, BOLD, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, SIXTEEN, TWENTY_SIX } from "../../../shared";
@@ -9,6 +11,25 @@ import { MARGIN_BORROW_REPAY_SCREEN, MARGIN_TRANSFER_SCREEN, TRADE_SCREEN } from
 import { close_ic } from "../../../helper/ImageAssets";
 
 const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, buildCoinIconUri }, ref) => {
+  const [liveData, setLiveData] = useState(null);
+
+  useEffect(() => {
+    if (selectedPair?.pair_id) {
+      appOperation.get(`margin/account/${selectedPair.pair_id}`, undefined, undefined, CUSTOMER_TYPE)
+        .then((res) => { if (res?.success) setLiveData(res.data); })
+        .catch(() => { });
+    }
+  }, [selectedPair]);
+
+  const fmt = (val) => {
+    const n = parseFloat(val);
+    if (!val || isNaN(n) || n === 0) return "0";
+    return parseFloat(n.toFixed(8)).toString();
+  };
+
+  const borrowableBase = fmt(liveData?.borrowable?.base ?? selectedPair?.borrowableBase ?? "0");
+  const borrowableQuote = fmt(liveData?.borrowable?.quote ?? selectedPair?.borrowableQuote ?? "0");
+
   return (
     <RBSheet
       ref={ref}
@@ -49,7 +70,7 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
 
             <View style={styles.content}>
               <DetailRow label="Available" valBase={selectedPair.availableBase} valQuote={selectedPair.availableQuote} base={selectedPair.base} quote={selectedPair.quote} />
-              <DetailRow label="Borrowable" valBase={selectedPair.borrowableBase} valQuote={selectedPair.borrowableQuote} base={selectedPair.base} quote={selectedPair.quote} />
+              <DetailRow label="Borrowable" valBase={borrowableBase} valQuote={borrowableQuote} base={selectedPair.base} quote={selectedPair.quote} />
               <DetailRow label="Loan Cap" valBase={selectedPair.loanCapBase} valQuote={selectedPair.loanCapQuote} base={selectedPair.base} quote={selectedPair.quote} />
               <DetailRow label="Borrowed" valBase={selectedPair.borrowedBase} valQuote={selectedPair.borrowedQuote} base={selectedPair.base} quote={selectedPair.quote} />
               <DetailRow label="Frozen" valBase={selectedPair.frozenBase} valQuote={selectedPair.frozenQuote} base={selectedPair.base} quote={selectedPair.quote} />
@@ -69,8 +90,7 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
           </ScrollView>
 
           <View style={styles.actions}>
-            <ActionBtn label="Borrow" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, { defaultTab: "borrow", pairId: selectedPair.pair_id }); }} />
-            <ActionBtn label="Repay" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, { defaultTab: "repay", pairId: selectedPair.pair_id }); }} />
+            <ActionBtn label="Borrow / Repay" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, { activeTab: "Borrow", pairId: selectedPair.pair_id, pair: selectedPair.name, coin: selectedPair.base }); }} />
             <ActionBtn label="Transfer" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "margin", coin: selectedPair?.base }); }} />
             <ActionBtn label="Trade" onPress={() => { ref.current?.close(); NavigationService.navigate(TRADE_SCREEN, { trade_pair: selectedPair.pairRaw }); }} />
           </View>
