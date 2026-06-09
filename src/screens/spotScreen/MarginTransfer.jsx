@@ -38,6 +38,8 @@ import SimpleToast from "react-native-simple-toast";
 import { fontFamilyMedium } from "../../theme/typography";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { appOperation } from "../../appOperation";
+import { MARGIN_BORROW_REPAY_HISTORY_SCREEN } from "../../navigation/routes";
+import { TRANSFER_HISTORY_SCREEN } from "../../navigation/routes";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
 import LinearGradient from "react-native-linear-gradient";
 
@@ -385,7 +387,7 @@ const MarginTransfer = () => {
           <FastImage source={back_ic} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
         <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>Transfer</AppText>
-        <TouchableOpacity onPress={() => SimpleToast.show("Transfer history coming soon")} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerRight}>
+        <TouchableOpacity onPress={() => navigation.navigate(TRANSFER_HISTORY_SCREEN)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerRight}>
           <FastImage source={historyIcon} style={{ width: 22, height: 22 }} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
       </View>

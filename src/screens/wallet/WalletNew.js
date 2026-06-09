@@ -784,13 +784,8 @@ const WalletNew = () => {
 
 
 
-                      <TabView
-                        lazy
-                        navigationState={{ index: innerIndex, routes: innerRoutes }}
-                        onIndexChange={setInnerIndex}
-                        initialLayout={{ width: layout.width }}
-                        swipeEnabled
-                        renderTabBar={() => (
+                      <View>
+
                           <View style={{ marginTop: 18 }}>
                             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                               <View style={{ flexDirection: "row", gap: 18, alignItems: "flex-end" }}>
@@ -883,10 +878,8 @@ const WalletNew = () => {
                               </View>
                             ) : null}
                           </View>
-                        )}
-                        renderScene={({ route: innerRoute }) => {
-                          if (innerRoute.key === "crypto") {
-                            return (
+
+                        {innerIndex === 0 ? (
                               <DeferredTabScene>
                                 <FlatList
                                   data={overviewCryptoRows}
@@ -954,10 +947,9 @@ const WalletNew = () => {
                                   )}
                                 />
                               </DeferredTabScene>
-                            );
-                          }
 
-                          return (
+                            ) : (
+
                             <DeferredTabScene>
                               <FlatList
                                 data={accountRows}
@@ -965,6 +957,7 @@ const WalletNew = () => {
                                 style={{ marginTop: 14 }}
                                 showsVerticalScrollIndicator={false}
                                 showsHorizontalScrollIndicator={false}
+                                scrollEnabled={false}
                                 renderItem={({ item }) => (
                                   <View style={styles.aoRow}>
                                     <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
@@ -1001,11 +994,13 @@ const WalletNew = () => {
                                     </TouchableOpacity>
                                   </View>
                                 )}
+                                ListFooterComponent={() => <View style={{ height: 120 }} />}
                               />
                             </DeferredTabScene>
-                          );
-                        }}
-                      />
+
+                            )
+                        }
+                      </View>
                     </View>
                   </View>
                 );

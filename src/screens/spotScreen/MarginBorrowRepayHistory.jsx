@@ -231,7 +231,7 @@ const MarginBorrowRepayHistory = ({ route }) => {
 
   return (
     <AppSafeAreaView style={[styles.container, { backgroundColor: memoizedTheme.background ?? "#FFFFFF" }]}>
-      <Toolbar isSecond title={isCross ? "Cross Margin History" : "Isolated Margin History"} style={{ width: "75%", backgroundColor: "transparent" }} />
+      <Toolbar isSecond title={isCross ? "Cross Margin History" : "Isolated Margin History"} style={{ width: isCross ? '75%' : "80%", backgroundColor: "transparent" }} />
 
       <View style={[styles.tabBar, { borderBottomColor: memoizedTheme?.themeBorderColor ?? "#EEEEEE" }]}>
         <TouchableOpacity onPress={() => { if (activeTab === "date") { setStartDate(moment().subtract(1, "months")); setEndDate(moment()); } setActiveTab("borrow"); }} style={styles.tab}>
