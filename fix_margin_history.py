@@ -25,9 +25,6 @@ def process_file(filepath):
     
     body = content[start_idx + len(start_str):content.find(end_str)]
     
-    # We just need to add the `if (tab.id !== activeTab) return null;` condition at the top of the map.
-    # Wait, if we keep the mapping, we can just replace Animated.View with View and remove slideWidth calculation.
-    
     new_content = """      {/* Content panel */}
       <View style={[{ overflow: 'hidden', minHeight: 150 }, isFullScreen && { flex: 1 }]}>
         <View style={[{ width: "100%" }, isFullScreen && { flex: 1 }]}>
