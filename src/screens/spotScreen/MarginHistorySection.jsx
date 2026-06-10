@@ -345,9 +345,22 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         const endpoint = isCross ? `cross/debts` : `margin/loans`;
         res = await appOperation.get(endpoint, undefined, undefined, CUSTOMER_TYPE);
         if (res?.success) {
-          const list = isCross
-            ? (Array.isArray(res.data?.debts) ? res.data.debts : Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [])
-            : (Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : []);
+          let list = [];
+          if (isCross) {
+            const debts = Array.isArray(res.data?.debts) ? res.data.debts : Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [];
+            list = debts.map(d => ({
+              ...d,
+              loan_id: d.currency_id || d.loan_id,
+              coin: d.asset || d.coin,
+              contract: "Cross",
+              outstanding: String((parseFloat(d.principal || 0) + parseFloat(d.interest_accrued || 0)).toFixed(8)),
+              hourly_rate_pct: d.interest_rate_daily != null ? ((d.interest_rate_daily / 24) * 100).toFixed(6) : null,
+              apr_pct: d.interest_rate_daily != null ? (d.interest_rate_daily * 100).toFixed(4) : null,
+              currency_id: d.currency_id
+            }));
+          } else {
+            list = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [];
+          }
           setDataList(list);
         } else {
           setDataList([]);
@@ -959,9 +972,30 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
             <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }}>Hourly Rate / APR</AppText>
             <AppText style={{ color: textThemeColor, fontSize: 13 }} weight={MEDIUM}>
-              {item?.hourly_rate_pct != null ? `${item.hourly_rate_pct}%` : (item?.hourly_rate != null ? `${(parseFloat(item.hourly_rate) * 100).toFixed(6)}%` : (marginMode === "Cross" ? "0.002000%" : "—"))}
-              {" / "}
-              {item?.apr_pct != null ? `${item.apr_pct}%` : (marginMode === "Cross" ? "17.520000%" : "—")}
+              {(() => {
+                const COIN_RATES = {
+                  BNB: { hourly: "0.00034929", annual: "3.05977500" },
+                  USDT: { hourly: "0.00038596", annual: "3.38099500" },
+                  BTC: { hourly: "0.00004663", annual: "0.40843500" },
+                  ETH: { hourly: "0.00008219", annual: "0.71998440" },
+                  "0G": { hourly: "0.00050000", annual: "4.38000000" },
+                  "1INCH": { hourly: "0.00037917", annual: "3.32150000" },
+                  "2Z": { hourly: "0.00062500", annual: "5.47500000" },
+                };
+                const cAsset = item?.coin || item?.asset;
+                const rateFromMap = COIN_RATES[cAsset];
+                let hRate = item?.hourly_rate_pct != null ? `${item.hourly_rate_pct}%` : (item?.hourly_rate != null ? `${(parseFloat(item.hourly_rate) * 100).toFixed(6)}%` : null);
+                let aRate = item?.apr_pct != null ? `${item.apr_pct}%` : null;
+                
+                if (!hRate) {
+                  hRate = rateFromMap ? `${rateFromMap.hourly}%` : (marginMode === "Cross" ? "0.002000%" : "—");
+                }
+                if (!aRate) {
+                  aRate = rateFromMap ? `${rateFromMap.annual}%` : (marginMode === "Cross" ? "17.520000%" : "—");
+                }
+                
+                return `${hRate} / ${aRate}`;
+              })()}
             </AppText>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
