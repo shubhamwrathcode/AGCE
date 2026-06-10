@@ -642,12 +642,20 @@ const WalletNew = () => {
         fetchWalletData();
         isFirstLoad.current = false;
       } else {
-        // Silent background refresh on subsequent focuses
-        // Delay to allow backend DB replication after actions
+        // Show native refresh spinner during focus sync
+        setRefreshing(true);
+        fetchWalletData();
+        
+        // Delay to allow backend DB replication after actions, then fetch again
         const timer = setTimeout(() => {
           fetchWalletData();
-        }, 1000);
-        return () => clearTimeout(timer);
+          setRefreshing(false);
+        }, 1500);
+        
+        return () => {
+          clearTimeout(timer);
+          setRefreshing(false);
+        };
       }
     }, [fetchWalletData])
   );

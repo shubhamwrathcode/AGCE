@@ -28,6 +28,7 @@ import FastImage from "react-native-fast-image";
 import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, right_ic, downIcon } from "../../helper/ImageAssets";
 import { useDispatch } from "react-redux";
 import { getPastOrders, cancelOrder } from "../../actions/homeActions";
+import { appOperation } from "../../appOperation";
 import { getTradeHistory } from "../../actions/walletActions";
 import moment from "moment";
 import TradeHistorySkeleton from "./TradeHistorySkeleton";
@@ -108,6 +109,33 @@ const OrderCard = React.memo(({
     return !!orderId && !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(status);
   }, [item, orderId]);
 
+  const statusDetails = useMemo(() => {
+    const raw = String(item?.status || item?.user_status || item?.order_status || item?.orderStatus || item?.state || "").toUpperCase().trim();
+    let label = raw || "---";
+    let color = themeColors?.text ?? "#fff";
+    
+    if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(raw)) {
+      label = "EXECUTED";
+      color = "#00c087";
+    } else if (["CANCELLED", "CANCELED"].includes(raw)) {
+      label = "Cancelled";
+      color = "#ff4b5c";
+    } else if (raw === "REJECTED") {
+      label = "Rejected";
+      color = "#ff4b5c";
+    } else if (raw === "EXPIRED") {
+      label = "Expired";
+      color = "#ff4b5c";
+    } else if (["OPEN", "PENDING"].includes(raw)) {
+      label = "Open";
+      color = "#f3ba2f";
+    } else if (["PARTIAL", "PARTIALLY_FILLED", "PARTIAL_FILLED"].includes(raw)) {
+      label = "Partial";
+      color = "#f3ba2f";
+    }
+    return { label, color };
+  }, [item, themeColors]);
+
   const eventM = useMemo(() => {
     const ts = orderHistoryEventTime(item);
     return ts ? moment(ts) : null;
@@ -160,8 +188,8 @@ const OrderCard = React.memo(({
           <TradeKvRow label="Market" value={currencyPair} textColor={textColor} isDark={isDark} />
           <TradeKvRow label="Side" value={side} color={sideColor} textColor={textColor} isDark={isDark} />
           <TradeKvRow label="Type" value={typeUpper} textColor={textColor} isDark={isDark} />
-          <TradeKvRow label="TIF" value={orderHistoryTifDisplay(item)} textColor={textColor} isDark={isDark} />
           <TradeKvRow label="Price" value={priceDisplay} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="Status" value={statusDetails.label.toUpperCase()} color={statusDetails.color} textColor={textColor} isDark={isDark} />
         </View>
 
         {hasExecutedTrades && (
@@ -293,40 +321,38 @@ const TradeHistory = ({ route }) => {
   const tradesListRef = useRef(null);
   const limit = 20;
 
-  // Stability for Redux data syncing
-  useEffect(() => {
-    const next = Array.isArray(pastOrdersRedux) ? pastOrdersRedux : [];
-    const currentId = ordersData[0]?._id ?? ordersData[0]?.id;
-    const nextId = next[0]?._id ?? next[0]?.id;
 
-    if (next.length !== ordersData.length || nextId !== currentId) {
-      console.log("[TradeHistory] Updating ordersData. New Count:", next.length);
-      setOrdersData(next);
-      setHasMoreOrders(next.length >= limit);
-    }
-  }, [pastOrdersRedux, ordersData]);
 
-  useEffect(() => {
-    const next = Array.isArray(walletTradeHistory) ? walletTradeHistory : [];
-    const currentId = tradesData[0]?._id ?? tradesData[0]?.id;
-    const nextId = next[0]?._id ?? next[0]?.id;
-
-    if (next.length !== tradesData.length || nextId !== currentId) {
-      console.log("[TradeHistory] Updating tradesData. New Count:", next.length);
-      setTradesData(next);
-      setHasMoreTrades(next.length >= limit);
-    }
-  }, [walletTradeHistory, tradesData]);
+  // Removed Redux-syncing useEffects because they overwrite paginated data.
 
   const fetchOrders = useCallback(async (page = 1, isLoadMore = false) => {
     if (loadingOrders || (isLoadMore && loadingMore)) return;
     if (isLoadMore) setLoadingMore(true); else setLoadingOrders(true);
     try {
-      await dispatch(getPastOrders({ page, page_size: limit }, { useGlobalLoader: false }));
+      const res = await appOperation.customer.past_orders({ page, page_size: limit });
+      if (res?.success) {
+        let newData = [];
+        const d = res.data;
+        if (Array.isArray(d?.items)) newData = d.items;
+        else if (Array.isArray(res.items)) newData = res.items;
+        else if (Array.isArray(d)) newData = d;
+        else if (Array.isArray(d?.data)) newData = d.data;
+        else if (Array.isArray(d?.records)) newData = d.records;
+
+        if (isLoadMore) {
+          setOrdersData(prev => {
+            const merged = [...prev, ...newData];
+            return merged.filter((item, index, self) => index === self.findIndex((t) => (t._id || t.id || t.order_id) === (item._id || item.id || item.order_id)));
+          });
+        } else {
+          setOrdersData(newData);
+        }
+        setHasMoreOrders(newData.length >= limit);
+      }
     } finally {
       if (isLoadMore) setLoadingMore(false); else setLoadingOrders(false);
     }
-  }, [dispatch, loadingOrders, loadingMore]);
+  }, [loadingOrders, loadingMore]);
 
   const fetchTrades = useCallback(async (page = 1, isLoadMore = false) => {
     if (loadingTrades || (isLoadMore && loadingMore)) return;
@@ -334,12 +360,33 @@ const TradeHistory = ({ route }) => {
     const skip = (page - 1) * limit;
     console.log("[TradeHistory] fetchTrades calling getTradeHistory skip:", skip);
     try {
-      const res = await dispatch(getTradeHistory(skip, limit, "", { useGlobalLoader: false, clearBeforeFetch: false }));
-      console.log("[TradeHistory] getTradeHistory response success:", res?.success);
+      const res = await appOperation.customer.spot_me_trades({ page, page_size: limit });
+      if (res?.success) {
+        let newData = [];
+        const d = res.data;
+        if (Array.isArray(d?.items)) newData = d.items;
+        else if (Array.isArray(res.items)) newData = res.items;
+        else if (Array.isArray(d)) newData = d;
+        else if (Array.isArray(d?.data)) newData = d.data;
+        else if (Array.isArray(d?.records)) newData = d.records;
+
+        console.log("[TradeHistory] getTradeHistory API Response Data:", JSON.stringify(res.data).substring(0, 300));
+        console.log("[TradeHistory] getTradeHistory Extracted newData length:", newData.length);
+
+        if (isLoadMore) {
+          setTradesData(prev => {
+            const merged = [...prev, ...newData];
+            return merged.filter((item, index, self) => index === self.findIndex((t) => (t._id || t.id || t.trade_id) === (item._id || item.id || item.trade_id)));
+          });
+        } else {
+          setTradesData(newData);
+        }
+        setHasMoreTrades(newData.length >= limit);
+      }
     } finally {
       if (isLoadMore) setLoadingMore(false); else setLoadingTrades(false);
     }
-  }, [dispatch, loadingTrades, loadingMore]);
+  }, [loadingTrades, loadingMore]);
 
   useEffect(() => {
     if (isFocused) {

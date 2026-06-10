@@ -5,12 +5,11 @@ import { AppText, SEMI_BOLD, MEDIUM } from "../../shared";
 import { colors } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import { MARGIN_TRANSFER_SCREEN, DEPOSIT_COIN_SCREEN } from "../../navigation/routes";
+import Toast from "react-native-simple-toast";
 import {
   convertIcon,
   onchain_ic,
   p2p_ic,
-  buyCrypto,
-  printIcon,
   right_ic,
 } from "../../helper/ImageAssets";
 
@@ -22,9 +21,6 @@ const AddFundsSheet = ({
   marginMode = "Isolated",
   onClose,
 }) => {
-  const quoteSymbol = currencyData?.quote_currency || "USDT";
-  const quoteAvailable = coinBalance?.quote_currency_balance || 0;
-
   const isCross = marginMode === "Cross";
 
   const items = [
@@ -58,27 +54,27 @@ const AddFundsSheet = ({
       desc: "Zero fees, 400+ payment methods, and seamless trading",
       icon: p2p_ic,
       onPress: () => {
-        Alert.alert("Coming soon");
+        Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
       },
     },
-    {
-      id: "buyusd",
-      title: "Buy with USD",
-      desc: "Buy and sell crypto via cards, bank transfers, and more",
-      icon: buyCrypto,
-      onPress: () => {
-        Alert.alert("Coming soon");
-      },
-    },
-    {
-      id: "redeem",
-      title: "Redeem AGCE Code",
-      desc: "For asset transfer among AGCE accounts only",
-      icon: printIcon,
-      onPress: () => {
-        Alert.alert("Coming soon");
-      },
-    },
+    // {
+    //   id: "buyusd",
+    //   title: "Buy with USD",
+    //   desc: "Buy and sell crypto via cards, bank transfers, and more",
+    //   icon: buyCrypto,
+    //   onPress: () => {
+    //     Alert.alert("Coming soon");
+    //   },
+    // },
+    // {
+    //   id: "redeem",
+    //   title: "Redeem AGCE Code",
+    //   desc: "For asset transfer among AGCE accounts only",
+    //   icon: printIcon,
+    //   onPress: () => {
+    //     Alert.alert("Coming soon");
+    //   },
+    // },
   ];
 
   return (

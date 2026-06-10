@@ -43,7 +43,30 @@ const SpotOrderHistoryDetail = () => {
   const value = parseNum(order?.executed_value ?? order?.executedValue) || (avgPrice * filled);
   const fee = parseNum(order?.total_fee ?? order?.fee) || 0;
   const tds = parseNum(order?.total_tds ?? order?.tds) || 0;
-  const status = String(order?.status || "").toUpperCase();
+  const rawStatus = String(order?.status || order?.user_status || order?.order_status || order?.orderStatus || order?.state || "").toUpperCase().trim();
+  let statusLabel = rawStatus || "---";
+  let statusColor = themeColors?.text ?? "#fff";
+
+  if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(rawStatus)) {
+    statusLabel = "EXECUTED";
+    statusColor = "#00c087";
+  } else if (["CANCELLED", "CANCELED"].includes(rawStatus)) {
+    statusLabel = "Cancelled";
+    statusColor = "#ff4b5c";
+  } else if (rawStatus === "REJECTED") {
+    statusLabel = "Rejected";
+    statusColor = "#ff4b5c";
+  } else if (rawStatus === "EXPIRED") {
+    statusLabel = "Expired";
+    statusColor = "#ff4b5c";
+  } else if (["OPEN", "PENDING"].includes(rawStatus)) {
+    statusLabel = "Open";
+    statusColor = "#f3ba2f";
+  } else if (["PARTIAL", "PARTIALLY_FILLED", "PARTIAL_FILLED"].includes(rawStatus)) {
+    statusLabel = "Partial";
+    statusColor = "#f3ba2f";
+  }
+
   const side = String(order?.side || "").toUpperCase();
   const type = String(order?.order_type || order?.type || "LIMIT").toUpperCase();
   const role = order?.is_maker === true ? "Maker" : order?.is_maker === false ? "Taker" : "—";
@@ -60,11 +83,6 @@ const SpotOrderHistoryDetail = () => {
   const timeStr = d ? moment(d).format("HH:mm:ss") : "---";
 
   const getSideColor = (s) => (s === "BUY" ? themeColors.green : themeColors.red);
-  const getStatusColor = (st) => {
-    if (st === "FILLED" || st === "EXECUTED" || st === "SUCCESS") return themeColors.green;
-    if (st === "CANCELLED" || st === "CANCELED" || st === "REJECTED") return themeColors.red;
-    return themeColors.yellow || colors.lightYellow || "#EAB308";
-  };
 
   const orderIdForCancel = order?._id || order?.id;
   const statusUpperCancel = String(order?.status || order?.user_status || "").toUpperCase();
@@ -121,7 +139,7 @@ const SpotOrderHistoryDetail = () => {
               <Row label="Fill Price" value={order?.avg_execution_price ? `${toFixedEight(avgPrice)} ${quoteCurrency}` : "—"} />
               <Row label="Price" value={type === "MARKET" ? "Smart Market" : `${toFixedEight(price)} ${quoteCurrency}`} />
               <Row label="Filled/Amount" value={`${toFixedEight(filled)}/${toFixedEight(qty)} · ${qty > 0 ? ((filled / qty) * 100).toFixed(2) : "0.00"}%`} />
-              <Row label="Status" value={status} valueColor={getStatusColor(status)} />
+              <Row label="Status" value={statusLabel.toUpperCase()} valueColor={statusColor} />
             </>
           ) : (
             <>
@@ -152,7 +170,7 @@ const SpotOrderHistoryDetail = () => {
                   <Row label="Fill %" value={order?.fill_percent || (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%")} />
                   <Row label="Value" value={toFixedEight(value)} />
                   <Row label="Fee" value={`${toFixedEight(fee)} ${quoteCurrency}`.trim()} />
-                  <Row label="Status" value={status} valueColor={getStatusColor(status)} />
+                  <Row label="Status" value={statusLabel.toUpperCase()} valueColor={statusColor} />
                 </>
               )}
             </>

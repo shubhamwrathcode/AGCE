@@ -44,25 +44,10 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
   // setFilteredCoinList(data);
 
   const [value, setValue] = useState("");
-  const [list, setList] = useState([]);
 
-  useEffect(() => {
-    getData();
-  }, [value]);
-
-  const getData = () => {
-    if (value === "") {
-      setList(filteredCoinList);
-    } else {
-      let filterData = filteredCoinList?.filter((data) => {
-        return (
-          data?.short_name?.toLowerCase().indexOf(value?.toLowerCase()) >
-            -1
-        );
-      });
-      setList(filterData);
-    }
-  };
+  const displayList = value === "" ? filteredCoinList : filteredCoinList?.filter((data) => {
+    return data?.short_name?.toLowerCase().includes(value?.toLowerCase());
+  });
 
   return (
     <>
@@ -128,7 +113,7 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
         </AppText>
       </View>
       <FlatList
-        data={value !== "" ? list : filteredCoinList}
+        data={displayList}
         renderItem={({ item }) => {
           return (
             <View

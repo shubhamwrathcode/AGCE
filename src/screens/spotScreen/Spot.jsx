@@ -401,6 +401,8 @@ const orderBookPanelAreEqual = (prev, next) =>
   prev.showOrderBookSkeleton === next.showOrderBookSkeleton &&
   prev.showAskSide === next.showAskSide &&
   prev.showBidSide === next.showBidSide &&
+  prev.quoteHourlyRate === next.quoteHourlyRate &&
+  prev.isHourlyRateLoading === next.isHourlyRateLoading &&
   orderBookDataEqual(prev.sellData, next.sellData) &&
   orderBookDataEqual(prev.buyData, next.buyData);
 
@@ -522,6 +524,7 @@ const OrderBookPanel = memo(({
   headerTab,
   marginMode,
   quoteHourlyRate,
+  isHourlyRateLoading,
 }) => {
   const { colors: themeColors, theme, isDark } = useTheme();
   const navigation = useNavigation();
@@ -615,7 +618,11 @@ const OrderBookPanel = memo(({
             style={{ alignItems: "flex-end" }}
           >
             <AppText style={{ fontSize: 9, color: themeColors.secondaryText, lineHeight: 11 }}>Hourly Rate ({quote_currency})...</AppText>
-            <AppText weight={SEMI_BOLD} style={{ fontSize: 10, color: themeColors.text, lineHeight: 12 }}>{quoteHourlyRate}</AppText>
+            {isHourlyRateLoading ? (
+              <ShimmerBox width={40} height={12} borderRadius={2} shimmerStripWidth={ORDER_BOOK_SHIMMER_STRIP_WIDTH} style={{ marginTop: 2 }} />
+            ) : (
+              <AppText weight={SEMI_BOLD} style={{ fontSize: 10, color: themeColors.text, lineHeight: 12 }}>{quoteHourlyRate}</AppText>
+            )}
           </TouchableOpacity>
         </View>
       )}
@@ -752,6 +759,7 @@ const OrderBookSection = memo(({
   headerTab,
   marginMode,
   quoteHourlyRate,
+  isHourlyRateLoading,
 }) => {
   const { theme, colors: themeColors, isDark } = useTheme();
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
@@ -955,6 +963,7 @@ const OrderBookSection = memo(({
         headerTab={headerTab}
         marginMode={marginMode}
         quoteHourlyRate={quoteHourlyRate}
+        isHourlyRateLoading={isHourlyRateLoading}
       />
 
       <View style={[sty.ratioIndicatorBar, { marginVertical: 3, gap: 4 }]}>
@@ -1233,6 +1242,7 @@ const Spot = () => {
   const rbSheetlimit = useRef();
   const rbSheetAddFunds = useRef();
   const rbSheetMarginConfirm = useRef();
+  const lastMarginFetchRef = useRef("");
   const [marginConfirmPayload, setMarginConfirmPayload] = useState(null);
   const [dontShowMarginConfirm, setDontShowMarginConfirm] = useState(false);
   const latestSocketDataRef = useRef(null);
@@ -1433,26 +1443,38 @@ const Spot = () => {
   // Dynamic Margin Account Data for Hourly Rates
   useEffect(() => {
     if (headerTab === "Margin" && effectiveCurrency) {
+      const base = effectiveCurrency.base_currency;
+      const quote = effectiveCurrency.quote_currency;
       const isCross = marginMode === "Cross";
-      if (isCross) {
-        appOperation.get(`cross/account`, undefined, undefined, CUSTOMER_TYPE)
-          .then((res) => { if (res?.success) setMarginAccountData(res.data); })
-          .catch(() => { });
-      } else {
-        // Resolve pairId robustly like MarginBorrowRepay
-        let pairId = effectiveCurrency?._id;
-        if (!pairId && effectiveCurrency && Array.isArray(coinData)) {
-          const match = coinData.find(p => p.base_currency === effectiveCurrency.base_currency && p.quote_currency === effectiveCurrency.quote_currency);
-          pairId = match?._id;
-        }
-        if (pairId) {
+
+      let pairId = effectiveCurrency?._id;
+      if (!isCross && !pairId && effectiveCurrency && Array.isArray(coinData)) {
+        const match = coinData.find(p => p.base_currency === base && p.quote_currency === quote);
+        pairId = match?._id;
+      }
+
+      const fetchKey = `${headerTab}_${marginMode}_${base}_${quote}_${isCross ? "cross" : pairId || "nopair"}`;
+
+      if (lastMarginFetchRef.current !== fetchKey) {
+        if (!isCross && !pairId) return;
+
+        lastMarginFetchRef.current = fetchKey;
+        setMarginAccountData(null);
+
+        if (isCross) {
+          appOperation.get(`cross/account`, undefined, undefined, CUSTOMER_TYPE)
+            .then((res) => { if (res?.success) setMarginAccountData(res.data); })
+            .catch(() => { });
+        } else {
           appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
             .then((res) => { if (res?.success) setMarginAccountData(res.data); })
             .catch(() => { });
         }
       }
+    } else {
+      lastMarginFetchRef.current = "";
     }
-  }, [headerTab, effectiveCurrency, marginMode, coinData]);
+  }, [headerTab, effectiveCurrency?.base_currency, effectiveCurrency?.quote_currency, effectiveCurrency?._id, marginMode, coinData]);
 
   const getCrossAsset = useCallback((symbol) => {
     if (!marginAccountData?.assets) return null;
@@ -2078,9 +2100,7 @@ const Spot = () => {
       dispatch(getPastOrders({ page: 1, page_size: 50, pair, tradeType: tt }, { useGlobalLoader: false }));
     };
     tick();
-    const id = setInterval(tick, SPOT_HIST_POLL_MS);
-    return () => clearInterval(id);
-  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused]);
+  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused, headerTab, marginMode]);
 
   // Same for Trade History (3): poll only when that panel is actually mounted (not merely tab highlight mid-animation).
   useEffect(() => {
@@ -2096,8 +2116,6 @@ const Spot = () => {
         }),
       );
     tick();
-    const id = setInterval(tick, SPOT_HIST_POLL_MS);
-    return () => clearInterval(id);
   }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused]);
 
   // Trade History list: mirror REST-only payload from getTradeHistory (no socket merge).
@@ -2670,22 +2688,6 @@ const Spot = () => {
         data.max_slippage_percent = n;
       }
     }
-    const amtNumForTotal = parseFloat(String(amount)) || 0;
-    const pxForNotional =
-      spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT"
-        ? orderPriceForApi
-        : refPrice;
-
-    if (showAmtDenomSelect && amtDenom === "QUOTE") {
-      if (amtNumForTotal > 0) {
-        data.total = String(amtNumForTotal);
-      }
-    } else {
-      if (Number.isFinite(amtNumForTotal) && Number.isFinite(pxForNotional)) {
-        data.total = String(pxForNotional * amtNumForTotal);
-      }
-    }
-
     if (headerTab === "Margin") {
       data.tradeType = marginMode === "Cross" ? "cross" : "margin";
     }
@@ -2714,6 +2716,12 @@ const Spot = () => {
       showError("KYC not verified. Please complete KYC first.");
       return;
     }
+
+    if ((spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET") && slippageEnabled && slippageError) {
+      showError(slippageError);
+      return;
+    }
+
     const { data, orderPriceForValidation } = buildSpotOrderPayload();
     if (!data.pair) {
       showError("Select a trading pair");
@@ -2918,8 +2926,10 @@ const Spot = () => {
     const raw = getOrderStatusRaw(inv);
     const status = String(raw || "").toUpperCase().trim();
     if (!status) return "---";
-    if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(status)) return "Filled";
+    if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(status)) return "EXECUTED";
     if (["CANCELLED", "CANCELED"].includes(status)) return "Cancelled";
+    if (status === "REJECTED") return "Rejected";
+    if (status === "EXPIRED") return "Expired";
     if (["OPEN", "PENDING"].includes(status)) return "Open";
     if (["PARTIAL", "PARTIALLY_FILLED", "PARTIAL_FILLED"].includes(status)) return "Partial";
     return String(raw);
@@ -3351,10 +3361,6 @@ const Spot = () => {
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{typeUpper}</AppText>
             </View>
             <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>TIF</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{tifStr}</AppText>
-            </View>
-            <View style={styles.kvRow}>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{priceDisplay}</AppText>
             </View>
@@ -3406,11 +3412,21 @@ const Spot = () => {
     const statusRaw = getOrderStatusRaw(inv);
     const statusLabel = getOrderStatusLabel(inv);
 
+    let statusColor = themeColors.text;
+    const sStr = String(statusRaw || "").toUpperCase().trim();
+    if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(sStr)) {
+      statusColor = "#00c087";
+    } else if (["CANCELLED", "CANCELED", "REJECTED", "EXPIRED"].includes(sStr)) {
+      statusColor = "#ff4b5c";
+    } else {
+      statusColor = "#f3ba2f";
+    }
+
     const hasExecutedTrades = Array.isArray(inv?.executed_prices) && inv.executed_prices.length > 0;
     const showTrades = !!showExecutedTrades?.[orderId];
 
     const textColor = themeColors.text;
-    const labelColor = '"#666666"';
+    const labelColor = isDark ? "#8E8E93" : "#666666";
 
     return (
       <TouchableOpacity
@@ -3442,8 +3458,14 @@ const Spot = () => {
             })()}
           </AppText>
 
-          <AppText style={{ color: getSideColor(inv?.side), marginBottom: 8 }} type={THIRTEEN} weight={BOLD}>
-            {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
+          <AppText style={{ marginBottom: 8 }} type={THIRTEEN} weight={BOLD}>
+            <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: getSideColor(inv?.side) }}>
+              {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
+            </AppText>
+            <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: isDark ? "#8E8E93" : "#666666" }}> · </AppText>
+            <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: statusLabel === "Cancelled" ? "#ff4b5c" : "#10c95dff" }}>
+              {statusLabel.toUpperCase()}
+            </AppText>
           </AppText>
 
           {(() => {
@@ -3471,15 +3493,15 @@ const Spot = () => {
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText>
                 </View>
                 <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>TIF</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{inv?.time_in_force || inv?.tif || "—"}</AppText>
-                </View>
-                <View style={styles.kvRow}>
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
                     {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
                   </AppText>
                 </View>
+                {/* <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Status</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: statusColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{statusLabel.toUpperCase()}</AppText>
+                </View> */}
               </View>
             );
           })()}
@@ -3598,6 +3620,7 @@ const Spot = () => {
                   headerTab={headerTab}
                   marginMode={marginMode}
                   quoteHourlyRate={quoteHourlyRate}
+                  isHourlyRateLoading={marginAccountData === null}
                 />
               </View>
 

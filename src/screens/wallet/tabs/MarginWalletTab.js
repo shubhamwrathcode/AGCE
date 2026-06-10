@@ -14,14 +14,16 @@ import { MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
 
 function fmt(val, decimals = 8) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return "0";
-  return parseFloat(n.toFixed(decimals)).toString();
+  if (!val || isNaN(n) || n === 0) return "0.00";
+  const str = parseFloat(n.toFixed(decimals)).toString();
+  return str === "0" ? "0.00" : str;
 }
 
 function fmtPrice(val) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return "0";
-  return parseFloat(n.toFixed(2)).toString();
+  if (!val || isNaN(n) || n === 0) return "0.00";
+  const str = parseFloat(n.toFixed(2)).toString();
+  return str === "0" ? "0.00" : str;
 }
 
 function buildPairRows(balanceRows, accounts) {
@@ -126,6 +128,7 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
 
   useFocusEffect(
     useCallback(() => {
+      let active = true;
       const fetchAccounts = async () => {
         try {
           const [balRes, accRes] = await Promise.all([
@@ -135,12 +138,21 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
           if (balRes?.success || accRes?.success) {
             const accs = accRes?.data || [];
             const bals = balRes?.data || [];
-            setPairs(buildPairRows(bals, accs));
+            if (active) setPairs(buildPairRows(bals, accs));
           }
         } catch (e) { }
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       };
+      
       fetchAccounts();
+      const timer = setTimeout(() => {
+        if (active) fetchAccounts();
+      }, 1500);
+      
+      return () => {
+        active = false;
+        clearTimeout(timer);
+      };
     }, [])
   );
 

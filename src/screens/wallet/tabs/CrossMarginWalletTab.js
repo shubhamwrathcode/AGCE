@@ -11,19 +11,22 @@ import { searchIcon, checkIc, NO_NOTIFICATION_ICON, moreOption, bitcoin_ic } fro
 import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_BORROW_REPAY_SCREEN, MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
 import CrossMarginDetailSheet from "../sheets/CrossMarginDetailSheet";
+import { useFocusEffect } from "@react-navigation/native";
 
 import Toast from "react-native-simple-toast";
 
 function fmt(val, decimals = 8) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return "0";
-  return parseFloat(n.toFixed(decimals)).toString();
+  if (!val || isNaN(n) || n === 0) return "0.00";
+  const str = parseFloat(n.toFixed(decimals)).toString();
+  return str === "0" ? "0.00" : str;
 }
 
 function fmtPrice(val) {
   const n = parseFloat(val);
-  if (!val || isNaN(n) || n === 0) return "0";
-  return parseFloat(n.toFixed(2)).toString();
+  if (!val || isNaN(n) || n === 0) return "0.00";
+  const str = parseFloat(n.toFixed(2)).toString();
+  return str === "0" ? "0.00" : str;
 }
 
 function MarginLevelGauge({ level, mmr = 1.1, warningRate = 1.15 }) {
@@ -223,9 +226,19 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      fetchAll();
+      const timer = setTimeout(() => {
+        if (active) fetchAll();
+      }, 1500);
+      return () => {
+        active = false;
+        clearTimeout(timer);
+      };
+    }, [fetchAll])
+  );
 
   useEffect(() => {
     fetchPnl(pnlPeriod);

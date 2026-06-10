@@ -231,7 +231,7 @@ const MarginBorrowRepayHistory = ({ route }) => {
 
   return (
     <AppSafeAreaView style={[styles.container, { backgroundColor: memoizedTheme.background ?? "#FFFFFF" }]}>
-      <Toolbar isSecond title={isCross ? "Cross Margin History" : "Isolated Margin History"} style={{ width: isCross ? '75%' : "80%", backgroundColor: "transparent" }} />
+      <Toolbar isSecond title={isCross ? "Cross Margin History" : "Isolated Margin History"} style={{ width: '75%', backgroundColor: "transparent" }} />
 
       <View style={[styles.tabBar, { borderBottomColor: memoizedTheme?.themeBorderColor ?? "#EEEEEE" }]}>
         <TouchableOpacity onPress={() => { if (activeTab === "date") { setStartDate(moment().subtract(1, "months")); setEndDate(moment()); } setActiveTab("borrow"); }} style={styles.tab}>
@@ -246,10 +246,10 @@ const MarginBorrowRepayHistory = ({ route }) => {
           <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "interest" ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93") }]}>Interest</AppText>
           {activeTab === "interest" && <View style={styles.activeTabIndicator} />}
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab("date")} style={styles.tab}>
+        {/* <TouchableOpacity onPress={() => setActiveTab("date")} style={styles.tab}>
           <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "date" ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93") }]}>Date</AppText>
           {activeTab === "date" && <View style={styles.activeTabIndicator} />}
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {activeTab === "date" && (

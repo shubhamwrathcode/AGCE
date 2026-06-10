@@ -543,6 +543,10 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       const itemPairStr = item?.pair || "";
       const cardBaseSymbol = itemPairStr ? itemPairStr.slice(0, -4) : baseSymbol;
       const cardQuoteSymbol = itemPairStr ? itemPairStr.slice(-4) : quoteSymbol;
+      const posVal = Math.abs(parseFloat(item?.notional ?? item?.value_usdt ?? item?.value ?? 0));
+      const minNotional = parseFloat(currencyData?.min_notional ?? 10);
+      const tooSmall = posVal > 0 && posVal < minNotional;
+      const noLiability = marginMode === "Cross" && !item?.position_id;
       return (
         <View key={item?._id || index} style={[styles.card, { borderBottomColor: borderThemeColor }]}>
           <View style={[styles.cardHeader, { alignItems: "flex-start", marginBottom: 12 }]}>
@@ -570,20 +574,29 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 )}
               </View>
             </View>
-            {marginMode !== "Cross" && (
-              <TouchableOpacity
-                style={{
-                  backgroundColor: "#374151",
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 4,
-                }}
-                onPress={() => handleClosePosition(item)}
-                activeOpacity={0.8}
-              >
-                <AppText style={{ color: colors.white, fontSize: 12 }} weight={MEDIUM}>Market Close</AppText>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#374151",
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 4,
+                opacity: (tooSmall || noLiability) ? 0.5 : 1,
+              }}
+              onPress={() => {
+                if (noLiability) {
+                  SimpleToast.show("There is no liability on this position");
+                  return;
+                }
+                if (tooSmall) {
+                  SimpleToast.show(`Only supports positions with a value >= ${minNotional} USDT. Try transfer to spot.`);
+                  return;
+                }
+                handleClosePosition(item);
+              }}
+              activeOpacity={(tooSmall || noLiability) ? 0.5 : 0.8}
+            >
+              <AppText style={{ color: colors.white, fontSize: 12 }} weight={MEDIUM}>Market Close</AppText>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.grid}>
