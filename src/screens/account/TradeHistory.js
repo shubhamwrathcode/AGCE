@@ -113,7 +113,7 @@ const OrderCard = React.memo(({
     const raw = String(item?.status || item?.user_status || item?.order_status || item?.orderStatus || item?.state || "").toUpperCase().trim();
     let label = raw || "---";
     let color = themeColors?.text ?? "#fff";
-    
+
     if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(raw)) {
       label = "EXECUTED";
       color = "#00c087";
@@ -164,7 +164,7 @@ const OrderCard = React.memo(({
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
-      style={[styles.orderSpotCard, { backgroundColor: colors.white }]}
+      style={[styles.orderSpotCard, { backgroundColor: "transparent" }]}
     >
       <View>
         <View style={styles.orderSpotHeaderRow}>
@@ -236,7 +236,7 @@ const OrderCard = React.memo(({
           </TouchableOpacity>
         </View>
       )}
-      <View style={[styles.orderSpotDivider, { backgroundColor: colors.iconBgColor }]} />
+      <View style={[styles.orderSpotDivider, { backgroundColor: themeColors.themeBorderColor || "#EEEEEE" }]} />
     </TouchableOpacity>
   );
 });
@@ -267,7 +267,7 @@ const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColo
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
-      style={[styles.tradeFillCard, { borderBottomColor: colors.iconBgColor, backgroundColor: colors.white }]}
+      style={[styles.tradeFillCard, { borderBottomColor: themeColors.themeBorderColor || "#EEEEEE", backgroundColor: "transparent" }]}
     >
       <View style={styles.pairRow}>
         <AppText type={FIFTEEN} weight={BOLD} style={{ color: textColor }}>{mLabel}</AppText>
@@ -291,12 +291,11 @@ const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColo
 
 const TradeHistory = ({ route }) => {
   const dispatch = useDispatch();
-  const { isDark, themeColors } = useTheme();
-  const memoizedTheme = useMemo(() => themeColors || {}, [themeColors, isDark]);
-  const isFocused = useIsFocused();
+  const { colors: themeColors, isDark } = useTheme();
+  const memoizedTheme = useMemo(() => themeColors, [themeColors]);
 
-  const { pastOrders: pastOrdersRedux } = useAppSelector((state) => state.home);
-  const { tradeHistory: walletTradeHistory } = useAppSelector((state) => state.wallet);
+  const pastOrdersRedux = useAppSelector((state) => state.home.pastOrders);
+  const spotOpenOrders = useAppSelector((state) => state.home.spotOpenOrders || []);
   const spotSelectedPair = useAppSelector((state) => state.home.spotSelectedPair);
 
   const [activeTab, setActiveTab] = useState(route?.params?.activeTab ?? 0);
@@ -387,7 +386,7 @@ const TradeHistory = ({ route }) => {
       if (isLoadMore) setLoadingMore(false); else setLoadingTrades(false);
     }
   }, [loadingTrades, loadingMore]);
-
+  const isFocused = useIsFocused()
   useEffect(() => {
     if (isFocused) {
       if (ordersData.length === 0) fetchOrders(1);
@@ -396,11 +395,11 @@ const TradeHistory = ({ route }) => {
   }, [isFocused]);
 
   const handleLoadMore = useCallback(() => {
-    if (activeTab === 0 && hasMoreOrders && !loadingMore && !loadingOrders) {
+    if (activeTab === 1 && hasMoreOrders && !loadingMore && !loadingOrders) {
       const next = ordersPage + 1;
       setOrdersPage(next);
       fetchOrders(next, true);
-    } else if (activeTab === 1 && hasMoreTrades && !loadingMore && !loadingTrades) {
+    } else if (activeTab === 2 && hasMoreTrades && !loadingMore && !loadingTrades) {
       const next = tradesPage + 1;
       setTradesPage(next);
       fetchTrades(next, true);
@@ -462,21 +461,43 @@ const TradeHistory = ({ route }) => {
     }).start();
   }, [activeTab]);
 
+  const flatListOptimizationProps = {
+    initialNumToRender: 8,
+    maxToRenderPerBatch: 10,
+    windowSize: 5,
+    updateCellsBatchingPeriod: 50,
+    removeClippedSubviews: true,
+  };
+
   return (
     <AppSafeAreaView style={[styles.container, { backgroundColor: memoizedTheme.background ?? "#FFFFFF" }]}>
       <Toolbar isSecond title={"History"} style={{ width: "58%", backgroundColor: "transparent" }} />
 
       <View style={[styles.tabBar, { borderBottomColor: memoizedTheme?.themeBorderColor ?? "#EEEEEE" }]}>
         <TouchableOpacity onPress={() => setActiveTab(0)} style={[styles.tab, activeTab === 0 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
-          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 0 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 15 }]}>Orders</AppText>
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 0 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 15 }]}>Open Orders</AppText>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setActiveTab(1)} style={[styles.tab, activeTab === 1 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
-          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 1 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 15 }]}>Trades</AppText>
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 1 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 15 }]}>Orders</AppText>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setActiveTab(2)} style={[styles.tab, activeTab === 2 && { borderBottomColor: colors.buttonBg, borderBottomWidth: 2 }]}>
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === 2 ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93"), fontSize: 15 }]}>Trades</AppText>
         </TouchableOpacity>
       </View>
 
       <Animated.View style={{ flex: 1, overflow: "hidden" }}>
-        <Animated.View style={{ flex: 1, flexDirection: "row", width: screenW * 2, transform: [{ translateX: pagerX }] }}>
+        <Animated.View style={{ flex: 1, flexDirection: "row", width: screenW * 3, transform: [{ translateX: pagerX }] }}>
+          <View style={{ width: screenW }}>
+            <FlatList
+              showsVerticalScrollIndicator={false}
+              data={spotOpenOrders}
+              renderItem={renderOrder}
+              keyExtractor={listKeyExtractor}
+              contentContainerStyle={styles.ordersListContent}
+              {...flatListOptimizationProps}
+              ListEmptyComponent={<View style={styles.noDataRow}><FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" /><AppText style={{ marginTop: 10, color: memoizedTheme?.secondaryText }}>No open orders</AppText></View>}
+            />
+          </View>
           <View style={{ width: screenW }}>
             {loadingOrders && ordersData.length === 0 ? <TradeHistorySkeleton /> : (
               <FlatList
@@ -486,9 +507,7 @@ const TradeHistory = ({ route }) => {
                 keyExtractor={listKeyExtractor}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
-                initialNumToRender={6}
-                windowSize={5}
-                removeClippedSubviews={true}
+                {...flatListOptimizationProps}
                 contentContainerStyle={styles.ordersListContent}
                 ListEmptyComponent={<View style={styles.noDataRow}><FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" /><AppText style={{ marginTop: 10, color: memoizedTheme?.secondaryText }}>No data found</AppText></View>}
               />
@@ -503,9 +522,7 @@ const TradeHistory = ({ route }) => {
                 keyExtractor={listKeyExtractor}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
-                initialNumToRender={6}
-                windowSize={5}
-                removeClippedSubviews={true}
+                {...flatListOptimizationProps}
                 contentContainerStyle={styles.tradesListContent}
                 ListEmptyComponent={<View style={styles.noDataRow}><FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" /><AppText style={{ marginTop: 10, color: memoizedTheme?.secondaryText }}>No data found</AppText></View>}
               />
@@ -550,7 +567,7 @@ const styles = StyleSheet.create({
   orderSpotCard: {
     borderRadius: 12,
     padding: 10,
-    marginBottom: 16,
+    marginBottom: 0,
     backgroundColor: "transparent",
   },
   orderSpotHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
@@ -566,11 +583,11 @@ const styles = StyleSheet.create({
   execTradeKvRowSpot: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 1 },
   execTradeKvKSpot: { fontSize: 15, flex: 1 },
   execTradeKvVSpot: { fontSize: 15, flex: 1, textAlign: "right" },
-  orderSpotDivider: { height: 1.5, marginTop: 12, marginBottom: 4 },
+  orderSpotDivider: { height: 1.5, marginTop: 12, marginBottom: 0 },
   tradeFillCard: {
     borderRadius: 12,
     padding: 10,
-    marginBottom: 16,
+    marginBottom: 0,
     borderBottomWidth: 1.5,
     borderBottomColor: colors.iconBgColor,
     backgroundColor: "transparent",
