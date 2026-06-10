@@ -959,9 +959,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
             <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }}>Hourly Rate / APR</AppText>
             <AppText style={{ color: textThemeColor, fontSize: 13 }} weight={MEDIUM}>
-              {item?.hourly_rate_pct != null ? `${item.hourly_rate_pct}%` : (item?.hourly_rate != null ? `${(parseFloat(item.hourly_rate) * 100).toFixed(6)}%` : (isCross ? "0.002000%" : "—"))}
+              {item?.hourly_rate_pct != null ? `${item.hourly_rate_pct}%` : (item?.hourly_rate != null ? `${(parseFloat(item.hourly_rate) * 100).toFixed(6)}%` : (marginMode === "Cross" ? "0.002000%" : "—"))}
               {" / "}
-              {item?.apr_pct != null ? `${item.apr_pct}%` : (isCross ? "17.520000%" : "—")}
+              {item?.apr_pct != null ? `${item.apr_pct}%` : (marginMode === "Cross" ? "17.520000%" : "—")}
             </AppText>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
