@@ -311,7 +311,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       } else if (activeTab === "positions") { // Open Orders
         const endpoint = isCross ? `cross/orders/open` : `margin/orders/open`;
         const params = { page: 1, limit: 100 };
-        if (!isCross) params.pair = pairSymbol;
+        params.pair = pairSymbol;
         res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
@@ -322,7 +322,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       } else if (activeTab === "orderHistory") {
         const endpoint = isCross ? `cross/orders/history` : `margin/orders/history`;
         const params = { page: 1, limit: 50 };
-        if (!isCross) params.pair = pairSymbol;
+        params.pair = pairSymbol;
         res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
@@ -333,7 +333,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
       } else if (activeTab === "tradeHistory") {
         const endpoint = isCross ? `cross/trades` : `margin/trades`;
         const params = { page: 1, limit: 50 };
-        if (!isCross) params.pair = pairSymbol;
+        params.pair = pairSymbol;
         res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
         if (res?.success) {
           const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
