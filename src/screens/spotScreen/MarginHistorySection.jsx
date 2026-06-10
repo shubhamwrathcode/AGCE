@@ -925,7 +925,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <AppText style={{ color: textThemeColor, fontSize: 16 }} weight={BOLD}>
-                {item?.coin || "—"}
+                {item?.coin || item?.asset || "—"}
               </AppText>
               {item?.contract && (
                 <AppText style={{ color: secondaryTextThemeColor, fontSize: 14 }}>
