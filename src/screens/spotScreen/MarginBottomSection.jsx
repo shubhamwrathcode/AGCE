@@ -77,10 +77,12 @@ const MarginBottomSection = ({
 
   let borrowingVal = 0;
   if (isBuy) {
-    const V = amountIsQuote ? inputQty : inputQty * inputPx;
+    const parsedTotal = parseFloat(formatTotal) || 0;
+    const V = parsedTotal > 0 ? parsedTotal : (amountIsQuote ? inputQty : inputQty * inputPx);
     borrowingVal = V > 0 ? Math.max(0, V - quoteAvailable) : 0;
   } else {
-    const baseQty = amountIsQuote ? (inputPx > 0 ? inputQty / inputPx : 0) : inputQty;
+    const parsedTotal = parseFloat(formatTotal) || 0;
+    const baseQty = parsedTotal > 0 && inputPx > 0 ? parsedTotal / inputPx : (amountIsQuote ? (inputPx > 0 ? inputQty / inputPx : 0) : inputQty);
     borrowingVal = baseQty > 0 ? Math.max(0, baseQty - baseAvailable) : 0;
   }
 
