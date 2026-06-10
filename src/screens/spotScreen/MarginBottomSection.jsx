@@ -76,14 +76,24 @@ const MarginBottomSection = ({
     : localBaseMax;
 
   let borrowingVal = 0;
+  const L = parseInt(marginLeverage, 10) || 1;
+  
   if (isBuy) {
     const parsedTotal = parseFloat(formatTotal) || 0;
     const V = parsedTotal > 0 ? parsedTotal : (amountIsQuote ? inputQty : inputQty * inputPx);
-    borrowingVal = V > 0 ? Math.max(0, V - quoteAvailable) : 0;
+    if (isCross) {
+      borrowingVal = V > 0 ? Math.max(0, V - quoteAvailable) : 0;
+    } else {
+      borrowingVal = V > 0 ? Math.max(0, V * (1 - 1 / L)) : 0;
+    }
   } else {
     const parsedTotal = parseFloat(formatTotal) || 0;
     const baseQty = parsedTotal > 0 && inputPx > 0 ? parsedTotal / inputPx : (amountIsQuote ? (inputPx > 0 ? inputQty / inputPx : 0) : inputQty);
-    borrowingVal = baseQty > 0 ? Math.max(0, baseQty - baseAvailable) : 0;
+    if (isCross) {
+      borrowingVal = baseQty > 0 ? Math.max(0, baseQty - baseAvailable) : 0;
+    } else {
+      borrowingVal = baseQty > 0 ? Math.max(0, baseQty * (1 - 1 / L)) : 0;
+    }
   }
 
   const availValue = isBuy ? quoteAvailable : baseAvailable;
