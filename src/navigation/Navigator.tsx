@@ -40,20 +40,16 @@ import EditAntiPhishingScreen from "../screens/Security/AntiPhishing/EditAntiPhi
 import DisableAntiPhishingScreen from "../screens/Security/AntiPhishing/DisableAntiPhishingScreen";
 import ResetPassword from "../screens/settings/ResetPassword";
 import CurrencyPreference from "../screens/account/CurrencyPreference";
-import CoinDetails from "../screens/trades/CoinDetails";
 import WalletDetails from "../features/wallet/screens/WalletDetailsScreen";
 import WalletHistoryDetails from "../screens/wallet/WalletHistoryDetails";
 import TradeHistoryDetails from "../screens/wallet/TradeHistoryDetails";
 import KycVerificationScreen from "../screens/account/KycVerificationScreen";
 import KycResubmitScreen from "../screens/account/KycResubmitScreen";
 import { KycFormProvider } from "../context/KycFormContext";
-import TradeSettings from "../screens/account/TradeSettings";
-import DownloadReport from "../screens/account/DownloadReport";
 import CoinDetailChart from "../screens/home/CoinDetailChart";
 import CoinTransactionHistory from "../screens/home/CoinTransactionHistory";
 import TwoFactorQr from "../screens/account/TwoFactorQr";
 import AddPhoneNumberScreen from "../screens/Security/PhoneVerification/AddPhoneNumberScreen";
-import DirectMessageManagement from "../screens/account/DirectMessageManagement";
 import NicknameSettings from "../screens/account/NicknameSettings";
 import PhoneSettingsScreen from "../screens/Security/PhoneVerification/PhoneSettingsScreen";
 import ChangePhoneNumberScreen from "../screens/Security/PhoneVerification/ChangePhoneNumberScreen";
@@ -93,7 +89,6 @@ import CloseAccountReasonScreen from "../screens/Security/AccountManagement/Clos
 import EmergencyContactVerification from "../screens/Security/EmergencyContact/EmergencyContactVerification";
 import EnterOtp from "../screens/account/EnterOtp";
 import ConvertHistory from "../screens/spotScreen/ConvertHistory";
-import LanguagePreference from "../screens/account/LanguagePreference";
 import Search from "../features/trades/screens/MarketSearchScreen";
 import {
   AppText,
@@ -105,10 +100,7 @@ import { Platform, StyleSheet, TouchableOpacity, View, Keyboard } from "react-na
 import Toast from "react-native-simple-toast";
 import { useAppSelector } from "../store/hooks";
 import { ChartPreloaderProvider } from "../context/ChartPreloaderContext";
-import OrderHistory from "../screens/trades/OrderHistory";
 import SpotOrderHistoryDetail from "../screens/spotScreen/SpotOrderHistoryDetail";
-import CommitDetails from "../screens/trades/CommitDetails";
-import PaymentOptions from "../features/account/screens/PaymentOptionsScreen";
 import WalletHistory from "../features/wallet/screens/WalletHistoryScreen";
 import Market from "../screens/other/Market";
 import SpotMarket from "../screens/other/SpotMarket";
@@ -134,14 +126,12 @@ import TradeHistory from "../screens/account/TradeHistory";
 import OpenOrder from "../screens/account/OpenOrder";
 import NewWalletHistory from "../screens/account/NewWalletHistory";
 import NewSwapHistory from "../screens/account/NewSwapHistory";
-import AdminTradeHistory from "../screens/account/AdminTradeHistory";
 import InternalWalletHistory from "../screens/account/InternalWalletHistory";
 import BuyPackage from "../screens/other/BuyPackage";
 import Futures from "../screens/Futures/index";
 import FutureOrderHistory from "../screens/Futures/FutureOrderHistory";
 import TicketScreen from "../screens/supportSreen/TicketScreen";
 import { useTheme } from "../hooks/useTheme";
-import DepositHistoryDetailScreen from "../screens/account/DepositHistoryDetailScreen";
 import WithdrawalHistory from "../screens/wallet/WithdrawalHistory";
 import WithdrawalDetailPage from "../screens/wallet/WithdrawalDetailPage";
 import SelectCoin from "../screens/wallet/Withdrawal/SelectCoin";
@@ -300,11 +290,6 @@ const MyAuthLoadingStack = () => {
         component={NotificationSettings}
       />
       <Stack.Screen
-        name={routes.DIRECT_MESSAGE_MANAGEMENT_SCREEN}
-        component={DirectMessageManagement}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
         name={routes.NICKNAME_SETTINGS_SCREEN}
         component={NicknameSettings}
         options={{ headerShown: false }}
@@ -331,7 +316,6 @@ const MyAuthLoadingStack = () => {
         component={CurrencyPreference}
       />
       <Stack.Screen name={routes.CONVERT_SCREEN} component={ConvertNew} />
-      <Stack.Screen name={routes.COIN_DETAILS_SCREEN} component={CoinDetails} />
       <Stack.Screen
         name={routes.WALLET_DETAIL_SCREEN}
         component={WalletDetails}
@@ -343,25 +327,10 @@ const MyAuthLoadingStack = () => {
         component={WalletHistoryDetails}
       />
       <Stack.Screen
-        name={routes.DEPOSIT_HISTORY_DETAIL_SCREEN}
-        component={DepositHistoryDetailScreen}
-      />
-      <Stack.Screen
         name={routes.TRADE_HISTORY_DETAILS_SCREEN}
         component={TradeHistoryDetails}
       />
-      <Stack.Screen
-        name={routes.PAYMENT_OPTIONS_SCREEN}
-        component={PaymentOptions}
-      />
-      <Stack.Screen
-        name={routes.TRADE_SETTINGS_SCREEN}
-        component={TradeSettings}
-      />
-      <Stack.Screen
-        name={routes.DOWNLOAD_TRADE_REPORT_SCREEN}
-        component={DownloadReport}
-      />
+
       <Stack.Screen
         name={routes.COIN_DETAILS_CHART_SCREEN}
         component={CoinDetailChart}
@@ -513,15 +482,8 @@ const MyAuthLoadingStack = () => {
         name={routes.CONVERT_HISTORY_SCREEN}
         component={ConvertHistory}
       />
-      <Stack.Screen
-        name={routes.LANGUAGE_PREFERENCE_SCREEN}
-        component={LanguagePreference}
-      />
-
-      <Stack.Screen name={routes.ORDER_HISTORY} component={OrderHistory} />
       <Stack.Screen name={routes.MARGIN_HISTORY_SCREEN} component={MarginHistoryScreen} />
       <Stack.Screen name={routes.SPOT_ORDER_HISTORY_DETAIL} component={SpotOrderHistoryDetail} />
-      <Stack.Screen name={routes.COMMIT_DETAIL} component={CommitDetails} />
       <Stack.Screen
         name={routes.WALLET_HISTORY_SCREEN}
         component={WalletHistory}
@@ -562,7 +524,6 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.OPEN_ORDER_SCREEN} component={OpenOrder} />
       <Stack.Screen name={'Wallet_History'} component={NewWalletHistory} />
       <Stack.Screen name={'Swap_History'} component={NewSwapHistory} />
-      <Stack.Screen name={'Admin_Trade'} component={AdminTradeHistory} />
       <Stack.Screen name={'Ticket_Screen'} component={TicketScreen} />
       <Stack.Screen name={'BuyPackage'} component={BuyPackage} />
 
