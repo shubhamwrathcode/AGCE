@@ -356,11 +356,11 @@ const DepthRow = React.memo(({ bid, ask, bidFillPct, askFillPct, themeColors, is
             backgroundColor: depthGreen,
           }}
         />
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthQty, { color: themeColors.text, zIndex: 1, position: 'absolute', left: 0, }]} numberOfLines={1}>
-          {bid ? formatQty(bidRem) : ""}
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthQty, { color: bid ? themeColors.text : "#9D9D9D", opacity: bid ? 1 : 0.15, zIndex: 1, position: 'absolute', left: 0, textAlign: 'left' }]} numberOfLines={1}>
+          {bid ? formatQty(bidRem) : "—"}
         </AppText>
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthBidPrice, { color: themeColors.green, zIndex: 1, paddingRight: 4 }]}>
-          {bid ? formatPrice(bid.price) : ""}
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthBidPrice, { color: bid ? themeColors.green : "#9D9D9D", opacity: bid ? 1 : 0.15, zIndex: 1, paddingRight: 4 }]}>
+          {bid ? formatPrice(bid.price) : "—"}
         </AppText>
       </View>
 
@@ -377,11 +377,11 @@ const DepthRow = React.memo(({ bid, ask, bidFillPct, askFillPct, themeColors, is
             backgroundColor: depthRed,
           }}
         />
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthAskPrice, { color: themeColors.red, zIndex: 1, paddingLeft: 4 }]}>
-          {ask ? formatPrice(ask.price) : ""}
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthAskPrice, { color: ask ? themeColors.red : "#9D9D9D", opacity: ask ? 1 : 0.15, zIndex: 1, paddingLeft: 4 }]}>
+          {ask ? formatPrice(ask.price) : "—"}
         </AppText>
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthQty, { color: themeColors.text, textAlign: "right", zIndex: 1, position: 'absolute', right: 0 }]} numberOfLines={1}>
-          {ask ? formatQty(askRem) : ""}
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.depthQty, { color: ask ? themeColors.text : "#9D9D9D", opacity: ask ? 1 : 0.15, textAlign: "right", zIndex: 1, position: 'absolute', right: 0 }]} numberOfLines={1}>
+          {ask ? formatQty(askRem) : "—"}
         </AppText>
       </View>
     </View>
@@ -1206,7 +1206,7 @@ const SpotChartScreen = () => {
 
   const depthRows = useMemo(() => {
     const rows = [];
-    const maxLen = Math.max(bidsDisplay.length, asksDisplay.length);
+    const maxLen = Math.max(bidsDisplay.length, asksDisplay.length, 20);
     for (let i = 0; i < maxLen; i++) {
       const bid = bidsDisplay[i] || null;
       const ask = asksDisplay[i] || null;
