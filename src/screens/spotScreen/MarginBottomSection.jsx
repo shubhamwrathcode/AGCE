@@ -47,11 +47,18 @@ const MarginBottomSection = ({
   const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance.quote_remaining_capacity) : null;
   const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance.base_remaining_capacity) : null;
 
-  const quoteAvailable = isCross && coinBalance?.buy_available != null ? Number(coinBalance.buy_available) : netEquity;
-  const baseAvailable = isCross && coinBalance?.sell_available != null ? Number(coinBalance.sell_available) : baseEquity;
+  const quoteAvailable = isCross && (coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
+    ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
+    : netEquity;
+  const baseAvailable = isCross && (coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
+    ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
+    : baseEquity;
 
   const grossQuoteMax = netEquity * leverage;
-  const quoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
+  const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
+  const quoteMax = isCross && (coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
+    ? Number(coinBalance?.buy?.max ?? coinBalance?.buy_max)
+    : localQuoteMax;
 
   const fmt = (val) => {
     if (val == null || !Number.isFinite(Number(val))) return "0";
@@ -63,12 +70,15 @@ const MarginBottomSection = ({
   const inputPx = parseFloat(price) || parseFloat(buy_price) || 0;
 
   const grossSellMax = inputPx > 0 ? grossQuoteMax / inputPx : 0;
-  const baseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
+  const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
+  const baseMax = isCross && (coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
+    ? Number(coinBalance?.sell?.max ?? coinBalance?.sell_max)
+    : localBaseMax;
 
   let borrowingVal = 0;
   if (isBuy) {
     const V = amountIsQuote ? inputQty : inputQty * inputPx;
-    borrowingVal = V > 0 ? Math.max(0, V * (1 - 1 / leverage)) : 0;
+    borrowingVal = V > 0 ? Math.max(0, V - quoteAvailable) : 0;
   } else {
     const baseQty = amountIsQuote ? (inputPx > 0 ? inputQty / inputPx : 0) : inputQty;
     borrowingVal = baseQty > 0 ? Math.max(0, baseQty - baseAvailable) : 0;
