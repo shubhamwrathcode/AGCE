@@ -10,8 +10,6 @@ const MarginBottomSection = ({
   base_currency,
   coinBalance,
   marginMode,
-  crossAccount,
-  crossBorrowable,
   isBuy,
   onSubmit,
   themeColors,
@@ -37,7 +35,7 @@ const MarginBottomSection = ({
 
   const socketNetEquity = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
   const refPrice = parseFloat(buy_price) || parseFloat(price) || 0;
-  
+
   const netEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
     ? socketNetEquity
     : Math.max(0, (Qf - Qb) + (Bf - Bb) * refPrice);
@@ -77,7 +75,7 @@ const MarginBottomSection = ({
 
   let borrowingVal = 0;
   const L = parseInt(marginLeverage, 10) || 1;
-  
+
   if (isBuy) {
     const parsedTotal = parseFloat(formatTotal) || 0;
     const V = parsedTotal > 0 ? parsedTotal : (amountIsQuote ? inputQty : inputQty * inputPx);

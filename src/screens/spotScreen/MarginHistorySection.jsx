@@ -257,7 +257,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
 
   const [orderHistoryTypeFilter, setOrderHistoryTypeFilter] = useState("All");
 
-  const { orderData } = useSelector((state) => state.home);
+  const { orderData, spotOpenOrders } = useSelector((state) => state.home);
 
   const baseSymbol = currencyData?.base_currency || "";
   const quoteSymbol = currencyData?.quote_currency || "";
@@ -389,7 +389,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
     let list = tabData[tabId] || [];
 
     if (tabId === "positions") {
-      list = currencyData?.open_orders || tabData[tabId] || [];
+      list = (spotOpenOrders && spotOpenOrders.length > 0) ? spotOpenOrders : tabData[tabId] || [];
     }
 
     if (tabId === "orderHistory") {
