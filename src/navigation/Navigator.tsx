@@ -174,10 +174,6 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
       {state.routes.map((route: any, index: number) => {
         const isFocused = state.index === index;
         const onPress = () => {
-          if (route.name === routes.FUTURES_SCREEN) {
-            Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
-            return;
-          }
           const event = navigation.emit({
             type: "tabPress",
             target: route.key,

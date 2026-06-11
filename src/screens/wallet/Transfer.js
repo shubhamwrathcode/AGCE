@@ -14,8 +14,6 @@ import { getParticularCoinBalance, getUserMainWallet, getWalletType, handleTranf
 import WalletTypeModal from "../../shared/components/WalletTypeModal";
 import CoinListModal from "../../shared/components/CoinListModal";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
-import { DEPOSIT_COIN_SCREEN, DEPOSIT_SCREEN, DEPOSIT_WALLET_SCREEN } from "../../navigation/routes";
-import DepositWallet from "./DepositWallet";
 import TransferModal from "../../shared/components/TransferModal";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import TransferSkeleton from "./TransferSkeleton";

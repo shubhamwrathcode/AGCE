@@ -42,7 +42,8 @@ export function useFuturesSocket() {
     futuresData: normalizedData,
     subscribeToFutures: context?.subscribeToFutures,
     unsubscribeFromFutures: context?.unsubscribeFromFutures,
-    setFuturesHistoryTab: context?.setFuturesHistoryTab,
+    subscribeToMarket: context?.subscribeToMarket,
+    unsubscribeFromMarket: context?.unsubscribeFromMarket,
     socket: context?.socket,
   };
 }
