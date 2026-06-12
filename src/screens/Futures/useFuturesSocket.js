@@ -23,6 +23,15 @@ export function useFuturesSocket() {
     if (data.sell_order != null) {
       normalized.sell_order = normalizeOrderbookOrders(data.sell_order || []);
     }
+
+    // Log real-time updates to debug the stream
+    console.log("=== LIVE FUTURES SOCKET UPDATE ===", {
+      last_price: normalized.last_price || normalized.buy_price || normalized.price,
+      sell_orders_count: normalized.sell_order?.length,
+      buy_orders_count: normalized.buy_order?.length,
+      timestamp: Date.now()
+    });
+
     if (data.recent_trades != null) {
       normalized.recent_trades = (data.recent_trades || []).map((t) => ({
         price: parseFloat(t.price) || 0,

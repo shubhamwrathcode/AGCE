@@ -673,7 +673,7 @@ const SpotChartScreen = () => {
             <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.SWAP_SCREEN)}>
               <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Convert</AppText>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}>
+            <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM)}>
               <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Transfer</AppText>
             </TouchableOpacity>
           </View>
@@ -759,7 +759,7 @@ const SpotChartScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
-            onPress={() => NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN)}
+            onPress={() => Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM)}
           >
             <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
               Transfer

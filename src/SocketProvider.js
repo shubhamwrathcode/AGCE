@@ -89,35 +89,32 @@ export const SocketProvider = ({ children }) => {
     }
   }, []);
 
-  const subscribeToFutures = useCallback((baseCurrencyId, quoteCurrencyId) => {
-    if (!baseCurrencyId || !quoteCurrencyId) {
-      if (currentFuturesSubscription.current === "all") return;
-      currentFuturesSubscription.current = "all";
-      if (socketService.getSocket()?.connected) {
-        socketService.emit('futures:subscribe', {});
-      }
-      return;
+  const subscribeToFutures = useCallback((payload = {}) => {
+    let subKey = "all";
+    if (typeof payload === "string") {
+      subKey = payload;
+    } else if (payload && payload.symbol) {
+      subKey = payload.symbol;
+    } else if (payload && payload.base_currency_id) {
+      subKey = payload.base_currency_id;
+    } else if (Object.keys(payload).length > 0) {
+      subKey = JSON.stringify(payload);
     }
-    const subKey = `${baseCurrencyId}-${quoteCurrencyId}`;
+
     if (currentFuturesSubscription.current === subKey) return;
     currentFuturesSubscription.current = subKey;
-    pendingSubscriptions.current.futures = { base_currency_id: baseCurrencyId, quote_currency_id: quoteCurrencyId };
+    pendingSubscriptions.current.futures = payload;
+
     if (socketService.getSocket()?.connected) {
-      socketService.emit('futures:subscribe', {
-        base_currency_id: baseCurrencyId,
-        quote_currency_id: quoteCurrencyId
-      });
+      socketService.emit('futures:subscribe', payload);
     }
   }, []);
 
-  const unsubscribeFromFutures = useCallback((baseCurrencyId, quoteCurrencyId) => {
+  const unsubscribeFromFutures = useCallback((payload = {}) => {
     currentFuturesSubscription.current = null;
     pendingSubscriptions.current.futures = null;
     if (socketService.getSocket()?.connected) {
-      socketService.emit('futures:unsubscribe', {
-        base_currency_id: baseCurrencyId,
-        quote_currency_id: quoteCurrencyId
-      });
+      socketService.emit('futures:unsubscribe', payload);
     }
   }, []);
 

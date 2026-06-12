@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { colors } from '../theme/colors';
-import { AppText, ELEVEN, SEMI_BOLD, THIRTEEN } from './AppText';
+import { AppText, ELEVEN, SEMI_BOLD, THIRTEEN, FOURTEEN, FIFTEEN, MEDIUM } from './AppText';
 import FastImage from 'react-native-fast-image';
 import { DOWN_ARROW, tick } from '../helper/ImageAssets';
 import { useTheme } from '../hooks/useTheme';
@@ -27,20 +27,7 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
   };
 
   const openDropdown = () => {
-    buttonRef.current?.measureInWindow((x, y, width, height) => {
-      const dropdownWidth = Math.max(width, 100);
-      let left = x;
-      if (left + dropdownWidth > Dimensions.get('window').width - 10) {
-        left = x + width - dropdownWidth;
-      }
-
-      setDropdownPos({
-        top: y + height + 2,
-        left: left,
-        width: dropdownWidth,
-      });
-      setVisible(true);
-    });
+    setVisible((prev) => !prev);
   };
 
   const isPlaceholder = !selected || selected.toLowerCase().includes("select");
@@ -54,26 +41,27 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
           compact && styles.dropdownTriggerCompact,
           compact
             ? {
-                backgroundColor: themeColors.input,
-                borderColor: themeColors.themeBorderColor,
-                borderWidth: 1,
-              }
+              backgroundColor: themeColors.input,
+              borderColor: themeColors.themeBorderColor,
+              borderWidth: 1,
+            }
             : {
-                backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
-                borderColor: themeColors.border,
-                borderWidth: 1,
-              },
+              backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
+              borderColor: themeColors.border,
+              borderWidth: 1,
+            },
           triggerStyle,
         ]}
         onPress={openDropdown}
         activeOpacity={0.8}
       >
         <AppText
-          type={compact ? ELEVEN : THIRTEEN}
+          type={compact ? THIRTEEN : FIFTEEN}
+          weight={MEDIUM}
           style={{
             flex: 1,
             color: isPlaceholder ? themeColors.secondaryText : themeColors.text,
-            ...(compact ? { fontSize: 11 } : null),
+            ...(compact ? { fontSize: 13 } : null),
           }}
         >
           {selected || 'Select option'}
@@ -89,54 +77,45 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
         />
       </TouchableOpacity>
 
-      <Modal transparent visible={visible} animationType="fade">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setVisible(false)}
+      {visible && (
+        <View
+          style={[
+            styles.inlineContent,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }
+          ]}
         >
-          <View
-            style={[
-              styles.modalContent,
-              {
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-                borderWidth: 1,
-                top: dropdownPos.top,
-                left: dropdownPos.left,
-                width: dropdownPos.width,
-              }
-            ]}
-          >
-            <FlatList
-              data={data}
-              keyExtractor={(item, index) => index.toString()}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity
-                  onPress={() => handleSelect(item)}
-                  style={[
-                    styles.option,
-                    { borderBottomColor: themeColors.border },
-                    index === data.length - 1 && { borderBottomWidth: 0 }
-                  ]}
+          <FlatList
+            data={data}
+            keyExtractor={(item, index) => index.toString()}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                onPress={() => handleSelect(item)}
+                style={[
+                  styles.option,
+                  { borderBottomColor: themeColors.border },
+                  index === data.length - 1 && { borderBottomWidth: 0 }
+                ]}
+              >
+                <AppText
+                  type={FOURTEEN}
+                  style={{ color: themeColors.text }}
+                  weight={selected === item ? SEMI_BOLD : MEDIUM}
                 >
-                  <AppText
-                    type={ELEVEN}
-                    style={{ color: themeColors.text }}
-                    weight={selected === item ? SEMI_BOLD : undefined}
-                  >
-                    {item}
-                  </AppText>
-                  {selected === item && (
-                    <FastImage source={tick} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.button} />
-                  )}
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+                  {item}
+                </AppText>
+                {selected === item && (
+                  <FastImage source={tick} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.button} />
+                )}
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
     </View>
   );
 };
@@ -167,27 +146,19 @@ const styles = StyleSheet.create({
     height: 8,
     marginLeft: 4,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  modalContent: {
-    position: 'absolute',
-    borderRadius: 12,
-    paddingVertical: 4,
+  inlineContent: {
     maxHeight: 250,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+    overflow: 'hidden',
   },
   option: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });

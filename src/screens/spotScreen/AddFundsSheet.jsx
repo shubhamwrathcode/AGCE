@@ -31,11 +31,7 @@ const AddFundsSheet = ({
       // meta: `Transferable: ${quoteAvailable} ${quoteSymbol}`,
       icon: convertIcon,
       onPress: () => {
-        onClose?.();
-        NavigationService.navigate(MARGIN_TRANSFER_SCREEN, {
-          fromWalletType: "spot",
-          toWalletType: isCross ? "cross_margin" : "margin"
-        });
+        Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
       },
     },
     {

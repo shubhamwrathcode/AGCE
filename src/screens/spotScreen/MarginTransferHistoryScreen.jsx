@@ -6,14 +6,18 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Platform,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import {
   AppText,
   SEMI_BOLD,
+  MEDIUM,
   BOLD,
   FOURTEEN,
+  FIFTEEN,
+  TWELVE,
 } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
 import { colors } from "../../theme/colors";
@@ -23,33 +27,47 @@ import { CUSTOMER_TYPE } from "../../appOperation/types";
 import moment from "moment";
 import RBSheet from "react-native-raw-bottom-sheet";
 import TradeHistorySkeleton from "../account/TradeHistorySkeleton";
-import { useAppSelector } from "../../store/hooks";
 import CustomDropdown from "../../common/CustomDropdown";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const WALLET_OPTIONS = ["All", "Main Wallet", "Spot Wallet", "Futures Wallet", "Margin Wallet"];
+const DIRECTION_LABELS = {
+  TO_MARGIN: "To Isolated Margin",
+  FROM_MARGIN: "From Isolated Margin",
+  TO_CROSS: "To Cross Margin",
+  FROM_CROSS: "From Cross Margin",
+};
 
-function mapWalletLabelToKey(label) {
-  if (label === "All") return "all";
-  if (label === "Main Wallet") return "main";
-  if (label === "Spot Wallet") return "spot";
-  if (label === "Futures Wallet") return "futures";
-  if (label === "Margin Wallet") return "margin";
-  return "all";
-}
+const ACCOUNT_OPTIONS = ["Isolated Margin", "Cross Margin"];
+const DIRECTION_OPTIONS = ["All", "To Margin", "From Margin"];
 
 const LIMIT = 20;
+
+function formatPair(raw) {
+  if (!raw) return "—";
+  if (raw.includes("/")) return raw;
+  if (raw.length >= 6) {
+    const known = ["USDT", "BTC", "ETH", "BNB", "USDC"];
+    for (const q of known) {
+      if (raw.endsWith(q)) return `${raw.slice(0, raw.length - q.length)}/${q}`;
+    }
+  }
+  return raw;
+}
 
 function fmtWallet(val) {
   const s = String(val || "").toLowerCase();
   if (s.includes("spot")) return "Spot Wallet";
   if (s.includes("main")) return "Main Wallet";
-  if (s.includes("p2p")) return "P2P Wallet";
-  if (s.includes("future")) return "Futures Wallet";
   if (s.includes("cross")) return "Cross Margin";
   if (s.includes("margin") || s.includes("isolated")) return "Margin Account";
   return val ? String(val).charAt(0).toUpperCase() + String(val).slice(1) : "—";
+}
+
+function fmtDirection(v) {
+  if (!v) return "—";
+  return DIRECTION_LABELS[v] ?? String(v);
 }
 
 function fmtAmount(amount) {
@@ -65,27 +83,55 @@ function fmtDate(iso) {
   return m.isValid() ? m.format("DD/MM/YYYY, HH:mm:ss") : String(iso);
 }
 
-function mapAllRow(raw, idx) {
-  const from = raw.from_wallet ?? raw.fromWallet ?? "";
-  const to = raw.to_wallet ?? raw.toWallet ?? "";
-  const coin = String(raw.short_name ?? raw.coin ?? raw.asset ?? "").toUpperCase();
-  const created = raw.createdAt ?? raw.created_at ?? "";
+function mapMarginRow(raw, idx) {
+  const direction = raw.direction ?? raw.type;
+  let from = raw.from_wallet ?? raw.from ?? "";
+  let to = raw.to_wallet ?? raw.to ?? "";
+
+  if (!from && !to && direction) {
+    if (String(direction).startsWith("TO_")) { from = "spot"; to = "margin"; }
+    else if (String(direction).startsWith("FROM_")) { from = "margin"; to = "spot"; }
+  }
+
+  const coin = String(raw.asset ?? raw.coin ?? "").toUpperCase();
   return {
-    id: raw.id ?? raw._id ?? `r-${idx}-${created}`,
-    date: fmtDate(created),
+    id: raw.transfer_id ?? raw.id ?? raw._id ?? `m-${idx}`,
+    date: fmtDate(raw.created_at ?? raw.time),
     coin,
     amount: fmtAmount(raw.amount),
     from: fmtWallet(from),
     to: fmtWallet(to),
-    direction: null,
-    pair: "—",
+    direction: fmtDirection(direction),
+    pair: formatPair(raw.contract ?? raw.pair ?? ""),
+  };
+}
+
+function mapCrossRow(raw, idx) {
+  const direction = raw.direction ?? raw.type;
+  let from = raw.from_wallet ?? raw.from ?? "";
+  let to = raw.to_wallet ?? raw.to ?? "";
+
+  if (!from && !to && direction) {
+    if (String(direction).startsWith("TO_")) { from = "spot"; to = "cross_margin"; }
+    else if (String(direction).startsWith("FROM_")) { from = "cross_margin"; to = "spot"; }
+  }
+
+  const coin = String(raw.asset ?? raw.coin ?? "").toUpperCase();
+  return {
+    id: raw.transfer_id ?? raw.id ?? raw._id ?? `c-${idx}`,
+    date: fmtDate(raw.created_at ?? raw.time),
+    coin,
+    amount: fmtAmount(raw.amount),
+    from: fmtWallet(from),
+    to: fmtWallet(to),
+    direction: fmtDirection(direction),
+    pair: formatPair(raw.asset ?? raw.pair ?? raw.contract ?? ""),
   };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const TradeKvRow = React.memo(({ label, value, color, secColor }) => {
-  if (!value) return null;
   return (
     <View style={styles.tradeKvRow}>
       <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: secColor }}>{label}</AppText>
@@ -100,12 +146,17 @@ const HistoryCard = React.memo(({ item, themeColors, isDark }) => {
   const textColor = themeColors.text ?? "#000000";
   const secColor = isDark ? "#8E8E93" : "#888888";
 
+  const isTo = item.direction?.startsWith("To");
+  const directionColor = item.direction && item.direction !== "—"
+    ? (isTo ? (themeColors.green ?? "#00C076") : (themeColors.red ?? "#E86161"))
+    : textColor;
+
   return (
     <View style={[styles.historyCard, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "transparent" }]}>
-      {/* Pair / Coin Header */}
+      {/* Pair Header */}
       <View style={styles.headerRow}>
         <AppText weight={BOLD} style={{ fontSize: 15, color: textColor }}>
-          {item.coin || "—"}
+          {(item.pair && item.pair !== "—") ? item.pair : item.coin}
         </AppText>
       </View>
 
@@ -114,47 +165,39 @@ const HistoryCard = React.memo(({ item, themeColors, isDark }) => {
         <TradeKvRow label="Time" value={item.date} color={textColor} secColor={secColor} />
         <TradeKvRow label="Coin" value={item.coin} color={textColor} secColor={secColor} />
         <TradeKvRow label="Amount" value={item.amount} color={textColor} secColor={secColor} />
+        <TradeKvRow label="Direction" value={item.direction} color={directionColor} secColor={secColor} />
         <TradeKvRow label="From" value={item.from} color={secColor} secColor={secColor} />
         <TradeKvRow label="To" value={item.to} color={secColor} secColor={secColor} />
       </View>
-      <View style={[styles.divider, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} />
+      <View style={[styles.divider, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(112, 59, 59, 0.05)" }]} />
     </View>
   );
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-const TransferHistoryScreen = () => {
+const MarginTransferHistoryScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const { colors: themeColors, isDark } = useTheme();
 
-  const userWallet = useAppSelector((state) => state.wallet?.userWallet || []);
-
-  const coinOptions = React.useMemo(() => {
-    const options = ["All"];
-    if (Array.isArray(userWallet)) {
-      const uniqueCoins = new Set();
-      userWallet.forEach(item => {
-        if (item?.short_name) {
-          uniqueCoins.add(item.short_name.toUpperCase());
-        }
-      });
-      options.push(...Array.from(uniqueCoins).sort());
-    }
-    return options;
-  }, [userWallet]);
-
   // Applied Filters
-  const [fromWallet, setFromWallet] = useState("All");
-  const [toWallet, setToWallet] = useState("All");
-  const [coin, setCoin] = useState("All");
+  const [accountType, setAccountType] = useState("Isolated Margin");
+  const [direction, setDirection] = useState("All");
+  const [contract, setContract] = useState("All");
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   // Temporary Filters for Bottom Sheet
   const filterSheetRef = useRef(null);
-  const [tempFromWallet, setTempFromWallet] = useState(fromWallet);
-  const [tempToWallet, setTempToWallet] = useState(toWallet);
-  const [tempCoin, setTempCoin] = useState(coin);
+  const [tempAccountType, setTempAccountType] = useState(accountType);
+  const [tempDirection, setTempDirection] = useState(direction);
+  const [tempContract, setTempContract] = useState(contract);
+  const [tempStartDate, setTempStartDate] = useState(startDate);
+  const [tempEndDate, setTempEndDate] = useState(endDate);
+
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [datePickerTarget, setDatePickerTarget] = useState("start");
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -162,42 +205,83 @@ const TransferHistoryScreen = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  const [rawAccounts, setRawAccounts] = useState([]);
+  const [contractOptions, setContractOptions] = useState(["All"]);
+
+  useEffect(() => {
+    appOperation.customer.margin_accounts()
+      .then((res) => {
+        const data = res?.data || [];
+        setRawAccounts(data);
+        const opts = data
+          .filter(a => a.base_asset && a.quote_asset)
+          .map(a => `${a.base_asset}/${a.quote_asset}`);
+        opts.sort((a, b) => a.localeCompare(b));
+        setContractOptions(["All", ...opts]);
+      })
+      .catch(() => { });
+  }, []);
+
   useEffect(() => {
     setData([]);
     setPage(1);
     setHasMore(true);
-  }, [fromWallet, toWallet, coin]);
+  }, [accountType, direction, startDate, endDate]);
 
   const fetchData = useCallback(async (pageNum = 1, append = false) => {
     if (append) setLoadingMore(true); else setLoading(true);
     try {
-      const skip = (pageNum - 1) * LIMIT;
-      let url = `wallet/wallet-transfer-history?skip=${skip}&limit=${LIMIT}`;
+      let res;
+      let items = [];
 
-      const fromKey = mapWalletLabelToKey(fromWallet);
-      const toKey = mapWalletLabelToKey(toWallet);
+      const resolvedPairId = contract === "All"
+        ? undefined
+        : rawAccounts.find(a => `${a.base_asset}/${a.quote_asset}` === contract)?.pair_id;
 
-      if (fromKey !== "all") url += `&from_wallet=${fromKey}`;
-      if (toKey !== "all") url += `&to_wallet=${toKey}`;
-      if (coin !== "All") url += `&currency=${coin}`;
+      if (accountType === "Isolated Margin") {
+        let dir = "all";
+        if (direction === "To Margin") dir = "TO_MARGIN";
+        if (direction === "From Margin") dir = "FROM_MARGIN";
 
-      const res = await appOperation.get(url, undefined, undefined, CUSTOMER_TYPE);
-      const raw = res?.data?.data || res?.data?.items || res?.data?.rows || (Array.isArray(res?.data) ? res.data : []);
-      const items = raw.map(mapAllRow);
+        const fromQuery = startDate ? `&from=${moment(startDate).format("YYYY-MM-DD")}T00:00:00.000Z` : "";
+        const toQuery = endDate ? `&to=${moment(endDate).format("YYYY-MM-DD")}T23:59:59.999Z` : "";
+        const pairQuery = resolvedPairId ? `&pairId=${resolvedPairId}` : "";
+
+        res = await appOperation.get(
+          `margin/history/transfer?page=${pageNum}&limit=${LIMIT}${dir !== "all" ? `&direction=${dir}` : ""}${pairQuery}${fromQuery}${toQuery}`,
+          undefined, undefined, CUSTOMER_TYPE
+        );
+        const raw = res?.data?.transfers ?? (Array.isArray(res?.data) ? res.data : []);
+        items = raw.map(mapMarginRow);
+      } else {
+        let dir = "all";
+        if (direction === "To Margin") dir = "TO_CROSS";
+        if (direction === "From Margin") dir = "FROM_CROSS";
+
+        res = await appOperation.customer.crossTransferHistory({
+          page: pageNum,
+          limit: LIMIT,
+          direction: dir !== "all" ? dir : undefined,
+        });
+        const raw = res?.data?.transfers ?? (Array.isArray(res?.data) ? res.data : []);
+        items = raw.map(mapCrossRow);
+      }
 
       if (append) setData(prev => [...prev, ...items]); else setData(items);
       setHasMore(items.length >= LIMIT);
-    } catch {
+
+    } catch (e) {
+      console.log(e);
       if (!append) setData([]);
       setHasMore(false);
     } finally {
       if (append) setLoadingMore(false); else setLoading(false);
     }
-  }, [fromWallet, toWallet, coin]);
+  }, [accountType, direction, startDate, endDate, contract, rawAccounts]);
 
   useEffect(() => {
     if (isFocused) { setPage(1); fetchData(1, false); }
-  }, [fromWallet, toWallet, coin, isFocused]);
+  }, [accountType, direction, startDate, endDate, contract, isFocused]);
 
   const handleLoadMore = useCallback(() => {
     if (hasMore && !loadingMore && !loading) {
@@ -208,9 +292,11 @@ const TransferHistoryScreen = () => {
   }, [hasMore, loadingMore, loading, page, fetchData]);
 
   const openFilterSheet = () => {
-    setTempFromWallet(fromWallet);
-    setTempToWallet(toWallet);
-    setTempCoin(coin);
+    setTempAccountType(accountType);
+    setTempDirection(direction);
+    setTempContract(contract);
+    setTempStartDate(startDate);
+    setTempEndDate(endDate);
     filterSheetRef.current?.open();
   };
 
@@ -219,16 +305,26 @@ const TransferHistoryScreen = () => {
   };
 
   const handleApplyFilters = () => {
-    setFromWallet(tempFromWallet);
-    setToWallet(tempToWallet);
-    setCoin(tempCoin);
+    setAccountType(tempAccountType);
+    setDirection(tempDirection);
+    setContract(tempContract);
+    setStartDate(tempStartDate);
+    setEndDate(tempEndDate);
     closeFilterSheet();
   };
 
   const handleResetFilters = () => {
-    setTempFromWallet("All");
-    setTempToWallet("All");
-    setTempCoin("All");
+    setTempAccountType("Isolated Margin");
+    setTempDirection("All");
+    setTempContract("All");
+    setTempStartDate(null);
+    setTempEndDate(null);
+  };
+
+  const handleDateConfirm = (date) => {
+    if (datePickerTarget === "start") setTempStartDate(date);
+    else setTempEndDate(date);
+    setDatePickerVisible(false);
   };
 
   const keyExtractor = useCallback((item, idx) => item?.id != null ? String(item.id) : `row_${idx}`, []);
@@ -246,6 +342,7 @@ const TransferHistoryScreen = () => {
           style={{ width: 100, height: 100, marginBottom: 12 }}
           resizeMode="contain"
         />
+        {/* <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>No transfer records found</AppText> */}
       </View>
     );
   };
@@ -255,6 +352,17 @@ const TransferHistoryScreen = () => {
     return <TradeHistorySkeleton />;
   };
 
+  const inputStyle = {
+    backgroundColor: themeColors.card,
+    borderColor: themeColors.border,
+    borderWidth: 1,
+    height: 48,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background ?? "#FFFFFF" }]}>
       {/* Header */}
@@ -262,9 +370,9 @@ const TransferHistoryScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <FastImage source={back_ic} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
-        <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>Transfer History</AppText>
+        <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>Margin Transfer History</AppText>
         <TouchableOpacity onPress={openFilterSheet} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <FastImage source={filterIcon} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={themeColors.text} />
+          <FastImage source={filterIcon} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={themeColors.text} />
         </TouchableOpacity>
       </View>
 
@@ -288,7 +396,7 @@ const TransferHistoryScreen = () => {
       {/* Filter Bottom Sheet */}
       <RBSheet
         ref={filterSheetRef}
-        height={550}
+        height={650}
         openDuration={250}
         customStyles={{
           container: {
@@ -305,24 +413,53 @@ const TransferHistoryScreen = () => {
         </View>
 
         <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-          {/* From */}
+          {/* Account */}
           <View style={styles.filterSection}>
-            <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>From</AppText>
-            <CustomDropdown data={WALLET_OPTIONS} selected={tempFromWallet} onSelect={setTempFromWallet} />
+            <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Account</AppText>
+            <CustomDropdown data={ACCOUNT_OPTIONS} selected={tempAccountType} onSelect={setTempAccountType} />
           </View>
 
-          {/* To */}
+          {/* Direction */}
           <View style={styles.filterSection}>
-            <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>To</AppText>
-            <CustomDropdown data={WALLET_OPTIONS} selected={tempToWallet} onSelect={setTempToWallet} />
+            <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Direction</AppText>
+            <CustomDropdown data={DIRECTION_OPTIONS} selected={tempDirection} onSelect={setTempDirection} />
           </View>
 
-          {/* Coin */}
+          {/* Contract */}
           <View style={styles.filterSection}>
-            <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Coin</AppText>
-            <CustomDropdown data={coinOptions} selected={tempCoin} onSelect={setTempCoin} />
+            <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Contract</AppText>
+            <CustomDropdown data={contractOptions} selected={tempContract} onSelect={setTempContract} />
           </View>
 
+          {/* Date */}
+          <View style={styles.filterSection}>
+            <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Date</AppText>
+            <View style={styles.dateRow}>
+              <TouchableOpacity
+                style={[styles.dateInput, { borderColor: themeColors.border }]}
+                onPress={() => { setDatePickerTarget("start"); setDatePickerVisible(true); }}
+              >
+                <AppText style={{ color: tempStartDate ? themeColors.text : themeColors.secondaryText, fontSize: 13 }}>
+                  {tempStartDate ? moment(tempStartDate).format("YYYY-MM-DD") : "YYYY-MM-DD"}
+                </AppText>
+              </TouchableOpacity>
+              <AppText style={{ color: themeColors.secondaryText, marginHorizontal: 8 }}>→</AppText>
+              <TouchableOpacity
+                style={[styles.dateInput, { borderColor: themeColors.border }]}
+                onPress={() => { setDatePickerTarget("end"); setDatePickerVisible(true); }}
+              >
+                <AppText style={{ color: tempEndDate ? themeColors.text : themeColors.secondaryText, fontSize: 13 }}>
+                  {tempEndDate ? moment(tempEndDate).format("YYYY-MM-DD") : "YYYY-MM-DD"}
+                </AppText>
+              </TouchableOpacity>
+              {/* <TouchableOpacity
+                style={[styles.calendarBtn, { borderColor: themeColors.border }]}
+                onPress={() => { setDatePickerTarget("start"); setDatePickerVisible(true); }}
+              >
+                <FastImage source={calendarIcon} style={{ width: 16, height: 16 }} tintColor={themeColors.secondaryText} resizeMode="contain" />
+              </TouchableOpacity> */}
+            </View>
+          </View>
         </ScrollView>
 
         <View style={[styles.sheetFooter, { borderTopColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }]}>
@@ -335,12 +472,23 @@ const TransferHistoryScreen = () => {
         </View>
       </RBSheet>
 
-
+      <DateTimePickerModal
+        isVisible={datePickerVisible}
+        mode="date"
+        display="spinner"
+        {...(Platform.OS === "ios" && {
+          themeVariant: isDark ? "dark" : "light",
+          textColor: isDark ? "#FFFFFF" : "#000000",
+        })}
+        onConfirm={handleDateConfirm}
+        onCancel={() => setDatePickerVisible(false)}
+        date={datePickerTarget === "start" ? (tempStartDate || new Date()) : (tempEndDate || new Date())}
+      />
     </SafeAreaView>
   );
 };
 
-export default TransferHistoryScreen;
+export default MarginTransferHistoryScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

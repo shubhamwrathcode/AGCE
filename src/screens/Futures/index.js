@@ -1,7 +1,9 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated } from 'react-native';
+import { FlashList } from "@shopify/flash-list";
 import React, { useState, useRef, useEffect } from 'react';
 import FastImage from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import { useIsFocused } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import RBSheet from 'react-native-raw-bottom-sheet';
@@ -27,14 +29,106 @@ import {
   closeIcon,
   candle,
   history_line,
-  add
+  add,
+  order_1,
+  order_2,
+  order_3
 } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
+import { formatPriceByTick, formatQtyByStep } from '../../helper/futuresUtils';
 
-const { width } = Dimensions.get('window');
+const { width: Width, height: Height } = Dimensions.get('window');
 
-const dummyAsks = Array(7).fill({ price: '105,248.47', size: '2.54K' });
-const dummyBids = Array(5).fill({ price: '105,248.47', size: '2.54K' });
+const SHIMMER_STRIP_WIDTH_DEFAULT = 240;
+
+const ShimmerBox = ({
+  width = "100%",
+  height = 15,
+  borderRadius = 4,
+  style,
+  shimmerDuration = 1800,
+  shimmerStripWidth,
+  shimmerToValue,
+  shimmerColorsOverride
+}) => {
+  const { colors: themeColors, isDark } = useTheme();
+  const stripW = typeof shimmerStripWidth === "number" ? shimmerStripWidth : SHIMMER_STRIP_WIDTH_DEFAULT;
+  const boneColor =
+    themeColors?.input ??
+    themeColors?.card ??
+    (isDark ? "rgba(100, 130, 180, 0.22)" : "rgba(160, 185, 220, 0.35)");
+  const shimmerColors =
+    shimmerColorsOverride ||
+    (isDark
+      ? ["transparent", "rgba(255,255,255,0.26)", "transparent"]
+      : ["transparent", "rgba(255,255,255,0.72)", "transparent"]);
+  const shimmerX = useRef(new Animated.Value(-stripW)).current;
+  useEffect(() => {
+    shimmerX.setValue(-stripW);
+    const run = () => {
+      shimmerX.setValue(-stripW);
+      Animated.timing(shimmerX, {
+        toValue: shimmerToValue !== undefined ? shimmerToValue : (Width + stripW),
+        duration: shimmerDuration,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) run();
+      });
+    };
+    run();
+    return () => shimmerX.stopAnimation();
+  }, [shimmerX, stripW, isDark]);
+  return (
+    <View style={[{ width, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          { position: "absolute", top: 0, bottom: 0, width: stripW, left: 0 },
+          { transform: [{ translateX: shimmerX }] },
+        ]}
+      >
+        <LinearGradient
+          colors={shimmerColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{ flex: 1, width: stripW }}
+        />
+      </Animated.View>
+    </View>
+  );
+};
+
+const ORDER_BOOK_VISIBLE_ROWS = 6;
+const ORDER_BOOK_ROW_LAYOUT_HEIGHT = 28;
+const ORDER_BOOK_LIST_MAX_HEIGHT = ORDER_BOOK_VISIBLE_ROWS * ORDER_BOOK_ROW_LAYOUT_HEIGHT;
+
+const OrderBookSkeleton = () => {
+  const ROWS = ORDER_BOOK_VISIBLE_ROWS;
+  const ROW_HEIGHT = 22;
+  const BONE_HEIGHT = 15;
+  const BONE_RADIUS = 6;
+  return (
+    <View style={{ flex: 1, paddingVertical: 6, paddingHorizontal: 8, gap: 2 }}>
+      {[...Array(ROWS)].map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            height: ROW_HEIGHT,
+            paddingHorizontal: 4,
+          }}
+        >
+          <ShimmerBox width="52%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} />
+          <ShimmerBox width="52%" height={BONE_HEIGHT} borderRadius={BONE_RADIUS} style={{ marginLeft: 3 }} />
+        </View>
+      ))}
+    </View>
+  );
+};
+
+const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
 
 const FuturesUI = () => {
   const themeObj = useTheme();
@@ -57,6 +151,33 @@ const FuturesUI = () => {
   const futuresPairs = useSelector((state) => state.home.futuresPairs);
   const [pairData, setPairData] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState(null);
+
+  const liveCoin = React.useMemo(() => {
+    return pairData?.find((p) => p._id === selectedCoin?._id) || selectedCoin;
+  }, [pairData, selectedCoin]);
+
+  const livePrice = React.useMemo(() => {
+    let p = futuresData?.last_price || futuresData?.buy_price || futuresData?.price;
+    if (!p) p = liveCoin?.last_price || liveCoin?.buy_price;
+    if (!p) {
+      const allAsks = futuresData?.sell_order || [];
+      const allBids = futuresData?.buy_order || [];
+      p = allAsks[0]?.price || allBids[0]?.price;
+    }
+    return parseFloat(p) || 0;
+  }, [futuresData, liveCoin]);
+
+  const [isPricePositive, setIsPricePositive] = useState(true);
+  const prevPriceRef = useRef(0);
+
+  useEffect(() => {
+    if (livePrice >= prevPriceRef.current) {
+      setIsPricePositive(true);
+    } else {
+      setIsPricePositive(false);
+    }
+    prevPriceRef.current = livePrice;
+  }, [livePrice]);
   const [searchTerm, setSearchTerm] = useState("");
   const [orderType, setOrderType] = useState('Limit');
   const orderTypeSheetRef = useRef(null);
@@ -65,6 +186,34 @@ const FuturesUI = () => {
   const [batchAdjustMarginMode, setBatchAdjustMarginMode] = useState(false);
   const [contractUnit, setContractUnit] = useState('Amount (BTC)');
   const contractUnitSheetRef = useRef(null);
+
+  // Precision Dropdown State
+  const [obPrecisionOptions] = useState(['0.1', '0.01', '0.001', '0.0001', '0.00001']);
+  const [precision, setPrecision] = useState('0.1');
+  const [obPrecisionOpen, setObPrecisionOpen] = useState(false);
+  const [obPrecisionLayout, setObPrecisionLayout] = useState(null);
+  const precisionTriggerRef = useRef(null);
+
+  // Order Book Layout Switcher State
+  const [viewModeIndex, setViewModeIndex] = useState(0);
+
+  const cycleViewMode = () => {
+    setViewModeIndex((i) => (i + 1) % 3);
+  };
+
+  const openObPrecisionMenu = () => {
+    requestAnimationFrame(() => {
+      precisionTriggerRef.current?.measureInWindow((x, y, w, h) => {
+        setObPrecisionLayout({ x, y, w, h });
+        setObPrecisionOpen(true);
+      });
+    });
+  };
+
+  const closeObPrecisionMenu = () => {
+    setObPrecisionOpen(false);
+    setObPrecisionLayout(null);
+  };
   const [marginLeverage, setMarginLeverage] = useState(10);
   const [leverageDraft, setLeverageDraft] = useState(10);
   const rbSheetMarginLeverage = useRef(null);
@@ -138,7 +287,6 @@ const FuturesUI = () => {
   };
 
   useEffect(() => {
-    // Prioritize live data from Redux (market:update), fallback to static futures socket
     const pairsArray = (futuresPairs && futuresPairs.length > 0)
       ? futuresPairs
       : (futuresData?.contracts || futuresData?.pairs || []);
@@ -146,7 +294,8 @@ const FuturesUI = () => {
     if (pairsArray && pairsArray.length > 0) {
       setPairData(pairsArray);
       if (!selectedCoin) {
-        setSelectedCoin(pairsArray[0]);
+        const btcPair = pairsArray.find((pair) => pair.symbol === "BTCUSDT-PERP");
+        setSelectedCoin(btcPair || pairsArray[0]);
       }
     }
   }, [futuresPairs, selectedCoin, futuresData]);
@@ -160,6 +309,13 @@ const FuturesUI = () => {
   }, [isFocused, pairData.length, subscribeToFutures]);
 
   useEffect(() => {
+    if (isFocused && selectedCoin) {
+      subscribeToFutures({ symbol: selectedCoin.symbol, base_currency_id: selectedCoin._id });
+      return () => unsubscribeFromFutures({ symbol: selectedCoin.symbol, base_currency_id: selectedCoin._id });
+    }
+  }, [isFocused, selectedCoin, subscribeToFutures, unsubscribeFromFutures]);
+
+  useEffect(() => {
     if (isFocused) {
       subscribeToMarket?.();
     } else {
@@ -171,7 +327,7 @@ const FuturesUI = () => {
     setSelectedCoin(pair);
     pairSheetRef.current?.close();
     setSearchTerm("");
-    subscribeToFutures(pair.base_currency_id, pair.quote_currency_id);
+    subscribeToFutures({ symbol: pair.symbol, base_currency_id: pair._id });
   };
 
   const filteredPairs = pairData?.filter((pair) => {
@@ -189,16 +345,26 @@ const FuturesUI = () => {
   const Header = () => (
     <View style={styles.header}>
       <View>
-        <TouchableOpacity style={styles.pairRow} onPress={() => pairSheetRef.current?.open()}>
-          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ fontSize: 20 }}>
-            {selectedCoin ? `${selectedCoin.short_name || selectedCoin.base_asset}/${selectedCoin.margin_asset}` : 'RON/USDT'}
-          </AppText>
-          <FastImage source={downIcon} style={styles.smallIcon} resizeMode='contain' tintColor={themeColors.text} />
+        <TouchableOpacity style={styles.pairRow} onPress={() => pairSheetRef.current?.open()} disabled={!liveCoin}>
+          {liveCoin ? (
+            <>
+              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ fontSize: 20 }}>
+                {`${liveCoin.short_name || liveCoin.base_asset}/${liveCoin.margin_asset}`}
+              </AppText>
+              <FastImage source={downIcon} style={styles.smallIcon} resizeMode='contain' tintColor={themeColors.text} />
+            </>
+          ) : (
+            <ShimmerBox width={150} height={24} borderRadius={4} />
+          )}
         </TouchableOpacity>
-        <View style={styles.changeBadge}>
-          <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.white }}>
-            {selectedCoin ? `${selectedCoin.change_percentage >= 0 ? '+' : ''}${selectedCoin.change_percentage}%` : '+50.47%'}
-          </AppText>
+        <View style={liveCoin ? styles.changeBadge : { marginTop: 4 }}>
+          {liveCoin ? (
+            <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.white }}>
+              {`${liveCoin.change_percentage >= 0 ? '+' : ''}${liveCoin.change_percentage || 0}%`}
+            </AppText>
+          ) : (
+            <ShimmerBox width={60} height={18} borderRadius={4} />
+          )}
         </View>
       </View>
 
@@ -223,66 +389,211 @@ const FuturesUI = () => {
     </View>
   );
 
-  const OrderBook = () => (
-    <View style={styles.leftColumn}>
-      <View style={styles.fundingRow}>
-        <AppText type={TEN} color={themeColors.secondaryText} style={[styles.dashedUnderline, { alignSelf: 'flex-start' }]}>Funding / Countdown</AppText>
-        <AppText type={TEN} weight={SEMI_BOLD} style={[styles.dashedUnderline, { marginTop: 4, alignSelf: 'flex-start' }]}>0.0100% / 03:23:21</AppText>
-      </View>
+  const OrderBook = () => {
+    const obAsks = React.useMemo(() => {
+      const allAsks = futuresData?.sell_order || [];
+      return viewModeIndex === 1 ? [] : allAsks.slice(0, 50);
+    }, [futuresData?.sell_order, viewModeIndex]);
 
-      <View style={styles.obHeader}>
-        <AppText type={TEN} color={themeColors.secondaryText}>Price{"\n"}(USDT)</AppText>
-        <AppText type={TEN} color={themeColors.secondaryText} style={{ textAlign: 'right' }}>Size{"\n"}(USDT)</AppText>
-      </View>
+    const obBids = React.useMemo(() => {
+      const allBids = futuresData?.buy_order || [];
+      return viewModeIndex === 2 ? [] : allBids.slice(0, 50);
+    }, [futuresData?.buy_order, viewModeIndex]);
 
-      {/* Asks (Red) */}
-      <View style={styles.asksContainer}>
-        {dummyAsks.map((item, index) => (
-          <View key={`ask-${index}`} style={styles.obRow}>
-            {/* Background fill representation */}
-            <View style={[styles.obFillRed, { width: index === 1 || index === 2 || index === 4 ? '40%' : '0%' }]} />
-            <AppText type={TWELVE} color={colors.red}>{item.price}</AppText>
-            <AppText type={TWELVE}>{item.size}</AppText>
-          </View>
-        ))}
-      </View>
+    const maxVolume = React.useMemo(() => {
+      const maxAsk = obAsks.reduce((max, a) => Math.max(max, a.remaining || 0), 0);
+      const maxBid = obBids.reduce((max, b) => Math.max(max, b.remaining || 0), 0);
+      return Math.max(maxAsk, maxBid) || 1;
+    }, [obAsks, obBids]);
 
-      {/* Current Price */}
-      <View style={styles.currentPrice}>
-        <AppText type={SIXTEEN} weight={BOLD} color={colors.green}>105,254.47</AppText>
-        <AppText type={TWELVE} color={themeColors.secondaryText}>≈ $105,254.47</AppText>
-      </View>
-
-      {/* Bids (Green) */}
-      <View style={styles.bidsContainer}>
-        {dummyBids.map((item, index) => (
-          <View key={`bid-${index}`} style={styles.obRow}>
-            <View style={[styles.obFillGreen, { width: index === 2 || index === 3 || index === 4 ? '50%' : '0%' }]} />
-            <AppText type={TWELVE} color={colors.green}>{item.price}</AppText>
-            <AppText type={TWELVE}>{item.size}</AppText>
-          </View>
-        ))}
-      </View>
-
-      {/* Ratio Bar */}
-      <View style={styles.ratioBarContainer}>
-        <View style={styles.ratioGreen}><AppText type={TEN} color={colors.green}>48%</AppText></View>
-        <View style={styles.ratioRed}><AppText type={TEN} color={colors.red}>52%</AppText></View>
-      </View>
-
-      {/* Precision Dropdown */}
-      <View style={styles.precisionRow}>
-        <View style={styles.precisionDropdown}>
-          <AppText type={TWELVE} color={themeColors.secondaryText}>0.01</AppText>
-          <FastImage source={downIcon} style={{ width: 10, height: 10 }} tintColor={themeColors.secondaryText} />
+    return (
+      <View style={styles.leftColumn}>
+        <View style={styles.fundingRow}>
+          <AppText type={TEN} color={themeColors.secondaryText} style={[styles.dashedUnderline, { alignSelf: 'flex-start' }]}>Funding / Countdown</AppText>
+          <AppText type={TEN} weight={SEMI_BOLD} style={[styles.dashedUnderline, { marginTop: 4, alignSelf: 'flex-start' }]}>0.0100% / 03:23:21</AppText>
         </View>
-        <View style={styles.layoutIcon}>
-          <View style={styles.layoutIconTop} />
-          <View style={styles.layoutIconBot} />
+
+        <View style={styles.obHeader}>
+          <AppText type={TEN} color={themeColors.secondaryText}>Price{"\n"}(USDT)</AppText>
+          <AppText type={TEN} color={themeColors.secondaryText} style={{ textAlign: 'right' }}>Size{"\n"}(USDT)</AppText>
         </View>
+
+        {(!futuresData?.sell_order && !futuresData?.buy_order) ? (
+          <View>
+            <OrderBookSkeleton />
+            <View style={[styles.currentPrice, { alignItems: 'flex-start', justifyContent: 'center' }]}>
+              <ShimmerBox width="100%" height={20} borderRadius={4} />
+              <ShimmerBox width="80%" height={14} borderRadius={4} style={{ marginTop: 6 }} />
+            </View>
+            <OrderBookSkeleton />
+          </View>
+        ) : (
+          <View>
+            {/* Asks */}
+            {obAsks.length > 0 && (
+              <View style={{ height: viewModeIndex === 0 ? 154 : 308, width: '100%' }}>
+                <FlashList
+                  data={obAsks}
+                  inverted={true}
+                  estimatedItemSize={22}
+                  showsVerticalScrollIndicator={false}
+                  keyExtractor={(ask, i) => `ask-${ask._id || i}`}
+                  renderItem={({ item: ask, index: i }) => {
+                    const ratio = Math.min(100, (ask.remaining / maxVolume) * 100);
+                    return (
+                      <View style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
+                        <View
+                          pointerEvents="none"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            bottom: 0,
+                            right: 0,
+                            width: `${ratio > 0 ? Math.max(2, ratio) : 0}%`,
+                            backgroundColor: isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)",
+                          }}
+                        />
+                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.red }}>
+                          {formatPriceByTick(ask.price, selectedCoin)}
+                        </AppText>
+                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                          {formatQtyByStep(ask.remaining, selectedCoin)}
+                        </AppText>
+                      </View>
+                    );
+                  }}
+                />
+              </View>
+            )}
+
+            {/* Current Price */}
+            <View style={styles.currentPrice}>
+              <AppText type={SIXTEEN} color={isPricePositive ? colors.green : colors.red} weight={SEMI_BOLD}>{livePrice || "0.00"}</AppText>
+              <AppText type={TEN} color={themeColors.secondaryText}>${livePrice || "0.00"}</AppText>
+            </View>
+
+            {/* Bids */}
+            {obBids.length > 0 && (
+              <View style={{ height: viewModeIndex === 0 ? 154 : 308, width: '100%' }}>
+                <FlashList
+                  data={obBids}
+                  inverted={false}
+                  estimatedItemSize={22}
+                  showsVerticalScrollIndicator={false}
+                  keyExtractor={(bid, i) => `bid-${bid._id || i}`}
+                  renderItem={({ item: bid, index: i }) => {
+                    const ratio = Math.min(100, (bid.remaining / maxVolume) * 100);
+                    return (
+                      <View style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
+                        <View
+                          pointerEvents="none"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            bottom: 0,
+                            right: 0,
+                            width: `${ratio > 0 ? Math.max(2, ratio) : 0}%`,
+                            backgroundColor: isDark ? "rgba(38, 166, 154, 0.18)" : "rgba(38, 166, 154, 0.14)",
+                          }}
+                        />
+                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.green }}>
+                          {formatPriceByTick(bid.price, selectedCoin)}
+                        </AppText>
+                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                          {formatQtyByStep(bid.remaining, selectedCoin)}
+                        </AppText>
+                      </View>
+                    );
+                  }}
+                />
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Ratio Bar */}
+        <View style={[styles.ratioIndicatorBar, { marginVertical: 8, gap: 4 }]}>
+          <View style={{ justifyContent: "flex-start", flexShrink: 0 }}>
+            <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
+              48.5%
+            </AppText>
+          </View>
+          <View style={[styles.ratioIndicatorTrack, { flex: 1, height: 3 }]}>
+            <View style={[styles.ratioIndicatorFill, { width: `48.5%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
+            <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
+          </View>
+          <View style={{ justifyContent: "flex-end", flexShrink: 0 }}>
+            <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 10 }}>
+              51.5%
+            </AppText>
+          </View>
+        </View>
+
+        {/* Precision Dropdown */}
+        <View style={styles.spotObToolbarRow}>
+          <TouchableOpacity
+            ref={precisionTriggerRef}
+            onPress={openObPrecisionMenu}
+            style={[styles.spotObAggTrigger, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor, borderRadius: 5 }]}
+            activeOpacity={0.75}
+          >
+            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>{precision}</AppText>
+            <FastImage source={downIcon} style={styles.spotObAggCaret} resizeMode='contain' tintColor={themeColors.secondaryText} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={cycleViewMode}
+            style={[styles.spotObViewCycleBtn, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor }]}
+            activeOpacity={0.75}
+          >
+            <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={styles.layoutIcon} resizeMode='contain' />
+          </TouchableOpacity>
+        </View>
+
+        <Modal visible={obPrecisionOpen} transparent animationType="fade" onRequestClose={closeObPrecisionMenu}>
+          <Pressable style={styles.spotObAggBackdrop} onPress={closeObPrecisionMenu} />
+          {obPrecisionLayout ? (
+            <View
+              style={[
+                styles.spotObAggPopover,
+                {
+                  top: obPrecisionLayout.y + obPrecisionLayout.h + 4,
+                  left: Math.max(8, Math.min(obPrecisionLayout.x + obPrecisionLayout.w - 144, width - 8 - 144)),
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.themeBorderColor,
+                },
+              ]}
+            >
+              {obPrecisionOptions.map((opt) => {
+                const selected = precision === opt;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[
+                      styles.spotObAggRow,
+                      selected && { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" },
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setPrecision(opt);
+                      closeObPrecisionMenu();
+                    }}
+                  >
+                    <AppText
+                      type={TEN}
+                      weight={selected ? SEMI_BOLD : undefined}
+                      style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}
+                    >
+                      {opt}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
+        </Modal>
       </View>
-    </View>
-  );
+    );
+  };
 
   const OrderForm = () => (
     <View style={styles.rightColumn}>
@@ -417,7 +728,7 @@ const FuturesUI = () => {
       <View style={styles.buttonWrapper}>
         <View style={styles.maxRow}>
           <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
-          <AppText type={TWELVE}>0 RON</AppText>
+          <AppText type={TWELVE}>0 USDT</AppText>
         </View>
         <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.green }]}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>Open Long</AppText>
@@ -427,7 +738,7 @@ const FuturesUI = () => {
       <View style={styles.buttonWrapper}>
         <View style={[styles.maxRow, { bottom: 5 }]}>
           <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
-          <AppText type={TWELVE}>0 RON</AppText>
+          <AppText type={TWELVE}>0 USDT</AppText>
         </View>
         <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.red }]}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>Open Short</AppText>
@@ -996,8 +1307,10 @@ const styles = StyleSheet.create({
   obRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 3,
-    position: 'relative',
+    alignItems: 'center',
+    paddingVertical: 4.5,
+    minHeight: 26,
+    width: '100%',
   },
   obFillRed: {
     position: 'absolute',
@@ -1016,55 +1329,70 @@ const styles = StyleSheet.create({
   currentPrice: {
     marginVertical: 12,
   },
-  ratioBarContainer: {
+  ratioIndicatorBar: {
     flexDirection: 'row',
-    height: 12,
-    marginTop: 16,
-    marginBottom: 12,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  ratioGreen: {
-    flex: 0.48,
-    backgroundColor: 'rgba(2, 192, 118, 0.15)',
-    justifyContent: 'center',
-    paddingLeft: 4,
-  },
-  ratioRed: {
-    flex: 0.52,
-    backgroundColor: 'rgba(235, 77, 92, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 4,
-  },
-  precisionRow: {
-    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  precisionDropdown: {
+  ratioIndicatorTrack: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    backgroundColor: 'transparent',
+    borderRadius: 2,
+  },
+  ratioIndicatorFill: {
+    height: '100%',
+  },
+  spotObToolbarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 0,
+  },
+  spotObAggTrigger: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 4,
-    gap: 4,
+    paddingVertical: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 32,
+  },
+  spotObAggCaret: {
+    width: 10,
+    height: 10,
+  },
+  spotObViewCycleBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
   },
   layoutIcon: {
-    width: 20,
-    height: 20,
-    justifyContent: 'space-between',
+    width: 15,
+    height: 15,
   },
-  layoutIconTop: {
-    height: 8,
-    backgroundColor: colors.green,
-    borderRadius: 2,
+  spotObAggBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.25)",
   },
-  layoutIconBot: {
-    height: 8,
-    backgroundColor: colors.red,
-    borderRadius: 2,
+  spotObAggPopover: {
+    position: "absolute",
+    width: 144,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  spotObAggRow: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   toggleContainer: {
     flexDirection: 'row',
