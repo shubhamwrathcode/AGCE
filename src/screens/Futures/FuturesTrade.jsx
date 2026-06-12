@@ -140,7 +140,6 @@ const FuturesUI = () => {
   const pairSheetRef = useRef(null);
 
   const {
-    isConnected,
     futuresData,
     subscribeToFutures,
     unsubscribeFromFutures,
@@ -775,7 +774,7 @@ const FuturesUI = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background, paddingTop: insets.top }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Header />
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.mainContent}>

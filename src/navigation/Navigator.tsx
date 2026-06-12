@@ -128,7 +128,7 @@ import NewWalletHistory from "../screens/account/NewWalletHistory";
 import NewSwapHistory from "../screens/account/NewSwapHistory";
 import InternalWalletHistory from "../screens/account/InternalWalletHistory";
 import BuyPackage from "../screens/other/BuyPackage";
-import Futures from "../screens/Futures/index";
+import Futures from "../screens/Futures/FuturesNavigator";
 import FutureOrderHistory from "../screens/Futures/FutureOrderHistory";
 import TicketScreen from "../screens/supportSreen/TicketScreen";
 import { useTheme } from "../hooks/useTheme";
