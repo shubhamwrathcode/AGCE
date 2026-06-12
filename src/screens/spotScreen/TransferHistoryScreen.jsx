@@ -301,7 +301,6 @@ const TransferHistoryScreen = () => {
       >
         <View style={styles.sheetHeader}>
           <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>Filters</AppText>
-
         </View>
 
         <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
