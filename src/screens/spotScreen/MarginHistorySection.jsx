@@ -464,10 +464,15 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
     ]);
   };
 
-  // Close position handler (Size tab)
   const handleClosePosition = (pos) => {
-    if (!pos?.pair) return;
-    setSelectedPosToClose(pos);
+    const pair = pos?.pair || pairSymbol;
+    if (!pair) return;
+    setSelectedPosToClose({
+      ...pos,
+      pair,
+      quantity: pos?.quantity ?? pos?.net_quantity ?? pos?.size,
+      notional: pos?.notional ?? pos?.value_usdt ?? pos?.value,
+    });
     setClosePositionType("MARKET");
     setClosePositionQty("");
     setClosePositionPrice("");
@@ -986,14 +991,14 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 const rateFromMap = COIN_RATES[cAsset];
                 let hRate = item?.hourly_rate_pct != null ? `${item.hourly_rate_pct}%` : (item?.hourly_rate != null ? `${(parseFloat(item.hourly_rate) * 100).toFixed(6)}%` : null);
                 let aRate = item?.apr_pct != null ? `${item.apr_pct}%` : null;
-                
+
                 if (!hRate) {
                   hRate = rateFromMap ? `${rateFromMap.hourly}%` : (marginMode === "Cross" ? "0.002000%" : "—");
                 }
                 if (!aRate) {
                   aRate = rateFromMap ? `${rateFromMap.annual}%` : (marginMode === "Cross" ? "17.520000%" : "—");
                 }
-                
+
                 return `${hRate} / ${aRate}`;
               })()}
             </AppText>
@@ -1429,13 +1434,13 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
                   <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>Holding</AppText>
                   <AppText style={{ color: textThemeColor, fontSize: 12 }} weight={MEDIUM}>
-                    {selectedPosToClose?.quantity || "—"} {selectedPosToClose?.pair ? selectedPosToClose.pair.slice(0, -4) : ""}
+                    {selectedPosToClose?.quantity ? (Math.floor(parseFloat(selectedPosToClose.quantity) * 100000000) / 100000000).toFixed(8).replace(/\.?0+$/, "") : "—"} {selectedPosToClose?.pair ? selectedPosToClose.pair.slice(0, -4) : ""}
                   </AppText>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
                   <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>Notional</AppText>
                   <AppText style={{ color: textThemeColor, fontSize: 12 }} weight={MEDIUM}>
-                    {selectedPosToClose?.notional ? parseFloat(selectedPosToClose.notional).toFixed(4) : "—"} {selectedPosToClose?.pair ? selectedPosToClose.pair.slice(-4) : ""}
+                    {selectedPosToClose?.notional ? (Math.floor(parseFloat(selectedPosToClose.notional) * 10000) / 10000).toFixed(4) : "—"} {selectedPosToClose?.pair ? selectedPosToClose.pair.slice(-4) : ""}
                   </AppText>
                 </View>
               </View>
