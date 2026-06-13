@@ -1,14 +1,12 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Dimensions, Platform, ToastAndroid, Alert } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
 import FastImage from 'react-native-fast-image';
 
 import { useTheme } from '../../hooks/useTheme';
-import { BOLD, MEDIUM, SEMI_BOLD } from '../../theme/typography';
+import { BOLD, fontFamilySemiBold, MEDIUM, SEMI_BOLD } from '../../theme/typography';
 import { back_ic } from '../../helper/ImageAssets';
-
 import FuturesTrade from './FuturesTrade';
 import TradFiTrade from './TradFiTrade';
 import OptionsTrade from './OptionsTrade/OptionsTrade';
@@ -18,8 +16,10 @@ const Tab = createMaterialTopTabNavigator();
 const { width } = Dimensions.get('window');
 
 const CustomTabBar = ({ state, descriptors, navigation, position, themeColors, isDark }) => {
+  const iconTint = isDark ? themeColors.text : "#222";
+
   return (
-    <View style={[styles.tabBarContainer, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.tabBarContainer, { backgroundColor: "#fff" }]}>
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -28,7 +28,7 @@ const CustomTabBar = ({ state, descriptors, navigation, position, themeColors, i
         <FastImage
           source={back_ic}
           style={styles.backIcon}
-          tintColor={themeColors.text}
+          tintColor={iconTint}
           resizeMode="contain"
         />
       </TouchableOpacity>
@@ -46,6 +46,15 @@ const CustomTabBar = ({ state, descriptors, navigation, position, themeColors, i
           const isFocused = state.index === index;
 
           const onPress = () => {
+            if (route.name === 'TradFi') {
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+              } else {
+                Alert.alert('Coming soon');
+              }
+              return;
+            }
+
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,
@@ -65,21 +74,21 @@ const CustomTabBar = ({ state, descriptors, navigation, position, themeColors, i
               accessibilityLabel={options.tabBarAccessibilityLabel}
               testID={options.tabBarTestID}
               onPress={onPress}
-              style={styles.tabItem}
+              style={[
+                styles.tabItem,
+                index !== state.routes.length - 1 && { marginRight: 5 }
+              ]}
             >
               <AppText
-                weight={isFocused ? BOLD : MEDIUM}
                 style={{
                   color: isFocused ? themeColors.text : themeColors.secondaryText,
                   fontSize: 16,
-                  textAlign: 'center',
+                  fontFamily: fontFamilySemiBold
                 }}
               >
                 {label}
               </AppText>
-              {isFocused && (
-                <View style={[styles.activeIndicator, { backgroundColor: themeColors.text }]} />
-              )}
+              <View style={[styles.activeIndicator, { backgroundColor: isFocused ? themeColors.text : "transparent" }]} />
             </TouchableOpacity>
           );
         })}
@@ -114,11 +123,15 @@ const styles = StyleSheet.create({
   tabBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   backButton: {
-    marginRight: 16,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backIcon: {
     width: 20,
@@ -128,18 +141,18 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    justifyContent: 'flex-start',
+    gap: 8,
+    paddingLeft: 5,
   },
   tabItem: {
-    position: 'relative',
-    paddingVertical: 4,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
   },
   activeIndicator: {
-    position: 'absolute',
-    bottom: -6,
-    left: 0,
-    right: 0,
-    height: 2,
+    height: 3,
+    width: 18,
     borderRadius: 2,
   },
 });

@@ -5,6 +5,7 @@ import { useTheme } from '../../../hooks/useTheme';
 import OptionsHeader from './OptionsHeader';
 import OptionsExpiries from './OptionsExpiries';
 import OptionsChainTable from './OptionsChainTable';
+import { colors } from '../../../theme/colors';
 
 const expiriesData = ['2026-05-30', '2026-05-31', '2026-06-01', '2026-06-05'];
 
@@ -15,7 +16,7 @@ const OptionsTrade = () => {
   const [selectedExpiry, setSelectedExpiry] = useState(expiriesData[0]);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.white }]}>
       <OptionsHeader
         selectedOptionType={selectedOptionType}
         setSelectedOptionType={setSelectedOptionType}

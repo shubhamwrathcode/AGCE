@@ -1,10 +1,9 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated } from 'react-native';
-import { FlashList } from "@shopify/flash-list";
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated, FlatList, Platform, ToastAndroid, Alert } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import FastImage from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import FuturePairList from './FuturePairList';
@@ -32,7 +31,8 @@ import {
   add,
   order_1,
   order_2,
-  order_3
+  order_3,
+  NO_NOTIFICATION_ICON
 } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import { formatPriceByTick, formatQtyByStep } from '../../helper/futuresUtils';
@@ -134,6 +134,7 @@ const FuturesUI = () => {
   const themeObj = useTheme();
   const { colors: themeColors, isDark } = themeObj;
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
 
   const [activeTab, setActiveTab] = useState('Open');
   const [sliderValue, setSliderValue] = useState(0);
@@ -342,48 +343,70 @@ const FuturesUI = () => {
   });
 
   const Header = () => (
-    <View style={styles.header}>
-      <View>
-        <TouchableOpacity style={styles.pairRow} onPress={() => pairSheetRef.current?.open()} disabled={!liveCoin}>
-          {liveCoin ? (
-            <>
-              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ fontSize: 20 }}>
-                {`${liveCoin.short_name || liveCoin.base_asset}/${liveCoin.margin_asset}`}
+    <View style={{ paddingTop: 10, paddingBottom: 10, paddingHorizontal: 16 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View>
+          <TouchableOpacity style={styles.pairRow} onPress={() => pairSheetRef.current?.open()} disabled={!liveCoin}>
+            {liveCoin ? (
+              <>
+                <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ fontSize: 20 }}>
+                  {`${liveCoin.short_name || liveCoin.base_asset}/${liveCoin.margin_asset}`}
+                </AppText>
+                <FastImage source={downIcon} style={styles.smallIcon} resizeMode='contain' tintColor={themeColors.text} />
+              </>
+            ) : (
+              <ShimmerBox width={150} height={24} borderRadius={4} />
+            )}
+          </TouchableOpacity>
+          <View style={liveCoin ? styles.changeBadge : { marginTop: 4 }}>
+            {liveCoin ? (
+              <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.white }}>
+                {`${liveCoin.change_percentage >= 0 ? '+' : ''}${liveCoin.change_percentage || 0}%`}
               </AppText>
-              <FastImage source={downIcon} style={styles.smallIcon} resizeMode='contain' tintColor={themeColors.text} />
-            </>
-          ) : (
-            <ShimmerBox width={150} height={24} borderRadius={4} />
-          )}
-        </TouchableOpacity>
-        <View style={liveCoin ? styles.changeBadge : { marginTop: 4 }}>
-          {liveCoin ? (
-            <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.white }}>
-              {`${liveCoin.change_percentage >= 0 ? '+' : ''}${liveCoin.change_percentage || 0}%`}
-            </AppText>
-          ) : (
-            <ShimmerBox width={60} height={18} borderRadius={4} />
-          )}
+            ) : (
+              <ShimmerBox width={60} height={18} borderRadius={4} />
+            )}
+          </View>
         </View>
-      </View>
 
-      <View style={[styles.headerIcons, { flexDirection: 'row', gap: 4 }]}>
-        <TouchableOpacity style={{ padding: 6 }} activeOpacity={0.7}>
-          <FastImage
-            source={candle}
-            style={{ width: 22, height: 22 }}
-            resizeMode="contain"
-            tintColor={themeColors.text}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={{ padding: 6, marginLeft: 2 }} activeOpacity={0.7}>
-          <FastImage
-            source={history_line}
-            style={{ width: 22, height: 22 }}
-            resizeMode="contain"
-            tintColor={themeColors.text}
-          />
-        </TouchableOpacity>
+        <View style={[styles.headerIcons, { flexDirection: 'row', gap: 4 }]}>
+          <TouchableOpacity
+            style={{ padding: 6 }}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+              } else {
+                Alert.alert('Coming soon');
+              }
+            }}
+          >
+            <FastImage
+              source={candle}
+              style={{ width: 22, height: 22 }}
+              resizeMode="contain"
+              tintColor={themeColors.text}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ padding: 6, marginLeft: 2 }}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+              } else {
+                Alert.alert('Coming soon');
+              }
+            }}
+          >
+            <FastImage
+              source={history_line}
+              style={{ width: 22, height: 22 }}
+              resizeMode="contain"
+              tintColor={themeColors.text}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -431,16 +454,14 @@ const FuturesUI = () => {
             {/* Asks */}
             {obAsks.length > 0 && (
               <View style={{ height: viewModeIndex === 0 ? 154 : 308, width: '100%' }}>
-                <FlashList
-                  data={obAsks}
-                  inverted={true}
-                  estimatedItemSize={22}
+                <ScrollView
                   showsVerticalScrollIndicator={false}
-                  keyExtractor={(ask, i) => `ask-${ask._id || i}`}
-                  renderItem={({ item: ask, index: i }) => {
+                  contentContainerStyle={{ flexDirection: 'column-reverse' }}
+                >
+                  {obAsks.map((ask, i) => {
                     const ratio = Math.min(100, (ask.remaining / maxVolume) * 100);
                     return (
-                      <View style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
+                      <View key={`ask-${ask._id || i}`} style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
                         <View
                           pointerEvents="none"
                           style={{
@@ -460,8 +481,8 @@ const FuturesUI = () => {
                         </AppText>
                       </View>
                     );
-                  }}
-                />
+                  })}
+                </ScrollView>
               </View>
             )}
 
@@ -474,16 +495,11 @@ const FuturesUI = () => {
             {/* Bids */}
             {obBids.length > 0 && (
               <View style={{ height: viewModeIndex === 0 ? 154 : 308, width: '100%' }}>
-                <FlashList
-                  data={obBids}
-                  inverted={false}
-                  estimatedItemSize={22}
-                  showsVerticalScrollIndicator={false}
-                  keyExtractor={(bid, i) => `bid-${bid._id || i}`}
-                  renderItem={({ item: bid, index: i }) => {
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {obBids.map((bid, i) => {
                     const ratio = Math.min(100, (bid.remaining / maxVolume) * 100);
                     return (
-                      <View style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
+                      <View key={`bid-${bid._id || i}`} style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
                         <View
                           pointerEvents="none"
                           style={{
@@ -503,8 +519,8 @@ const FuturesUI = () => {
                         </AppText>
                       </View>
                     );
-                  }}
-                />
+                  })}
+                </ScrollView>
               </View>
             )}
           </View>
@@ -598,10 +614,10 @@ const FuturesUI = () => {
     <View style={styles.rightColumn}>
       {/* Open / Close Toggle */}
       <View style={styles.toggleContainer}>
-        <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Open' && styles.toggleActive]}>
+        <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Open' && styles.toggleActive]} onPress={() => setActiveTab('Open')}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Open' ? colors.white : themeColors.secondaryText }}>Open</AppText>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Close' && styles.toggleActive]}>
+        <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Close' && { backgroundColor: colors.red }]} onPress={() => setActiveTab('Close')}>
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Close' ? colors.white : themeColors.secondaryText }}>Close</AppText>
         </TouchableOpacity>
       </View>
@@ -609,56 +625,61 @@ const FuturesUI = () => {
       {/* Margin / Leverage */}
       <View style={[styles.marginRow, { marginBottom: 8 }]}>
         <TouchableOpacity
-          style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6 }]}
+          style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
           onPress={() => marginModeSheetRef.current?.open()}
+          activeOpacity={0.7}
         >
-          <AppText type={THIRTEEN} weight={SEMI_BOLD}>{marginMode}</AppText>
-          <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
+          <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
+            <AppText type={THIRTEEN} weight={SEMI_BOLD}>{marginMode}</AppText>
+            <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.marginBox, { flex: 0.6, paddingVertical: 8, borderRadius: 6 }]}
+          style={[styles.marginBox, { flex: 0.6, paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
           onPress={() => rbSheetMarginLeverage.current?.open()}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
-          <AppText type={THIRTEEN} weight={SEMI_BOLD}>{marginLeverage}x</AppText>
-          <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
+          <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
+            <AppText type={THIRTEEN} weight={SEMI_BOLD}>{marginLeverage}x</AppText>
+            <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
+          </View>
         </TouchableOpacity>
       </View>
 
       {/* Order Type */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           onPress={() => orderTypeSheetRef.current?.open()}
           style={{
             backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
             flex: 1,
             borderRadius: 6,
-            flexDirection: 'row',
-            alignItems: 'center',
             paddingVertical: 8,
             paddingHorizontal: 10,
           }}
         >
-          <AppText
-            weight={MEDIUM}
-            style={{ color: themeColors.text, fontSize: 14 }}
-          >
-            {orderType}
-          </AppText>
-          <FastImage
-            source={INFO}
-            style={{ height: 14, width: 14, marginLeft: 6 }}
-            resizeMode="contain"
-            tintColor={themeColors.secondaryText}
-          />
-          <View style={{ flex: 1 }} />
-          <FastImage
-            source={downIcon}
-            resizeMode="contain"
-            style={{ width: 10, height: 10 }}
-            tintColor={themeColors.secondaryText}
-          />
+          <View pointerEvents="none" style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+            <AppText
+              weight={MEDIUM}
+              style={{ color: themeColors.text, fontSize: 14 }}
+            >
+              {orderType}
+            </AppText>
+            <FastImage
+              source={INFO}
+              style={{ height: 14, width: 14, marginLeft: 6 }}
+              resizeMode="contain"
+              tintColor={themeColors.secondaryText}
+            />
+            <View style={{ flex: 1 }} />
+            <FastImage
+              source={downIcon}
+              resizeMode="contain"
+              style={{ width: 10, height: 10 }}
+              tintColor={themeColors.secondaryText}
+            />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -729,7 +750,16 @@ const FuturesUI = () => {
           <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
           <AppText type={TWELVE}>0 USDT</AppText>
         </View>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.green }]}>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: colors.green }]}
+          onPress={() => {
+            if (Platform.OS === 'android') {
+              ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+            } else {
+              Alert.alert('Coming soon');
+            }
+          }}
+        >
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>Open Long</AppText>
         </TouchableOpacity>
       </View>
@@ -739,7 +769,16 @@ const FuturesUI = () => {
           <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
           <AppText type={TWELVE}>0 USDT</AppText>
         </View>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.red }]}>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: colors.red }]}
+          onPress={() => {
+            if (Platform.OS === 'android') {
+              ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+            } else {
+              Alert.alert('Coming soon');
+            }
+          }}
+        >
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>Open Short</AppText>
         </TouchableOpacity>
       </View>
@@ -753,14 +792,41 @@ const FuturesUI = () => {
           <AppText type={SIXTEEN} weight={BOLD}>Open Orders (0)</AppText>
           <View style={styles.activeTabIndicator} />
         </View>
-        <View style={styles.bottomTab}>
+        <TouchableOpacity 
+          style={styles.bottomTab}
+          onPress={() => {
+            if (Platform.OS === 'android') {
+              ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+            } else {
+              Alert.alert('Coming soon');
+            }
+          }}
+        >
           <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.secondaryText}>Orders (0)</AppText>
-        </View>
-        <View style={styles.bottomTab}>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.bottomTab}
+          onPress={() => {
+            if (Platform.OS === 'android') {
+              ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+            } else {
+              Alert.alert('Coming soon');
+            }
+          }}
+        >
           <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.secondaryText}>Assets</AppText>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
-      <TouchableOpacity style={styles.historyIconBtn}>
+      <TouchableOpacity 
+        style={styles.historyIconBtn}
+        onPress={() => {
+          if (Platform.OS === 'android') {
+            ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+          } else {
+            Alert.alert('Coming soon');
+          }
+        }}
+      >
         <FastImage source={printIcon} style={{ width: 18, height: 18 }} tintColor={themeColors.text} />
       </TouchableOpacity>
     </View>
@@ -768,13 +834,13 @@ const FuturesUI = () => {
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
-      <View style={styles.telescopeIcon} />
+      <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70 }} resizeMode='contain' />
       <AppText type={FOURTEEN} color={themeColors.secondaryText}>No data</AppText>
     </View>
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.white }]}>
       <Header />
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.mainContent}>

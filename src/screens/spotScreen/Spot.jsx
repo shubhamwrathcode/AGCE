@@ -1697,10 +1697,7 @@ const Spot = () => {
   const [isBuy, setIsBuy] = useState(true);
   const [total, setTotal] = useState("");
 
-  useEffect(() => {
-    setAmount("");
-    setTotal("");
-  }, [headerTab, marginMode]);
+
   // const [chartLoading, setChartLoading] = useState(true);
   // const [preloadedUrl, setPreloadedUrl] = useState(null);
   // const [showPlaceholder, setShowPlaceholder] = useState(true);
@@ -1774,6 +1771,12 @@ const Spot = () => {
   const [visible, setVisible] = useState(false);
   const [focusSettling, setFocusSettling] = useState(false);
   const focusSettlingTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    setAmount("");
+    setTotal("");
+    setActivePercentage(0);
+  }, [headerTab, marginMode]);
 
   const orderBookReady = orderBookSocketReady;
   const showOrderBookSkeleton = !orderBookSocketReady;
@@ -2404,15 +2407,49 @@ const Spot = () => {
       const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance.quote_remaining_capacity) : null;
       const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance.base_remaining_capacity) : null;
 
+      const maxLeverage = (marginMode === "Cross" ? crossAccount?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;
+      const L = leverage;
+      const M = Number(maxLeverage);
+
+      const crossMarginMaxAtLeverage = (available, maxAtMaxLeverage) => {
+        const avail = Number(available);
+        const maxAtMax = Number(maxAtMaxLeverage);
+        if (!Number.isFinite(avail) || avail < 0) return 0;
+        if (!Number.isFinite(maxAtMax) || maxAtMax <= 0) return Math.max(0, avail);
+        if (!Number.isFinite(L) || L <= 0) return Math.max(0, avail);
+        if (!Number.isFinite(M) || M <= 1) return Math.max(0, Math.min(maxAtMax, avail));
+        if (L >= M) return Math.max(0, maxAtMax);
+        if (L <= 1) return Math.max(0, avail);
+
+        const borrowable = Math.max(0, maxAtMax - avail);
+        return Math.max(0, avail + borrowable * ((L - 1) / (M - 1)));
+      };
+
+      const isCross = marginMode === "Cross";
+      
+      const quoteAvailable = isCross && (coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
+        ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
+        : netEquity;
+      const baseAvailable = isCross && (coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
+        ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
+        : Math.max(0, Bf - Bb);
+
       const grossQuoteMax = netEquity * leverage;
-      const quoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
+      const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
+      const quoteMax = isCross && (coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
+        ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
+        : localQuoteMax;
+
+      const grossSellMax = refPx > 0 ? grossQuoteMax / refPx : 0;
+      const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
+      const baseMax = isCross && (coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
+        ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))
+        : localBaseMax;
 
       if (isBuy) {
         balToUse = Math.max(0, quoteMax);
       } else {
-        const grossSellMax = refPx > 0 ? grossQuoteMax / refPx : 0;
-        balToUse = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
-        balToUse = Math.max(0, balToUse);
+        balToUse = Math.max(0, baseMax);
       }
     } else {
       balToUse = isBuy

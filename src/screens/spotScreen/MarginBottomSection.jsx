@@ -54,13 +54,35 @@ const MarginBottomSection = ({
 
   const grossQuoteMax = netEquity * leverage;
   const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
+  const maxLeverage = (isCross ? coinBalance?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;
+  const L = parseInt(marginLeverage, 10) || 1;
+  const M = Number(maxLeverage);
+
+  const crossMarginMaxAtLeverage = (available, maxAtMaxLeverage) => {
+    const avail = Number(available);
+    const maxAtMax = Number(maxAtMaxLeverage);
+    if (!Number.isFinite(avail) || avail < 0) return 0;
+    if (!Number.isFinite(maxAtMax) || maxAtMax <= 0) return Math.max(0, avail);
+    if (!Number.isFinite(L) || L <= 0) return Math.max(0, avail);
+    if (!Number.isFinite(M) || M <= 1) return Math.max(0, Math.min(maxAtMax, avail));
+    if (L >= M) return Math.max(0, maxAtMax);
+    if (L <= 1) return Math.max(0, avail);
+
+    const borrowable = Math.max(0, maxAtMax - avail);
+    return Math.max(0, avail + borrowable * ((L - 1) / (M - 1)));
+  };
+
   const quoteMax = isCross && (coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
-    ? Number(coinBalance?.buy?.max ?? coinBalance?.buy_max)
+    ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
     : localQuoteMax;
+
+  const precision = isBuy 
+    ? (currencyData?.quote_asset_precision ?? 6) 
+    : (currencyData?.base_asset_precision ?? 8);
 
   const fmt = (val) => {
     if (val == null || !Number.isFinite(Number(val))) return "0";
-    const res = parseFloat(Number(val).toFixed(5)).toString();
+    const res = parseFloat(Number(val).toFixed(precision)).toString();
     return res === "NaN" ? "0" : res;
   };
 
@@ -69,13 +91,12 @@ const MarginBottomSection = ({
 
   const grossSellMax = inputPx > 0 ? grossQuoteMax / inputPx : 0;
   const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
+
   const baseMax = isCross && (coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
-    ? Number(coinBalance?.sell?.max ?? coinBalance?.sell_max)
+    ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))
     : localBaseMax;
 
   let borrowingVal = 0;
-  const L = parseInt(marginLeverage, 10) || 1;
-
   if (isBuy) {
     const parsedTotal = parseFloat(formatTotal) || 0;
     const V = parsedTotal > 0 ? parsedTotal : (amountIsQuote ? inputQty : inputQty * inputPx);
