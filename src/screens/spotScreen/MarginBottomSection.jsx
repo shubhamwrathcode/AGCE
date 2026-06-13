@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, TouchableOpacity } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, Button } from "../../shared";
 import { colors } from "../../theme/colors";
 import { add } from "../../helper/ImageAssets";
+import { ShimmerBox } from "./Spot";
 
 const MarginBottomSection = ({
   quote_currency,
@@ -24,6 +25,16 @@ const MarginBottomSection = ({
   loading,
   currencyData,
 }) => {
+  const [isSwitching, setIsSwitching] = useState(true);
+
+  useEffect(() => {
+    setIsSwitching(true);
+    const timer = setTimeout(() => {
+      setIsSwitching(false);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [marginMode, base_currency, quote_currency]);
+
   const leverage = parseInt(marginLeverage, 10) || 5;
 
   const isCross = marginMode === "Cross";
@@ -45,44 +56,30 @@ const MarginBottomSection = ({
   const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance.quote_remaining_capacity) : null;
   const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance.base_remaining_capacity) : null;
 
-  const quoteAvailable = isCross && (coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
-    ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
-    : netEquity;
-  const baseAvailable = isCross && (coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
-    ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
-    : baseEquity;
+  const quoteAvailable = isCross
+    ? ((coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
+      ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
+      : netEquity)
+    : Math.max(0, Qf);
+      
+  const baseAvailable = isCross
+    ? ((coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
+      ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
+      : baseEquity)
+    : Math.max(0, Bf);
 
   const grossQuoteMax = netEquity * leverage;
   const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
-  const maxLeverage = (isCross ? coinBalance?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;
-  const L = parseInt(marginLeverage, 10) || 1;
-  const M = Number(maxLeverage);
-
-  const crossMarginMaxAtLeverage = (available, maxAtMaxLeverage) => {
-    const avail = Number(available);
-    const maxAtMax = Number(maxAtMaxLeverage);
-    if (!Number.isFinite(avail) || avail < 0) return 0;
-    if (!Number.isFinite(maxAtMax) || maxAtMax <= 0) return Math.max(0, avail);
-    if (!Number.isFinite(L) || L <= 0) return Math.max(0, avail);
-    if (!Number.isFinite(M) || M <= 1) return Math.max(0, Math.min(maxAtMax, avail));
-    if (L >= M) return Math.max(0, maxAtMax);
-    if (L <= 1) return Math.max(0, avail);
-
-    const borrowable = Math.max(0, maxAtMax - avail);
-    return Math.max(0, avail + borrowable * ((L - 1) / (M - 1)));
-  };
-
-  const quoteMax = isCross && (coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
-    ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
-    : localQuoteMax;
-
-  const precision = isBuy 
-    ? (currencyData?.quote_asset_precision ?? 6) 
-    : (currencyData?.base_asset_precision ?? 8);
+  
+  const quoteMax = isCross
+    ? ((coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
+      ? Number(coinBalance?.buy?.max ?? coinBalance?.buy_max)
+      : localQuoteMax)
+    : Math.max(0, Qf * leverage);
 
   const fmt = (val) => {
     if (val == null || !Number.isFinite(Number(val))) return "0";
-    const res = parseFloat(Number(val).toFixed(precision)).toString();
+    const res = parseFloat(Number(val).toFixed(5)).toString();
     return res === "NaN" ? "0" : res;
   };
 
@@ -92,11 +89,15 @@ const MarginBottomSection = ({
   const grossSellMax = inputPx > 0 ? grossQuoteMax / inputPx : 0;
   const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
 
-  const baseMax = isCross && (coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
-    ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))
-    : localBaseMax;
+  const baseMax = isCross
+    ? ((coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
+      ? Number(coinBalance?.sell?.max ?? coinBalance?.sell_max)
+      : localBaseMax)
+    : Math.max(0, Bf * leverage);
 
   let borrowingVal = 0;
+  const L = parseInt(marginLeverage, 10) || 1;
+
   if (isBuy) {
     const parsedTotal = parseFloat(formatTotal) || 0;
     const V = parsedTotal > 0 ? parsedTotal : (amountIsQuote ? inputQty : inputQty * inputPx);
@@ -130,9 +131,13 @@ const MarginBottomSection = ({
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <AppText style={{ fontSize: 13, color: colors.placeholderColor }}>Available</AppText>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600" }}>
-              {`${fmt(availValue)} ${availSymbol}`}
-            </AppText>
+            {isSwitching ? (
+              <ShimmerBox width={80} height={14} borderRadius={4} />
+            ) : (
+              <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600" }}>
+                {`${fmt(availValue)} ${availSymbol}`}
+              </AppText>
+            )}
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={onBorrowPress}
@@ -145,16 +150,24 @@ const MarginBottomSection = ({
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <AppText style={{ fontSize: 13, color: colors.placeholderColor }}>Max</AppText>
-          <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600" }}>
-            {`${fmt(maxVal)} ${maxSymbol}`}
-          </AppText>
+          {isSwitching ? (
+            <ShimmerBox width={80} height={14} borderRadius={4} />
+          ) : (
+            <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600" }}>
+              {`${fmt(maxVal)} ${maxSymbol}`}
+            </AppText>
+          )}
         </View>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <AppText style={{ fontSize: 13, color: colors.placeholderColor }}>Borrowable</AppText>
-          <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600" }}>
-            {`${fmt(borrowingVal)} ${borrowingSymbol}`}
-          </AppText>
+          {isSwitching ? (
+            <ShimmerBox width={80} height={14} borderRadius={4} />
+          ) : (
+            <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600" }}>
+              {`${fmt(borrowingVal)} ${borrowingSymbol}`}
+            </AppText>
+          )}
         </View>
       </View>
 

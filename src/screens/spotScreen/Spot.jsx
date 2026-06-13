@@ -406,8 +406,8 @@ const orderBookPanelAreEqual = (prev, next) =>
   orderBookDataEqual(prev.sellData, next.sellData) &&
   orderBookDataEqual(prev.buyData, next.buyData);
 
-const SHIMMER_STRIP_WIDTH_DEFAULT = 100;
-const ShimmerBox = ({
+export const SHIMMER_STRIP_WIDTH_DEFAULT = 100;
+export const ShimmerBox = ({
   width, height, borderRadius = 8, style,
   shimmerStripWidth = SHIMMER_STRIP_WIDTH_DEFAULT,
   shimmerDuration = 700,
@@ -1772,6 +1772,14 @@ const Spot = () => {
   const [focusSettling, setFocusSettling] = useState(false);
   const focusSettlingTimeoutRef = useRef(null);
 
+  const [isSwitchingTab, setIsSwitchingTab] = useState(false);
+
+  useEffect(() => {
+    setIsSwitchingTab(true);
+    const t = setTimeout(() => setIsSwitchingTab(false), 600);
+    return () => clearTimeout(t);
+  }, [headerTab, marginMode, quote_currency, base_currency]);
+
   useEffect(() => {
     setAmount("");
     setTotal("");
@@ -2427,24 +2435,35 @@ const Spot = () => {
 
       const isCross = marginMode === "Cross";
       
-      const quoteAvailable = isCross && (coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
-        ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
-        : netEquity;
-      const baseAvailable = isCross && (coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
-        ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
-        : Math.max(0, Bf - Bb);
+      const quoteAvailable = isCross
+        ? ((coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
+          ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
+          : netEquity)
+        : Math.max(0, Qf);
+          
+      const baseAvailable = isCross
+        ? ((coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
+          ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
+          : Math.max(0, Bf - Bb))
+        : Math.max(0, Bf);
 
       const grossQuoteMax = netEquity * leverage;
       const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
-      const quoteMax = isCross && (coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
-        ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
-        : localQuoteMax;
+      
+      const quoteMax = isCross
+        ? ((coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
+          ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
+          : localQuoteMax)
+        : Math.max(0, Qf * leverage);
 
       const grossSellMax = refPx > 0 ? grossQuoteMax / refPx : 0;
       const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
-      const baseMax = isCross && (coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
-        ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))
-        : localBaseMax;
+      
+      const baseMax = isCross
+        ? ((coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
+          ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))
+          : localBaseMax)
+        : Math.max(0, Bf * leverage);
 
       if (isBuy) {
         balToUse = Math.max(0, quoteMax);
@@ -4406,13 +4425,17 @@ const Spot = () => {
                         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <AppText style={{ fontSize: 13, color: colors.placeholderColor, flexShrink: 0, marginTop: 2 }}>Available</AppText>
                           <View style={{ flexDirection: "row", alignItems: "flex-end", flexShrink: 1, paddingLeft: 10 }}>
-                            <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600", flexShrink: 1, textAlign: "right" }}>
-                              {(() => {
-                                const val = isBuy ? (coinBalance?.quote_currency_balance || 0) : (coinBalance?.base_currency_balance || 0);
-                                const res = parseFloat(Number(val).toFixed(8)).toString();
-                                return (res === "NaN" ? "0" : res).replace('.', '.\u200B');
-                              })()} {isBuy ? quote_currency : base_currency}
-                            </AppText>
+                            {isSwitchingTab ? (
+                              <ShimmerBox width={80} height={14} borderRadius={4} />
+                            ) : (
+                              <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600", flexShrink: 1, textAlign: "right" }}>
+                                {(() => {
+                                  const val = isBuy ? (coinBalance?.quote_currency_balance || 0) : (coinBalance?.base_currency_balance || 0);
+                                  const res = parseFloat(Number(val).toFixed(8)).toString();
+                                  return (res === "NaN" ? "0" : res).replace('.', '.\u200B');
+                                })()} {isBuy ? quote_currency : base_currency}
+                              </AppText>
+                            )}
                             <TouchableOpacity
                               activeOpacity={0.8}
                               onPress={() => {
@@ -4427,13 +4450,17 @@ const Spot = () => {
 
                         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <AppText style={{ fontSize: 13, color: colors.placeholderColor, flexShrink: 0, marginTop: 2 }}>Max</AppText>
-                          <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600", flexShrink: 1, paddingLeft: 10, textAlign: "right" }}>
-                            {(() => {
-                              const val = isBuy ? (coinBalance?.quote_currency_balance || 0) : (coinBalance?.base_currency_balance || 0);
-                              const res = formatTotal(Number(val)) || "0";
-                              return res.replace('.', '.\u200B');
-                            })()} {isBuy ? quote_currency : base_currency}
-                          </AppText>
+                          {isSwitchingTab ? (
+                            <ShimmerBox width={80} height={14} borderRadius={4} />
+                          ) : (
+                            <AppText style={{ fontSize: 13, color: themeColors.text, fontWeight: "600", flexShrink: 1, paddingLeft: 10, textAlign: "right" }}>
+                              {(() => {
+                                const val = isBuy ? (coinBalance?.quote_currency_balance || 0) : (coinBalance?.base_currency_balance || 0);
+                                const res = formatTotal(Number(val)) || "0";
+                                return res.replace('.', '.\u200B');
+                              })()} {isBuy ? quote_currency : base_currency}
+                            </AppText>
+                          )}
                         </View>
                       </View>
                     </View>
