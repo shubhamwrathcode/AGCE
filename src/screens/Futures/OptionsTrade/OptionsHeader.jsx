@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import FastImage from 'react-native-fast-image';
+import { useNavigation } from '@react-navigation/native';
 
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
@@ -8,8 +9,9 @@ import { BOLD, fontFamilyMedium, fontFamilySemiBold, MEDIUM, REGULAR, SEMI_BOLD 
 import { downIcon, filterNew, history, historyIcon, menuIcon, printIcon } from '../../../helper/ImageAssets'; // using existing icons
 import { colors } from '../../../theme/colors';
 
-const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelectedOptionType, onOpenSettings }) => {
+const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelectedOptionType, onOpenSettings, onOpenMoreSheet }) => {
   const { colors: themeColors, isDark } = useTheme();
+  const navigation = useNavigation();
 
   const topNavItems = ['Options Chain', 'Easy', 'Options Strategies'];
   const optionTypes = ['All', 'Call', 'Put'];
@@ -32,25 +34,27 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
             </TouchableOpacity>
           ))}
         </ScrollView>
-        <TouchableOpacity style={styles.moreBtn}>
+        <TouchableOpacity style={styles.moreBtn} onPress={onOpenMoreSheet}>
           <FastImage source={menuIcon} style={{ width: 18, height: 18, }} resizeMode='contain' tintColor={colors.black} />
         </TouchableOpacity>
       </View>
 
       {/* Title & Price */}
-      <View style={styles.titleRow}>
-        <TouchableOpacity style={styles.coinSelector}>
-          <AppText style={{ fontSize: 18, color: themeColors.text, fontFamily: fontFamilySemiBold }}>BTC Options</AppText>
-          <FastImage source={downIcon} style={styles.downIcon} tintColor={themeColors.text} resizeMode="contain" />
-        </TouchableOpacity>
-        <View style={styles.badge}>
-          <AppText style={{ color: '#fff', fontSize: 10, fontFamily: fontFamilyMedium }}>+50.47%</AppText>
+      {activeTab !== 2 && (
+        <View style={styles.titleRow}>
+          <TouchableOpacity style={styles.coinSelector}>
+            <AppText style={{ fontSize: 18, color: themeColors.text, fontFamily: fontFamilySemiBold }}>BTC Options</AppText>
+            <FastImage source={downIcon} style={styles.downIcon} tintColor={themeColors.text} resizeMode="contain" />
+          </TouchableOpacity>
+          <View style={styles.badge}>
+            <AppText style={{ color: '#fff', fontSize: 10, fontFamily: fontFamilyMedium }}>+50.47%</AppText>
+          </View>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity onPress={() => navigation.navigate('OptionHistory')}>
+            <FastImage source={historyIcon} style={styles.historyIcon} tintColor={themeColors.text} resizeMode="contain" />
+          </TouchableOpacity>
         </View>
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity>
-          <FastImage source={historyIcon} style={styles.historyIcon} tintColor={themeColors.text} resizeMode="contain" />
-        </TouchableOpacity>
-      </View>
+      )}
 
       {/* Filter Toggles */}
       {activeTab === 0 && (

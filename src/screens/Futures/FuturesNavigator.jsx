@@ -123,9 +123,9 @@ const styles = StyleSheet.create({
   tabBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    // paddingHorizontal: 5,
     paddingTop: 10,
-    paddingBottom: 10,
+    paddingBottom: 5,
   },
   backButton: {
     width: 36,

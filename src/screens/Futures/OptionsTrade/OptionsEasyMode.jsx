@@ -6,9 +6,9 @@ import { useTheme } from '../../../hooks/useTheme';
 import { fontFamilyMedium, fontFamilySemiBold, fontFamilyBold } from '../../../theme/typography';
 import { colors } from '../../../theme/colors';
 import OptionsExpiries from './OptionsExpiries';
-import { easyGraph, easyGraphArrow, easyGraphDownArrow, easyGraphDown, swapLight } from '../../../helper/ImageAssets';
+import { easyGraph, easyGraphArrow, easyGraphDownArrow, easyGraphDown, swapLight, transferIcon, upDown } from '../../../helper/ImageAssets';
 
-const OptionsEasyMode = ({ expiries, selectedExpiry, onSelectExpiry }) => {
+const OptionsEasyMode = ({ expiries, selectedExpiry, setSelectedExpiry }) => {
   const { colors: themeColors, isDark } = useTheme();
   const [selectedTrend, setSelectedTrend] = useState(0); // 0 to 3
 
@@ -40,7 +40,6 @@ const OptionsEasyMode = ({ expiries, selectedExpiry, onSelectExpiry }) => {
           if (isActive) {
             backgroundColor = item.id < 2 ? (isDark ? 'rgba(56, 183, 129, 0.15)' : '#ECFDF5') : (isDark ? 'rgba(235, 78, 92, 0.15)' : '#FEF2F2');
           }
-
           return (
             <TouchableOpacity
               key={item.id}
@@ -60,7 +59,7 @@ const OptionsEasyMode = ({ expiries, selectedExpiry, onSelectExpiry }) => {
           <AppText style={{ color: themeColors.text, fontSize: 16, fontFamily: fontFamilySemiBold }}>+5.02% (76,998)</AppText>
         </View>
         <TouchableOpacity style={[styles.swapBtn, { backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
-          <FastImage source={swapLight} style={{ width: 16, height: 16 }} tintColor={themeColors.text} resizeMode="contain" />
+          <FastImage source={upDown} style={{ width: 25, height: 25 }} tintColor={themeColors.text} resizeMode="contain" />
         </TouchableOpacity>
       </View>
 
@@ -68,7 +67,7 @@ const OptionsEasyMode = ({ expiries, selectedExpiry, onSelectExpiry }) => {
       <OptionsExpiries
         expiries={expiries}
         selectedExpiry={selectedExpiry}
-        onSelectExpiry={onSelectExpiry}
+        setSelectedExpiry={setSelectedExpiry}
       />
 
       {/* Recommendation Cards */}
@@ -79,7 +78,7 @@ const OptionsEasyMode = ({ expiries, selectedExpiry, onSelectExpiry }) => {
           <View style={styles.cardHeader}>
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <AppText style={{ fontSize: 18, fontFamily: fontFamilyBold, color: themeColors.text }}>Buy Call</AppText>
+                <AppText style={{ fontSize: 16, fontFamily: fontFamilyBold, color: themeColors.text }}>Buy Call</AppText>
                 <View style={[styles.badge, { backgroundColor: isDark ? '#2A2A2A' : '#F0F0F0' }]}>
                   <AppText style={{ fontSize: 10, color: themeColors.secondaryText, fontFamily: fontFamilyMedium }}>UNLIMITED UPSIDE</AppText>
                 </View>
@@ -87,7 +86,7 @@ const OptionsEasyMode = ({ expiries, selectedExpiry, onSelectExpiry }) => {
               <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginTop: 4 }}>Buy 74,000C</AppText>
             </View>
             <TouchableOpacity style={styles.tradeBtn}>
-              <AppText style={{ color: '#FFF', fontSize: 14, fontFamily: fontFamilySemiBold }}>Trade</AppText>
+              <AppText style={{ color: '#FFF', fontSize: 12, fontFamily: fontFamilySemiBold }}>Trade</AppText>
             </TouchableOpacity>
           </View>
 
@@ -168,43 +167,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   expectationRow: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   trendsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
     // paddingHorizontal: 8,
   },
   trendBtn: {
-    width: 50,
-    height: 50,
+    width: 55,
+    height: 55,
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
   changeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'stretch',
+    marginBottom: 12,
   },
   changeCard: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
     borderRadius: 8,
     marginRight: 12,
+    justifyContent: 'center',
   },
   swapBtn: {
     width: 48,
-    height: 48,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardsContainer: {
-    marginTop: 20,
-    gap: 20,
+    marginTop: 10,
+    gap: 12,
   },
   recCard: {
     marginBottom: 10,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   badge: {
     paddingHorizontal: 6,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   statLabel: {
     color: '#999',

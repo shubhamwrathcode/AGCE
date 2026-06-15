@@ -365,6 +365,13 @@ export const easyGraphDownArrow = require('../../assets/images/easyGraphDownArro
 export const easyGraphDown = require('../../assets/images/easyGraphDown.png');
 export const easyGraphArrow = require('../../assets/images/easyGraphArrow.png');
 export const easyGraph = require('../../assets/images/easyGraph.png');
+export const upDown = require('../../assets/images/upDown.png');
+export const testnet = require('../../assets/images/testnet.png');
+export const telegram = require('../../assets/images/telegram.png');
+export const fee = require('../../assets/images/fee.png');
+export const learnVideo = require('../../assets/images/learnVideo.png');
+
+
 
 
 

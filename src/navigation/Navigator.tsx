@@ -144,6 +144,7 @@ import MarginBorrowRepayHistory from "../screens/spotScreen/MarginBorrowRepayHis
 import TransferHistoryScreen from "../screens/spotScreen/TransferHistoryScreen";
 import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 import MarginTransferHistoryScreen from "../screens/spotScreen/MarginTransferHistoryScreen";
+import OptionHistory from "../screens/Futures/OptionsTrade/OptionHistory";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -588,6 +589,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.ADD_FAVOURITE_SCREEN}
         component={AddFavouriteScreen}
+      />
+      <Stack.Screen
+        name="OptionHistory"
+        component={OptionHistory}
       />
     </Stack.Navigator>
   );

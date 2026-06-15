@@ -7,6 +7,8 @@ import OptionsExpiries from './OptionsExpiries';
 import OptionsChainTable from './OptionsChainTable';
 import OptionsSettingsSheet from './OptionsSettingsSheet';
 import OptionsEasyMode from './OptionsEasyMode';
+import OptionsStrategies from './OptionsStrategies';
+import OptionsMoreSheet from './OptionsMoreSheet';
 import { colors } from '../../../theme/colors';
 
 const expiriesData = ['2026-05-30', '2026-05-31', '2026-06-01', '2026-06-05'];
@@ -18,6 +20,7 @@ const OptionsTrade = () => {
   const [selectedOptionType, setSelectedOptionType] = useState('All');
   const [selectedExpiry, setSelectedExpiry] = useState(expiriesData[0]);
   const [isSettingsVisible, setSettingsVisible] = useState(false);
+  const [isMoreSheetVisible, setMoreSheetVisible] = useState(false);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.white }]}>
@@ -27,13 +30,14 @@ const OptionsTrade = () => {
         selectedOptionType={selectedOptionType}
         setSelectedOptionType={setSelectedOptionType}
         onOpenSettings={() => setSettingsVisible(true)}
+        onOpenMoreSheet={() => setMoreSheetVisible(true)}
       />
       {activeTab === 0 && (
         <>
           <OptionsExpiries
             expiries={expiriesData}
             selectedExpiry={selectedExpiry}
-            onSelectExpiry={setSelectedExpiry}
+            setSelectedExpiry={setSelectedExpiry}
           />
           <OptionsChainTable
             selectedExpiry={selectedExpiry}
@@ -41,15 +45,22 @@ const OptionsTrade = () => {
         </>
       )}
       {activeTab === 1 && (
-        <OptionsEasyMode 
+        <OptionsEasyMode
           expiries={expiriesData}
           selectedExpiry={selectedExpiry}
-          onSelectExpiry={setSelectedExpiry}
+          setSelectedExpiry={setSelectedExpiry}
         />
       )}
-      <OptionsSettingsSheet 
-        visible={isSettingsVisible} 
-        onClose={() => setSettingsVisible(false)} 
+      {activeTab === 2 && (
+        <OptionsStrategies />
+      )}
+      <OptionsSettingsSheet
+        visible={isSettingsVisible}
+        onClose={() => setSettingsVisible(false)}
+      />
+      <OptionsMoreSheet
+        visible={isMoreSheetVisible}
+        onClose={() => setMoreSheetVisible(false)}
       />
     </View>
   );
