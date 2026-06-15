@@ -2,7 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
-import { SEMI_BOLD, MEDIUM } from '../../../theme/typography';
+import { SEMI_BOLD, MEDIUM, fontFamilyMedium } from '../../../theme/typography';
 
 const OptionsExpiries = ({ expiries, selectedExpiry, setSelectedExpiry }) => {
   const { colors: themeColors, isDark } = useTheme();
@@ -26,10 +26,10 @@ const OptionsExpiries = ({ expiries, selectedExpiry, setSelectedExpiry }) => {
               onPress={() => setSelectedExpiry(date)}
             >
               <AppText
-                weight={isSelected ? SEMI_BOLD : MEDIUM}
                 style={{
+                  fontFamily: fontFamilyMedium,
                   color: isSelected ? themeColors.text : themeColors.secondaryText,
-                  fontSize: 13
+                  fontSize: 12
                 }}
               >
                 {date}
@@ -46,14 +46,14 @@ export default OptionsExpiries;
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 12,
+    // paddingVertical: 5,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: 5,
+    gap: 10,
   },
   pill: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 20,
   }

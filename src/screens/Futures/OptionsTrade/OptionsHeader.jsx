@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import FastImage from 'react-native-fast-image';
 
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
-import { BOLD, MEDIUM, REGULAR, SEMI_BOLD } from '../../../theme/typography';
-import { downIcon, printIcon } from '../../../helper/ImageAssets'; // using existing icons
+import { BOLD, fontFamilyMedium, fontFamilySemiBold, MEDIUM, REGULAR, SEMI_BOLD } from '../../../theme/typography';
+import { downIcon, filterNew, history, historyIcon, menuIcon, printIcon } from '../../../helper/ImageAssets'; // using existing icons
+import { colors } from '../../../theme/colors';
 
-const OptionsHeader = ({ selectedOptionType, setSelectedOptionType }) => {
+const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelectedOptionType, onOpenSettings }) => {
   const { colors: themeColors, isDark } = useTheme();
 
   const topNavItems = ['Options Chain', 'Easy', 'Options Strategies'];
@@ -19,10 +20,12 @@ const OptionsHeader = ({ selectedOptionType, setSelectedOptionType }) => {
       <View style={styles.topLinksRow}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topLinksScroll}>
           {topNavItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.topLinkItem}>
-              <AppText 
-                weight={index === 0 ? BOLD : MEDIUM} 
-                style={{ color: index === 0 ? themeColors.text : themeColors.secondaryText, fontSize: 14 }}
+            <TouchableOpacity key={index} style={styles.topLinkItem} onPress={() => setActiveTab(index)}>
+              <AppText
+                style={{
+                  fontFamily: fontFamilySemiBold,
+                  color: activeTab === index ? themeColors.text : themeColors.secondaryText, fontSize: 15
+                }}
               >
                 {item}
               </AppText>
@@ -30,52 +33,55 @@ const OptionsHeader = ({ selectedOptionType, setSelectedOptionType }) => {
           ))}
         </ScrollView>
         <TouchableOpacity style={styles.moreBtn}>
-          <AppText weight={BOLD} style={{ color: themeColors.secondaryText, fontSize: 16 }}>...</AppText>
+          <FastImage source={menuIcon} style={{ width: 18, height: 18, }} resizeMode='contain' tintColor={colors.black} />
         </TouchableOpacity>
       </View>
 
       {/* Title & Price */}
       <View style={styles.titleRow}>
         <TouchableOpacity style={styles.coinSelector}>
-          <AppText weight={BOLD} style={{ fontSize: 22, color: themeColors.text }}>BTC Options</AppText>
+          <AppText style={{ fontSize: 18, color: themeColors.text, fontFamily: fontFamilySemiBold }}>BTC Options</AppText>
           <FastImage source={downIcon} style={styles.downIcon} tintColor={themeColors.text} resizeMode="contain" />
         </TouchableOpacity>
         <View style={styles.badge}>
-          <AppText weight={SEMI_BOLD} style={{ color: '#fff', fontSize: 10 }}>+50.47%</AppText>
+          <AppText style={{ color: '#fff', fontSize: 10, fontFamily: fontFamilyMedium }}>+50.47%</AppText>
         </View>
         <View style={{ flex: 1 }} />
         <TouchableOpacity>
-          <FastImage source={printIcon} style={styles.historyIcon} tintColor={themeColors.text} resizeMode="contain" />
+          <FastImage source={historyIcon} style={styles.historyIcon} tintColor={themeColors.text} resizeMode="contain" />
         </TouchableOpacity>
       </View>
 
       {/* Filter Toggles */}
-      <View style={styles.filterRow}>
-        <View style={styles.optionTypes}>
-          {optionTypes.map((type) => {
-            const isSelected = selectedOptionType === type;
-            return (
-              <TouchableOpacity 
-                key={type} 
-                style={styles.optionTypeBtn}
-                onPress={() => setSelectedOptionType(type)}
-              >
-                <AppText 
-                  weight={isSelected ? BOLD : MEDIUM}
-                  style={{ color: isSelected ? themeColors.text : themeColors.secondaryText, fontSize: 14 }}
+      {activeTab === 0 && (
+        <View style={styles.filterRow}>
+          <View style={styles.optionTypes}>
+            {optionTypes.map((type) => {
+              const isSelected = selectedOptionType === type;
+              return (
+                <TouchableOpacity
+                  key={type}
+                  style={styles.optionTypeBtn}
+                  onPress={() => setSelectedOptionType(type)}
                 >
-                  {type}
-                </AppText>
-                {isSelected && <View style={[styles.activeLine, { backgroundColor: themeColors.text }]} />}
-              </TouchableOpacity>
-            );
-          })}
+                  <AppText
+                    style={{
+                      color: isSelected ? themeColors.text : themeColors.secondaryText, fontSize: 14,
+                      fontFamily: fontFamilySemiBold
+                    }}
+                  >
+                    {type}
+                  </AppText>
+                  {isSelected && <View style={[styles.activeLine, { backgroundColor: themeColors.text }]} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity style={styles.filterIconBtn} onPress={onOpenSettings}>
+            <FastImage source={filterNew} style={{ width: 20, height: 20, }} resizeMode='contain' />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.filterIconBtn}>
-          <View style={[styles.filterLines, { borderBottomColor: themeColors.text }]} />
-          <View style={[styles.filterLines, { width: 10, borderBottomColor: themeColors.text, alignSelf: 'flex-end' }]} />
-        </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 };
@@ -85,7 +91,6 @@ export default OptionsHeader;
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingTop: 12,
     paddingBottom: 8,
   },
   topLinksRow: {
@@ -101,13 +106,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   moreBtn: {
-    marginLeft: 16,
-    paddingBottom: 4,
+    // marginLeft: 16,
+    marginTop: 5
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 5,
   },
   coinSelector: {
     flexDirection: 'row',
@@ -127,8 +132,8 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   historyIcon: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
   },
   filterRow: {
     flexDirection: 'row',

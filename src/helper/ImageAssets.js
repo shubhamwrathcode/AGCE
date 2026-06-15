@@ -360,6 +360,17 @@ export const p2p_ic = require('../../assets/images/p2p_ic.png');
 export const onchain_ic = require('../../assets/images/onchain_ic.png');
 export const infoNewIc = require('../../assets/images/infoNewIc.png');
 export const filterIcon = require('../../assets/images/filterIcon.png');
+export const filterNew = require('../../assets/images/filterNew.png');
+export const easyGraphDownArrow = require('../../assets/images/easyGraphDownArrow.png');
+export const easyGraphDown = require('../../assets/images/easyGraphDown.png');
+export const easyGraphArrow = require('../../assets/images/easyGraphArrow.png');
+export const easyGraph = require('../../assets/images/easyGraph.png');
+
+
+
+
+
+
 
 
 
