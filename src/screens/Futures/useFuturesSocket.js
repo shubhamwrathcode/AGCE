@@ -61,6 +61,7 @@ export function useFuturesSocket() {
   return {
     isConnected,
     futuresData: normalizedData,
+    futuresPrice: context?.futuresPrice,
     subscribeToFutures: context?.subscribeToFutures,
     unsubscribeFromFutures: context?.unsubscribeFromFutures,
     subscribeToMarket: context?.subscribeToMarket,

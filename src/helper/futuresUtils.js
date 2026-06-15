@@ -115,7 +115,48 @@ export function normalizeOrderbookOrders(orders) {
       size: remaining,
       sum,
       quantity: remaining,
-      _id: o._id || `ob-${i}`,
     };
   });
 }
+
+const DEFAULT_ORDER_BOOK_AGG_OPTIONS = [0.1, 0.01, 0.001, 0.0001];
+
+export function getOrderBookAggOptionsForPair(tickSize) {
+    const tick = Number(tickSize);
+    if (!Number.isFinite(tick) || tick <= 0) {
+        return DEFAULT_ORDER_BOOK_AGG_OPTIONS.slice();
+    }
+    const mults = [1, 10, 100, 1000, 10000];
+    const out = [];
+    for (const m of mults) {
+        const v = tick * m;
+        if (!Number.isFinite(v) || v <= 0) continue;
+        out.push(parseFloat(v.toPrecision(12)));
+    }
+    const unique = Array.from(new Set(out)).sort((a, b) => a - b);
+    return unique.length ? unique : DEFAULT_ORDER_BOOK_AGG_OPTIONS.slice();
+}
+
+export function roundPriceToAgg(price, agg) {
+    const n = Number(price);
+    if (!Number.isFinite(n) || !agg) return n;
+    return Math.round(n / agg) * agg;
+}
+
+export function aggregateOrderBookRows(orders, agg) {
+    if (!orders?.length) return [];
+    const map = new Map();
+    for (const o of orders) {
+        const bucket = roundPriceToAgg(o.price, agg);
+        const qty = Number(o.quantity ?? o.remaining) || 0;
+        const prev = map.get(bucket);
+        if (prev) {
+            prev.quantity  = (Number(prev.quantity)  || 0) + qty;
+            prev.remaining = (Number(prev.remaining) || 0) + qty;
+        } else {
+            map.set(bucket, { ...o, price: bucket, quantity: qty, remaining: qty });
+        }
+    }
+    return Array.from(map.values());
+}
+

@@ -29,6 +29,8 @@ export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
   const isInitializedRef = useRef(false);
   const [futuresData, setFuturesData] = useState(null);
+  const [futuresPrice, setFuturesPrice] = useState(null);
+  const [exchangeData, setExchangeData] = useState(null);
   const pendingSubscriptions = useRef({
     market: false,
     exchange: null,
@@ -260,6 +262,7 @@ export const SocketProvider = ({ children }) => {
 
       const handleFuturesUpdate = (data) => {
         if (!data || currentFuturesSubscription.current == null) return;
+        console.log("FUTURES UPDATE:", Object.keys(data), "sell_order length:", data?.sell_order?.length);
         pendingFuturesData = data;
 
         if (!futuresThrottleTimer) {
@@ -276,6 +279,9 @@ export const SocketProvider = ({ children }) => {
       socketService.on("exchange:update", handleExchangeUpdate);
       socketService.on("message", handleExchangeUpdate);
       socketService.on("futures:update", handleFuturesUpdate);
+      socketService.on("futures:price", (data) => {
+        if (data) setFuturesPrice(data);
+      });
 
       // subscribeToMarket(); removed to prevent auto-subscribe, Market data should only be subscribed on Market screen
     };
@@ -327,7 +333,9 @@ export const SocketProvider = ({ children }) => {
   const contextValue = useMemo(
     () => ({
       socket: socketService.getSocket(),
+      exchangeData,
       futuresData,
+      futuresPrice,
       subscribeToMarket,
       unsubscribeFromMarket,
       subscribeToExchange,
@@ -336,7 +344,7 @@ export const SocketProvider = ({ children }) => {
       unsubscribeFromFutures,
       setFuturesHistoryTab,
     }),
-    [futuresData, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange, subscribeToFutures, unsubscribeFromFutures, setFuturesHistoryTab]
+    [exchangeData, futuresData, futuresPrice, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange, subscribeToFutures, unsubscribeFromFutures, setFuturesHistoryTab]
   );
 
   return (

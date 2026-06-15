@@ -35,7 +35,10 @@ import {
   NO_NOTIFICATION_ICON
 } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
-import { formatPriceByTick, formatQtyByStep } from '../../helper/futuresUtils';
+import { formatPriceByTick, formatQtyByStep, getOrderBookAggOptionsForPair, aggregateOrderBookRows, getTickSize } from '../../helper/futuresUtils';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs(['VirtualizedLists should never be nested inside plain ScrollViews']);
 
 const { width: Width, height: Height } = Dimensions.get('window');
 
@@ -128,6 +131,72 @@ const OrderBookSkeleton = () => {
   );
 };
 
+const OrderBookAskRow = React.memo(({ item: ask, maxVolume, themeColors, isDark, selectedCoin, styles }) => {
+  if (ask.isPlaceholder) {
+    return (
+      <View style={styles.obRow}>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, opacity: 0.15 }}>—</AppText>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, opacity: 0.15 }}>—</AppText>
+      </View>
+    );
+  }
+  const ratio = Math.min(100, (ask.remaining / maxVolume) * 100);
+  return (
+    <View style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: 0,
+          width: `${ratio > 0 ? Math.max(2, ratio) : 0}%`,
+          backgroundColor: isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)",
+        }}
+      />
+      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.red }}>
+        {formatPriceByTick(ask.price, selectedCoin)}
+      </AppText>
+      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+        {formatQtyByStep(ask.remaining, selectedCoin)}
+      </AppText>
+    </View>
+  );
+}, (prev, next) => prev.item.price === next.item.price && prev.item.remaining === next.item.remaining && prev.maxVolume === next.maxVolume);
+
+const OrderBookBidRow = React.memo(({ item: bid, maxVolume, themeColors, isDark, selectedCoin, styles }) => {
+  if (bid.isPlaceholder) {
+    return (
+      <View style={styles.obRow}>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, opacity: 0.15 }}>—</AppText>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, opacity: 0.15 }}>—</AppText>
+      </View>
+    );
+  }
+  const ratio = Math.min(100, (bid.remaining / maxVolume) * 100);
+  return (
+    <View style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: 0,
+          width: `${ratio > 0 ? Math.max(2, ratio) : 0}%`,
+          backgroundColor: isDark ? "rgba(38, 166, 154, 0.18)" : "rgba(38, 166, 154, 0.14)",
+        }}
+      />
+      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.green }}>
+        {formatPriceByTick(bid.price, selectedCoin)}
+      </AppText>
+      <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+        {formatQtyByStep(bid.remaining, selectedCoin)}
+      </AppText>
+    </View>
+  );
+}, (prev, next) => prev.item.price === next.item.price && prev.item.remaining === next.item.remaining && prev.maxVolume === next.maxVolume);
+
 const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
 
 const FuturesUI = () => {
@@ -142,6 +211,7 @@ const FuturesUI = () => {
 
   const {
     futuresData,
+    futuresPrice,
     subscribeToFutures,
     unsubscribeFromFutures,
     subscribeToMarket,
@@ -156,8 +226,35 @@ const FuturesUI = () => {
     return pairData?.find((p) => p._id === selectedCoin?._id) || selectedCoin;
   }, [pairData, selectedCoin]);
 
+  const [livePriceState, setLivePriceState] = useState("");
+  const lastStreamBidRef = useRef(null);
+
+  useEffect(() => {
+    if (!futuresPrice) return;
+    if (selectedCoin?.symbol && futuresPrice.symbol && futuresPrice.symbol !== selectedCoin.symbol) return;
+
+    const p = futuresPrice.mark_price ?? futuresPrice.last_price;
+    if (p == null) return;
+
+    const price = parseFloat(p);
+    if (!Number.isFinite(price) || price <= 0) return;
+
+    if (lastStreamBidRef.current != null) {
+      const prev = Number(lastStreamBidRef.current);
+      if (price > prev) setIsPricePositive(true);
+      else if (price < prev) setIsPricePositive(false);
+    }
+    lastStreamBidRef.current = price;
+    setLivePriceState(p);
+  }, [futuresPrice, selectedCoin?.symbol]);
+
   const livePrice = React.useMemo(() => {
+    if (livePriceState) return parseFloat(livePriceState) || 0;
+
     let p = futuresData?.last_price || futuresData?.buy_price || futuresData?.price;
+    if (!p && futuresData?.contract) {
+      p = futuresData.contract.mark_price || futuresData.contract.last_price;
+    }
     if (!p) p = liveCoin?.last_price || liveCoin?.buy_price;
     if (!p) {
       const allAsks = futuresData?.sell_order || [];
@@ -165,19 +262,22 @@ const FuturesUI = () => {
       p = allAsks[0]?.price || allBids[0]?.price;
     }
     return parseFloat(p) || 0;
-  }, [futuresData, liveCoin]);
+  }, [livePriceState, futuresData, liveCoin]);
 
   const [isPricePositive, setIsPricePositive] = useState(true);
   const prevPriceRef = useRef(0);
 
   useEffect(() => {
-    if (livePrice >= prevPriceRef.current) {
+    if (livePrice > prevPriceRef.current && prevPriceRef.current !== 0) {
       setIsPricePositive(true);
-    } else {
+    } else if (livePrice < prevPriceRef.current && prevPriceRef.current !== 0) {
       setIsPricePositive(false);
     }
-    prevPriceRef.current = livePrice;
+    if (livePrice > 0) {
+      prevPriceRef.current = livePrice;
+    }
   }, [livePrice]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [orderType, setOrderType] = useState('Limit');
   const orderTypeSheetRef = useRef(null);
@@ -188,8 +288,17 @@ const FuturesUI = () => {
   const contractUnitSheetRef = useRef(null);
 
   // Precision Dropdown State
-  const [obPrecisionOptions] = useState(['0.1', '0.01', '0.001', '0.0001', '0.00001']);
-  const [precision, setPrecision] = useState('0.1');
+  const obPrecisionOptions = React.useMemo(() => {
+    return getOrderBookAggOptionsForPair(getTickSize(selectedCoin));
+  }, [selectedCoin]);
+
+  const [precision, setPrecision] = useState(null);
+
+  useEffect(() => {
+    if (obPrecisionOptions.length > 0 && (!precision || !obPrecisionOptions.includes(precision))) {
+      setPrecision(obPrecisionOptions[0]);
+    }
+  }, [obPrecisionOptions, selectedCoin]);
   const [obPrecisionOpen, setObPrecisionOpen] = useState(false);
   const [obPrecisionLayout, setObPrecisionLayout] = useState(null);
   const precisionTriggerRef = useRef(null);
@@ -202,11 +311,9 @@ const FuturesUI = () => {
   };
 
   const openObPrecisionMenu = () => {
-    requestAnimationFrame(() => {
-      precisionTriggerRef.current?.measureInWindow((x, y, w, h) => {
-        setObPrecisionLayout({ x, y, w, h });
-        setObPrecisionOpen(true);
-      });
+    precisionTriggerRef.current?.measure((x, y, w, h, pageX, pageY) => {
+      setObPrecisionLayout({ x: pageX, y: pageY, w, h });
+      setObPrecisionOpen(true);
     });
   };
 
@@ -304,14 +411,19 @@ const FuturesUI = () => {
     if (isFocused && pairData.length === 0) {
       subscribeToFutures();
       const t = setTimeout(() => subscribeToFutures(), 800);
-      return () => clearTimeout(t);
+      return () => {
+        clearTimeout(t);
+        unsubscribeFromFutures();
+      };
     }
-  }, [isFocused, pairData.length, subscribeToFutures]);
+  }, [isFocused, pairData.length, subscribeToFutures, unsubscribeFromFutures]);
 
   useEffect(() => {
     if (isFocused && selectedCoin) {
-      subscribeToFutures({ symbol: selectedCoin.symbol, base_currency_id: selectedCoin._id });
-      return () => unsubscribeFromFutures({ symbol: selectedCoin.symbol, base_currency_id: selectedCoin._id });
+      subscribeToFutures({ symbol: selectedCoin.symbol });
+      return () => {
+        unsubscribeFromFutures({ symbol: selectedCoin.symbol, base_currency_id: selectedCoin._id });
+      };
     }
   }, [isFocused, selectedCoin, subscribeToFutures, unsubscribeFromFutures]);
 
@@ -327,7 +439,7 @@ const FuturesUI = () => {
     setSelectedCoin(pair);
     pairSheetRef.current?.close();
     setSearchTerm("");
-    subscribeToFutures({ symbol: pair.symbol, base_currency_id: pair._id });
+    subscribeToFutures({ symbol: pair.symbol });
   };
 
   const filteredPairs = pairData?.filter((pair) => {
@@ -374,10 +486,8 @@ const FuturesUI = () => {
             style={{ padding: 6 }}
             activeOpacity={0.7}
             onPress={() => {
-              if (Platform.OS === 'android') {
-                ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-              } else {
-                Alert.alert('Coming soon');
+              if (liveCoin) {
+                navigation.navigate('FutureChartScreen', { coin: liveCoin, tradeType: 'Future' });
               }
             }}
           >
@@ -411,16 +521,37 @@ const FuturesUI = () => {
     </View>
   );
 
-  const OrderBook = () => {
     const obAsks = React.useMemo(() => {
       const allAsks = futuresData?.sell_order || [];
-      return viewModeIndex === 1 ? [] : allAsks.slice(0, 50);
-    }, [futuresData?.sell_order, viewModeIndex]);
+      const aggregated = aggregateOrderBookRows(allAsks, precision);
+      const sorted = [...aggregated].sort((a, b) => Number(a.price) - Number(b.price));
+      let data = viewModeIndex === 1 ? [] : sorted.slice(0, 50);
+
+      if (viewModeIndex !== 1) {
+        const minRows = viewModeIndex === 0 ? 6 : 12;
+        data = [...data];
+        while (data.length < minRows) {
+          data.push({ isPlaceholder: true, _id: `placeholder-ask-${data.length}` });
+        }
+      }
+      return data;
+    }, [futuresData?.sell_order, viewModeIndex, precision]);
 
     const obBids = React.useMemo(() => {
       const allBids = futuresData?.buy_order || [];
-      return viewModeIndex === 2 ? [] : allBids.slice(0, 50);
-    }, [futuresData?.buy_order, viewModeIndex]);
+      const aggregated = aggregateOrderBookRows(allBids, precision);
+      const sorted = [...aggregated].sort((a, b) => Number(b.price) - Number(a.price));
+      let data = viewModeIndex === 2 ? [] : sorted.slice(0, 50);
+
+      if (viewModeIndex !== 2) {
+        const minRows = viewModeIndex === 0 ? 6 : 12;
+        data = [...data];
+        while (data.length < minRows) {
+          data.push({ isPlaceholder: true, _id: `placeholder-bid-${data.length}` });
+        }
+      }
+      return data;
+    }, [futuresData?.buy_order, viewModeIndex, precision]);
 
     const maxVolume = React.useMemo(() => {
       const maxAsk = obAsks.reduce((max, a) => Math.max(max, a.remaining || 0), 0);
@@ -428,7 +559,41 @@ const FuturesUI = () => {
       return Math.max(maxAsk, maxBid) || 1;
     }, [obAsks, obBids]);
 
-    return (
+    const orderBookBidAskRatio = React.useMemo(() => {
+      const bid = obBids.reduce((s, o) => s + (Number(o.remaining ?? o.quantity) || 0), 0);
+      const ask = obAsks.reduce((s, o) => s + (Number(o.remaining ?? o.quantity) || 0), 0);
+      const t = bid + ask;
+      if (t <= 0) return { bidPct: 50, askPct: 50 };
+      return { bidPct: (bid / t) * 100, askPct: (ask / t) * 100 };
+    }, [obBids, obAsks]);
+
+    const renderAskItem = React.useCallback(({ item }) => (
+      <OrderBookAskRow
+        item={item}
+        maxVolume={maxVolume}
+        themeColors={themeColors}
+        isDark={isDark}
+        selectedCoin={selectedCoin}
+        styles={styles}
+      />
+    ), [maxVolume, themeColors, isDark, selectedCoin]);
+
+    const renderBidItem = React.useCallback(({ item }) => (
+      <OrderBookBidRow
+        item={item}
+        maxVolume={maxVolume}
+        themeColors={themeColors}
+        isDark={isDark}
+        selectedCoin={selectedCoin}
+        styles={styles}
+      />
+    ), [maxVolume, themeColors, isDark, selectedCoin]);
+
+    const getLayout = React.useCallback((_, index) => ({
+      length: 26, offset: 26 * index, index
+    }), []);
+
+    const renderOrderBook = () => (
       <View style={styles.leftColumn}>
         <View style={styles.fundingRow}>
           <AppText type={TEN} color={themeColors.secondaryText} style={[styles.dashedUnderline, { alignSelf: 'flex-start' }]}>Funding / Countdown</AppText>
@@ -453,93 +618,65 @@ const FuturesUI = () => {
           <View>
             {/* Asks */}
             {obAsks.length > 0 && (
-              <View style={{ height: viewModeIndex === 0 ? 154 : 308, width: '100%' }}>
-                <ScrollView
+              <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
+                <FlatList
+                  data={obAsks}
+                  inverted={true}
                   showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ flexDirection: 'column-reverse' }}
-                >
-                  {obAsks.map((ask, i) => {
-                    const ratio = Math.min(100, (ask.remaining / maxVolume) * 100);
-                    return (
-                      <View key={`ask-${ask._id || i}`} style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
-                        <View
-                          pointerEvents="none"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            bottom: 0,
-                            right: 0,
-                            width: `${ratio > 0 ? Math.max(2, ratio) : 0}%`,
-                            backgroundColor: isDark ? "rgba(232, 97, 97, 0.18)" : "rgba(255, 77, 79, 0.14)",
-                          }}
-                        />
-                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.red }}>
-                          {formatPriceByTick(ask.price, selectedCoin)}
-                        </AppText>
-                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                          {formatQtyByStep(ask.remaining, selectedCoin)}
-                        </AppText>
-                      </View>
-                    );
-                  })}
-                </ScrollView>
+                  nestedScrollEnabled={true}
+                  removeClippedSubviews={true}
+                  initialNumToRender={8}
+                  maxToRenderPerBatch={8}
+                  windowSize={5}
+                  updateCellsBatchingPeriod={100}
+                  getItemLayout={getLayout}
+                  keyExtractor={(item, i) => item._id ? `ask-${item._id}` : `ask-idx-${i}`}
+                  renderItem={renderAskItem}
+                />
               </View>
             )}
 
             {/* Current Price */}
             <View style={styles.currentPrice}>
-              <AppText type={SIXTEEN} color={isPricePositive ? colors.green : colors.red} weight={SEMI_BOLD}>{livePrice || "0.00"}</AppText>
-              <AppText type={TEN} color={themeColors.secondaryText}>${livePrice || "0.00"}</AppText>
+              <AppText type={SIXTEEN} style={{ color: isPricePositive ? colors.green : colors.red }} weight={SEMI_BOLD}>{livePrice || "0.00"}</AppText>
+              <AppText type={TEN} style={{ color: themeColors.secondaryText }}>${livePrice || "0.00"}</AppText>
             </View>
 
             {/* Bids */}
             {obBids.length > 0 && (
-              <View style={{ height: viewModeIndex === 0 ? 154 : 308, width: '100%' }}>
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  {obBids.map((bid, i) => {
-                    const ratio = Math.min(100, (bid.remaining / maxVolume) * 100);
-                    return (
-                      <View key={`bid-${bid._id || i}`} style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
-                        <View
-                          pointerEvents="none"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            bottom: 0,
-                            right: 0,
-                            width: `${ratio > 0 ? Math.max(2, ratio) : 0}%`,
-                            backgroundColor: isDark ? "rgba(38, 166, 154, 0.18)" : "rgba(38, 166, 154, 0.14)",
-                          }}
-                        />
-                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.green }}>
-                          {formatPriceByTick(bid.price, selectedCoin)}
-                        </AppText>
-                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                          {formatQtyByStep(bid.remaining, selectedCoin)}
-                        </AppText>
-                      </View>
-                    );
-                  })}
-                </ScrollView>
+              <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
+                <FlatList
+                  data={obBids}
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled={true}
+                  removeClippedSubviews={true}
+                  initialNumToRender={8}
+                  maxToRenderPerBatch={8}
+                  windowSize={5}
+                  updateCellsBatchingPeriod={100}
+                  getItemLayout={getLayout}
+                  keyExtractor={(item, i) => item._id ? `bid-${item._id}` : `bid-idx-${i}`}
+                  renderItem={renderBidItem}
+                />
               </View>
             )}
           </View>
         )}
 
-        {/* Ratio Bar */}
+        {/* Ratio Indicator */}
         <View style={[styles.ratioIndicatorBar, { marginVertical: 8, gap: 4 }]}>
           <View style={{ justifyContent: "flex-start", flexShrink: 0 }}>
             <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
-              48.5%
+              {orderBookBidAskRatio.bidPct.toFixed(2)}%
             </AppText>
           </View>
           <View style={[styles.ratioIndicatorTrack, { flex: 1, height: 3 }]}>
-            <View style={[styles.ratioIndicatorFill, { width: `48.5%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
+            <View style={[styles.ratioIndicatorFill, { width: `${orderBookBidAskRatio.bidPct}%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
             <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
           </View>
           <View style={{ justifyContent: "flex-end", flexShrink: 0 }}>
             <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 10 }}>
-              51.5%
+              {orderBookBidAskRatio.askPct.toFixed(2)}%
             </AppText>
           </View>
         </View>
@@ -572,7 +709,7 @@ const FuturesUI = () => {
                 styles.spotObAggPopover,
                 {
                   top: obPrecisionLayout.y + obPrecisionLayout.h + 4,
-                  left: Math.max(8, Math.min(obPrecisionLayout.x + obPrecisionLayout.w - 144, width - 8 - 144)),
+                  left: Math.max(8, Math.min(obPrecisionLayout.x + obPrecisionLayout.w - 144, Width - 8 - 144)),
                   backgroundColor: themeColors.card,
                   borderColor: themeColors.themeBorderColor,
                 },
@@ -608,9 +745,8 @@ const FuturesUI = () => {
         </Modal>
       </View>
     );
-  };
 
-  const OrderForm = () => (
+  const renderOrderForm = () => (
     <View style={styles.rightColumn}>
       {/* Open / Close Toggle */}
       <View style={styles.toggleContainer}>
@@ -624,6 +760,7 @@ const FuturesUI = () => {
 
       {/* Margin / Leverage */}
       <View style={[styles.marginRow, { marginBottom: 8 }]}>
+        {/*
         <TouchableOpacity
           style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
           onPress={() => marginModeSheetRef.current?.open()}
@@ -631,6 +768,18 @@ const FuturesUI = () => {
         >
           <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
             <AppText type={THIRTEEN} weight={SEMI_BOLD}>{marginMode}</AppText>
+            <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
+          </View>
+        </TouchableOpacity>
+        */}
+
+        <TouchableOpacity
+          style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
+          onPress={() => orderTypeSheetRef.current?.open()}
+          activeOpacity={0.7}
+        >
+          <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
+            <AppText type={THIRTEEN} weight={SEMI_BOLD}>{orderType}</AppText>
             <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
           </View>
         </TouchableOpacity>
@@ -647,6 +796,7 @@ const FuturesUI = () => {
       </View>
 
       {/* Order Type */}
+      {/*
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <TouchableOpacity
           activeOpacity={0.7}
@@ -682,6 +832,7 @@ const FuturesUI = () => {
           </View>
         </TouchableOpacity>
       </View>
+      */}
 
       {/* Price Input */}
       <View style={styles.inputRow}>
@@ -792,7 +943,7 @@ const FuturesUI = () => {
           <AppText type={SIXTEEN} weight={BOLD}>Open Orders (0)</AppText>
           <View style={styles.activeTabIndicator} />
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.bottomTab}
           onPress={() => {
             if (Platform.OS === 'android') {
@@ -804,7 +955,7 @@ const FuturesUI = () => {
         >
           <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.secondaryText}>Orders (0)</AppText>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.bottomTab}
           onPress={() => {
             if (Platform.OS === 'android') {
@@ -817,7 +968,7 @@ const FuturesUI = () => {
           <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.secondaryText}>Assets</AppText>
         </TouchableOpacity>
       </ScrollView>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.historyIconBtn}
         onPress={() => {
           if (Platform.OS === 'android') {
@@ -844,8 +995,8 @@ const FuturesUI = () => {
       <Header />
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.mainContent}>
-          <OrderBook />
-          <OrderForm />
+          {renderOrderBook()}
+          {renderOrderForm()}
         </View>
         <View style={styles.divider} />
         <BottomTabs />

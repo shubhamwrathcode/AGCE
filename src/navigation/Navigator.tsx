@@ -113,6 +113,7 @@ import DepositCoin from "../screens/wallet/DepositCoin";
 import DashboardInner from "../screens/dashboardInner/DashboardInner";
 import Spot from "../screens/spotScreen/Spot";
 import SpotChartScreen from "../screens/spotScreen/SpotChartScreen";
+import FutureChartScreen from "../screens/Futures/FutureChartScreen";
 import MarginBorrowRepay from "../screens/spotScreen/MarginBorrowRepay";
 import MarginTransfer from "../screens/spotScreen/MarginTransfer";
 import ProfileDrawer from "../screens/profileDrawer/ProfileDrawer";
@@ -488,6 +489,7 @@ const MyAuthLoadingStack = () => {
       />
       <Stack.Screen name={routes.SPOT_MARKET_SCREEN} component={SpotMarket as any} />
       <Stack.Screen name={routes.SPOT_CHART_SCREEN} component={SpotChartScreen} />
+      <Stack.Screen name="FutureChartScreen" component={FutureChartScreen} />
       <Stack.Screen name={routes.MARGIN_BORROW_REPAY_SCREEN} component={MarginBorrowRepay} />
       <Stack.Screen name={routes.MARGIN_BORROW_REPAY_HISTORY_SCREEN} component={MarginBorrowRepayHistory} />
       <Stack.Screen name={routes.MARGIN_TRANSFER_SCREEN} component={MarginTransfer} />
