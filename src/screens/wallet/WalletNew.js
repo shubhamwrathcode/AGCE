@@ -107,7 +107,7 @@ const DeferredTabScene = ({ children }) => {
   return children;
 };
 
-const WalletNew = () => {
+const WalletNew = ({ route }) => {
   const dispatch = useDispatch();
   const depsoitSheet = useRef(null);
   const withdrawSheet = useRef(null);
@@ -182,6 +182,12 @@ const WalletNew = () => {
     },
     [topRoutes]
   );
+
+  useEffect(() => {
+    if (route?.params?.activeTab) {
+      setActiveTab(route.params.activeTab);
+    }
+  }, [route?.params?.activeTab, setActiveTab]);
 
   const layout = useWindowDimensions();
   const [showBalance, setShowBalance] = useState(true);

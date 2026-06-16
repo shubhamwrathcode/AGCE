@@ -262,7 +262,7 @@ export const SocketProvider = ({ children }) => {
 
       const handleFuturesUpdate = (data) => {
         if (!data || currentFuturesSubscription.current == null) return;
-        console.log("FUTURES UPDATE:", Object.keys(data), "sell_order length:", data?.sell_order?.length);
+        // console.log("FUTURES UPDATE:", Object.keys(data), "sell_order length:", data?.sell_order?.length);
         pendingFuturesData = data;
 
         if (!futuresThrottleTimer) {

@@ -1,10 +1,10 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated, FlatList, Platform, ToastAndroid, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated, FlatList, Platform, ToastAndroid, Alert, Keyboard } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import FastImage from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import FuturePairList from './FuturePairList';
 import { useFuturesSocket } from './useFuturesSocket';
@@ -35,8 +35,18 @@ import {
   NO_NOTIFICATION_ICON
 } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
-import { formatPriceByTick, formatQtyByStep, getOrderBookAggOptionsForPair, aggregateOrderBookRows, getTickSize } from '../../helper/futuresUtils';
+import { 
+  computeFuturesLeverageStats, 
+  formatPriceByTick, 
+  formatQtyByStep,
+  getOrderBookAggOptionsForPair,
+  aggregateOrderBookRows,
+  getTickSize,
+  resolveTakerFeeRate
+} from '../../helper/futuresUtils';
 import { LogBox } from 'react-native';
+import { getUserFuturesWallet, getOpenOrders } from '../../actions/walletActions';
+import { IMAGE_BASE_URL } from '../../helper/Constants';
 
 LogBox.ignoreLogs(['VirtualizedLists should never be nested inside plain ScrollViews']);
 
@@ -201,12 +211,37 @@ const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
 
 const FuturesUI = () => {
   const themeObj = useTheme();
+  const dispatch = useDispatch();
   const { colors: themeColors, isDark } = themeObj;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
   const [activeTab, setActiveTab] = useState('Open');
   const [sliderValue, setSliderValue] = useState(0);
+  const [price, setPrice] = useState("");
+  const [amount, setAmount] = useState("");
+
+  const priceAnim = useRef(new Animated.Value(0)).current;
+  const amountAnim = useRef(new Animated.Value(0)).current;
+  const [isPriceFocused, setIsPriceFocused] = useState(false);
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
+
+  useEffect(() => {
+    Animated.timing(priceAnim, {
+      toValue: isPriceFocused || String(price ?? "").trim() !== "" ? 1 : 0,
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
+  }, [isPriceFocused, price]);
+
+  useEffect(() => {
+    Animated.timing(amountAnim, {
+      toValue: isAmountFocused || String(amount ?? "").trim() !== "" ? 1 : 0,
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
+  }, [isAmountFocused, amount]);
+
   const pairSheetRef = useRef(null);
 
   const {
@@ -219,6 +254,13 @@ const FuturesUI = () => {
   } = useFuturesSocket();
   const isFocused = useIsFocused();
   const futuresPairs = useSelector((state) => state.home.futuresPairs);
+  const userFuturesWallet = useSelector((state) => state.wallet.userFuturesWallet);
+
+  const usdtFuturesWallet = React.useMemo(() => {
+    if (!Array.isArray(userFuturesWallet)) return null;
+    return userFuturesWallet.find(w => w?.short_name === 'USDT' || w?.currency === 'USDT');
+  }, [userFuturesWallet]);
+
   const [pairData, setPairData] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState(null);
 
@@ -228,6 +270,56 @@ const FuturesUI = () => {
 
   const [livePriceState, setLivePriceState] = useState("");
   const lastStreamBidRef = useRef(null);
+  const limitPriceSeededPairRef = useRef(null);
+
+
+
+  const calculateAmountForSlider = (val, currentUnit, currentPrice) => {
+    if (val === 0) return '';
+
+    const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+    const takerFeeRate = resolveTakerFeeRate(selectedCoin);
+    const stats = computeFuturesLeverageStats({
+      availableBalance: balanceToUse,
+      leverage: marginLeverage,
+      maxLeverage: selectedCoin?.max_leverage || 125,
+      leverageTiers: selectedCoin?.leverage_tiers || [],
+      takerFeeRate,
+    });
+
+    const maxNotional = stats.allowToOpen || 0;
+    if (!Number.isFinite(maxNotional) || maxNotional < 0 || maxNotional === Infinity) {
+      return '';
+    }
+
+    const isValueUnit = currentUnit.includes('Value');
+    if (isValueUnit) {
+      const dec = selectedCoin?.quote_decimal ?? 2;
+      const valAmount = (maxNotional * val) / 100;
+      return parseFloat(valAmount.toFixed(dec)).toString();
+    } else {
+      let p = Number(currentPrice);
+      if (!Number.isFinite(p) || p <= 0) {
+        p = Number(liveCoin?.mark_price);
+      }
+      if (!Number.isFinite(p) || p <= 0) return '';
+
+      const maxQty = maxNotional / p;
+      const qty = (maxQty * val) / 100;
+      return String(formatQtyByStep(qty, selectedCoin));
+    }
+  };
+
+  const handleSliderChange = (val) => {
+    setSliderValue(val);
+  };
+
+  useEffect(() => {
+    // 2. Normal slider recalculation
+    if (sliderValue > 0) {
+      setAmount(calculateAmountForSlider(sliderValue, contractUnit, price));
+    }
+  }, [sliderValue, contractUnit, marginLeverage, price]);
 
   useEffect(() => {
     if (!futuresPrice) return;
@@ -236,17 +328,23 @@ const FuturesUI = () => {
     const p = futuresPrice.mark_price ?? futuresPrice.last_price;
     if (p == null) return;
 
-    const price = parseFloat(p);
-    if (!Number.isFinite(price) || price <= 0) return;
+    const priceNum = parseFloat(p);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) return;
+
+    const pairId = selectedCoin?._id;
+    if (pairId && limitPriceSeededPairRef.current !== pairId) {
+      limitPriceSeededPairRef.current = pairId;
+      setPrice(String(formatPriceByTick(priceNum, selectedCoin)));
+    }
 
     if (lastStreamBidRef.current != null) {
       const prev = Number(lastStreamBidRef.current);
-      if (price > prev) setIsPricePositive(true);
-      else if (price < prev) setIsPricePositive(false);
+      if (priceNum > prev) setIsPricePositive(true);
+      else if (priceNum < prev) setIsPricePositive(false);
     }
-    lastStreamBidRef.current = price;
+    lastStreamBidRef.current = priceNum;
     setLivePriceState(p);
-  }, [futuresPrice, selectedCoin?.symbol]);
+  }, [futuresPrice, selectedCoin]);
 
   const livePrice = React.useMemo(() => {
     if (livePriceState) return parseFloat(livePriceState) || 0;
@@ -285,7 +383,15 @@ const FuturesUI = () => {
   const marginModeSheetRef = useRef(null);
   const [batchAdjustMarginMode, setBatchAdjustMarginMode] = useState(false);
   const [contractUnit, setContractUnit] = useState('Amount (BTC)');
+  const [contractUnitDraft, setContractUnitDraft] = useState('Amount (BTC)');
   const contractUnitSheetRef = useRef(null);
+
+  useEffect(() => {
+    if (selectedCoin?.short_name) {
+      setContractUnit(`Amount (${selectedCoin.short_name})`);
+      setContractUnitDraft(`Amount (${selectedCoin.short_name})`);
+    }
+  }, [selectedCoin]);
 
   // Precision Dropdown State
   const obPrecisionOptions = React.useMemo(() => {
@@ -321,8 +427,8 @@ const FuturesUI = () => {
     setObPrecisionOpen(false);
     setObPrecisionLayout(null);
   };
-  const [marginLeverage, setMarginLeverage] = useState(10);
-  const [leverageDraft, setLeverageDraft] = useState(10);
+  const [marginLeverage, setMarginLeverage] = useState(1);
+  const [leverageDraft, setLeverageDraft] = useState(1);
   const rbSheetMarginLeverage = useRef(null);
 
   const ORDER_TYPE_SHEET_BASIC = [
@@ -402,12 +508,24 @@ const FuturesUI = () => {
       setPairData(pairsArray);
       if (!selectedCoin) {
         const btcPair = pairsArray.find((pair) => pair.symbol === "BTCUSDT-PERP");
-        setSelectedCoin(btcPair || pairsArray[0]);
+        const initPair = btcPair || pairsArray[0];
+        setSelectedCoin(initPair);
+        if (initPair) {
+          const p = initPair?.buy_price ?? initPair?.last_price ?? initPair?.mark_price;
+          if (p) {
+            setPrice(String(formatPriceByTick(parseFloat(p), initPair)));
+            limitPriceSeededPairRef.current = initPair?._id;
+          }
+        }
       }
     }
   }, [futuresPairs, selectedCoin, futuresData]);
 
   useEffect(() => {
+    if (isFocused) {
+      dispatch(getOpenOrders(0, 10, "cross", selectedCoin?.symbol));
+      dispatch(getUserFuturesWallet("futures"));
+    }
     if (isFocused && pairData.length === 0) {
       subscribeToFutures();
       const t = setTimeout(() => subscribeToFutures(), 800);
@@ -439,6 +557,10 @@ const FuturesUI = () => {
     setSelectedCoin(pair);
     pairSheetRef.current?.close();
     setSearchTerm("");
+    const p = pair?.buy_price ?? pair?.last_price ?? pair?.mark_price;
+    if (p) {
+      setPrice(String(formatPriceByTick(parseFloat(p), pair)));
+    }
     subscribeToFutures({ symbol: pair.symbol });
   };
 
@@ -521,53 +643,57 @@ const FuturesUI = () => {
     </View>
   );
 
-    const obAsks = React.useMemo(() => {
-      const allAsks = futuresData?.sell_order || [];
-      const aggregated = aggregateOrderBookRows(allAsks, precision);
-      const sorted = [...aggregated].sort((a, b) => Number(a.price) - Number(b.price));
-      let data = viewModeIndex === 1 ? [] : sorted.slice(0, 50);
+  const obAsks = React.useMemo(() => {
+    const allAsks = futuresData?.sell_order || [];
+    const aggregated = aggregateOrderBookRows(allAsks, precision);
+    const sorted = [...aggregated].sort((a, b) => Number(a.price) - Number(b.price));
+    let data = viewModeIndex === 1 ? [] : sorted.slice(0, 50);
 
-      if (viewModeIndex !== 1) {
-        const minRows = viewModeIndex === 0 ? 6 : 12;
-        data = [...data];
-        while (data.length < minRows) {
-          data.push({ isPlaceholder: true, _id: `placeholder-ask-${data.length}` });
-        }
+    if (viewModeIndex !== 1) {
+      const minRows = viewModeIndex === 0 ? 6 : 12;
+      data = [...data];
+      while (data.length < minRows) {
+        data.push({ isPlaceholder: true, _id: `placeholder-ask-${data.length}` });
       }
-      return data;
-    }, [futuresData?.sell_order, viewModeIndex, precision]);
+    }
+    return data;
+  }, [futuresData?.sell_order, viewModeIndex, precision]);
 
-    const obBids = React.useMemo(() => {
-      const allBids = futuresData?.buy_order || [];
-      const aggregated = aggregateOrderBookRows(allBids, precision);
-      const sorted = [...aggregated].sort((a, b) => Number(b.price) - Number(a.price));
-      let data = viewModeIndex === 2 ? [] : sorted.slice(0, 50);
+  const obBids = React.useMemo(() => {
+    const allBids = futuresData?.buy_order || [];
+    const aggregated = aggregateOrderBookRows(allBids, precision);
+    const sorted = [...aggregated].sort((a, b) => Number(b.price) - Number(a.price));
+    let data = viewModeIndex === 2 ? [] : sorted.slice(0, 50);
 
-      if (viewModeIndex !== 2) {
-        const minRows = viewModeIndex === 0 ? 6 : 12;
-        data = [...data];
-        while (data.length < minRows) {
-          data.push({ isPlaceholder: true, _id: `placeholder-bid-${data.length}` });
-        }
+    if (viewModeIndex !== 2) {
+      const minRows = viewModeIndex === 0 ? 6 : 12;
+      data = [...data];
+      while (data.length < minRows) {
+        data.push({ isPlaceholder: true, _id: `placeholder-bid-${data.length}` });
       }
-      return data;
-    }, [futuresData?.buy_order, viewModeIndex, precision]);
+    }
+    return data;
+  }, [futuresData?.buy_order, viewModeIndex, precision]);
 
-    const maxVolume = React.useMemo(() => {
-      const maxAsk = obAsks.reduce((max, a) => Math.max(max, a.remaining || 0), 0);
-      const maxBid = obBids.reduce((max, b) => Math.max(max, b.remaining || 0), 0);
-      return Math.max(maxAsk, maxBid) || 1;
-    }, [obAsks, obBids]);
+  const maxVolume = React.useMemo(() => {
+    const maxAsk = obAsks.reduce((max, a) => Math.max(max, a.remaining || 0), 0);
+    const maxBid = obBids.reduce((max, b) => Math.max(max, b.remaining || 0), 0);
+    return Math.max(maxAsk, maxBid) || 1;
+  }, [obAsks, obBids]);
 
-    const orderBookBidAskRatio = React.useMemo(() => {
-      const bid = obBids.reduce((s, o) => s + (Number(o.remaining ?? o.quantity) || 0), 0);
-      const ask = obAsks.reduce((s, o) => s + (Number(o.remaining ?? o.quantity) || 0), 0);
-      const t = bid + ask;
-      if (t <= 0) return { bidPct: 50, askPct: 50 };
-      return { bidPct: (bid / t) * 100, askPct: (ask / t) * 100 };
-    }, [obBids, obAsks]);
+  const orderBookBidAskRatio = React.useMemo(() => {
+    const bid = obBids.reduce((s, o) => s + (Number(o.remaining ?? o.quantity) || 0), 0);
+    const ask = obAsks.reduce((s, o) => s + (Number(o.remaining ?? o.quantity) || 0), 0);
+    const t = bid + ask;
+    if (t <= 0) return { bidPct: 50, askPct: 50 };
+    return { bidPct: (bid / t) * 100, askPct: (ask / t) * 100 };
+  }, [obBids, obAsks]);
 
-    const renderAskItem = React.useCallback(({ item }) => (
+  const renderAskItem = React.useCallback(({ item }) => (
+    <TouchableOpacity onPress={() => {
+      if (item.isPlaceholder) return;
+      setPrice(String(formatPriceByTick(item.price, selectedCoin)));
+    }}>
       <OrderBookAskRow
         item={item}
         maxVolume={maxVolume}
@@ -576,9 +702,14 @@ const FuturesUI = () => {
         selectedCoin={selectedCoin}
         styles={styles}
       />
-    ), [maxVolume, themeColors, isDark, selectedCoin]);
+    </TouchableOpacity>
+  ), [maxVolume, themeColors, isDark, selectedCoin]);
 
-    const renderBidItem = React.useCallback(({ item }) => (
+  const renderBidItem = React.useCallback(({ item }) => (
+    <TouchableOpacity onPress={() => {
+      if (item.isPlaceholder) return;
+      setPrice(String(formatPriceByTick(item.price, selectedCoin)));
+    }}>
       <OrderBookBidRow
         item={item}
         maxVolume={maxVolume}
@@ -587,164 +718,165 @@ const FuturesUI = () => {
         selectedCoin={selectedCoin}
         styles={styles}
       />
-    ), [maxVolume, themeColors, isDark, selectedCoin]);
+    </TouchableOpacity>
+  ), [maxVolume, themeColors, isDark, selectedCoin]);
 
-    const getLayout = React.useCallback((_, index) => ({
-      length: 26, offset: 26 * index, index
-    }), []);
+  const getLayout = React.useCallback((_, index) => ({
+    length: 26, offset: 26 * index, index
+  }), []);
 
-    const renderOrderBook = () => (
-      <View style={styles.leftColumn}>
-        <View style={styles.fundingRow}>
-          <AppText type={TEN} color={themeColors.secondaryText} style={[styles.dashedUnderline, { alignSelf: 'flex-start' }]}>Funding / Countdown</AppText>
-          <AppText type={TEN} weight={SEMI_BOLD} style={[styles.dashedUnderline, { marginTop: 4, alignSelf: 'flex-start' }]}>0.0100% / 03:23:21</AppText>
-        </View>
-
-        <View style={styles.obHeader}>
-          <AppText type={TEN} color={themeColors.secondaryText}>Price{"\n"}(USDT)</AppText>
-          <AppText type={TEN} color={themeColors.secondaryText} style={{ textAlign: 'right' }}>Size{"\n"}(USDT)</AppText>
-        </View>
-
-        {(!futuresData?.sell_order && !futuresData?.buy_order) ? (
-          <View>
-            <OrderBookSkeleton />
-            <View style={[styles.currentPrice, { alignItems: 'flex-start', justifyContent: 'center' }]}>
-              <ShimmerBox width="100%" height={20} borderRadius={4} />
-              <ShimmerBox width="80%" height={14} borderRadius={4} style={{ marginTop: 6 }} />
-            </View>
-            <OrderBookSkeleton />
-          </View>
-        ) : (
-          <View>
-            {/* Asks */}
-            {obAsks.length > 0 && (
-              <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
-                <FlatList
-                  data={obAsks}
-                  inverted={true}
-                  showsVerticalScrollIndicator={false}
-                  nestedScrollEnabled={true}
-                  removeClippedSubviews={true}
-                  initialNumToRender={8}
-                  maxToRenderPerBatch={8}
-                  windowSize={5}
-                  updateCellsBatchingPeriod={100}
-                  getItemLayout={getLayout}
-                  keyExtractor={(item, i) => item._id ? `ask-${item._id}` : `ask-idx-${i}`}
-                  renderItem={renderAskItem}
-                />
-              </View>
-            )}
-
-            {/* Current Price */}
-            <View style={styles.currentPrice}>
-              <AppText type={SIXTEEN} style={{ color: isPricePositive ? colors.green : colors.red }} weight={SEMI_BOLD}>{livePrice || "0.00"}</AppText>
-              <AppText type={TEN} style={{ color: themeColors.secondaryText }}>${livePrice || "0.00"}</AppText>
-            </View>
-
-            {/* Bids */}
-            {obBids.length > 0 && (
-              <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
-                <FlatList
-                  data={obBids}
-                  showsVerticalScrollIndicator={false}
-                  nestedScrollEnabled={true}
-                  removeClippedSubviews={true}
-                  initialNumToRender={8}
-                  maxToRenderPerBatch={8}
-                  windowSize={5}
-                  updateCellsBatchingPeriod={100}
-                  getItemLayout={getLayout}
-                  keyExtractor={(item, i) => item._id ? `bid-${item._id}` : `bid-idx-${i}`}
-                  renderItem={renderBidItem}
-                />
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Ratio Indicator */}
-        <View style={[styles.ratioIndicatorBar, { marginVertical: 8, gap: 4 }]}>
-          <View style={{ justifyContent: "flex-start", flexShrink: 0 }}>
-            <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
-              {orderBookBidAskRatio.bidPct.toFixed(2)}%
-            </AppText>
-          </View>
-          <View style={[styles.ratioIndicatorTrack, { flex: 1, height: 3 }]}>
-            <View style={[styles.ratioIndicatorFill, { width: `${orderBookBidAskRatio.bidPct}%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
-            <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
-          </View>
-          <View style={{ justifyContent: "flex-end", flexShrink: 0 }}>
-            <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 10 }}>
-              {orderBookBidAskRatio.askPct.toFixed(2)}%
-            </AppText>
-          </View>
-        </View>
-
-        {/* Precision Dropdown */}
-        <View style={styles.spotObToolbarRow}>
-          <TouchableOpacity
-            ref={precisionTriggerRef}
-            onPress={openObPrecisionMenu}
-            style={[styles.spotObAggTrigger, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor, borderRadius: 5 }]}
-            activeOpacity={0.75}
-          >
-            <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>{precision}</AppText>
-            <FastImage source={downIcon} style={styles.spotObAggCaret} resizeMode='contain' tintColor={themeColors.secondaryText} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={cycleViewMode}
-            style={[styles.spotObViewCycleBtn, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor }]}
-            activeOpacity={0.75}
-          >
-            <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={styles.layoutIcon} resizeMode='contain' />
-          </TouchableOpacity>
-        </View>
-
-        <Modal visible={obPrecisionOpen} transparent animationType="fade" onRequestClose={closeObPrecisionMenu}>
-          <Pressable style={styles.spotObAggBackdrop} onPress={closeObPrecisionMenu} />
-          {obPrecisionLayout ? (
-            <View
-              style={[
-                styles.spotObAggPopover,
-                {
-                  top: obPrecisionLayout.y + obPrecisionLayout.h + 4,
-                  left: Math.max(8, Math.min(obPrecisionLayout.x + obPrecisionLayout.w - 144, Width - 8 - 144)),
-                  backgroundColor: themeColors.card,
-                  borderColor: themeColors.themeBorderColor,
-                },
-              ]}
-            >
-              {obPrecisionOptions.map((opt) => {
-                const selected = precision === opt;
-                return (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[
-                      styles.spotObAggRow,
-                      selected && { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" },
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setPrecision(opt);
-                      closeObPrecisionMenu();
-                    }}
-                  >
-                    <AppText
-                      type={TEN}
-                      weight={selected ? SEMI_BOLD : undefined}
-                      style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}
-                    >
-                      {opt}
-                    </AppText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : null}
-        </Modal>
+  const renderOrderBook = () => (
+    <View style={styles.leftColumn}>
+      <View style={styles.fundingRow}>
+        <AppText type={TEN} color={themeColors.secondaryText} style={[styles.dashedUnderline, { alignSelf: 'flex-start' }]}>Funding / Countdown</AppText>
+        <AppText type={TEN} weight={SEMI_BOLD} style={[styles.dashedUnderline, { marginTop: 4, alignSelf: 'flex-start' }]}>0.0100% / 03:23:21</AppText>
       </View>
-    );
+
+      <View style={styles.obHeader}>
+        <AppText type={TEN} color={themeColors.secondaryText}>Price{"\n"}(USDT)</AppText>
+        <AppText type={TEN} color={themeColors.secondaryText} style={{ textAlign: 'right' }}>Size{"\n"}(USDT)</AppText>
+      </View>
+
+      {(!futuresData?.sell_order && !futuresData?.buy_order) ? (
+        <View>
+          <OrderBookSkeleton />
+          <View style={[styles.currentPrice, { alignItems: 'flex-start', justifyContent: 'center' }]}>
+            <ShimmerBox width="100%" height={20} borderRadius={4} />
+            <ShimmerBox width="80%" height={14} borderRadius={4} style={{ marginTop: 6 }} />
+          </View>
+          <OrderBookSkeleton />
+        </View>
+      ) : (
+        <View>
+          {/* Asks */}
+          {obAsks.length > 0 && (
+            <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
+              <FlatList
+                data={obAsks}
+                inverted={true}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={5}
+                updateCellsBatchingPeriod={100}
+                getItemLayout={getLayout}
+                keyExtractor={(item, i) => item._id ? `ask-${item._id}` : `ask-idx-${i}`}
+                renderItem={renderAskItem}
+              />
+            </View>
+          )}
+
+          {/* Current Price */}
+          <View style={styles.currentPrice}>
+            <AppText type={SIXTEEN} style={{ color: isPricePositive ? colors.green : colors.red }} weight={SEMI_BOLD}>{livePrice || "0.00"}</AppText>
+            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>${livePrice || "0.00"}</AppText>
+          </View>
+
+          {/* Bids */}
+          {obBids.length > 0 && (
+            <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
+              <FlatList
+                data={obBids}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={5}
+                updateCellsBatchingPeriod={100}
+                getItemLayout={getLayout}
+                keyExtractor={(item, i) => item._id ? `bid-${item._id}` : `bid-idx-${i}`}
+                renderItem={renderBidItem}
+              />
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Ratio Indicator */}
+      <View style={[styles.ratioIndicatorBar, { marginVertical: 8, gap: 4 }]}>
+        <View style={{ justifyContent: "flex-start", flexShrink: 0 }}>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
+            {orderBookBidAskRatio.bidPct.toFixed(2)}%
+          </AppText>
+        </View>
+        <View style={[styles.ratioIndicatorTrack, { flex: 1, height: 3 }]}>
+          <View style={[styles.ratioIndicatorFill, { width: `${orderBookBidAskRatio.bidPct}%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
+          <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
+        </View>
+        <View style={{ justifyContent: "flex-end", flexShrink: 0 }}>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 10 }}>
+            {orderBookBidAskRatio.askPct.toFixed(2)}%
+          </AppText>
+        </View>
+      </View>
+
+      {/* Precision Dropdown */}
+      <View style={styles.spotObToolbarRow}>
+        <TouchableOpacity
+          ref={precisionTriggerRef}
+          onPress={openObPrecisionMenu}
+          style={[styles.spotObAggTrigger, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor, borderRadius: 5 }]}
+          activeOpacity={0.75}
+        >
+          <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>{precision}</AppText>
+          <FastImage source={downIcon} style={styles.spotObAggCaret} resizeMode='contain' tintColor={themeColors.secondaryText} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={cycleViewMode}
+          style={[styles.spotObViewCycleBtn, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor }]}
+          activeOpacity={0.75}
+        >
+          <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={styles.layoutIcon} resizeMode='contain' />
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={obPrecisionOpen} transparent animationType="fade" onRequestClose={closeObPrecisionMenu}>
+        <Pressable style={styles.spotObAggBackdrop} onPress={closeObPrecisionMenu} />
+        {obPrecisionLayout ? (
+          <View
+            style={[
+              styles.spotObAggPopover,
+              {
+                top: obPrecisionLayout.y + obPrecisionLayout.h + 4,
+                left: Math.max(8, Math.min(obPrecisionLayout.x + obPrecisionLayout.w - 144, Width - 8 - 144)),
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.themeBorderColor,
+              },
+            ]}
+          >
+            {obPrecisionOptions.map((opt) => {
+              const selected = precision === opt;
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  style={[
+                    styles.spotObAggRow,
+                    selected && { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" },
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setPrecision(opt);
+                    closeObPrecisionMenu();
+                  }}
+                >
+                  <AppText
+                    type={TEN}
+                    weight={selected ? SEMI_BOLD : undefined}
+                    style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}
+                  >
+                    {opt}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
+      </Modal>
+    </View>
+  );
 
   const renderOrderForm = () => (
     <View style={styles.rightColumn}>
@@ -760,19 +892,6 @@ const FuturesUI = () => {
 
       {/* Margin / Leverage */}
       <View style={[styles.marginRow, { marginBottom: 8 }]}>
-        {/*
-        <TouchableOpacity
-          style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
-          onPress={() => marginModeSheetRef.current?.open()}
-          activeOpacity={0.7}
-        >
-          <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
-            <AppText type={THIRTEEN} weight={SEMI_BOLD}>{marginMode}</AppText>
-            <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
-          </View>
-        </TouchableOpacity>
-        */}
-
         <TouchableOpacity
           style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
           onPress={() => orderTypeSheetRef.current?.open()}
@@ -795,77 +914,108 @@ const FuturesUI = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Order Type */}
-      {/*
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => orderTypeSheetRef.current?.open()}
-          style={{
-            backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-            flex: 1,
-            borderRadius: 6,
-            paddingVertical: 8,
-            paddingHorizontal: 10,
-          }}
-        >
-          <View pointerEvents="none" style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
-            <AppText
-              weight={MEDIUM}
-              style={{ color: themeColors.text, fontSize: 14 }}
-            >
-              {orderType}
-            </AppText>
-            <FastImage
-              source={INFO}
-              style={{ height: 14, width: 14, marginLeft: 6 }}
-              resizeMode="contain"
-              tintColor={themeColors.secondaryText}
-            />
-            <View style={{ flex: 1 }} />
-            <FastImage
-              source={downIcon}
-              resizeMode="contain"
-              style={{ width: 10, height: 10 }}
-              tintColor={themeColors.secondaryText}
-            />
-          </View>
-        </TouchableOpacity>
-      </View>
-      */}
-
       {/* Price Input */}
       <View style={styles.inputRow}>
-        <View style={styles.inputBox}>
-          <AppText type={TEN} color={themeColors.secondaryText} style={{ marginBottom: -4 }}>Price (USDT)</AppText>
+        <View style={[styles.inputBox, { position: "relative", justifyContent: "center" }]}>
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 10,
+              top: priceAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [12, 4],
+              }),
+            }}
+          >
+            <Animated.Text
+              style={{
+                color: themeColors.secondaryText,
+                fontFamily: fontFamilyMedium,
+                fontSize: priceAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [13, 11],
+                }),
+              }}
+            >
+              Price
+            </Animated.Text>
+          </Animated.View>
           <TextInput
-            value="0.057508"
-            style={[styles.textInput, { color: themeColors.text }]}
-            editable={false}
+            cursorColor={colors.black}
+            value={price}
+            onChangeText={setPrice}
+            onFocus={() => setIsPriceFocused(true)}
+            onBlur={() => setIsPriceFocused(false)}
+            placeholder=""
+            keyboardType="numeric"
+            style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
           />
         </View>
-        <TouchableOpacity style={styles.bboBtn}>
-          <AppText type={TWELVE} weight={SEMI_BOLD}>BBO</AppText>
-        </TouchableOpacity>
       </View>
 
       {/* Amount Input */}
-      <View style={[styles.inputBox, { flex: 0, marginTop: 12, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-        <View style={{ justifyContent: 'center' }}>
-          <AppText type={TEN} color={themeColors.secondaryText} style={{ marginBottom: -5 }}>{contractUnit}</AppText>
+      <View style={[styles.inputBox, { flex: 0, marginTop: 12, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+        <View style={{ justifyContent: 'center', flex: 1 }}>
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              top: amountAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [12, 4],
+              }),
+            }}
+          >
+            <Animated.Text
+              style={{
+                color: themeColors.secondaryText,
+                fontFamily: fontFamilyMedium,
+                fontSize: amountAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [13, 11],
+                }),
+              }}
+            >
+              Amount
+            </Animated.Text>
+          </Animated.View>
           <TextInput
-            value="45%"
-            style={[styles.textInput, { color: themeColors.text }]}
-            editable={false}
+            cursorColor={colors.black}
+            value={amount}
+            onChangeText={(text) => {
+              if (isAmountFocused) {
+                setAmount(text);
+                setSliderValue(0);
+              }
+            }}
+            onFocus={() => {
+              setIsAmountFocused(true);
+              setSliderValue(0);
+            }}
+            onBlur={() => setIsAmountFocused(false)}
+            placeholder=""
+            keyboardType="numeric"
+            style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
           />
         </View>
         <TouchableOpacity
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-          onPress={() => contractUnitSheetRef.current?.open()}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 10 }}
+          onPress={() => {
+            Keyboard.dismiss();
+            setIsAmountFocused(false);
+            setContractUnitDraft(contractUnit);
+            contractUnitSheetRef.current?.open();
+          }}
           activeOpacity={0.8}
         >
           <AppText type={TWELVE} weight={SEMI_BOLD}>
-            {contractUnit.includes('BTC') ? 'BTC' : contractUnit.includes('USDT') ? 'USDT' : 'Cont.'}
+            {(() => {
+              const match = contractUnit.match(/\(([^)]+)\)/);
+              const label = match ? match[1] : 'Cont.';
+              return label === 'Contracts' ? 'Cont.' : label;
+            })()}
           </AppText>
           <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode='contain' tintColor={themeColors.text} />
         </TouchableOpacity>
@@ -875,7 +1025,14 @@ const FuturesUI = () => {
       <View style={{ marginVertical: 10 }}>
         <PercentQuickSelect
           activeValue={sliderValue}
-          onSelect={setSliderValue}
+          onSelect={(val) => {
+            Keyboard.dismiss();
+            setIsAmountFocused(false);
+            handleSliderChange(val);
+            if (val === 0) {
+              setAmount('');
+            }
+          }}
           theme={themeObj.theme}
         />
       </View>
@@ -887,11 +1044,24 @@ const FuturesUI = () => {
       </View>
 
       {/* Available */}
-      <View style={styles.availableRow}>
-        <AppText type={TWELVE} color={themeColors.secondaryText}>Available</AppText>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <AppText type={TWELVE}>-- USDT </AppText>
-          <FastImage source={add} style={{ width: 16, height: 16 }} resizeMode='contain' />
+      <View style={[styles.availableRow, { flexWrap: 'wrap' }]}>
+        <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginRight: 8, paddingVertical: 2 }}>Available</AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+          <AppText type={TWELVE}>{Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0)} USDT</AppText>
+          <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
+            <FastImage source={add} style={{ width: 16, height: 16, marginLeft: 6 }} resizeMode='contain' />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Margin */}
+      <View style={[styles.availableRow, { marginBottom: 16, flexWrap: 'wrap' }]}>
+        <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, { marginRight: 8, paddingVertical: 2 }]}>Margin</AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+          <AppText type={TWELVE} style={{ color: colors.green }}>0.00</AppText>
+          <AppText type={TWELVE} style={{ marginHorizontal: 4 }}>/</AppText>
+          <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4 }}>0.00</AppText>
+          <AppText type={TWELVE}>USDT</AppText>
         </View>
       </View>
 
@@ -1147,7 +1317,7 @@ const FuturesUI = () => {
           ref={contractUnitSheetRef}
           closeOnDragDown={true}
           closeOnPressMask={true}
-          height={520}
+          height={450}
           animationType="slide"
           customStyles={{
             container: {
@@ -1166,45 +1336,33 @@ const FuturesUI = () => {
           }}
         >
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 8, paddingBottom: 4 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 8, paddingBottom: 20 }}>
               <AppText weight={BOLD} style={{ fontSize: 18, color: themeColors.text }}>
-                Contract Unit Preferences
+                Contract Unit Settings
               </AppText>
               <TouchableOpacity onPress={() => contractUnitSheetRef.current?.close()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <FastImage source={REMOVE} style={{ width: 16, height: 16 }} tintColor={themeColors.text} resizeMode="contain" />
               </TouchableOpacity>
             </View>
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 20 }}>
-              Select the unit type you want to use for placing your order.
-            </AppText>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               {[
                 {
-                  name: "Amount (BTC)",
-                  description: "Specify the quantity of BTC tokens you wish to trade.",
+                  name: `Amount (${selectedCoin?.base_currency || 'BTC'})`,
+                  description: `Order size is entered in ${selectedCoin?.base_currency || 'BTC'} (base asset).`,
                 },
                 {
-                  name: "Value (USDT)",
-                  description: "Enter the total position value in USDT. The required margin will change according to your selected leverage.",
-                },
-                {
-                  name: "Cost (USDT)",
-                  description: "Enter the margin amount for this position. This amount remains constant regardless of leverage changes.",
-                },
-                {
-                  name: "Amount (Contracts)",
-                  description: "Specify the total number of contracts you want to place for this order.",
+                  name: `Value (${selectedCoin?.quote_currency || 'USDT'})`,
+                  description: `Order size is entered in ${selectedCoin?.quote_currency || 'USDT'} (notional / margin asset).`,
                 },
               ].map((item) => {
-                const isSelected = contractUnit === item.name;
+                const isSelected = contractUnitDraft === item.name;
                 return (
                   <TouchableOpacity
                     key={item.name}
                     activeOpacity={0.8}
                     onPress={() => {
-                      setContractUnit(item.name);
-                      contractUnitSheetRef.current?.close();
+                      setContractUnitDraft(item.name);
                     }}
                     style={{
                       backgroundColor: 'transparent',
@@ -1241,6 +1399,29 @@ const FuturesUI = () => {
                 );
               })}
             </ScrollView>
+            <Button
+              children='Confirm'
+              onPress={() => {
+                if (contractUnit !== contractUnitDraft) {
+                  setSliderValue(0);
+                  setAmount('');
+                }
+                setContractUnit(contractUnitDraft);
+                contractUnitSheetRef.current?.close();
+              }}
+              containerStyle={{
+                height: 50,
+                justifyContent: 'center',
+                borderRadius: 25,
+                marginTop: 20,
+                marginBottom: 20,
+              }}
+              textStyle={{
+                fontSize: 15,
+                fontFamily: fontFamilySemiBold,
+              }}
+            />
+
           </View>
         </RBSheet>
 
@@ -1249,14 +1430,14 @@ const FuturesUI = () => {
           ref={rbSheetMarginLeverage}
           closeOnDragDown={false}
           closeOnPressMask={true}
-          height={600}
+          height={640}
           animationType="slide"
           onOpen={() => {
             setLeverageDraft(marginLeverage);
           }}
           customStyles={{
             container: {
-              backgroundColor: colors.white,
+              backgroundColor: themeColors.background,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingHorizontal: 16,
@@ -1286,67 +1467,103 @@ const FuturesUI = () => {
               {/* Pair Row */}
               <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Pair</AppText>
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
-                <FastImage source={{ uri: "https://cryptologos.cc/logos/bitcoin-btc-logo.png" }} style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }} />
-                <AppText weight={BOLD} style={{ fontSize: 16, color: themeColors.text }}>{selectedCoin?.short_name ? `${selectedCoin.short_name}/${selectedCoin.margin_asset}` : 'BTC/USDT'}</AppText>
+                {selectedCoin?.icon_path ? (
+                  <FastImage
+                    source={{ uri: IMAGE_BASE_URL + selectedCoin.icon_path.replace(/^\//, '') }}
+                    style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
+                  />
+                ) : null}
+                <AppText weight={BOLD} style={{ fontSize: 16, color: themeColors.text }}>
+                  {(selectedCoin?.short_name || selectedCoin?.base_asset) ? `${selectedCoin.short_name || selectedCoin.base_asset}/${selectedCoin.margin_asset || selectedCoin.quote_asset || '—'}` : '—/—'}
+                </AppText>
               </View>
 
               {/* Leverage Input */}
-              <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Leverage</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#fff", borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.1)" : "#E5E5EA", padding: 14, borderRadius: 8, marginBottom: 16 }}>
-                <AppText weight={MEDIUM} style={{ fontSize: 16, color: themeColors.text }}>{leverageDraft}x</AppText>
+              <AppText style={{ color: themeColors.secondaryText, fontSize: 14, marginBottom: 8 }}>Leverage</AppText>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: 'transparent', borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.1)" : "#E5E5EA", paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12, marginBottom: 24 }}>
+                <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text }}>{leverageDraft}x</AppText>
               </View>
 
-              {/* Quick selector row */}
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }}>
-                {[1, 2, 3, 4].map((i) => {
-                  const maxLeverage = selectedCoin?.max_leverage || 125;
-                  const val = Math.round((maxLeverage / 5) * i);
-                  const x = val < 1 ? 1 : val;
+              {/* Quick selector pills */}
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 32 }}>
+                {[5, 10, 20, 50, 100, 125].filter(x => x <= (selectedCoin?.max_leverage || 125)).map((x) => {
                   const isSelected = leverageDraft === x;
                   return (
                     <TouchableOpacity
                       key={`lev-${x}`}
                       onPress={() => setLeverageDraft(x)}
                       style={{
-                        flex: 1,
-                        marginHorizontal: 4,
+                        paddingHorizontal: 18,
                         paddingVertical: 10,
-                        borderRadius: 20,
+                        borderRadius: 24,
                         borderWidth: 1,
                         borderColor: isSelected ? themeColors.text : (isDark ? "rgba(255,255,255,0.1)" : "#E5E5EA"),
-                        backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F2F2F7",
+                        backgroundColor: isSelected ? 'transparent' : (isDark ? "rgba(255,255,255,0.05)" : "#F9F9FB"),
                         alignItems: "center"
                       }}
                     >
-                      <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 13 }}>
+                      <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 14 }}>
                         {x}x
                       </AppText>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-              <TouchableOpacity
-                onPress={() => setLeverageDraft(selectedCoin?.max_leverage || 125)}
-                style={{
-                  marginHorizontal: 4,
-                  paddingVertical: 12,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: leverageDraft === (selectedCoin?.max_leverage || 125) ? themeColors.text : (isDark ? "rgba(255,255,255,0.1)" : "#E5E5EA"),
-                  backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#E5E5EA",
-                  alignItems: "center",
-                  marginBottom: 24
-                }}
-              >
-                <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>
-                  {selectedCoin?.max_leverage || 125}x
-                </AppText>
-              </TouchableOpacity>
 
-              {/* Removed details list to match web logic */}
-              <AppText style={{ color: '#FF3B30', fontSize: 12, marginBottom: 10, marginTop: 10 }}>
-                * Selecting higher leverage such as [10x] increases your liquidation risk. Always manage your risk levels. See our help article for more information.
-              </AppText>
+              {/* Info Rows */}
+              <View style={{ marginBottom: 20 }}>
+                {(() => {
+                  const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+                  const stats = computeFuturesLeverageStats({
+                    availableBalance: balanceToUse,
+                    leverage: leverageDraft,
+                    maxLeverage: selectedCoin?.max_leverage || 125,
+                    leverageTiers: selectedCoin?.leverage_tiers || [],
+                  });
+
+                  const fmt = (n, dp = 2) => {
+                    const x = Number(n);
+                    return Number.isFinite(x) ? x.toLocaleString("en-US", { maximumFractionDigits: dp, minimumFractionDigits: 0 }) : "0";
+                  };
+
+                  const maxNotional = stats.maxNotionalAtLev;
+                  const markPriceNum = Number(liveCoin?.mark_price) || 0;
+                  let maxPosLabel = "—";
+
+                  if (Number.isFinite(maxNotional) && maxNotional === Infinity) {
+                    maxPosLabel = "No cap";
+                  } else if (Number.isFinite(maxNotional) && maxNotional === 0) {
+                    maxPosLabel = "—";
+                  } else if (Number.isFinite(markPriceNum) && markPriceNum > 0) {
+                    const maxQty = maxNotional / markPriceNum;
+                    maxPosLabel = `${fmt(maxQty, 8)} ${selectedCoin?.base_asset || 'BTC'} (≈ ${fmt(maxNotional)} ${selectedCoin?.margin_asset || 'USDT'})`;
+                  } else if (Number.isFinite(maxNotional) && maxNotional !== Infinity) {
+                    maxPosLabel = `≈ ${fmt(maxNotional)} ${selectedCoin?.margin_asset || 'USDT'}`;
+                  }
+
+                  const quoteSymbol = selectedCoin?.margin_asset || 'USDT';
+
+                  return [
+                    { label: "Allow to Open", value: `${fmt(stats.allowToOpen)} ${quoteSymbol}` },
+                    { label: "Maximum Borrowable", value: `${fmt(stats.maximumBorrowable)} ${quoteSymbol}` },
+                    { label: "Maximum Leverage", value: `${stats.maxLeverage}x >` },
+                    { label: "Current Loan Limit", value: stats.currentLoanLimit != null ? `${fmt(stats.currentLoanLimit)} ${quoteSymbol}` : `0 ${quoteSymbol}` },
+                    { label: `Max position at ${leverageDraft}x`, value: maxPosLabel },
+                  ].map((row, idx) => (
+                    <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
+                      <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>{row.label}</AppText>
+                      <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>{row.value}</AppText>
+                    </View>
+                  ));
+                })()}
+              </View>
+
+              {/* Warning Text */}
+              <View style={{ marginBottom: 10 }}>
+                <AppText style={{ color: '#FF7A00', fontSize: 14, marginTop: 4, marginBottom: 20, lineHeight: 20 }}>
+                  The current available margin ≤ 0. You can increase the leverage or add margin.
+                </AppText>
+              </View>
             </ScrollView>
 
             {/* Confirm Button */}
@@ -1448,7 +1665,7 @@ const FuturesUI = () => {
           </View>
         </RBSheet>
       </ScrollView>
-    </View>
+    </View >
   );
 };
 

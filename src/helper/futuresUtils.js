@@ -160,3 +160,103 @@ export function aggregateOrderBookRows(orders, agg) {
     return Array.from(map.values());
 }
 
+export function decUsd(v) {
+    if (v == null) return null;
+    if (typeof v === "object" && v !== null && "$numberDecimal" in v) {
+        const n = Number(v.$numberDecimal);
+        return Number.isFinite(n) ? n : null;
+    }
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+}
+
+export function getMaxNotionalAtLeverage(tiers, selectedLeverage) {
+    if (!Array.isArray(tiers) || tiers.length === 0) return Infinity;
+    const lev = Number(selectedLeverage);
+    if (!Number.isFinite(lev) || lev < 1) return Infinity;
+
+    let maxNotional = 0;
+    let hasFinite = false;
+    for (const tier of tiers) {
+        if (Number(tier.max_leverage) >= lev) {
+            const parsed = decUsd(tier.max_notional_usd);
+            const cap = parsed == null ? Infinity : parsed;
+            if (Number.isFinite(cap)) hasFinite = true;
+            if (cap > maxNotional) maxNotional = cap;
+        }
+    }
+    if (!hasFinite && maxNotional === 0) return Infinity;
+    return maxNotional;
+}
+
+export function getTierLeverageButtons(leverageTiers, maxLeverage = 125) {
+    const maxLev = Number(maxLeverage) || 125;
+    if (!Array.isArray(leverageTiers) || leverageTiers.length === 0) {
+        return [1, maxLev].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
+    }
+    const set = new Set();
+    for (const tier of leverageTiers) {
+        const ml = Number(tier.max_leverage);
+        if (Number.isFinite(ml) && ml >= 1) set.add(Math.round(ml));
+    }
+    const arr = [...set].sort((a, b) => a - b);
+    return arr.length ? arr : [1, maxLev];
+}
+
+export function resolveTakerFeeRate(contract) {
+    if (!contract) return 0;
+    const rate = Number(contract.taker_fee_rate);
+    if (Number.isFinite(rate) && rate >= 0) return rate;
+    const pct = Number(contract.taker_fee);
+    if (Number.isFinite(pct) && pct >= 0) return pct / 100;
+    return 0;
+}
+
+export function computeMaxOpenNotional(effectiveAvailable, leverage, takerFeeRate) {
+    const avail = Number(effectiveAvailable);
+    const lev = Math.max(1, Number(leverage) || 1);
+    const fee = Number(takerFeeRate);
+    if (!Number.isFinite(avail) || avail <= 0) return 0;
+    const feeVal = Number.isFinite(fee) && fee >= 0 ? fee : 0;
+    const denom = 1 / lev + feeVal;
+    if (denom <= 0) return 0;
+    return avail / denom;
+}
+
+export function computeFuturesLeverageStats({
+    availableBalance = 0,
+    leverage = 1,
+    maxLeverage = 125,
+    leverageTiers = [],
+    takerFeeRate = 0,
+}) {
+    const bal = Number(availableBalance) || 0;
+    const lev = Number(leverage) || 1;
+    const maxLev = Number(maxLeverage) || 125;
+
+    const maxNotionalAtLev = getMaxNotionalAtLeverage(leverageTiers, lev);
+    const maxNotionalAtMaxLev = getMaxNotionalAtLeverage(leverageTiers, maxLev);
+
+    const allowFromBalance = computeMaxOpenNotional(bal, lev, takerFeeRate);
+    const allowToOpen =
+        Number.isFinite(maxNotionalAtLev) && maxNotionalAtLev !== Infinity
+            ? Math.min(allowFromBalance, maxNotionalAtLev)
+            : allowFromBalance;
+
+    const maxBorrowableFromBal = bal * Math.max(0, maxLev - 1);
+    const maximumBorrowable =
+        Number.isFinite(maxNotionalAtMaxLev) && maxNotionalAtMaxLev !== Infinity
+            ? Math.min(maxBorrowableFromBal, maxNotionalAtMaxLev)
+            : maxBorrowableFromBal;
+
+    const currentLoanLimit =
+        Number.isFinite(maxNotionalAtLev) && maxNotionalAtLev !== Infinity ? maxNotionalAtLev : null;
+
+    return {
+        allowToOpen,
+        maximumBorrowable,
+        maxLeverage: maxLev,
+        currentLoanLimit,
+        maxNotionalAtLev,
+    };
+}
