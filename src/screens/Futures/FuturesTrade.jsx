@@ -32,7 +32,8 @@ import {
   order_1,
   order_2,
   order_3,
-  NO_NOTIFICATION_ICON
+  NO_NOTIFICATION_ICON,
+  right_ic
 } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import {
@@ -43,11 +44,17 @@ import {
   aggregateOrderBookRows,
   getTickSize,
   resolveTakerFeeRate,
-  computeMaxOpenNotional
+  computeMaxOpenNotional,
+  computePosition,
+  computeClosedPosition
 } from '../../helper/futuresUtils';
+import moment from 'moment';
+import FuturesHistorySection from './components/FuturesHistorySection';
 import { LogBox } from 'react-native';
 import { getUserFuturesWallet, getOpenOrders } from '../../actions/walletActions';
 import { IMAGE_BASE_URL } from '../../helper/Constants';
+import { appOperation } from '../../appOperation';
+import { CUSTOMER_TYPE } from '../../appOperation/types';
 
 LogBox.ignoreLogs(['VirtualizedLists should never be nested inside plain ScrollViews']);
 
@@ -210,6 +217,8 @@ const OrderBookBidRow = React.memo(({ item: bid, maxVolume, themeColors, isDark,
 
 const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
 
+// Moving HISTORY_TABS inside FuturesUI to allow dynamic counts
+
 const FuturesUI = () => {
   const themeObj = useTheme();
   const dispatch = useDispatch();
@@ -227,6 +236,20 @@ const FuturesUI = () => {
   const [stopLoss, setStopLoss] = useState("");
   const [postOnly, setPostOnly] = useState(false);
   const [tif, setTif] = useState("GTC");
+  const [activeHistoryTab, setActiveHistoryTab] = useState("Positions");
+
+  // History Data States
+  const [futuresPositionHistory, setFuturesPositionHistory] = useState([]);
+  const [loadingPositionHistory, setLoadingPositionHistory] = useState(false);
+
+  const [futuresOpenOrders, setFuturesOpenOrders] = useState([]);
+  const [loadingOpenOrders, setLoadingOpenOrders] = useState(false);
+
+  const [futuresOrderHistory, setFuturesOrderHistory] = useState([]);
+  const [loadingOrderHistory, setLoadingOrderHistory] = useState(false);
+
+  const [futuresPositions, setFuturesPositions] = useState([]);
+  const [loadingPositions, setLoadingPositions] = useState(false);
 
   const tpAnim = useRef(new Animated.Value(0)).current;
   const slAnim = useRef(new Animated.Value(0)).current;
@@ -306,6 +329,88 @@ const FuturesUI = () => {
       }
     }
   }, [routeCoin, subscribeToFutures]);
+
+  const fetchFuturesPositions = React.useCallback(async () => {
+    if (!selectedCoin?.symbol) return;
+    try {
+      setLoadingPositions(true);
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
+      const result = await appOperation.customer.futuresOpenPositions(params);
+      if (result?.success) {
+        setFuturesPositions(result.data?.positions ?? []);
+      }
+    } catch (e) {
+      console.warn("fetchFuturesPositions err:", e);
+    } finally {
+      setLoadingPositions(false);
+    }
+  }, [selectedCoin?.symbol]);
+
+  const fetchFuturesPositionHistory = React.useCallback(async () => {
+    if (!selectedCoin?.symbol) {
+      return;
+    }
+    try {
+      setLoadingPositionHistory(true);
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
+      const result = await appOperation.customer.futuresPositionHistory(params);
+      if (result?.success) {
+        setFuturesPositionHistory(result.data?.positions ?? []);
+      } else {
+        console.log("[PositionHistory] API failed or success=false", result);
+      }
+    } catch (e) {
+      console.warn("[PositionHistory] fetchFuturesPositionHistory err:", e);
+    } finally {
+      setLoadingPositionHistory(false);
+    }
+  }, [selectedCoin?.symbol]);
+
+  const fetchFuturesOpenOrders = React.useCallback(async () => {
+    if (!selectedCoin?.symbol) return;
+    try {
+      setLoadingOpenOrders(true);
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
+      const result = await appOperation.customer.futuresOpenOrders(params);
+      if (result?.success) {
+        setFuturesOpenOrders(result.data?.orders ?? []);
+      }
+    } catch (e) {
+      console.warn("fetchFuturesOpenOrders err:", e);
+    } finally {
+      setLoadingOpenOrders(false);
+    }
+  }, [selectedCoin?.symbol]);
+
+  const fetchFuturesOrderHistory = React.useCallback(async () => {
+    if (!selectedCoin?.symbol) return;
+    try {
+      setLoadingOrderHistory(true);
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
+      const result = await appOperation.customer.futuresOrderHistory(params);
+      if (result?.success) {
+        setFuturesOrderHistory(result.data?.orders ?? []);
+      }
+    } catch (e) {
+      console.warn("fetchFuturesOrderHistory err:", e);
+    } finally {
+      setLoadingOrderHistory(false);
+    }
+  }, [selectedCoin?.symbol]);
+
+  useEffect(() => {
+    if (isFocused) {
+      if (activeHistoryTab === 'Positions') {
+        fetchFuturesPositions();
+      } else if (activeHistoryTab === 'Position History') {
+        fetchFuturesPositionHistory();
+      } else if (activeHistoryTab === 'Open Orders') {
+        fetchFuturesOpenOrders();
+      } else if (activeHistoryTab === 'Order History') {
+        fetchFuturesOrderHistory();
+      }
+    }
+  }, [isFocused, activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory]);
 
   const liveCoin = React.useMemo(() => {
     return pairData?.find((p) => p._id === selectedCoin?._id) || selectedCoin;
@@ -930,7 +1035,7 @@ const FuturesUI = () => {
 
       const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
       const takerFeeRate = resolveTakerFeeRate(selectedCoin);
-      
+
       const stats = computeFuturesLeverageStats({
         availableBalance: balanceToUse,
         leverage: marginLeverage,
@@ -940,7 +1045,7 @@ const FuturesUI = () => {
       });
 
       const maxNotional = stats.allowToOpen || 0;
-      
+
       let px = Number(price) || 0;
       if (!px || px <= 0) {
         px = Number(liveCoin?.mark_price) || 0;
@@ -951,7 +1056,7 @@ const FuturesUI = () => {
       if (Number.isFinite(orderCap) && orderCap > 0) {
         maxQty = Math.min(maxQty, orderCap);
       }
-      
+
       const step = Number(selectedCoin?.step_size) || 0.0001;
       const stepDec = (() => {
         const s = String(step);
@@ -964,7 +1069,7 @@ const FuturesUI = () => {
       const isValueUnit = contractUnit && contractUnit.includes('Value');
       const baseAsset = selectedCoin?.base_asset || selectedCoin?.short_name || 'BTC';
       const marginAsset = selectedCoin?.margin_asset || 'USDT';
-      
+
       let maxText = '';
       if (isValueUnit) {
         const quoteDec = selectedCoin?.quote_decimal ?? 2;
@@ -988,419 +1093,444 @@ const FuturesUI = () => {
 
     return (
       <View style={styles.rightColumn}>
-      {/* Open / Close Toggle */}
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Open' && styles.toggleActive]} onPress={() => setActiveTab('Open')}>
-          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Open' ? colors.white : themeColors.secondaryText }}>Open</AppText>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Close' && { backgroundColor: colors.red }]} onPress={() => setActiveTab('Close')}>
-          <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Close' ? colors.white : themeColors.secondaryText }}>Close</AppText>
-        </TouchableOpacity>
-      </View>
-
-      {/* Margin / Leverage */}
-      <View style={[styles.marginRow, { marginBottom: 8 }]}>
-        <TouchableOpacity
-          style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
-          onPress={() => orderTypeSheetRef.current?.open()}
-          activeOpacity={0.7}
-        >
-          <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
-            <AppText type={THIRTEEN} weight={SEMI_BOLD}>{orderType}</AppText>
-            <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.marginBox, { flex: 0.6, paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
-          onPress={() => rbSheetMarginLeverage.current?.open()}
-          activeOpacity={0.7}
-        >
-          <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
-            <AppText type={THIRTEEN} weight={SEMI_BOLD}>{marginLeverage}x</AppText>
-            <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Price Input */}
-      <View style={styles.inputRow}>
-        <View style={[styles.inputBox, { position: "relative", justifyContent: "center" }]}>
-          <Animated.View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              left: 10,
-              top: priceAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [12, 4],
-              }),
-            }}
-          >
-            <Animated.Text
-              style={{
-                color: themeColors.secondaryText,
-                fontFamily: fontFamilyMedium,
-                fontSize: priceAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [13, 11],
-                }),
-              }}
-            >
-              Price
-            </Animated.Text>
-          </Animated.View>
-          <TextInput
-            cursorColor={colors.black}
-            value={price}
-            onChangeText={setPrice}
-            onFocus={() => setIsPriceFocused(true)}
-            onBlur={() => setIsPriceFocused(false)}
-            placeholder=""
-            keyboardType="numeric"
-            style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
-          />
-        </View>
-      </View>
-
-      {/* Amount Input */}
-      <View style={[styles.inputBox, { flex: 0, marginTop: 12, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
-        <View style={{ justifyContent: 'center', flex: 1 }}>
-          <Animated.View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              left: 0,
-              top: amountAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [12, 4],
-              }),
-            }}
-          >
-            <Animated.Text
-              style={{
-                color: themeColors.secondaryText,
-                fontFamily: fontFamilyMedium,
-                fontSize: amountAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [13, 11],
-                }),
-              }}
-            >
-              Amount
-            </Animated.Text>
-          </Animated.View>
-          <TextInput
-            cursorColor={colors.black}
-            value={amount}
-            onChangeText={(text) => {
-              if (isAmountFocused) {
-                setAmount(text);
-                setSliderValue(0);
-              }
-            }}
-            onFocus={() => {
-              setIsAmountFocused(true);
-              setSliderValue(0);
-            }}
-            onBlur={() => setIsAmountFocused(false)}
-            placeholder=""
-            keyboardType="numeric"
-            style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
-          />
-        </View>
-        <TouchableOpacity
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 10 }}
-          onPress={() => {
-            Keyboard.dismiss();
-            setIsAmountFocused(false);
-            setContractUnitDraft(contractUnit);
-            contractUnitSheetRef.current?.open();
-          }}
-          activeOpacity={0.8}
-        >
-          <AppText type={TWELVE} weight={SEMI_BOLD}>
-            {(() => {
-              const match = contractUnit.match(/\(([^)]+)\)/);
-              const label = match ? match[1] : 'Cont.';
-              return label === 'Contracts' ? 'Cont.' : label;
-            })()}
-          </AppText>
-          <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode='contain' tintColor={themeColors.text} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Slider */}
-      <View style={{ marginVertical: 10 }}>
-        <PercentQuickSelect
-          activeValue={sliderValue}
-          onSelect={(val) => {
-            Keyboard.dismiss();
-            setIsAmountFocused(false);
-            handleSliderChange(val);
-            if (val === 0) {
-              setAmount('');
-            }
-          }}
-          theme={themeObj.theme}
-        />
-      </View>
-
-      {/* TP/SL */}
-      <TouchableOpacity
-        style={[styles.tpslRow, { justifyContent: 'space-between', marginBottom: showTpSl ? 12 : 8 }]}
-        onPress={() => setShowTpSl(!showTpSl)}
-        activeOpacity={0.8}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <View style={[styles.checkbox, showTpSl && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
-            {showTpSl && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
-          </View>
-          <AppText type={TWELVE} style={[styles.dashedUnderline]}>TP/SL</AppText>
-        </View>
-        {showTpSl && <AppText type={TWELVE}>Advanced</AppText>}
-      </TouchableOpacity>
-
-      {showTpSl && (
-        <View style={{ marginBottom: 12 }}>
-          {/* TP Input */}
-          <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginBottom: 6 }}>TP</AppText>
-          <View style={[styles.inputBox, { flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative", marginBottom: 12 }]}>
-            <View style={{ justifyContent: 'center', flex: 1 }}>
-              <Animated.View
-                pointerEvents="none"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: tpAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [12, 4],
-                  }),
-                }}
-              >
-                <Animated.Text
-                  style={{
-                    color: themeColors.secondaryText,
-                    fontFamily: fontFamilyMedium,
-                    fontSize: tpAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [13, 11],
-                    }),
-                  }}
-                >
-                  Take Profit
-                </Animated.Text>
-              </Animated.View>
-              <TextInput
-                cursorColor={colors.black}
-                value={takeProfit}
-                onChangeText={setTakeProfit}
-                onFocus={() => setIsTpFocused(true)}
-                onBlur={() => setIsTpFocused(false)}
-                placeholder=""
-                keyboardType="numeric"
-                style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
-              />
-            </View>
-            <AppText type={TWELVE} weight={SEMI_BOLD}>Price</AppText>
-          </View>
-
-          {/* SL Input */}
-          <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginBottom: 6 }}>SL</AppText>
-          <View style={[styles.inputBox, { flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
-            <View style={{ justifyContent: 'center', flex: 1 }}>
-              <Animated.View
-                pointerEvents="none"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: slAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [12, 4],
-                  }),
-                }}
-              >
-                <Animated.Text
-                  style={{
-                    color: themeColors.secondaryText,
-                    fontFamily: fontFamilyMedium,
-                    fontSize: slAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [13, 11],
-                    }),
-                  }}
-                >
-                  Stop Loss
-                </Animated.Text>
-              </Animated.View>
-              <TextInput
-                cursorColor={colors.black}
-                value={stopLoss}
-                onChangeText={setStopLoss}
-                onFocus={() => setIsSlFocused(true)}
-                onBlur={() => setIsSlFocused(false)}
-                placeholder=""
-                keyboardType="numeric"
-                style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
-              />
-            </View>
-            <AppText type={TWELVE} weight={SEMI_BOLD}>Price</AppText>
-          </View>
-        </View>
-      )}
-
-      {/* Post Only */}
-      <TouchableOpacity
-        style={[styles.tpslRow, { marginBottom: 12 }]}
-        onPress={() => setPostOnly(!postOnly)}
-        activeOpacity={0.8}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <View style={[styles.checkbox, postOnly && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
-            {postOnly && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
-          </View>
-          <AppText type={TWELVE} style={[styles.dashedUnderline]}>Post Only</AppText>
-        </View>
-      </TouchableOpacity>
-
-      {/* TIF */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <AppText type={TWELVE} color={themeColors.secondaryText}>TIF</AppText>
-        <TouchableOpacity
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-          onPress={() => tifSheetRef.current?.open()}
-          activeOpacity={0.8}
-        >
-          <AppText type={TWELVE} weight={SEMI_BOLD}>{postOnly ? 'GTX' : tif}</AppText>
-          <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode="contain" tintColor={themeColors.text} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Available */}
-      <View style={styles.availableRow}>
-        <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginRight: 8, paddingVertical: 2 }}>Available</AppText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-          <AppText type={TWELVE}>{Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0).toFixed(5)} USDT</AppText>
-          <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
-            <FastImage source={add} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
+        {/* Open / Close Toggle */}
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Open' && styles.toggleActive]} onPress={() => setActiveTab('Open')}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Open' ? colors.white : themeColors.secondaryText }}>Open</AppText>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Close' && { backgroundColor: colors.red }]} onPress={() => setActiveTab('Close')}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Close' ? colors.white : themeColors.secondaryText }}>Close</AppText>
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Margin */}
-      <View style={[styles.availableRow, { marginBottom: 16, flexWrap: 'wrap' }]}>
-        <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, { marginRight: 8, paddingVertical: 2 }]}>Margin</AppText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-          <AppText type={TWELVE} style={{ color: colors.green }}>0.00</AppText>
-          <AppText type={TWELVE} style={{ marginHorizontal: 4 }}>/</AppText>
-          <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4 }}>0.00</AppText>
-          <AppText type={TWELVE}>USDT</AppText>
+        {/* Margin / Leverage */}
+        <View style={[styles.marginRow, { marginBottom: 8 }]}>
+          <TouchableOpacity
+            style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
+            onPress={() => orderTypeSheetRef.current?.open()}
+            activeOpacity={0.7}
+          >
+            <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
+              <AppText type={THIRTEEN} weight={SEMI_BOLD}>{orderType}</AppText>
+              <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.marginBox, { flex: 0.6, paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
+            onPress={() => rbSheetMarginLeverage.current?.open()}
+            activeOpacity={0.7}
+          >
+            <View pointerEvents="none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flex: 1, width: '100%' }}>
+              <AppText type={THIRTEEN} weight={SEMI_BOLD}>{marginLeverage}x</AppText>
+              <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
+            </View>
+          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Buttons */}
-      {(() => {
-        const { maxText } = resolveMaxAndCost();
-        return (
-          <>
-            <View style={styles.buttonWrapper}>
-              <View style={styles.maxRow}>
-                <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
-                <AppText type={TWELVE}>{maxText}</AppText>
-              </View>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: colors.green }]}
-                onPress={() => {
-                  if (Platform.OS === 'android') {
-                    ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-                  } else {
-                    Alert.alert('Coming soon');
-                  }
+        {/* Price Input */}
+        <View style={styles.inputRow}>
+          <View style={[styles.inputBox, { position: "relative", justifyContent: "center" }]}>
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: 10,
+                top: priceAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [12, 4],
+                }),
+              }}
+            >
+              <Animated.Text
+                style={{
+                  color: themeColors.secondaryText,
+                  fontFamily: fontFamilyMedium,
+                  fontSize: priceAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [13, 11],
+                  }),
                 }}
               >
-                <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
-                  {activeTab === 'Close' ? 'Close Long' : 'Open Long'}
-                </AppText>
-              </TouchableOpacity>
-            </View>
+                Price
+              </Animated.Text>
+            </Animated.View>
+            <TextInput
+              cursorColor={colors.black}
+              value={price}
+              onChangeText={setPrice}
+              onFocus={() => setIsPriceFocused(true)}
+              onBlur={() => setIsPriceFocused(false)}
+              placeholder=""
+              keyboardType="numeric"
+              style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
+            />
+          </View>
+        </View>
 
-            <View style={styles.buttonWrapper}>
-              <View style={[styles.maxRow, { bottom: 5 }]}>
-                <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
-                <AppText type={TWELVE}>{maxText}</AppText>
-              </View>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: colors.red }]}
-                onPress={() => {
-                  if (Platform.OS === 'android') {
-                    ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-                  } else {
-                    Alert.alert('Coming soon');
-                  }
+        {/* Amount Input */}
+        <View style={[styles.inputBox, { flex: 0, marginTop: 12, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+          <View style={{ justifyContent: 'center', flex: 1 }}>
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: amountAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [12, 4],
+                }),
+              }}
+            >
+              <Animated.Text
+                style={{
+                  color: themeColors.secondaryText,
+                  fontFamily: fontFamilyMedium,
+                  fontSize: amountAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [13, 11],
+                  }),
                 }}
               >
-                <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
-                  {activeTab === 'Close' ? 'Close Short' : 'Open Short'}
-                </AppText>
-              </TouchableOpacity>
-            </View>
-          </>
-        );
-      })()}
-    </View>
-  );
-};
-
-  const BottomTabs = () => (
-    <View style={styles.bottomTabsContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomTabs}>
-        <View style={styles.bottomTabActive}>
-          <AppText type={SIXTEEN} weight={BOLD}>Open Orders (0)</AppText>
-          <View style={styles.activeTabIndicator} />
+                Amount
+              </Animated.Text>
+            </Animated.View>
+            <TextInput
+              cursorColor={colors.black}
+              value={amount}
+              onChangeText={(text) => {
+                if (isAmountFocused) {
+                  setAmount(text);
+                  setSliderValue(0);
+                }
+              }}
+              onFocus={() => {
+                setIsAmountFocused(true);
+                setSliderValue(0);
+              }}
+              onBlur={() => setIsAmountFocused(false)}
+              placeholder=""
+              keyboardType="numeric"
+              style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
+            />
+          </View>
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 10 }}
+            onPress={() => {
+              Keyboard.dismiss();
+              setIsAmountFocused(false);
+              setContractUnitDraft(contractUnit);
+              contractUnitSheetRef.current?.open();
+            }}
+            activeOpacity={0.8}
+          >
+            <AppText type={TWELVE} weight={SEMI_BOLD}>
+              {(() => {
+                const match = contractUnit.match(/\(([^)]+)\)/);
+                const label = match ? match[1] : 'Cont.';
+                return label === 'Contracts' ? 'Cont.' : label;
+              })()}
+            </AppText>
+            <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode='contain' tintColor={themeColors.text} />
+          </TouchableOpacity>
         </View>
+
+        {/* Slider */}
+        <View style={{ marginVertical: 10 }}>
+          <PercentQuickSelect
+            activeValue={sliderValue}
+            onSelect={(val) => {
+              Keyboard.dismiss();
+              setIsAmountFocused(false);
+              handleSliderChange(val);
+              if (val === 0) {
+                setAmount('');
+              }
+            }}
+            theme={themeObj.theme}
+          />
+        </View>
+
+        {/* TP/SL */}
         <TouchableOpacity
-          style={styles.bottomTab}
-          onPress={() => {
-            if (Platform.OS === 'android') {
-              ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-            } else {
-              Alert.alert('Coming soon');
-            }
-          }}
+          style={[styles.tpslRow, { justifyContent: 'space-between', marginBottom: showTpSl ? 12 : 8 }]}
+          onPress={() => setShowTpSl(!showTpSl)}
+          activeOpacity={0.8}
         >
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.secondaryText}>Orders (0)</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={[styles.checkbox, showTpSl && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
+              {showTpSl && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
+            </View>
+            <AppText type={TWELVE} style={[styles.dashedUnderline]}>TP/SL</AppText>
+          </View>
+          {showTpSl && <AppText type={TWELVE}>Advanced</AppText>}
         </TouchableOpacity>
+
+        {showTpSl && (
+          <View style={{ marginBottom: 12 }}>
+            {/* TP Input */}
+            <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginBottom: 6 }}>TP</AppText>
+            <View style={[styles.inputBox, { flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative", marginBottom: 12 }]}>
+              <View style={{ justifyContent: 'center', flex: 1 }}>
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: tpAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [12, 4],
+                    }),
+                  }}
+                >
+                  <Animated.Text
+                    style={{
+                      color: themeColors.secondaryText,
+                      fontFamily: fontFamilyMedium,
+                      fontSize: tpAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [13, 11],
+                      }),
+                    }}
+                  >
+                    Take Profit
+                  </Animated.Text>
+                </Animated.View>
+                <TextInput
+                  cursorColor={colors.black}
+                  value={takeProfit}
+                  onChangeText={setTakeProfit}
+                  onFocus={() => setIsTpFocused(true)}
+                  onBlur={() => setIsTpFocused(false)}
+                  placeholder=""
+                  keyboardType="numeric"
+                  style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
+                />
+              </View>
+              <AppText type={TWELVE} weight={SEMI_BOLD}>Price</AppText>
+            </View>
+
+            {/* SL Input */}
+            <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginBottom: 6 }}>SL</AppText>
+            <View style={[styles.inputBox, { flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+              <View style={{ justifyContent: 'center', flex: 1 }}>
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: slAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [12, 4],
+                    }),
+                  }}
+                >
+                  <Animated.Text
+                    style={{
+                      color: themeColors.secondaryText,
+                      fontFamily: fontFamilyMedium,
+                      fontSize: slAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [13, 11],
+                      }),
+                    }}
+                  >
+                    Stop Loss
+                  </Animated.Text>
+                </Animated.View>
+                <TextInput
+                  cursorColor={colors.black}
+                  value={stopLoss}
+                  onChangeText={setStopLoss}
+                  onFocus={() => setIsSlFocused(true)}
+                  onBlur={() => setIsSlFocused(false)}
+                  placeholder=""
+                  keyboardType="numeric"
+                  style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
+                />
+              </View>
+              <AppText type={TWELVE} weight={SEMI_BOLD}>Price</AppText>
+            </View>
+          </View>
+        )}
+
+        {/* Post Only */}
         <TouchableOpacity
-          style={styles.bottomTab}
-          onPress={() => {
-            if (Platform.OS === 'android') {
-              ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-            } else {
-              Alert.alert('Coming soon');
-            }
-          }}
+          style={[styles.tpslRow, { marginBottom: 12 }]}
+          onPress={() => setPostOnly(!postOnly)}
+          activeOpacity={0.8}
         >
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.secondaryText}>Assets</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={[styles.checkbox, postOnly && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
+              {postOnly && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
+            </View>
+            <AppText type={TWELVE} style={[styles.dashedUnderline]}>Post Only</AppText>
+          </View>
         </TouchableOpacity>
-      </ScrollView>
-      <TouchableOpacity
-        style={styles.historyIconBtn}
-        onPress={() => {
-          if (Platform.OS === 'android') {
-            ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-          } else {
-            Alert.alert('Coming soon');
-          }
-        }}
+
+        {/* TIF */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <AppText type={TWELVE} color={themeColors.secondaryText}>TIF</AppText>
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            onPress={() => tifSheetRef.current?.open()}
+            activeOpacity={0.8}
+          >
+            <AppText type={TWELVE} weight={SEMI_BOLD}>{postOnly ? 'GTX' : tif}</AppText>
+            <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode="contain" tintColor={themeColors.text} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Available */}
+        <View style={styles.availableRow}>
+          <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginRight: 8, paddingVertical: 2 }}>Available</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+            <AppText type={TWELVE}>{Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0).toFixed(5)} USDT</AppText>
+            <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
+              <FastImage source={add} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Margin */}
+        <View style={[styles.availableRow, { marginBottom: 16, flexWrap: 'wrap' }]}>
+          <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, { marginRight: 8, paddingVertical: 2 }]}>Margin</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+            <AppText type={TWELVE} style={{ color: colors.green }}>0.00</AppText>
+            <AppText type={TWELVE} style={{ marginHorizontal: 4 }}>/</AppText>
+            <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4 }}>0.00</AppText>
+            <AppText type={TWELVE}>USDT</AppText>
+          </View>
+        </View>
+
+        {/* Buttons */}
+        {(() => {
+          const { maxText } = resolveMaxAndCost();
+          return (
+            <>
+              <View style={styles.buttonWrapper}>
+                <View style={styles.maxRow}>
+                  <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
+                  <AppText type={TWELVE}>{maxText}</AppText>
+                </View>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: colors.green }]}
+                  onPress={() => {
+                    if (Platform.OS === 'android') {
+                      ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+                    } else {
+                      Alert.alert('Coming soon');
+                    }
+                  }}
+                >
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
+                    {activeTab === 'Close' ? 'Close Long' : 'Open Long'}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.buttonWrapper}>
+                <View style={[styles.maxRow, { bottom: 5 }]}>
+                  <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
+                  <AppText type={TWELVE}>{maxText}</AppText>
+                </View>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: colors.red }]}
+                  onPress={() => {
+                    if (Platform.OS === 'android') {
+                      ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
+                    } else {
+                      Alert.alert('Coming soon');
+                    }
+                  }}
+                >
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
+                    {activeTab === 'Close' ? 'Close Short' : 'Open Short'}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            </>
+          );
+        })()}
+      </View>
+    );
+  };
+
+
+
+  const dynamicHistoryTabs = React.useMemo(() => [
+    { id: 'Positions', label: 'Positions', count: futuresPositions?.length || 0 },
+    { id: 'Position History', label: 'Position History' },
+    { id: 'Open Orders', label: 'Open Orders', count: futuresOpenOrders?.length || 0 },
+    { id: 'Order History', label: 'Order History' },
+    { id: 'Trade History', label: 'Trade History' },
+    { id: 'Transaction History', label: 'Transaction History' },
+  ], [futuresPositions]);
+
+  const renderBottomTabs = () => (
+    <View style={[styles.bottomTabsContainer, { flexDirection: "row", marginTop: 6, alignItems: "center", height: 40 }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ flexDirection: "row", alignItems: "center", gap: 16, paddingRight: 8 }}
+        style={{ flex: 1 }}
       >
-        <FastImage source={printIcon} style={{ width: 18, height: 18 }} tintColor={themeColors.text} />
-      </TouchableOpacity>
+        {dynamicHistoryTabs.map((t) => (
+          <TouchableOpacity
+            key={t.id}
+            activeOpacity={0.8}
+            onPress={() => setActiveHistoryTab(t.id)}
+            style={{ alignItems: "center", minHeight: 28, justifyContent: "center", paddingHorizontal: 2 }}
+          >
+            <AppText
+              numberOfLines={1}
+              weight={SEMI_BOLD}
+              style={{
+                color: activeHistoryTab === t.id ? themeColors.text : themeColors.secondaryText,
+                fontSize: 14,
+              }}
+            >
+              {t.label}
+              {typeof t.count === "number" ? `(${t.count})` : ""}
+            </AppText>
+            <View
+              style={{
+                width: 20,
+                height: 10,
+                marginTop: 2,
+                backgroundColor: activeHistoryTab === t.id ? colors.black : "transparent",
+                borderRadius: 2,
+              }}
+            />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
     </View>
   );
+
+  const renderHistoryContent = () => {
+    return (
+      <FuturesHistorySection
+        activeHistoryTab={activeHistoryTab}
+        futuresPositions={futuresPositions}
+        loadingPositions={loadingPositions}
+        futuresPositionHistory={futuresPositionHistory}
+        loadingPositionHistory={loadingPositionHistory}
+        futuresOpenOrders={futuresOpenOrders}
+        loadingOpenOrders={loadingOpenOrders}
+        futuresOrderHistory={futuresOrderHistory}
+        loadingOrderHistory={loadingOrderHistory}
+        themeColors={themeColors}
+        isDark={isDark}
+        futuresPrice={futuresPrice}
+        selectedCoin={selectedCoin}
+      />
+    );
+  };
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
       <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70 }} resizeMode='contain' />
-      <AppText type={FOURTEEN} color={themeColors.secondaryText}>No data</AppText>
     </View>
   );
 
@@ -1413,9 +1543,8 @@ const FuturesUI = () => {
           {renderOrderForm()}
         </View>
         <View style={styles.divider} />
-        <BottomTabs />
-        <View style={styles.divider} />
-        <EmptyState />
+        {renderBottomTabs()}
+        {renderHistoryContent()}
 
         <RBSheet
           ref={pairSheetRef}
@@ -2295,7 +2424,7 @@ const styles = StyleSheet.create({
   bottomTabsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   bottomTabs: {

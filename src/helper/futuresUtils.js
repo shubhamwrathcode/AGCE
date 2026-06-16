@@ -223,6 +223,82 @@ export function computeMaxOpenNotional(effectiveAvailable, leverage, takerFeeRat
     return avail / denom;
 }
 
+export function decNum(val) {
+  if (val == null) return NaN;
+  if (typeof val === "object" && val.$numberDecimal !== undefined) {
+    return parseFloat(val.$numberDecimal);
+  }
+  const n = parseFloat(val);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+export function computePosition(pos, liveMarkPrice = null, selectedCoin = null) {
+  const qty = decNum(pos.quantity);
+  const entry = decNum(pos.average_entry_price ?? pos.entry_price);
+  
+  let mark = decNum(pos.mark_price);
+  if (!Number.isFinite(mark) || mark <= 0) {
+    if (liveMarkPrice && selectedCoin && pos.symbol === selectedCoin.symbol) {
+      const lm = Number(String(liveMarkPrice ?? "").replace(/,/g, ""));
+      if (Number.isFinite(lm) && lm > 0) mark = lm;
+    }
+  }
+
+  const sideSign = String(pos.side ?? "").toUpperCase() === "SHORT" ? -1 : 1;
+  let pnl = decNum(pos.unrealized_pnl);
+  
+  if ((!Number.isFinite(pnl) || pnl === 0) && Number.isFinite(entry) && Number.isFinite(mark) && Number.isFinite(qty)) {
+    pnl = (mark - entry) * qty * sideSign;
+  }
+  if (!Number.isFinite(pnl)) pnl = 0;
+
+  const margin = decNum(pos.isolated_margin_allocated ?? pos.initial_margin);
+  
+  const apiRoe = decNum(pos.roe_pct);
+  const roe = Number.isFinite(apiRoe)
+    ? apiRoe
+    : Number.isFinite(margin) && margin > 0
+      ? (pnl / margin) * 100
+      : NaN;
+
+  const mm = decNum(pos.maintenance_margin);
+  const marginRatio = Number.isFinite(mm) && Number.isFinite(margin) && margin + pnl > 0
+    ? (mm / (margin + pnl)) * 100
+    : NaN;
+
+  return { qty, entry, mark, pnl, margin, roe, marginRatio };
+}
+
+export function formatCloseReason(reason, status) {
+  const r = String(reason ?? status ?? "").toUpperCase();
+  if (r === "USER") return "Closed manually";
+  if (r === "LIQUIDATED" || r === "LIQUIDATION") return "Liquidated";
+  if (r === "ADL") return "ADL";
+  if (r === "CLOSED") return "Closed";
+  if (r === "EXPIRED") return "Expired";
+  return reason || status || "—";
+}
+
+export function computeClosedPosition(pos) {
+  const entry = decNum(pos.average_entry_price ?? pos.entry_price);
+  const exit = decNum(pos.average_exit_price ?? pos.close_price ?? pos.mark_price);
+  let qty = decNum(pos.quantity);
+  
+  if ((!Number.isFinite(qty) || qty <= 0) && Number.isFinite(entry) && entry > 0) {
+    const initMargin = decNum(pos.initial_margin ?? pos.isolated_margin_allocated);
+    const lev = Number(pos.leverage);
+    if (Number.isFinite(initMargin) && initMargin > 0 && Number.isFinite(lev) && lev > 0) {
+      qty = (initMargin * lev) / entry;
+    }
+  }
+
+  const pnl = decNum(pos.realized_pnl);
+  const fees = decNum(pos.total_fees ?? pos.fees ?? pos.accumulated_fees);
+  const funding = decNum(pos.total_funding ?? pos.funding_fee);
+  const reason = formatCloseReason(pos.close_reason, pos.status);
+  return { entry, exit, qty, pnl, fees, funding, reason };
+}
+
 export function computeFuturesLeverageStats({
     availableBalance = 0,
     leverage = 1,

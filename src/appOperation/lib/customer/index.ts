@@ -625,6 +625,49 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('futures/order', data, CUSTOMER_TYPE),
   close_position: (data: any) =>
     appOperation.post('futures/close-position', data, CUSTOMER_TYPE),
+  futuresOpenPositions: (params: { symbol?: string; skip?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({ skip: String(params.skip ?? 0), limit: String(params.limit ?? 20) });
+    if (params.symbol) p.append("symbol", params.symbol);
+    return appOperation.get(`futures/positions/open?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  futuresPositionHistory: (params: { symbol?: string; status?: string; side?: string; from?: string; to?: string; skip?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({ skip: String(params.skip ?? 0), limit: String(params.limit ?? 20) });
+    if (params.symbol) p.append("symbol", params.symbol);
+    if (params.status) p.append("status", params.status);
+    if (params.side) p.append("side", params.side);
+    if (params.from) p.append("from", params.from);
+    if (params.to) p.append("to", params.to);
+    return appOperation.get(`futures/positions/history?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  futuresOpenOrders: (params: { symbol?: string; skip?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({ skip: String(params.skip ?? 0), limit: String(params.limit ?? 20) });
+    if (params.symbol) p.append("symbol", params.symbol);
+    return appOperation.get(`futures/orders/open?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  futuresOrderHistory: (params: { symbol?: string; status?: string; from?: string; to?: string; skip?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({ skip: String(params.skip ?? 0), limit: String(params.limit ?? 20) });
+    if (params.symbol) p.append("symbol", params.symbol);
+    if (params.status) p.append("status", params.status);
+    if (params.from) p.append("from", params.from);
+    if (params.to) p.append("to", params.to);
+    return appOperation.get(`futures/orders/history?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  futuresExecutions: (params: { symbol?: string; from?: string; to?: string; skip?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({ skip: String(params.skip ?? 0), limit: String(params.limit ?? 20) });
+    if (params.symbol) p.append("symbol", params.symbol);
+    if (params.from) p.append("from", params.from);
+    if (params.to) p.append("to", params.to);
+    return appOperation.get(`futures/trades?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
+  futuresWalletHistory: (params: { asset?: string; symbol?: string; type?: string; from?: string; to?: string; page?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({ page: String(params.page ?? 1), limit: String(params.limit ?? 20) });
+    if (params.asset) p.append("asset", params.asset);
+    if (params.symbol) p.append("symbol", params.symbol);
+    if (params.type) p.append("type", params.type);
+    if (params.from) p.append("from", params.from);
+    if (params.to) p.append("to", params.to);
+    return appOperation.get(`futures/wallet-history?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
+  },
   getOptionsPairs: (data: any) =>
     appOperation.get('options/optionPairs', undefined, undefined, CUSTOMER_TYPE),
   placeOptionOrder: (data: any) =>
