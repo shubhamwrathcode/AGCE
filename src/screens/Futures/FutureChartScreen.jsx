@@ -53,16 +53,19 @@ import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
 import { SocketContext } from "../../SocketProvider";
 import { CHART_WEB_BASE_URL } from "../../helper/Constants";
-import TradingDataModal from "../../common/TradingDataModal/TradingDataModal";
+
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
 import { setBuyOrders, setRecentTrades, setSellOrders, setSpotSelectedPair } from "../../slices/homeSlice";
 import { getUserSpotWallet } from "../../actions/walletActions";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import RBSheet from "react-native-raw-bottom-sheet";
+import FuturePairList from "./FuturePairList";
 import { colors, lightTheme } from "../../theme/colors";
 import * as routes from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors as themePalette } from "../../theme/colors";
+import { fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 
 const { width: Width, height: Height } = Dimensions.get("window");
 const CHART_BLOCK_HEIGHT = Math.round(Height * 0.45);
@@ -439,7 +442,7 @@ const FutureChartScreen = () => {
   const insets = useSafeAreaInsets();
   const tabScrollBottomPadding =
     TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
-  const { subscribeToFutures, unsubscribeFromFutures } = useContext(SocketContext) || {};
+  const { subscribeToFutures, unsubscribeFromFutures, futuresData: socketFuturesData, futuresPrice: socketFuturesPrice } = useContext(SocketContext) || {};
 
   const spotSelectedPair = route.params?.coin;
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
@@ -451,6 +454,30 @@ const FutureChartScreen = () => {
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const favoriteArrayLoaded = useAppSelector((state) => state.home.favoriteArrayLoaded);
   const coinBalance = useAppSelector((state) => state.home.coinBalance);
+  
+  const futuresPairs = useAppSelector((state) => state.home.futuresPairs);
+  const [pairData, setPairData] = useState([]);
+
+  useEffect(() => {
+    const pairsArray = (futuresPairs && futuresPairs.length > 0)
+      ? futuresPairs
+      : (socketFuturesData?.contracts || socketFuturesData?.pairs || []);
+
+    if (pairsArray && pairsArray.length > 0) {
+      setPairData(pairsArray);
+    }
+  }, [futuresPairs, socketFuturesData]);
+
+  const isFocused = useIsFocused();
+
+  // Fetch pairs list from socket if empty, matching FuturesTrade.jsx
+  useEffect(() => {
+    if (isFocused && pairData.length === 0) {
+      subscribeToFutures?.();
+      const t = setTimeout(() => subscribeToFutures?.(), 800);
+      return () => clearTimeout(t);
+    }
+  }, [isFocused, pairData.length, subscribeToFutures]);
 
   const params = route.params || {};
   /** Redux pair wins over stale navigation params after user changes pair in `TradingDataModal`. */
@@ -518,7 +545,8 @@ const FutureChartScreen = () => {
     Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
   }, []);
 
-  const [pairSheetVisible, setPairSheetVisible] = useState(false);
+  const pairSheetRef = useRef(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const pairBase = mergedPair?.base_currency || mergedPair?.short_name || mergedPair?.base_asset || "-";
   const pairQuote = mergedPair?.quote_currency || mergedPair?.margin_asset || mergedPair?.quote_asset || "-";
@@ -564,6 +592,7 @@ const FutureChartScreen = () => {
     [pairTickSize]
   );
   const [orderBookAggStep, setOrderBookAggStep] = useState(DEFAULT_ORDER_BOOK_AGG_OPTIONS[0]);
+  const [orderBookAgg, setOrderBookAgg] = useState(null);
   const [orderBookAggOpen, setOrderBookAggOpen] = useState(false);
   const [aggMenuLayout, setAggMenuLayout] = useState(null);
   const aggTriggerRef = useRef(null);
@@ -841,7 +870,7 @@ const FutureChartScreen = () => {
 
   const [lastSocketData, setLastSocketData] = useState(null);
   const socket = useAppSelector((state) => state.home.socket);
-  const isFocused = useIsFocused();
+
   const isFocusedRef = useRef(true);
 
   useEffect(() => {
@@ -864,15 +893,17 @@ const FutureChartScreen = () => {
   const lastFlushedSellRef = useRef(null);
   const SOCKET_UI_THROTTLE_MS = 300;
 
+  // Resume socket if sheet is closed or app comes back to foreground
   useEffect(() => {
-    if (pairSheetVisible) {
-      if (socketThrottleTimerRef.current) {
-        clearTimeout(socketThrottleTimerRef.current);
-        socketThrottleTimerRef.current = null;
-      }
-      pendingSocketFlushRef.current = null;
+    // If the modal was previously hiding the socket and we switched to RBSheet,
+    // we don't strictly need to pause the socket, but keeping it as is.
+    const isReady = appStateRef.current === "active";
+    if (isReady && !pairSheetRef.current?.state?.visible) {
+      // resumeSocket();
     }
-  }, [pairSheetVisible]);
+  }, []);
+
+
 
   const flushSocketToState = useCallback((payload) => {
     if (!payload || !isFocusedRef.current) return;
@@ -951,7 +982,10 @@ const FutureChartScreen = () => {
     const handleMessage = (data) => {
       if (!isFocusedRef.current || appStateRef.current !== "active") return;
 
-      if (data?.buy_order || data?.sell_order || data?.recent_trades) {
+      const hasOb = data?.buy_order || data?.sell_order || data?.recent_trades;
+      const hasContract = data?.contract != null;
+
+      if (hasOb || hasContract) {
         const buy = data?.buy_order ? (data.buy_order || []).map(normalizeObRow) : null;
         const sell = data?.sell_order ? (data.sell_order || []).map(normalizeObRow) : null;
         const payload = {
@@ -1002,17 +1036,19 @@ const FutureChartScreen = () => {
     return `${CHART_WEB_BASE_URL}futures-chart/${themeSlug}/${symbol}`;
   }, [theme, pairBase, pairQuote]);
 
-  console.log(chartUri, '===url');
 
 
   const handleCurrencyChange = useCallback(
     (coin) => {
+      navigation.setParams({ coin });
       dispatch(setSpotSelectedPair(coin));
       dispatch(setBuyOrders([]));
       dispatch(setSellOrders([]));
       setLastSocketData(null);
+      pairSheetRef.current?.close();
+      setSearchTerm("");
     },
-    [dispatch]
+    [dispatch, navigation]
   );
 
   // Cleaned up legacy effect as its logic is now merged into the unified subscription hook above.
@@ -1073,8 +1109,11 @@ const FutureChartScreen = () => {
 
   const showSkeleton = !chartRevealed;
   const bg = themeColors.background ?? "transparent";
-  const isNeg = Number(pairChange) < 0;
+  const liveChangePct = liveMarketStats?.changePct ?? pairChange;
+  const isNeg = Number(liveChangePct) < 0;
   const changeColor = isNeg ? themeColors.red : themeColors.green;
+
+
 
   const bidsAggregated = useMemo(() => {
     if (!buyOrders?.length) return [];
@@ -1136,26 +1175,52 @@ const FutureChartScreen = () => {
   /** Merge REST pair snapshot with optional socket ticker (web TradeCenterSection parity). */
   const liveMarketStats = useMemo(() => {
     const base = {
-      high: mergedPair?.high,
-      low: mergedPair?.low,
-      volume: mergedPair?.volume,
-      changeAbs: mergedPair?.change,
-      volQuote: mergedPair?.volume_quote ?? mergedPair?.quote_volume,
+      high: mergedPair?.high_24h ?? mergedPair?.high,
+      low: mergedPair?.low_24h ?? mergedPair?.low,
+      volume: mergedPair?.volume_24h ?? mergedPair?.volume,
+      changeAbs: mergedPair?.price_change_24h ?? mergedPair?.change,
+      changePct: mergedPair?.change_percentage,
+      volQuote: mergedPair?.volume_24h_quote ?? mergedPair?.volume_quote ?? mergedPair?.quote_volume,
       last: mergedPair?.buy_price ?? mergedPair?.last_price ?? mergedPair?.price,
     };
+
+    // Primary: socketFuturesData from SocketProvider context (updates on every futures:update)
+    // Fallback: lastSocketData from local socket listener
+    const fd = socketFuturesData;
     const d = lastSocketData;
-    if (!d) return base;
-    const t = d.ticker != null && typeof d.ticker === "object" ? d.ticker : null;
-    const src = t || d;
+    const fp = socketFuturesPrice;
+
+    const contractFromCtx = fd?.contract != null && typeof fd.contract === "object" ? fd.contract : null;
+    const contractFromLocal = d?.contract != null && typeof d.contract === "object" ? d.contract : null;
+    const ticker = d?.ticker != null && typeof d.ticker === "object" ? d.ticker : null;
+    const src = contractFromCtx || contractFromLocal || ticker || d;
+
+    // Fast-path sub-second price tick from `futures:price`
+    let livePrice = null;
+    if (fp != null && (fp.symbol === mergedPair?.symbol || !fp.symbol)) {
+      livePrice = fp.mark_price ?? fp.last_price;
+    }
+    // Fallback to contract data
+    if (livePrice == null && src) {
+      livePrice = src.mark_price ?? src.last_price ?? src.bid_price;
+    }
+
+    if (!src && livePrice == null) return base;
+
+    const finalSrc = src || {};
+
     return {
-      high: src.high ?? src.h ?? base.high,
-      low: src.low ?? src.l ?? base.low,
-      volume: src.volume ?? src.v ?? base.volume,
-      changeAbs: src.change ?? src.change_24hour ?? src.changePercentage ?? base.changeAbs,
-      volQuote: src.quote_volume ?? src.volume_quote ?? src.quoteVolume ?? base.volQuote,
-      last: src.last ?? src.buy_price ?? src.c ?? base.last,
+      high: finalSrc.high_24h ?? finalSrc.high ?? finalSrc.h ?? base.high,
+      low: finalSrc.low_24h ?? finalSrc.low ?? finalSrc.l ?? base.low,
+      volume: finalSrc.volume_24h ?? finalSrc.volume ?? finalSrc.v ?? base.volume,
+      changeAbs: finalSrc.price_change_24h ?? finalSrc.change ?? finalSrc.change_24hour ?? base.changeAbs,
+      changePct: finalSrc.change_percentage ?? base.changePct,
+      volQuote: finalSrc.volume_24h_quote ?? finalSrc.quote_volume ?? finalSrc.volume_quote ?? finalSrc.quoteVolume ?? base.volQuote,
+      last: livePrice != null && Number.isFinite(Number(livePrice)) && Number(livePrice) > 0
+        ? parseFloat(livePrice)
+        : (finalSrc.last_price ?? finalSrc.last ?? finalSrc.buy_price ?? finalSrc.c ?? base.last),
     };
-  }, [lastSocketData, mergedPair]);
+  }, [socketFuturesData, lastSocketData, socketFuturesPrice, mergedPair]);
 
   const formatChangeAbsDisplay = useCallback(
     (raw) => {
@@ -1170,6 +1235,29 @@ const FutureChartScreen = () => {
   );
 
   const stripDisplayPrice = liveMarketStats.last ?? pairPrice;
+
+  const [tickDirection, setTickDirection] = useState(0); // 1 = up, -1 = down, 0 = neutral
+  const prevPriceRef = useRef(null);
+
+  useEffect(() => {
+    if (stripDisplayPrice != null && stripDisplayPrice !== "—") {
+      const curr = Number(stripDisplayPrice);
+      const prev = Number(prevPriceRef.current);
+      if (prevPriceRef.current != null) {
+        if (curr > prev) {
+          setTickDirection(1);
+        } else if (curr < prev) {
+          setTickDirection(-1);
+        }
+      } else {
+        setTickDirection(1); // default up if no prev
+      }
+      prevPriceRef.current = stripDisplayPrice;
+    }
+  }, [stripDisplayPrice]);
+
+  const tickColor = tickDirection === -1 ? themeColors.red : themeColors.green;
+  const tickIconDisplay = tickDirection === -1 ? downIcon : upIcon;
 
   // Web-style: never abbreviate Amount/Total (no K/M). Keep it readable with commas.
   const formatObQty = useCallback(
@@ -1390,12 +1478,15 @@ const FutureChartScreen = () => {
       navigation.navigate({
         name: routes.NAVIGATION_BOTTOM_TAB_STACK,
         params: {
-          screen: routes.TRADE_SCREEN,
-          params: { spotTradeSide: side, activeTab: tradeType },
+          screen: routes.FUTURES_SCREEN,
+          params: {
+            screen: 'Futures',
+            params: { futuresTradeSide: side, activeTab: tradeType, coin: mergedPair }
+          },
         },
       });
     },
-    [navigation, tradeType]
+    [navigation, tradeType, mergedPair]
   );
 
   return (
@@ -1414,7 +1505,7 @@ const FutureChartScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerPairRow}
-            onPress={() => setPairSheetVisible(true)}
+            onPress={() => pairSheetRef.current?.open()}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -1483,81 +1574,75 @@ const FutureChartScreen = () => {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
         >
-          {/* 24h strip — layout aligned with web TradeCenterSection (TradePage): left price + 24h change; right 2×2 high/low + volumes */}
-          <View style={[styles.statsStrip, { borderBottomColor: themeColors.themeBorderColor }]}>
+          <View style={[styles.statsStrip, { borderBottomColor: themeColors.themeBorderColor, paddingVertical: 14 }]}>
             <View style={styles.statsMainRow}>
-              <View style={styles.statsLeftCol}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <AppText style={[styles.statMainPrice, { color: changeColor }]} numberOfLines={1}>
+              {/* Left Column */}
+              <View style={[styles.statsLeftCol, { justifyContent: "space-between" }]}>
+                <View>
+                  <AppText weight={MEDIUM} style={[styles.statMainPriceHuge, { color: tickColor }]} numberOfLines={1}>
                     {stripDisplayPrice != null && stripDisplayPrice !== "" ? formatPriceComma(stripDisplayPrice) : "—"}
                   </AppText>
-                  <FastImage
-                    source={isNeg ? downIcon : upIcon}
-                    resizeMode="contain"
-                    style={styles.statTrendIcon}
-                    tintColor={changeColor}
-                  />
-                </View>
-                <AppText type={TWELVE} weight={MEDIUM} style={[styles.statChangeSectionTitle, { color: themeColors.text }]}>
-                  24h Change
-                </AppText>
-                <View style={styles.statChangeRow}>
-                  <AppText style={[styles.statChangePct, { color: changeColor }]}>
-                    {mergedPair?.change_percentage != null
-                      ? `${Number(mergedPair.change_percentage) >= 0 ? "+" : ""}${toFixedThree(Number(mergedPair.change_percentage))}%`
-                      : "—"}
-                  </AppText>
-                  <AppText style={[styles.statChangeAbs, { color: changeColor }]}>
-                    {liveMarketStats.changeAbs != null && liveMarketStats.changeAbs !== ""
-                      ? formatChangeAbsDisplay(liveMarketStats.changeAbs)
+
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 }}>
+                    <AppText type={FOURTEEN} style={{ color: themeColors.text, opacity: 0.8 }}>
+                      {stripDisplayPrice != null && stripDisplayPrice !== "" ? `≈ $${formatWithCommas(toFixedThree(Number(stripDisplayPrice)))}` : "—"}
+                    </AppText>
+
+                  </View>
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: changeColor }}>
+                    {liveMarketStats.changePct != null
+                      ? `${Number(liveMarketStats.changePct) >= 0 ? "+" : ""}${toFixedThree(Number(liveMarketStats.changePct))}%`
                       : "—"}
                   </AppText>
                 </View>
+
+
               </View>
 
-              <View style={styles.statsRightCols}>
-                <View style={styles.statsCol}>
-                  <View style={styles.statKV}>
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
-                      24h High
-                    </AppText>
-                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVValue, { color: themeColors.text }]}>
-                      {liveMarketStats.high != null ? toFixedFive(liveMarketStats.high) : "—"}
-                    </AppText>
-                  </View>
-                  <View style={[styles.statKV, styles.statKVGap]}>
-                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
-                      24h Volume
-                    </AppText>
-                    <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: themeColors.text }]} numberOfLines={1}>
-                      {liveMarketStats.volume != null ? `${toFixedThree(liveMarketStats.volume)} ${pairBase}` : "—"}
-                    </AppText>
-                  </View>
+              {/* Right Column */}
+              <View style={styles.statsRightColsStack}>
+                <View style={styles.statListRow}>
+                  <AppText type={ELEVEN} style={[styles.statListLabel, { color: themeColors.text, opacity: 0.6 }]}>24h High</AppText>
+                  <AppText type={ELEVEN} weight={MEDIUM} style={[styles.statListValue, { color: themeColors.text }]}>
+                    {liveMarketStats.high != null ? toFixedFive(liveMarketStats.high) : "—"}
+                  </AppText>
                 </View>
-                <View style={styles.statsCol}>
-                  <View style={styles.statKV}>
-                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
-                      24h Low
-                    </AppText>
-                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVValue, { color: themeColors.text }]}>
-                      {liveMarketStats.low != null ? toFixedFive(liveMarketStats.low) : "—"}
-                    </AppText>
-                  </View>
-                  <View style={[styles.statKV, styles.statKVGap]}>
-                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
-                      Max Leverage
-                    </AppText>
-                    <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: themeColors.text }]} numberOfLines={1}>
-                      {mergedPair?.max_leverage != null ? `${mergedPair.max_leverage}x` : "—"}
-                    </AppText>
-                  </View>
+                <View style={styles.statListRow}>
+                  <AppText type={ELEVEN} style={[styles.statListLabel, { color: themeColors.text, opacity: 0.6 }]}>24h Low</AppText>
+                  <AppText type={ELEVEN} weight={MEDIUM} style={[styles.statListValue, { color: themeColors.text }]}>
+                    {liveMarketStats.low != null ? toFixedFive(liveMarketStats.low) : "—"}
+                  </AppText>
+                </View>
+                <View style={styles.statListRow}>
+                  <AppText type={ELEVEN} style={[styles.statListLabel, { color: themeColors.text, opacity: 0.6 }]}>24h Vol ({pairBase})</AppText>
+                  <AppText type={ELEVEN} weight={MEDIUM} style={[styles.statListValue, { color: themeColors.text }]} numberOfLines={1}>
+                    {liveMarketStats.volume != null ? formatWithCommas(twoFixedTwo(liveMarketStats.volume)) : "—"}
+                  </AppText>
+                </View>
+                <View style={styles.statListRow}>
+                  <AppText type={ELEVEN} style={[styles.statListLabel, { color: themeColors.text, opacity: 0.6 }]}>24h Turnover ({pairQuote})</AppText>
+                  <AppText type={ELEVEN} weight={MEDIUM} style={[styles.statListValue, { color: themeColors.text }]} numberOfLines={1}>
+                    {liveMarketStats.volQuote != null ? formatWithCommas(twoFixedTwo(liveMarketStats.volQuote)) : "—"}
+                  </AppText>
                 </View>
               </View>
+            </View>
+
+            {/* Bottom Row */}
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 24, gap: 10 }}>
+              <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
+                {pairBase}{pairQuote} Perpetual
+              </AppText>
+              <AppText type={TWELVE} weight={MEDIUM} style={{ color: changeColor }}>
+                {stripDisplayPrice != null && stripDisplayPrice !== "" ? formatPriceComma(stripDisplayPrice) : "—"}
+                {" "}
+                ({liveMarketStats.changePct != null ? `${Number(liveMarketStats.changePct) >= 0 ? "+" : ""}${toFixedThree(Number(liveMarketStats.changePct))}%` : "—"})
+              </AppText>
             </View>
           </View>
 
 
-          <View style={{ width: Width, overflow: "hidden" }}>
+          <View style={{ width: Width, overflow: "hidden", marginTop: 10 }}>
             <Animated.View
               style={{
                 flexDirection: "row",
@@ -2093,13 +2178,36 @@ const FutureChartScreen = () => {
         </View>
       </View>
 
-      <TradingDataModal
-        visible={pairSheetVisible}
-        onClose={() => setPairSheetVisible(false)}
-        setCurrency={handleCurrencyChange}
-        isDark={isDark}
-        theme={theme}
-      />
+      <RBSheet
+        ref={pairSheetRef}
+        closeOnDragDown={true}
+        closeOnPressMask={true}
+        height={Dimensions.get("window").height * 0.7}
+        animationType="slide"
+        customStyles={{
+          container: {
+            backgroundColor: themeColors.themeElevationColor || themeColors.background,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          },
+          wrapper: {
+            backgroundColor: "#0006",
+          },
+          draggableIcon: {
+            backgroundColor: themeColors.themeBorderColor || "#ccc",
+            width: 40,
+          },
+        }}
+      >
+        <FuturePairList
+          pairs={pairData}
+          selectedPair={mergedPair}
+          onSelectPair={handleCurrencyChange}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onClose={() => pairSheetRef.current?.close()}
+        />
+      </RBSheet>
     </View>
   );
 };
@@ -2262,19 +2370,49 @@ const styles = StyleSheet.create({
   },
   statsStrip: {
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 5,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   statsMainRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "stretch",
     justifyContent: "space-between",
-    gap: 10,
+    gap: 16,
   },
   statsLeftCol: {
     flex: 1,
     minWidth: 0,
     paddingRight: 6,
+  },
+  statMainPriceHuge: {
+    fontSize: 22,
+    letterSpacing: -0.5,
+    includeFontPadding: false,
+  },
+  tagWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  statsRightColsStack: {
+    flex: 1.3,
+    flexDirection: "column",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  statListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
+  },
+  statListLabel: {
+    fontSize: 11,
+    flexShrink: 1,
+  },
+  statListValue: {
+    fontSize: 11,
+    textAlign: "right",
+    flexShrink: 0,
   },
   statsRightCols: {
     flex: 1.15,
@@ -2321,7 +2459,7 @@ const styles = StyleSheet.create({
   },
   statChangePct: {
     fontSize: 14,
-    fontWeight: "700",
+    fontFamily: fontFamilyMedium
   },
   statChangeAbs: {
     fontSize: 14,
@@ -2385,7 +2523,7 @@ const styles = StyleSheet.create({
   },
   statMainPrice: {
     fontSize: 17,
-    fontFamily: SEMI_BOLD,
+    fontFamily: fontFamilySemiBold,
   },
   statTrendIcon: {
     width: 9,

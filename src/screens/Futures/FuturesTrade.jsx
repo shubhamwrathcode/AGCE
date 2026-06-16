@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import FastImage from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import FuturePairList from './FuturePairList';
@@ -289,8 +289,20 @@ const FuturesUI = () => {
     return userFuturesWallet.find(w => w?.short_name === 'USDT' || w?.currency === 'USDT');
   }, [userFuturesWallet]);
 
+  const route = useRoute();
+  const routeCoin = route.params?.coin;
+
   const [pairData, setPairData] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState(null);
+
+  useEffect(() => {
+    if (routeCoin && routeCoin._id !== selectedCoin?._id) {
+      setSelectedCoin(routeCoin);
+      if (subscribeToFutures && routeCoin.symbol) {
+        subscribeToFutures({ symbol: routeCoin.symbol });
+      }
+    }
+  }, [routeCoin, selectedCoin?._id, subscribeToFutures]);
 
   const liveCoin = React.useMemo(() => {
     return pairData?.find((p) => p._id === selectedCoin?._id) || selectedCoin;
