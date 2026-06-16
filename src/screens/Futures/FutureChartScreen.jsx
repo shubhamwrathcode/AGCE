@@ -445,16 +445,16 @@ const FutureChartScreen = () => {
   const { subscribeToFutures, unsubscribeFromFutures, futuresData: socketFuturesData, futuresPrice: socketFuturesPrice } = useContext(SocketContext) || {};
 
   const spotSelectedPair = route.params?.coin;
-  const buyOrders = useAppSelector((state) => state.home.buyOrders);
-  const sellOrders = useAppSelector((state) => state.home.sellOrders);
+  const buyOrders = socketFuturesData?.buy_order || [];
+  const sellOrders = socketFuturesData?.sell_order || [];
   const userData = useAppSelector((state) => state.auth.userData);
   const loading = useAppSelector((state) => state.auth.loading);
   const userSpotWallet = useAppSelector((state) => state.wallet.userSpotWallet);
-  const recentTrades = useAppSelector((state) => state.home.recentTrades);
+  const recentTrades = socketFuturesData?.recent_trades || [];
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const favoriteArrayLoaded = useAppSelector((state) => state.home.favoriteArrayLoaded);
   const coinBalance = useAppSelector((state) => state.home.coinBalance);
-  
+
   const futuresPairs = useAppSelector((state) => state.home.futuresPairs);
   const [pairData, setPairData] = useState([]);
 
@@ -886,61 +886,17 @@ const FutureChartScreen = () => {
     return () => sub.remove();
   }, []);
 
-  const socketThrottleTimerRef = useRef(null);
-  const socketLastFlushRef = useRef(0);
-  const pendingSocketFlushRef = useRef(null);
-  const lastFlushedBuyRef = useRef(null);
-  const lastFlushedSellRef = useRef(null);
-  const SOCKET_UI_THROTTLE_MS = 300;
-
-  // Resume socket if sheet is closed or app comes back to foreground
-  useEffect(() => {
-    // If the modal was previously hiding the socket and we switched to RBSheet,
-    // we don't strictly need to pause the socket, but keeping it as is.
-    const isReady = appStateRef.current === "active";
-    if (isReady && !pairSheetRef.current?.state?.visible) {
-      // resumeSocket();
-    }
-  }, []);
-
-
-
-  const flushSocketToState = useCallback((payload) => {
-    if (!payload || !isFocusedRef.current) return;
-    setLastSocketData(payload.data);
-    if (payload.sellOrders) {
-      if (!orderBookDataEqual(lastFlushedSellRef.current, payload.sellOrders)) {
-        lastFlushedSellRef.current = payload.sellOrders;
-        dispatch(setSellOrders(payload.sellOrders));
-      }
-    }
-    if (payload.buyOrders) {
-      if (!orderBookDataEqual(lastFlushedBuyRef.current, payload.buyOrders)) {
-        lastFlushedBuyRef.current = payload.buyOrders;
-        dispatch(setBuyOrders(payload.buyOrders));
-      }
-    }
-    if (payload.recentTrades) {
-      dispatch(setRecentTrades(payload.recentTrades));
-    }
-  }, [dispatch]);
-
-
-
+  // Removed flushSocketToState and throttle refs
   const lastSubscribedExchangeRef = useRef(null);
   const prevChartPairKeyRef = useRef(null);
 
   useEffect(() => {
-    const base = mergedPair?.base_currency_id;
-    const quote = mergedPair?.quote_currency_id;
-    if (!base || !quote) return;
-    const key = `${base}-${quote}`;
+    const symbol = mergedPair?.symbol;
+    if (!symbol) return;
+    const key = symbol;
 
     if (prevChartPairKeyRef.current !== key) {
-      // Clear stale order book data for the new pair immediately
-      dispatch(setBuyOrders([]));
-      dispatch(setSellOrders([]));
-      dispatch(setRecentTrades([]));
+      // Clear stale socket data for the new pair immediately
       setLastSocketData(null);
       prevChartPairKeyRef.current = key;
     }
@@ -949,16 +905,24 @@ const FutureChartScreen = () => {
 
     // Manage futures socket subscriptions reactively on pair change
     const last = lastSubscribedExchangeRef.current;
-    if (last && (last.base_currency_id !== base || last.quote_currency_id !== quote || last.tradeType !== tradeType)) {
-      unsubscribeFromFutures?.({ symbol: last.symbol, base_currency_id: last.base_currency_id });
+    if (last && (last.symbol !== symbol || last.tradeType !== tradeType)) {
+      unsubscribeFromFutures?.({ symbol: last.symbol });
     }
 
-    if (mergedPair?.symbol) {
-      subscribeToFutures?.({ symbol: mergedPair.symbol });
-      lastSubscribedExchangeRef.current = { base_currency_id: base, quote_currency_id: quote, tradeType, symbol: mergedPair.symbol };
+    if (symbol) {
+      subscribeToFutures?.({ symbol });
+      lastSubscribedExchangeRef.current = { tradeType, symbol };
     }
 
-  }, [isFocused, mergedPair?.base_currency_id, mergedPair?.quote_currency_id, mergedPair?.symbol, subscribeToFutures, unsubscribeFromFutures, dispatch, tradeType]);
+  }, [isFocused, mergedPair?.symbol, subscribeToFutures, unsubscribeFromFutures, dispatch, tradeType]);
+
+  useEffect(() => {
+    // Sync context socket data to local state so hasData evaluates to true
+    // even if buy_order and sell_order arrays are completely empty.
+    if (socketFuturesData) {
+      setLastSocketData(socketFuturesData);
+    }
+  }, [socketFuturesData]);
 
   useEffect(() => {
     return () => {
@@ -970,65 +934,7 @@ const FutureChartScreen = () => {
     };
   }, [unsubscribeFromFutures]);
 
-  useEffect(() => {
-    if (!socket || !isFocused) return;
-
-    const normalizeObRow = (o) => {
-      if (!o) return o;
-      const rem = toFinite(o?.remaining ?? o?.quantity ?? o?.qty ?? o?.amount ?? 0);
-      return { ...o, remaining: rem };
-    };
-
-    const handleMessage = (data) => {
-      if (!isFocusedRef.current || appStateRef.current !== "active") return;
-
-      const hasOb = data?.buy_order || data?.sell_order || data?.recent_trades;
-      const hasContract = data?.contract != null;
-
-      if (hasOb || hasContract) {
-        const buy = data?.buy_order ? (data.buy_order || []).map(normalizeObRow) : null;
-        const sell = data?.sell_order ? (data.sell_order || []).map(normalizeObRow) : null;
-        const payload = {
-          data,
-          buyOrders: buy,
-          sellOrders: sell,
-          recentTrades: data?.recent_trades || null,
-        };
-
-        pendingSocketFlushRef.current = payload;
-        const now = Date.now();
-        const elapsed = now - socketLastFlushRef.current;
-        if (elapsed >= SOCKET_UI_THROTTLE_MS || socketLastFlushRef.current === 0) {
-          socketLastFlushRef.current = now;
-          flushSocketToState(payload);
-          pendingSocketFlushRef.current = null;
-          if (socketThrottleTimerRef.current) {
-            clearTimeout(socketThrottleTimerRef.current);
-            socketThrottleTimerRef.current = null;
-          }
-        } else if (!socketThrottleTimerRef.current) {
-          socketThrottleTimerRef.current = setTimeout(() => {
-            socketThrottleTimerRef.current = null;
-            socketLastFlushRef.current = Date.now();
-            const pending = pendingSocketFlushRef.current;
-            pendingSocketFlushRef.current = null;
-            if (pending) flushSocketToState(pending);
-          }, SOCKET_UI_THROTTLE_MS - elapsed);
-        }
-      }
-    };
-
-    socket.on("message", handleMessage);
-    socket.on("futures:update", handleMessage);
-    return () => {
-      socket.off("message", handleMessage);
-      socket.off("futures:update", handleMessage);
-      if (socketThrottleTimerRef.current) {
-        clearTimeout(socketThrottleTimerRef.current);
-        socketThrottleTimerRef.current = null;
-      }
-    };
-  }, [socket, isFocused, flushSocketToState]);
+  // Removed legacy socket listener as orderbook data now comes via SocketContext (socketFuturesData)
 
   const chartUri = useMemo(() => {
     const themeSlug = theme === "Dark" ? "dark" : "light";
@@ -1042,8 +948,6 @@ const FutureChartScreen = () => {
     (coin) => {
       navigation.setParams({ coin });
       dispatch(setSpotSelectedPair(coin));
-      dispatch(setBuyOrders([]));
-      dispatch(setSellOrders([]));
       setLastSocketData(null);
       pairSheetRef.current?.close();
       setSearchTerm("");
@@ -1298,7 +1202,8 @@ const FutureChartScreen = () => {
 
   const depthRows = useMemo(() => {
     const rows = [];
-    const maxLen = Math.max(bidsDisplay.length, asksDisplay.length, 20);
+    const hasAnyData = bidsDisplay.length > 0 || asksDisplay.length > 0;
+    const maxLen = hasAnyData ? Math.max(bidsDisplay.length, asksDisplay.length, 20) : 5;
     for (let i = 0; i < maxLen; i++) {
       const bid = bidsDisplay[i] || null;
       const ask = asksDisplay[i] || null;
@@ -1409,7 +1314,9 @@ const FutureChartScreen = () => {
             />
           ))
         ) : (
-          (orderBookViewMode === "bids" ? bidsDisplay : asksDisplay)
+          ((orderBookViewMode === "bids" ? bidsDisplay : asksDisplay).length > 0
+            ? (orderBookViewMode === "bids" ? bidsDisplay : asksDisplay)
+            : Array(5).fill(null))
             .map((item, i) => {
               const rem = item ? orderBookRemaining(item) : 0;
               const maxCum = orderBookViewMode === "bids" ? maxBidCum : maxAskCum;
@@ -1602,14 +1509,14 @@ const FutureChartScreen = () => {
               {/* Right Column */}
               <View style={styles.statsRightColsStack}>
                 <View style={styles.statListRow}>
-                  <AppText type={ELEVEN} style={[styles.statListLabel, { color: themeColors.text, opacity: 0.6 }]}>24h High</AppText>
-                  <AppText type={ELEVEN} weight={MEDIUM} style={[styles.statListValue, { color: themeColors.text }]}>
+                  <AppText type={ELEVEN} style={[styles.statListLabel, { color: themeColors.text, opacity: 0.6 }]}>24h High ({pairQuote})</AppText>
+                  <AppText type={ELEVEN} weight={MEDIUM} style={[styles.statListValue, { color: themeColors.spotTradeBuy ?? colors.green }]}>
                     {liveMarketStats.high != null ? toFixedFive(liveMarketStats.high) : "—"}
                   </AppText>
                 </View>
                 <View style={styles.statListRow}>
-                  <AppText type={ELEVEN} style={[styles.statListLabel, { color: themeColors.text, opacity: 0.6 }]}>24h Low</AppText>
-                  <AppText type={ELEVEN} weight={MEDIUM} style={[styles.statListValue, { color: themeColors.text }]}>
+                  <AppText type={ELEVEN} style={[styles.statListLabel, { color: themeColors.text, opacity: 0.6 }]}>24h Low ({pairQuote})</AppText>
+                  <AppText type={ELEVEN} weight={MEDIUM} style={[styles.statListValue, { color: themeColors.spotTradeSell ?? colors.red }]}>
                     {liveMarketStats.low != null ? toFixedFive(liveMarketStats.low) : "—"}
                   </AppText>
                 </View>
@@ -1855,9 +1762,8 @@ const FutureChartScreen = () => {
                                   ))
                                 ) : (
                                   <View style={styles.noDataContainer}>
-                                    <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                                      No market trades yet
-                                    </AppText>
+
+                                    <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70 }} resizeMode="contain" />
                                   </View>
                                 )}
                               </View>
@@ -2025,9 +1931,8 @@ const FutureChartScreen = () => {
                               ))
                             ) : (
                               <View style={styles.noDataContainer}>
-                                <AppText type={TEN} style={{ color: themeColors.secondaryText }}>
-                                  No market trades yet
-                                </AppText>
+                                <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70 }} resizeMode="contain" />
+
                               </View>
                             )}
                           </View>
@@ -2129,7 +2034,15 @@ const FutureChartScreen = () => {
             <TouchableOpacity
               key={it.id}
               activeOpacity={0.8}
-              onPress={showComingSoon}
+              onPress={() => {
+                if (it.id === "margin") {
+                  NavigationService.navigate(routes.TRADE_SCREEN, { activeTab: "Margin" });
+                } else if (it.id === "futures") {
+                  NavigationService.navigate(routes.FUTURES_SCREEN);
+                } else {
+                  showComingSoon();
+                }
+              }}
               style={styles.chartBottomIconItem}
               accessibilityLabel={it.label}
             >

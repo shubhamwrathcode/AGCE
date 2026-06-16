@@ -13,7 +13,10 @@ import { colors } from "../../theme/colors";
 import { toFixedFive } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
-import { searchIcon, closeIcon, starIcon, starFillIcon } from "../../helper/ImageAssets";
+import { searchIcon, closeIcon, starIcon, starFillIcon, NO_NOTIFICATION_ICON } from "../../helper/ImageAssets";
+import { useAppSelector } from "../../store/hooks";
+import { useDispatch } from "react-redux";
+import { addToFavorites } from "../../actions/homeActions";
 
 const { width } = Dimensions.get("window");
 
@@ -26,6 +29,7 @@ const FuturePairList = ({
   onClose,
 }) => {
   const { isDark, colors: themeColors } = useTheme();
+  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState("USDT");
 
   const cardBg = themeColors.background;
@@ -40,14 +44,37 @@ const FuturePairList = ({
     }
   };
 
+  const toggleFavorite = (item) => {
+    if (!item || !item._id) return;
+    dispatch(addToFavorites({ pair_id: item._id }));
+  };
+
+  const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
+
   const filteredData = useMemo(() => {
     return pairs.filter(pair => {
+      let tabMatch = false;
       if (activeTab === "Favourites") {
-        return true; // Just return all for now or implement fav logic
+        tabMatch = favoriteArray?.includes(pair?._id);
+      } else {
+        tabMatch = (pair?.margin_asset || "").toLowerCase() === activeTab.toLowerCase() || 
+                   (pair?.quote_asset || "").toLowerCase() === activeTab.toLowerCase() ||
+                   (pair?.base_asset || "").toLowerCase() === activeTab.toLowerCase() ||
+                   (pair?.short_name || "").toLowerCase() === activeTab.toLowerCase();
       }
-      return pair?.margin_asset === activeTab;
+
+      let searchMatch = true;
+      if (searchTerm && searchTerm.trim() !== "") {
+        const term = searchTerm.toLowerCase().trim();
+        const symbol = (pair?.symbol || "").toLowerCase();
+        const base = (pair?.base_asset || pair?.short_name || "").toLowerCase();
+        const quote = (pair?.quote_asset || pair?.margin_asset || "").toLowerCase();
+        searchMatch = symbol.includes(term) || base.includes(term) || quote.includes(term);
+      }
+
+      return tabMatch && searchMatch;
     });
-  }, [pairs, activeTab]);
+  }, [pairs, activeTab, searchTerm, favoriteArray]);
 
   return (
     <View style={[styles.container, { backgroundColor: cardBg }]}>
@@ -105,15 +132,15 @@ const FuturePairList = ({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <AppText type={ELEVEN} style={{ color: themeColors.secondaryText }}>No pairs found</AppText>
-          </View>
+          <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70, alignSelf: "center", marginTop: 50 }} resizeMode="contain" />
+
         }
         renderItem={({ item }) => {
           const changeVal = parseFloat(item?.change_percentage || 0);
           const isPositive = changeVal >= 0;
           const changeColor = isPositive ? colors.green : colors.red;
           const sign = isPositive ? "+" : "";
+          const isFavorite = favoriteArray?.includes(item?._id);
 
           const iconUrl = item?.icon_path ? { uri: `${IMAGE_BASE_URL}${item.icon_path}` } : null;
 
@@ -121,8 +148,8 @@ const FuturePairList = ({
             <TouchableOpacity activeOpacity={0.7} onPress={() => handleSelect(item)} style={styles.row}>
               {/* Pair Info */}
               <View style={[styles.cell, { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }]}>
-                <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ marginRight: 8 }}>
-                  <FastImage source={starIcon} style={styles.starIconLeft} tintColor={themeColors.secondaryText} />
+                <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ marginRight: 8 }} onPress={() => toggleFavorite(item)}>
+                  <FastImage source={isFavorite ? starFillIcon : starIcon} style={styles.starIconLeft} tintColor={isFavorite ? colors.starColor : themeColors.secondaryText} />
                 </TouchableOpacity>
                 {iconUrl ? (
                   <FastImage source={iconUrl} style={styles.coinIcon} />
@@ -214,8 +241,8 @@ const styles = StyleSheet.create({
   activeIndicator: {
     position: 'absolute',
     bottom: 0,
-    width: '100%',
-    height: 2,
+    width: 20,
+    height: 3,
     backgroundColor: '#F3BB2B',
     borderRadius: 2,
   },

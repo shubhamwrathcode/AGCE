@@ -1206,7 +1206,8 @@ const SpotChartScreen = () => {
 
   const depthRows = useMemo(() => {
     const rows = [];
-    const maxLen = Math.max(bidsDisplay.length, asksDisplay.length, 20);
+    const hasAnyData = bidsDisplay.length > 0 || asksDisplay.length > 0;
+    const maxLen = hasAnyData ? Math.max(bidsDisplay.length, asksDisplay.length, 20) : 5;
     for (let i = 0; i < maxLen; i++) {
       const bid = bidsDisplay[i] || null;
       const ask = asksDisplay[i] || null;
@@ -1317,7 +1318,9 @@ const SpotChartScreen = () => {
             />
           ))
         ) : (
-          (orderBookViewMode === "bids" ? bidsDisplay : asksDisplay)
+          ((orderBookViewMode === "bids" ? bidsDisplay : asksDisplay).length > 0
+            ? (orderBookViewMode === "bids" ? bidsDisplay : asksDisplay)
+            : Array(5).fill(null))
             .map((item, i) => {
               const rem = item ? orderBookRemaining(item) : 0;
               const maxCum = orderBookViewMode === "bids" ? maxBidCum : maxAskCum;
@@ -2040,7 +2043,15 @@ const SpotChartScreen = () => {
             <TouchableOpacity
               key={it.id}
               activeOpacity={0.8}
-              onPress={showComingSoon}
+              onPress={() => {
+                if (it.id === "margin") {
+                  NavigationService.navigate(routes.TRADE_SCREEN, { activeTab: "Margin" });
+                } else if (it.id === "futures") {
+                  NavigationService.navigate(routes.FUTURES_SCREEN);
+                } else {
+                  showComingSoon();
+                }
+              }}
               style={styles.chartBottomIconItem}
               accessibilityLabel={it.label}
             >

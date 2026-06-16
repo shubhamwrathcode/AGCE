@@ -295,14 +295,17 @@ const FuturesUI = () => {
   const [pairData, setPairData] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState(null);
 
+  const lastRouteCoinId = useRef(null);
+
   useEffect(() => {
-    if (routeCoin && routeCoin._id !== selectedCoin?._id) {
+    if (routeCoin && routeCoin._id !== lastRouteCoinId.current) {
+      lastRouteCoinId.current = routeCoin._id;
       setSelectedCoin(routeCoin);
       if (subscribeToFutures && routeCoin.symbol) {
         subscribeToFutures({ symbol: routeCoin.symbol });
       }
     }
-  }, [routeCoin, selectedCoin?._id, subscribeToFutures]);
+  }, [routeCoin, subscribeToFutures]);
 
   const liveCoin = React.useMemo(() => {
     return pairData?.find((p) => p._id === selectedCoin?._id) || selectedCoin;
