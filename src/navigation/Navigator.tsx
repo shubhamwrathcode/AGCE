@@ -147,6 +147,7 @@ import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 import MarginTransferHistoryScreen from "../screens/spotScreen/MarginTransferHistoryScreen";
 import OptionHistory from "../screens/Futures/OptionsTrade/OptionHistory";
 import FutureHistoryCardDetailPage from "../screens/Futures/FutureHistoryCardDetailPage";
+import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -536,6 +537,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name="FutureHistoryCardDetailPage"
         component={FutureHistoryCardDetailPage}
+      />
+      <Stack.Screen
+        name="FutureHistoryScreen"
+        component={FutureHistoryScreen}
       />
       <Stack.Screen
         name={routes.AUTHORIZED_DEVICES_SCREEN}

@@ -803,10 +803,8 @@ const FuturesUI = () => {
             style={{ padding: 6, marginLeft: 2 }}
             activeOpacity={0.7}
             onPress={() => {
-              if (Platform.OS === 'android') {
-                ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-              } else {
-                Alert.alert('Coming soon');
+              if (liveCoin) {
+                navigation.navigate('FutureHistoryScreen', { selectedCoin: liveCoin, initialTab: activeHistoryTab });
               }
             }}
           >
@@ -1197,7 +1195,7 @@ const FuturesUI = () => {
                   style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
                 />
               </View>
-              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>USDT</AppText>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>USDT</AppText>
             </View>
           </View>
         )}
@@ -1254,7 +1252,7 @@ const FuturesUI = () => {
                 ]}
               />
             </View>
-            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>USDT</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>USDT</AppText>
           </View>
         </View>
 
@@ -1650,26 +1648,32 @@ const FuturesUI = () => {
 
   const renderHistoryContent = () => {
     return (
-      <FuturesHistorySection
-        activeHistoryTab={activeHistoryTab}
-        futuresPositions={futuresPositions}
-        loadingPositions={loadingPositions}
-        futuresPositionHistory={futuresPositionHistory}
-        loadingPositionHistory={loadingPositionHistory}
-        futuresOpenOrders={futuresOpenOrders}
-        loadingOpenOrders={loadingOpenOrders}
-        futuresOrderHistory={futuresOrderHistory}
-        loadingOrderHistory={loadingOrderHistory}
-        themeColors={themeColors}
-        isDark={isDark}
-        futuresPrice={futuresPrice}
-        selectedCoin={selectedCoin}
-      />
+      <View style={{ minHeight: 400 }}>
+        <FuturesHistorySection
+          activeHistoryTab={activeHistoryTab}
+          futuresPositions={futuresPositions}
+          loadingPositions={loadingPositions}
+          futuresPositionHistory={futuresPositionHistory}
+          loadingPositionHistory={loadingPositionHistory}
+          futuresOpenOrders={futuresOpenOrders}
+          loadingOpenOrders={loadingOpenOrders}
+          futuresOrderHistory={futuresOrderHistory}
+          loadingOrderHistory={loadingOrderHistory}
+          themeColors={themeColors}
+          isDark={isDark}
+          futuresPrice={futuresPrice}
+          selectedCoin={selectedCoin}
+          limit={5}
+          onViewMore={() => {
+            navigation.navigate('FutureHistoryScreen', { selectedCoin, initialTab: activeHistoryTab });
+          }}
+        />
+      </View>
     );
   };
 
   const EmptyState = () => (
-    <View style={styles.emptyState}>
+    <View style={[styles.emptyState, { flex: 1, minHeight: 300 }]}>
       <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70 }} resizeMode='contain' />
     </View>
   );
@@ -2297,7 +2301,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   leftColumn: {
-    flex: 0.35,
+    flex: 0.4,
     paddingRight: 10,
   },
   rightColumn: {

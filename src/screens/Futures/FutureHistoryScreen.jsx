@@ -1,0 +1,229 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
+import { AppSafeAreaView } from '../../shared';
+import { AppText, FOURTEEN, SEMI_BOLD } from '../../common';
+import { appOperation } from '../../appOperation';
+import FuturesHistorySection from './components/FuturesHistorySection';
+import { colors } from '../../theme/colors';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import FastImage from 'react-native-fast-image';
+import { back_ic, BACK_ICON } from '../../helper/ImageAssets';
+
+const FutureHistoryScreen = () => {
+  const { colors: themeColors, isDark } = useTheme();
+  const route = useRoute();
+  const navigation = useNavigation();
+
+  const selectedCoin = route.params?.selectedCoin;
+  const initialTab = route.params?.initialTab || 'Positions';
+
+  const [activeHistoryTab, setActiveHistoryTab] = useState(initialTab);
+
+  const [futuresPositions, setFuturesPositions] = useState([]);
+  const [loadingPositions, setLoadingPositions] = useState(false);
+
+  const [futuresPositionHistory, setFuturesPositionHistory] = useState([]);
+  const [loadingPositionHistory, setLoadingPositionHistory] = useState(false);
+
+  const [futuresOpenOrders, setFuturesOpenOrders] = useState([]);
+  const [loadingOpenOrders, setLoadingOpenOrders] = useState(false);
+
+  const [futuresOrderHistory, setFuturesOrderHistory] = useState([]);
+  const [loadingOrderHistory, setLoadingOrderHistory] = useState(false);
+
+  // We can fetch price for mark price calculation if needed, or pass it
+  const futuresPrice = route.params?.futuresPrice || null;
+
+  const dynamicHistoryTabs = React.useMemo(() => [
+    { id: 'Positions', label: 'Positions', count: futuresPositions?.length || 0 },
+    { id: 'Position History', label: 'Position History' },
+    { id: 'Open Orders', label: 'Open Orders', count: futuresOpenOrders?.length || 0 },
+    { id: 'Order History', label: 'Order History' },
+    { id: 'Trade History', label: 'Trade History' },
+    { id: 'Transaction History', label: 'Transaction History' },
+  ], [futuresPositions, futuresOpenOrders]);
+
+  const fetchFuturesPositions = useCallback(async () => {
+    if (!selectedCoin?.symbol) return;
+    try {
+      setLoadingPositions(true);
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
+      const result = await appOperation.customer.futuresOpenPositions(params);
+      if (result?.success) {
+        setFuturesPositions(result.data?.positions ?? []);
+      }
+    } catch (e) {
+      console.warn("fetchFuturesPositions err:", e);
+    } finally {
+      setLoadingPositions(false);
+    }
+  }, [selectedCoin?.symbol]);
+
+  const fetchFuturesPositionHistory = useCallback(async () => {
+    if (!selectedCoin?.symbol) return;
+    try {
+      setLoadingPositionHistory(true);
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
+      const result = await appOperation.customer.futuresPositionHistory(params);
+      if (result?.success) {
+        setFuturesPositionHistory(result.data?.positions ?? []);
+      }
+    } catch (e) {
+      console.warn("[PositionHistory] fetchFuturesPositionHistory err:", e);
+    } finally {
+      setLoadingPositionHistory(false);
+    }
+  }, [selectedCoin?.symbol]);
+
+  const fetchFuturesOpenOrders = useCallback(async () => {
+    if (!selectedCoin?.symbol) return;
+    try {
+      setLoadingOpenOrders(true);
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
+      const result = await appOperation.customer.futuresOpenOrders(params);
+      if (result?.success) {
+        setFuturesOpenOrders(result.data?.orders ?? []);
+      }
+    } catch (e) {
+      console.warn("fetchFuturesOpenOrders err:", e);
+    } finally {
+      setLoadingOpenOrders(false);
+    }
+  }, [selectedCoin?.symbol]);
+
+  const fetchFuturesOrderHistory = useCallback(async () => {
+    if (!selectedCoin?.symbol) return;
+    try {
+      setLoadingOrderHistory(true);
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
+      const result = await appOperation.customer.futuresOrderHistory(params);
+      if (result?.success) {
+        setFuturesOrderHistory(result.data?.orders ?? []);
+      }
+    } catch (e) {
+      console.warn("fetchFuturesOrderHistory err:", e);
+    } finally {
+      setLoadingOrderHistory(false);
+    }
+  }, [selectedCoin?.symbol]);
+
+  useEffect(() => {
+    if (activeHistoryTab === 'Positions') {
+      fetchFuturesPositions();
+    } else if (activeHistoryTab === 'Position History') {
+      fetchFuturesPositionHistory();
+    } else if (activeHistoryTab === 'Open Orders') {
+      fetchFuturesOpenOrders();
+    } else if (activeHistoryTab === 'Order History') {
+      fetchFuturesOrderHistory();
+    }
+  }, [activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory]);
+
+  const renderBottomTabs = () => (
+    <View style={[{
+      flexDirection: "row", marginTop: 6, alignItems: "center", height: 35,
+      borderBottomWidth: 1, borderBottomColor: themeColors.themeBorderColor
+    }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 16 }}
+        style={{ flex: 1 }}
+      >
+        {dynamicHistoryTabs.map((t) => (
+          <TouchableOpacity
+            key={t.id}
+            activeOpacity={0.8}
+            onPress={() => setActiveHistoryTab(t.id)}
+            style={{ alignItems: "center", minHeight: 28, justifyContent: "center", paddingHorizontal: 2 }}
+          >
+            <AppText
+              numberOfLines={1}
+              weight={SEMI_BOLD}
+              style={{
+                color: activeHistoryTab === t.id ? themeColors.text : themeColors.secondaryText,
+                fontSize: 15,
+              }}
+            >
+              {t.label}
+              {typeof t.count === "number" && t.count > 0 ? `(${t.count})` : ""}
+            </AppText>
+            <View
+              style={{
+                width: 25,
+                height: 4,
+                marginTop: 8,
+                backgroundColor: activeHistoryTab === t.id ? colors.black : "transparent",
+                borderRadius: 2,
+              }}
+            />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  return (
+    <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+        >
+          <FastImage
+            source={back_ic}
+            style={{ width: 18, height: 18 }}
+            tintColor={themeColors.text}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={styles.headerTitle}>Futures History</AppText>
+        <View style={{ width: 36 }} />
+      </View>
+      {renderBottomTabs()}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 10 }}>
+        <FuturesHistorySection
+          activeHistoryTab={activeHistoryTab}
+          futuresPositions={futuresPositions}
+          loadingPositions={loadingPositions}
+          futuresPositionHistory={futuresPositionHistory}
+          loadingPositionHistory={loadingPositionHistory}
+          futuresOpenOrders={futuresOpenOrders}
+          loadingOpenOrders={loadingOpenOrders}
+          futuresOrderHistory={futuresOrderHistory}
+          loadingOrderHistory={loadingOrderHistory}
+          themeColors={themeColors}
+          isDark={isDark}
+          futuresPrice={futuresPrice}
+          selectedCoin={selectedCoin}
+        />
+      </ScrollView>
+    </AppSafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+  },
+});
+
+export default FutureHistoryScreen;

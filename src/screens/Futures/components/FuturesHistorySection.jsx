@@ -23,12 +23,14 @@ const FuturesHistorySection = ({
   themeColors,
   isDark,
   futuresPrice,
-  selectedCoin
+  selectedCoin,
+  limit,
+  onViewMore
 }) => {
   const navigation = useNavigation();
 
   const EmptyState = () => (
-    <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 40 }}>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40, minHeight: 300 }}>
       <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 80, height: 80, marginBottom: 12, opacity: 0.8 }} />
     </View>
   );
@@ -379,13 +381,20 @@ const FuturesHistorySection = ({
     if (futuresPositions.length === 0) {
       return <EmptyState />;
     }
+    const data = limit ? futuresPositions.slice(0, limit) : futuresPositions;
+    const hasMore = limit && futuresPositions.length > limit;
     return (
       <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
-        {futuresPositions.map((pos, index) => (
+        {data.map((pos, index) => (
           <React.Fragment key={pos._id || index}>
-            {renderFuturesPositionItem({ item: pos, isLast: index === futuresPositions.length - 1 })}
+            {renderFuturesPositionItem({ item: pos, isLast: index === data.length - 1 && !hasMore })}
           </React.Fragment>
         ))}
+        {hasMore && (
+          <TouchableOpacity onPress={onViewMore} style={{ marginTop: 16, alignItems: 'center' }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, textDecorationLine: 'underline' }}>View More</AppText>
+          </TouchableOpacity>
+        )}
         <View style={{ height: 80 }} />
       </View>
     );
@@ -402,13 +411,20 @@ const FuturesHistorySection = ({
     if (futuresPositionHistory.length === 0) {
       return <EmptyState />;
     }
+    const data = limit ? futuresPositionHistory.slice(0, limit) : futuresPositionHistory;
+    const hasMore = limit && futuresPositionHistory.length > limit;
     return (
       <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
-        {futuresPositionHistory.map((pos, index) => (
+        {data.map((pos, index) => (
           <React.Fragment key={pos._id || index}>
-            {renderFuturesPositionHistoryItem({ item: pos, isLast: index === futuresPositionHistory.length - 1 })}
+            {renderFuturesPositionHistoryItem({ item: pos, isLast: index === data.length - 1 && !hasMore })}
           </React.Fragment>
         ))}
+        {hasMore && (
+          <TouchableOpacity onPress={onViewMore} style={{ marginTop: 16, alignItems: 'center' }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, textDecorationLine: 'underline' }}>View More</AppText>
+          </TouchableOpacity>
+        )}
         <View style={{ height: 80 }} />
       </View>
     );
@@ -425,13 +441,20 @@ const FuturesHistorySection = ({
     if (futuresOpenOrders.length === 0) {
       return <EmptyState />;
     }
+    const data = limit ? futuresOpenOrders.slice(0, limit) : futuresOpenOrders;
+    const hasMore = limit && futuresOpenOrders.length > limit;
     return (
       <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
-        {futuresOpenOrders.map((order, index) => (
+        {data.map((order, index) => (
           <React.Fragment key={order._id || index}>
-            {renderFuturesOpenOrderItem({ item: order, isLast: index === futuresOpenOrders.length - 1 })}
+            {renderFuturesOpenOrderItem({ item: order, isLast: index === data.length - 1 && !hasMore })}
           </React.Fragment>
         ))}
+        {hasMore && (
+          <TouchableOpacity onPress={onViewMore} style={{ marginTop: 16, alignItems: 'center' }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, textDecorationLine: 'underline' }}>View More</AppText>
+          </TouchableOpacity>
+        )}
         <View style={{ height: 80 }} />
       </View>
     );
@@ -448,13 +471,20 @@ const FuturesHistorySection = ({
     if (futuresOrderHistory.length === 0) {
       return <EmptyState />;
     }
+    const data = limit ? futuresOrderHistory.slice(0, limit) : futuresOrderHistory;
+    const hasMore = limit && futuresOrderHistory.length > limit;
     return (
       <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
-        {futuresOrderHistory.map((order, index) => (
+        {data.map((order, index) => (
           <React.Fragment key={order._id || index}>
-            {renderFuturesOrderHistoryItem({ item: order, isLast: index === futuresOrderHistory.length - 1 })}
+            {renderFuturesOrderHistoryItem({ item: order, isLast: index === data.length - 1 && !hasMore })}
           </React.Fragment>
         ))}
+        {hasMore && (
+          <TouchableOpacity onPress={onViewMore} style={{ marginTop: 16, alignItems: 'center' }}>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, textDecorationLine: 'underline' }}>View More</AppText>
+          </TouchableOpacity>
+        )}
         <View style={{ height: 80 }} />
       </View>
     );
