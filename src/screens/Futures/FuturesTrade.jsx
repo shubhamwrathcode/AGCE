@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated, FlatList, Platform, ToastAndroid, Alert, Keyboard } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated, FlatList, Platform, ToastAndroid, Alert, Keyboard, ActivityIndicator } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import FastImage from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,6 +55,20 @@ import { getUserFuturesWallet, getOpenOrders } from '../../actions/walletActions
 import { IMAGE_BASE_URL } from '../../helper/Constants';
 import { appOperation } from '../../appOperation';
 import { CUSTOMER_TYPE } from '../../appOperation/types';
+import SimpleToast from 'react-native-simple-toast';
+import {
+  futuresErrSelectPair,
+  futuresErrInvalidSize,
+  futuresErrPriceForValue,
+  futuresErrInvalidLimitPrice,
+  futuresErrInvalidTrigger,
+  futuresErrGeneric,
+  formatFuturesApiError,
+  futuresErrTpBuy,
+  futuresErrTpSell,
+  futuresErrSlBuy,
+  futuresErrSlSell,
+} from './futuresOrderMessages';
 
 LogBox.ignoreLogs(['VirtualizedLists should never be nested inside plain ScrollViews']);
 
@@ -226,7 +240,7 @@ const FuturesUI = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
-  const [activeTab, setActiveTab] = useState('Open');
+  const [activeTab, setActiveTab] = useState('Buy');
   const [sliderValue, setSliderValue] = useState(0);
   const [price, setPrice] = useState("");
   const [amount, setAmount] = useState("");
@@ -261,7 +275,7 @@ const FuturesUI = () => {
 
   const [futuresOrderHistory, setFuturesOrderHistory] = useState([]);
   const [loadingOrderHistory, setLoadingOrderHistory] = useState(false);
-  
+
   const [futuresTransactionHistory, setFuturesTransactionHistory] = useState([]);
   const [loadingTransactionHistory, setLoadingTransactionHistory] = useState(false);
 
@@ -448,12 +462,12 @@ const FuturesUI = () => {
 
   useEffect(() => {
     if (isFocused) {
-      if (activeHistoryTab === 'Positions') {
-        fetchFuturesPositions();
-      } else if (activeHistoryTab === 'Position History') {
+      // Always fetch to keep counts updated on tabs
+      fetchFuturesPositions();
+      fetchFuturesOpenOrders();
+
+      if (activeHistoryTab === 'Position History') {
         fetchFuturesPositionHistory();
-      } else if (activeHistoryTab === 'Open Orders') {
-        fetchFuturesOpenOrders();
       } else if (activeHistoryTab === 'Order History') {
         fetchFuturesOrderHistory();
       } else if (activeHistoryTab === 'Transaction History') {
@@ -510,6 +524,161 @@ const FuturesUI = () => {
 
   const handleSliderChange = (val) => {
     setSliderValue(val);
+  };
+
+  const [placingOrderSide, setPlacingOrderSide] = useState("");
+
+  const handlePlaceOrder = async (side) => {
+    if (!selectedCoin?.symbol) {
+      SimpleToast.show(futuresErrSelectPair(), SimpleToast.SHORT);
+      return;
+    }
+
+    const isBuy = side === "BUY";
+    const apiSide = isBuy ? "BUY" : "SELL";
+    const order_type = orderType.toUpperCase();
+
+    const tickSize = Number(selectedCoin?.tick_size) || 0.01;
+    const stepSize = Number(selectedCoin?.step_size) || 0.001;
+    const minQty = Number(selectedCoin?.min_order_qty) || stepSize;
+
+    // Quantity validation
+    const rawQty = parseFloat(String(amount).replace(/,/g, ''));
+    if (!Number.isFinite(rawQty) || rawQty <= 0) {
+      SimpleToast.show(futuresErrInvalidSize(), SimpleToast.SHORT);
+      return;
+    }
+
+    // Convert from Amount/Value to Base Qty logic
+    const isQuoteSize = contractUnit.includes('Value');
+    let baseQty = rawQty;
+
+    const refPrice = Number(liveCoin?.mark_price) || 0;
+    const priceForConversion = orderType === 'Limit' ? parseFloat(String(price).replace(/,/g, '')) || refPrice : refPrice;
+
+    if (isQuoteSize && priceForConversion > 0) {
+      baseQty = rawQty / priceForConversion;
+    }
+
+    if (!Number.isFinite(baseQty) || baseQty <= 0) {
+      SimpleToast.show(futuresErrPriceForValue(), SimpleToast.SHORT);
+      return;
+    }
+
+    // Leverage validation
+    const leverage = Number(marginLeverage) || 1;
+
+    // Removing reduceOnly logic as tabs are now Buy/Sell. Can be added as checkbox later if needed.
+    const reduceOnly = false;
+    const closePosition = false;
+
+    const effectiveTif = postOnly ? "GTX" : tif;
+
+    const payload = {
+      symbol: selectedCoin.symbol,
+      side: apiSide,
+      order_type,
+      quantity: String(formatQtyByStep(baseQty, selectedCoin)),
+      leverage,
+    };
+
+    if (orderType === 'Limit') {
+      const priceVal = parseFloat(String(price).replace(/,/g, ''));
+      if (!Number.isFinite(priceVal) || priceVal <= 0) {
+        SimpleToast.show(futuresErrInvalidLimitPrice(), SimpleToast.SHORT);
+        return;
+      }
+      payload.price = String(priceVal);
+      if (effectiveTif && effectiveTif !== "GTC") {
+        payload.time_in_force = effectiveTif;
+      }
+    } else if (orderType === 'Conditional') {
+      const triggerVal = parseFloat(String(triggerPrice).replace(/,/g, ''));
+      if (!Number.isFinite(triggerVal) || triggerVal <= 0) {
+        SimpleToast.show(futuresErrInvalidTrigger(), SimpleToast.SHORT);
+        return;
+      }
+      payload.trigger_price = String(triggerVal);
+
+      const orderPriceVal = parseFloat(String(conditionalPrice).replace(/,/g, ''));
+      if (Number.isFinite(orderPriceVal) && orderPriceVal > 0) {
+        payload.order_price = String(orderPriceVal);
+      }
+    } else if (orderType === 'Market') {
+      if (showSlippage && slippagePct) {
+        const sp = parseFloat(slippagePct);
+        if (Number.isFinite(sp) && sp > 0 && sp <= 100) {
+          payload.slippage = sp;
+        }
+      }
+    }
+
+    if (showTpSl) {
+      const markPriceForTpSl = Number(futuresPrice?.mark_price) || 0;
+      if (takeProfit && String(takeProfit).trim() !== "") {
+        const tpVal = parseFloat(takeProfit);
+        if (Number.isFinite(tpVal) && tpVal > 0) {
+          if (markPriceForTpSl > 0) {
+            if (apiSide === "BUY" && tpVal <= markPriceForTpSl) { SimpleToast.show(futuresErrTpBuy(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+            if (apiSide === "SELL" && tpVal >= markPriceForTpSl) { SimpleToast.show(futuresErrTpSell(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+          }
+          payload.take_profit = String(tpVal);
+        }
+      }
+      if (stopLoss && String(stopLoss).trim() !== "") {
+        const slVal = parseFloat(stopLoss);
+        if (Number.isFinite(slVal) && slVal > 0) {
+          if (markPriceForTpSl > 0) {
+            if (apiSide === "BUY" && slVal >= markPriceForTpSl) { SimpleToast.show(futuresErrSlBuy(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+            if (apiSide === "SELL" && slVal <= markPriceForTpSl) { SimpleToast.show(futuresErrSlSell(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+          }
+          payload.stop_loss = String(slVal);
+        }
+      }
+    }
+
+    if (reduceOnly) payload.reduce_only = true;
+    if (closePosition) payload.close_position = true;
+
+    setPlacingOrderSide(apiSide);
+    try {
+      const result = await appOperation.customer.futuresPlaceOrder(payload);
+      if (result?.success) {
+        SimpleToast.show('Order Placed Successfully!', SimpleToast.SHORT);
+
+        // clear form
+        setAmount("");
+        setSliderValue(0);
+        if (orderType === 'Conditional') {
+          setTriggerPrice("");
+          setConditionalPrice("");
+        }
+        if (showTpSl) {
+          setTakeProfit("");
+          setStopLoss("");
+        }
+
+        fetchFuturesPositions();
+        fetchFuturesOpenOrders();
+        fetchFuturesTransactionHistory();
+      } else {
+        const msg = result?.error?.message || result?.message || "Failed to place order";
+        SimpleToast.show(formatFuturesApiError(msg), SimpleToast.SHORT);
+      }
+    } catch (e) {
+      console.warn("futuresPlaceOrder err:", e);
+      let errMsg = futuresErrGeneric();
+      if (e?.error?.message) {
+        errMsg = e.error.message;
+      } else if (typeof e?.error === 'string') {
+        errMsg = e.error;
+      } else if (e?.message) {
+        errMsg = e.message;
+      }
+      SimpleToast.show(formatFuturesApiError(errMsg), SimpleToast.SHORT);
+    } finally {
+      setPlacingOrderSide("");
+    }
   };
 
   useEffect(() => {
@@ -1141,13 +1310,13 @@ const FuturesUI = () => {
 
     return (
       <View style={styles.rightColumn}>
-        {/* Open / Close Toggle */}
+        {/* Buy / Sell Toggle */}
         <View style={styles.toggleContainer}>
-          <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Open' && styles.toggleActive]} onPress={() => setActiveTab('Open')}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Open' ? colors.white : themeColors.secondaryText }}>Open</AppText>
+          <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Buy' && styles.toggleActive]} onPress={() => setActiveTab('Buy')}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Buy' ? colors.white : themeColors.secondaryText }}>Buy</AppText>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Close' && { backgroundColor: colors.red }]} onPress={() => setActiveTab('Close')}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Close' ? colors.white : themeColors.secondaryText }}>Close</AppText>
+          <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Sell' && { backgroundColor: colors.red }]} onPress={() => setActiveTab('Sell')}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Sell' ? colors.white : themeColors.secondaryText }}>Sell</AppText>
           </TouchableOpacity>
         </View>
 
@@ -1359,6 +1528,29 @@ const FuturesUI = () => {
           />
         </View>
 
+        {/* Available */}
+        <View style={[styles.availableRow, { marginBottom: 2 }]}>
+          <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginRight: 8, paddingVertical: 2 }}>Available</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+            <AppText type={TWELVE}
+              style={{ fontFamily: fontFamilyMedium }}>{parseFloat(Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0).toFixed(5))} USDT</AppText>
+            <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
+              <FastImage source={add} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Margin */}
+        <View style={[styles.availableRow, { marginBottom: 10, flexWrap: 'wrap' }]}>
+          <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, { marginRight: 8, paddingVertical: 2 }]}>Margin</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
+            <AppText type={TWELVE} style={{ color: colors.green, fontFamily: fontFamilyMedium }}>0.00</AppText>
+            <AppText type={TWELVE} style={{ marginHorizontal: 4, fontFamily: fontFamilyMedium }}>/</AppText>
+            <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4, fontFamily: fontFamilyMedium }}>0.00</AppText>
+            <AppText type={TWELVE} style={{ fontFamily: fontFamilyMedium }}>USDT</AppText>
+          </View>
+        </View>
+
         {/* TP/SL */}
         <TouchableOpacity
           style={[styles.tpslRow, { justifyContent: 'space-between', marginBottom: showTpSl ? 12 : 8 }]}
@@ -1526,7 +1718,7 @@ const FuturesUI = () => {
         )}
 
         {/* TIF */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 5 }}>
           <AppText type={TWELVE} color={themeColors.secondaryText}>TIF</AppText>
           <TouchableOpacity
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
@@ -1538,75 +1730,58 @@ const FuturesUI = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Available */}
-        <View style={styles.availableRow}>
-          <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginRight: 8, paddingVertical: 2 }}>Available</AppText>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-            <AppText type={TWELVE}>{Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0).toFixed(5)} USDT</AppText>
-            <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
-              <FastImage source={add} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Margin */}
-        <View style={[styles.availableRow, { marginBottom: 16, flexWrap: 'wrap' }]}>
-          <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, { marginRight: 8, paddingVertical: 2 }]}>Margin</AppText>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-            <AppText type={TWELVE} style={{ color: colors.green }}>0.00</AppText>
-            <AppText type={TWELVE} style={{ marginHorizontal: 4 }}>/</AppText>
-            <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4 }}>0.00</AppText>
-            <AppText type={TWELVE}>USDT</AppText>
-          </View>
-        </View>
-
         {/* Buttons */}
         {(() => {
-          const { maxText } = resolveMaxAndCost();
+          const { maxText, costText } = resolveMaxAndCost();
           return (
-            <>
-              <View style={styles.buttonWrapper}>
-                <View style={styles.maxRow}>
-                  <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
-                  <AppText type={TWELVE}>{maxText}</AppText>
-                </View>
+            <View style={{ width: '100%', marginBottom: 12 }}>
+              {activeTab === 'Buy' ? (
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: colors.green }]}
-                  onPress={() => {
-                    if (Platform.OS === 'android') {
-                      ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-                    } else {
-                      Alert.alert('Coming soon');
-                    }
-                  }}
+                  style={[
+                    styles.actionBtn,
+                    { backgroundColor: colors.green, opacity: (!amount || Number(amount) <= 0) ? 0.5 : 1 }
+                  ]}
+                  disabled={placingOrderSide === "BUY" || !amount || Number(amount) <= 0}
+                  onPress={() => handlePlaceOrder("BUY", false)}
                 >
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
-                    {activeTab === 'Close' ? 'Close Long' : 'Open Long'}
-                  </AppText>
+                  {placingOrderSide === "BUY" ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
+                      Buy {selectedCoin?.short_name || 'BTC'}
+                    </AppText>
+                  )}
                 </TouchableOpacity>
-              </View>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { backgroundColor: colors.red, opacity: (!amount || Number(amount) <= 0) ? 0.5 : 1 }
+                  ]}
+                  disabled={placingOrderSide === "SELL" || !amount || Number(amount) <= 0}
+                  onPress={() => handlePlaceOrder("SELL", false)}
+                >
+                  {placingOrderSide === "SELL" ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
+                      Sell {selectedCoin?.short_name || 'BTC'}
+                    </AppText>
+                  )}
+                </TouchableOpacity>
+              )}
 
-              <View style={styles.buttonWrapper}>
-                <View style={[styles.maxRow, { bottom: 5 }]}>
-                  <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
-                  <AppText type={TWELVE}>{maxText}</AppText>
+              <View style={{ marginTop: 12, gap: 6 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <AppText type={TWELVE} color={themeColors.secondaryText}>Cost</AppText>
+                  <AppText type={TWELVE} weight={SEMI_BOLD}>{costText}</AppText>
                 </View>
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: colors.red }]}
-                  onPress={() => {
-                    if (Platform.OS === 'android') {
-                      ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-                    } else {
-                      Alert.alert('Coming soon');
-                    }
-                  }}
-                >
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
-                    {activeTab === 'Close' ? 'Close Short' : 'Open Short'}
-                  </AppText>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
+                  <AppText type={TWELVE} weight={SEMI_BOLD}>{maxText}</AppText>
+                </View>
               </View>
-            </>
+            </View>
           );
         })()}
       </View>
@@ -2332,8 +2507,9 @@ const styles = StyleSheet.create({
   },
   dashedUnderline: {
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: colors.black,
     borderStyle: 'dashed',
+    color: colors.black
   },
   fundingRow: {
     marginBottom: 16,

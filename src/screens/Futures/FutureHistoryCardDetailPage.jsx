@@ -140,8 +140,8 @@ const FutureHistoryCardDetailPage = () => {
         <View style={{ gap: 4 }}>
           {title === 'Order History' || title === 'Open Orders' ? (
             <>
-              {renderDetailRow("Price", String(pos.order_type ?? pos.type ?? "").toUpperCase() === "MARKET" ? "Market" : decNum(pos.order_price ?? pos.price).toFixed(4))}
-              {renderDetailRow("Avg Fill", decNum(pos.average_execution_price ?? pos.avg_price ?? 0).toFixed(2))}
+              {renderDetailRow("Price", String(pos.order_type ?? pos.type ?? "").toUpperCase() === "MARKET" ? "Market" : (decNum(pos.order_price ?? pos.price) > 0 ? decNum(pos.order_price ?? pos.price).toFixed(4) : "—"))}
+              {renderDetailRow("Avg Fill", decNum(pos.average_execution_price ?? pos.avg_price) > 0 ? decNum(pos.average_execution_price ?? pos.avg_price).toFixed(2) : "—")}
               {renderDetailRow("Date", moment(pos.created_at || pos.createdAt).format("YYYY-MM-DD"))}
               {renderDetailRow("Time", moment(pos.created_at || pos.createdAt).format("HH:mm:ss"))}
               {renderDetailRow("Qty / Filled", `${decNum(pos.quantity).toFixed(4)} / ${decNum(pos.filled_quantity ?? pos.executed_quantity ?? pos.filledQty ?? 0).toFixed(4)} ${selectedCoin?.base_currency || "USDT"}`)}
@@ -163,8 +163,8 @@ const FutureHistoryCardDetailPage = () => {
               {renderDetailRow("Closed Time", closedDateFormatted)}
               {renderDetailRow("Opened Time", openedDateFormatted)}
               {renderDetailRow("Size", `${Number(qty).toFixed(4)} ${selectedCoin?.base_currency || "USDT"}`)}
-              {renderDetailRow("Entry Price", Number(entry).toFixed(4))}
-              {renderDetailRow("Exit Price", Number(exit).toFixed(4))}
+              {renderDetailRow("Entry Price", Number(entry) > 0 ? Number(entry).toFixed(4) : "—")}
+              {renderDetailRow("Exit Price", Number(exit) > 0 ? Number(exit).toFixed(4) : "—")}
               {renderDetailRow("Realized PNL", `${pnl >= 0 ? "+" : ""}${Number(pnl).toFixed(4)} USDT`, pnlColor)}
               {renderDetailRow("Funding", `${funding >= 0 ? "+" : ""}${Number(funding || 0).toFixed(4)} USDT`, fundingColor)}
               {renderDetailRow("Fee", `${Number(fees || 0).toFixed(4)} USDT`)}

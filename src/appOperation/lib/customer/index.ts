@@ -639,6 +639,8 @@ export default (appOperation: AppOperation) => ({
     if (params.to) p.append("to", params.to);
     return appOperation.get(`futures/positions/history?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
   },
+  futuresPlaceOrder: (payload: any) =>
+    appOperation.post('futures/orders', payload, CUSTOMER_TYPE),
   futuresOpenOrders: (params: { symbol?: string; skip?: number; limit?: number } = {}) => {
     const p = new URLSearchParams({ skip: String(params.skip ?? 0), limit: String(params.limit ?? 20) });
     if (params.symbol) p.append("symbol", params.symbol);
