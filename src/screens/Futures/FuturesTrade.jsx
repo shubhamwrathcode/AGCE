@@ -235,7 +235,21 @@ const FuturesUI = () => {
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
   const [postOnly, setPostOnly] = useState(false);
-  const [tif, setTif] = useState("GTC");
+  const [tif, setTif] = useState('GTC');
+
+  // Market specific
+  const [showSlippage, setShowSlippage] = useState(false);
+  const [slippagePct, setSlippagePct] = useState('');
+
+  // Conditional specific
+  const [triggerPrice, setTriggerPrice] = useState("");
+  const triggerAnim = useRef(new Animated.Value(0)).current;
+  const [isTriggerFocused, setIsTriggerFocused] = useState(false);
+
+  const [conditionalPrice, setConditionalPrice] = useState("");
+  const conditionalPriceAnim = useRef(new Animated.Value(0)).current;
+  const [isConditionalPriceFocused, setIsConditionalPriceFocused] = useState(false);
+
   const [activeHistoryTab, setActiveHistoryTab] = useState("Positions");
 
   // History Data States
@@ -255,6 +269,22 @@ const FuturesUI = () => {
   const slAnim = useRef(new Animated.Value(0)).current;
   const [isTpFocused, setIsTpFocused] = useState(false);
   const [isSlFocused, setIsSlFocused] = useState(false);
+
+  useEffect(() => {
+    Animated.timing(triggerAnim, {
+      toValue: isTriggerFocused || String(triggerPrice ?? "").trim() !== "" ? 1 : 0,
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
+  }, [isTriggerFocused, triggerPrice]);
+
+  useEffect(() => {
+    Animated.timing(conditionalPriceAnim, {
+      toValue: isConditionalPriceFocused || String(conditionalPrice ?? "").trim() !== "" ? 1 : 0,
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
+  }, [isConditionalPriceFocused, conditionalPrice]);
 
   useEffect(() => {
     Animated.timing(tpAnim, {
@@ -1127,43 +1157,104 @@ const FuturesUI = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Trigger Price Input (Only for Conditional) */}
+        {orderType === 'Conditional' && (
+          <View style={[styles.inputRow, { marginBottom: 12 }]}>
+            <View style={[styles.inputBox, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+              <View style={{ justifyContent: 'center', flex: 1 }}>
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: triggerAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [12, 4],
+                    }),
+                  }}
+                >
+                  <Animated.Text
+                    style={{
+                      color: themeColors.secondaryText,
+                      fontFamily: fontFamilyMedium,
+                      fontSize: triggerAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [13, 11],
+                      }),
+                    }}
+                  >
+                    Trigger Price
+                  </Animated.Text>
+                </Animated.View>
+                <TextInput
+                  cursorColor={colors.black}
+                  value={triggerPrice}
+                  onChangeText={setTriggerPrice}
+                  onFocus={() => setIsTriggerFocused(true)}
+                  onBlur={() => setIsTriggerFocused(false)}
+                  placeholder=""
+                  keyboardType="numeric"
+                  style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
+                />
+              </View>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>USDT</AppText>
+            </View>
+          </View>
+        )}
+
         {/* Price Input */}
         <View style={styles.inputRow}>
-          <View style={[styles.inputBox, { position: "relative", justifyContent: "center" }]}>
-            <Animated.View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                left: 10,
-                top: priceAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [12, 4],
-                }),
-              }}
-            >
-              <Animated.Text
+          <View style={[styles.inputBox, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+            <View style={{ justifyContent: 'center', flex: 1 }}>
+              <Animated.View
+                pointerEvents="none"
                 style={{
-                  color: themeColors.secondaryText,
-                  fontFamily: fontFamilyMedium,
-                  fontSize: priceAnim.interpolate({
+                  position: "absolute",
+                  left: 0,
+                  top: (orderType === 'Conditional' ? conditionalPriceAnim : priceAnim).interpolate({
                     inputRange: [0, 1],
-                    outputRange: [13, 11],
+                    outputRange: [12, 4],
                   }),
                 }}
               >
-                Price
-              </Animated.Text>
-            </Animated.View>
-            <TextInput
-              cursorColor={colors.black}
-              value={price}
-              onChangeText={setPrice}
-              onFocus={() => setIsPriceFocused(true)}
-              onBlur={() => setIsPriceFocused(false)}
-              placeholder=""
-              keyboardType="numeric"
-              style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilySemiBold, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
-            />
+                <Animated.Text
+                  style={{
+                    color: themeColors.secondaryText,
+                    fontFamily: fontFamilyMedium,
+                    fontSize: (orderType === 'Market' ? new Animated.Value(1) : (orderType === 'Conditional' ? conditionalPriceAnim : priceAnim)).interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [13, 11],
+                    }),
+                  }}
+                >
+                  {orderType === 'Conditional' ? 'Order Price' : 'Price'}
+                </Animated.Text>
+              </Animated.View>
+              <TextInput
+                cursorColor={colors.black}
+                value={orderType === 'Market' ? '---Best Market Price---' : (orderType === 'Conditional' ? conditionalPrice : price)}
+                onChangeText={orderType === 'Conditional' ? setConditionalPrice : setPrice}
+                onFocus={() => orderType === 'Conditional' ? setIsConditionalPriceFocused(true) : setIsPriceFocused(true)}
+                onBlur={() => orderType === 'Conditional' ? setIsConditionalPriceFocused(false) : setIsPriceFocused(false)}
+                placeholder=""
+                placeholderTextColor={themeColors.secondaryText}
+                keyboardType="numeric"
+                editable={orderType !== 'Market'}
+                style={[
+                  styles.textInput,
+                  {
+                    color: orderType === 'Market' ? themeColors.secondaryText : themeColors.text,
+                    fontFamily: fontFamilySemiBold,
+                    paddingTop: 14,
+                    paddingBottom: 0,
+                    paddingLeft: 0,
+                    marginTop: 4,
+                    opacity: orderType === 'Market' ? 0.5 : 1
+                  }
+                ]}
+              />
+            </View>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>USDT</AppText>
           </View>
         </View>
 
@@ -1223,14 +1314,14 @@ const FuturesUI = () => {
             }}
             activeOpacity={0.8}
           >
-            <AppText type={TWELVE} weight={SEMI_BOLD}>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
               {(() => {
                 const match = contractUnit.match(/\(([^)]+)\)/);
                 const label = match ? match[1] : 'Cont.';
                 return label === 'Contracts' ? 'Cont.' : label;
               })()}
             </AppText>
-            <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode='contain' tintColor={themeColors.text} />
+            <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
           </TouchableOpacity>
         </View>
 
@@ -1353,19 +1444,68 @@ const FuturesUI = () => {
           </View>
         )}
 
-        {/* Post Only */}
-        <TouchableOpacity
-          style={[styles.tpslRow, { marginBottom: 12 }]}
-          onPress={() => setPostOnly(!postOnly)}
-          activeOpacity={0.8}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <View style={[styles.checkbox, postOnly && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
-              {postOnly && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
+        {/* Post Only (Only for Limit) */}
+        {orderType === 'Limit' && (
+          <TouchableOpacity
+            style={[styles.tpslRow, { marginBottom: 12 }]}
+            onPress={() => setPostOnly(!postOnly)}
+            activeOpacity={0.8}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={[styles.checkbox, postOnly && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
+                {postOnly && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
+              </View>
+              <AppText type={TWELVE} style={[styles.dashedUnderline]}>Post Only</AppText>
             </View>
-            <AppText type={TWELVE} style={[styles.dashedUnderline]}>Post Only</AppText>
+          </TouchableOpacity>
+        )}
+
+        {/* Slippage (Only for Market) */}
+        {orderType === 'Market' && (
+          <View style={{ marginBottom: 12 }}>
+            <TouchableOpacity
+              style={[styles.tpslRow, { justifyContent: 'space-between', marginBottom: showSlippage ? 12 : 0 }]}
+              onPress={() => setShowSlippage(!showSlippage)}
+              activeOpacity={0.8}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={[styles.checkbox, showSlippage && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
+                  {showSlippage && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
+                </View>
+                <AppText type={TWELVE} style={[styles.dashedUnderline]}>Slippage</AppText>
+              </View>
+            </TouchableOpacity>
+
+            {showSlippage && (
+              <View style={[styles.inputBox, { flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+                <View style={{ justifyContent: 'center', flex: 1 }}>
+                  <Animated.View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 4,
+                    }}
+                  >
+                    <Animated.Text style={{ color: themeColors.secondaryText, fontFamily: fontFamilyMedium, fontSize: 11 }}>
+                      Percentage
+                    </Animated.Text>
+                  </Animated.View>
+                  <TextInput
+                    cursorColor={colors.black}
+                    value={slippagePct}
+                    onChangeText={setSlippagePct}
+                    placeholder="0.01~2"
+                    placeholderTextColor={themeColors.secondaryText}
+                    keyboardType="numeric"
+                    style={[styles.textInput, { color: themeColors.text, fontFamily: fontFamilyMedium, paddingTop: 14, paddingBottom: 0, paddingLeft: 0, marginTop: 4 }]}
+                  />
+                </View>
+                <AppText type={TWELVE} weight={SEMI_BOLD}>%</AppText>
+              </View>
+            )}
           </View>
-        </TouchableOpacity>
+        )}
 
         {/* TIF */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
@@ -2157,11 +2297,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   leftColumn: {
-    flex: 0.45,
+    flex: 0.35,
     paddingRight: 10,
   },
   rightColumn: {
-    flex: 0.55,
+    flex: 0.7,
     paddingLeft: 10,
   },
   dashedUnderline: {
