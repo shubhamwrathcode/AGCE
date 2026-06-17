@@ -10,7 +10,7 @@ import {
 import { colors } from '../theme/colors';
 import { AppText, ELEVEN, SEMI_BOLD, THIRTEEN, FOURTEEN, FIFTEEN, MEDIUM } from './AppText';
 import FastImage from 'react-native-fast-image';
-import { DOWN_ARROW, tick } from '../helper/ImageAssets';
+import { DOWN_ARROW, downIcon, tick } from '../helper/ImageAssets';
 import { useTheme } from '../hooks/useTheme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -67,7 +67,7 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
           {selected || 'Select option'}
         </AppText>
         <FastImage
-          source={icon || DOWN_ARROW}
+          source={icon || downIcon}
           style={[
             compact ? styles.arrowCompact : styles.arrow,
             { transform: [{ rotate: visible ? '180deg' : '0deg' }] },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, SafeAreaView, Platform, Alert, ToastAndroid } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import moment from 'moment';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -10,6 +10,8 @@ import { BOLD, MEDIUM, SEMI_BOLD, fontFamilyMedium, fontFamilySemiBold } from '.
 import { colors } from '../../theme/colors';
 import { decNum, computeClosedPosition } from '../../helper/futuresUtils';
 import { back_ic } from '../../helper/ImageAssets';
+import { appOperation } from '../../appOperation';
+import FuturesCancelModal from './components/FuturesCancelModal';
 
 const FutureHistoryCardDetailPage = () => {
   const { colors: themeColors, isDark } = useTheme();
@@ -30,6 +32,21 @@ const FutureHistoryCardDetailPage = () => {
   const pnlColor = pnl >= 0 ? colors.green : colors.red;
   const fundingColor = funding >= 0 ? colors.green : colors.red;
 
+  const getStatusColor = (statusText) => {
+    if (!statusText) return themeColors.text;
+    const normalized = statusText.toString().toLowerCase();
+    if (normalized.includes("filled") || normalized.includes("success") || normalized.includes("completed")) {
+      return colors.green;
+    }
+    if (normalized.includes("cancel") || normalized.includes("reject") || normalized.includes("fail")) {
+      return colors.red;
+    }
+    if (normalized.includes("pending")) {
+      return colors.orange || "#FFA500";
+    }
+    return themeColors.text;
+  };
+
   const closedTime = pos.closed_at || pos.updatedAt || pos.createdAt;
   const openedTime = pos.opened_at || pos.createdAt;
 
@@ -42,6 +59,32 @@ const FutureHistoryCardDetailPage = () => {
       <AppText type={FOURTEEN} style={{ color: valueColor, fontFamily: valueFont }}>{value}</AppText>
     </View>
   );
+
+  const [cancelModalVisible, setCancelModalVisible] = React.useState(false);
+  const [cancelLoading, setCancelLoading] = React.useState(false);
+
+  const handleCancelOrder = () => {
+    setCancelModalVisible(true);
+  };
+
+  const executeCancelOrder = async () => {
+    setCancelLoading(true);
+    try {
+      const result = await appOperation.customer?.cancelFutureOrder({ orderId: pos._id || pos.id });
+      if (result?.success) {
+        ToastAndroid.show(result?.message || 'Order Cancelled', ToastAndroid.SHORT);
+        setCancelModalVisible(false);
+        navigation.goBack();
+      } else {
+        ToastAndroid.show(result?.message || 'Failed to cancel', ToastAndroid.SHORT);
+      }
+    } catch (e) {
+      console.warn("Cancel error", e);
+      ToastAndroid.show('Something went wrong', ToastAndroid.SHORT);
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
@@ -80,7 +123,7 @@ const FutureHistoryCardDetailPage = () => {
               {pos.symbol || "—"}
             </AppText>
           </View>
-          {title === 'Order History' ? (
+          {title === 'Order History' || title === 'Open Orders' ? (
             <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilyMedium }}>
               <AppText type={FOURTEEN} style={{ color: String(pos.side ?? "").toUpperCase() === "BUY" ? colors.green : colors.red, fontFamily: fontFamilySemiBold }}>
                 {String(pos.side ?? "").toUpperCase() === "BUY" ? "BUY" : "SELL"}
@@ -95,17 +138,25 @@ const FutureHistoryCardDetailPage = () => {
         </View>
 
         <View style={{ gap: 4 }}>
-          {title === 'Order History' ? (
+          {title === 'Order History' || title === 'Open Orders' ? (
             <>
               {renderDetailRow("Price", String(pos.order_type ?? pos.type ?? "").toUpperCase() === "MARKET" ? "Market" : decNum(pos.order_price ?? pos.price).toFixed(4))}
-              {renderDetailRow("Avg Fill", decNum(pos.average_execution_price ?? pos.avg_price).toFixed(2))}
+              {renderDetailRow("Avg Fill", decNum(pos.average_execution_price ?? pos.avg_price ?? 0).toFixed(2))}
               {renderDetailRow("Date", moment(pos.created_at || pos.createdAt).format("YYYY-MM-DD"))}
               {renderDetailRow("Time", moment(pos.created_at || pos.createdAt).format("HH:mm:ss"))}
-              {renderDetailRow("Qty / Filled", `${decNum(pos.quantity).toFixed(4)} / ${decNum(pos.filled_quantity ?? pos.executed_quantity).toFixed(4)} ${selectedCoin?.base_currency || "USDT"}`)}
-              {renderDetailRow("TIF", pos.time_in_force || "GTC")}
-              {renderDetailRow("Reduce Only", pos.reduce_only ? "Yes" : "No")}
-              {renderDetailRow("Fee", `${decNum(pos.total_fees_paid).toFixed(9)} USDT`)}
-              {renderDetailRow("Status", String(pos.status || "—").toUpperCase(), pos.status === "FILLED" ? colors.green : themeColors.text)}
+              {renderDetailRow("Qty / Filled", `${decNum(pos.quantity).toFixed(4)} / ${decNum(pos.filled_quantity ?? pos.executed_quantity ?? pos.filledQty ?? 0).toFixed(4)} ${selectedCoin?.base_currency || "USDT"}`)}
+              {renderDetailRow("TIF", pos.time_in_force || pos.timeInForce || "GTC")}
+              {renderDetailRow("Reduce Only", pos.reduce_only || pos.reduceOnly ? "Yes" : "No")}
+              {title === 'Order History' && renderDetailRow("Fee", `${decNum(pos.total_fees_paid ?? 0).toFixed(9)} USDT`)}
+              {renderDetailRow("Status", String(pos.status || "OPEN").toUpperCase(), getStatusColor(pos.status || "OPEN"))}
+              {title === 'Open Orders' && (
+                <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, alignItems: 'center' }}>
+                  <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Action</AppText>
+                  <TouchableOpacity onPress={handleCancelOrder} style={{ paddingHorizontal: 16, paddingVertical: 6, backgroundColor: isDark ? "rgba(255,255,255,0.15)" : "#333333", borderRadius: 16 }}>
+                    <AppText type={FOURTEEN} style={{ color: isDark ? colors.white : colors.white, fontFamily: fontFamilyMedium }}>Cancel</AppText>
+                  </TouchableOpacity>
+                </View>
+              )}
             </>
           ) : (
             <>
@@ -117,12 +168,21 @@ const FutureHistoryCardDetailPage = () => {
               {renderDetailRow("Realized PNL", `${pnl >= 0 ? "+" : ""}${Number(pnl).toFixed(4)} USDT`, pnlColor)}
               {renderDetailRow("Funding", `${funding >= 0 ? "+" : ""}${Number(funding || 0).toFixed(4)} USDT`, fundingColor)}
               {renderDetailRow("Fee", `${Number(fees || 0).toFixed(4)} USDT`)}
-              {pos.close_reason || pos.status ? renderDetailRow("Status", reason || pos.status, colors.green) : null}
+              {pos.close_reason || pos.status ? renderDetailRow("Status", reason || pos.status, getStatusColor(reason || pos.status)) : null}
             </>
           )}
         </View>
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <FuturesCancelModal
+        visible={cancelModalVisible}
+        isDark={isDark}
+        themeColors={themeColors}
+        loading={cancelLoading}
+        onClose={() => setCancelModalVisible(false)}
+        onConfirm={executeCancelOrder}
+      />
     </SafeAreaView>
   );
 };

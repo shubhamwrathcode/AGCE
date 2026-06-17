@@ -6,7 +6,7 @@ import { AppText, FOURTEEN, SEMI_BOLD } from '../../common';
 import { appOperation } from '../../appOperation';
 import FuturesHistorySection from './components/FuturesHistorySection';
 import { colors } from '../../theme/colors';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useIsFocused } from '@react-navigation/native';
 import FastImage from 'react-native-fast-image';
 import { back_ic, BACK_ICON } from '../../helper/ImageAssets';
 
@@ -14,6 +14,7 @@ const FutureHistoryScreen = () => {
   const { colors: themeColors, isDark } = useTheme();
   const route = useRoute();
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
   const selectedCoin = route.params?.selectedCoin;
   const initialTab = route.params?.initialTab || 'Positions';
@@ -31,6 +32,9 @@ const FutureHistoryScreen = () => {
 
   const [futuresOrderHistory, setFuturesOrderHistory] = useState([]);
   const [loadingOrderHistory, setLoadingOrderHistory] = useState(false);
+
+  const [futuresTransactionHistory, setFuturesTransactionHistory] = useState([]);
+  const [loadingTransactionHistory, setLoadingTransactionHistory] = useState(false);
 
   // We can fetch price for mark price calculation if needed, or pass it
   const futuresPrice = route.params?.futuresPrice || null;
@@ -96,7 +100,7 @@ const FutureHistoryScreen = () => {
     if (!selectedCoin?.symbol) return;
     try {
       setLoadingOrderHistory(true);
-      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
+      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOrderHistory(params);
       if (result?.success) {
         setFuturesOrderHistory(result.data?.orders ?? []);
@@ -108,17 +112,36 @@ const FutureHistoryScreen = () => {
     }
   }, [selectedCoin?.symbol]);
 
-  useEffect(() => {
-    if (activeHistoryTab === 'Positions') {
-      fetchFuturesPositions();
-    } else if (activeHistoryTab === 'Position History') {
-      fetchFuturesPositionHistory();
-    } else if (activeHistoryTab === 'Open Orders') {
-      fetchFuturesOpenOrders();
-    } else if (activeHistoryTab === 'Order History') {
-      fetchFuturesOrderHistory();
+  const fetchFuturesTransactionHistory = useCallback(async () => {
+    try {
+      setLoadingTransactionHistory(true);
+      const params = { page: 1, limit: 50 };
+      const result = await appOperation.customer.futuresWalletHistory(params);
+      if (result?.success) {
+        setFuturesTransactionHistory(result.data?.transactions ?? []);
+      }
+    } catch (e) {
+      console.warn("fetchFuturesTransactionHistory err:", e);
+    } finally {
+      setLoadingTransactionHistory(false);
     }
-  }, [activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory]);
+  }, []);
+
+  useEffect(() => {
+    if (isFocused) {
+      if (activeHistoryTab === 'Positions') {
+        fetchFuturesPositions();
+      } else if (activeHistoryTab === 'Position History') {
+        fetchFuturesPositionHistory();
+      } else if (activeHistoryTab === 'Open Orders') {
+        fetchFuturesOpenOrders();
+      } else if (activeHistoryTab === 'Order History') {
+        fetchFuturesOrderHistory();
+      } else if (activeHistoryTab === 'Transaction History') {
+        fetchFuturesTransactionHistory();
+      }
+    }
+  }, [isFocused, activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory, fetchFuturesTransactionHistory]);
 
   const renderBottomTabs = () => (
     <View style={[{
@@ -146,8 +169,7 @@ const FutureHistoryScreen = () => {
                 fontSize: 15,
               }}
             >
-              {t.label}
-              {typeof t.count === "number" && t.count > 0 ? `(${t.count})` : ""}
+              {t.label} {t.count != null ? `(${t.count})` : ""}
             </AppText>
             <View
               style={{
@@ -193,10 +215,13 @@ const FutureHistoryScreen = () => {
           loadingOpenOrders={loadingOpenOrders}
           futuresOrderHistory={futuresOrderHistory}
           loadingOrderHistory={loadingOrderHistory}
+          futuresTransactionHistory={futuresTransactionHistory}
+          loadingTransactionHistory={loadingTransactionHistory}
           themeColors={themeColors}
           isDark={isDark}
           futuresPrice={futuresPrice}
           selectedCoin={selectedCoin}
+          onRefresh={fetchFuturesOpenOrders}
         />
       </ScrollView>
     </AppSafeAreaView>

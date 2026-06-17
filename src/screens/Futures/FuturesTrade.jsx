@@ -261,6 +261,9 @@ const FuturesUI = () => {
 
   const [futuresOrderHistory, setFuturesOrderHistory] = useState([]);
   const [loadingOrderHistory, setLoadingOrderHistory] = useState(false);
+  
+  const [futuresTransactionHistory, setFuturesTransactionHistory] = useState([]);
+  const [loadingTransactionHistory, setLoadingTransactionHistory] = useState(false);
 
   const [futuresPositions, setFuturesPositions] = useState([]);
   const [loadingPositions, setLoadingPositions] = useState(false);
@@ -428,6 +431,21 @@ const FuturesUI = () => {
     }
   }, [selectedCoin?.symbol]);
 
+  const fetchFuturesTransactionHistory = React.useCallback(async () => {
+    try {
+      setLoadingTransactionHistory(true);
+      const params = { page: 1, limit: 50 };
+      const result = await appOperation.customer.futuresWalletHistory(params);
+      if (result?.success) {
+        setFuturesTransactionHistory(result.data?.transactions ?? []);
+      }
+    } catch (e) {
+      console.warn("fetchFuturesTransactionHistory err:", e);
+    } finally {
+      setLoadingTransactionHistory(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (isFocused) {
       if (activeHistoryTab === 'Positions') {
@@ -438,9 +456,11 @@ const FuturesUI = () => {
         fetchFuturesOpenOrders();
       } else if (activeHistoryTab === 'Order History') {
         fetchFuturesOrderHistory();
+      } else if (activeHistoryTab === 'Transaction History') {
+        fetchFuturesTransactionHistory();
       }
     }
-  }, [isFocused, activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory]);
+  }, [isFocused, activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory, fetchFuturesTransactionHistory]);
 
   const liveCoin = React.useMemo(() => {
     return pairData?.find((p) => p._id === selectedCoin?._id) || selectedCoin;
@@ -1602,7 +1622,7 @@ const FuturesUI = () => {
     { id: 'Order History', label: 'Order History' },
     { id: 'Trade History', label: 'Trade History' },
     { id: 'Transaction History', label: 'Transaction History' },
-  ], [futuresPositions]);
+  ], [futuresPositions, futuresOpenOrders]);
 
   const renderBottomTabs = () => (
     <View style={[styles.bottomTabsContainer, { flexDirection: "row", marginTop: 6, alignItems: "center", height: 40 }]}>
@@ -1627,8 +1647,7 @@ const FuturesUI = () => {
                 fontSize: 14,
               }}
             >
-              {t.label}
-              {typeof t.count === "number" ? `(${t.count})` : ""}
+              {t.label} {t.count != null ? `(${t.count})` : ""}
             </AppText>
             <View
               style={{
@@ -1659,6 +1678,8 @@ const FuturesUI = () => {
           loadingOpenOrders={loadingOpenOrders}
           futuresOrderHistory={futuresOrderHistory}
           loadingOrderHistory={loadingOrderHistory}
+          futuresTransactionHistory={futuresTransactionHistory}
+          loadingTransactionHistory={loadingTransactionHistory}
           themeColors={themeColors}
           isDark={isDark}
           futuresPrice={futuresPrice}
@@ -1667,6 +1688,7 @@ const FuturesUI = () => {
           onViewMore={() => {
             navigation.navigate('FutureHistoryScreen', { selectedCoin, initialTab: activeHistoryTab });
           }}
+          onRefresh={fetchFuturesOpenOrders}
         />
       </View>
     );

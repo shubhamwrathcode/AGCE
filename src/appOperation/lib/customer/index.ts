@@ -674,8 +674,10 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('options/placeOrder', data, CUSTOMER_TYPE),
   getExpiryDates: (data: any) =>
     appOperation.get(`options/contractDates?underlying=${data}`, undefined, undefined, CUSTOMER_TYPE),
-  cancelFutureOrder: (data: any) =>
-    appOperation.post('futures/cancel', data, CUSTOMER_TYPE),
+  cancelFutureOrder: (data: any) => {
+    const orderId = typeof data === "object" ? (data.orderId || data.order_id) : data;
+    return appOperation.post(`futures/orders/${encodeURIComponent(String(orderId))}/cancel`, {}, CUSTOMER_TYPE);
+  },
   transaction_history: (id: string) =>
     appOperation.get(
       `mobile/wallet-history?short_name=${id}`,
