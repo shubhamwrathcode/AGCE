@@ -220,8 +220,8 @@ const MarginTransfer = () => {
       const defaultCoin = route?.params?.coin;
       const found = defaultCoin
         ? currencyData.find(c => String(c.short_name).toUpperCase() === String(defaultCoin).toUpperCase() || String(c.currency).toUpperCase() === String(defaultCoin).toUpperCase())
-        : currencyData.find(c => String(c.short_name).toUpperCase() === "BTC");
-      setSelectedCurrency(found || currencyData[0]);
+        : currencyData.find(c => String(c.short_name).toUpperCase() === "USDT");
+      setSelectedCurrency(found || currencyData.find(c => String(c.short_name).toUpperCase() === "BTC") || currencyData[0]);
     }
   }, [currencyData, selectedCurrency, route?.params?.coin]);
 

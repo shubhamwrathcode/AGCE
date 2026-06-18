@@ -639,6 +639,16 @@ const KycStatus = () => {
   const { width: screenWidth } = useWindowDimensions();
   const kycVerified = userData?.kycVerified != null ? Number(userData.kycVerified) : 0;
 
+  useEffect(() => {
+    console.log("=== USER KYC STATUS LOG ===", {
+      kycVerified: userData?.kycVerified,
+      kyc_verified: userData?.kyc_verified,
+      kycStatus: userData?.kycStatus,
+      kyc_status: userData?.kyc_status,
+      userData: JSON.stringify(userData, null, 2)
+    });
+  }, [userData]);
+
   const [idDocStatus, setIdDocStatus] = useState(null);
   const [taxDocStatus, setTaxDocStatus] = useState(null);
   const [selfieStatus, setSelfieStatus] = useState(null);

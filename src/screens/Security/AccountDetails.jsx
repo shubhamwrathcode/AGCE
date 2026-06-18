@@ -215,7 +215,7 @@ const AccountDetails = () => {
               const fetched = res.data?.nickname || res.data?.data?.nickname;
               if (fetched) setServerNickname(fetched);
             }
-          } catch {}
+          } catch { }
         })(),
         (async () => {
           try {
@@ -224,7 +224,7 @@ const AccountDetails = () => {
               const fetchedAvatar = resAvatar.data?.avatar || resAvatar.data?.data?.avatar;
               if (fetchedAvatar) setServerAvatar(fetchedAvatar);
             }
-          } catch {}
+          } catch { }
         })()
       ]);
     } catch (e) {
@@ -351,6 +351,31 @@ const AccountDetails = () => {
   };
 
   const finalAvatarUri = getFullAvatarUrl(serverAvatar || userData?.profilepicture);
+
+  const kycBadge = React.useMemo(() => {
+    const raw = userData?.kycVerified ?? userData?.kyc_verified;
+    let tier = 0;
+    if (raw === true) tier = 1;
+    else if (typeof raw === "number" || typeof raw === "string") {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n >= 0 && n <= 4) tier = Math.trunc(n);
+    }
+    const hint = String(userData?.kyc_status ?? userData?.kycStatus ?? "").toLowerCase();
+    if (tier === 3 && hint && /pending|review|process|submit|progress|under/.test(hint) && !/reject|fail|declin|denied/.test(hint)) {
+      tier = 1;
+    }
+    if (tier === 2) {
+      return { label: "Verified", bg: isDark ? "rgba(34, 197, 94, 0.15)" : "#DCFCE7", fg: isDark ? "#4ADE80" : "#16A34A" };
+    }
+    if (tier === 3) {
+      return { label: "Failed", bg: isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2", fg: isDark ? "#F87171" : "#DC2626" };
+    }
+    if (tier === 1) {
+      return { label: "In Review", bg: isDark ? "rgba(249, 115, 22, 0.15)" : "#FFEDD5", fg: isDark ? "#FB923C" : "#EA580C" };
+    }
+    return { label: "Unverified", bg: isDark ? "rgba(249, 115, 22, 0.15)" : "#FFEDD5", fg: isDark ? "#FB923C" : "#EA580C" };
+  }, [userData?.kycVerified, userData?.kyc_verified, userData?.kyc_status, userData?.kycStatus, isDark]);
+
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
       <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} onSwitchProfilePress={() => {
@@ -442,7 +467,13 @@ const AccountDetails = () => {
         <View style={{ marginTop: 20 }}>
           {activeTab === "Profile" ? (
             <>
-              <MenuItem label="Identity Verification" badge="Unverified" />
+              <MenuItem
+                label="Identity Verification"
+                badge={kycBadge.label}
+                badgeBgColor={kycBadge.bg}
+                badgeTextColor={kycBadge.fg}
+                onPress={() => NavigationService.navigate(routes.KYC_STATUS_SCREEN)}
+              />
               <MenuItem label="VIP Privilege" badge={`VIP ${userData?.vipLevel || 0}`} />
               <MenuItem
                 label="Personal Page"
@@ -460,7 +491,6 @@ const AccountDetails = () => {
                 value={displayName}
                 onPress={() => NavigationService.navigate(routes.NICKNAME_SETTINGS_SCREEN, { currentNickname: displayName })}
               />
-              <MenuItem label="Username" value={displayName} />
               <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(202, 195, 182, 0.15)" badgeTextColor="#D1AA67" />
               <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
               <MenuItem

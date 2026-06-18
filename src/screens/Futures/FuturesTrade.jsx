@@ -242,6 +242,7 @@ const FuturesUI = () => {
   const route = useRoute();
   const routeCoin = route.params?.coin;
   const futuresPairs = useSelector((state) => state.home.futuresPairs);
+  const userData = useSelector((state) => state.auth.userData);
 
   const [pairData, setPairData] = useState(() => {
     return futuresPairs && futuresPairs.length > 0 ? futuresPairs : [];
@@ -1779,7 +1780,19 @@ const FuturesUI = () => {
           const { maxText, costText } = resolveMaxAndCost();
           return (
             <View style={{ width: '100%', marginBottom: 12 }}>
-              {activeTab === 'Buy' ? (
+              {(!userData) ? (
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { backgroundColor: activeTab === 'Buy' ? colors.green : colors.red }
+                  ]}
+                  onPress={() => navigation.navigate("Login")}
+                >
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
+                    Login
+                  </AppText>
+                </TouchableOpacity>
+              ) : activeTab === 'Buy' ? (
                 <TouchableOpacity
                   style={[
                     styles.actionBtn,

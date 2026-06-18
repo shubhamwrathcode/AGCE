@@ -4469,26 +4469,34 @@ const Spot = () => {
                     <View style={styles.spotOrderSubmitWrap}>
                       <Button
                         children={
-                          isBuy
-                            ? `Buy ${base_currency}`
-                            : `Sell ${base_currency}`
+                          !userData
+                            ? "Login"
+                            : isBuy
+                              ? `Buy ${base_currency}`
+                              : `Sell ${base_currency}`
                         }
-                        disabled={isPlacingOrder}
+                        disabled={!userData ? false : isPlacingOrder}
                         loading={isPlacingOrder}
-                        activeOpacity={amount ? 0.75 : 1}
+                        activeOpacity={!userData ? 0.75 : amount ? 0.75 : 1}
                         containerStyle={[
                           styles.spotOrderSubmitBtn,
                           {
-                            backgroundColor: amount
-                              ? (isBuy
-                                ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
-                                : (themeColors.spotTradeSell ?? colors.spotTradeSell))
-                              : (isBuy
-                                ? (isDark ? "#19402E" : "#A7E2C6")
-                                : (isDark ? "#4A1D20" : "#F2B2B4")),
+                            backgroundColor: !userData
+                              ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
+                              : amount
+                                ? (isBuy
+                                  ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
+                                  : (themeColors.spotTradeSell ?? colors.spotTradeSell))
+                                : (isBuy
+                                  ? (isDark ? "#19402E" : "#A7E2C6")
+                                  : (isDark ? "#4A1D20" : "#F2B2B4")),
                           },
                         ]}
                         onPress={() => {
+                          if (!userData) {
+                            NavigationService.navigate("Login");
+                            return;
+                          }
                           if (amount) {
                             onSubmit();
                           }

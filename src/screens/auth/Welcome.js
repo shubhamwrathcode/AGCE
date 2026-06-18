@@ -30,22 +30,78 @@ import {
   back_ic,
   googleIcon,
   welcome_banner,
+  NO_NOTIFICATION_ICON,
+  NO_NOTIFICATION_ICON_LIGHT,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
-import { LOGIN_SCREEN, REGISTER_SCREEN } from "../../navigation/routes";
+import { LOGIN_SCREEN, REGISTER_SCREEN, TRADE_SCREEN, FUTURES_SCREEN, NAVIGATION_BOTTOM_TAB_STACK } from "../../navigation/routes";
 import { useTheme } from "../../hooks/useTheme";
 import { colors, lightTheme } from "../../theme/colors";
 import Toast from "react-native-simple-toast";
 import { useAppSelector } from "../../store/hooks";
+import { useDispatch } from "react-redux";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { setFuturesPairs } from "../../slices/homeSlice";
+import { fontFamilyMedium } from "../../theme/typography";
+import WebView from "react-native-webview";
+import { CHART_WEB_BASE_URL } from "../../helper/Constants";
+
+const formatVol = (vol) => {
+  const n = Number(vol);
+  if (!n || isNaN(n)) return "0";
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(2) + "K";
+  return n.toFixed(2);
+};
+
+const formatPriceWithTick = (p, tickSize) => {
+  const n = Number(p);
+  if (!Number.isFinite(n)) return "";
+  const t = Number(tickSize);
+  if (Number.isFinite(t) && t > 0) {
+    let decs = 0;
+    const tsStr = String(t);
+    if (tsStr.includes("e-")) {
+      decs = parseInt(tsStr.split("e-")[1], 10);
+    } else if (tsStr.includes(".")) {
+      decs = tsStr.split(".")[1].length;
+    }
+    return n.toFixed(decs);
+  }
+  return n.toFixed(5); // fallback
+};
+
+const formatWithCommas = (val) => {
+  if (val == null || val === "") return "";
+  const str = String(val);
+  if (!str.includes(".")) {
+    return str.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  const [intPart, decPart] = str.split(".");
+  let sign = "";
+  let iPart = intPart;
+  if (iPart.startsWith("-")) {
+    sign = "-";
+    iPart = iPart.slice(1);
+  }
+  const withSep = iPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${sign}${withSep}${decPart != null && decPart !== "" ? `.${decPart}` : ""}`;
+};
+
+const formatDisplayPrice = (p, tickSize) => {
+  if (p == null || p === "") return "—";
+  return formatWithCommas(formatPriceWithTick(p, tickSize));
+};
 import { SocketContext } from "../../SocketProvider";
 
-/** Same keys/labels as `CoinList.js` tabs, excluding Favorite (key 0). */
 const WELCOME_TABS = [
   { key: 1, label: "Trending" },
-  { key: 2, label: "Hot" },
-  { key: 3, label: "New Listing" },
-  { key: 4, label: "Top Gainers" },
+  { key: 2, label: "Spot" },
+  { key: 3, label: "Futures" },
+  { key: 4, label: "Hot" },
+  { key: 5, label: "New Listing" },
+  { key: 6, label: "Top Gainers" },
 ];
 
 const C = {
@@ -64,7 +120,9 @@ const Welcome = () => {
   const insets = useSafeAreaInsets();
   const { colors: themeColors, isDark } = useTheme();
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
+  const futuresPairs = useAppSelector((state) => state.home.futuresPairs ?? []);
   const socketLoading = useAppSelector((state) => state.home.socketLoading);
+  const dispatch = useDispatch();
   const socketContextVars = useContext(SocketContext) || {};
   const { subscribeToMarket, unsubscribeFromMarket } = socketContextVars;
 
@@ -81,8 +139,10 @@ const Welcome = () => {
     }, [subscribeToMarket, unsubscribeFromMarket])
   );
 
-  /** CoinList parity: 1=Trending, 2=Hot, 3=New Listing, 4=Top Gainers (no Favorite). */
+  /** CoinList parity: 1=Trending, 2=Spot, 3=Futures, 4=Hot, 5=New Listing, 6=Top Gainers (no Favorite). */
   const [activeTabList, setActiveTabList] = useState(1);
+  const [expandedRow, setExpandedRow] = useState(null);
+  const userData = useAppSelector((state) => state.auth?.userData);
 
   const normSym = useCallback((s) => String(s || "").trim().toUpperCase(), []);
   const toNum = useCallback((v) => {
@@ -125,11 +185,20 @@ const Welcome = () => {
   }, [coinPairs, normSym]);
 
   const filterData = useMemo(() => {
+    if (activeTabList === 3) {
+      if (!futuresPairs || futuresPairs.length === 0) return [];
+      return [...futuresPairs].sort((a, b) => pairVolumeNumber(b) - pairVolumeNumber(a));
+    }
+
     if (!spotUsdtPairs || spotUsdtPairs.length === 0) return [];
-    if (activeTabList === 1) {
+
+    if (activeTabList === 1) { // Trending
       return [...spotUsdtPairs].sort((a, b) => pairVolumeNumber(b) - pairVolumeNumber(a));
     }
-    if (activeTabList === 2) {
+    if (activeTabList === 2) { // Spot
+      return [...spotUsdtPairs];
+    }
+    if (activeTabList === 4) { // Hot
       const seen = new Set();
       const out = [];
       for (const base of HOT_BASE_ORDER) {
@@ -150,15 +219,16 @@ const Welcome = () => {
       }
       return out;
     }
-    if (activeTabList === 3) {
+    if (activeTabList === 5) { // New Listing
       return [...spotUsdtPairs].sort((a, b) => pairListingTimeMs(b) - pairListingTimeMs(a));
     }
-    if (activeTabList === 4) {
+    if (activeTabList === 6) { // Top Gainers
       return [...spotUsdtPairs].sort((a, b) => spotChangeNumber(b) - spotChangeNumber(a));
     }
     return [...spotUsdtPairs];
   }, [
     spotUsdtPairs,
+    futuresPairs,
     activeTabList,
     pairVolumeNumber,
     HOT_BASE_ORDER,
@@ -191,6 +261,16 @@ const Welcome = () => {
   const onLogin = useCallback(() => {
     NavigationService.navigate(LOGIN_SCREEN);
   }, []);
+
+  const onRowPress = useCallback((idx, isFutures) => {
+    if (isFutures) {
+      onLogin();
+    } else {
+      setExpandedRow(prev => (prev === idx ? null : idx));
+    }
+  }, [onLogin]);
+
+
 
   const onRegister = useCallback(() => {
     NavigationService.navigate(REGISTER_SCREEN);
@@ -261,7 +341,10 @@ const Welcome = () => {
                   <TouchableOpacity
                     key={String(t.key)}
                     style={styles.tabPill}
-                    onPress={() => setActiveTabList(t.key)}
+                    onPress={() => {
+                      setActiveTabList(t.key);
+                      setExpandedRow(null);
+                    }}
                     activeOpacity={0.8}
                   >
                     <AppText
@@ -311,64 +394,169 @@ const Welcome = () => {
 
             {fourItems.length > 0
               ? fourItems.map((item, idx) => {
-                const sym = String(item?.base_currency || "").toUpperCase();
-                const q = normSym(item?.quote_currency) || "USDT";
+                const isFutures = activeTabList === 3;
+                const sym = isFutures ? String(item?.base_asset || item?.base_currency || "").toUpperCase() : String(item?.base_currency || "").toUpperCase();
+                const q = isFutures ? (item?.margin_asset || "USDT") : (normSym(item?.quote_currency) || "USDT");
                 const pairTop = sym ? `${sym} / ${q}` : "—";
-                const name = item?.base_currency_name || item?.base_currency || "—";
+                const name = isFutures ? "Perpetual" : (item?.base_currency_name || item?.base_currency || "—");
                 const last = item?.buy_price ?? item?.last_price ?? item?.price ?? 0;
                 const sub = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
-                const chg =
-                  Number(item?.change_percentage ?? item?.changePercentage ?? item?.change) || 0;
+                const chg = Number(item?.change_percentage ?? item?.changePercentage ?? item?.change) || 0;
                 const isUp = chg >= 0;
                 const chgText = `${Math.abs(chg).toFixed(2)}%`;
+
+                if (expandedRow === idx) {
+                  // console.log(`\n\n=== EXPANDED ITEM DATA [${sym}] ===\n`, JSON.stringify(item, null, 2), `\n=================================\n\n`);
+                }
+
                 return (
-                  <TouchableOpacity
-                    key={`live-${activeTabList}-${sym}-${idx}`}
-                    style={styles.row}
-                    onPress={onLogin}
-                    activeOpacity={0.85}
-                  >
-                    <View style={[styles.colSymbol, { flex: 1.2, right: 5 }]}>
-                      <View style={[styles.iconCircle, {}]}>
-                        <FastImage
-                          source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
-                          resizeMode="contain"
-                          style={{ width: 32, height: 32, borderRadius: 50 }}
-                        />
+                  <View key={`wrap-${idx}`}>
+                    <TouchableOpacity
+                      key={`live-${activeTabList}-${sym}-${idx}`}
+                      style={[styles.row, expandedRow === idx && activeTabList !== 3 ? { borderBottomWidth: 0, paddingBottom: 8 } : {}]}
+                      onPress={() => onRowPress(idx, isFutures)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.colSymbol, { flex: 1.2, right: 5 }]}>
+                        <View style={[styles.iconCircle, {}]}>
+                          <FastImage
+                            source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
+                            resizeMode="contain"
+                            style={{ width: 32, height: 32, borderRadius: 50 }}
+                          />
+                        </View>
+                        <View style={{ flex: 1, }}>
+                          <AppText weight={SEMI_BOLD} type={FOURTEEN} style={[styles.coinName, { color: palette.text }]} numberOfLines={1}>
+                            {sym}<AppText style={{ color: palette.muted, fontSize: 12 }}> / {q}</AppText>
+                          </AppText>
+                          <AppText style={[styles.coinSym, { color: palette.muted }]} numberOfLines={1}>
+                            {name}
+                          </AppText>
+                        </View>
                       </View>
-                      <View style={{ flex: 1, }}>
-                        <AppText weight={SEMI_BOLD} type={FOURTEEN} style={[styles.coinName, { color: palette.text }]} numberOfLines={1}>
-                          {sym}<AppText style={{ color: palette.muted, fontSize: 12 }}> / {q}</AppText>
+                      <View style={{ flex: 1, alignItems: "flex-end" }}>
+                        <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: palette.text }} numberOfLines={1}>
+                          {String(last)}
                         </AppText>
-                        <AppText style={[styles.coinSym, { color: palette.muted }]} numberOfLines={1}>
-                          {name}
-                        </AppText>
-                      </View>
-                    </View>
-                    <View style={{ flex: 1, alignItems: "flex-end" }}>
-                      <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: palette.text }} numberOfLines={1}>
-                        {String(last)}
-                      </AppText>
-                      <AppText style={[styles.priceSub, { color: palette.muted }]} numberOfLines={1}>
-                        {String(sub)}
-                      </AppText>
-                    </View>
-                    <View style={{ flex: 0.9, alignItems: "flex-end" }}>
-                      <View style={[styles.changePillCoin, { backgroundColor: isUp ? "#2DBE7E" : "#EF4444" }]}>
-                        <AppText style={styles.changeText} weight={MEDIUM} type={ELEVEN} numberOfLines={1}>
-                          {isUp ? "+ " : "- "}
-                          {chgText}
+                        <AppText style={[styles.priceSub, { color: palette.muted }]} numberOfLines={1}>
+                          {String(sub)}
                         </AppText>
                       </View>
-                    </View>
-                  </TouchableOpacity>
+                      <View style={{ flex: 0.9, alignItems: "flex-end" }}>
+                        <View style={[styles.changePillCoin, { backgroundColor: isUp ? "#2DBE7E" : "#EF4444" }]}>
+                          <AppText style={styles.changeText} weight={MEDIUM} type={ELEVEN} numberOfLines={1}>
+                            {isUp ? "+ " : "- "}
+                            {chgText}
+                          </AppText>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+
+                    {expandedRow === idx && !isFutures && (
+                      <View style={{ marginHorizontal: -16, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: palette.card }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 20, marginTop: 8 }}>
+                          <TouchableOpacity
+                            style={{ flex: 1, paddingVertical: 6, backgroundColor: isDark ? '#2D2D2D' : '#1A1A1A', borderRadius: 30, alignItems: 'center', justifyContent: 'center' }}
+                            onPress={() => NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, { screen: TRADE_SCREEN, params: { coinDetail: item } })}
+                            activeOpacity={0.8}
+                          >
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>Trade</AppText>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={{ flex: 1, paddingVertical: 6, backgroundColor: isDark ? '#2D2D2D' : '#1A1A1A', borderRadius: 30, alignItems: 'center', justifyContent: 'center' }}
+                            onPress={() => NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, { 
+                              screen: FUTURES_SCREEN, 
+                              params: { 
+                                screen: 'Futures', 
+                                params: { coin: item } 
+                              } 
+                            })}
+                            activeOpacity={0.8}
+                          >
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>Futures</AppText>
+                          </TouchableOpacity>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                          <View style={{ flex: 1 }}>
+                            <AppText type={TEN} style={{ color: palette.muted, marginBottom: 4 }}>24h High</AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#2DBE7E' }}>{item?.high ? formatDisplayPrice(item.high, item.tick_size) : "—"}</AppText>
+                          </View>
+                          <View style={{ flex: 1, alignItems: 'center' }}>
+                            <AppText type={TEN} style={{ color: palette.muted, marginBottom: 4 }}>24h Low</AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#EF4444' }}>{item?.low ? formatDisplayPrice(item.low, item.tick_size) : "—"}</AppText>
+                          </View>
+                          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                            <AppText type={TEN} style={{ color: palette.muted, marginBottom: 4 }}>24h Vol</AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: palette.text }}>{item?.volume ? formatVol(item.volume) : "—"}</AppText>
+                          </View>
+                        </View>
+
+                        {/* Grid Row 2: 24h Change, 24h Open, Vol(Quote) */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <View style={{ flex: 1 }}>
+                            <AppText type={TEN} style={{ color: palette.muted, marginBottom: 4 }}>24h Change</AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: isUp ? '#2DBE7E' : '#EF4444' }}>{isUp ? '+' : '-'}{chgText}</AppText>
+                          </View>
+                          <View style={{ flex: 1, alignItems: 'center' }}>
+                            <AppText type={TEN} style={{ color: palette.muted, marginBottom: 4 }}>24h Open</AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: palette.text }}>{item?.open ? formatDisplayPrice(item.open, item.tick_size) : "—"}</AppText>
+                          </View>
+                          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                            <AppText type={TEN} style={{ color: palette.muted, marginBottom: 4 }}>Vol ({q})</AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: palette.text }}>{item?.volumeQuote || item?.quote_volume ? formatVol(item?.volumeQuote || item?.quote_volume) : "—"}</AppText>
+                          </View>
+                        </View>
+
+                        {/* Chart WebView */}
+                        <View style={{ height: 250, width: "100%", backgroundColor: palette.card, borderRadius: 8, overflow: 'hidden' }}>
+                          <WebView
+                            key={`${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}`}
+                            source={{ uri: `${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}` }}
+                            style={{ width: "100%", height: 280, marginTop: -30, backgroundColor: "transparent" }}
+                            containerStyle={{ backgroundColor: "transparent" }}
+                            opaque={false}
+                            androidLayerType="hardware"
+                            cacheEnabled
+                            cacheMode="LOAD_CACHE_ELSE_NETWORK"
+                            mixedContentMode="compatibility"
+                            allowsInlineMediaPlayback
+                            mediaPlaybackRequiresUserAction={false}
+                            javaScriptEnabled
+                            domStorageEnabled
+                            scrollEnabled={false}
+                            bounces={false}
+                            sharedCookiesEnabled
+                            javaScriptEnabledAndroid
+                            scalesPageToFit={false}
+                            automaticallyAdjustContentInsets={false}
+                            setSupportMultipleWindows={false}
+                            overScrollMode="never"
+                          />
+                        </View>
+                      </View>
+                    )}
+                  </View>
                 );
               })
               : (
                 <View style={styles.marketEmpty}>
-                  <AppText style={[styles.coinSym, { color: palette.muted, textAlign: "center" }]}>
-                    {socketLoading ? "Loading markets…" : "Markets unavailable. Check connection and try again."}
-                  </AppText>
+                  {socketLoading ? (
+                    <AppText style={[styles.coinSym, { color: palette.muted, textAlign: "center" }]}>
+                      Loading markets…
+                    </AppText>
+                  ) : (
+                    <View style={{ alignItems: "center", justifyContent: "center" }}>
+                      <FastImage
+                        source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                        resizeMode="contain"
+                        style={{ width: 100, height: 100, marginBottom: 10 }}
+                      />
+                      <AppText style={[styles.coinSym, { color: palette.muted, textAlign: "center", fontFamily: fontFamilyMedium }]}>
+                        No market data available.
+                      </AppText>
+                    </View>
+                  )}
                 </View>
               )}
           </View>

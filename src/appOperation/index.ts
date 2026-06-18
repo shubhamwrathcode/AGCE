@@ -111,6 +111,8 @@ export class AppOperation {
       if (bodyData !== undefined) {
         fetchInit.body = bodyData;
       }
+      
+      console.log("=== API FETCHING ===", uri);
 
       fetch(uri, fetchInit)
         .then(response => {

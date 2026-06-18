@@ -55,6 +55,7 @@ import PhoneSettingsScreen from "../screens/Security/PhoneVerification/PhoneSett
 import ChangePhoneNumberScreen from "../screens/Security/PhoneVerification/ChangePhoneNumberScreen";
 import UnlinkPhoneNumberScreen from "../screens/Security/PhoneVerification/UnlinkPhoneNumberScreen";
 import UnlinkSuccessScreen from "../screens/Security/PhoneVerification/UnlinkSuccessScreen";
+import DirectMessageManagement from "../screens/account/DirectMessageManagement";
 import LoginTwoStepVerificationScreen from "../screens/Security/LoginTwoStepVerificationScreen";
 import WithdrawalSettingsScreen from "../screens/Security/WithdrawalSettings/WithdrawalSettingsScreen";
 import WithdrawalVerifyEmailScreen from "../screens/Security/WithdrawalSettings/WithdrawalVerifyEmailScreen";
@@ -289,6 +290,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.NOTIFICATION_SETTINGS_SCREEN}
         component={NotificationSettings}
+      />
+      <Stack.Screen
+        name={routes.DIRECT_MESSAGE_MANAGEMENT_SCREEN}
+        component={DirectMessageManagement}
       />
       <Stack.Screen
         name={routes.NICKNAME_SETTINGS_SCREEN}

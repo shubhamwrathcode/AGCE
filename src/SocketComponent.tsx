@@ -4,6 +4,7 @@ import {useAppDispatch, useAppSelector} from './store/hooks';
 import {
   setCoinData,
   setSocketLoading,
+  setFuturesPairs,
 } from './slices/homeSlice';
 import {socketService} from './services/socket/SocketService';
 
@@ -46,6 +47,13 @@ const SocketComponent = React.memo(({children}: EventComponentProps) => {
       // Update after a short delay to batch rapid updates
       updateTimeout = setTimeout(() => {
         dispatch(setCoinData(res));
+        
+        // Ensure futures pairs are also extracted from the initial market message
+        const futuresList = res?.futures_pairs ?? res?.futuresPairs ?? null;
+        if (futuresList != null && Array.isArray(futuresList)) {
+          dispatch(setFuturesPairs(futuresList));
+        }
+
         dispatch(setSocketLoading(false));
       }, 50);
     };
