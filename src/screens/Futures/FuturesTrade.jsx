@@ -239,10 +239,40 @@ const FuturesUI = () => {
   const { colors: themeColors, isDark } = themeObj;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const route = useRoute();
+  const routeCoin = route.params?.coin;
+  const futuresPairs = useSelector((state) => state.home.futuresPairs);
+
+  const [pairData, setPairData] = useState(() => {
+    return futuresPairs && futuresPairs.length > 0 ? futuresPairs : [];
+  });
+
+  const [selectedCoin, setSelectedCoin] = useState(() => {
+    if (routeCoin) return routeCoin;
+    if (futuresPairs && futuresPairs.length > 0) {
+      const btcPair = futuresPairs.find((pair) => pair.symbol === "BTCUSDT-PERP");
+      return btcPair || futuresPairs[0];
+    }
+    return null;
+  });
 
   const [activeTab, setActiveTab] = useState('Buy');
   const [sliderValue, setSliderValue] = useState(0);
-  const [price, setPrice] = useState("");
+  const [price, setPrice] = useState(() => {
+    if (routeCoin) {
+      const p = routeCoin.buy_price ?? routeCoin.last_price ?? routeCoin.mark_price;
+      if (p) return String(formatPriceByTick(parseFloat(p), routeCoin));
+    }
+    if (futuresPairs && futuresPairs.length > 0) {
+      const btcPair = futuresPairs.find((pair) => pair.symbol === "BTCUSDT-PERP");
+      const initPair = btcPair || futuresPairs[0];
+      if (initPair) {
+        const p = initPair.buy_price ?? initPair.last_price ?? initPair.mark_price;
+        if (p) return String(formatPriceByTick(parseFloat(p), initPair));
+      }
+    }
+    return "";
+  });
   const [amount, setAmount] = useState("");
 
   const [showTpSl, setShowTpSl] = useState(false);
@@ -351,19 +381,12 @@ const FuturesUI = () => {
     unsubscribeFromMarket
   } = useFuturesSocket();
   const isFocused = useIsFocused();
-  const futuresPairs = useSelector((state) => state.home.futuresPairs);
   const userFuturesWallet = useSelector((state) => state.wallet.userFuturesWallet);
 
   const usdtFuturesWallet = React.useMemo(() => {
     if (!Array.isArray(userFuturesWallet)) return null;
     return userFuturesWallet.find(w => w?.short_name === 'USDT' || w?.currency === 'USDT');
   }, [userFuturesWallet]);
-
-  const route = useRoute();
-  const routeCoin = route.params?.coin;
-
-  const [pairData, setPairData] = useState([]);
-  const [selectedCoin, setSelectedCoin] = useState(null);
 
   const lastRouteCoinId = useRef(null);
 
@@ -874,20 +897,29 @@ const FuturesUI = () => {
 
     if (pairsArray && pairsArray.length > 0) {
       setPairData(pairsArray);
-      if (!selectedCoin) {
+
+      setPrice(prevPrice => {
+        if (prevPrice && prevPrice !== "") return prevPrice;
         const btcPair = pairsArray.find((pair) => pair.symbol === "BTCUSDT-PERP");
         const initPair = btcPair || pairsArray[0];
-        setSelectedCoin(initPair);
         if (initPair) {
-          const p = initPair?.buy_price ?? initPair?.last_price ?? initPair?.mark_price;
-          if (p) {
-            setPrice(String(formatPriceByTick(parseFloat(p), initPair)));
-            limitPriceSeededPairRef.current = initPair?._id;
-          }
+          const p = initPair.buy_price ?? initPair.last_price ?? initPair.mark_price;
+          if (p) return String(formatPriceByTick(parseFloat(p), initPair));
         }
-      }
+        return prevPrice;
+      });
+
+      setSelectedCoin(prev => {
+        if (prev) return prev;
+        const btcPair = pairsArray.find((pair) => pair.symbol === "BTCUSDT-PERP");
+        const initPair = btcPair || pairsArray[0];
+        if (initPair) {
+          limitPriceSeededPairRef.current = initPair?._id;
+        }
+        return initPair;
+      });
     }
-  }, [futuresPairs, selectedCoin, futuresData]);
+  }, [futuresPairs, futuresData]);
 
   useEffect(() => {
     if (isFocused) {
@@ -1532,11 +1564,17 @@ const FuturesUI = () => {
         <View style={[styles.availableRow, { marginBottom: 2 }]}>
           <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginRight: 8, paddingVertical: 2 }}>Available</AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-            <AppText type={TWELVE}
-              style={{ fontFamily: fontFamilyMedium }}>{parseFloat(Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0).toFixed(5))} USDT</AppText>
-            <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
-              <FastImage source={add} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
-            </TouchableOpacity>
+            {(!pairData || pairData.length === 0) ? (
+              <ShimmerBox width={60} height={16} borderRadius={4} />
+            ) : (
+              <>
+                <AppText type={TWELVE}
+                  style={{ fontFamily: fontFamilyMedium }}>{parseFloat(Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0).toFixed(5))} USDT</AppText>
+                <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
+                  <FastImage source={add} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
@@ -1544,10 +1582,16 @@ const FuturesUI = () => {
         <View style={[styles.availableRow, { marginBottom: 10, flexWrap: 'wrap' }]}>
           <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, { marginRight: 8, paddingVertical: 2 }]}>Margin</AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-            <AppText type={TWELVE} style={{ color: colors.green, fontFamily: fontFamilyMedium }}>0.00</AppText>
-            <AppText type={TWELVE} style={{ marginHorizontal: 4, fontFamily: fontFamilyMedium }}>/</AppText>
-            <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4, fontFamily: fontFamilyMedium }}>0.00</AppText>
-            <AppText type={TWELVE} style={{ fontFamily: fontFamilyMedium }}>USDT</AppText>
+            {(!pairData || pairData.length === 0) ? (
+              <ShimmerBox width={80} height={16} borderRadius={4} />
+            ) : (
+              <>
+                <AppText type={TWELVE} style={{ color: colors.green, fontFamily: fontFamilyMedium }}>0.00</AppText>
+                <AppText type={TWELVE} style={{ marginHorizontal: 4, fontFamily: fontFamilyMedium }}>/</AppText>
+                <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4, fontFamily: fontFamilyMedium }}>0.00</AppText>
+                <AppText type={TWELVE} style={{ fontFamily: fontFamilyMedium }}>USDT</AppText>
+              </>
+            )}
           </View>
         </View>
 
@@ -1774,11 +1818,19 @@ const FuturesUI = () => {
               <View style={{ marginTop: 12, gap: 6 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <AppText type={TWELVE} color={themeColors.secondaryText}>Cost</AppText>
-                  <AppText type={TWELVE} weight={SEMI_BOLD}>{costText}</AppText>
+                  {(!pairData || pairData.length === 0) ? (
+                    <ShimmerBox width={60} height={14} borderRadius={4} />
+                  ) : (
+                    <AppText type={TWELVE} weight={SEMI_BOLD}>{costText}</AppText>
+                  )}
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
-                  <AppText type={TWELVE} weight={SEMI_BOLD}>{maxText}</AppText>
+                  {(!pairData || pairData.length === 0) ? (
+                    <ShimmerBox width={60} height={14} borderRadius={4} />
+                  ) : (
+                    <AppText type={TWELVE} weight={SEMI_BOLD}>{maxText}</AppText>
+                  )}
                 </View>
               </View>
             </View>
