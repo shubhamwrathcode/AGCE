@@ -80,7 +80,7 @@ const Login = (): JSX.Element => {
     try {
       GoogleSignin.configure({
         webClientId:
-          "181209853085-4biots3iul9k7ag9qudhirgj3olapj4n.apps.googleusercontent.com",
+          "512474198099-lbg03gjaesa8n6vhf73c5t9f9j55t7tf.apps.googleusercontent.com",
         offlineAccess: true,
         forceCodeForRefreshToken: true,
       });
@@ -112,15 +112,15 @@ const Login = (): JSX.Element => {
 
   const signInWithGoogle = async () => {
     // Prevent multiple simultaneous calls
-    if (isGoogleSignInInProgress) {
-      console.log(
-        "Google Sign-In already in progress, ignoring duplicate call"
-      );
-      return;
-    }
+    // if (isGoogleSignInInProgress) {
+    //   console.log(
+    //     "Google Sign-In already in progress, ignoring duplicate call"
+    //   );
+    //   return;
+    // }
 
-    Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
-    return;
+    // Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
+    // return;
 
     try {
       console.log("Starting Google Sign-In...");

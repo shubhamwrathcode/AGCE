@@ -156,7 +156,7 @@ const Register = () => {
     try {
       GoogleSignin.configure({
         webClientId:
-          "181209853085-4biots3iul9k7ag9qudhirgj3olapj4n.apps.googleusercontent.com",
+          "512474198099-lbg03gjaesa8n6vhf73c5t9f9j55t7tf.apps.googleusercontent.com",
         offlineAccess: true,
         forceCodeForRefreshToken: true,
       });
