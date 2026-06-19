@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, SafeAreaView, Platform, Modal, ScrollView, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, TouchableOpacity,  Platform, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { AppText, BOLD, FOURTEEN, SIXTEEN, TWENTY, SEMI_BOLD, TWELVE, EIGHT, EIGHTEEN, TWENTY_FOUR, TWENTY_TWO, MEDIUM, FIFTEEN } from '../../../shared';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';

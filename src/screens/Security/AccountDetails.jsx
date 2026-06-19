@@ -379,7 +379,15 @@ const AccountDetails = () => {
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
       <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} onSwitchProfilePress={() => {
-        NavigationService.navigate(routes.SWITCH_ACCOUNT_SCREEN);
+        NavigationService.navigate(routes.SWITCH_ACCOUNT_SCREEN, {
+          userData,
+          serverAvatar,
+          serverNickname,
+          maskedEmail,
+          maskedPhone,
+          displayName,
+          initials
+        })
       }} />
 
       <ScrollView

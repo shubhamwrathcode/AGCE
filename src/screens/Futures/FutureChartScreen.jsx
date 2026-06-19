@@ -391,47 +391,7 @@ const DepthRow = React.memo(({ bid, ask, bidFillPct, askFillPct, themeColors, is
   );
 });
 
-// Web/Binance-like order book row (Price | Amount | Total) with depth behind the Total column.
-const WebObRow = React.memo(
-  ({ side, price, total, amount, fillPct, themeColors, isDark, formatPrice, formatQty, formatTotal }) => {
-    const depthGreen = isDark ? "rgba(0, 192, 118, 0.22)" : "rgba(0, 192, 118, 0.14)";
-    const depthRed = isDark ? "rgba(232, 97, 97, 0.24)" : "rgba(255, 77, 79, 0.16)";
-    const pct = clamp01(Number(fillPct ?? 0) / 100);
-    const depthColor = side === "ask" ? depthRed : depthGreen;
-    const priceColor = side === "ask" ? themeColors.red : themeColors.green;
 
-    return (
-      <View style={styles.webObRow}>
-        <AppText type={ELEVEN} style={[styles.webObCellPrice, { color: priceColor }]} numberOfLines={1}>
-          {Number.isFinite(Number(price)) ? formatPrice(price) : "—"}
-        </AppText>
-
-        <AppText type={ELEVEN} style={[styles.webObCellAmt, { color: themeColors.text }]} numberOfLines={1}>
-          {Number.isFinite(Number(amount)) ? formatQty(amount) : "—"}
-        </AppText>
-
-        <View style={styles.webObCellTotalWrap}>
-          <View style={[styles.webObCellTotalInner, { position: "relative", overflow: "hidden" }]}>
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width: `${pct > 0 ? Math.max(2, pct * 100) : 0}%`,
-                backgroundColor: depthColor,
-              }}
-            />
-            <AppText type={ELEVEN} style={[styles.webObCellTotal, { color: themeColors.text }]} numberOfLines={1}>
-              {Number.isFinite(Number(total)) ? formatTotal(total) : "—"}
-            </AppText>
-          </View>
-        </View>
-      </View>
-    );
-  }
-);
 
 const FutureChartScreen = () => {
   const dispatch = useDispatch();
@@ -1397,7 +1357,7 @@ const FutureChartScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.white }]}>
+    <View style={[styles.container, { backgroundColor: colors.white, paddingTop: insets.top }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
 
       <View style={[styles.header, { backgroundColor: colors.white }]}>

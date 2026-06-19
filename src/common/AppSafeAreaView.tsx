@@ -1,5 +1,5 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, {ReactNode} from 'react';
+import React, { ReactNode } from 'react';
 import {
   ImageBackground,
   Platform,
@@ -8,9 +8,8 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
-import {appBg, HomeBg} from '../helper/ImageAssets';
-import {commonStyles} from '../theme/commonStyles';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { commonStyles } from '../theme/commonStyles';
 import { colors } from '../theme/colors';
 
 import { useTheme } from '../hooks/useTheme';
@@ -88,7 +87,7 @@ const AppSafeAreaView = ({
       )}
     </SafeAreaView>
   ) : (
-    <View style={[{flex: 1, backgroundColor: shellBg}, style]}>
+    <View style={[{ flex: 1, backgroundColor: shellBg, paddingTop: insets.top }, style]}>
       <StatusBar
         translucent={false}
         backgroundColor={androidStatusBg}
@@ -107,4 +106,4 @@ const AppSafeAreaView = ({
     </View>
   );
 };
-export {AppSafeAreaView};
+export { AppSafeAreaView };

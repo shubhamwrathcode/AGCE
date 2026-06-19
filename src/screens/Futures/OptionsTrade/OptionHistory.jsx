@@ -1,5 +1,6 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity,  StatusBar, Platform } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';

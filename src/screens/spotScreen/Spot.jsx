@@ -29,6 +29,7 @@ import React, {
   useMemo,
   memo,
 } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SpotHeader from "../../shared/components/spotHeader/SpotHeader";
 import FastImage from "react-native-fast-image";
 import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
@@ -1074,6 +1075,7 @@ OrderBookSection.displayName = "OrderBookSection";
  * - Focus: subscribe to exchange on focus; on blur unsubscribe but keep Redux cache. No getSpotOpenOrders on focus unless added elsewhere.
  */
 const Spot = () => {
+  const insets = useSafeAreaInsets();
   const { colors: themeColors, theme, isDark } = useTheme();
   const route = useRoute();
   const navigation = useNavigation();
@@ -3629,7 +3631,7 @@ const Spot = () => {
   }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor, isDark]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.white }}>
+    <View style={{ flex: 1, backgroundColor: colors.white, paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

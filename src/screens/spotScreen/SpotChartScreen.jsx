@@ -18,6 +18,7 @@ import Toast from "react-native-simple-toast";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
 import { useRoute, useNavigation, useFocusEffect, useIsFocused } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import moment from "moment";
 import { useDispatch } from "react-redux";
 import { useTheme } from "../../hooks/useTheme";
@@ -61,7 +62,6 @@ import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { colors, lightTheme } from "../../theme/colors";
 import * as routes from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors as themePalette } from "../../theme/colors";
 
 const { width: Width, height: Height } = Dimensions.get("window");
@@ -1398,7 +1398,7 @@ const SpotChartScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.white }]}>
+    <View style={[styles.container, { backgroundColor: colors.white, paddingTop: insets.top }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
 
       <View style={[styles.header, { backgroundColor: colors.white }]}>

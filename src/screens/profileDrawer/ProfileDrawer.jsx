@@ -17,6 +17,7 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import FastImage from "react-native-fast-image";
 import Toast from "react-native-simple-toast";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const showComingSoonToast = () =>
   Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM);
@@ -515,42 +516,9 @@ const AnimatedIconBox = ({ theme, children, themeColors }) => {
   );
 };
 
-const IconAndLabel = ({ theme, themeColors, iconSource, title, textStyle = {} }) => {
-  return (
-    <>
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.iconBgColor,
-          borderRadius: 20,
-        }}
-      >
-        <FastImage
-          source={iconSource}
-          resizeMode="contain"
-          style={styles.icon}
-        // tintColor={theme !== "Dark" ? colors.black : colors.white}
-        />
-      </View>
-      <View style={{ alignItems: "center" }}>
-        <AppText
-          style={[
-            { fontWeight: "700", fontSize: 12, textAlign: "center", color: themeColors.text },
-            textStyle,
-          ]}
-          type={THIRTEEN}
-        >
-          {title}
-        </AppText>
-      </View>
-    </>
-  );
-};
 
 const ProfileDrawer = () => {
+  const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const { colors: themeColors, theme, isDark } = useTheme();
   const drawerColors = themeColors;
@@ -665,7 +633,7 @@ const ProfileDrawer = () => {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: 'white' }]}>
+    <View style={[styles.container, { backgroundColor: 'white', paddingTop: insets.top }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{

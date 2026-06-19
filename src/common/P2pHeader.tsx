@@ -1,11 +1,11 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React from 'react';
 import {
   ImageBackground,
-  SafeAreaView,
+  
   StatusBar,
   StyleSheet,
-  View,
-} from 'react-native';
+  View} from 'react-native';
 import TouchableOpacityView from './TouchableOpacityView';
 import FastImage from 'react-native-fast-image';
 import {

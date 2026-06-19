@@ -1,14 +1,14 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useContext } from "react";
 import {
-  SafeAreaView,
+  
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  TextInput,
-} from "react-native";
+  TextInput} from "react-native";
 import FastImage from "react-native-fast-image";
 import { BACK_ICON, folder } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";

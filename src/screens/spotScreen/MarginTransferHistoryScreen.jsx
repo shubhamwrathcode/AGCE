@@ -1,13 +1,13 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  SafeAreaView,
+  
   ScrollView,
-  Platform,
-} from "react-native";
+  Platform} from "react-native";
 import FastImage from "react-native-fast-image";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import {

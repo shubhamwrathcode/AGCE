@@ -1,5 +1,6 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity,  Platform, ActivityIndicator, Linking } from 'react-native';
 import { AppText, BOLD, FOURTEEN, SIXTEEN, SEMI_BOLD, TWENTY_TWO, MEDIUM, FIFTEEN, THIRTEEN } from '../../../shared';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';

@@ -1,0 +1,2554 @@
+1077: const Spot = () => {
+1078:   const insets = useSafeAreaInsets();
+1079:   const { colors: themeColors, theme, isDark } = useTheme();
+1080:   const route = useRoute();
+1081:   const navigation = useNavigation();
+1082:   const { subscribeToExchange, unsubscribeFromExchange, unsubscribeFromMarket, unsubscribeFromFutures } = useContext(SocketContext);
+1083:   const dispatch = useDispatch();
+1084: 
+1085:   const coinData = useAppSelector((state) => state.home.coinData);
+1086:   const spotSelectedPair = useAppSelector((state) => state.home.spotSelectedPair);
+1087:   const coinBalance = useAppSelector((state) => state.home.coinBalance);
+1088:   const crossAccount = useAppSelector((state) => state.home.crossAccount);
+1089:   const crossBorrowable = useAppSelector((state) => state.home.crossBorrowable);
+1090:   const userData = useAppSelector((state) => state.auth.userData);
+1091:   const socket = useAppSelector((state) => state.home.socket);
+1092:   const openOrders = useAppSelector((state) => state.home.spotOpenOrders);
+1093:   const pastOrders = useAppSelector((state) => state.home.pastOrders);
+1094:   // Keep terminal readable: avoid logging whole arrays continuously
+1095:   // (use the rate-limited lens logs inside the socket handler instead)
+1096: 
+1097:   const buyOrders = useAppSelector((state) => state.home.buyOrders);
+1098:   const sellOrders = useAppSelector((state) => state.home.sellOrders);
+1099:   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
+1100:   const favoriteArrayLoaded = useAppSelector((state) => state.home.favoriteArrayLoaded);
+1101: 
+1102:   const [currency, setCurrency] = useState(null);
+1103:   const [currencyData, setCurrencyData] = useState(null);
+1104:   const [LocalBuyOrders, setLocalBuyOrders] = useState([]);
+1105:   const [LocalSellOrders, setLocalSellOrders] = useState([]);
+1106:   const [orderFilter, setOrderFilter] = useState("All");
+1107:   const [pastOrderFilter, setPastOrderFilter] = useState("All");
+1108:   const [expandedRowIndex, setExpandedRowIndex] = useState(null);
+1109:   const [showExecutedTrades, setShowExecutedTrades] = useState({});
+1110:   const [lastSocketData, setLastSocketData] = useState(null);
+1111:   /** Web parity: flip true once socket sends `buy_order`/`sell_order` key (empty array still counts). */
+1112:   const [orderBookSocketReady, setOrderBookSocketReady] = useState(false);
+1113:   const [appState, setAppState] = useState(AppState.currentState);
+1114:   const appStateRef = useRef(AppState.currentState);
+1115:   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
+1116:   const [isCancelLoading, setIsCancelLoading] = useState(false);
+1117:   const [marginAccountData, setMarginAccountData] = useState(null);
+1118: 
+1119: 
+1120:   const [orderToCancel, setOrderToCancel] = useState(null);
+1121:   const isSpotFocused = useIsFocused();
+1122:   const recentTrades = useAppSelector((state) => state.home.recentTrades);
+1123: 
+1124:   const [isPriceFocused, setIsPriceFocused] = useState(false);
+1125:   const [isAmountFocused, setIsAmountFocused] = useState(false);
+1126:   const [isStopFocused, setIsStopFocused] = useState(false);
+1127:   const [isTotalFocused, setIsTotalFocused] = useState(false);
+1128: 
+1129:   const priceAnim = useRef(new Animated.Value(1)).current;
+1130:   const amountAnim = useRef(new Animated.Value(0)).current;
+1131:   const stopAnim = useRef(new Animated.Value(0)).current;
+1132:   const totalAnim = useRef(new Animated.Value(0)).current;
+1133:   const slippageAnim = useRef(new Animated.Value(0)).current;
+1134:   const amountInputRef = useRef(null);
+1135:   const slippageInputRef = useRef(null);
+1136: 
+1137:   /** Must run before setAmount so next render’s Animated styles already see 1 (fixes +/− without focus overlap). */
+1138:   const syncAmountAnimForQuantityString = useCallback((qtyStr) => {
+1139:     if (String(qtyStr ?? "").trim() !== "") {
+1140:       amountAnim.setValue(1);
+1141:       totalAnim.setValue(1);
+1142:     }
+1143:   }, []);
+1144: 
+1145:   const syncStopAnimForPriceString = useCallback((priceStr) => {
+1146:     if (String(priceStr ?? "").trim() !== "") {
+1147:       stopAnim.setValue(1);
+1148:     }
+1149:   }, []);
+1150: 
+1151:   useLayoutEffect(() => {
+1152:     const displayValue = price || buy_price;
+1153:     const hasPrice = String(displayValue ?? "").trim() !== "";
+1154:     const isLoaded = !!buy_price;
+1155:     if (hasPrice || isPriceFocused || !isLoaded) {
+1156:       Animated.timing(priceAnim, {
+1157:         toValue: 1,
+1158:         duration: 200,
+1159:         useNativeDriver: false,
+1160:       }).start();
+1161:       return;
+1162:     }
+1163:     Animated.timing(priceAnim, {
+1164:       toValue: 0,
+1165:       duration: 200,
+1166:       useNativeDriver: false,
+1167:     }).start();
+1168:   }, [isPriceFocused, price, buy_price]);
+1169: 
+1170:   useLayoutEffect(() => {
+1171:     const hasAmt = String(amount ?? "").trim() !== "";
+1172:     if (hasAmt || isTotalFocused) {
+1173:       Animated.timing(totalAnim, {
+1174:         toValue: 1,
+1175:         duration: 200,
+1176:         useNativeDriver: false,
+1177:       }).start();
+1178:       return;
+1179:     }
+1180:     Animated.timing(totalAnim, {
+1181:       toValue: 0,
+1182:       duration: 200,
+1183:       useNativeDriver: false,
+1184:     }).start();
+1185:   }, [amount, isTotalFocused]);
+1186: 
+1187:   useLayoutEffect(() => {
+1188:     const hasAmt = String(amount ?? "").trim() !== "";
+1189: 
+1190:     // Amount label: value or focus based (original perfect logic)
+1191:     if (hasAmt || isAmountFocused) {
+1192:       Animated.timing(amountAnim, {
+1193:         toValue: 1,
+1194:         duration: 200,
+1195:         useNativeDriver: false,
+1196:       }).start();
+1197:       return;
+1198:     }
+1199:     Animated.timing(amountAnim, {
+1200:       toValue: 0,
+1201:       duration: 200,
+1202:       useNativeDriver: false,
+1203:     }).start();
+1204:   }, [amount, isAmountFocused]);
+1205: 
+1206:   useLayoutEffect(() => {
+1207:     const hasStop = String(stopPrice ?? "").trim() !== "";
+1208:     if (hasStop || isStopFocused) {
+1209:       Animated.timing(stopAnim, {
+1210:         toValue: 1,
+1211:         duration: 200,
+1212:         useNativeDriver: false,
+1213:       }).start();
+1214:       return;
+1215:     }
+1216:     Animated.timing(stopAnim, {
+1217:       toValue: 0,
+1218:       duration: 200,
+1219:       useNativeDriver: false,
+1220:     }).start();
+1221:   }, [stopPrice, isStopFocused]);
+1222: 
+1223:   useLayoutEffect(() => {
+1224:     const hasSlippage = String(slippagePct ?? "").trim() !== "";
+1225:     if (hasSlippage || isSlippageInputFocused) {
+1226:       Animated.timing(slippageAnim, {
+1227:         toValue: 1,
+1228:         duration: 200,
+1229:         useNativeDriver: false,
+1230:       }).start();
+1231:       return;
+1232:     }
+1233:     Animated.timing(slippageAnim, {
+1234:       toValue: 0,
+1235:       duration: 200,
+1236:       useNativeDriver: false,
+1237:     }).start();
+1238:   }, [slippagePct, isSlippageInputFocused]);
+1239: 
+1240:   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
+1241:   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
+1242: 
+1243:   const rbSheetNumber = useRef();
+1244:   const rbSheetlimit = useRef();
+1245:   const rbSheetAddFunds = useRef();
+1246:   const rbSheetMarginConfirm = useRef();
+1247:   const lastMarginFetchRef = useRef("");
+1248:   const [marginConfirmPayload, setMarginConfirmPayload] = useState(null);
+1249:   const [dontShowMarginConfirm, setDontShowMarginConfirm] = useState(false);
+1250:   const latestSocketDataRef = useRef(null);
+1251:   const latestLocalBuyOrdersRef = useRef([]);
+1252:   const latestLocalSellOrdersRef = useRef([]);
+1253:   const currentCurrencyRef = useRef(null);
+1254:   const SOCKET_UI_THROTTLE_MS = 300;
+1255:   /** Match web `TradePage`: poll spot history while the matching tab is visible (`SPOT_HIST_POLL_MS`). */
+1256:   const SPOT_HIST_POLL_MS = 3000;
+1257:   const socketThrottleTimerRef = useRef(null);
+1258:   const socketLastFlushRef = useRef(0);
+1259:   const pendingSocketFlushRef = useRef(null);
+1260:   const isSpotFocusedRef = useRef(true);
+1261:   const lastSubscribedExchangeRef = useRef(null);
+1262:   const lastSubscribedPairRef = useRef(null);
+1263:   const lastFlushedBuyRef = useRef(null);
+1264:   const lastFlushedSellRef = useRef(null);
+1265:   const pendingOrderBookOnBlurRef = useRef(null);
+1266:   const flushSocketToStateRef = useRef(null);
+1267:   const activeTabRef = useRef(1);
+1268: 
+1269:   // Get decimal places from step_size or tick_size
+1270:   const getDecimalPlaces = (value) => {
+1271:     if (!value || value >= 1) return 0;
+1272:     const str = value.toString();
+1273:     if (str.includes("e-")) return parseInt(str.split("e-")[1], 10);
+1274:     const decimalPart = str.split(".")[1];
+1275:     return decimalPart ? decimalPart.length : 0;
+1276:   };
+1277: 
+1278:   const getPricePrecision = () => {
+1279:     const tickSize = currencyData?.tick_size;
+1280:     if (tickSize === undefined || tickSize === null) return 8;
+1281:     return getDecimalPlaces(tickSize);
+1282:   };
+1283: 
+1284:   const getQuantityPrecision = () => {
+1285:     const stepSize = currencyData?.step_size;
+1286:     if (stepSize === undefined || stepSize === null) return 8;
+1287:     return getDecimalPlaces(stepSize);
+1288:   };
+1289: 
+1290:   const pricePrecision = useMemo(() => getPricePrecision(), [currencyData?.tick_size]);
+1291:   const quantityPrecision = useMemo(() => getQuantityPrecision(), [currencyData?.step_size]);
+1292: 
+1293:   const formatPrice = useCallback(
+1294:     (price) => {
+1295:       if (price === undefined || price === null || isNaN(price)) return "0";
+1296:       return parseFloat(Number(price).toFixed(pricePrecision));
+1297:     },
+1298:     [pricePrecision]
+1299:   );
+1300: 
+1301:   const formatPriceThousands = useCallback(
+1302:     (raw) => {
+1303:       const n = parseFloat(String(raw).replace(/,/g, ""));
+1304:       if (Number.isNaN(n)) return raw === undefined || raw === null ? "" : String(raw);
+1305:       return n.toLocaleString("en-US", { maximumFractionDigits: pricePrecision, minimumFractionDigits: 0 });
+1306:     },
+1307:     [pricePrecision]
+1308:   );
+1309: 
+1310:   const formatQuantity = useCallback(
+1311:     (qty) => {
+1312:       if (qty === undefined || qty === null || isNaN(qty)) return "0";
+1313:       return parseFloat(Number(qty).toFixed(quantityPrecision));
+1314:     },
+1315:     [quantityPrecision]
+1316:   );
+1317: 
+1318:   // effectiveCurrency: Redux first, then local, then route param, then coinData[0]
+1319:   const effectiveCurrency = spotSelectedPair ?? currency ?? route?.params?.coinDetail ?? coinData?.[0];
+1320: 
+1321:   // Scenario 1: Default to coinData[0] when nothing selected
+1322:   useEffect(() => {
+1323:     if (!spotSelectedPair && !route?.params?.coinDetail && coinData?.[0]) {
+1324:       dispatch(setSpotSelectedPair(coinData[0]));
+1325:     }
+1326:   }, [coinData, spotSelectedPair, route?.params?.coinDetail, dispatch]);
+1327: 
+1328:   // Scenario 2: Nav from Home with coinDetail
+1329:   useEffect(() => {
+1330:     const navCoin = route?.params?.coinDetail;
+1331:     if (navCoin) {
+1332:       const key = `${navCoin.base_currency}_${navCoin.quote_currency}`;
+1333:       const currentKey = spotSelectedPair ? `${spotSelectedPair.base_currency}_${spotSelectedPair.quote_currency}` : null;
+1334:       if (key !== currentKey) dispatch(setSpotSelectedPair(navCoin));
+1335:       navigation.setParams({ coinDetail: undefined });
+1336:     }
+1337:   }, [route?.params?.coinDetail, dispatch, navigation, spotSelectedPair]);
+1338: 
+1339:   /** SpotChartScreen bottom Buy/Sell → navigate here with `spotTradeSide` */
+1340:   useEffect(() => {
+1341:     const raw = route?.params?.spotTradeSide;
+1342:     if (raw == null || raw === "") return;
+1343:     const u = String(raw).toUpperCase();
+1344:     if (u === "BUY") {
+1345:       setTab("Buy");
+1346:       setIsBuy(true);
+1347:     } else if (u === "SELL") {
+1348:       setTab("Sell");
+1349:       setIsBuy(false);
+1350:     }
+1351:     navigation.setParams({ spotTradeSide: undefined });
+1352:   }, [route?.params?.spotTradeSide, navigation]);
+1353: 
+1354:   // Removed automatic restoration from Redux cache to ensure only fresh socket data is shown.
+1355:   // This satisfies the requirement: "if data comes from backend, show; otherwise don't".
+1356: 
+1357: 
+1358:   // When spotSelectedPair changes: sync local form + clear order book until new pair socket data arrives.
+1359:   useEffect(() => {
+1360:     if (!spotSelectedPair) return;
+1361: 
+1362:     if (currentCurrencyRef.current?.base_currency !== spotSelectedPair.base_currency ||
+1363:       currentCurrencyRef.current?.quote_currency !== spotSelectedPair.quote_currency) {
+1364:       setCurrency(spotSelectedPair);
+1365:       currentCurrencyRef.current = spotSelectedPair;
+1366:       const initialPrice = spotSelectedPair.buy_price ? formatPrice(spotSelectedPair.buy_price).toString() : "";
+1367:       setPrice(initialPrice);
+1368:       setStaticBuyPrice(initialPrice);
+1369:       setActivePercentage("");
+1370:       setLastSocketData(null);
+1371:       setLocalBuyOrders([]);
+1372:       setLocalSellOrders([]);
+1373:       dispatch(setBuyOrders([]));
+1374:       dispatch(setSellOrders([]));
+1375:       dispatch(setRecentTrades([]));
+1376:       dispatch(setPastOrders([]));
+1377:       dispatch(clearTradeHistory());
+1378:       setSpotMyTrades([]);
+1379:       setOrderBookSocketReady(false);
+1380:       setStopPrice("");
+1381:       setTradeHistorySideFilter("All");
+1382:       setMarginLeverage("5x");
+1383:     }
+1384:   }, [spotSelectedPair?.base_currency, spotSelectedPair?.quote_currency, dispatch, formatPrice]);
+1385: 
+1386:   useEffect(() => {
+1387:     if (!staticBuyPrice && buy_price) {
+1388:       const p = formatPrice(buy_price).toString();
+1389:       setStaticBuyPrice(p);
+1390:       if (!price) setPrice(p);
+1391:     }
+1392:   }, [buy_price, staticBuyPrice, price, formatPrice]);
+1393: 
+1394:   useEffect(() => {
+1395:     // When switching between Spot and Margin tabs, reset price to capture the latest market price for the new mode.
+1396:     setStaticBuyPrice("");
+1397:     setPrice("");
+1398:     setStopPrice("");
+1399:   }, [headerTab]);
+1400: 
+1401:   // Manual change (TradingDataModal): dispatch to Redux - sync effect will handle rest
+1402:   // Clear order book so we don't show previous pair's data; new data will replace when socket responds
+1403:   const handleCurrencyChange = (coin) => {
+1404:     dispatch(setSpotSelectedPair(coin));
+1405:     setLastSocketData(null);
+1406:     setLocalBuyOrders([]);
+1407:     setLocalSellOrders([]);
+1408:     dispatch(setBuyOrders([]));
+1409:     dispatch(setSellOrders([]));
+1410:     setOpenOrderKindTab("all");
+1411:     setOrderFilter("All");
+1412:   };
+1413: 
+1414:   // --- Keep selected currency updated with socket ---
+1415:   useEffect(() => {
+1416:     const curr = effectiveCurrency ?? currency;
+1417:     if (!curr || !coinData) return;
+1418: 
+1419:     currentCurrencyRef.current = curr;
+1420: 
+1421:     const updated = coinData.find(
+1422:       (c) => c.base_currency === curr.base_currency
+1423:     );
+1424: 
+1425:     if (updated) {
+1426:       setCurrencyData(updated);
+1427:     }
+1428:   }, [coinData, currency, effectiveCurrency]);
+1429: 
+1430:   // --- Safe destructuring ---
+1431:   const {
+1432:     base_currency,
+1433:     base_currency_id,
+1434:     quote_currency,
+1435:     quote_currency_id,
+1436:     change_percentage,
+1437:     _id,
+1438:     buy_price,
+1439:     high,
+1440:     low,
+1441:     volume,
+1442:   } = currencyData ?? {};
+1443:   const { skip_buy_sell, id, kycVerified } = userData ?? "";
+1444: 
+1445:   // Dynamic Margin Account Data for Hourly Rates
+1446:   useEffect(() => {
+1447:     if (headerTab === "Margin" && effectiveCurrency) {
+1448:       const base = effectiveCurrency.base_currency;
+1449:       const quote = effectiveCurrency.quote_currency;
+1450:       const isCross = marginMode === "Cross";
+1451: 
+1452:       let pairId = effectiveCurrency?._id;
+1453:       if (!isCross && !pairId && effectiveCurrency && Array.isArray(coinData)) {
+1454:         const match = coinData.find(p => p.base_currency === base && p.quote_currency === quote);
+1455:         pairId = match?._id;
+1456:       }
+1457: 
+1458:       const fetchKey = `${headerTab}_${marginMode}_${base}_${quote}_${isCross ? "cross" : pairId || "nopair"}`;
+1459: 
+1460:       if (lastMarginFetchRef.current !== fetchKey) {
+1461:         if (!isCross && !pairId) return;
+1462: 
+1463:         lastMarginFetchRef.current = fetchKey;
+1464:         setMarginAccountData(null);
+1465: 
+1466:         if (isCross) {
+1467:           appOperation.get(`cross/account`, undefined, undefined, CUSTOMER_TYPE)
+1468:             .then((res) => { if (res?.success) setMarginAccountData(res.data); })
+1469:             .catch(() => { });
+1470:         } else {
+1471:           appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
+1472:             .then((res) => { if (res?.success) setMarginAccountData(res.data); })
+1473:             .catch(() => { });
+1474:         }
+1475:       }
+1476:     } else {
+1477:       lastMarginFetchRef.current = "";
+1478:     }
+1479:   }, [headerTab, effectiveCurrency?.base_currency, effectiveCurrency?.quote_currency, effectiveCurrency?._id, marginMode, coinData]);
+1480: 
+1481:   const getCrossAsset = useCallback((symbol) => {
+1482:     if (!marginAccountData?.assets) return null;
+1483:     return marginAccountData.assets.find((a) => a.currency === symbol) || null;
+1484:   }, [marginAccountData]);
+1485: 
+1486:   const COIN_RATES = {
+1487:     BNB: { hourly: "0.00034929", annual: "3.05977500" },
+1488:     USDT: { hourly: "0.00038596", annual: "3.38099500" },
+1489:     BTC: { hourly: "0.00004663", annual: "0.40843500" },
+1490:     ETH: { hourly: "0.00008219", annual: "0.71998440" },
+1491:     "0G": { hourly: "0.00050000", annual: "4.38000000" },
+1492:     "1INCH": { hourly: "0.00037917", annual: "3.32150000" },
+1493:     "2Z": { hourly: "0.00062500", annual: "5.47500000" },
+1494:   };
+1495: 
+1496:   const getHourlyRate = useCallback((symbol) => {
+1497:     const isCross = marginMode === "Cross";
+1498:     let rawRate = null;
+1499:     let fallback = COIN_RATES[symbol]?.hourly || "0.00200000";
+1500: 
+1501:     if (isCross) {
+1502:       const crossInterest = getCrossAsset(symbol);
+1503:       rawRate = crossInterest?.hourly_interest_rate_pct;
+1504:     } else {
+1505:       rawRate = marginAccountData?.interest?.hourly_pct;
+1506:     }
+1507: 
+1508:     if (rawRate != null) {
+1509:       return `${String(rawRate).replace(/%/g, "")}%`;
+1510:     }
+1511:     return `${fallback}%`;
+1512:   }, [marginMode, marginAccountData, getCrossAsset]);
+1513: 
+1514:   const safeBaseCurrency = base_currency || effectiveCurrency?.base_currency || "BTC";
+1515:   const safeQuoteCurrency = quote_currency || effectiveCurrency?.quote_currency || "USDT";
+1516:   const baseHourlyRate = getHourlyRate(safeBaseCurrency);
+1517:   const quoteHourlyRate = getHourlyRate(safeQuoteCurrency);
+1518: 
+1519:   /** Chart opens immediately — do not wait for order book / socket; resolve symbols from pair, coin list, or row metadata. */
+1520:   const handleCandlePress = useCallback(() => {
+1521:     const pair = spotSelectedPair ?? currency ?? effectiveCurrency;
+1522:     if (!pair) return;
+1523:     const fromList =
+1524:       Array.isArray(coinData) && coinData.length > 0
+1525:         ? coinData.find(
+1526:           (c) =>
+1527:             (pair.base_currency_id != null &&
+1528:               pair.quote_currency_id != null &&
+1529:               c.base_currency_id === pair.base_currency_id &&
+1530:               c.quote_currency_id === pair.quote_currency_id) ||
+1531:             (pair.base_currency &&
+1532:               pair.quote_currency &&
+1533:               c.base_currency === pair.base_currency &&
+1534:               c.quote_currency === pair.quote_currency)
+1535:         )
+1536:         : null;
+1537:     const baseSym =
+1538:       pair.base_currency ??
+1539:       pair.base_currency_short_name ??
+1540:       fromList?.base_currency ??
+1541:       base_currency ??
+1542:       currencyData?.base_currency;
+1543:     const quoteSym =
+1544:       pair.quote_currency ??
+1545:       pair.quote_currency_short_name ??
+1546:       fromList?.quote_currency ??
+1547:       quote_currency ??
+1548:       currencyData?.quote_currency;
+1549:     if (!baseSym || !quoteSym) return;
+1550:     NavigationService.navigate(SPOT_CHART_SCREEN, {
+1551:       base_currency: baseSym,
+1552:       quote_currency: quoteSym,
+1553:       change_percentage: pair.change_percentage ?? change_percentage ?? 0,
+1554:       buy_price: pair.buy_price ?? buy_price,
+1555:       high: pair.high ?? high,
+1556:       low: pair.low ?? low,
+1557:       volume: pair.volume ?? volume,
+1558:       tradeType: headerTab,
+1559:     });
+1560:   }, [
+1561:     spotSelectedPair,
+1562:     currency,
+1563:     effectiveCurrency,
+1564:     coinData,
+1565:     base_currency,
+1566:     quote_currency,
+1567:     change_percentage,
+1568:     buy_price,
+1569:     high,
+1570:     low,
+1571:     volume,
+1572:     currencyData,
+1573:     headerTab,
+1574:   ]);
+1575: 
+1576:   /** Web TradePage: Maker / Taker % under CTA; fall back 0.2 when pair has no fee fields yet */
+1577:   const spotFooterMakerTakerPct = useMemo(() => {
+1578:     const parseFee = (v, fallback = 0.2) => {
+1579:       if (v === null || v === undefined || v === "") return fallback;
+1580:       const n = Number(v);
+1581:       return Number.isFinite(n) ? n : fallback;
+1582:     };
+1583:     return {
+1584:       maker: parseFee(currencyData?.maker_fee),
+1585:       taker: parseFee(currencyData?.taker_fee),
+1586:     };
+1587:   }, [currencyData?.maker_fee, currencyData?.taker_fee]);
+1588: 
+1589: 
+1590: 
+1591:   /** `activeTab` + `mountedOrdersTab` stay in sync — single panel only (web-style API lists; no duplicate slide UI). */
+1592:   const [activeTab, setActiveTab] = useState(1);
+1593:   const [mountedOrdersTab, setMountedOrdersTab] = useState(1);
+1594:   activeTabRef.current = activeTab;
+1595: 
+1596:   // Swipe animation for bottom tabs content (1 ↔ 2 ↔ 3)
+1597:   const ordersTabsPrevRef = useRef(activeTab);
+1598:   const ordersTabsAnimX = useRef(new Animated.Value(0)).current;
+1599:   const animateOrdersTabsSwitch = useCallback(
+1600:     (nextTabId) => {
+1601:       const prev = ordersTabsPrevRef.current;
+1602:       ordersTabsPrevRef.current = nextTabId;
+1603:       const dir = nextTabId > prev ? 1 : -1;
+1604:       ordersTabsAnimX.setValue(dir * (Width * 0.25));
+1605:       Animated.timing(ordersTabsAnimX, {
+1606:         toValue: 0,
+1607:         duration: 220,
+1608:         useNativeDriver: true,
+1609:       }).start();
+1610:     },
+1611:     [ordersTabsAnimX],
+1612:   );
+1613: 
+1614:   /** Bottom tabs row: scroll so left tabs align left, right tab aligns right (narrow screens). */
+1615:   const ordersBottomTabScrollRef = useRef(null);
+1616:   const ordersBottomTabBarWidthRef = useRef(0);
+1617:   const ordersBottomTabItemLayoutRef = useRef({});
+1618: 
+1619:   const scrollOrdersBottomTabBarIntoView = useCallback((tabId) => {
+1620:     const sv = ordersBottomTabScrollRef.current;
+1621:     if (!sv) return;
+1622:     const barW = ordersBottomTabBarWidthRef.current;
+1623:     const lay = ordersBottomTabItemLayoutRef.current[tabId];
+1624:     const pad = 10;
+1625:     if (!lay?.width || barW <= 0) {
+1626:       if (tabId === 1) sv.scrollTo({ x: 0, animated: true });
+1627:       else if (tabId === 3) sv.scrollToEnd({ animated: true });
+1628:       return;
+1629:     }
+1630:     let x = 0;
+1631:     if (tabId === 1) {
+1632:       x = Math.max(0, lay.x - pad);
+1633:     } else if (tabId === 3) {
+1634:       x = Math.max(0, lay.x + lay.width - barW + pad);
+1635:     } else {
+1636:       x = Math.max(0, lay.x + lay.width / 2 - barW / 2);
+1637:     }
+1638:     sv.scrollTo({ x, animated: true });
+1639:   }, []);
+1640: 
+1641:   useLayoutEffect(() => {
+1642:     const id = requestAnimationFrame(() => {
+1643:       scrollOrdersBottomTabBarIntoView(mountedOrdersTab);
+1644:     });
+1645:     return () => cancelAnimationFrame(id);
+1646:   }, [mountedOrdersTab, scrollOrdersBottomTabBarIntoView]);
+1647: 
+1648:   const handleSpotOrdersPrimaryTab = useCallback(
+1649:     (tabId) => {
+1650:       if (tabId < 1 || tabId > 3) return;
+1651:       if (activeTab === tabId) return;
+1652:       setExpandedRowIndex(null);
+1653:       animateOrdersTabsSwitch(tabId);
+1654:       activeTabRef.current = tabId;
+1655:       setActiveTab(tabId);
+1656:       setMountedOrdersTab(tabId);
+1657:     },
+1658:     [activeTab, animateOrdersTabsSwitch],
+1659:   );
+1660: 
+1661:   const [tab, setTab] = useState("Buy");
+1662:   const [headerTab, setHeaderTab] = useState(route?.params?.activeTab || "Spot");
+1663:   useEffect(() => {
+1664:     if (route?.params?.activeTab) {
+1665:       setHeaderTab(route.params.activeTab);
+1666:     }
+1667:   }, [route?.params?.activeTab]);
+1668:   const [marginMode, setMarginMode] = useState("Isolated");
+1669:   const [marginLeverage, setMarginLeverage] = useState("5x");
+1670: 
+1671:   useEffect(() => {
+1672:     if (headerTab === "Margin" && marginMode === "Cross") {
+1673:       dispatch(getCrossAccount());
+1674: 
+1675:       const baseId = currencyData?.base_currency_id || currentCurrencyRef.current?.base_currency_id;
+1676:       const quoteId = currencyData?.quote_currency_id || currentCurrencyRef.current?.quote_currency_id;
+1677:       if (baseId) {
+1678:         dispatch(getCrossBorrowable(baseId));
+1679:       }
+1680:       if (quoteId) {
+1681:         dispatch(getCrossBorrowable(quoteId));
+1682:       }
+1683:     }
+1684:   }, [headerTab, marginMode, currencyData?.base_currency_id, currencyData?.quote_currency_id, dispatch]);
+1685:   const [tpPrice, setTpPrice] = useState("");
+1686:   const [slPrice, setSlPrice] = useState("");
+1687:   const [staticBuyPrice, setStaticBuyPrice] = useState("");
+1688:   const [price, setPrice] = useState("");
+1689:   const [amount, setAmount] = useState("");
+1690:   const [amtDenom, setAmtDenom] = useState("BASE");
+1691:   const [stopPrice, setStopPrice] = useState("");
+1692:   const [limitIoc, setLimitIoc] = useState(false);
+1693:   const [limitFok, setLimitFok] = useState(false);
+1694:   const [slippageEnabled, setSlippageEnabled] = useState(false);
+1695:   const [slippagePct, setSlippagePct] = useState("");
+1696:   const [isSlippageInputFocused, setIsSlippageInputFocused] = useState(false);
+1697:   // Fixed pitch black selection highlight on long press copy/paste
+1698:   const inputSelectionColor = themeColors.spotTradeBuy ? `${themeColors.spotTradeBuy}40` : "rgba(0,0,0,0.2)";
+1699:   const [isBuy, setIsBuy] = useState(true);
+1700:   const [total, setTotal] = useState("");
+1701: 
+1702: 
+1703:   // const [chartLoading, setChartLoading] = useState(true);
+1704:   // const [preloadedUrl, setPreloadedUrl] = useState(null);
+1705:   // const [showPlaceholder, setShowPlaceholder] = useState(true);
+1706:   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+1707:   const [isLoading, setIsLoading] = useState(true);
+1708:   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+1709:   const [numberSelectLimit, setNumberLimit] = useState("Limit");
+1710:   const spotOrderType = useMemo(() => {
+1711:     switch (numberSelectLimit) {
+1712:       case "Market":
+1713:         return "MARKET";
+1714:       case "Spot Limit":
+1715:         return "STOP_LIMIT";
+1716:       case "Spot Market":
+1717:         return "STOP_MARKET";
+1718:       default:
+1719:         return "LIMIT";
+1720:     }
+1721:   }, [numberSelectLimit]);
+1722:   // Web parity flags (see `arab_global_exchange/src/ui/Pages/TradePage/index.js`)
+1723:   const isStopOrder = spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET";
+1724:   const isLimit = spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT";
+1725:   const isMarketLikeOrder = spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET";
+1726:   const showStopPriceField = isStopOrder;
+1727:   const showAmtDenomSelect =
+1728:     spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET" || spotOrderType === "STOP_LIMIT";
+1729:   const showSpotOrderFooter =
+1730:     spotOrderType === "LIMIT" || spotOrderType === "MARKET" || spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET";
+1731: 
+1732:   const slippageBounds = useMemo(() => {
+1733:     const minRaw = Number(currencyData?.min_slippage_percent);
+1734:     const maxRaw = Number(currencyData?.max_slippage_percent);
+1735:     const min = Number.isFinite(minRaw) && minRaw > 0 ? minRaw : 0.1;
+1736:     const max = Number.isFinite(maxRaw) && maxRaw >= min ? maxRaw : Math.max(1, min);
+1737:     return { min, max };
+1738:   }, [currencyData?.min_slippage_percent, currencyData?.max_slippage_percent]);
+1739: 
+1740:   const slippagePlaceholder = useMemo(
+1741:     () => `Allowed ${slippageBounds.min}% - ${slippageBounds.max}%`,
+1742:     [slippageBounds.max, slippageBounds.min]
+1743:   );
+1744: 
+1745:   const slippageError = useMemo(() => {
+1746:     if (!slippageEnabled) return "";
+1747:     const text = String(slippagePct ?? "").trim();
+1748:     if (text === "") return "";
+1749:     const n = Number(text);
+1750:     if (!Number.isFinite(n)) return "Enter a valid slippage percent.";
+1751:     if (n < slippageBounds.min || n > slippageBounds.max) {
+1752:       return `Slippage must be between ${slippageBounds.min}% and ${slippageBounds.max}%.`;
+1753:     }
+1754:     return "";
+1755:   }, [slippageBounds.max, slippageBounds.min, slippageEnabled, slippagePct]);
+1756: 
+1757:   useEffect(() => {
+1758:     if (!slippageEnabled) setIsSlippageInputFocused(false);
+1759:   }, [slippageEnabled]);
+1760: 
+1761:   const [openOrderKindTab, setOpenOrderKindTab] = useState("all");
+1762:   // const [orderBookReady, setOrderBookReady] = useState(false);
+1763:   // const [showOrderBookSkeleton, setShowOrderBookSkeleton] = useState(true);
+1764:   const [spotMyTrades, setSpotMyTrades] = useState([]);
+1765:   /** Skip local state updates when REST poll returns identical rows (less re-render / jank). */
+1766:   const spotMyTradesDataSigRef = useRef("");
+1767:   const [tradeHistorySideFilter, setTradeHistorySideFilter] = useState("All");
+1768:   const [activePercentage, setActivePercentage] = useState(0);
+1769:   const [balance, setBalance] = useState(0);
+1770:   const [_balance, _setBalance] = useState(0);
+1771:   const [numberSelect, setNumberSelect] = useState("0.0001");
+1772:   const [isConfirm, setIsConfirm] = useState(false);
+1773:   const [visible, setVisible] = useState(false);
+1774:   const [focusSettling, setFocusSettling] = useState(false);
+1775:   const focusSettlingTimeoutRef = useRef(null);
+1776: 
+1777:   const [isSwitchingTab, setIsSwitchingTab] = useState(false);
+1778: 
+1779:   useEffect(() => {
+1780:     setIsSwitchingTab(true);
+1781:     const t = setTimeout(() => setIsSwitchingTab(false), 600);
+1782:     return () => clearTimeout(t);
+1783:   }, [headerTab, marginMode, quote_currency, base_currency]);
+1784: 
+1785:   useEffect(() => {
+1786:     setAmount("");
+1787:     setTotal("");
+1788:     setActivePercentage(0);
+1789:   }, [headerTab, marginMode]);
+1790: 
+1791:   const orderBookReady = orderBookSocketReady;
+1792:   const showOrderBookSkeleton = !orderBookSocketReady;
+1793:   /** Header shows skeleton until `coinData` row exists for the pair (LOCAL pairs skip list lookup). */
+1794:   const pairMetaReady =
+1795:     currencyData != null || effectiveCurrency?.available === "LOCAL";
+1796:   const pairHeaderLoading = !pairMetaReady;
+1797: 
+1798:   const pairIdForFav = useMemo(() => currencyData?._id ?? effectiveCurrency?._id ?? spotSelectedPair?._id, [currencyData?._id, effectiveCurrency?._id, spotSelectedPair?._id]);
+1799:   const isFav = useMemo(() => {
+1800:     if (!favoriteArray || !pairIdForFav) return false;
+1801:     return favoriteArray.includes(pairIdForFav);
+1802:   }, [favoriteArray, pairIdForFav]);
+1803:   const [favLoading, setFavLoading] = useState(false);
+1804: 
+1805:   useEffect(() => {
+1806:     if (userData && !favoriteArrayLoaded) {
+1807:       dispatch(getFavoriteArray());
+1808:     }
+1809:   }, [userData, favoriteArrayLoaded, dispatch]);
+1810: 
+1811:   const toggleFavorite = useCallback(async () => {
+1812:     if (!pairIdForFav || favLoading) return;
+1813:     setFavLoading(true);
+1814:     try {
+1815:       await dispatch(addToFavorites({ pair_id: pairIdForFav }));
+1816:     } catch (e) {
+1817:       console.log("Favorite toggle error", e);
+1818:     } finally {
+1819:       setFavLoading(false);
+1820:     }
+1821:   }, [dispatch, pairIdForFav, favLoading]);
+1822: 
+1823: 
+1824:   // Lifecycle: on focus subscribe and show content; on blur clear global loader first (no overlay), then all timers and unsubscribe
+1825:   useFocusEffect(
+1826:     useCallback(() => {
+1827:       unsubscribeFromMarket();
+1828:       unsubscribeFromFutures();
+1829:       dispatch(setLoading(false));
+1830:       isSpotFocusedRef.current = true;
+1831:       setFocusSettling(true);
+1832:       if (focusSettlingTimeoutRef.current) clearTimeout(focusSettlingTimeoutRef.current);
+1833:       focusSettlingTimeoutRef.current = setTimeout(() => {
+1834:         focusSettlingTimeoutRef.current = null;
+1835:         setFocusSettling(false);
+1836:       }, 550);
+1837:       const pending = pendingOrderBookOnBlurRef.current;
+1838:       if (pending) {
+1839:         pendingOrderBookOnBlurRef.current = null;
+1840:         flushSocketToStateRef.current?.(pending);
+1841:       }
+1842:       const currentPair = currentCurrencyRef.current || currency;
+1843:       if (currentPair?.base_currency_id && currentPair?.quote_currency_id) {
+1844:         const tradeType = headerTab === "Margin" ? (marginMode === "Cross" ? "cross" : "margin") : "spot";
+1845:         const newKey = `${currentPair.base_currency_id}-${currentPair.quote_currency_id}-${tradeType}`;
+1846:         const lastExchange = lastSubscribedExchangeRef.current;
+1847:         const alreadySubscribed =
+1848:           !!lastExchange &&
+1849:           `${lastExchange.base_currency_id}-${lastExchange.quote_currency_id}-${lastExchange.tradeType || "spot"}` === newKey;
+1850:         /** Only clear + resubscribe when the exchange pair actually changed (or first load).
+1851:          *  Returning from SpotChartScreen keeps `lastSubscribedExchangeRef` + Redux book — Binance-style (no full reload). */
+1852:         if (!alreadySubscribed) {
+1853:           dispatch(setBuyOrders([]));
+1854:           dispatch(setSellOrders([]));
+1855:           setLastSocketData(null);
+1856:           setLocalBuyOrders([]);
+1857:           setLocalSellOrders([]);
+1858:           if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
+1859:             unsubscribeFromExchange(lastExchange.base_currency_id, lastExchange.quote_currency_id);
+1860:           }
+1861:           const extraParams = headerTab === "Margin" ? { tradeType, pairId: currentPair?._id } : {};
+1862:           subscribeToExchange(currentPair.base_currency_id, currentPair.quote_currency_id, extraParams);
+1863:           lastSubscribedExchangeRef.current = {
+1864:             base_currency_id: currentPair.base_currency_id,
+1865:             quote_currency_id: currentPair.quote_currency_id,
+1866:             tradeType,
+1867:           };
+1868:         }
+1869:       }
+1870:       // If pair has no ids, ensure we don't show stale data from a previous subscription.
+1871:       if (!currentPair?.base_currency_id || !currentPair?.quote_currency_id) {
+1872:         const lastExchange = lastSubscribedExchangeRef.current;
+1873:         if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
+1874:           unsubscribeFromExchange(lastExchange.base_currency_id, lastExchange.quote_currency_id);
+1875:           lastSubscribedExchangeRef.current = null;
+1876:         }
+1877:         dispatch(setBuyOrders([]));
+1878:         dispatch(setSellOrders([]));
+1879:         dispatch(setRecentTrades([]));
+1880:         setLastSocketData(null);
+1881:         setLocalBuyOrders([]);
+1882:         setLocalSellOrders([]);
+1883:       }
+1884:       if (currentPair?.available === "LOCAL") {
+1885:         if (latestLocalBuyOrdersRef.current?.length > 0) {
+1886:           dispatch(setBuyOrders(latestLocalBuyOrdersRef.current));
+1887:         }
+1888:         if (latestLocalSellOrdersRef.current?.length > 0) {
+1889:           dispatch(setSellOrders(latestLocalSellOrdersRef.current));
+1890:         }
+1891:       }
+1892:       // Ensure loader hides after a timeout if data is stuck, but mainly rely on data
+1893:       const stopLoaderTimer = setTimeout(() => {
+1894:         dispatch(setLoading(false));
+1895:       }, 2000);
+1896: 
+1897:       return () => {
+1898:         dispatch(setLoading(false));
+1899:         isSpotFocusedRef.current = false;
+1900:         clearTimeout(stopLoaderTimer);
+1901: 
+1902:         // Clean up all timers and refs so no callbacks run after blur (prevents freeze and overlay)
+1903:         if (focusSettlingTimeoutRef.current) {
+1904:           clearTimeout(focusSettlingTimeoutRef.current);
+1905:           focusSettlingTimeoutRef.current = null;
+1906:         }
+1907: 
+1908:         if (socketThrottleTimerRef.current) {
+1909:           clearTimeout(socketThrottleTimerRef.current);
+1910:           socketThrottleTimerRef.current = null;
+1911:         }
+1912:         pendingSocketFlushRef.current = null;
+1913: 
+1914:         /** Do not unsubscribe or clear the order book on blur (e.g. opening SpotChartScreen).
+1915:          *  SocketProvider keeps one exchange subscription; Redux keeps last book until pair changes or Spot unmounts. */
+1916:       };
+1917:     }, [subscribeToExchange, unsubscribeFromExchange, currency, dispatch, headerTab, marginMode])
+1918:   );
+1919: 
+1920:   /** Tear down exchange subscription only when Spot screen unmounts (leave trading stack), not on blur. */
+1921:   useEffect(() => {
+1922:     return () => {
+1923:       const last = lastSubscribedExchangeRef.current;
+1924:       if (last?.base_currency_id != null && last?.quote_currency_id != null) {
+1925:         unsubscribeFromExchange(last.base_currency_id, last.quote_currency_id);
+1926:         lastSubscribedExchangeRef.current = null;
+1927:       }
+1928:     };
+1929:   }, [unsubscribeFromExchange]);
+1930: 
+1931:   // Keep ref in sync for callbacks (socket, flushSocketToState) so they see current focus without delay
+1932:   useEffect(() => {
+1933:     isSpotFocusedRef.current = isSpotFocused;
+1934:   }, [isSpotFocused]);
+1935: 
+1936:   // Removed redundant useEffects for exchange subscriptions to prevent duplicate Exchange subscribe logs.
+1937: 
+1938:   useEffect(() => {
+1939:     if (Object.keys(coinBalance || {}).length === 0) return;
+1940:     setBalance(coinBalance?.quote_currency_balance || 0);
+1941:     _setBalance(coinBalance?.base_currency_balance || 0);
+1942:   }, [coinBalance]);
+1943: 
+1944:   // AppState handling to prevent updates when app is in background
+1945:   useEffect(() => {
+1946:     const subscription = AppState.addEventListener('change', nextAppState => {
+1947:       appStateRef.current = nextAppState;
+1948:       setAppState(nextAppState);
+1949:     });
+1950: 
+1951:     return () => {
+1952:       subscription?.remove();
+1953:     };
+1954:   }, []);
+1955: 
+1956:   const flushSocketToState = useCallback((payload) => {
+1957:     if (!payload) return;
+1958:     if (!isSpotFocusedRef.current) {
+1959:       pendingOrderBookOnBlurRef.current = payload;
+1960:       return;
+1961:     }
+1962:     setLastSocketData(payload.data);
+1963:     if (historyOnly) {
+1964:       // In history-only mode, skip orderbook/recentTrades dispatches to keep UI ultra-light.
+1965:       return;
+1966:     }
+1967:     if (payload.recentTrades?.length !== undefined) {
+1968:       // already in Redux via setCoinData in SocketProvider
+1969:     }
+1970:     if (payload.sellOrders?.length !== undefined) {
+1971:       if (!orderBookDataEqual(lastFlushedSellRef.current, payload.sellOrders)) {
+1972:         lastFlushedSellRef.current = payload.sellOrders;
+1973:         setLocalSellOrders(payload.sellOrders);
+1974:         dispatch(setSellOrders(payload.sellOrders));
+1975:       }
+1976:     }
+1977:     if (payload.buyOrders?.length !== undefined) {
+1978:       if (!orderBookDataEqual(lastFlushedBuyRef.current, payload.buyOrders)) {
+1979:         lastFlushedBuyRef.current = payload.buyOrders;
+1980:         setLocalBuyOrders(payload.buyOrders);
+1981:         dispatch(setBuyOrders(payload.buyOrders));
+1982:       }
+1983:     }
+1984:     if (payload.recentTrades?.length !== undefined) {
+1985:       dispatch(setRecentTrades(payload.recentTrades));
+1986:     }
+1987:   }, [dispatch]);
+1988: 
+1989:   flushSocketToStateRef.current = flushSocketToState;
+1990: 
+1991:   // Socket listener only when Spot is focused - when blurred we remove listeners so no work in background
+1992:   useEffect(() => {
+1993:     if (!socket || !isSpotFocused) return;
+1994: 
+1995:     const scheduleFlush = (payload) => {
+1996:       pendingSocketFlushRef.current = payload;
+1997:       const now = Date.now();
+1998:       const elapsed = now - socketLastFlushRef.current;
+1999:       const throttleMs = SOCKET_UI_THROTTLE_MS;
+2000:       if (elapsed >= throttleMs || socketLastFlushRef.current === 0) {
+2001:         socketLastFlushRef.current = now;
+2002:         flushSocketToState(payload);
+2003:         pendingSocketFlushRef.current = null;
+2004:         if (socketThrottleTimerRef.current) {
+2005:           clearTimeout(socketThrottleTimerRef.current);
+2006:           socketThrottleTimerRef.current = null;
+2007:         }
+2008:         return;
+2009:       }
+2010:       if (socketThrottleTimerRef.current == null) {
+2011:         socketThrottleTimerRef.current = setTimeout(() => {
+2012:           socketThrottleTimerRef.current = null;
+2013:           socketLastFlushRef.current = Date.now();
+2014:           const pending = pendingSocketFlushRef.current;
+2015:           pendingSocketFlushRef.current = null;
+2016:           if (pending) {
+2017:             flushSocketToState(pending);
+2018:           }
+2019:         }, throttleMs - elapsed);
+2020:       }
+2021:     };
+2022: 
+2023:     const handleMessage = (data) => {
+2024:       latestSocketDataRef.current = data;
+2025:       if (!isSpotFocusedRef.current || appStateRef.current !== "active") return;
+2026: 
+2027:       // Trade History UI is API-only (getTradeHistory → Redux → spotMyTrades). Do not hydrate from socket.
+2028: 
+2029:       const hasBuyArr = Array.isArray(data?.buy_order);
+2030:       const hasSellArr = Array.isArray(data?.sell_order);
+2031:       if (!historyOnly && (hasBuyArr || hasSellArr)) {
+2032:         setOrderBookSocketReady(true);
+2033:       }
+2034:       if (hasBuyArr) {
+2035:         latestLocalBuyOrdersRef.current = data.buy_order;
+2036:       }
+2037:       if (hasSellArr) {
+2038:         latestLocalSellOrdersRef.current = data.sell_order;
+2039:       }
+2040: 
+2041:       if (!historyOnly && (hasBuyArr || hasSellArr || Array.isArray(data?.recent_trades))) {
+2042:         scheduleFlush({
+2043:           data,
+2044:           buyOrders: hasBuyArr ? data.buy_order : undefined,
+2045:           sellOrders: hasSellArr ? data.sell_order : undefined,
+2046:           recentTrades: Array.isArray(data?.recent_trades) ? data.recent_trades : undefined,
+2047:         });
+2048:       }
+2049:     };
+2050: 
+2051:     // Web uses exchange:update; listen to both so open orders & order history update smoothly
+2052:     socket.on("message", handleMessage);
+2053:     socket.on("exchange:update", handleMessage);
+2054:     return () => {
+2055:       socket.off("message", handleMessage);
+2056:       socket.off("exchange:update", handleMessage);
+2057:       if (socketThrottleTimerRef.current) {
+2058:         clearTimeout(socketThrottleTimerRef.current);
+2059:         socketThrottleTimerRef.current = null;
+2060:       }
+2061:     };
+2062:   }, [socket, isSpotFocused, dispatch, flushSocketToState]);
+2063: 
+2064:   // Use local orders for LOCAL pairs when local lists update
+2065:   useEffect(() => {
+2066:     if (currency?.available === "LOCAL") {
+2067:       dispatch(setBuyOrders(LocalBuyOrders));
+2068:       dispatch(setSellOrders(LocalSellOrders));
+2069:       dispatch(setRecentTrades(recentTrades));
+2070:     }
+2071:   }, [LocalBuyOrders, LocalSellOrders, recentTrades, currency, dispatch]);
+2072: 
+2073:   // Web parity: poll only while the mounted tab panel is Order History (2) — matches visible UI after slide animation (avoids Redux updating mid-slide + stale list flash).
+2074:   /**
+2075:    * Warm-switch prefetch:
+2076:    * When Spot is focused and a pair is selected, prefetch BOTH:
+2077:    * - Order History (executed orders)
+2078:    * - Trade History (fills)
+2079:    *
+2080:    * This makes switching tab 2 ↔ 3 feel instant (same as History screen warm-cache behavior),
+2081:    * while keeping the polling intervals gated to the mounted panel only.
+2082:    */
+2083:   const spotHistoryPrefetchRef = useRef({ pair: undefined, ts: 0 });
+2084:   useEffect(() => {
+2085:     if (!base_currency || !quote_currency || !userData) return;
+2086:     if (!isSpotFocused) return;
+2087:     const pair = `${base_currency}${quote_currency}`.toUpperCase();
+2088:     const now = Date.now();
+2089:     // Debounce: avoid spam on rapid re-renders.
+2090:     if (spotHistoryPrefetchRef.current.pair === pair && now - (spotHistoryPrefetchRef.current.ts || 0) < 2500) return;
+2091:     spotHistoryPrefetchRef.current = { pair, ts: now };
+2092: 
+2093:     // Prefetch order history (tab 2)
+2094:     const tt = headerTab === "Margin" ? (marginMode === "Cross" ? "cross" : "margin") : undefined;
+2095:     dispatch(getPastOrders({ page: 1, page_size: 50, pair, tradeType: tt }, { useGlobalLoader: false }));
+2096: 
+2097:     // Prefetch trade fills (tab 3) — do NOT clear on focus return (avoids list flicker/reload when coming back from detail).
+2098:     dispatch(
+2099:       getTradeHistory(0, 50, pair, {
+2100:         useGlobalLoader: false,
+2101:         clearBeforeFetch: false,
+2102:       }),
+2103:     );
+2104:   }, [base_currency, quote_currency, userData, dispatch, isSpotFocused]);
+2105: 
+2106:   useEffect(() => {
+2107:     if (!base_currency || !quote_currency || !userData) return undefined;
+2108:     if (!isSpotFocused) return undefined;
+2109:     if (mountedOrdersTab !== 2) return undefined;
+2110:     const pair = `${base_currency}${quote_currency}`.toUpperCase();
+2111:     const tick = () => {
+2112:       const tt = headerTab === "Margin" ? (marginMode === "Cross" ? "cross" : "margin") : undefined;
+2113:       dispatch(getPastOrders({ page: 1, page_size: 50, pair, tradeType: tt }, { useGlobalLoader: false }));
+2114:     };
+2115:     tick();
+2116:   }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused, headerTab, marginMode]);
+2117: 
+2118:   // Same for Trade History (3): poll only when that panel is actually mounted (not merely tab highlight mid-animation).
+2119:   useEffect(() => {
+2120:     if (!base_currency || !quote_currency || !userData) return undefined;
+2121:     if (!isSpotFocused) return undefined;
+2122:     if (mountedOrdersTab !== 3) return undefined;
+2123:     const pair = `${base_currency}${quote_currency}`.toUpperCase();
+2124:     const tick = () =>
+2125:       dispatch(
+2126:         getTradeHistory(0, 50, pair, {
+2127:           useGlobalLoader: false,
+2128:           clearBeforeFetch: false,
+2129:         }),
+2130:       );
+2131:     tick();
+2132:   }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused]);
+2133: 
+2134:   // Trade History list: mirror REST-only payload from getTradeHistory (no socket merge).
+2135:   const walletTradeHistory = useSelector((state) => state.wallet.tradeHistory);
+2136:   useEffect(() => {
+2137:     // Optimization: when leaving Trade History tab, ignore background Redux updates
+2138:     // to avoid heavy mapping + re-render during tab-switch animation.
+2139:     if (mountedOrdersTab !== 3) return;
+2140:     const list = walletTradeHistory == null
+2141:       ? []
+2142:       : (Array.isArray(walletTradeHistory) ? walletTradeHistory : []);
+2143:     const norm = list.map((t, idx) => ({
+2144:       ...t,
+2145:       _id: t._id || t.id || t.trade_id || `trade_row_${idx}`,
+2146:     }));
+2147:     const sig = norm
+2148:       .map(
+2149:         (t) =>
+2150:           `${t._id}:${String(t.executed_at ?? t.executedAt ?? t.created_at ?? "")}:${String(t.price ?? "")}:${String(t.quantity ?? "")}:${String(t.side ?? "")}`,
+2151:       )
+2152:       .join("|");
+2153:     if (sig === spotMyTradesDataSigRef.current) return;
+2154:     spotMyTradesDataSigRef.current = sig;
+2155:     setSpotMyTrades(norm);
+2156:   }, [walletTradeHistory, mountedOrdersTab]);
+2157: 
+2158:   useEffect(() => {
+2159:     spotMyTradesDataSigRef.current = "";
+2160:   }, [base_currency, quote_currency]);
+2161: 
+2162:   const handleAmount = (text) => {
+2163:     setPrice(text?.toString());
+2164:     setTotal(multiply(text, amount));
+2165:   };
+2166: 
+2167:   const handleOrderBookClick = useCallback((itemPrice, itemQuantity) => {
+2168:     if (isLimit) {
+2169:       setPrice(formatPrice(itemPrice).toString());
+2170:     }
+2171:     const q = formatQuantity(itemQuantity).toString();
+2172:     syncAmountAnimForQuantityString(q);
+2173:     setAmount(q);
+2174:     Animated.timing(totalAnim, {
+2175:       toValue: q.trim() !== "" ? 1 : 0,
+2176:       duration: 200,
+2177:       useNativeDriver: false,
+2178:     }).start();
+2179:   }, [isLimit, formatPrice, formatQuantity, syncAmountAnimForQuantityString]);
+2180: 
+2181:   const validateOrder = (price, quantity, side, orderKind = "LIMIT", amountIsQuote = false) => {
+2182:     const tick_size = currencyData?.tick_size || 0.01;
+2183:     const step_size = currencyData?.step_size || 0.00001;
+2184:     const min_notional = currencyData?.min_notional || 5;
+2185:     const max_order_qty = currencyData?.max_order_qty || 9000;
+2186: 
+2187:     const skipPriceTick = orderKind === "MARKET" || orderKind === "STOP_MARKET";
+2188: 
+2189:     const numPrice = parseFloat(price);
+2190:     const numQuantity = parseFloat(quantity);
+2191: 
+2192:     if (!Number.isFinite(numPrice) || !Number.isFinite(numQuantity)) {
+2193:       showError("Invalid price or amount");
+2194:       return false;
+2195:     }
+2196: 
+2197:     const baseQty = amountIsQuote && numPrice > 0 ? numQuantity / numPrice : numQuantity;
+2198:     const total = amountIsQuote ? numQuantity : numPrice * numQuantity;
+2199: 
+2200:     if (!skipPriceTick) {
+2201:       const pricePrecisionVal = getDecimalPlaces(tick_size);
+2202:       const priceMultiplier = Math.pow(10, pricePrecisionVal);
+2203:       if (Math.round(numPrice * priceMultiplier) % Math.round(tick_size * priceMultiplier) !== 0) {
+2204:         showError(`Price must be a multiple of ${tick_size}`);
+2205:         return false;
+2206:       }
+2207:     }
+2208: 
+2209:     if (amountIsQuote && numPrice <= 0) {
+2210:       showError("Price is required to size this order");
+2211:       return false;
+2212:     }
+2213: 
+2214:     const qtyPrecision = getDecimalPlaces(step_size);
+2215:     const qtyMultiplier = Math.pow(10, qtyPrecision);
+2216:     if (Math.round(baseQty * qtyMultiplier) % Math.round(step_size * qtyMultiplier) !== 0) {
+2217:       showError(`Quantity must be a multiple of ${step_size}`);
+2218:       return false;
+2219:     }
+2220: 
+2221:     if (baseQty > max_order_qty) {
+2222:       showError(`Maximum order quantity is ${max_order_qty} ${currencyData?.base_currency}`);
+2223:       return false;
+2224:     }
+2225: 
+2226:     if (total < min_notional) {
+2227:       showError(`Minimum order value is ${min_notional} ${currencyData?.quote_currency}`);
+2228:       return false;
+2229:     }
+2230: 
+2231:     if (headerTab !== "Margin") {
+2232:       if (side === "BUY") {
+2233:         const availableBalance = coinBalance?.quote_currency_balance || 0;
+2234:         let spend;
+2235:         if (amountIsQuote) {
+2236:           spend = numQuantity;
+2237:         } else if (orderKind === "MARKET" || orderKind === "STOP_MARKET") {
+2238:           spend = baseQty * numPrice * 1.02;
+2239:         } else {
+2240:           spend = baseQty * numPrice;
+2241:         }
+2242:         if (spend > availableBalance) {
+2243:           showError("Insufficient funds");
+2244:           return false;
+2245:         }
+2246:       } else if (side === "SELL") {
+2247:         const availableBalance = coinBalance?.base_currency_balance || 0;
+2248:         if (baseQty > availableBalance) {
+2249:           showError("Insufficient funds");
+2250:           return false;
+2251:         }
+2252:       }
+2253:     }
+2254: 
+2255:     return true;
+2256:   };
+2257: 
+2258:   const formatTotal = (value) => {
+2259:     const precision = getPricePrecision();
+2260:     const finalValue = value?.toFixed(precision)?.replace(/\.?0+$/, "");
+2261:     let formattedNum = finalValue?.toString();
+2262:     let result = formattedNum?.replace(/^0\.0*/, "");
+2263:     const decimalPart = finalValue?.toString()?.split(".")[1];
+2264:     if (!decimalPart) return finalValue;
+2265:     let zeroCount = 0;
+2266:     for (let char of decimalPart) {
+2267:       if (char === "0") zeroCount++;
+2268:       else break;
+2269:     }
+2270:     if (zeroCount > 4) return `0.0{${zeroCount}}${result}`;
+2271:     if (value < 1e-7) return `0.0{${zeroCount}}${result}`;
+2272:     return finalValue;
+2273:   };
+2274: 
+2275:   const isValidPriceInput = (value) => {
+2276:     if (value === "" || value === "0") return true;
+2277:     const tickSize = currencyData?.tick_size || 0.01;
+2278:     const pricePrec = getPricePrecision();
+2279:     const regex = new RegExp(`^\\d*\\.?\\d{0,${pricePrec}}$`);
+2280:     if (!regex.test(value)) return false;
+2281:     if (value.endsWith(".")) return true;
+2282:     const numValue = parseFloat(value);
+2283:     if (isNaN(numValue)) return false;
+2284:     if (numValue === 0) return true;
+2285:     return numValue >= tickSize;
+2286:   };
+2287: 
+2288:   const handlePriceInput = (value, setter) => {
+2289:     if (isValidPriceInput(value)) setter(value);
+2290:   };
+2291: 
+2292:   const handlePriceBlur = (value, setter) => {
+2293:     if (value === "" || value === "0" || value === "0.") {
+2294:       setter("");
+2295:       return;
+2296:     }
+2297:     const tickSize = currencyData?.tick_size || 0.01;
+2298:     const numValue = parseFloat(value);
+2299:     if (isNaN(numValue) || numValue === 0) {
+2300:       setter("");
+2301:       return;
+2302:     }
+2303:     if (numValue < tickSize) {
+2304:       setter(tickSize.toString());
+2305:       return;
+2306:     }
+2307:     const rounded = Math.round(numValue / tickSize) * tickSize;
+2308:     const prec = getPricePrecision();
+2309:     setter(parseFloat(rounded.toFixed(prec)).toString());
+2310:   };
+2311: 
+2312:   const isValidQuantityInput = (value) => {
+2313:     if (value === "" || value === "0") return true;
+2314:     const qtyPrec = getQuantityPrecision();
+2315:     const regex = new RegExp(`^\\d*\\.?\\d{0,${qtyPrec}}$`);
+2316:     return regex.test(value);
+2317:   };
+2318: 
+2319:   const handleQuantityInput = (value, setter) => {
+2320:     if (isValidQuantityInput(value)) setter(value);
+2321:   };
+2322: 
+2323:   const handleQuantityBlur = (value, setter) => {
+2324:     if (value === "" || value === "0" || value === "0.") {
+2325:       setter("");
+2326:       return;
+2327:     }
+2328:     const stepSize = currencyData?.step_size || 0.00001;
+2329:     const numValue = parseFloat(value);
+2330:     if (isNaN(numValue) || numValue === 0) {
+2331:       setter("");
+2332:       return;
+2333:     }
+2334:     if (numValue < stepSize) {
+2335:       setter(stepSize.toString());
+2336:       return;
+2337:     }
+2338:     const rounded = Math.round(numValue / stepSize) * stepSize;
+2339:     const prec = getQuantityPrecision();
+2340:     setter(parseFloat(rounded.toFixed(prec)).toString());
+2341:   };
+2342: 
+2343:   const tickSize = currencyData?.tick_size || 0.01;
+2344:   const stepSize = currencyData?.step_size || 0.00001;
+2345:   const handlePriceStep = (delta) => {
+2346:     const current = parseFloat(price || buy_price || "0") || 0;
+2347:     const next = Math.max(0, current + delta * tickSize);
+2348:     const prec = getPricePrecision();
+2349:     const val = parseFloat(next.toFixed(prec)).toString();
+2350:     setPrice(val);
+2351:   };
+2352:   const handleAmountStep = (delta) => {
+2353:     const current = parseFloat(amount || "0") || 0;
+2354:     const next = Math.max(0, current + delta * stepSize);
+2355:     const prec = getQuantityPrecision();
+2356:     const val = parseFloat(next.toFixed(prec)).toString();
+2357:     syncAmountAnimForQuantityString(val);
+2358:     setAmount(val);
+2359:   };
+2360: 
+2361:   const handleStopPriceStep = (delta) => {
+2362:     const current = parseFloat(stopPrice || buy_price || "0") || 0;
+2363:     const next = Math.max(0, current + delta * tickSize);
+2364:     const prec = getPricePrecision();
+2365:     const val = parseFloat(next.toFixed(prec)).toString();
+2366:     syncStopAnimForPriceString(val);
+2367:     setStopPrice(val);
+2368:   };
+2369: 
+2370:   const handleQty = (text) => {
+2371:     handleQuantityInput(text, setAmount);
+2372:     Animated.timing(totalAnim, {
+2373:       toValue: text.trim() !== "" ? 1 : 0,
+2374:       duration: 200,
+2375:       useNativeDriver: false,
+2376:     }).start();
+2377:   };
+2378: 
+2379:   const toFixed8 = (data) => {
+2380:     const precision = getQuantityPrecision();
+2381:     const multiplier = Math.pow(10, precision);
+2382:     return Math.floor(data * multiplier) / multiplier;
+2383:   };
+2384: 
+2385:   const toFixedStepSize = (data) => {
+2386:     const stepSize = currencyData?.step_size || 0.00001;
+2387:     const precision = getQuantityPrecision();
+2388:     const multiplier = Math.pow(10, precision);
+2389:     return Math.floor(data * multiplier) / multiplier;
+2390:   };
+2391: 
+2392:   useEffect(() => {
+2393:     if (isBuy && _balance) {
+2394:       setBalance(_balance?.quote_currency_balance);
+2395:     } else {
+2396:       setBalance(_balance?.base_currency_balance);
+2397:     }
+2398:   }, [isBuy, _balance]);
+2399: 
+2400:   const handleTotalPercentage = (value) => {
+2401:     setActivePercentage(value);
+2402: 
+2403:     let balToUse = 0;
+2404:     const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+2405: 
+2406:     if (headerTab === "Margin") {
+2407:       const leverage = parseInt(marginLeverage, 10) || 5;
+2408:       const Qf = Number(coinBalance?.quote_currency_balance) || 0;
+2409:       const Bf = Number(coinBalance?.base_currency_balance) || 0;
+2410:       const Qb = Number(coinBalance?.quote_currency_borrowed) || 0;
+2411:       const Bb = Number(coinBalance?.base_currency_borrowed) || 0;
+2412:       const socketNetEquity = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
+2413:       const netEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
+2414:         ? socketNetEquity
+2415:         : Math.max(0, (Qf - Qb) + (Bf - Bb) * refPx);
+2416: 
+2417:       const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance.quote_remaining_capacity) : null;
+2418:       const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance.base_remaining_capacity) : null;
+2419: 
+2420:       const maxLeverage = (marginMode === "Cross" ? crossAccount?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;
+2421:       const L = leverage;
+2422:       const M = Number(maxLeverage);
+2423: 
+2424:       const crossMarginMaxAtLeverage = (available, maxAtMaxLeverage) => {
+2425:         const avail = Number(available);
+2426:         const maxAtMax = Number(maxAtMaxLeverage);
+2427:         if (!Number.isFinite(avail) || avail < 0) return 0;
+2428:         if (!Number.isFinite(maxAtMax) || maxAtMax <= 0) return Math.max(0, avail);
+2429:         if (!Number.isFinite(L) || L <= 0) return Math.max(0, avail);
+2430:         if (!Number.isFinite(M) || M <= 1) return Math.max(0, Math.min(maxAtMax, avail));
+2431:         if (L >= M) return Math.max(0, maxAtMax);
+2432:         if (L <= 1) return Math.max(0, avail);
+2433: 
+2434:         const borrowable = Math.max(0, maxAtMax - avail);
+2435:         return Math.max(0, avail + borrowable * ((L - 1) / (M - 1)));
+2436:       };
+2437: 
+2438:       const isCross = marginMode === "Cross";
+2439:       
+2440:       const quoteAvailable = isCross
+2441:         ? ((coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
+2442:           ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
+2443:           : netEquity)
+2444:         : Math.max(0, Qf);
+2445:           
+2446:       const baseAvailable = isCross
+2447:         ? ((coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
+2448:           ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
+2449:           : Math.max(0, Bf - Bb))
+2450:         : Math.max(0, Bf);
+2451: 
+2452:       const grossQuoteMax = netEquity * leverage;
+2453:       const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
+2454:       
+2455:       const quoteMax = isCross
+2456:         ? ((coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
+2457:           ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
+2458:           : localQuoteMax)
+2459:         : Math.max(0, Qf * leverage);
+2460: 
+2461:       const grossSellMax = refPx > 0 ? grossQuoteMax / refPx : 0;
+2462:       const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
+2463:       
+2464:       const baseMax = isCross
+2465:         ? ((coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
+2466:           ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))
+2467:           : localBaseMax)
+2468:         : Math.max(0, Bf * leverage);
+2469: 
+2470:       if (isBuy) {
+2471:         balToUse = Math.max(0, quoteMax);
+2472:       } else {
+2473:         balToUse = Math.max(0, baseMax);
+2474:       }
+2475:     } else {
+2476:       balToUse = isBuy
+2477:         ? (coinBalance?.quote_currency_balance || 0)
+2478:         : (coinBalance?.base_currency_balance || 0);
+2479:     }
+2480: 
+2481:     const val = percentCalculation(balToUse, value);
+2482: 
+2483:     if (showAmtDenomSelect && amtDenom === "QUOTE") {
+2484:       if (isBuy) {
+2485:         const amtStr = val.toString();
+2486:         syncAmountAnimForQuantityString(amtStr);
+2487:         setAmount(amtStr);
+2488:         Animated.timing(totalAnim, {
+2489:           toValue: amtStr.trim() !== "" ? 1 : 0,
+2490:           duration: 200,
+2491:           useNativeDriver: false,
+2492:         }).start();
+2493:       } else {
+2494:         const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+2495:         const quoteAmt = toFixed8(val * refPx);
+2496:         const amtStr = quoteAmt.toString();
+2497:         syncAmountAnimForQuantityString(amtStr);
+2498:         setAmount(amtStr);
+2499:       }
+2500:     } else {
+2501:       if (isBuy) {
+2502:         const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+2503:         const finalQuantity = refPx > 0 ? toFixed8(val / refPx) : 0;
+2504:         const amtStr = finalQuantity.toString() || "0";
+2505:         syncAmountAnimForQuantityString(amtStr);
+2506:         setAmount(amtStr);
+2507:         Animated.timing(totalAnim, {
+2508:           toValue: amtStr.trim() !== "" ? 1 : 0,
+2509:           duration: 200,
+2510:           useNativeDriver: false,
+2511:         }).start();
+2512:       } else {
+2513:         const finalQuantity = toFixed8(val);
+2514:         const amtStr = finalQuantity.toString() || "0";
+2515:         syncAmountAnimForQuantityString(amtStr);
+2516:         setAmount(amtStr);
+2517:       }
+2518:     }
+2519:   };
+2520: 
+2521:   const handleTotal = (text) => {
+2522:     setTotal(text);
+2523:     const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+2524:     if (refPx > 0) {
+2525:       const val = parseFloat(text);
+2526:       if (Number.isFinite(val) && val > 0) {
+2527:         const qty = toFixed8(val / refPx);
+2528:         const qStr = qty.toString();
+2529:         syncAmountAnimForQuantityString(qStr);
+2530:         setAmount(qStr);
+2531:       } else if (!text || text === "0") {
+2532:         syncAmountAnimForQuantityString("");
+2533:         setAmount("");
+2534:       }
+2535:     }
+2536:   };
+2537: 
+2538:   const selectNumberLimitOn = (item) => {
+2539:     setNumberLimit(item.name);
+2540:     rbSheetlimit?.current?.close();
+2541:   };
+2542: 
+2543:   const orderTypeSheetHeight = Math.min(540, WindowHeight * 0.58);
+2544: 
+2545:   const renderOrderTypeSheet = () => {
+2546:     const lime = themeColors.spotTradeBuy ?? colors.spotTradeBuy ?? colors.buyBtnGreen;
+2547:     const renderRow = (item) => {
+2548:       const selected = numberSelectLimit === item.name;
+2549:       return (
+2550:         <TouchableOpacity
+2551:           key={item.name}
+2552:           activeOpacity={0.75}
+2553:           onPress={() => selectNumberLimitOn({ name: item.name })}
+2554:           style={{
+2555:             flexDirection: "row",
+2556:             alignItems: "center",
+2557:             paddingVertical: 14,
+2558:             paddingHorizontal: 4,
+2559:             borderBottomWidth: StyleSheet.hairlineWidth,
+2560:             borderBottomColor: themeColors.themeBorderColor,
+2561:           }}
+2562:         >
+2563:           <View
+2564:             style={{
+2565:               width: 34,
+2566:               height: 34,
+2567:               borderRadius: 17,
+2568:               backgroundColor: colors.newThemeColor,
+2569:               alignItems: "center",
+2570:               justifyContent: "center",
+2571:             }}
+2572:           >
+2573:             <FastImage source={item.icon} tintColor={colors.white} style={{ width: 16, height: 16 }} resizeMode="contain" />
+2574:           </View>
+2575:           <View style={{ flex: 1, marginLeft: 12, paddingRight: 8 }}>
+2576:             <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14, marginBottom: 3 }}>
+2577:               {item.name}
+2578:             </AppText>
+2579:             <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, fontSize: 11, lineHeight: 15 }}>
+2580:               {item.description}
+2581:             </AppText>
+2582:           </View>
+2583:           {selected ? (
+2584:             <View style={{ width: 16, height: 16, borderRadius: 10, backgroundColor: colors.black, alignItems: "center", justifyContent: "center" }}>
+2585:               <FastImage source={tick} tintColor={colors.white} style={{ width: 8, height: 8 }} resizeMode="contain" />
+2586:             </View>
+2587:           ) : (
+2588:             <View style={{ width: 26 }} />
+2589:           )}
+2590:         </TouchableOpacity>
+2591:       );
+2592:     };
+2593: 
+2594:     const sectionInfo = (title, body) => {
+2595:       Alert.alert(title, body);
+2596:     };
+2597: 
+2598:     return (
+2599:       <View style={{ flex: 1 }}>
+2600:         <View
+2601:           style={{
+2602:             flexDirection: "row",
+2603:             alignItems: "center",
+2604:             justifyContent: "space-between",
+2605:             paddingBottom: 14,
+2606:             marginBottom: 4,
+2607:             borderBottomWidth: StyleSheet.hairlineWidth,
+2608:             borderBottomColor: themeColors.themeBorderColor,
+2609:           }}
+2610:         >
+2611:           <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text }}>
+2612:             Order Type
+2613:           </AppText>
+2614:           <TouchableOpacity
+2615:             onPress={() => rbSheetlimit?.current?.close()}
+2616:             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+2617:             style={{
+2618:               width: 36,
+2619:               height: 36,
+2620:               borderRadius: 18,
+2621:               backgroundColor: themeColors.themeElevationColor,
+2622:               alignItems: "center",
+2623:               justifyContent: "center",
+2624:               borderWidth: StyleSheet.hairlineWidth,
+2625:               borderColor: themeColors.themeBorderColor,
+2626:             }}
+2627:           >
+2628:             <FastImage source={REMOVE} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={colors.black} />
+2629:           </TouchableOpacity>
+2630:         </View>
+2631: 
+2632:         <ScrollView
+2633:           style={{ flex: 1 }}
+2634:           contentContainerStyle={{ paddingBottom: 24 }}
+2635:           showsVerticalScrollIndicator={false}
+2636:         >
+2637:           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, marginBottom: 6 }}>
+2638:             <AppText weight={SEMI_BOLD} style={{ fontSize: 13, color: themeColors.text }}>
+2639:               Basic
+2640:             </AppText>
+2641:             <TouchableOpacity
+2642:               onPress={() =>
+2643:                 sectionInfo(
+2644:                   "Basic order types",
+2645:                   "Limit: your order rests on the book at a set price.\n\nMarket: fill immediately at the best available prices."
+2646:                 )
+2647:               }
+2648:               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+2649:               style={{ marginLeft: 4, top: 2 }}
+2650:             >
+2651:               <FastImage source={INFO} style={{ width: 12, height: 12 }} resizeMode="contain" />
+2652:             </TouchableOpacity>
+2653:           </View>
+2654:           {ORDER_TYPE_SHEET_BASIC.map(renderRow)}
+2655: 
+2656:           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 18, marginBottom: 6 }}>
+2657:             <AppText weight={SEMI_BOLD} style={{ fontSize: 14, color: themeColors.text }}>
+2658:               Advanced
+2659:             </AppText>
+2660:             <TouchableOpacity
+2661:               onPress={() =>
+2662:                 sectionInfo(
+2663:                   "Advanced (Spot)",
+2664:                   "Spot Limit: after your stop is hit, a limit order is placed.\n\nSpot Market: after your stop is hit, a market order runs at the best price."
+2665:                 )
+2666:               }
+2667:               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+2668:               style={{ marginLeft: 4, top: 2 }}
+2669:             >
+2670:               <FastImage source={INFO} style={{ width: 12, height: 12 }} resizeMode="contain" />
+2671:             </TouchableOpacity>
+2672:           </View>
+2673:           {ORDER_TYPE_SHEET_ADVANCED.map(renderRow)}
+2674:         </ScrollView>
+2675:       </View>
+2676:     );
+2677:   };
+2678: 
+2679: 
+2680: 
+2681:   const validateStopTriggerPrice = useCallback(
+2682:     (rawStop) => {
+2683:       const tick_size = currencyData?.tick_size || 0.01;
+2684:       const numPrice = parseFloat(rawStop);
+2685:       if (!Number.isFinite(numPrice) || numPrice <= 0) {
+2686:         showError("Enter a valid stop price");
+2687:         return false;
+2688:       }
+2689:       const pricePrecisionVal = getDecimalPlaces(tick_size);
+2690:       const priceMultiplier = Math.pow(10, pricePrecisionVal);
+2691:       if (Math.round(numPrice * priceMultiplier) % Math.round(tick_size * priceMultiplier) !== 0) {
+2692:         showError(`Stop price must be a multiple of ${tick_size}`);
+2693:         return false;
+2694:       }
+2695:       return true;
+2696:     },
+2697:     [currencyData?.tick_size]
+2698:   );
+2699: 
+2700:   const buildSpotOrderPayload = useCallback(() => {
+2701:     const refPrice = Number(buy_price) || 0;
+2702:     const limitFromUi =
+2703:       price !== undefined && price !== null && String(price).trim() !== ""
+2704:         ? parseFloat(price)
+2705:         : refPrice;
+2706:     const orderPriceForValidation =
+2707:       spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET" ? refPrice : limitFromUi;
+2708:     const orderPriceForApi = orderPriceForValidation;
+2709:     const stopPxRaw = stopPrice !== undefined && stopPrice !== null && String(stopPrice).trim() !== ""
+2710:       ? stopPrice
+2711:       : buy_price;
+2712:     const baseSym = String(base_currency ?? "").trim().toUpperCase();
+2713:     const quoteSym = String(quote_currency ?? "").trim().toUpperCase();
+2714:     const pair = baseSym && quoteSym ? `${baseSym}${quoteSym}` : "";
+2715: 
+2716:     const amtNum = parseFloat(String(amount)) || 0;
+2717:     let baseQty = amtNum;
+2718:     if (showAmtDenomSelect && amtDenom === "QUOTE") {
+2719:       const refPx = orderPriceForValidation || Number(buy_price) || 0;
+2720:       if (refPx > 0 && amtNum > 0) {
+2721:         baseQty = toFixed8(amtNum / refPx);
+2722:       } else {
+2723:         baseQty = 0;
+2724:       }
+2725:     }
+2726: 
+2727:     const data = {
+2728:       pair,
+2729:       type: spotOrderType,
+2730:       side: isBuy ? "BUY" : "SELL",
+2731:       quantity: String(baseQty),
+2732:     };
+2733:     if (spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT") {
+2734:       data.price = String(orderPriceForApi);
+2735:     }
+2736:     if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
+2737:       data.stop_price = String(stopPxRaw);
+2738:     }
+2739:     if ((spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT") && (limitFok || limitIoc)) {
+2740:       data.time_in_force = limitFok ? "FOK" : "IOC";
+2741:     }
+2742:     if ((spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET") && slippageEnabled && !slippageError) {
+2743:       const raw = String(slippagePct ?? "").trim();
+2744:       const n = parseFloat(raw);
+2745:       if (Number.isFinite(n) && n > 0) {
+2746:         data.max_slippage_percent = n;
+2747:       }
+2748:     }
+2749:     if (headerTab === "Margin") {
+2750:       data.tradeType = marginMode === "Cross" ? "cross" : "margin";
+2751:     }
+2752: 
+2753:     return { data, orderPriceForValidation };
+2754:   }, [
+2755:     amount,
+2756:     base_currency,
+2757:     buy_price,
+2758:     isBuy,
+2759:     limitFok,
+2760:     limitIoc,
+2761:     price,
+2762:     quote_currency,
+2763:     slippageEnabled,
+2764:     slippageError,
+2765:     slippagePct,
+2766:     spotOrderType,
+2767:     stopPrice,
+2768:     headerTab,
+2769:     marginMode,
+2770:   ]);
+2771: 
+2772:   const onSubmit = async () => {
+2773:     if (userData && Number(userData?.kycVerified) !== 2) {
+2774:       showError("KYC not verified. Please complete KYC first.");
+2775:       return;
+2776:     }
+2777: 
+2778:     if ((spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET") && slippageEnabled && slippageError) {
+2779:       showError(slippageError);
+2780:       return;
+2781:     }
+2782: 
+2783:     const { data, orderPriceForValidation } = buildSpotOrderPayload();
+2784:     if (!data.pair) {
+2785:       showError("Select a trading pair");
+2786:       return;
+2787:     }
+2788:     if (headerTab === "Margin" && !dontShowMarginConfirm) {
+2789:       setMarginConfirmPayload(data);
+2790:       rbSheetMarginConfirm.current?.open();
+2791:       return;
+2792:     }
+2793: 
+2794:     const amountIsQuote = showAmtDenomSelect && amtDenom === "QUOTE";
+2795: 
+2796:     if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
+2797:       if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) {
+2798:         return;
+2799:       }
+2800:     }
+2801:     if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType, amountIsQuote)) {
+2802:       return;
+2803:     }
+2804: 
+2805:     setIsPlacingOrder(true);
+2806:     try {
+2807:       await dispatch(placeOrder(data, setVisible));
+2808:     } finally {
+2809:       setIsPlacingOrder(false);
+2810:     }
+2811:   };
+2812: 
+2813:   const handleConfirmMarginOrder = async () => {
+2814:     rbSheetMarginConfirm.current?.close();
+2815:     if (!marginConfirmPayload) return;
+2816: 
+2817:     const { orderPriceForValidation } = buildSpotOrderPayload();
+2818:     const amountIsQuote = showAmtDenomSelect && amtDenom === "QUOTE";
+2819: 
+2820:     if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
+2821:       if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) {
+2822:         return;
+2823:       }
+2824:     }
+2825:     if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType, amountIsQuote)) {
+2826:       return;
+2827:     }
+2828: 
+2829:     setIsPlacingOrder(true);
+2830:     try {
+2831:       await dispatch(placeOrder(marginConfirmPayload, setVisible));
+2832:     } finally {
+2833:       setIsPlacingOrder(false);
+2834:     }
+2835:   };
+2836: 
+2837:   const renderMarginConfirmSheet = () => {
+2838:     if (!marginConfirmPayload) return null;
+2839:     const { side, type, price: orderPrice, quantity, stop_price } = marginConfirmPayload;
+2840: 
+2841:     // Derived display values
+2842:     const isBuyMode = side === "BUY";
+2843:     const orderTypeLabel = type === "MARKET" ? "MARKET" : type === "LIMIT" ? "LIMIT" : type === "STOP_LIMIT" ? "STOP LIMIT" : "STOP MARKET";
+2844:     const displayPrice = type === "MARKET" || type === "STOP_MARKET" ? "Market" : orderPrice;
+2845:     const baseAsset = currencyData?.base_currency || "BTC";
+2846: 
+2847:     return (
+2848:       <View style={{ flex: 1, paddingTop: 10 }}>
+2849:         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, }}>
+2850:           <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>Order Confirmation</AppText>
+2851:           <TouchableOpacity onPress={() => rbSheetMarginConfirm.current?.close()}>
+2852:             <FastImage source={REMOVE} style={{ width: 20, height: 20 }} tintColor={themeColors.iconColor} />
+2853:           </TouchableOpacity>
+2854:         </View>
+2855: 
+2856:         <View style={{
+2857:           flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15,
+2858:           paddingHorizontal: 10
+2859:         }}>
+2860:           <View style={{ flexDirection: "row", alignItems: "center" }}>
+2861:             {!!currencyData?.icon_path && (
+2862:               <FastImage
+2863:                 source={{ uri: `${IMAGE_BASE_URL}${currencyData.icon_path}` }}
+2864:                 style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
+2865:               />
+2866:             )}
+2867:             <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>{currencyData?.base_currency}/{currencyData?.quote_currency}</AppText>
+2868:           </View>
+2869:           <View style={{ backgroundColor: isBuyMode ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 }}>
+2870:             <AppText style={{ color: colors.white, fontSize: 12 }} weight={SEMI_BOLD}>{isBuyMode ? "Buy" : "Sell"}</AppText>
+2871:           </View>
+2872:         </View>
+2873: 
+2874:         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15, paddingHorizontal: 10 }}>
+2875:           <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Order Type</AppText>
+2876:           <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>{orderTypeLabel}</AppText>
+2877:         </View>
+2878: 
+2879:         {type.startsWith("STOP_") && (
+2880:           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15, paddingHorizontal: 10 }}>
+2881:             <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Stop Price</AppText>
+2882:             <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>{stop_price}</AppText>
+2883:           </View>
+2884:         )}
+2885: 
+2886:         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15, paddingHorizontal: 10 }}>
+2887:           <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Price</AppText>
+2888:           <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>{displayPrice}</AppText>
+2889:         </View>
+2890: 
+2891:         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15, paddingHorizontal: 10 }}>
+2892:           <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Amount</AppText>
+2893:           <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>{quantity} {baseAsset}</AppText>
+2894:         </View>
+2895: 
+2896:         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20, paddingHorizontal: 10 }}>
+2897:           <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Leverage</AppText>
+2898:           <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>
+2899:             {String(marginLeverage).endsWith("x") ? marginLeverage : `${marginLeverage}x`}
+2900:           </AppText>
+2901:         </View>
+2902: 
+2903:         <TouchableOpacity
+2904:           style={{ flexDirection: "row", alignItems: "center", marginBottom: 30, paddingHorizontal: 10 }}
+2905:           onPress={() => setDontShowMarginConfirm(!dontShowMarginConfirm)}
+2906:         >
+2907:           <View style={{ width: 18, height: 18, borderWidth: 1, borderColor: dontShowMarginConfirm ? (themeColors.spotTradeBuy || colors.green) : themeColors.secondaryText, borderRadius: 3, justifyContent: "center", alignItems: "center", marginRight: 10, backgroundColor: dontShowMarginConfirm ? (themeColors.spotTradeBuy || colors.green) : 'transparent' }}>
+2908:             {dontShowMarginConfirm && <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor={colors.white} />}
+2909:           </View>
+2910:           <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Don't show confirmation for future orders</AppText>
+2911:         </TouchableOpacity>
+2912: 
+2913:         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+2914:           <TouchableOpacity
+2915:             style={{ flex: 1, backgroundColor: isDark ? "#2a2d35" : "#f3f4f6", paddingVertical: 14, borderRadius: 8, alignItems: "center", marginRight: 10 }}
+2916:             onPress={() => rbSheetMarginConfirm.current?.close()}
+2917:           >
+2918:             <AppText style={{ color: themeColors.text, fontSize: 16 }} weight={SEMI_BOLD}>Cancel</AppText>
+2919:           </TouchableOpacity>
+2920:           <TouchableOpacity
+2921:             style={{ flex: 1, backgroundColor: isBuyMode ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red, paddingVertical: 14, borderRadius: 8, alignItems: "center", marginLeft: 10 }}
+2922:             onPress={handleConfirmMarginOrder}
+2923:           >
+2924:             <AppText style={{ color: colors.white, fontSize: 16 }} weight={SEMI_BOLD}>Confirm {isBuyMode ? "Buy" : "Sell"}</AppText>
+2925:           </TouchableOpacity>
+2926:         </View>
+2927: 
+2928:       </View>
+2929:     );
+2930:   };
+2931: 
+2932:   const handleCancelOrder = (orderId) => {
+2933:     let tt = undefined;
+2934:     if (headerTab === "Margin") tt = marginMode === "Cross" ? "cross" : "margin";
+2935:     dispatch(cancelOrder({ order_id: orderId, tradeType: tt }));
+2936:   };
+2937: 
+2938:   const selectNumber = (item) => {
+2939:     setNumberSelect(item.label);
+2940:   };
+2941:   const renderNumber = () => {
+2942:     return Data?.map((item) => {
+2943:       return (
+2944:         <TouchableOpacity
+2945:           activeOpacity={0.5}
+2946:           onPress={() => selectNumber(item)}
+2947:           style={[styles.selectContainer, { paddingVertical: 12, height: 'auto' }]}
+2948:         >
+2949:           <AppText style={{ color: themeColors.text, fontSize: 14 }}>{item.label}</AppText>
+2950:           {numberSelect == item.label ? (
+2951:             <FastImage
+2952:               source={checkIc}
+2953:               tintColor={themeColors.green}
+2954:               resizeMode="stretch"
+2955:               style={styles.checkImage}
+2956:             />
+2957:           ) : (
+2958:             <></>
+2959:           )}
+2960:         </TouchableOpacity>
+2961:       );
+2962:     });
+2963:   };
+2964: 
+2965:   const normalizePairSymbol = useCallback((v) => {
+2966:     if (v == null) return "";
+2967:     const s = String(v).trim();
+2968:     return s && s.toLowerCase() !== "undefined" && s.toLowerCase() !== "null" ? s : "";
+2969:   }, []);
+2970: 
+2971:   const getOrderStatusRaw = useCallback((inv) => {
+2972:     return (
+2973:       inv?.status ??
+2974:       inv?.order_status ??
+2975:       inv?.orderStatus ??
+2976:       inv?.state ??
+2977:       inv?.status_text ??
+2978:       inv?.statusText ??
+2979:       ""
+2980:     );
+2981:   }, []);
+2982: 
+2983:   const getOrderStatusLabel = useCallback((inv) => {
+2984:     const raw = getOrderStatusRaw(inv);
+2985:     const status = String(raw || "").toUpperCase().trim();
+2986:     if (!status) return "---";
+2987:     if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(status)) return "EXECUTED";
+2988:     if (["CANCELLED", "CANCELED"].includes(status)) return "Cancelled";
+2989:     if (status === "REJECTED") return "Rejected";
+2990:     if (status === "EXPIRED") return "Expired";
+2991:     if (["OPEN", "PENDING"].includes(status)) return "Open";
+2992:     if (["PARTIAL", "PARTIALLY_FILLED", "PARTIAL_FILLED"].includes(status)) return "Partial";
+2993:     return String(raw);
+2994:   }, [getOrderStatusRaw]);
+2995: 
+2996:   const getBaseCoinIconUri = useCallback((inv) => {
+2997:     const uri =
+2998:       inv?.base_currency_image ??
+2999:       inv?.base_currency_icon ??
+3000:       inv?.base_currency_logo ??
+3001:       inv?.baseCurrencyImage ??
+3002:       inv?.baseCurrencyIcon ??
+3003:       currencyData?.base_currency_image ??
+3004:       currencyData?.base_currency_icon ??
+3005:       currencyData?.base_currency_logo ??
+3006:       null;
+3007:     return typeof uri === "string" && uri.length > 0 ? uri : null;
+3008:   }, [currencyData]);
+3009: 
+3010:   const buildCurrencyPairText = useCallback((inv) => {
+3011:     const base =
+3012:       normalizePairSymbol(inv?.base_currency_short_name) ||
+3013:       normalizePairSymbol(inv?.ask_currency) ||
+3014:       normalizePairSymbol(inv?.base_currency) ||
+3015:       normalizePairSymbol(inv?.base_currency_name) ||
+3016:       normalizePairSymbol(base_currency);
+3017:     const quote =
+3018:       normalizePairSymbol(inv?.quote_currency_short_name) ||
+3019:       normalizePairSymbol(inv?.pay_currency) ||
+3020:       normalizePairSymbol(inv?.quote_currency) ||
+3021:       normalizePairSymbol(inv?.quote_currency_name) ||
+3022:       normalizePairSymbol(quote_currency);
+3023:     if (!base || !quote) return `${base || "-"} / ${quote || "-"}`;
+3024:     return `${base}/${quote}`;
+3025:   }, [base_currency, quote_currency, normalizePairSymbol]);
+3026: 
+3027:   // Stable keyExtractors for order FlatLists (avoid inline functions)
+3028:   // Prefer stable keys (avoid index fallback -> remounts on sort/filter)
+3029:   const openOrderKeyExtractor = useCallback((item, idx) => {
+3030:     const id = item?._id ?? item?.order_id ?? item?.id;
+3031:     const t = item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt;
+3032:     return id ? `open_${id}` : `open_${t ?? "na"}_${idx}`;
+3033:   }, []);
+3034:   const pastOrderKeyExtractor = useCallback((item, idx) => {
+3035:     const id = item?._id ?? item?.order_id ?? item?.id;
+3036:     const t = item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt;
+3037:     return id ? `past_${id}` : `past_${t ?? "na"}_${idx}`;
+3038:   }, []);
+3039: 
+3040:   // Memoize filtered open orders for better performance
+3041:   const filteredOpenOrders = useMemo(() => {
+3042:     if (!openOrders?.length) return [];
+3043:     let filtered = openOrders.filter((item) => matchesOpenOrderKind(item, openOrderKindTab));
+3044:     if (orderFilter !== "All") {
+3045:       filtered = filtered.filter((item) => item?.side === orderFilter);
+3046:     }
+3047:     return filtered.sort((a, b) => {
+3048:       const dateA = new Date(a?.created_at || a?.createdAt || 0).getTime();
+3049:       const dateB = new Date(b?.created_at || b?.createdAt || 0).getTime();
+3050:       return dateB - dateA;
+3051:     });
+3052:   }, [openOrders, orderFilter, openOrderKindTab]);
+3053: 
+3054:   const pastOrdersNormalized = useMemo(() => {
+3055:     if (!Array.isArray(pastOrders)) return [];
+3056: 
+3057:     // Web uses dedupeSpotHistoryById and normalizeSpotOrderHistoryApiItemForTrade
+3058:     const items = pastOrders.map(raw => {
+3059:       const id = raw._id || raw.id || raw.order_id || raw.client_order_id;
+3060:       if (!id) return null;
+3061: 
+3062:       const parseNumVal = (v) => {
+3063:         if (v != null && typeof v === 'object' && v.$numberDecimal != null) return parseFloat(v.$numberDecimal);
+3064:         return v !== undefined && v !== null ? parseFloat(v) : undefined;
+3065:       };
+3066: 
+3067:       // Ensure executions (executed_prices) are present
+3068:       const executions = Array.isArray(raw.executions) ? raw.executions : (Array.isArray(raw.executed_prices) ? raw.executed_prices : []);
+3069:       const executed_prices = executions.map((ex) => {
+3070:         const p = parseNumVal(ex?.price ?? ex?.execution_price);
+3071:         const q = parseNumVal(ex?.quantity ?? ex?.filled_quantity);
+3072:         const f = parseNumVal(ex?.fee ?? "0");
+3073:         return {
+3074:           price: p,
+3075:           quantity: q,
+3076:           fee: f,
+3077:         };
+3078:       });
+3079: 
+3080:       const qty = parseNumVal(raw.quantity) ?? 0;
+3081:       const filled = parseNumVal(raw.filled_quantity ?? raw.filled) ?? 0;
+3082:       const remaining = parseNumVal(raw.remaining_quantity ?? raw.remaining) ?? Math.max(0, qty - filled);
+3083: 
+3084:       const avgExecutionPrice = parseNumVal(raw.avg_execution_price ?? raw.avgPrice ?? raw.average_price);
+3085:       const executedValue = parseNumVal(raw.executed_value ?? raw.executedValue) ?? ((avgExecutionPrice || 0) * filled);
+3086: 
+3087:       return {
+3088:         ...raw,
+3089:         _id: id,
+3090:         side: String(raw.side || "").toUpperCase(),
+3091:         type: raw.type ?? raw.order_type ?? raw.orderType,
+3092:         order_type: raw.order_type ?? raw.type ?? raw.orderType,
+3093:         orderType: raw.orderType ?? raw.order_type ?? raw.type,
+3094:         user_status: raw.user_status ?? raw.status,
+3095:         status: raw.status,
+3096:         quantity: qty,
+3097:         remaining_quantity: remaining,
+3098:         filled_quantity: filled,
+3099:         avg_execution_price: avgExecutionPrice,
+3100:         executed_value: executedValue,
+3101:         price: parseNumVal(raw.price ?? raw.limit_price ?? raw.stop_price ?? raw.trigger_price),
+3102:         time_in_force: raw.time_in_force || raw.tif || raw.timeInForce,
+3103:         tif: raw.tif || raw.time_in_force || raw.timeInForce,
+3104:         fill_percent: raw.fill_percent ?? raw.fillPercent ?? (qty > 0 ? `${Math.round((filled / qty) * 100)}%` : "0%"),
+3105:         executed_prices: executed_prices.length > 0 ? executed_prices : undefined,
+3106:         pair: raw.pair,
+3107:         ask_currency: raw.ask_currency,
+3108:         pay_currency: raw.pay_currency,
+3109:         total_fee: parseNumVal(raw.total_fee ?? raw.fee),
+3110: 
+3111:         total_tds: raw.total_tds ?? raw.tds,
+3112:         updatedAt: raw.updatedAt || raw.updated_at || raw.created_at || raw.createdAt,
+3113:         createdAt: raw.createdAt || raw.created_at || raw.updatedAt || raw.updated_at,
+3114:       };
+3115:     }).filter(Boolean);
+3116: 
+3117:     // Dedupe by ID
+3118:     const seen = new Set();
+3119:     const out = [];
+3120:     for (const r of items) {
+3121:       const k = String(r._id);
+3122:       if (seen.has(k)) continue;
+3123:       seen.add(k);
+3124:       out.push(r);
+3125:     }
+3126: 
+3127:     return out.sort((a, b) => {
+3128:       const dateA = new Date(a?.created_at || a?.createdAt || a?.updated_at || a?.updatedAt || 0).getTime();
+3129:       const dateB = new Date(b?.created_at || b?.createdAt || b?.updated_at || b?.updatedAt || 0).getTime();
+3130:       return dateB - dateA;
+3131:     });
+3132:   }, [pastOrders]);
+3133: 
+3134:   const filteredPastOrders = useMemo(() => {
+3135:     if (!pastOrdersNormalized?.length) return [];
+3136:     if (pastOrderFilter === "All") return pastOrdersNormalized;
+3137:     const filtered = pastOrdersNormalized.filter((item) => item?.side === pastOrderFilter);
+3138:     return filtered.sort((a, b) => {
+3139:       const dateA = new Date(a?.created_at || a?.createdAt || a?.updated_at || a?.updatedAt || 0).getTime();
+3140:       const dateB = new Date(b?.created_at || b?.createdAt || b?.updated_at || b?.updatedAt || 0).getTime();
+3141:       return dateB - dateA;
+3142:     });
+3143:   }, [pastOrdersNormalized, pastOrderFilter]);
+3144: 
+3145:   const pastOrdersForSpotPair = useMemo(() => {
+3146:     if (!base_currency || !quote_currency || !filteredPastOrders?.length) return [];
+3147:     const b = String(base_currency).toUpperCase();
+3148:     const q = String(quote_currency).toUpperCase();
+3149:     return filteredPastOrders.filter((item) => spotPastOrderMatchesScreenPair(item, b, q));
+3150:   }, [filteredPastOrders, base_currency, quote_currency]);
+3151: 
+3152:   const filteredMyTrades = useMemo(() => {
+3153:     if (!spotMyTrades?.length) return [];
+3154:     const list =
+3155:       tradeHistorySideFilter === "All"
+3156:         ? [...spotMyTrades]
+3157:         : spotMyTrades.filter((t) => String(t?.side || "").toUpperCase() === tradeHistorySideFilter);
+3158:     return list.sort((a, b) => {
+3159:       const ta = Date.parse(a?.executed_at || a?.executedAt || a?.created_at || "") || 0;
+3160:       const tb = Date.parse(b?.executed_at || b?.executedAt || b?.created_at || "") || 0;
+3161:       return tb - ta;
+3162:     });
+3163:   }, [spotMyTrades, tradeHistorySideFilter]);
+3164: 
+3165:   const tradeHistoryKeyExtractor = useCallback((item, idx) => {
+3166:     const id = item?._id ?? item?.trade_id ?? item?.id;
+3167:     const t = item?.executed_at ?? item?.executedAt ?? item?.created_at ?? item?.createdAt;
+3168:     const p = item?.price ?? item?.rate ?? item?.avg_price;
+3169:     return id ? `th_${id}` : `th_${t ?? "na"}_${p ?? "na"}_${idx}`;
+3170:   }, []);
+3171: 
+3172:   const tradeHistoryPreviewSlice = useMemo(
+3173:     () => filteredMyTrades.slice(0, 5),
+3174:     [filteredMyTrades],
+3175:   );
+3176: 
+3177:   const tradeHistorySectionNode = useMemo(() => {
+3178:     if (!filteredMyTrades?.length) {
+3179:       return (
+3180:         <View style={styles.noDataRow}>
+3181:           <FastImage
+3182:             source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+3183:             resizeMode="contain"
+3184:             style={{ width: 80, height: 80 }}
+3185:           />
+3186:         </View>
+3187:       );
+3188:     }
+3189:     const baseHint = effectiveCurrency?.base_currency;
+3190:     const quoteHint = effectiveCurrency?.quote_currency;
+3191:     return (
+3192:       <>
+3193:         <View style={styles.scrollContent}>
+3194:           {tradeHistoryPreviewSlice.map((item, index) => {
+3195:             const mLabel = tradeHistoryMarketLabel(item, baseHint, quoteHint);
+3196:             const baseSym = tradeHistoryBaseAsset(item, baseHint, quoteHint);
+3197:             const side = String(item?.side || "").toUpperCase();
+3198:             const role = item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—";
+3199:             const sideColor = side === "BUY" ? themeColors.green : themeColors.red;
+3200:             const ts = item?.executed_at || item?.executedAt || item?.created_at;
+3201:             const m = moment(ts);
+3202:             const dateStr = m.isValid() ? m.format("DD/MM/YYYY") : "—";
+3203:             const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
+3204: 
+3205:             return (
+3206:               <TouchableOpacity
+3207:                 key={tradeHistoryKeyExtractor(item, index)}
+3208:                 activeOpacity={0.85}
+3209:                 onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item })}
+3210:                 style={{
+3211:                   paddingVertical: 12,
+3212:                   paddingHorizontal: 0,
+3213:                   borderBottomWidth: 1,
+3214:                   borderBottomColor: themeColors.themeBorderColor,
+3215:                 }}
+3216:               >
+3217:                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+3218:                   <AppText style={{ color: themeColors.text }} type={FIFTEEN} weight={BOLD}>
+3219:                     {mLabel}
+3220:                   </AppText>
+3221:                   <FastImage
+3222:                     source={right_ic}
+3223:                     style={{ width: 11, height: 11, marginLeft: 4 }}
+3224:                     resizeMode="contain"
+3225:                     tintColor={themeColors.secondaryText}
+3226:                   />
+3227:                 </View>
+3228:                 <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 2 }}>
+3229:                   {dateStr} {timeStr}
+3230:                 </AppText>
+3231:                 <AppText style={{ color: sideColor, marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
+3232:                   {side} · {role}
+3233:                 </AppText>
+3234: 
+3235:                 <View style={{ gap: 5 }}>
+3236:                   <View style={styles.kvRow}>
+3237:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+3238:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+3239:                       {dateStr}
+3240:                     </AppText>
+3241:                   </View>
+3242:                   <View style={styles.kvRow}>
+3243:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+3244:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+3245:                       {timeStr}
+3246:                     </AppText>
+3247:                   </View>
+3248:                   <View style={styles.kvRow}>
+3249:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Pair</AppText>
+3250:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+3251:                       {mLabel}
+3252:                     </AppText>
+3253:                   </View>
+3254:                   <View style={styles.kvRow}>
+3255:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+3256:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: sideColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{side}</AppText>
+3257:                   </View>
+3258:                   <View style={styles.kvRow}>
+3259:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Role</AppText>
+3260:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+3261:                       {role}
+3262:                     </AppText>
+3263:                   </View>
+3264:                   <View style={styles.kvRow}>
+3265:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+3266:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+3267:                       {safeToFixed8(item?.price, "—")}
+3268:                     </AppText>
+3269:                   </View>
+3270:                   <View style={styles.kvRow}>
+3271:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
+3272:                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+3273:                       {safeToFixed8(item?.quantity, "—")}{baseSym ? ` ${baseSym}` : ""}
+3274:                     </AppText>
+3275:                   </View>
+3276:                 </View>
+3277:               </TouchableOpacity>
+3278:             );
+3279:           })}
+3280:         </View>
+3281:         {filteredMyTrades?.length > 5 && (
+3282:           <TouchableOpacity
+3283:             style={styles.viewAllButton}
+3284:             onPress={() => NavigationService.navigate("Trade_History", { activeTab: 1 })}
+3285:           >
+3286:             <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+3287:           </TouchableOpacity>
+3288:         )}
+3289:       </>
+3290:     );
+3291:   }, [
+3292:     filteredMyTrades,
+3293:     tradeHistoryPreviewSlice,
+3294:     tradeHistoryKeyExtractor,
+3295:     isDark,
+3296:     themeColors,
+3297:     effectiveCurrency?.base_currency,
+3298:     effectiveCurrency?.quote_currency,
+3299:     styles.scrollContent,
+3300:     styles.kvRow,
+3301:     styles.kvK,
+3302:     styles.kvV,
+3303:     styles.viewAllButton,
+3304:     styles.viewAllText,
+3305:     styles.noDataRow,
+3306:     colors.buttonBg,
+3307:   ]);
+3308: 
+3309: 
+3310: 
+3311:   // Total: when amount is 0/empty show same default price as Limit field; else amount * price
+3312:   const totalDisplayValue = useMemo(() => {
+3313:     const amt = (amount === "" || amount === undefined) ? 0 : (Number(amount) || 0);
+3314:     const effectivePrice = !isMarketLikeOrder
+3315:       ? (Number(price) || Number(buy_price) || 0)
+3316:       : (Number(buy_price) || 0);
+3317:     return amt * effectivePrice;
+3318:   }, [amount, price, buy_price, isMarketLikeOrder]);
+3319: 
+3320:   // Stable slice references for FlatList data (avoid new array on every render)
+3321:   const openOrdersSlice = useMemo(() => filteredOpenOrders.slice(0, 5), [filteredOpenOrders]);
+3322:   const pastOrdersSlice = useMemo(() => (pastOrdersForSpotPair ?? []).slice(0, 5), [pastOrdersForSpotPair]);
+3323: 
+3324:   // Get side color
+3325:   const getSideColor = useCallback((side) => {
+3326:     if (side === "BUY" || side === "buy") {
+3327:       return themeColors.green;
+3328:     }
+3329:     if (side === "SELL" || side === "sell") {
+3330:       return themeColors.red;
+3331:     }
+3332:     return themeColors.text;
+3333:   }, [themeColors]);
+3334:   /** Same UI as `tradeHistorySectionNode`; kept for any `{renderTradeHistorySection()}` call sites / bundles. */
+3335:   const renderTradeHistorySection = useCallback(
+3336:     () => tradeHistorySectionNode,
+3337:     [tradeHistorySectionNode],
+3338:   );
+3339:   /** Open orders preview — matches detail header + Date…Price only; pair row → full detail; Cancel unchanged. */
+3340:   const renderOpenOrderItem = useCallback(({ item: inv }) => {
+3341:     const currencyPair = buildCurrencyPairText(inv);
+3342:     const statusRaw = getOrderStatusRaw(inv);
+3343:     const statusUpper = String(statusRaw || "").toUpperCase().trim();
+3344:     const orderId = inv?._id || inv?.id;
+3345:     const canCancel =
+3346:       !!orderId &&
+3347:       !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpper);
+3348: 
+3349:     const priceNum = Number(inv?.price) || 0;
+3350:     const typeUpper = String(inv?.order_type || inv?.type || inv?.orderType || "MARKET").toUpperCase();
+3351:     const side = String(inv?.side || "").toUpperCase();
+3352: 
+3353:     const eventTs =
+3354:       inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp;
+3355:     const eventM = eventTs ? moment(eventTs) : null;
+3356:     const dateStr = eventM?.isValid() ? eventM.format("DD/MM/YYYY") : "---";
+3357:     const timeStr = eventM?.isValid() ? eventM.format("HH:mm:ss") : "---";
+3358:     const headerDateTime = eventM?.isValid() ? eventM.format("DD/MM/YYYY HH:mm:ss") : "---";
+3359: 
+3360:     const rawTif = inv?.time_in_force ?? inv?.tif ?? inv?.timeInForce;
+3361:     const tifStr =
+3362:       rawTif != null && String(rawTif).trim() !== "" ? String(rawTif).trim().toUpperCase() : "—";
+3363: 
+3364:     const priceDisplay =
+3365:       String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(priceNum);
+3366: 
+3367:     const textColor = themeColors.text;
+3368:     const labelColor = themeColors.secondaryText;
+3369: 
+3370:     return (
+3371:       <TouchableOpacity
+3372:         activeOpacity={0.85}
+3373:         onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
+3374:         style={{
+3375:           paddingVertical: 12,
+3376:           paddingHorizontal: 0,
+3377:           borderBottomWidth: 1,
+3378:           borderBottomColor: themeColors.themeBorderColor,
+3379:         }}
+3380:       >
+3381:         <View>
+3382:           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+3383:             <AppText style={{ color: textColor }} type={FIFTEEN} weight={BOLD}>
+3384:               {currencyPair}
+3385:             </AppText>
+3386:             <FastImage
+3387:               source={right_ic}
+3388:               style={{ width: 11, height: 11, marginLeft: 4 }}
+3389:               resizeMode="contain"
+3390:               tintColor={labelColor}
+3391:             />
+3392:           </View>
+3393:           <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: labelColor, marginBottom: 2 }}>
+3394:             {headerDateTime}
+3395:           </AppText>
+3396:           <AppText style={{ color: getSideColor(inv?.side), marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
+3397:             {side} · {typeUpper}
+3398:           </AppText>
+3399: 
+3400:           <View style={{ gap: 5 }}>
+3401:             <View style={styles.kvRow}>
+3402:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+3403:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{dateStr}</AppText>
+3404:             </View>
+3405:             <View style={styles.kvRow}>
+3406:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+3407:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{timeStr}</AppText>
+3408:             </View>
+3409:             <View style={styles.kvRow}>
+3410:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
+3411:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
+3412:             </View>
+3413:             <View style={styles.kvRow}>
+3414:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+3415:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{side || "—"}</AppText>
+3416:             </View>
+3417:             <View style={styles.kvRow}>
+3418:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
+3419:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{typeUpper}</AppText>
+3420:             </View>
+3421:             <View style={styles.kvRow}>
+3422:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+3423:               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{priceDisplay}</AppText>
+3424:             </View>
+3425:           </View>
+3426:         </View>
+3427: 
+3428:         {canCancel ? (
+3429:           <View style={[styles.openOrderCardRow, { marginTop: 8, marginBottom: 4 }]}>
+3430:             <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666" }}>Action:</AppText>
+3431:             <TouchableOpacity
+3432:               style={styles.cancelActionBtn}
+3433:               activeOpacity={0.8}
+3434:               onPress={() => {
+3435:                 setOrderToCancel(inv);
+3436:                 setIsCancelModalVisible(true);
+3437:               }}
+3438:             >
+3439:               <AppText style={{ color: themeColors.red, fontWeight: "600", fontSize: 12 }}>Cancel</AppText>
+3440:             </TouchableOpacity>
+3441:           </View>
+3442:         ) : null}
+3443:       </TouchableOpacity>
+3444:     );
+3445:   }, [themeColors, buildCurrencyPairText, getOrderStatusRaw, getSideColor, isDark]);
+3446: 
+3447:   // Memoized render function for past orders - same card UI as Open Orders; tap → SPOT_ORDER_HISTORY_DETAIL with full order data
+3448:   const renderPastOrderItem = useCallback(({ item: inv, index: idx }) => {
+3449:     const orderId = inv?._id || inv?.order_id || inv?.id;
+3450:     const baseSym = inv?.ask_currency || inv?.base_currency || base_currency || "";
+3451:     const quoteSym = inv?.pay_currency || inv?.quote_currency || quote_currency || "";
+3452:     const currencyPair = (baseSym && quoteSym) ? `${baseSym}/${quoteSym}` : buildCurrencyPairText(inv);
+3453:     const quoteCc =
+3454:       normalizePairSymbol(inv?.pay_currency) ||
+3455:       normalizePairSymbol(inv?.fee_asset) ||
+3456:       normalizePairSymbol(quote_currency);
+3457: 
+3458: 
+3459:     const fillPercent = (() => {
+3460:       const fp = inv?.fill_percent;
+3461:       if (fp == null || String(fp).trim() === "") return "—";
+3462:       const s = String(fp).trim();
+3463:       return s.endsWith("%") ? s : `${s}%`;
+3464:     })();
+3465: 
+3466:     const execValue = Number(inv?.executed_value ?? inv?.executedValue ?? inv?.quote ?? 0);
+3467:     const fee = inv?.total_fee ?? inv?.fee;
+3468:     const tds = inv?.total_tds ?? inv?.tds;
+3469: 
+3470:     const statusRaw = getOrderStatusRaw(inv);
+3471:     const statusLabel = getOrderStatusLabel(inv);
+3472: 
+3473:     let statusColor = themeColors.text;
+3474:     const sStr = String(statusRaw || "").toUpperCase().trim();
+3475:     if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(sStr)) {
+3476:       statusColor = "#00c087";
+3477:     } else if (["CANCELLED", "CANCELED", "REJECTED", "EXPIRED"].includes(sStr)) {
+3478:       statusColor = "#ff4b5c";
+3479:     } else {
+3480:       statusColor = "#f3ba2f";
+3481:     }
+3482: 
+3483:     const hasExecutedTrades = Array.isArray(inv?.executed_prices) && inv.executed_prices.length > 0;
+3484:     const showTrades = !!showExecutedTrades?.[orderId];
+3485: 
+3486:     const textColor = themeColors.text;
+3487:     const labelColor = isDark ? "#8E8E93" : "#666666";
+3488: 
+3489:     return (
+3490:       <TouchableOpacity
+3491:         activeOpacity={0.85}
+3492:         onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
+3493:         style={{
+3494:           paddingVertical: 12,
+3495:           paddingHorizontal: 0,
+3496:           borderBottomWidth: 1,
+3497:           borderBottomColor: themeColors.themeBorderColor,
+3498:         }}
+3499:       >
+3500:         <View>
+3501:           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+3502:             <AppText style={{ color: textColor }} type={FIFTEEN} weight={BOLD}>
+3503:               {currencyPair}
+3504:             </AppText>
+3505:             <FastImage
+3506:               source={right_ic}
+3507:               style={{ width: 11, height: 11, marginLeft: 4 }}
+3508:               resizeMode="contain"
+3509:               tintColor={labelColor}
+3510:             />
+3511:           </View>
+3512:           <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: labelColor, marginBottom: 2 }}>
+3513:             {(() => {
+3514:               const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
+3515:               return d ? moment(d).format("DD/MM/YYYY HH:mm:ss") : "---";
+3516:             })()}
+3517:           </AppText>
+3518: 
+3519:           <AppText style={{ marginBottom: 8 }} type={THIRTEEN} weight={BOLD}>
+3520:             <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: getSideColor(inv?.side) }}>
+3521:               {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
+3522:             </AppText>
+3523:             <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: isDark ? "#8E8E93" : "#666666" }}> · </AppText>
+3524:             <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: statusLabel === "Cancelled" ? "#ff4b5c" : "#10c95dff" }}>
+3525:               {statusLabel.toUpperCase()}
+3526:             </AppText>
+3527:           </AppText>
+3528: 
+3529:           {(() => {
+3530:             const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
+3531:             return (
+3532:               <View style={{ gap: 5 }}>
+3533:                 <View style={styles.kvRow}>
+3534:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
+3535:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
+3536:                 </View>
+3537:                 <View style={styles.kvRow}>
+3538:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
+3539:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
+3540:                 </View>
+3541:                 <View style={styles.kvRow}>
+3542:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
+3543:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
+3544:                 </View>
+3545:                 <View style={styles.kvRow}>
+3546:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
+3547:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.side || "---").toUpperCase()}</AppText>
+3548:                 </View>
+3549:                 <View style={styles.kvRow}>
+3550:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
+3551:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText>
+3552:                 </View>
+3553:                 <View style={styles.kvRow}>
+3554:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+3555:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+3556:                     {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
+3557:                   </AppText>
+3558:                 </View>
+3559:                 {/* <View style={styles.kvRow}>
+3560:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Status</AppText>
+3561:                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: statusColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{statusLabel.toUpperCase()}</AppText>
+3562:                 </View> */}
+3563:               </View>
+3564:             );
+3565:           })()}
+3566:         </View>
+3567: 
+3568:         {hasExecutedTrades && (
+3569:           <View style={{ marginTop: 8 }}>
+3570:             <TouchableOpacity
+3571:               activeOpacity={0.8}
+3572:               style={styles.execTradesBtn}
+3573:               onPress={() => setShowExecutedTrades((p) => ({ ...p, [orderId]: !p?.[orderId] }))}
+3574:             >
+3575:               <View style={styles.execTradesBtnRow}>
+3576:                 <FastImage
+3577:                   source={downIcon}
+3578:                   tintColor={colors.lightGrey}
+3579:                   style={[
+3580:                     styles.orderHistoryChevron,
+3581:                     { transform: [{ rotate: showTrades ? "180deg" : "0deg" }] },
+3582:                   ]}
+3583:                   resizeMode="contain"
+3584:                 />
+3585:                 <AppText style={[styles.execTradesBtnText, { color: textColor }]}> Executed trades</AppText>
+3586:               </View>
+3587:             </TouchableOpacity>
+3588: 
+3589:             {showTrades && (
+3590:               <View style={styles.execTradesBox}>
+3591:                 {inv.executed_prices.map((tr, i) => (
+3592:                   <View
+3593:                     key={`${orderId}_${tr?.trade_id ?? i}`}
+3594:                     style={[
+3595:                       styles.execTradeItem,
+3596:                       i === inv.executed_prices.length - 1 ? { borderBottomWidth: 0, marginBottom: 0 } : null,
+3597:                     ]}
+3598:                   >
+3599:                     <View style={styles.execTradeHeaderRow}>
+3600:                       <AppText style={[styles.execTradeHeaderText, { color: labelColor }]} weight={MEDIUM}>
+3601:                         Trade #{i + 1}
+3602:                       </AppText>
+3603:                     </View>
+3604: 
+3605:                     <View style={{ gap: 4, marginTop: 4 }}>
+3606:                       <View style={styles.execTradeKvRow}>
+3607:                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price:</AppText>
+3608:                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
+3609:                       </View>
+3610:                       <View style={styles.execTradeKvRow}>
+3611:                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Executed:</AppText>
+3612:                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
+3613:                       </View>
+3614:                       <View style={styles.execTradeKvRow}>
+3615:                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee:</AppText>
+3616:                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
+3617:                       </View>
+3618:                       <View style={styles.execTradeKvRow}>
+3619:                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total:</AppText>
+3620:                         <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
+3621:                       </View>
+3622:                     </View>
+3623:                   </View>
+3624:                 ))}
+3625:               </View>
+3626:             )}
+3627:           </View>
+3628:         )}
+3629:       </TouchableOpacity>
+3630:     );
