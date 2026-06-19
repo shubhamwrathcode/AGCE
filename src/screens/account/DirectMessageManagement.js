@@ -231,7 +231,6 @@ const DirectMessageManagement = () => {
 
     try {
       const res = await appOperation.customer.update_alert_settings_setting(body);
-      console.log("=== UPDATE ALERT SETTINGS API RESPONSE ===", JSON.stringify(res, null, 2));
       const ok = res?.success === true || res?.success === 1;
       if (ok) {
         Toast.showWithGravity(res?.message || "Alert settings updated successfully.", Toast.SHORT, Toast.BOTTOM);

@@ -666,6 +666,7 @@ const FuturesUI = () => {
 
     setPlacingOrderSide(apiSide);
     try {
+      console.log("=== FUTURES ORDER PAYLOAD ===", JSON.stringify(payload, null, 2));
       const result = await appOperation.customer.futuresPlaceOrder(payload);
       if (result?.success) {
         SimpleToast.show('Order Placed Successfully!', SimpleToast.SHORT);
@@ -1169,8 +1170,8 @@ const FuturesUI = () => {
 
           {/* Current Price */}
           <View style={styles.currentPrice}>
-            <AppText type={SIXTEEN} style={{ color: isPricePositive ? colors.green : colors.red }} weight={SEMI_BOLD}>{livePrice || "0.00"}</AppText>
-            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>${livePrice || "0.00"}</AppText>
+            <AppText type={SIXTEEN} style={{ color: isPricePositive ? colors.green : colors.red }} weight={SEMI_BOLD}>{livePrice ? parseFloat(livePrice).toFixed(5) : "0.00000"}</AppText>
+            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>${livePrice ? parseFloat(livePrice).toFixed(5) : "0.00000"}</AppText>
           </View>
 
           {/* Bids */}
@@ -1933,12 +1934,6 @@ const FuturesUI = () => {
       </View>
     );
   };
-
-  const EmptyState = () => (
-    <View style={[styles.emptyState, { flex: 1, minHeight: 300 }]}>
-      <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70 }} resizeMode='contain' />
-    </View>
-  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.white }]}>
