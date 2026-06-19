@@ -336,7 +336,8 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
       useNativeDriver
       useNativeDriverForBackdrop
       propagateSwipe
-      avoidKeyboard
+      statusBarTranslucent
+      hideModalContentWhileAnimating={true}
     >
       <View style={[styles.sheet, { height: SHEET_HEIGHT, backgroundColor: modalBg }]}>
         <View style={styles.header}>

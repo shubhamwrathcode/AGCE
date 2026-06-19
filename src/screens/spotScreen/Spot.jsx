@@ -1094,15 +1094,11 @@ const Spot = () => {
   // Keep terminal readable: avoid logging whole arrays continuously
   // (use the rate-limited lens logs inside the socket handler instead)
 
-  const buyOrders = useAppSelector((state) => state.home.buyOrders);
-  const sellOrders = useAppSelector((state) => state.home.sellOrders);
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const favoriteArrayLoaded = useAppSelector((state) => state.home.favoriteArrayLoaded);
 
   const [currency, setCurrency] = useState(null);
   const [currencyData, setCurrencyData] = useState(null);
-  const [LocalBuyOrders, setLocalBuyOrders] = useState([]);
-  const [LocalSellOrders, setLocalSellOrders] = useState([]);
   const [orderFilter, setOrderFilter] = useState("All");
   const [pastOrderFilter, setPastOrderFilter] = useState("All");
   const [expandedRowIndex, setExpandedRowIndex] = useState(null);
@@ -1119,7 +1115,6 @@ const Spot = () => {
 
   const [orderToCancel, setOrderToCancel] = useState(null);
   const isSpotFocused = useIsFocused();
-  const recentTrades = useAppSelector((state) => state.home.recentTrades);
 
   const [isPriceFocused, setIsPriceFocused] = useState(false);
   const [isAmountFocused, setIsAmountFocused] = useState(false);
@@ -1251,7 +1246,7 @@ const Spot = () => {
   const latestLocalBuyOrdersRef = useRef([]);
   const latestLocalSellOrdersRef = useRef([]);
   const currentCurrencyRef = useRef(null);
-  const SOCKET_UI_THROTTLE_MS = 300;
+  const SOCKET_UI_THROTTLE_MS = 50;
   /** Match web `TradePage`: poll spot history while the matching tab is visible (`SPOT_HIST_POLL_MS`). */
   const SPOT_HIST_POLL_MS = 3000;
   const socketThrottleTimerRef = useRef(null);
@@ -1368,8 +1363,6 @@ const Spot = () => {
       setStaticBuyPrice(initialPrice);
       setActivePercentage("");
       setLastSocketData(null);
-      setLocalBuyOrders([]);
-      setLocalSellOrders([]);
       dispatch(setBuyOrders([]));
       dispatch(setSellOrders([]));
       dispatch(setRecentTrades([]));
@@ -1403,8 +1396,6 @@ const Spot = () => {
   const handleCurrencyChange = (coin) => {
     dispatch(setSpotSelectedPair(coin));
     setLastSocketData(null);
-    setLocalBuyOrders([]);
-    setLocalSellOrders([]);
     dispatch(setBuyOrders([]));
     dispatch(setSellOrders([]));
     setOpenOrderKindTab("all");
@@ -1853,8 +1844,6 @@ const Spot = () => {
           dispatch(setBuyOrders([]));
           dispatch(setSellOrders([]));
           setLastSocketData(null);
-          setLocalBuyOrders([]);
-          setLocalSellOrders([]);
           if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
             unsubscribeFromExchange(lastExchange.base_currency_id, lastExchange.quote_currency_id);
           }
@@ -1878,8 +1867,6 @@ const Spot = () => {
         dispatch(setSellOrders([]));
         dispatch(setRecentTrades([]));
         setLastSocketData(null);
-        setLocalBuyOrders([]);
-        setLocalSellOrders([]);
       }
       if (currentPair?.available === "LOCAL") {
         if (latestLocalBuyOrdersRef.current?.length > 0) {
@@ -1970,14 +1957,12 @@ const Spot = () => {
     if (payload.sellOrders?.length !== undefined) {
       if (!orderBookDataEqual(lastFlushedSellRef.current, payload.sellOrders)) {
         lastFlushedSellRef.current = payload.sellOrders;
-        setLocalSellOrders(payload.sellOrders);
         dispatch(setSellOrders(payload.sellOrders));
       }
     }
     if (payload.buyOrders?.length !== undefined) {
       if (!orderBookDataEqual(lastFlushedBuyRef.current, payload.buyOrders)) {
         lastFlushedBuyRef.current = payload.buyOrders;
-        setLocalBuyOrders(payload.buyOrders);
         dispatch(setBuyOrders(payload.buyOrders));
       }
     }
@@ -2062,13 +2047,6 @@ const Spot = () => {
   }, [socket, isSpotFocused, dispatch, flushSocketToState]);
 
   // Use local orders for LOCAL pairs when local lists update
-  useEffect(() => {
-    if (currency?.available === "LOCAL") {
-      dispatch(setBuyOrders(LocalBuyOrders));
-      dispatch(setSellOrders(LocalSellOrders));
-      dispatch(setRecentTrades(recentTrades));
-    }
-  }, [LocalBuyOrders, LocalSellOrders, recentTrades, currency, dispatch]);
 
   // Web parity: poll only while the mounted tab panel is Order History (2) — matches visible UI after slide animation (avoids Redux updating mid-slide + stale list flash).
   /**
@@ -2436,13 +2414,13 @@ const Spot = () => {
       };
 
       const isCross = marginMode === "Cross";
-      
+
       const quoteAvailable = isCross
         ? ((coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
           ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
           : netEquity)
         : Math.max(0, Qf);
-          
+
       const baseAvailable = isCross
         ? ((coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
           ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
@@ -2451,7 +2429,7 @@ const Spot = () => {
 
       const grossQuoteMax = netEquity * leverage;
       const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
-      
+
       const quoteMax = isCross
         ? ((coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
           ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
@@ -2460,7 +2438,7 @@ const Spot = () => {
 
       const grossSellMax = refPx > 0 ? grossQuoteMax / refPx : 0;
       const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
-      
+
       const baseMax = isCross
         ? ((coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
           ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))

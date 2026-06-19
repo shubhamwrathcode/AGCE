@@ -16,9 +16,11 @@ import {
   setRandom,
   setSocket,
   setSocketLoading,
+  setFuturesData
 } from "./slices/homeSlice";
 import { setLoading } from "./slices/authSlice";
 import { socketService } from "./services/socket/SocketService";
+import { normalizeOrderbookOrders } from "./helper/futuresUtils";
 import { USER_TOKEN_KEY } from "./helper/Constants";
 
 export const SocketContext = createContext(null);
@@ -28,7 +30,7 @@ export const SocketContext = createContext(null);
 export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
   const isInitializedRef = useRef(false);
-  const [futuresData, setFuturesData] = useState(null);
+  const futuresDataRef = useRef(null);
   const [futuresPrice, setFuturesPrice] = useState(null);
   const [exchangeData, setExchangeData] = useState(null);
   const pendingSubscriptions = useRef({
@@ -256,7 +258,8 @@ export const SocketProvider = ({ children }) => {
 
       const flushFuturesData = () => {
         if (!pendingFuturesData) return;
-        setFuturesData(pendingFuturesData);
+        futuresDataRef.current = pendingFuturesData;
+          dispatch(setFuturesData(pendingFuturesData));
         pendingFuturesData = null;
       };
 
@@ -334,7 +337,7 @@ export const SocketProvider = ({ children }) => {
     () => ({
       socket: socketService.getSocket(),
       exchangeData,
-      futuresData,
+      futuresData: futuresDataRef.current,
       futuresPrice,
       subscribeToMarket,
       unsubscribeFromMarket,
@@ -344,7 +347,7 @@ export const SocketProvider = ({ children }) => {
       unsubscribeFromFutures,
       setFuturesHistoryTab,
     }),
-    [exchangeData, futuresData, futuresPrice, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange, subscribeToFutures, unsubscribeFromFutures, setFuturesHistoryTab]
+    [exchangeData, futuresDataRef.current, futuresPrice, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange, subscribeToFutures, unsubscribeFromFutures, setFuturesHistoryTab]
   );
 
   return (

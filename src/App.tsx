@@ -65,6 +65,8 @@ async function handleAgceKycReturnUrl(url: string | null | undefined) {
   setTimeout(go, 600);
 }
 
+
+
 const MainApp = () => {
   const { colors: themeColors, isDark } = useTheme();
 

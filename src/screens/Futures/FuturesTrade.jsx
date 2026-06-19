@@ -1127,10 +1127,10 @@ const FuturesUI = () => {
 
   const renderOrderBook = () => (
     <View style={styles.leftColumn}>
-      <View style={styles.fundingRow}>
+      {/* <View style={styles.fundingRow}>
         <AppText type={TEN} color={themeColors.secondaryText} style={[styles.dashedUnderline, { alignSelf: 'flex-start' }]}>Funding / Countdown</AppText>
         <AppText type={TEN} weight={SEMI_BOLD} style={[styles.dashedUnderline, { marginTop: 4, alignSelf: 'flex-start' }]}>0.0100% / 03:23:21</AppText>
-      </View>
+      </View> */}
 
       <View style={styles.obHeader}>
         <AppText type={TEN} color={themeColors.secondaryText}>Price{"\n"}(USDT)</AppText>

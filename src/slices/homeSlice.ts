@@ -33,6 +33,7 @@ export const initialState: HomeSliceProps = {
   oneYearSymbolData: [],
   fiveYearSymbolData: [],
   socket: undefined,
+  futuresData: undefined,
   feeDetails: undefined,
   buyOrders: [],
   sellOrders: [],
@@ -248,6 +249,9 @@ export const homeSlice = createSlice({
     },
     setFeeDetails: (state, {payload}) => {
       state.feeDetails = payload;
+    },
+    setFuturesData: (state, {payload}) => {
+      state.futuresData = payload;
     },
     setBuyOrders: (state, {payload}) => {
       state.buyOrders = payload;

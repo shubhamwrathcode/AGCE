@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "prefabPath": "/Users/wrathcodetechnology/.gradle/caches/modules-2/files-2.1/com.google.prefab/cli/2.1.0/aa32fec809c44fa531f01dcfb739b5b3304d3050/cli-2.1.0-all.jar",
+  "packages": [
+    "/Users/wrathcodetechnology/.gradle/caches/8.13/transforms/441131b4df597f91cf4093ed70b11bd8/transformed/jetified-react-android-0.79.2-release/prefab",
+    "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-reanimated/android/build/intermediates/prefab_package/release/prefab",
+    "/Users/wrathcodetechnology/.gradle/caches/8.13/transforms/4c90d1a1e70fe84eeaa9d426267044a4/transformed/jetified-hermes-android-0.79.2-release/prefab",
+    "/Users/wrathcodetechnology/.gradle/caches/8.13/transforms/32967fc9c20fbc4168bb1c7886f5c054/transformed/jetified-fbjni-0.7.0/prefab"
+  ]
+}

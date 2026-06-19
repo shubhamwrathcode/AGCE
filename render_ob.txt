@@ -1,0 +1,123 @@
+  const renderOrderBook = () => (
+    <View style={styles.leftColumn}>
+      <View style={styles.fundingRow}>
+        <AppText type={TEN} color={themeColors.secondaryText} style={[styles.dashedUnderline, { alignSelf: 'flex-start' }]}>Funding / Countdown</AppText>
+        <AppText type={TEN} weight={SEMI_BOLD} style={[styles.dashedUnderline, { marginTop: 4, alignSelf: 'flex-start' }]}>0.0100% / 03:23:21</AppText>
+      </View>
+
+      <View style={styles.obHeader}>
+        <AppText type={TEN} color={themeColors.secondaryText}>Price{"\n"}(USDT)</AppText>
+        <AppText type={TEN} color={themeColors.secondaryText} style={{ textAlign: 'right' }}>Size{"\n"}(USDT)</AppText>
+      </View>
+
+      {(!futuresData?.sell_order && !futuresData?.buy_order) ? (
+        <View>
+          <OrderBookSkeleton />
+          <View style={[styles.currentPrice, { alignItems: 'flex-start', justifyContent: 'center' }]}>
+            <ShimmerBox width="100%" height={20} borderRadius={4} />
+            <ShimmerBox width="80%" height={14} borderRadius={4} style={{ marginTop: 6 }} />
+          </View>
+          <OrderBookSkeleton />
+        </View>
+      ) : (
+        <View>
+          {/* Asks */}
+          {obAsks.length > 0 && (
+            <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
+              <FlatList
+                data={obAsks}
+                inverted={true}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={5}
+                updateCellsBatchingPeriod={100}
+                getItemLayout={getLayout}
+                keyExtractor={(item, i) => item._id ? `ask-${item._id}` : `ask-idx-${i}`}
+                renderItem={renderAskItem}
+              />
+            </View>
+          )}
+
+          {/* Current Price */}
+          <View style={styles.currentPrice}>
+            <AppText type={SIXTEEN} style={{ color: isPricePositive ? colors.green : colors.red }} weight={SEMI_BOLD}>{livePrice ? parseFloat(livePrice).toFixed(5) : "0.00000"}</AppText>
+            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>${livePrice ? parseFloat(livePrice).toFixed(5) : "0.00000"}</AppText>
+          </View>
+
+          {/* Bids */}
+          {obBids.length > 0 && (
+            <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
+              <FlatList
+                data={obBids}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={5}
+                updateCellsBatchingPeriod={100}
+                getItemLayout={getLayout}
+                keyExtractor={(item, i) => item._id ? `bid-${item._id}` : `bid-idx-${i}`}
+                renderItem={renderBidItem}
+              />
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Ratio Indicator */}
+      <View style={[styles.ratioIndicatorBar, { marginVertical: 8, gap: 4 }]}>
+        <View style={{ justifyContent: "flex-start", flexShrink: 0 }}>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#38B781", fontSize: 10 }}>
+            {orderBookBidAskRatio.bidPct.toFixed(2)}%
+          </AppText>
+        </View>
+        <View style={[styles.ratioIndicatorTrack, { flex: 1, height: 3 }]}>
+          <View style={[styles.ratioIndicatorFill, { width: `${orderBookBidAskRatio.bidPct}%`, backgroundColor: "#38B781", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }]} />
+          <View style={[styles.ratioIndicatorFill, { flex: 1, backgroundColor: "#ED4E4E", borderTopRightRadius: 2, borderBottomRightRadius: 2 }]} />
+        </View>
+        <View style={{ justifyContent: "flex-end", flexShrink: 0 }}>
+          <AppText numberOfLines={1} weight={SEMI_BOLD} style={{ color: "#ED4E4E", fontSize: 10 }}>
+            {orderBookBidAskRatio.askPct.toFixed(2)}%
+          </AppText>
+        </View>
+      </View>
+
+      {/* Precision Dropdown */}
+      <View style={styles.spotObToolbarRow}>
+        <TouchableOpacity
+          ref={precisionTriggerRef}
+          onPress={openObPrecisionMenu}
+          style={[styles.spotObAggTrigger, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor, borderRadius: 5 }]}
+          activeOpacity={0.75}
+        >
+          <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>{precision}</AppText>
+          <FastImage source={downIcon} style={styles.spotObAggCaret} resizeMode='contain' tintColor={themeColors.secondaryText} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={cycleViewMode}
+          style={[styles.spotObViewCycleBtn, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor }]}
+          activeOpacity={0.75}
+        >
+          <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={styles.layoutIcon} resizeMode='contain' />
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={obPrecisionOpen} transparent animationType="fade" onRequestClose={closeObPrecisionMenu}>
+        <Pressable style={styles.spotObAggBackdrop} onPress={closeObPrecisionMenu} />
+        {obPrecisionLayout ? (
+          <View
+            style={[
+              styles.spotObAggPopover,
+              {
+                top: obPrecisionLayout.y + obPrecisionLayout.h + 4,
+                left: Math.max(8, Math.min(obPrecisionLayout.x + obPrecisionLayout.w - 144, Width - 8 - 144)),
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.themeBorderColor,
+              },
+            ]}
+          >
+            {obPrecisionOptions.map((opt) => {
