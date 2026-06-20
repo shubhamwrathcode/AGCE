@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated, FlatList, Platform, ToastAndroid, Alert, Keyboard, ActivityIndicator } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
+import { setFuturesData } from "../../slices/homeSlice";
 import FastImage from 'react-native-fast-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -928,24 +929,18 @@ const FuturesUI = () => {
       dispatch(getOpenOrders(0, 10, "cross", selectedCoin?.symbol));
       dispatch(getUserFuturesWallet("futures"));
     }
-    if (isFocused && pairData.length === 0) {
-      subscribeToFutures();
-      const t = setTimeout(() => subscribeToFutures(), 800);
-      return () => {
-        clearTimeout(t);
-        unsubscribeFromFutures();
-      };
-    }
+
   }, [isFocused, pairData.length, subscribeToFutures, unsubscribeFromFutures]);
 
   useEffect(() => {
     if (isFocused && selectedCoin) {
       subscribeToFutures({ symbol: selectedCoin.symbol });
       return () => {
+        dispatch(setFuturesData(null));
         unsubscribeFromFutures({ symbol: selectedCoin.symbol, base_currency_id: selectedCoin._id });
       };
     }
-  }, [isFocused, selectedCoin, subscribeToFutures, unsubscribeFromFutures]);
+  }, [isFocused, selectedCoin, subscribeToFutures, unsubscribeFromFutures, dispatch]);
 
   useEffect(() => {
     if (isFocused) {
@@ -956,6 +951,7 @@ const FuturesUI = () => {
   }, [isFocused, subscribeToMarket, unsubscribeFromMarket]);
 
   const handleSelectCoin = (pair) => {
+    dispatch(setFuturesData(null));
     setSelectedCoin(pair);
     pairSheetRef.current?.close();
     setSearchTerm("");
