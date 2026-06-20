@@ -428,6 +428,7 @@ export const {
   setFlatInvestments,
   setUserTickets,
   setTicketChats,
-  setRecentTrades
+  setRecentTrades,
+  setFuturesData
 } = homeSlice.actions;
 export const homeReducer = homeSlice.reducer;
