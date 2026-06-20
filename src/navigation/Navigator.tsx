@@ -150,6 +150,7 @@ import OptionHistory from "../screens/Futures/OptionsTrade/OptionHistory";
 import FutureHistoryCardDetailPage from "../screens/Futures/FutureHistoryCardDetailPage";
 import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
 import StakingDashboard from "../screens/staking/StakingDashboard";
+import StakingPurchase from "../screens/staking/StakingPurchase";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -615,6 +616,11 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.STAKING_DASHBOARD_SCREEN}
         component={StakingDashboard}
+      />
+      <Stack.Screen
+        name="StakingPurchase"
+        component={StakingPurchase}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

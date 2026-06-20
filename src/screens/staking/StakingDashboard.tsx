@@ -1,12 +1,17 @@
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, FlatList, Alert } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import { AppSafeAreaView, AppText } from '../../shared';
 import { colors } from '../../theme/colors';
-import { staking_bnr_img, back_ic, INFO, searchIcon, upDown, usdtIcon, checkIcon, closeIcon, checkIc, wallet_ic, SECURITY_SHEIELD, earningIcon, secure_icon, crypto_staking_icon, crypto_staking_icon2, crypto_staking_icon3, stake_crypto, stake_acge_icon, stake_acge_icon2, stake_acge_icon3, deposit_icon2, withdrawal_icon2, upIcon, downIcon } from '../../helper/ImageAssets';
+import { staking_bnr_img, back_ic, INFO, searchIcon, upDown, usdtIcon, checkIcon, closeIcon, checkIc, wallet_ic, SECURITY_SHEIELD, earningIcon, secure_icon, crypto_staking_icon, crypto_staking_icon2, crypto_staking_icon3, stake_crypto, stake_acge_icon, stake_acge_icon2, stake_acge_icon3, deposit_icon2, withdrawal_icon2, upIcon, downIcon, NO_NOTIFICATION_ICON } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import NavigationService from '../../navigation/NavigationService';
+import { useDispatch, useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
+import { getStaking } from '../../actions/homeActions';
+import { IMAGE_BASE_URL } from '../../helper/Constants';
+import { appOperation } from '../../appOperation';
 
 const faqData = [
   {
@@ -33,9 +38,108 @@ const faqData = [
 
 const StakingDashboard = () => {
   const sheetRef = useRef<any>(null);
+  const planSheetRef = useRef<any>(null);
   const faqSheetRef = useRef<any>(null);
-  const [isMatchAssets, setIsMatchAssets] = useState(false);
+  const dispatch = useDispatch<any>();
   const [faqActiveIndex, setFaqActiveIndex] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [planPackages, setPlanPackages] = useState<any[]>([]);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [isListLoading, setIsListLoading] = useState(true);
+
+
+  const { stakingHome, coinBalance } = useSelector((state: any) => state.home);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsListLoading(true);
+      Promise.resolve(dispatch(getStaking())).finally(() => {
+        setIsListLoading(false);
+      });
+    }, [dispatch])
+  );
+
+  const STAKING_TYPE_LABELS: any = {
+    LOCKED: "Locked Staking",
+    FLEXIBLE: "Flexible Staking",
+    TOKENIZED: "Tokenized Staking",
+  };
+
+  const formatApr = (pkg: any) => {
+    const min = pkg?.aprMin;
+    const max = pkg?.aprMax ?? pkg?.returnPercentage;
+    if (min != null && max != null && min !== max) {
+      return `${min}% - ${max}%`;
+    }
+    if (max != null) return `${max}%`;
+    return "—";
+  };
+
+  const packages = Array.isArray(stakingHome?.data) ? stakingHome.data : (Array.isArray(stakingHome) ? stakingHome : []);
+
+  const filteredPackages = useMemo(() => {
+    let filtered = packages.filter((pkg: any) =>
+      String(pkg?.stakingType || "").toUpperCase() === "LOCKED" && pkg?.status === "ACTIVE"
+    );
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      filtered = filtered.filter((pkg: any) => {
+        const currency = String(pkg?.currency || "").toLowerCase();
+        const fullName = String(pkg?.currencyFullName || "").toLowerCase();
+        return currency.includes(q) || fullName.includes(q);
+      });
+    }
+
+    // deduplicate by currency — one row per coin
+    const seen = new Set();
+    return filtered.filter((pkg: any) => {
+      const key = String(pkg?.currency || "").toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [packages, searchQuery, coinBalance]);
+
+  const openSheet = (pkg: any) => {
+    setSelectedPackage(pkg);
+    sheetRef.current?.open();
+  };
+
+  const openPlanSheet = async () => {
+    if (!selectedPackage?.currency) return;
+    sheetRef.current?.close();
+    setPlanPackages([]);
+    setPlanLoading(true);
+
+    setTimeout(() => {
+      planSheetRef.current?.open();
+    }, 400);
+
+    try {
+      const res: any = await appOperation.customer.Staking_GetPackagesForCoin(selectedPackage.currency);
+      if (res?.success && Array.isArray(res.data)) {
+        const lockedPackages = res.data.filter(
+          (pkg: any) => String(pkg?.stakingType || "").toUpperCase() === "LOCKED" && pkg?.status === "ACTIVE"
+        );
+        setPlanPackages(lockedPackages);
+      } else {
+        setPlanPackages([]);
+      }
+    } catch (error) {
+      setPlanPackages([]);
+    } finally {
+      setPlanLoading(false);
+    }
+  };
+
+  const openStakeSheet = (plan: any) => {
+    planSheetRef.current?.close();
+    setTimeout(() => {
+      NavigationService.navigate('StakingPurchase', { plan });
+    }, 400);
+  };
 
   return (
     <>
@@ -56,9 +160,7 @@ const StakingDashboard = () => {
               <AppText style={styles.bannerSubtitle}>
                 Stake cryptos to earn in{"\n"}PoS products
               </AppText>
-              <TouchableOpacity style={styles.aboutBtn}>
-                <AppText style={styles.aboutBtnText}>About Staking</AppText>
-              </TouchableOpacity>
+
             </View>
             <View style={styles.bannerImgContainer}>
               <FastImage source={staking_bnr_img} style={styles.bannerImg} resizeMode="contain" />
@@ -66,7 +168,9 @@ const StakingDashboard = () => {
           </View>
 
           <View style={styles.sectionContainer}>
-            <AppText style={styles.sectionTitle}>All Products</AppText>
+            <View style={styles.sectionHeaderRow}>
+              <AppText style={styles.sectionTitle}>All Products</AppText>
+            </View>
 
             <View style={styles.filterRow}>
               <View style={styles.searchContainer}>
@@ -75,15 +179,10 @@ const StakingDashboard = () => {
                   style={styles.searchInput}
                   placeholder="Search"
                   placeholderTextColor="#888"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
                 />
               </View>
-
-              <TouchableOpacity style={styles.checkboxContainer} onPress={() => setIsMatchAssets(!isMatchAssets)}>
-                <View style={[styles.checkbox, isMatchAssets && styles.checkboxActive]}>
-                  {isMatchAssets && <FastImage source={checkIc} style={styles.checkIcon} resizeMode="contain" tintColor={colors.black} />}
-                </View>
-                <AppText style={styles.checkboxText}>Match my assets</AppText>
-              </TouchableOpacity>
             </View>
 
             <View style={styles.tableHeader}>
@@ -94,16 +193,43 @@ const StakingDashboard = () => {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.tableRow} onPress={() => sheetRef.current?.open()}>
-              <View style={styles.coinInfo}>
-                <FastImage source={usdtIcon} style={styles.coinIcon} resizeMode="contain" />
-                <AppText style={styles.coinName}>USDT</AppText>
-                <View style={styles.newBadge}>
-                  <AppText style={styles.newBadgeText}>New</AppText>
+            {isListLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <View key={i} style={styles.tableRow}>
+                  <View style={styles.coinInfo}>
+                    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#EEE', marginRight: 10 }} />
+                    <View style={{ width: 60, height: 16, borderRadius: 4, backgroundColor: '#EEE' }} />
+                  </View>
+                  <View style={{ width: 50, height: 16, borderRadius: 4, backgroundColor: '#EEE' }} />
                 </View>
-              </View>
-              <AppText style={styles.aprText}>3.45%</AppText>
-            </TouchableOpacity>
+              ))
+            ) : (
+              <FlatList
+                data={filteredPackages}
+                keyExtractor={(item, index) => String(item._id || item.id || index)}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.tableRow} onPress={() => openSheet(item)}>
+                    <View style={styles.coinInfo}>
+                      <FastImage source={{ uri: `${IMAGE_BASE_URL}${item.iconPath}` }} style={styles.coinIcon} resizeMode="contain" />
+                      <AppText style={styles.coinName}>{item?.currency || item?.coin || 'Unknown'}</AppText>
+                      {String(item?.tag || "").toLowerCase() === "new" && (
+                        <View style={styles.newBadge}>
+                          <AppText style={styles.newBadgeText}>New</AppText>
+                        </View>
+                      )}
+                    </View>
+                    <AppText style={styles.aprText}>{formatApr(item)}</AppText>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={() => (
+                  <View style={styles.emptyContainer}>
+                    <FastImage source={NO_NOTIFICATION_ICON} style={styles.emptyIcon} resizeMode="contain" />
+                    <AppText style={styles.emptyText}>No Products Found</AppText>
+                  </View>
+                )}
+              />
+            )}
 
           </View>
 
@@ -247,27 +373,93 @@ const StakingDashboard = () => {
         }}
       >
         <View style={styles.sheetHeader}>
-          <AppText style={styles.sheetTitle}>USDT</AppText>
+          <AppText style={styles.sheetTitle}>{selectedPackage?.currency || "Coin"}</AppText>
         </View>
 
         <View style={styles.sheetRow}>
           <AppText style={styles.sheetLabel}>Est. APR</AppText>
-          <AppText style={styles.sheetValue}>3.45%</AppText>
+          <AppText style={styles.sheetValue}>{formatApr(selectedPackage)}</AppText>
         </View>
 
         <View style={styles.sheetRow}>
           <AppText style={styles.sheetLabel}>Reward Coin</AppText>
-          <FastImage source={usdtIcon} style={styles.sheetCoinIcon} resizeMode="contain" />
+          <FastImage source={{ uri: `${IMAGE_BASE_URL}${selectedPackage?.iconPath || ''}` }} style={styles.sheetCoinIcon} resizeMode="contain" />
         </View>
 
         <View style={styles.sheetRow}>
           <AppText style={styles.sheetLabel}>Type</AppText>
-          <AppText style={styles.sheetValue}>Locked Staking</AppText>
+          <AppText style={styles.sheetValue}>
+            {selectedPackage?.stakingType ? (STAKING_TYPE_LABELS[selectedPackage.stakingType] || selectedPackage.stakingType) : "Locked Staking"}
+          </AppText>
         </View>
 
-        <TouchableOpacity style={styles.stakeBtn}>
+        <TouchableOpacity style={styles.stakeBtn} onPress={openPlanSheet}>
           <AppText style={styles.stakeBtnText}>Stake</AppText>
         </TouchableOpacity>
+      </RBSheet>
+
+      <RBSheet
+        ref={planSheetRef}
+        keyboardAvoidingViewEnabled={false}
+        {...({ customModalProps: { statusBarTranslucent: true } } as any)}
+        closeOnDragDown={true}
+        closeOnPressMask={true}
+        height={450}
+        customStyles={{
+          wrapper: {
+            backgroundColor: "rgba(0,0,0,0.5)"
+          },
+          draggableIcon: {
+            backgroundColor: "transparent",
+          },
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingBottom: 20,
+            backgroundColor: colors.white
+          }
+        }}
+      >
+        <View style={styles.planHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <FastImage
+              source={selectedPackage?.iconPath ? { uri: `${IMAGE_BASE_URL}${selectedPackage.iconPath}` } : usdtIcon}
+              style={styles.planHeaderIcon}
+              resizeMode="contain"
+            />
+            <AppText style={styles.planHeaderTitle}>{selectedPackage?.currency || "Coin"} Staking</AppText>
+          </View>
+          <TouchableOpacity onPress={() => planSheetRef.current?.close()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <FastImage source={closeIcon} style={{ width: 16, height: 16 }} resizeMode="contain" tintColor="#888" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+          {planLoading ? (
+            <View style={{ padding: 40, alignItems: 'center' }}>
+              <AppText style={{ color: '#848e9c' }}>Loading plans...</AppText>
+            </View>
+          ) : planPackages.length === 0 ? (
+            <View style={{ padding: 40, alignItems: 'center' }}>
+              <AppText style={{ color: '#848e9c' }}>No plans available.</AppText>
+            </View>
+          ) : (
+            planPackages.map((plan: any) => (
+              <TouchableOpacity key={plan._id || plan.id} style={styles.planCard} onPress={() => openStakeSheet(plan)}>
+                <View style={styles.planRowTop}>
+                  <AppText style={styles.planDuration}>{plan.duration} {plan.durationType || 'DAYS'}</AppText>
+                  <AppText style={styles.planApr}>{plan.returnPercentage}%</AppText>
+                </View>
+                <View style={styles.planRowBottom}>
+                  <AppText style={styles.planLimits}>
+                    Min: {Number(plan.minAmount || 0).toLocaleString()} — Max: {Number(plan.maxAmount || 0).toLocaleString()} {plan.currency}
+                  </AppText>
+                  <AppText style={styles.planEstAprLabel}>Est. APR</AppText>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
       </RBSheet>
 
       <RBSheet
@@ -323,6 +515,7 @@ const StakingDashboard = () => {
           ))}
         </ScrollView>
       </RBSheet>
+
     </>
   );
 };
@@ -354,7 +547,7 @@ const styles = StyleSheet.create({
   bannerContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 5,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -400,43 +593,21 @@ const styles = StyleSheet.create({
   sectionContainer: {
     paddingHorizontal: 20,
     marginTop: 10,
+    backgroundColor: colors.white,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   sectionTitle: {
     fontSize: 18,
     fontFamily: fontFamilySemiBold,
     color: colors.black,
-    marginBottom: 12,
   },
   filterRow: {
     marginBottom: 20,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  checkbox: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  checkboxActive: {
-    borderColor: '#333',
-  },
-  checkIcon: {
-    width: 10,
-    height: 10,
-  },
-  checkboxText: {
-    fontSize: 12,
-    color: colors.black,
-    lineHeight: 16,
-    fontFamily: fontFamilyMedium,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -478,12 +649,12 @@ const styles = StyleSheet.create({
     height: 14,
     marginLeft: 4,
   },
-  tableRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+  // tableRow: {
+  //   flexDirection: 'row',
+  //   justifyContent: 'space-between',
+  //   alignItems: 'center',
+  //   marginBottom: 12,
+  // },
   coinInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -703,6 +874,29 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0'
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    marginBottom: 10,
+    opacity: 0.8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#888',
+    fontFamily: fontFamilyMedium,
+  },
   sheetRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -731,11 +925,70 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 'auto',
+    marginTop: 20,
   },
   stakeBtnText: {
     fontSize: 14,
     color: colors.white,
+    fontFamily: fontFamilyMedium,
+  },
+  planHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f5',
+    marginBottom: 10,
+  },
+  planHeaderIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 10,
+  },
+  planHeaderTitle: {
+    fontSize: 18,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+  },
+  planCard: {
+    borderWidth: 1,
+    borderColor: '#eaecef',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: colors.white,
+  },
+  planRowTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  planDuration: {
+    fontSize: 15,
+    fontFamily: fontFamilySemiBold,
+    color: '#1e2329',
+  },
+  planApr: {
+    fontSize: 16,
+    fontFamily: fontFamilySemiBold,
+    color: '#03a66d',
+  },
+  planRowBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  planLimits: {
+    fontSize: 12,
+    color: '#848e9c',
+    fontFamily: fontFamilyMedium,
+  },
+  planEstAprLabel: {
+    fontSize: 11,
+    color: '#848e9c',
     fontFamily: fontFamilyMedium,
   },
   modalOverlay: {

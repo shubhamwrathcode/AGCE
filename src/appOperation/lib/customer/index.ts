@@ -902,9 +902,32 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
-  Staking_Home: () =>
+  Staking_Home: (page: number = 1, limit: number = 50) =>
     appOperation.get(
-      'staking/availabe_staking',
+      `staking/packages?page=${page}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  Staking_GetPackagesForCoin: (currency: string) =>
+    appOperation.get(
+      `staking/getStakingPackagesForSingleCoin?currency=${encodeURIComponent(currency)}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  Staking_Subscribe: (data: any) =>
+    appOperation.post('staking/subscribe', data, CUSTOMER_TYPE),
+  Staking_MyPositions: (page: number = 1, limit: number = 100) =>
+    appOperation.get(
+      `staking/my-positions?page=${page}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  Staking_UserBalance: (currencyId: string, walletType: string = 'earning') =>
+    appOperation.get(
+      `staking/user-balance?currencyId=${currencyId}&walletType=${walletType}`,
       undefined,
       undefined,
       CUSTOMER_TYPE,
