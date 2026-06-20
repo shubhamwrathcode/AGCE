@@ -24,7 +24,6 @@ import { useDispatch } from "react-redux";
 import { setBuyOrders, setSellOrders, setSpotSelectedPair, setFuturesSelectedPair } from "../../slices/homeSlice";
 import { useTheme } from "../../hooks/useTheme";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
-import StakingDahboardData from "./StakingDahboardData";
 
 const CoinList = React.memo(() => {
   const { colors: themeColors, isDark } = useTheme();
@@ -303,7 +302,6 @@ const CoinList = React.memo(() => {
         )}
       </View>
       {activeTabList === 0 && <View style={{ height: 20 }} />}
-      <StakingDahboardData />
 
       <Animated.View entering={FadeIn.duration(600).delay(200)}>
         <HomeCoinList activeTabList={activeTabList} hideViewMore />

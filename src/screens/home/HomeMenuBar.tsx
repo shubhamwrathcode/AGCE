@@ -20,7 +20,7 @@ import {
   lockLight,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
-import { ACCOUNT_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
+import { ACCOUNT_SCREEN, STAKING_DASHBOARD_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { checkValue } from "../../helper/utility";
 import { colors } from "../../theme/colors";
@@ -116,7 +116,7 @@ const HomeMenuBar = () => {
       id: "5",
       title: "Earning",
       icon: earningAsset1,
-      onPress: showComingSoonToast,
+      onPress: () => NavigationService.navigate(STAKING_DASHBOARD_SCREEN),
     },
     {
       id: "6",

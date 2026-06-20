@@ -1,0 +1,808 @@
+import React, { useRef, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+import FastImage from 'react-native-fast-image';
+import RBSheet from 'react-native-raw-bottom-sheet';
+import { AppSafeAreaView, AppText } from '../../shared';
+import { colors } from '../../theme/colors';
+import { staking_bnr_img, back_ic, INFO, searchIcon, upDown, usdtIcon, checkIcon, closeIcon, checkIc, wallet_ic, SECURITY_SHEIELD, earningIcon, secure_icon, crypto_staking_icon, crypto_staking_icon2, crypto_staking_icon3, stake_crypto, stake_acge_icon, stake_acge_icon2, stake_acge_icon3, deposit_icon2, withdrawal_icon2, upIcon, downIcon } from '../../helper/ImageAssets';
+import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
+import NavigationService from '../../navigation/NavigationService';
+
+const faqData = [
+  {
+    title: "What is Staking?",
+    content: "Staking is the process of locking up cryptocurrency assets to participate in transaction validation on a Proof-of-Stake (PoS) blockchain. In return for securing the network, participants earn staking rewards."
+  },
+  {
+    title: "What is Proof of Stake (PoS)?",
+    content: "Proof of Stake (PoS) is a consensus mechanism used by blockchains to agree on the validity of transactions. Instead of using computing power like Proof of Work (mining), PoS relies on users who 'stake' their tokens to secure the network."
+  },
+  {
+    title: "When will I receive my staking return?",
+    content: "Staking returns are typically calculated daily and distributed according to the rules of the specific product. Depending on the asset, rewards may be credited to your account daily or at the end of a fixed staking period."
+  },
+  {
+    title: "Why choose AGCE Staking?",
+    content: "AGCE Staking offers a safe and seamless experience with competitive yields across a wide pool of top PoS products. We provide a low threshold for entry, 100% Proof of Reserve security, and a flexible redemption process."
+  },
+  {
+    title: "How is the Est. APR calculated?",
+    content: "The Estimated Annual Percentage Rate (APR) is dynamically calculated based on the underlying blockchain's on-chain reward rates, total network participation, and platform conditions. The actual rate may fluctuate over time."
+  }
+];
+
+const StakingDashboard = () => {
+  const sheetRef = useRef<any>(null);
+  const faqSheetRef = useRef<any>(null);
+  const [isMatchAssets, setIsMatchAssets] = useState(false);
+  const [faqActiveIndex, setFaqActiveIndex] = useState<number | null>(null);
+
+  return (
+    <>
+      <AppSafeAreaView style={styles.container} forceBarStyle="dark-content">
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => NavigationService.goBack()}>
+            <FastImage source={back_ic} style={styles.icon} resizeMode="contain" tintColor={colors.black} />
+          </TouchableOpacity>
+          <AppText style={styles.headerTitle}>Staking</AppText>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => faqSheetRef.current?.open()}>
+            <FastImage source={INFO} style={styles.icon} resizeMode="contain" tintColor={colors.black} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.bannerContainer}>
+            <View style={styles.bannerTextContainer}>
+              <AppText style={styles.bannerTitle}>Staking</AppText>
+              <AppText style={styles.bannerSubtitle}>
+                Stake cryptos to earn in{"\n"}PoS products
+              </AppText>
+              <TouchableOpacity style={styles.aboutBtn}>
+                <AppText style={styles.aboutBtnText}>About Staking</AppText>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.bannerImgContainer}>
+              <FastImage source={staking_bnr_img} style={styles.bannerImg} resizeMode="contain" />
+            </View>
+          </View>
+
+          <View style={styles.sectionContainer}>
+            <AppText style={styles.sectionTitle}>All Products</AppText>
+
+            <View style={styles.filterRow}>
+              <View style={styles.searchContainer}>
+                <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor="#888" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search"
+                  placeholderTextColor="#888"
+                />
+              </View>
+
+              <TouchableOpacity style={styles.checkboxContainer} onPress={() => setIsMatchAssets(!isMatchAssets)}>
+                <View style={[styles.checkbox, isMatchAssets && styles.checkboxActive]}>
+                  {isMatchAssets && <FastImage source={checkIc} style={styles.checkIcon} resizeMode="contain" tintColor={colors.black} />}
+                </View>
+                <AppText style={styles.checkboxText}>Match my assets</AppText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.tableHeader}>
+              <AppText style={styles.tableHeaderText}>Coin</AppText>
+              <View style={styles.aprHeader}>
+                <AppText style={styles.tableHeaderText}>Est. APR</AppText>
+                <FastImage source={upDown} style={styles.upDownIcon} resizeMode="contain" />
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.tableRow} onPress={() => sheetRef.current?.open()}>
+              <View style={styles.coinInfo}>
+                <FastImage source={usdtIcon} style={styles.coinIcon} resizeMode="contain" />
+                <AppText style={styles.coinName}>USDT</AppText>
+                <View style={styles.newBadge}>
+                  <AppText style={styles.newBadgeText}>New</AppText>
+                </View>
+              </View>
+              <AppText style={styles.aprText}>3.45%</AppText>
+            </TouchableOpacity>
+
+          </View>
+
+          <View style={styles.infoSection}>
+            <AppText style={styles.infoSectionTitle}>What is crypto staking?</AppText>
+
+            <View style={styles.stepContainer}>
+              <View style={styles.stepIconContainer}>
+                <View style={styles.stepIconBg}>
+                  <FastImage source={crypto_staking_icon} style={styles.stepIcon} resizeMode="contain" tintColor="#A07246" />
+                </View>
+                <View style={styles.stepLine} />
+              </View>
+              <View style={styles.stepContent}>
+                <AppText style={styles.stepTitle}>Deposit Your Assets</AppText>
+                <AppText style={styles.stepDesc}>Choose your asset and stake with just a few clicks.</AppText>
+              </View>
+            </View>
+
+            <View style={styles.stepContainer}>
+              <View style={styles.stepIconContainer}>
+                <View style={styles.stepIconBg}>
+                  <FastImage source={crypto_staking_icon2} style={styles.stepIcon} resizeMode="contain" tintColor="#A07246" />
+                </View>
+                <View style={styles.stepLine} />
+              </View>
+              <View style={styles.stepContent}>
+                <AppText style={styles.stepTitle}>Secure The Network</AppText>
+                <AppText style={styles.stepDesc}>Your stake helps validate transactions and keep the network secure.</AppText>
+              </View>
+            </View>
+
+            <View style={styles.stepContainer}>
+              <View style={styles.stepIconContainer}>
+                <View style={styles.stepIconBg}>
+                  <FastImage source={crypto_staking_icon3} style={styles.stepIcon} resizeMode="contain" tintColor="#A07246" />
+                </View>
+              </View>
+              <View style={styles.stepContent}>
+                <AppText style={styles.stepTitle}>Earn Rewards</AppText>
+                <AppText style={styles.stepDesc}>Get rewarded in real-time proportional to your contribution.</AppText>
+              </View>
+            </View>
+          </View>
+
+
+          <View style={styles.howToStakeSection}>
+            <AppText style={styles.whyStakeTitle}>How to stake on AGCE ?</AppText>
+
+            <View style={styles.gridContainer}>
+              <View style={styles.gridItem}>
+                <View style={styles.gridIconWrapper}>
+                  <View style={styles.gridIconCircle}>
+                    <FastImage source={wallet_ic} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                  </View>
+                  <View style={styles.badgeContainer}>
+                    <AppText style={styles.badgeText}>1</AppText>
+                  </View>
+                </View>
+                <AppText style={styles.gridTitle}>Connect Wallet</AppText>
+                <AppText style={styles.gridDesc}>Securely connect wallet to get started.</AppText>
+              </View>
+
+              <View style={styles.gridItem}>
+                <View style={styles.gridIconWrapper}>
+                  <View style={styles.gridIconCircle}>
+                    <FastImage source={deposit_icon2} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                  </View>
+                  <View style={styles.badgeContainer}>
+                    <AppText style={styles.badgeText}>2</AppText>
+                  </View>
+                </View>
+                <AppText style={styles.gridTitle}>Choose Asset</AppText>
+                <AppText style={styles.gridDesc}>Select the asset you want to stake.</AppText>
+              </View>
+
+              <View style={styles.gridItem}>
+                <View style={styles.gridIconWrapper}>
+                  <View style={styles.gridIconCircle}>
+                    <FastImage source={crypto_staking_icon} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                  </View>
+                  <View style={styles.badgeContainer}>
+                    <AppText style={styles.badgeText}>3</AppText>
+                  </View>
+                </View>
+                <AppText style={styles.gridTitle}>Start Staking</AppText>
+                <AppText style={styles.gridDesc}>Enter amount and confirm your staking.</AppText>
+              </View>
+
+              <View style={styles.gridItem}>
+                <View style={styles.gridIconWrapper}>
+                  <View style={styles.gridIconCircle}>
+                    <FastImage source={earningIcon} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                  </View>
+                  <View style={styles.badgeContainer}>
+                    <AppText style={styles.badgeText}>4</AppText>
+                  </View>
+                </View>
+                <AppText style={styles.gridTitle}>Earn Rewards</AppText>
+                <AppText style={styles.gridDesc}>Watch your rewards grow in real-time.</AppText>
+              </View>
+
+              <View style={styles.gridItem}>
+                <View style={styles.gridIconWrapper}>
+                  <View style={styles.gridIconCircle}>
+                    <FastImage source={withdrawal_icon2} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                  </View>
+                  <View style={styles.badgeContainer}>
+                    <AppText style={styles.badgeText}>5</AppText>
+                  </View>
+                </View>
+                <AppText style={styles.gridTitle}>Withdraw Anytime</AppText>
+                <AppText style={styles.gridDesc}>Claim rewards or unstake whenever you want.</AppText>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </AppSafeAreaView>
+
+      <RBSheet
+        ref={sheetRef}
+        keyboardAvoidingViewEnabled={false}
+        {...({ customModalProps: { statusBarTranslucent: true } } as any)}
+        closeOnDragDown={true}
+        closeOnPressMask={true}
+        customStyles={{
+          wrapper: {
+            backgroundColor: "rgba(0,0,0,0.5)"
+          },
+          draggableIcon: {
+            backgroundColor: "transparent",
+          },
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            height: 340,
+            paddingHorizontal: 20,
+            paddingBottom: 30,
+            backgroundColor: colors.white
+          }
+        }}
+      >
+        <View style={styles.sheetHeader}>
+          <AppText style={styles.sheetTitle}>USDT</AppText>
+        </View>
+
+        <View style={styles.sheetRow}>
+          <AppText style={styles.sheetLabel}>Est. APR</AppText>
+          <AppText style={styles.sheetValue}>3.45%</AppText>
+        </View>
+
+        <View style={styles.sheetRow}>
+          <AppText style={styles.sheetLabel}>Reward Coin</AppText>
+          <FastImage source={usdtIcon} style={styles.sheetCoinIcon} resizeMode="contain" />
+        </View>
+
+        <View style={styles.sheetRow}>
+          <AppText style={styles.sheetLabel}>Type</AppText>
+          <AppText style={styles.sheetValue}>Locked Staking</AppText>
+        </View>
+
+        <TouchableOpacity style={styles.stakeBtn}>
+          <AppText style={styles.stakeBtnText}>Stake</AppText>
+        </TouchableOpacity>
+      </RBSheet>
+
+      <RBSheet
+        ref={faqSheetRef}
+        keyboardAvoidingViewEnabled={false}
+        {...({ customModalProps: { statusBarTranslucent: true } } as any)}
+        closeOnDragDown={true}
+        closeOnPressMask={true}
+        height={450}
+        customStyles={{
+          wrapper: {
+            backgroundColor: "rgba(0,0,0,0.5)"
+          },
+          draggableIcon: {
+            backgroundColor: "transparent",
+          },
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingBottom: 20,
+            backgroundColor: colors.white
+          }
+        }}
+      >
+        <View style={styles.modalHeader}>
+          <AppText style={styles.modalTitle}>FAQ</AppText>
+          <TouchableOpacity onPress={() => faqSheetRef.current?.close()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <AppText style={styles.modalCloseText}>×</AppText>
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {faqData.map((item, index) => (
+            <View key={String(index)} style={[styles.faqItemInner, index === faqData.length - 1 && styles.faqItemInnerLast]}>
+              <TouchableOpacity
+                style={styles.faqQuestionRow}
+                onPress={() => setFaqActiveIndex(faqActiveIndex === index ? null : index)}
+                activeOpacity={0.7}
+              >
+                <AppText style={styles.faqQuestion}>{item.title}</AppText>
+                <FastImage
+                  source={faqActiveIndex === index ? upIcon : downIcon}
+                  resizeMode="contain"
+                  style={styles.faqArrow}
+                  tintColor="#333"
+                />
+              </TouchableOpacity>
+              {faqActiveIndex === index && (
+                <View style={styles.faqAnswer}>
+                  <AppText style={styles.faqAnswerText}>{item.content}</AppText>
+                </View>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      </RBSheet>
+    </>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.white
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    height: 56,
+  },
+  iconBtn: {
+    padding: 8,
+  },
+  icon: {
+    width: 20,
+    height: 20,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+  },
+  bannerContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bannerTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  bannerTitle: {
+    fontSize: 22,
+    color: colors.black,
+    marginBottom: 8,
+    fontFamily: fontFamilySemiBold
+  },
+  bannerSubtitle: {
+    fontSize: 14,
+    color: '#333333',
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  aboutBtn: {
+    backgroundColor: '#F0F0F5',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  aboutBtnText: {
+    fontSize: 14,
+    color: colors.black,
+    fontFamily: fontFamilyMedium
+  },
+  bannerImgContainer: {
+    width: 140,
+    height: 140,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  bannerImg: {
+    width: '100%',
+    height: '100%',
+  },
+  sectionContainer: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+    marginBottom: 12,
+  },
+  filterRow: {
+    marginBottom: 20,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  checkboxActive: {
+    borderColor: '#333',
+  },
+  checkIcon: {
+    width: 10,
+    height: 10,
+  },
+  checkboxText: {
+    fontSize: 12,
+    color: colors.black,
+    lineHeight: 16,
+    fontFamily: fontFamilyMedium,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F7F7F7',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 40,
+    width: '100%',
+  },
+  searchIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.black,
+    padding: 0,
+    fontFamily: fontFamilyMedium,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  tableHeaderText: {
+    fontSize: 12,
+    color: '#888',
+    fontFamily: fontFamilyMedium,
+  },
+  aprHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  upDownIcon: {
+    width: 10,
+    height: 14,
+    marginLeft: 4,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  coinInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coinIcon: {
+    width: 32,
+    height: 32,
+    marginRight: 10,
+  },
+  coinName: {
+    fontSize: 14,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+    marginRight: 8,
+  },
+  newBadge: {
+    backgroundColor: '#4EFC99',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  newBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+  },
+  aprText: {
+    fontSize: 14,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+  },
+  infoSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  infoSectionTitle: {
+    fontSize: 18,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+    marginBottom: 20,
+  },
+  stepContainer: {
+    flexDirection: 'row',
+  },
+  stepIconContainer: {
+    alignItems: 'center',
+    marginRight: 16,
+    width: 48,
+  },
+  stepIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: '#F3E5D8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  stepIcon: {
+    width: 20,
+    height: 20,
+  },
+  stepLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#E6D2C0',
+    marginTop: -8,
+    marginBottom: -8,
+    zIndex: 1,
+  },
+  stepContent: {
+    flex: 1,
+    paddingTop: 4,
+    paddingBottom: 24,
+  },
+  stepTitle: {
+    fontSize: 14,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+    marginBottom: 4,
+  },
+  stepDesc: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+    fontFamily: fontFamilyMedium,
+  },
+  whyStakeSection: {
+    paddingHorizontal: 20,
+    marginTop: 5,
+    marginBottom: 20,
+  },
+  whyStakeTitle: {
+    fontSize: 18,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+    marginBottom: 20,
+  },
+  featureCard: {
+    flexDirection: 'row',
+    backgroundColor: '#F9F9F9',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  featureIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  featureIcon: {
+    width: 24,
+    height: 24,
+  },
+  featureTextContainer: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 14,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+    marginBottom: 4,
+  },
+  featureDesc: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+    fontFamily: fontFamilyMedium,
+  },
+  howToStakeSection: {
+    paddingHorizontal: 20,
+    marginTop: 0,
+    marginBottom: 40,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  gridIconWrapper: {
+    position: 'relative',
+    marginBottom: 16,
+    marginTop: 10,
+  },
+  gridIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3.84,
+    elevation: 2,
+  },
+  gridIcon: {
+    width: 28,
+    height: 28,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -10,
+    alignSelf: 'center',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F3E5D8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+  },
+  gridTitle: {
+    fontSize: 15,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  gridDesc: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+    fontFamily: fontFamilyMedium,
+    textAlign: 'center',
+    paddingHorizontal: 10,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+  },
+  closeIcon: {
+    width: 20,
+    height: 20,
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F5',
+  },
+  sheetLabel: {
+    fontSize: 14,
+    color: '#888',
+    fontFamily: fontFamilyMedium,
+  },
+  sheetValue: {
+    fontSize: 14,
+    color: colors.black,
+    fontFamily: fontFamilySemiBold,
+  },
+  sheetCoinIcon: {
+    width: 24,
+    height: 24,
+  },
+  stakeBtn: {
+    backgroundColor: '#2b2f36',
+    borderRadius: 8,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 'auto',
+  },
+  stakeBtnText: {
+    fontSize: 14,
+    color: colors.white,
+    fontFamily: fontFamilyMedium,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F5',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+  },
+  modalCloseText: {
+    fontSize: 24,
+    color: colors.black,
+  },
+  modalList: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  faqItemInner: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F5',
+  },
+  faqItemInnerLast: {
+    borderBottomWidth: 0,
+  },
+  faqQuestionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  faqQuestion: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: fontFamilySemiBold,
+    color: colors.black,
+  },
+  faqArrow: {
+    width: 14,
+    height: 14,
+    marginLeft: 10,
+  },
+  faqAnswer: {
+    marginTop: 12,
+  },
+  faqAnswerText: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 20,
+    fontFamily: fontFamilyMedium,
+  },
+});
+
+export default StakingDashboard;

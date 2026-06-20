@@ -26,6 +26,7 @@ interface AppSafeAreaViewProps {
   isfrom?: any;
   /** Light splash: dark status bar area; rest of screen stays light (image + body). */
   darkStatusBarOnLightSplash?: boolean;
+  forceBarStyle?: 'dark-content' | 'light-content';
 }
 
 const AppSafeAreaView = ({
@@ -35,12 +36,13 @@ const AppSafeAreaView = ({
   backgroundColor,
   isfrom,
   darkStatusBarOnLightSplash,
+  forceBarStyle,
 }: AppSafeAreaViewProps) => {
   const { colors: themeColors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const splashLight = Boolean(darkStatusBarOnLightSplash && source);
   const shellBg = splashLight ? SPLASH_BODY_BG : themeColors.background;
-  const barStyle = splashLight ? 'light-content' : isDark ? 'light-content' : 'dark-content';
+  const barStyle = forceBarStyle ? forceBarStyle : splashLight ? 'light-content' : isDark ? 'light-content' : 'dark-content';
   const androidStatusBg = splashLight ? SPLASH_STATUS_BAR_BG : themeColors.background;
 
   const splashTopOverlay =

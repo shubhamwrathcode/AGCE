@@ -90,7 +90,7 @@ const MainApp = () => {
     <SafeAreaProvider>
       <StatusBar
         backgroundColor={colors.white}
-        barStyle={isDark ? "light-content" : "dark-content"}
+        barStyle={"dark-content"}
         translucent={false}
       />
       <SocketProvider>

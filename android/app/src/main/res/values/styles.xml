@@ -8,8 +8,8 @@
         <item name="colorPrimaryDark">#FFFFFF</item>
         <item name="colorAccent">#D1AA67</item>
 
-        <item name="android:statusBarColor">#FFFFFF</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:autofilledHighlight">@android:color/transparent</item>
         <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>

@@ -96,11 +96,6 @@ export const LANGUAGE_PREFERENCE_SCREEN: string = 'LANGUAGE_PREFERENCE_SCREEN';
 export const QUICK_BUY_SELL: string = 'QUICK_BUY_SELL';
 export const QS_TRANSACTION: string = 'QS_TRANSACTION';
 
-export const STAKING: string = 'STAKING';
-export const STAKING_SUCCESS: string = 'STAKING_SUCCESS';
-export const LAKED_STAKING: string = 'LAKED_STAKING';
-export const STAKING_HISTORY: string = 'STAKING_HISTORY';
-export const p2pHome: string = 'STAKING_HISTORY';
 export const p2pOrder: string = 'p2pOrder';
 export const p2pProfile: string = 'p2pProfile';
 export const p2pAds: string = 'p2pAds';
@@ -179,3 +174,4 @@ export const THIRD_PARTY_ACCOUNT_ACCESS_SCREEN: string = 'THIRD_PARTY_ACCOUNT_AC
 export const CLOSE_ACCOUNT_REASON_SCREEN: string = 'CLOSE_ACCOUNT_REASON_SCREEN';
 export const PERSONAL_PAGE_SCREEN: string = 'PERSONAL_PAGE_SCREEN';
 export const CONVERT_HISTORY_SCREEN: string = 'CONVERT_HISTORY_SCREEN';
+export const STAKING_DASHBOARD_SCREEN: string = 'STAKING_DASHBOARD_SCREEN';

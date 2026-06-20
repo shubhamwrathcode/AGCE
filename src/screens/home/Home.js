@@ -89,7 +89,6 @@ import { colors, lightTheme } from "../../theme/colors";
 import { SocketContext } from "../../SocketProvider";
 
 import { useTheme } from "../../hooks/useTheme";
-import StakingDahboardData from "./StakingDahboardData";
 
 const Home = () => {
   const dispatch = useAppDispatch();

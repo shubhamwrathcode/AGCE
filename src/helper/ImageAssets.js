@@ -370,6 +370,24 @@ export const testnet = require('../../assets/images/testnet.png');
 export const telegram = require('../../assets/images/telegram.png');
 export const fee = require('../../assets/images/fee.png');
 export const learnVideo = require('../../assets/images/learnVideo.png');
+export const staking_bnr_img = require('../../assets/images/staking_bnr_img.png');
+export const crypto_staking_icon = require('../../assets/images/crypto_staking_icon.png');
+export const crypto_staking_icon2 = require('../../assets/images/crypto_staking_icon2.png');
+export const crypto_staking_icon3 = require('../../assets/images/crypto_staking_icon3.png');
+export const stake_crypto = require('../../assets/images/stake_crypto.png');
+export const stake_acge_icon = require('../../assets/images/stake_acge_icon.png');
+export const stake_acge_icon2 = require('../../assets/images/stake_acge_icon2.png');
+export const stake_acge_icon3 = require('../../assets/images/stake_acge_icon3.png');
+
+
+
+
+
+
+
+
+
+
 
 
 

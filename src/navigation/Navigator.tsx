@@ -149,6 +149,7 @@ import MarginTransferHistoryScreen from "../screens/spotScreen/MarginTransferHis
 import OptionHistory from "../screens/Futures/OptionsTrade/OptionHistory";
 import FutureHistoryCardDetailPage from "../screens/Futures/FutureHistoryCardDetailPage";
 import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
+import StakingDashboard from "../screens/staking/StakingDashboard";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -610,6 +611,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name="OptionHistory"
         component={OptionHistory}
+      />
+      <Stack.Screen
+        name={routes.STAKING_DASHBOARD_SCREEN}
+        component={StakingDashboard}
       />
     </Stack.Navigator>
   );
