@@ -560,7 +560,22 @@ const OrderBookPanel = memo(({
     ),
     [showOrderBookSkeleton, themeColors.secondaryText, styles.emptyOrderBook, theme, isDark]
   );
-  const currentPriceColor = change_percentage < 0 ? themeColors.red : themeColors.green;
+  const [isPricePositive, setIsPricePositive] = React.useState(true);
+  const prevPriceRef = React.useRef(0);
+
+  React.useEffect(() => {
+    const currentNum = Number(buy_price);
+    if (currentNum > prevPriceRef.current && prevPriceRef.current !== 0) {
+      setIsPricePositive(true);
+    } else if (currentNum < prevPriceRef.current && prevPriceRef.current !== 0) {
+      setIsPricePositive(false);
+    }
+    if (currentNum > 0) {
+      prevPriceRef.current = currentNum;
+    }
+  }, [buy_price]);
+
+  const currentPriceColor = isPricePositive ? themeColors.green : themeColors.red;
   const renderCurrentPrice = () => (
     <View style={styles.currentPriceBox}>
       {showOrderBookSkeleton ? (
@@ -1897,6 +1912,8 @@ const Spot = () => {
           socketThrottleTimerRef.current = null;
         }
         pendingSocketFlushRef.current = null;
+        dispatch(setBuyOrders([]));
+        dispatch(setSellOrders([]));
 
         /** Do not unsubscribe or clear the order book on blur (e.g. opening SpotChartScreen).
          *  SocketProvider keeps one exchange subscription; Redux keeps last book until pair changes or Spot unmounts. */
