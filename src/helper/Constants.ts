@@ -7,9 +7,10 @@ export const SELECTED_LANGUAGE = 'SELECTED_LANGUAGE';
  * (`https://agcebackend.wrathcode.com`). Used by AppOperation for `v1/...` calls.
  */
 
-// export const BASE_URL = 'http://192.168.29.246:9503/';
+export const BASE_URL = 'http://192.168.29.245:9503';
 
-export const BASE_URL = 'https://agcebackend.wrathcode.com/';
+
+// export const BASE_URL = 'https://agcebackend.wrathcode.com/';
 // export const BASE_URL = 'https://backend.arabglobal.io/';
 
 
@@ -17,7 +18,7 @@ export const BASE_URL = 'https://agcebackend.wrathcode.com/';
  * Spot chart WebView (ejected web), e.g. `.../chart/light/BTC_USDT`.
  * Not the API host — keep separate from `BASE_URL`.
  */
-export const CHART_WEB_BASE_URL = 'https://agce.wrathcode.com/';
+export const CHART_WEB_BASE_URL = 'http://192.168.29.246:9503/';
 /**
  * Static / uploaded assets (coin icons, profile images, banners) — same as web
  * `baseImage` / `appUrl2` (`https://backend.demoexchange.wrathcode.com`).

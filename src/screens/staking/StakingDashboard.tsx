@@ -213,9 +213,23 @@ const StakingDashboard = () => {
                     <View style={styles.coinInfo}>
                       <FastImage source={{ uri: `${IMAGE_BASE_URL}${item.iconPath}` }} style={styles.coinIcon} resizeMode="contain" />
                       <AppText style={styles.coinName}>{item?.currency || item?.coin || 'Unknown'}</AppText>
-                      {String(item?.tag || "").toLowerCase() === "new" && (
-                        <View style={styles.newBadge}>
-                          <AppText style={styles.newBadgeText}>New</AppText>
+                      {!!item?.tag && (
+                        <View style={[
+                          styles.newBadge,
+                          {
+                            backgroundColor: String(item.tag).toLowerCase() === 'vip' ? 'rgba(240, 185, 11, 0.15)' :
+                                           String(item.tag).toLowerCase() === 'new' ? 'rgba(3, 166, 109, 0.15)' :
+                                           'rgba(240, 185, 11, 0.15)',
+                          }
+                        ]}>
+                          <AppText style={[
+                            styles.newBadgeText,
+                            {
+                              color: String(item.tag).toLowerCase() === 'vip' ? '#f0b90b' :
+                                     String(item.tag).toLowerCase() === 'new' ? '#03a66d' :
+                                     '#f0b90b',
+                            }
+                          ]}>{item.tag}</AppText>
                         </View>
                       )}
                     </View>

@@ -294,7 +294,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 20 }}>
             <TouchableOpacity
-              style={{ flex: 1, backgroundColor: (!stakeAmount || !stakeChecked || stakeLoading) ? '#f0f0f5' : '#f0b90b', paddingVertical: 14, borderRadius: 8, alignItems: 'center' }}
+              style={{ flex: 1, backgroundColor: (!stakeAmount || !stakeChecked || stakeLoading) ? '#f0f0f5' : colors.orangeTheme, paddingVertical: 14, borderRadius: 8, alignItems: 'center' }}
               onPress={submitStake}
               disabled={!stakeAmount || !stakeChecked || stakeLoading}
             >
@@ -396,7 +396,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 20 }}>
             <TouchableOpacity
-              style={{ flex: 1, backgroundColor: stakeLoading ? '#f0f0f5' : '#f0b90b', paddingVertical: 14, borderRadius: 8, alignItems: 'center' }}
+              style={{ flex: 1, backgroundColor: stakeLoading ? '#f0f0f5' : colors.orangeTheme, paddingVertical: 14, borderRadius: 8, alignItems: 'center' }}
               onPress={finalSubmitStake}
               disabled={stakeLoading}
             >
