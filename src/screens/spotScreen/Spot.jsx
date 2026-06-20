@@ -590,9 +590,9 @@ const OrderBookPanel = memo(({
             <AppText style={styles.currentPriceUSD}>
               ≈ ${buy_price}
             </AppText>
-            <AppText style={{ fontSize: 11, fontWeight: "600", color: currentPriceColor }}>
+            {/* <AppText style={{ fontSize: 11, fontWeight: "600", color: currentPriceColor }}>
               {Number(change_percentage) >= 0 ? "+" : ""}{Number(change_percentage || 0).toFixed(2)}%
-            </AppText>
+            </AppText> */}
           </View>
         </>
       )}

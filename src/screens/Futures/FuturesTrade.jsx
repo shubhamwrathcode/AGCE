@@ -1165,9 +1165,15 @@ const FuturesUI = () => {
           )}
 
           {/* Current Price */}
-          <View style={styles.currentPrice}>
-            <AppText type={SIXTEEN} style={{ color: isPricePositive ? colors.green : colors.red }} weight={SEMI_BOLD}>{livePrice ? parseFloat(livePrice).toFixed(5) : "0.00000"}</AppText>
-            <AppText type={TEN} style={{ color: themeColors.secondaryText }}>${livePrice ? parseFloat(livePrice).toFixed(5) : "0.00000"}</AppText>
+          <View style={[styles.currentPrice, { alignItems: 'flex-start' }]}>
+            <AppText style={{ color: isPricePositive ? colors.green : colors.red, fontWeight: "bold", fontSize: 19 }}>
+              {livePrice ? Number(livePrice).toFixed(selectedCoin?.quote_decimal || 2) : "0.00"}
+            </AppText>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+              <AppText style={{ fontSize: 11, color: "#8E8E93", fontWeight: "500" }}>
+                ≈ ${livePrice ? Number(livePrice).toFixed(selectedCoin?.quote_decimal || 2) : "0.00"}
+              </AppText>
+            </View>
           </View>
 
           {/* Bids */}
