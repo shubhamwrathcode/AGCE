@@ -28,11 +28,14 @@ import { colors } from "../../../theme/colors";
 import { appOperation } from "../../../appOperation";
 import moment from "moment";
 import FastImage from "react-native-fast-image";
-import { right_ic, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, eye_open_icon, closeDark_ic } from "../../../helper/ImageAssets";
+import { right_ic, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, eye_open_icon, closeDark_ic, filterNew, filterIcon, } from "../../../helper/ImageAssets";
 import NavigationService from "../../../navigation/NavigationService";
 
 import { showError, showSuccess } from "../../../helper/logger";
 import { IMAGE_BASE_URL } from "../../../helper/Constants";
+import CustomDropdown from '../../../common/CustomDropdown';
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+import { fontFamilyMedium } from "../../../theme/typography";
 
 const parseDec = (val) => {
   if (val == null) return "0";
@@ -97,7 +100,6 @@ const StakingCard = React.memo(({ item, themeColors, isDark, onView, onStake, on
           <AppText type={FIFTEEN} weight={BOLD} style={{ color: textColor }}>
             {currency}
           </AppText>
-          <FastImage source={right_ic} style={{ width: 12, height: 12, marginLeft: 4 }} resizeMode="contain" tintColor={labelColor} />
         </View>
         <StatusBadge status={item?.status} />
       </View>
@@ -159,6 +161,7 @@ const StakingWalletTab = ({ theme, themeColors }) => {
   const confirmCancelSheetRef = React.useRef(null);
   const redeemSheetRef = React.useRef(null);
   const confirmRedeemSheetRef = React.useRef(null);
+  const filterSheetRef = React.useRef(null);
 
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -168,6 +171,20 @@ const StakingWalletTab = ({ theme, themeColors }) => {
   const [redeemAmount, setRedeemAmount] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  const today = new Date();
+  const threeMonthsAgo = new Date(today);
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const fmtDate = (d) => d.toISOString().slice(0, 10);
+
+  const [filterCoin, setFilterCoin] = useState("All");
+  const [filterType, setFilterType] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterDateFrom, setFilterDateFrom] = useState(fmtDate(threeMonthsAgo));
+  const [filterDateTo, setFilterDateTo] = useState(fmtDate(today));
+
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState("from"); // "from" | "to"
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 10000);
@@ -182,6 +199,47 @@ const StakingWalletTab = ({ theme, themeColors }) => {
       hideSub.remove();
     };
   }, []);
+
+  const coinOptions = useMemo(() => {
+    const coins = [...new Set(positions.map((p) => p.currency).filter(Boolean))];
+    return ["All", ...coins];
+  }, [positions]);
+
+  const stakingTypeOptions = ["All", "LOCKED", "FLEXIBLE"];
+  const statusOptions = ["All", "ACTIVE", "COMPLETED", "CANCELLED"];
+
+  const rowBetweenDateInputs = (rowDate, dateFromStr, dateToStr) => {
+    if (!rowDate) return false;
+    const d = new Date(rowDate);
+    if (isNaN(d.valueOf())) return true;
+    const f = dateFromStr ? new Date(dateFromStr) : null;
+    const t = dateToStr ? new Date(dateToStr) : null;
+    if (f && d < f) return false;
+    if (t) {
+      const endOfDay = new Date(t);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (d > endOfDay) return false;
+    }
+    return true;
+  };
+
+  const filteredPositions = useMemo(() => {
+    return positions.filter((r) => {
+      if (filterCoin !== "All" && String(r.currency || "").toUpperCase() !== String(filterCoin).toUpperCase()) return false;
+      if (filterType !== "All" && String(r.stakingType || "LOCKED").toUpperCase() !== String(filterType).toUpperCase()) return false;
+      if (filterStatus !== "All" && String(r.status || "").toUpperCase() !== String(filterStatus).toUpperCase()) return false;
+      if (!rowBetweenDateInputs(r.startDate || r.createdAt, filterDateFrom, filterDateTo)) return false;
+      return true;
+    });
+  }, [positions, filterCoin, filterType, filterStatus, filterDateFrom, filterDateTo]);
+
+  const resetFilters = () => {
+    setFilterCoin("All");
+    setFilterType("All");
+    setFilterStatus("All");
+    setFilterDateFrom(fmtDate(threeMonthsAgo));
+    setFilterDateTo(fmtDate(today));
+  };
 
   const fetchPositions = useCallback(async (pageNum = 1, isLoadMore = false) => {
     if (loading || (isLoadMore && loadingMore)) return;
@@ -236,7 +294,7 @@ const StakingWalletTab = ({ theme, themeColors }) => {
       showError("Package details not found.");
       return;
     }
-    NavigationService.navigate('StakingPurchase', { 
+    NavigationService.navigate('StakingPurchase', {
       plan: item.packageId,
       positionId: item._id,
       isTopUp: true,
@@ -329,14 +387,21 @@ const StakingWalletTab = ({ theme, themeColors }) => {
         </View>
       ) : (
         <FlatList
-          data={positions}
+          data={filteredPositions}
           keyExtractor={(item, index) => item?._id || item?.id || String(index)}
           contentContainerStyle={{ paddingBottom: 40 }}
           scrollEnabled={false}
+          ListHeaderComponent={
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 }}>
+              <TouchableOpacity onPress={() => filterSheetRef.current?.open()} style={{ padding: 6 }}>
+                <FastImage source={filterIcon} style={{ width: 18, height: 18 }} tintColor={themeColors.text} resizeMode="contain" />
+              </TouchableOpacity>
+            </View>
+          }
           renderItem={({ item, index }) => (
             <StakingCard
               item={item}
-              isLast={index === positions.length - 1}
+              isLast={index === filteredPositions.length - 1}
               themeColors={themeColors}
               isDark={isDark}
               onView={handleView}
@@ -866,6 +931,110 @@ const StakingWalletTab = ({ theme, themeColors }) => {
           })()}
         </View>
       </RBSheet>
+
+      {/* Filter Modal */}
+      <RBSheet
+        ref={filterSheetRef}
+        closeOnDragDown={true}
+        dragFromTopOnly={true}
+        closeOnPressMask={true}
+        keyboardAvoidingViewEnabled={false}
+        {...({ customModalProps: { statusBarTranslucent: true } })}
+        customStyles={{
+          wrapper: { backgroundColor: "rgba(0,0,0,0.5)" },
+          draggableIcon: { backgroundColor: themeColors.text || "#000" },
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            backgroundColor: themeColors?.background || "#FFF",
+            height: 600,
+          }
+        }}
+      >
+        <View style={[styles.modalContent, { backgroundColor: themeColors?.background || "#FFF", flex: 1, paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={{ paddingBottom: 24 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <AppText style={{ fontSize: 18, color: themeColors?.text }} weight={SEMI_BOLD}>Filters</AppText>
+              <TouchableOpacity onPress={() => filterSheetRef.current?.close()} style={{ padding: 4 }}>
+                <FastImage source={closeDark_ic} style={{ width: 14, height: 14 }} tintColor={themeColors?.secondaryText} resizeMode="contain" />
+              </TouchableOpacity>
+            </View>
+
+            <AppText style={{ color: themeColors?.text, marginBottom: 8, fontSize: 14 }} weight={SEMI_BOLD}>Coin</AppText>
+            <CustomDropdown
+              data={coinOptions}
+              selected={filterCoin}
+              onSelect={setFilterCoin}
+              triggerStyle={{ marginBottom: 16, borderColor: themeColors?.themeBorderColor || "#EEE" }}
+            />
+
+            <AppText style={{ color: themeColors?.text, marginBottom: 8, fontSize: 14 }} weight={SEMI_BOLD}>Type</AppText>
+            <CustomDropdown
+              data={stakingTypeOptions}
+              selected={filterType}
+              onSelect={setFilterType}
+              triggerStyle={{ marginBottom: 16, borderColor: themeColors?.themeBorderColor || "#EEE" }}
+            />
+
+            <AppText style={{ color: themeColors?.text, marginBottom: 8, fontSize: 14 }} weight={SEMI_BOLD}>Status</AppText>
+            <CustomDropdown
+              data={statusOptions}
+              selected={filterStatus}
+              onSelect={setFilterStatus}
+              triggerStyle={{ marginBottom: 16, borderColor: themeColors?.themeBorderColor || "#EEE" }}
+            />
+
+            <AppText style={{ color: themeColors?.text, marginBottom: 8, fontSize: 14 }} weight={SEMI_BOLD}>Date</AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <TouchableOpacity
+                style={{ flex: 1, borderWidth: 1, borderColor: themeColors?.themeBorderColor || "#EEE", borderRadius: 8, padding: 12, alignItems: 'center' }}
+                onPress={() => { setDatePickerMode("from"); setDatePickerVisibility(true); }}
+              >
+                <AppText style={{ color: themeColors?.text, fontFamily: fontFamilyMedium, fontSize: 14 }}>{filterDateFrom}</AppText>
+              </TouchableOpacity>
+              <AppText style={{ marginHorizontal: 8, color: themeColors?.secondaryText }}>→</AppText>
+              <TouchableOpacity
+                style={{ flex: 1, borderWidth: 1, borderColor: themeColors?.themeBorderColor || "#EEE", borderRadius: 8, padding: 12, alignItems: 'center' }}
+                onPress={() => { setDatePickerMode("to"); setDatePickerVisibility(true); }}
+              >
+                <AppText style={{ color: themeColors?.text, fontFamily: fontFamilyMedium, fontSize: 14 }}>{filterDateTo}</AppText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={{ flex: 1, height: 48, borderRadius: 10, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: themeColors?.secondaryText }}
+                onPress={resetFilters}
+              >
+                <AppText style={{ color: themeColors?.text, fontWeight: "600", fontSize: 15 }}>Reset</AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, height: 48, borderRadius: 10, justifyContent: "center", alignItems: "center", backgroundColor: colors.buttonBg }}
+                onPress={() => filterSheetRef.current?.close()}
+              >
+                <AppText style={{ color: "#FFF", fontWeight: "600", fontSize: 15 }}>Search</AppText>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </RBSheet>
+
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
+        themeVariant={isDark ? "dark" : "light"}
+        isDarkModeEnabled={isDark}
+        textColor={isDark ? "#FFFFFF" : "#000000"}
+        maximumDate={today}
+        date={datePickerMode === "from" && !isNaN(new Date(filterDateFrom).getTime()) ? new Date(filterDateFrom) : (!isNaN(new Date(filterDateTo).getTime()) ? new Date(filterDateTo) : today)}
+        onConfirm={(date) => {
+          if (datePickerMode === "from") setFilterDateFrom(fmtDate(date));
+          else setFilterDateTo(fmtDate(date));
+          setDatePickerVisibility(false);
+        }}
+        onCancel={() => setDatePickerVisibility(false)}
+      />
     </View>
   );
 };
