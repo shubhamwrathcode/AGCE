@@ -980,6 +980,12 @@ export default (appOperation: AppOperation) => ({
     ),
   break_staking: (data: any) =>
     appOperation.post('staking/break_staking', data, CUSTOMER_TYPE),
+  Staking_Redeem: (positionId: string, redeemAmount: number) =>
+    appOperation.post(`staking/redeem`, { positionId, redeemAmount }, CUSTOMER_TYPE),
+  Staking_TopUp: (positionId: string, topUpAmount: number, walletType: string = "earning") =>
+    appOperation.post(`staking/top-up`, { positionId, topUpAmount, walletType }, CUSTOMER_TYPE),
+  Staking_CancelPosition: (positionId: string, cancelReason?: string) =>
+    appOperation.post(`staking/position/${positionId}/cancel`, { positionId, ...(cancelReason ? { cancelReason } : {}) }, CUSTOMER_TYPE),
   /** Legacy — prefer `spot_me_trades` (web parity: GET /spot/v1/me/trades). */
   get_trade_history: (skip: any, limit: any, pair?: string) =>
     appOperation.get(

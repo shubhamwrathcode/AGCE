@@ -14,7 +14,7 @@ import { getStaking } from '../../actions/homeActions';
 import { showError, showSuccess } from '../../helper/logger';
 
 const StakingPurchase = ({ route, navigation }: any) => {
-  const { plan: stakeSelectedPlan } = route.params || {};
+  const { plan: stakeSelectedPlan, positionId, isTopUp, currentStakingAmount: passedCurrentStaking } = route.params || {};
 
   const confirmOverviewSheetRef = useRef<any>(null);
   const dispatch = useDispatch<any>();
@@ -23,25 +23,82 @@ const StakingPurchase = ({ route, navigation }: any) => {
   const [stakeChecked, setStakeChecked] = useState(false);
   const [stakeLoading, setStakeLoading] = useState(false);
   const [stakeWalletBalance, setStakeWalletBalance] = useState("0");
-  const [currentStaking, setCurrentStaking] = useState("0");
+  const [currentStaking, setCurrentStaking] = useState(passedCurrentStaking || "0");
   const [stakeBalanceLoading, setStakeBalanceLoading] = useState(false);
   const [currentStakingLoading, setCurrentStakingLoading] = useState(false);
 
+  const formatStakeBalance = (balance: any) => {
+    const n = parseFloat(balance);
+    if (!Number.isFinite(n) || n === 0) return "0.00";
+    return n >= 1 ? n.toFixed(2) : n.toFixed(6);
+  };
+
+  const getReturnAccruesLabel = (interestStartsAfterDays: any) => {
+    if (interestStartsAfterDays === 0) return "Time Subscribed";
+    return `D+${interestStartsAfterDays || 1}`;
+  };
+
   useEffect(() => {
     if (stakeSelectedPlan) {
+      if (passedCurrentStaking) {
+        setCurrentStaking(String(passedCurrentStaking));
+      } else {
+        fetchCurrentStaking();
+      }
       fetchBalances();
     }
-  }, [stakeSelectedPlan]);
+  }, [stakeSelectedPlan, passedCurrentStaking]);
+
+  const fetchCurrentStaking = async () => {
+    setCurrentStakingLoading(true);
+    try {
+      const res: any = await appOperation.customer.Staking_MyPositions(1, 100);
+      if (res?.success && Array.isArray(res.data)) {
+        const selectedId = stakeSelectedPlan?._id || stakeSelectedPlan?.packageId;
+        const currency = String(stakeSelectedPlan?.currency || "").toUpperCase();
+
+        const activeMatches = res.data.filter((position: any) => {
+          if (String(position?.status || "").toUpperCase() !== "ACTIVE") return false;
+          const posPkgId = position?.packageId?._id || position?.packageId?.packageId || position?.packageId;
+          if (selectedId && posPkgId && String(posPkgId) === String(selectedId)) return true;
+          return String(position.currency || "").toUpperCase() === currency;
+        });
+
+        if (activeMatches.length === 0) {
+          setCurrentStaking("0");
+        } else {
+          const total = activeMatches.reduce((sum: number, position: any) => {
+            const raw = position?.totalInvestedAmount ?? position?.investedAmount ?? "0";
+            const val = raw?.["$numberDecimal"] || raw;
+            const n = parseFloat(val) || 0;
+            return sum + n;
+          }, 0);
+          setCurrentStaking(String(total));
+        }
+      } else {
+        setCurrentStaking("0");
+      }
+    } catch {
+      setCurrentStaking("0");
+    } finally {
+      setCurrentStakingLoading(false);
+    }
+  };
 
   const fetchBalances = async () => {
     setStakeBalanceLoading(true);
     try {
       let currencyId = stakeSelectedPlan?.currencyId || stakeSelectedPlan?.currency_id;
+
       if (!currencyId) {
         const walletRes: any = await appOperation.customer.user_main_wallet("earning");
         if (walletRes?.success && Array.isArray(walletRes.data)) {
-          const row = walletRes.data.find((item: any) => String(item.coin?.short_name).toUpperCase() === String(stakeSelectedPlan.currency).toUpperCase());
-          currencyId = row?.coin?.currency_id || row?.currency_id || row?.coin?._id;
+          const row = walletRes.data.find((item: any) =>
+            String(item?.short_name || item?.currency || item?.coin?.short_name || item?.coin?.currency || "").toUpperCase() === String(stakeSelectedPlan.currency).toUpperCase()
+          );
+          if (row) {
+            currencyId = row?.coin?.currency_id || row?.currency_id || row?.coin?._id || row?._id;
+          }
         }
       }
 
@@ -62,23 +119,25 @@ const StakingPurchase = ({ route, navigation }: any) => {
       setStakeBalanceLoading(false);
     }
 
-    setCurrentStakingLoading(true);
-    try {
-      const posRes: any = await appOperation.customer.Staking_MyPositions(1, 100);
-      if (posRes?.success && Array.isArray(posRes.data)) {
-        const activeMatches = posRes.data.filter((pos: any) =>
-          String(pos?.status || "").toUpperCase() === "ACTIVE" &&
-          (String(pos.packageId?._id || pos.packageId || "") === String(stakeSelectedPlan._id || stakeSelectedPlan.id) ||
-            String(pos.currency || "").toUpperCase() === String(stakeSelectedPlan.currency).toUpperCase())
-        );
+    if (!passedCurrentStaking) {
+      setCurrentStakingLoading(true);
+      try {
+        const posRes: any = await appOperation.customer.Staking_MyPositions(1, 100);
+        if (posRes?.success && Array.isArray(posRes.data)) {
+          const activeMatches = posRes.data.filter((pos: any) =>
+            String(pos?.status || "").toUpperCase() === "ACTIVE" &&
+            (String(pos.packageId?._id || pos.packageId || "") === String(stakeSelectedPlan._id || stakeSelectedPlan.id) ||
+              String(pos.currency || "").toUpperCase() === String(stakeSelectedPlan.currency).toUpperCase())
+          );
 
-        const total = activeMatches.reduce((sum: number, pos: any) => sum + (parseFloat(pos.investAmount) || 0), 0);
-        setCurrentStaking(String(total));
+          const total = activeMatches.reduce((sum: number, pos: any) => sum + (parseFloat(pos.investAmount) || 0), 0);
+          setCurrentStaking(String(total));
+        }
+      } catch (e) {
+        setCurrentStaking("0");
+      } finally {
+        setCurrentStakingLoading(false);
       }
-    } catch (e) {
-      setCurrentStaking("0");
-    } finally {
-      setCurrentStakingLoading(false);
     }
   };
 
@@ -114,23 +173,22 @@ const StakingPurchase = ({ route, navigation }: any) => {
     setStakeLoading(true);
     try {
       const amountNum = parseFloat(stakeAmount);
-      const payload = {
-        packageId: stakeSelectedPlan?._id || stakeSelectedPlan?.packageId || stakeSelectedPlan?.id,
-        investAmount: amountNum,
-        walletType: "earning"
-      };
+      let res: any;
 
-      console.log("=== STAKING API CALL ===");
-      console.log("URL:", "staking/subscribe");
-      console.log("PAYLOAD:", JSON.stringify(payload, null, 2));
+      if (isTopUp && positionId) {
 
-      const res: any = await appOperation.customer.Staking_Subscribe(payload);
-
-      console.log("RESPONSE:", JSON.stringify(res, null, 2));
-      console.log("========================");
+        res = await appOperation.customer.Staking_TopUp(positionId, amountNum, "earning");
+      } else {
+        const payload = {
+          packageId: stakeSelectedPlan?._id || stakeSelectedPlan?.packageId || stakeSelectedPlan?.id,
+          investAmount: amountNum,
+          walletType: "earning"
+        };
+        res = await appOperation.customer.Staking_Subscribe(payload);
+      }
 
       if (res?.success) {
-        showSuccess(res?.message || "Staking subscription successful.");
+        showSuccess(res?.message || (isTopUp ? "Top up successful." : "Staking subscription successful."));
         confirmOverviewSheetRef.current?.close();
         dispatch(getStaking());
         NavigationService.goBack();
@@ -162,7 +220,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
         <TouchableOpacity style={styles.iconBtn} onPress={() => NavigationService.goBack()}>
           <FastImage source={back_ic} style={styles.icon} resizeMode="contain" tintColor={colors.black} />
         </TouchableOpacity>
-        <AppText style={styles.headerTitle}>{stakeSelectedPlan.currency} Staking</AppText>
+        <AppText style={styles.headerTitle}>{stakeSelectedPlan.currency} {isTopUp ? "Top Up" : "Staking"}</AppText>
         <View style={styles.iconBtn} />
       </View>
 
@@ -186,7 +244,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
             <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#eee', borderRadius: 8, height: 48, paddingHorizontal: 12 }}>
               <TextInput
                 style={{ flex: 1, fontSize: 14, color: colors.black, height: '100%' }}
-                placeholder={`Min. ${stakeSelectedPlan.minAmount}`}
+                placeholder={`Min. ${stakeSelectedPlan.minAmount ?? stakeSelectedPlan.minimumAmount ?? 0}`}
                 placeholderTextColor="#888"
                 keyboardType="numeric"
                 value={stakeAmount}
@@ -205,13 +263,13 @@ const StakingPurchase = ({ route, navigation }: any) => {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                 <AppText style={{ fontSize: 12, color: '#888' }}>Available</AppText>
                 <AppText style={{ fontSize: 12, fontFamily: fontFamilySemiBold, color: colors.black }}>
-                  {stakeBalanceLoading ? "Loading..." : `${parseFloat(stakeWalletBalance).toFixed(4).replace(/\.?0+$/, '') || '0'} ${stakeSelectedPlan.currency}`}
+                  {stakeBalanceLoading ? "Loading..." : `${formatStakeBalance(stakeWalletBalance)} ${stakeSelectedPlan.currency}`}
                 </AppText>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <AppText style={{ fontSize: 12, color: '#888' }}>Your current staking</AppText>
                 <AppText style={{ fontSize: 12, fontFamily: fontFamilySemiBold, color: colors.black }}>
-                  {currentStakingLoading ? "Loading..." : `${parseFloat(currentStaking).toFixed(4).replace(/\.?0+$/, '') || '0'} ${stakeSelectedPlan.currency}`}
+                  {currentStakingLoading ? "Loading..." : `${formatStakeBalance(currentStaking)} ${stakeSelectedPlan.currency}`}
                 </AppText>
               </View>
             </View>
@@ -220,9 +278,22 @@ const StakingPurchase = ({ route, navigation }: any) => {
           {/* Est APR */}
           <View style={{ marginBottom: 20 }}>
             <AppText style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>Est. APR</AppText>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 12 }}>
-              <AppText style={{ fontSize: 14, color: '#888' }}>Standard APR</AppText>
-              <AppText style={{ fontSize: 14, fontFamily: fontFamilySemiBold, color: colors.black }}>{stakeSelectedPlan.returnPercentage}%</AppText>
+            <View style={{ borderWidth: 1, borderColor: '#eee', borderRadius: 8, padding: 12 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <AppText style={{ fontSize: 14, color: '#888' }}>Standard APR</AppText>
+                <AppText style={{ fontSize: 14, fontFamily: fontFamilySemiBold, color: colors.black }}>{stakeSelectedPlan.returnPercentage}%</AppText>
+              </View>
+              {Array.isArray(stakeSelectedPlan.bonusAprTiers) && stakeSelectedPlan.bonusAprTiers.length > 0 && (
+                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#eee' }}>
+                  <AppText style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>Bonus APR</AppText>
+                  {stakeSelectedPlan.bonusAprTiers.map((tier: any, index: number) => (
+                    <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <AppText style={{ fontSize: 13, color: '#444' }}>{tier.tierName}: {tier.minAmount}{tier.maxAmount ? ` - ${tier.maxAmount}` : '+'}</AppText>
+                      <AppText style={{ fontSize: 13, fontFamily: fontFamilySemiBold, color: colors.black }}>{Number(tier.bonusApr || 0).toFixed(2)}%</AppText>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
 
@@ -257,7 +328,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#ddd', marginRight: 12 }} />
                   <AppText style={{ fontSize: 13, color: '#888' }}>Return Accrues</AppText>
                 </View>
-                <AppText style={{ fontSize: 13, color: '#888' }}>D+1</AppText>
+                <AppText style={{ fontSize: 13, color: '#888' }}>{getReturnAccruesLabel(stakeSelectedPlan?.interestStartsAfterDays)}</AppText>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -271,7 +342,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#ddd', marginRight: 12 }} />
                   <AppText style={{ fontSize: 13, color: '#888' }}>Unbonding Period</AppText>
                 </View>
-                <AppText style={{ fontSize: 13, color: '#888' }}>About {stakeSelectedPlan.unbondingPeriodDays ?? stakeSelectedPlan.unbondingPeriod ?? 0} day(s)</AppText>
+                <AppText style={{ fontSize: 13, color: '#888' }}>About {stakeSelectedPlan.unbondingPeriodDays ?? stakeSelectedPlan.unbondingPeriod ?? 1} day(s)</AppText>
               </View>
             </View>
 
@@ -351,7 +422,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
               <AppText style={{ fontSize: 14, color: '#888', fontFamily: fontFamilyMedium }}>Staking Amount</AppText>
-              <AppText style={{ fontSize: 14, color: '#03a66d', fontFamily: fontFamilyMedium }}>{Number(stakeAmount || 0).toFixed(2).replace(/\.?0+$/, '') || stakeAmount} {stakeSelectedPlan?.currency}</AppText>
+              <AppText style={{ fontSize: 14, color: '#03a66d', fontFamily: fontFamilyMedium }}>{formatStakeBalance(stakeAmount)} {stakeSelectedPlan?.currency}</AppText>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
               <AppText style={{ fontSize: 14, color: '#888', fontFamily: fontFamilyMedium }}>Est. APR</AppText>
@@ -367,11 +438,11 @@ const StakingPurchase = ({ route, navigation }: any) => {
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
               <AppText style={{ fontSize: 14, color: '#888', fontFamily: fontFamilyMedium }}>Your current staking</AppText>
-              <AppText style={{ fontSize: 14, color: colors.black, fontFamily: fontFamilyMedium }}>{Number(currentStaking || 0).toFixed(2).replace(/\.?0+$/, '') || currentStaking} {stakeSelectedPlan?.currency}</AppText>
+              <AppText style={{ fontSize: 14, color: colors.black, fontFamily: fontFamilyMedium }}>{formatStakeBalance(currentStaking)} {stakeSelectedPlan?.currency}</AppText>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
               <AppText style={{ fontSize: 14, color: '#888', fontFamily: fontFamilyMedium }}>Return Accrues</AppText>
-              <AppText style={{ fontSize: 14, color: colors.black, fontFamily: fontFamilyMedium }}>D+1</AppText>
+              <AppText style={{ fontSize: 14, color: colors.black, fontFamily: fontFamilyMedium }}>{getReturnAccruesLabel(stakeSelectedPlan?.interestStartsAfterDays)}</AppText>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
               <AppText style={{ fontSize: 14, color: '#888', fontFamily: fontFamilyMedium }}>Reward Distributes</AppText>
@@ -379,7 +450,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
               <AppText style={{ fontSize: 14, color: '#888', fontFamily: fontFamilyMedium }}>Unbonding Period</AppText>
-              <AppText style={{ fontSize: 14, color: colors.black, fontFamily: fontFamilyMedium }}>About {stakeSelectedPlan?.unbondingPeriodDays ?? stakeSelectedPlan?.unbondingPeriod ?? 0} day(s)</AppText>
+              <AppText style={{ fontSize: 14, color: colors.black, fontFamily: fontFamilyMedium }}>About {stakeSelectedPlan?.unbondingPeriodDays ?? stakeSelectedPlan?.unbondingPeriod ?? 1} day(s)</AppText>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
               <AppText style={{ fontSize: 14, color: '#888', fontFamily: fontFamilyMedium }}>Wallet</AppText>

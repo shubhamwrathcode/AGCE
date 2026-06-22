@@ -81,6 +81,7 @@ import MainWalletTab from "./tabs/MainWalletTab";
 import P2PWalletTab from "./tabs/P2PWalletTab";
 import SwapWalletTab from "./tabs/SwapWalletTab";
 import EarningWalletTab from "./tabs/EarningWalletTab";
+import StakingWalletTab from "./tabs/StakingWalletTab";
 import FuturesWalletTab from "./tabs/FuturesWalletTab";
 import MarginWalletTab from "./tabs/MarginWalletTab";
 import CrossMarginWalletTab from "./tabs/CrossMarginWalletTab";
@@ -168,6 +169,7 @@ const WalletNew = ({ route }) => {
       { key: "Cross", title: "Cross" },
       { key: "P2P", title: "P2P" },
       { key: "Futures", title: "Futures" },
+      { key: "Staking", title: "Staking" },
       { key: "Swap", title: "Swap" },
       { key: "Earning", title: "Earning" },
     ],
@@ -651,13 +653,13 @@ const WalletNew = ({ route }) => {
         // Show native refresh spinner during focus sync
         setRefreshing(true);
         fetchWalletData();
-        
+
         // Delay to allow backend DB replication after actions, then fetch again
         const timer = setTimeout(() => {
           fetchWalletData();
           setRefreshing(false);
         }, 1500);
-        
+
         return () => {
           clearTimeout(timer);
           setRefreshing(false);
@@ -800,219 +802,219 @@ const WalletNew = ({ route }) => {
 
                       <View>
 
-                          <View style={{ marginTop: 18 }}>
-                            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                              <View style={{ flexDirection: "row", gap: 18, alignItems: "flex-end" }}>
-                                <TouchableOpacity onPress={() => setInnerIndex(0)} style={{ alignItems: "center" }}>
-                                  <AppText
-                                    type={FOURTEEN}
-                                    weight={SEMI_BOLD}
-                                    color={overviewInnerTab === "crypto" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}
-                                  >
-                                    Crypto
-                                  </AppText>
-                                  <View
-                                    style={{
-                                      marginTop: 6,
-                                      height: 3,
-                                      width: 22,
-                                      borderRadius: 2,
-                                      backgroundColor: overviewInnerTab === "crypto" ? colors.buttonBg : "transparent",
-                                    }}
-                                  />
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => setInnerIndex(1)} style={{ alignItems: "center" }}>
-                                  <AppText
-                                    type={FOURTEEN}
-                                    weight={SEMI_BOLD}
-                                    color={overviewInnerTab === "account" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}
-                                  >
-                                    Account
-                                  </AppText>
-                                  <View
-                                    style={{
-                                      marginTop: 6,
-                                      height: 3,
-                                      width: 22,
-                                      borderRadius: 2,
-                                      backgroundColor: overviewInnerTab === "account" ? colors.buttonBg : "transparent",
-                                    }}
-                                  />
-                                </TouchableOpacity>
-                              </View>
-
-                              {overviewInnerTab === "crypto" ? (
-                                <TouchableOpacity
-                                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-                                  onPress={() => setHideZeroBalance((v) => !v)}
+                        <View style={{ marginTop: 18 }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                            <View style={{ flexDirection: "row", gap: 18, alignItems: "flex-end" }}>
+                              <TouchableOpacity onPress={() => setInnerIndex(0)} style={{ alignItems: "center" }}>
+                                <AppText
+                                  type={FOURTEEN}
+                                  weight={SEMI_BOLD}
+                                  color={overviewInnerTab === "crypto" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}
                                 >
-                                  <View
-                                    style={{
-                                      width: 15,
-                                      height: 15,
-                                      borderWidth: 1,
-                                      borderColor: colors.grey,
-                                      borderRadius: 2,
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                    }}
-                                  >
-                                    {hideZeroBalance ? (
-                                      <FastImage
-                                        source={checkIc}
-                                        style={{ width: 8, height: 8 }}
-                                        resizeMode="contain"
-                                        tintColor={colors.buttonBg}
-                                      />
-                                    ) : null}
-                                  </View>
-                                  <AppText type={TWELVE} color={DISCLAIMTEXT}>Hide 0 Balance</AppText>
-                                </TouchableOpacity>
-                              ) : null}
+                                  Crypto
+                                </AppText>
+                                <View
+                                  style={{
+                                    marginTop: 6,
+                                    height: 3,
+                                    width: 22,
+                                    borderRadius: 2,
+                                    backgroundColor: overviewInnerTab === "crypto" ? colors.buttonBg : "transparent",
+                                  }}
+                                />
+                              </TouchableOpacity>
+
+                              <TouchableOpacity onPress={() => setInnerIndex(1)} style={{ alignItems: "center" }}>
+                                <AppText
+                                  type={FOURTEEN}
+                                  weight={SEMI_BOLD}
+                                  color={overviewInnerTab === "account" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}
+                                >
+                                  Account
+                                </AppText>
+                                <View
+                                  style={{
+                                    marginTop: 6,
+                                    height: 3,
+                                    width: 22,
+                                    borderRadius: 2,
+                                    backgroundColor: overviewInnerTab === "account" ? colors.buttonBg : "transparent",
+                                  }}
+                                />
+                              </TouchableOpacity>
                             </View>
 
-                            {shouldShowCryptoSearch ? (
-                              <View style={styles.aoCryptoSearchRow}>
-                                <FastImage
-                                  source={searchIcon}
-                                  resizeMode="contain"
-                                  style={{ width: 14, height: 14 }}
-                                  tintColor={"#787878"}
-                                />
-                                <TextInput
-                                  ref={searchInputRef}
-                                  value={search}
-                                  onChangeText={setSearch}
-                                  placeholder="Search Crypto"
-                                  placeholderTextColor={"#787878"}
-                                  style={{ flex: 1, height: 38, fontSize: 13, color: theme !== "Dark" ? "#000" : "#FFF" }}
-                                  returnKeyType="search"
-                                />
-                              </View>
+                            {overviewInnerTab === "crypto" ? (
+                              <TouchableOpacity
+                                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                                onPress={() => setHideZeroBalance((v) => !v)}
+                              >
+                                <View
+                                  style={{
+                                    width: 15,
+                                    height: 15,
+                                    borderWidth: 1,
+                                    borderColor: colors.grey,
+                                    borderRadius: 2,
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  {hideZeroBalance ? (
+                                    <FastImage
+                                      source={checkIc}
+                                      style={{ width: 8, height: 8 }}
+                                      resizeMode="contain"
+                                      tintColor={colors.buttonBg}
+                                    />
+                                  ) : null}
+                                </View>
+                                <AppText type={TWELVE} color={DISCLAIMTEXT}>Hide 0 Balance</AppText>
+                              </TouchableOpacity>
                             ) : null}
                           </View>
 
+                          {shouldShowCryptoSearch ? (
+                            <View style={styles.aoCryptoSearchRow}>
+                              <FastImage
+                                source={searchIcon}
+                                resizeMode="contain"
+                                style={{ width: 14, height: 14 }}
+                                tintColor={"#787878"}
+                              />
+                              <TextInput
+                                ref={searchInputRef}
+                                value={search}
+                                onChangeText={setSearch}
+                                placeholder="Search Crypto"
+                                placeholderTextColor={"#787878"}
+                                style={{ flex: 1, height: 38, fontSize: 13, color: theme !== "Dark" ? "#000" : "#FFF" }}
+                                returnKeyType="search"
+                              />
+                            </View>
+                          ) : null}
+                        </View>
+
                         {innerIndex === 0 ? (
-                              <DeferredTabScene>
-                                <FlatList
-                                  data={overviewCryptoRows}
-                                  keyExtractor={(item, idx) => String(item?.currency_id || idx)}
-                                  style={{ marginTop: 14 }}
-                                  showsVerticalScrollIndicator={false}
-                                  showsHorizontalScrollIndicator={false}
-                                  scrollEnabled={false}
-                                  renderItem={({ item, index }) => {
-                                    const total = totalWalletQty(item);
-                                    const isLast = index === overviewCryptoRows.length - 1;
-                                    return (
-                                      <View style={[styles.aoRow, isLast && { borderBottomWidth: 0 }]}>
-                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                                          <View style={{ borderRadius: 16, overflow: "hidden" }}>
-                                            <FastImage
-                                              source={
-                                                failedIconMap?.[String(item?.currency_id)]
-                                                  ? bitcoin_ic
-                                                  : (buildCoinIconUri(item?.icon_path)
-                                                    ? { uri: buildCoinIconUri(item?.icon_path) }
-                                                    : bitcoin_ic)
-                                              }
-                                              style={{ width: 28, height: 28 }}
-                                              resizeMode="cover"
-                                              onError={() => {
-                                                const id = String(item?.currency_id ?? "");
-                                                if (!id) return;
-                                                setFailedIconMap((prev) => (prev?.[id] ? prev : { ...(prev || {}), [id]: true }));
-                                              }}
-                                            />
-                                          </View>
-                                          <View style={{ flex: 1 }}>
-                                            <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item?.short_name}</AppText>
-                                            <AppText type={TWELVE} color={DISCLAIMTEXT}>{item?.currency}</AppText>
-                                          </View>
-                                        </View>
-                                        <View style={{ alignItems: "flex-end" }}>
-                                          <AppText type={FOURTEEN} weight={SEMI_BOLD}>{safeRound(total, 8)}</AppText>
-                                          <AppText type={TWELVE} color={DISCLAIMTEXT}>{approxUsdLine(item)}</AppText>
-                                        </View>
-                                        <TouchableOpacity
-                                          style={{ paddingLeft: 10, paddingVertical: 6 }}
-                                          onPress={() => {
-                                            setSelectedCoinForSheet(item);
-                                            coinDetailSheet.current?.open?.();
+                          <DeferredTabScene>
+                            <FlatList
+                              data={overviewCryptoRows}
+                              keyExtractor={(item, idx) => String(item?.currency_id || idx)}
+                              style={{ marginTop: 14 }}
+                              showsVerticalScrollIndicator={false}
+                              showsHorizontalScrollIndicator={false}
+                              scrollEnabled={false}
+                              renderItem={({ item, index }) => {
+                                const total = totalWalletQty(item);
+                                const isLast = index === overviewCryptoRows.length - 1;
+                                return (
+                                  <View style={[styles.aoRow, isLast && { borderBottomWidth: 0 }]}>
+                                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                                      <View style={{ borderRadius: 16, overflow: "hidden" }}>
+                                        <FastImage
+                                          source={
+                                            failedIconMap?.[String(item?.currency_id)]
+                                              ? bitcoin_ic
+                                              : (buildCoinIconUri(item?.icon_path)
+                                                ? { uri: buildCoinIconUri(item?.icon_path) }
+                                                : bitcoin_ic)
+                                          }
+                                          style={{ width: 28, height: 28 }}
+                                          resizeMode="cover"
+                                          onError={() => {
+                                            const id = String(item?.currency_id ?? "");
+                                            if (!id) return;
+                                            setFailedIconMap((prev) => (prev?.[id] ? prev : { ...(prev || {}), [id]: true }));
                                           }}
-                                        >
-                                          <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain" tintColor={DISCLAIMTEXT} />
-                                        </TouchableOpacity>
+                                        />
                                       </View>
-                                    );
-                                  }}
-                                  ListFooterComponent={() => <View style={{ height: 120 }} />}
-                                  ListEmptyComponent={() => (
-                                    <View style={{ alignItems: "center", marginTop: 60, gap: 10 }}>
-                                      <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 80, height: 80 }} resizeMode="contain" />
-                                      <View style={{ flexDirection: 'row', marginTop: 10, alignItems: "center" }}>
-                                        <AppText type={TWELVE} weight={SEMI_BOLD} style={{}} color={colors.buttonBg} onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}>
-                                          Deposit Now{' '}
-                                        </AppText>
-                                        <FastImage source={share_ic} style={{ width: 10, height: 10, bottom: 1 }} resizeMode="contain" tintColor={colors.black} />
+                                      <View style={{ flex: 1 }}>
+                                        <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item?.short_name}</AppText>
+                                        <AppText type={TWELVE} color={DISCLAIMTEXT}>{item?.currency}</AppText>
                                       </View>
-                                    </View>
-                                  )}
-                                />
-                              </DeferredTabScene>
-
-                            ) : (
-
-                            <DeferredTabScene>
-                              <FlatList
-                                data={accountRows}
-                                keyExtractor={(it) => it.key}
-                                style={{ marginTop: 14 }}
-                                showsVerticalScrollIndicator={false}
-                                showsHorizontalScrollIndicator={false}
-                                scrollEnabled={false}
-                                renderItem={({ item }) => (
-                                  <View style={styles.aoRow}>
-                                    <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
-                                      <View
-                                        style={{
-                                          width: 8,
-                                          height: 8,
-                                          borderRadius: 8,
-                                          backgroundColor: accountDotColor(item.key),
-                                          marginRight: 10,
-                                        }}
-                                      />
-                                      <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.label}</AppText>
                                     </View>
                                     <View style={{ alignItems: "flex-end" }}>
-                                      <AppText type={FOURTEEN} weight={SEMI_BOLD}>
-                                        {showBalance ? `${safeRound(item.pref, 8)} ${item.cur}` : "****"}
-                                      </AppText>
-                                      <AppText type={TWELVE} color={DISCLAIMTEXT}>
-                                        {showBalance ? `$${safeRound(item.usd, 2)}` : "****"}
-                                      </AppText>
-                                    </View>
-                                    <View style={{ width: 70, alignItems: "flex-end" }}>
-                                      <AppText type={TWELVE} color={DISCLAIMTEXT}>{showBalance ? `${item.ratio}%` : "****"}</AppText>
+                                      <AppText type={FOURTEEN} weight={SEMI_BOLD}>{safeRound(total, 8)}</AppText>
+                                      <AppText type={TWELVE} color={DISCLAIMTEXT}>{approxUsdLine(item)}</AppText>
                                     </View>
                                     <TouchableOpacity
                                       style={{ paddingLeft: 10, paddingVertical: 6 }}
                                       onPress={() => {
-                                        setSelectedAccountForSheet(item);
-                                        accountDetailSheet.current?.open?.();
+                                        setSelectedCoinForSheet(item);
+                                        coinDetailSheet.current?.open?.();
                                       }}
                                     >
                                       <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain" tintColor={DISCLAIMTEXT} />
                                     </TouchableOpacity>
                                   </View>
-                                )}
-                                ListFooterComponent={() => <View style={{ height: 120 }} />}
-                              />
-                            </DeferredTabScene>
+                                );
+                              }}
+                              ListFooterComponent={() => <View style={{ height: 120 }} />}
+                              ListEmptyComponent={() => (
+                                <View style={{ alignItems: "center", marginTop: 60, gap: 10 }}>
+                                  <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 80, height: 80 }} resizeMode="contain" />
+                                  <View style={{ flexDirection: 'row', marginTop: 10, alignItems: "center" }}>
+                                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{}} color={colors.buttonBg} onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}>
+                                      Deposit Now{' '}
+                                    </AppText>
+                                    <FastImage source={share_ic} style={{ width: 10, height: 10, bottom: 1 }} resizeMode="contain" tintColor={colors.black} />
+                                  </View>
+                                </View>
+                              )}
+                            />
+                          </DeferredTabScene>
 
-                            )
+                        ) : (
+
+                          <DeferredTabScene>
+                            <FlatList
+                              data={accountRows}
+                              keyExtractor={(it) => it.key}
+                              style={{ marginTop: 14 }}
+                              showsVerticalScrollIndicator={false}
+                              showsHorizontalScrollIndicator={false}
+                              scrollEnabled={false}
+                              renderItem={({ item }) => (
+                                <View style={styles.aoRow}>
+                                  <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+                                    <View
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: 8,
+                                        backgroundColor: accountDotColor(item.key),
+                                        marginRight: 10,
+                                      }}
+                                    />
+                                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.label}</AppText>
+                                  </View>
+                                  <View style={{ alignItems: "flex-end" }}>
+                                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                      {showBalance ? `${safeRound(item.pref, 8)} ${item.cur}` : "****"}
+                                    </AppText>
+                                    <AppText type={TWELVE} color={DISCLAIMTEXT}>
+                                      {showBalance ? `$${safeRound(item.usd, 2)}` : "****"}
+                                    </AppText>
+                                  </View>
+                                  <View style={{ width: 70, alignItems: "flex-end" }}>
+                                    <AppText type={TWELVE} color={DISCLAIMTEXT}>{showBalance ? `${item.ratio}%` : "****"}</AppText>
+                                  </View>
+                                  <TouchableOpacity
+                                    style={{ paddingLeft: 10, paddingVertical: 6 }}
+                                    onPress={() => {
+                                      setSelectedAccountForSheet(item);
+                                      accountDetailSheet.current?.open?.();
+                                    }}
+                                  >
+                                    <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain" tintColor={DISCLAIMTEXT} />
+                                  </TouchableOpacity>
+                                </View>
+                              )}
+                              ListFooterComponent={() => <View style={{ height: 120 }} />}
+                            />
+                          </DeferredTabScene>
+
+                        )
                         }
                       </View>
                     </View>
@@ -1276,6 +1278,42 @@ const WalletNew = ({ route }) => {
                         onOpenCoinSheet={(coin) => {
                           setSelectedCoinForSheet(coin);
                           setSelectedCoinSheetWalletType("earning");
+                          coinDetailSheet.current?.open?.();
+                        }}
+                      />
+                    </DeferredTabScene>
+                  </View>
+                );
+              }
+
+              if (route.key === "Staking") {
+                return (
+                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <StakingWalletTab
+                        theme={theme}
+                        themeColors={themeColors}
+                        showBalance={showBalance}
+                        setShowBalance={setShowBalance}
+                        walletBalance={{}} // Currently no redux state for staking balance
+                        portfolioPreferredAmount={portfolioPreferredAmount}
+                        portfolioPreferredCurrency={portfolioPreferredCurrency}
+                        portfolioUsdtEstimate={portfolioUsdtEstimate}
+                        formatEstimateHeader={formatEstimateHeader}
+                        safeRound={safeRound}
+                        safeNum={safeNum}
+                        totalWalletQty={totalWalletQty}
+                        approxUsdLine={approxUsdLine}
+                        buildCoinIconUri={buildCoinIconUri}
+                        failedIconMap={failedIconMap}
+                        setFailedIconMap={setFailedIconMap}
+                        userWalletRows={[]} // Currently no redux state for staking wallet rows
+                        actions={[]}
+                        eyeCloseIcon={eye_close_icon}
+                        eyeOpenIcon={eye_open_icon}
+                        onOpenCoinSheet={(coin) => {
+                          setSelectedCoinForSheet(coin);
+                          setSelectedCoinSheetWalletType("staking");
                           coinDetailSheet.current?.open?.();
                         }}
                       />
