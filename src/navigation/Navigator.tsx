@@ -138,7 +138,9 @@ import WithdrawalHistory from "../screens/wallet/WithdrawalHistory";
 import WithdrawalDetailPage from "../screens/wallet/WithdrawalDetailPage";
 import SelectCoin from "../screens/wallet/Withdrawal/SelectCoin";
 import WithdrawForm from "../screens/wallet/Withdrawal/WithdrawForm";
-import AddFavouriteScreen from "../screens/other/AddFavouriteScreen";
+import AddFavouriteScreen from '../screens/other/AddFavouriteScreen';
+import Earning from '../screens/earning/Earning';
+import SoftStaking from '../screens/SoftStaking/SoftStaking';
 import AccountDetails from "../screens/Security/AccountDetails";
 import PersonalPage from "../screens/account/PersonalPage";
 import MarginHistoryScreen from "../screens/account/MarginHistoryScreen";
@@ -621,6 +623,14 @@ const MyAuthLoadingStack = () => {
         name="StakingPurchase"
         component={StakingPurchase}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name={routes.EARNING_SCREEN}
+        component={Earning}
+      />
+      <Stack.Screen
+        name={routes.SOFT_STAKING_SCREEN}
+        component={SoftStaking}
       />
     </Stack.Navigator>
   );

@@ -378,6 +378,13 @@ export const stake_crypto = require('../../assets/images/stake_crypto.png');
 export const stake_acge_icon = require('../../assets/images/stake_acge_icon.png');
 export const stake_acge_icon2 = require('../../assets/images/stake_acge_icon2.png');
 export const stake_acge_icon3 = require('../../assets/images/stake_acge_icon3.png');
+export const launchpad = require('../../assets/images/launchpad.png');
+export const referAndEarn = require('../../assets/images/referAndEarn.png');
+export const stakingNew = require('../../assets/images/stakingNew.png');
+export const simpleEarn = require('../../assets/images/simpleEarn.png');
+export const vip = require('../../assets/images/vip.png');
+
+
 
 
 

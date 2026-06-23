@@ -932,6 +932,20 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
+  SoftStaking_Packages: (page: number = 1, limit: number = 10) =>
+    appOperation.get(
+      `softstaking/packages?page=${page}&limit=${limit}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  SoftStaking_Status: () =>
+    appOperation.get(
+      `softstaking/status`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
   place_staking: (data: any) =>
     appOperation.post('staking/place_staking', data, CUSTOMER_TYPE),
 
