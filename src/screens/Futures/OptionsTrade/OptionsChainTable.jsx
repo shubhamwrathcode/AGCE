@@ -105,7 +105,7 @@ const OptionsChainTable = ({ selectedExpiry }) => {
       {/* Top Header Row (Static) */}
       <View style={styles.topHeaderRow}>
         <AppText style={{ color: themeColors.text, fontSize: 14, flex: 1, fontFamily: fontFamilyMedium }}>Calls</AppText>
-        <AppText style={{ color: themeColors.text, fontSize: 14, flex: 1, textAlign: 'center', fontFamily: fontFamilyMedium }}>2026-05-21</AppText>
+        <AppText style={{ color: themeColors.text, fontSize: 14, flex: 1, textAlign: 'center', fontFamily: fontFamilyMedium }}>{selectedExpiry === 'ALL' ? 'All Expiries' : selectedExpiry}</AppText>
         <AppText style={{ color: themeColors.text, fontSize: 14, flex: 1, textAlign: 'right', fontFamily: fontFamilyMedium }}>Puts</AppText>
       </View>
 

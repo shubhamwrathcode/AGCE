@@ -6,6 +6,7 @@
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/@react-native-google-signin/google-signin/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/@react-native-picker/picker/android/src/main/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/lottie-react-native/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-image-crop-picker/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-pager-view/android/build/generated/source/codegen/jni/CMakeLists.txt",
@@ -73,6 +74,11 @@
       "toolchain": "toolchain",
       "abi": "x86_64",
       "artifactName": "react_codegen_RNDateTimePickerCGen"
+    },
+    "react_codegen_RNEdgeToEdge::@668218a48b60eb28aa9e": {
+      "toolchain": "toolchain",
+      "abi": "x86_64",
+      "artifactName": "react_codegen_RNEdgeToEdge"
     },
     "react_codegen_RNGoogleSignInCGen::@337b7b353bd94a4215c0": {
       "toolchain": "toolchain",

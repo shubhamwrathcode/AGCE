@@ -9,7 +9,7 @@ import { BOLD, fontFamilyMedium, fontFamilySemiBold, MEDIUM, REGULAR, SEMI_BOLD 
 import { downIcon, filterNew, history, historyIcon, menuIcon, printIcon } from '../../../helper/ImageAssets'; // using existing icons
 import { colors } from '../../../theme/colors';
 
-const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelectedOptionType, onOpenSettings, onOpenMoreSheet }) => {
+const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelectedOptionType, onOpenSettings, onOpenMoreSheet, selectedAsset, onOpenPairList }) => {
   const { colors: themeColors, isDark } = useTheme();
   const navigation = useNavigation();
 
@@ -42,8 +42,8 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
       {/* Title & Price */}
       {activeTab !== 2 && (
         <View style={styles.titleRow}>
-          <TouchableOpacity style={styles.coinSelector}>
-            <AppText style={{ fontSize: 18, color: themeColors.text, fontFamily: fontFamilySemiBold }}>BTC Options</AppText>
+          <TouchableOpacity style={styles.coinSelector} onPress={onOpenPairList}>
+            <AppText style={{ fontSize: 18, color: themeColors.text, fontFamily: fontFamilySemiBold }}>{selectedAsset || '...'} Options</AppText>
             <FastImage source={downIcon} style={styles.downIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
           <View style={styles.badge}>

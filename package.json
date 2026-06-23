@@ -37,6 +37,7 @@
     "react-native-collapsible": "^1.6.1",
     "react-native-country-picker-modal": "^2.0.0",
     "react-native-device-info": "^15.0.2",
+    "react-native-edge-to-edge": "^1.8.1",
     "react-native-element-dropdown": "^2.12.4",
     "react-native-fast-image": "^8.6.3",
     "react-native-gesture-handler": "^2.28.0",

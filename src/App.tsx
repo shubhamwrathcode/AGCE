@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Linking, StatusBar } from "react-native";
+import { SystemBars } from 'react-native-edge-to-edge';
 import SplashScreen from "react-native-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { onAppStart } from "./helper/utility";
@@ -88,11 +89,7 @@ const MainApp = () => {
 
   return (
     <SafeAreaProvider>
-      <StatusBar
-        backgroundColor={colors.white}
-        barStyle={"dark-content"}
-        translucent={false}
-      />
+      <SystemBars style="dark" />
       <SocketProvider>
         <FutureSocketContextProvider>
           <ChartProvider>

@@ -168,6 +168,31 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/CMakeFiles/cmake.verify_globs")
 endif()
 
+# react_codegen_SRCS at /Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/*.cpp")
+set(OLD_GLOB
+  "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/RNEdgeToEdge-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/CMakeFiles/cmake.verify_globs")
+endif()
+
+# react_codegen_SRCS at /Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/react/renderer/components/RNEdgeToEdge/*.cpp")
+set(OLD_GLOB
+  "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/react/renderer/components/RNEdgeToEdge/ComponentDescriptors.cpp"
+  "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/react/renderer/components/RNEdgeToEdge/EventEmitters.cpp"
+  "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/react/renderer/components/RNEdgeToEdge/Props.cpp"
+  "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/react/renderer/components/RNEdgeToEdge/RNEdgeToEdgeJSI-generated.cpp"
+  "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/react/renderer/components/RNEdgeToEdge/ShadowNodes.cpp"
+  "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-edge-to-edge/android/build/generated/source/codegen/jni/react/renderer/components/RNEdgeToEdge/States.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/CMakeFiles/cmake.verify_globs")
+endif()
+
 # react_codegen_SRCS at /Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni/*.cpp")
 set(OLD_GLOB

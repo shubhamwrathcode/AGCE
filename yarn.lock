@@ -6273,6 +6273,11 @@ react-native-device-info@^15.0.2:
   resolved "https://registry.npmjs.org/react-native-device-info/-/react-native-device-info-15.0.2.tgz"
   integrity sha512-dd71eXG2l3Cwp66IvKNadMTB8fhU3PEjyVddI97sYan+D4bgIAUmgGDhbSOFvHcGavksb2U17kiQYaDiK2WK2g==
 
+react-native-edge-to-edge@^1.8.1:
+  version "1.8.1"
+  resolved "https://registry.npmjs.org/react-native-edge-to-edge/-/react-native-edge-to-edge-1.8.1.tgz"
+  integrity sha512-bhvsKqeX9PGkY9wBUk9vni/tJNJdKtLPbs/j3e/3CdV4JmUWfTXYYoL+4Hc8Wmej+5eJxkc8KOFa454ruFWBCA==
+
 react-native-element-dropdown@^2.12.4:
   version "2.12.4"
   resolved "https://registry.npmjs.org/react-native-element-dropdown/-/react-native-element-dropdown-2.12.4.tgz"

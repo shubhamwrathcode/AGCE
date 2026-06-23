@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
+import RBSheet from 'react-native-raw-bottom-sheet';
 
 import OptionsHeader from './OptionsHeader';
 import OptionsExpiries from './OptionsExpiries';
@@ -9,18 +10,44 @@ import OptionsSettingsSheet from './OptionsSettingsSheet';
 import OptionsEasyMode from './OptionsEasyMode';
 import OptionsStrategies from './OptionsStrategies';
 import OptionsMoreSheet from './OptionsMoreSheet';
+import OptionsPairList from '../../Options/OptionsPairList';
 import { colors } from '../../../theme/colors';
-
-const expiriesData = ['2026-05-30', '2026-05-31', '2026-06-01', '2026-06-05'];
+import useOptionsWebSocket from './hooks/useOptionsWebSocket';
 
 const OptionsTrade = () => {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, theme } = useTheme();
+
+  const [selectedAsset, setSelectedAsset] = useState('BTC');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const { underlyings, expiries, isMarketLoading } = useOptionsWebSocket(selectedAsset);
 
   const [activeTab, setActiveTab] = useState(0);
   const [selectedOptionType, setSelectedOptionType] = useState('All');
-  const [selectedExpiry, setSelectedExpiry] = useState(expiriesData[0]);
+  const [selectedExpiry, setSelectedExpiry] = useState('ALL');
   const [isSettingsVisible, setSettingsVisible] = useState(false);
   const [isMoreSheetVisible, setMoreSheetVisible] = useState(false);
+  
+  const pairSheetRef = useRef(null);
+
+  // Default to first underlying if current selectedAsset is not in the list
+  useEffect(() => {
+    if (underlyings?.length > 0 && !underlyings.find(u => u.symbol === selectedAsset)) {
+      setSelectedAsset(underlyings[0].symbol);
+    }
+  }, [underlyings, selectedAsset]);
+
+  // Ensure selectedExpiry is valid within the dynamic expiries list
+  useEffect(() => {
+    if (expiries?.length > 0 && !expiries.includes(selectedExpiry)) {
+      setSelectedExpiry('ALL');
+    }
+  }, [expiries, selectedExpiry]);
+
+  const filteredPairs = underlyings?.filter(pair =>
+    pair.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    pair.underlying.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.white }]}>
@@ -31,11 +58,13 @@ const OptionsTrade = () => {
         setSelectedOptionType={setSelectedOptionType}
         onOpenSettings={() => setSettingsVisible(true)}
         onOpenMoreSheet={() => setMoreSheetVisible(true)}
+        selectedAsset={selectedAsset}
+        onOpenPairList={() => pairSheetRef.current?.open()}
       />
       {activeTab === 0 && (
         <>
           <OptionsExpiries
-            expiries={expiriesData}
+            expiries={expiries}
             selectedExpiry={selectedExpiry}
             setSelectedExpiry={setSelectedExpiry}
           />
@@ -46,7 +75,7 @@ const OptionsTrade = () => {
       )}
       {activeTab === 1 && (
         <OptionsEasyMode
-          expiries={expiriesData}
+          expiries={expiries}
           selectedExpiry={selectedExpiry}
           setSelectedExpiry={setSelectedExpiry}
         />
@@ -62,6 +91,40 @@ const OptionsTrade = () => {
         visible={isMoreSheetVisible}
         onClose={() => setMoreSheetVisible(false)}
       />
+      <RBSheet
+        ref={pairSheetRef}
+        keyboardAvoidingViewEnabled={false}
+        customModalProps={{ statusBarTranslucent: true }}
+        closeOnDragDown={true}
+        closeOnPressMask={true}
+        height={600}
+        customStyles={{
+          wrapper: {
+            backgroundColor: "rgba(0,0,0,0.5)"
+          },
+          draggableIcon: {
+            backgroundColor: themeColors.secondaryText || "#CCC",
+          },
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            backgroundColor: theme === 'dark' ? '#1D1D1D' : colors.white,
+          }
+        }}
+      >
+        <OptionsPairList
+          pairs={filteredPairs}
+          selectedPair={underlyings?.find(u => u.symbol === selectedAsset)}
+          onSelectPair={(pair) => {
+            setSelectedAsset(pair.symbol);
+            pairSheetRef.current?.close();
+          }}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          theme={theme === 'dark' ? 'Dark' : 'Light'}
+          onClose={() => pairSheetRef.current?.close()}
+        />
+      </RBSheet>
     </View>
   );
 };
@@ -71,5 +134,5 @@ export default OptionsTrade;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  }
+  },
 });

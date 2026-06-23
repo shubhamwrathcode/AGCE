@@ -9,6 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SystemBars } from 'react-native-edge-to-edge';
 import { commonStyles } from '../theme/commonStyles';
 import { colors } from '../theme/colors';
 
@@ -71,11 +72,7 @@ const AppSafeAreaView = ({
         },
         style,
       ]}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={barStyle}
-      />
+      <SystemBars style={source ? 'light' : (barStyle === 'light-content' ? 'light' : 'dark')} />
       {source ? (
         <ImageBackground
           source={source}
@@ -89,12 +86,11 @@ const AppSafeAreaView = ({
       )}
     </SafeAreaView>
   ) : (
-    <View style={[{ flex: 1, backgroundColor: shellBg, paddingTop: insets.top }, style]}>
-      <StatusBar
-        translucent={false}
-        backgroundColor={androidStatusBg}
-        barStyle={barStyle}
-      />
+    <View style={[{ flex: 1, backgroundColor: shellBg }, style]}>
+      <SystemBars style={source ? 'light' : (barStyle === 'light-content' ? 'light' : 'dark')} hidden={false} />
+      {!source && (
+        <View style={{ height: insets.top || StatusBar.currentHeight || 40, backgroundColor: isDark ? themeColors.background : colors.white, width: '100%' }} />
+      )}
       {source ? (
         <ImageBackground
           source={source}

@@ -19,6 +19,9 @@
 /Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/lottiereactnative_autolinked_build/CMakeFiles/react_codegen_lottiereactnative.dir
 /Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/lottiereactnative_autolinked_build/CMakeFiles/edit_cache.dir
 /Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/lottiereactnative_autolinked_build/CMakeFiles/rebuild_cache.dir
+/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/RNEdgeToEdge_autolinked_build/CMakeFiles/react_codegen_RNEdgeToEdge.dir
+/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/RNEdgeToEdge_autolinked_build/CMakeFiles/edit_cache.dir
+/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/RNEdgeToEdge_autolinked_build/CMakeFiles/rebuild_cache.dir
 /Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/rngesturehandler_codegen_autolinked_build/CMakeFiles/react_codegen_rngesturehandler_codegen.dir
 /Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/rngesturehandler_codegen_autolinked_build/CMakeFiles/edit_cache.dir
 /Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/armeabi-v7a/rngesturehandler_codegen_autolinked_build/CMakeFiles/rebuild_cache.dir

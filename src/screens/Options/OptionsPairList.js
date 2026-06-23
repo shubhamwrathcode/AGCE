@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -5,8 +6,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { AppText, ELEVEN, FOURTEEN, SEMI_BOLD } from "../../shared";
+import FastImage from "react-native-fast-image";
+import { AppText, ELEVEN, FOURTEEN, SEMI_BOLD, MEDIUM } from "../../shared";
 import { colors } from "../../theme/colors";
+import { closeIcon, NO_NOTIFICATION_ICON, searchIcon } from "../../helper/ImageAssets";
+import { IMAGE_BASE_URL } from '../../helper/Constants';
 
 const OptionsPairList = ({
   pairs = [],
@@ -15,8 +19,10 @@ const OptionsPairList = ({
   searchTerm = "",
   onSearchChange,
   theme = "Dark",
+  onClose,
 }) => {
   const isDark = theme === "Dark";
+  const [activeTab, setActiveTab] = useState("USDT");
 
   const handleSelect = (pair) => {
     if (typeof onSelectPair === "function") {
@@ -24,13 +30,15 @@ const OptionsPairList = ({
     }
   };
 
-  const formatNumber = (data, decimal = 1) => {
+  const formatNumber = (data, decimal = 2) => {
     const num = typeof data === "string" ? Number(data) : data;
     if (typeof num === "number" && !isNaN(num)) {
-      return parseFloat(num.toFixed(decimal));
+      return num.toLocaleString('en-US', { minimumFractionDigits: decimal, maximumFractionDigits: decimal });
     }
     return "0.00";
   };
+
+  const filteredByTab = pairs.filter(p => p?.quote_currency?.toUpperCase() === activeTab);
 
   return (
     <View
@@ -39,24 +47,32 @@ const OptionsPairList = ({
         { backgroundColor: isDark ? "#1D1D1D" : colors.white },
       ]}
     >
-      <AppText
-        type={FOURTEEN}
-        weight={SEMI_BOLD}
-        style={[styles.title, { color: isDark ? colors.white : colors.black }]}
-      >
-        Select Options Pair
-      </AppText>
+      {/* Header */}
+      <View style={styles.header}>
+        <AppText
+          type={FOURTEEN}
+          weight={SEMI_BOLD}
+          style={[styles.title, { color: isDark ? colors.white : colors.black, fontSize: 18 }]}
+        >
+          Select Asset
+        </AppText>
 
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Search Bar */}
       <View
         style={[
           styles.searchWrapper,
-          { backgroundColor: isDark ? "#2A2A2A" : "#F2F2F2" },
+          { backgroundColor: isDark ? "#2A2A2A" : "#F8F8F8" },
         ]}
       >
+        <FastImage source={searchIcon} style={{ width: 16, height: 16, marginRight: 8 }} tintColor={isDark ? "#6F6F6F" : "#9D9D9D"} resizeMode="contain" />
         <TextInput
           value={searchTerm}
           onChangeText={onSearchChange}
-          placeholder="Search by name or asset"
+          placeholder="Search"
           placeholderTextColor={isDark ? "#6F6F6F" : "#9D9D9D"}
           style={[
             styles.searchInput,
@@ -65,28 +81,47 @@ const OptionsPairList = ({
         />
       </View>
 
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        {["USDT", "USDC"].map((tab) => (
+          <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={styles.tabItem}>
+            <AppText
+              style={{
+                fontFamily: SEMI_BOLD,
+                fontSize: 15,
+                color: activeTab === tab ? (isDark ? colors.white : colors.black) : "#9D9D9D"
+              }}
+            >
+              {tab}
+            </AppText>
+            {activeTab === tab && <View style={[styles.activeIndicator,
+            { backgroundColor: isDark ? colors.white : colors.black }]} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Column Headers */}
+      <View style={styles.columnsHeader}>
+        <AppText style={[styles.columnText, { flex: 1, textAlign: 'left' }]}>Pair</AppText>
+        <AppText style={[styles.columnText, { flex: 1.5, textAlign: 'right' }]}>Price</AppText>
+        <AppText style={[styles.columnText, { flex: 1, textAlign: 'right' }]}>Change</AppText>
+      </View>
+
       <FlatList
-        data={pairs}
+        data={filteredByTab}
         keyExtractor={(item) =>
           item?._id ?? `${item?.base_currency}-${item?.quote_currency}`
         }
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <AppText
-              type={ELEVEN}
-              style={{ color: isDark ? "#9D9D9D" : "#666666" }}
-            >
-              No pairs found
-            </AppText>
+            <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70 }} resizeMode='contain' />
           </View>
         }
         renderItem={({ item }) => {
           const isSelected =
             selectedPair?.base_currency === item?.base_currency &&
             selectedPair?.quote_currency === item?.quote_currency;
-          const changeColor =
-            item?.change_percentage < 0 ? colors.red : colors.green;
 
           return (
             <TouchableOpacity
@@ -96,53 +131,56 @@ const OptionsPairList = ({
                 styles.row,
                 {
                   backgroundColor: isSelected
-                    ? "#00C0761A"
-                    : isDark
-                    ? "#1D1D1D"
-                    : colors.white,
-                  borderColor: isSelected ? "#00C076" : "#2A2A2A33",
+                    ? (isDark ? "#2A2A2A" : "#F8F8F8")
+                    : "transparent",
                 },
               ]}
             >
-              <View>
+              {/* Pair Info */}
+              <View style={[styles.cell, { flex: 1, flexDirection: 'row', alignItems: 'center' }]}>
+                {item?.iconPath ? (
+                  <FastImage source={{ uri: item.iconPath }} style={styles.coinIcon} resizeMode="contain" />
+                ) : (
+                  <View style={[styles.coinIcon, { backgroundColor: '#E0E0E0', borderRadius: 12 }]} />
+                )}
+                <View style={{ marginLeft: 8 }}>
+                  <AppText
+                    weight={SEMI_BOLD}
+                    style={{ color: isDark ? colors.white : colors.black, fontSize: 15 }}
+                  >
+                    {item?.base_currency}/{item?.quote_currency}
+                  </AppText>
+                  <AppText
+                    weight={MEDIUM}
+                    style={{ color: isDark ? "#9D9D9D" : "#9D9D9D", fontSize: 13, marginTop: 2 }}
+                  >
+                    {item?.base_currency}
+                  </AppText>
+                </View>
+              </View>
+
+              {/* Price Info */}
+              <View style={[styles.cell, { flex: 1.5, alignItems: 'flex-end', justifyContent: 'center' }]}>
                 <AppText
-                  type={FOURTEEN}
                   weight={SEMI_BOLD}
-                  style={{ color: isDark ? colors.white : colors.black }}
+                  style={{ color: isDark ? colors.white : colors.black, fontSize: 14 }}
                 >
-                  {item?.base_currency}/{item?.quote_currency}
+                  {formatNumber(item?.price)}
                 </AppText>
-                <AppText
-                  type={ELEVEN}
-                  style={{ color: isDark ? "#9D9D9D" : "#666666" }}
-                >
-                  {item?.name || `${item?.base_currency} ${item?.quote_currency}`}
+                <AppText style={{ color: "#9D9D9D", fontSize: 12, marginTop: 2 }}>
+                  ${formatNumber(item?.price)}
                 </AppText>
               </View>
 
-              <View style={styles.rowRight}>
-                <AppText
-                  type={FOURTEEN}
-                  weight={SEMI_BOLD}
-                  style={{ color: isDark ? colors.white : colors.black }}
-                >
-                  {formatNumber(item?.buy_price)}
-                </AppText>
-                <AppText type={ELEVEN} style={{ color: changeColor }}>
-                  {formatNumber(item?.change_percentage)}%
+              {/* Change Info */}
+              <View style={[styles.cell, { flex: 1, alignItems: 'flex-end', justifyContent: 'center' }]}>
+                <AppText style={{ color: "#9D9D9D", fontSize: 14 }}>
+                  —
                 </AppText>
               </View>
             </TouchableOpacity>
           );
         }}
-        ItemSeparatorComponent={() => (
-          <View
-            style={{
-              height: StyleSheet.hairlineWidth,
-              backgroundColor: isDark ? "#2A2A2A" : "#E6E6E6",
-            }}
-          />
-        )}
       />
     </View>
   );
@@ -151,35 +189,81 @@ const OptionsPairList = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 8,
+    paddingTop: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   title: {
-    textAlign: "center",
-    marginBottom: 12,
+    textAlign: "left",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    width: '100%',
+    marginBottom: 16,
   },
   searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 12,
+    paddingVertical: 10,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
   },
   searchInput: {
-    fontSize: 14,
+    fontSize: 15,
+    flex: 1,
+    padding: 0,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    gap: 20,
+  },
+  tabItem: {
+    paddingBottom: 6,
+    position: 'relative',
+    alignItems: 'center',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    width: 20,
+    height: 3,
+    borderRadius: 1.5,
+  },
+  columnsHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  columnText: {
+    fontSize: 12,
+    color: '#9D9D9D',
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20,
   },
-  rowRight: {
-    alignItems: "flex-end",
-    gap: 4,
+  cell: {
+    justifyContent: 'center',
+  },
+  coinIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   emptyState: {
     paddingVertical: 24,
@@ -189,4 +273,3 @@ const styles = StyleSheet.create({
 });
 
 export default OptionsPairList;
-

@@ -27,7 +27,7 @@ export const CHART_WEB_BASE_URL = 'https://agce.wrathcode.com/';
 
 // export const IMAGE_BASE_URL = 'http://192.168.29.246:9503/';
 
-export const IMAGE_BASE_URL = 'https://backend.demoexchange.wrathcode.com/';
+export const IMAGE_BASE_URL = 'https://backend.arabglobal.io/';
 // export const IMAGE_BASE_URL = 'https://backend.arabglobal.io/';
 
 // export const BASE_URL = 'http://3.110.173.10:3008/';

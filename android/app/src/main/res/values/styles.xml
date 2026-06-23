@@ -1,6 +1,6 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="AppTheme" parent="Theme.EdgeToEdge">
         <!-- React Native default -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
 
@@ -8,11 +8,7 @@
         <item name="colorPrimaryDark">#FFFFFF</item>
         <item name="colorAccent">#D1AA67</item>
 
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowTranslucentStatus">true</item>
         <item name="android:autofilledHighlight">@android:color/transparent</item>
-        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
 
         <item name="android:datePickerDialogTheme">@style/CustomDatePickerTheme</item>
     </style>

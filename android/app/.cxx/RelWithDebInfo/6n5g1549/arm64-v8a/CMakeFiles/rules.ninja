@@ -110,6 +110,16 @@ rule CXX_COMPILER__react_codegen_lottiereactnative_RelWithDebInfo
 #############################################
 # Rule for compiling CXX files.
 
+rule CXX_COMPILER__react_codegen_RNEdgeToEdge_RelWithDebInfo
+  depfile = $DEP_FILE
+  deps = gcc
+  command = /Users/wrathcodetechnology/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android24 --sysroot=/Users/wrathcodetechnology/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -o $out -c $in
+  description = Building CXX object $out
+
+
+#############################################
+# Rule for compiling CXX files.
+
 rule CXX_COMPILER__react_codegen_rngesturehandler_codegen_RelWithDebInfo
   depfile = $DEP_FILE
   deps = gcc
