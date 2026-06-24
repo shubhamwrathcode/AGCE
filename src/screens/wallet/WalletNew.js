@@ -649,6 +649,9 @@ const WalletNew = ({ route }) => {
         setContentLoading(true);
         fetchWalletData();
         isFirstLoad.current = false;
+        setTimeout(() => {
+          setContentLoading(false);
+        }, 1500);
       } else {
         // Show native refresh spinner during focus sync
         setRefreshing(true);
@@ -713,6 +716,7 @@ const WalletNew = ({ route }) => {
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white }}>
       <KeyBoardAware
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 200, flexGrow: 1 }}
@@ -1366,7 +1370,7 @@ const WalletNew = ({ route }) => {
                   {renderWalletTypeScene(route.key)}
                 </View>
               );
-            })}
+            })()}
           </View>
         )}
         {/* </ImageBackground> */}

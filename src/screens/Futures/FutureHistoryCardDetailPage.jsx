@@ -1,6 +1,6 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppSafeAreaView } from '../../shared';
 import React from 'react';
-import { View, ScrollView, TouchableOpacity,  Platform, Alert, ToastAndroid } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Platform, Alert, ToastAndroid } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import moment from 'moment';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -88,7 +88,7 @@ const FutureHistoryCardDetailPage = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <View style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -184,7 +184,7 @@ const FutureHistoryCardDetailPage = () => {
         onClose={() => setCancelModalVisible(false)}
         onConfirm={executeCancelOrder}
       />
-    </SafeAreaView>
+    </AppSafeAreaView>
   );
 };
 

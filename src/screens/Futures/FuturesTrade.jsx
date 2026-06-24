@@ -41,6 +41,7 @@ import {
   computeFuturesLeverageStats,
   formatPriceByTick,
   formatQtyByStep,
+  getDecimalPlaces,
   getOrderBookAggOptionsForPair,
   aggregateOrderBookRows,
   getTickSize,
@@ -541,9 +542,33 @@ const FuturesUI = () => {
       }
       if (!Number.isFinite(p) || p <= 0) return '';
 
-      const maxQty = maxNotional / p;
-      const qty = (maxQty * val) / 100;
-      return String(formatQtyByStep(qty, selectedCoin));
+      let maxQty = maxNotional / p;
+      const orderCap = Number(selectedCoin?.max_order_qty);
+      if (Number.isFinite(orderCap) && orderCap > 0) {
+        maxQty = Math.min(maxQty, orderCap);
+      }
+      
+      const step = Number(selectedCoin?.step_size) || 0.001;
+      const stepDec = (() => {
+        const s = String(step);
+        if (s.includes("e-")) {
+          return parseInt(s.split("e-")[1], 10) || 0;
+        }
+        const dot = s.indexOf(".");
+        return dot === -1 ? 0 : s.length - dot - 1;
+      })();
+      
+      const maxSteps = Math.floor(maxQty / step + 1e-12);
+      const flooredMaxQty = parseFloat((maxSteps * step).toFixed(stepDec));
+      
+      if (flooredMaxQty <= 0) return '';
+      
+      const targetQty = (flooredMaxQty * val) / 100;
+      
+      const multiplier = Math.pow(10, stepDec);
+      const flooredTargetQty = Math.floor(targetQty * multiplier) / multiplier;
+      
+      return flooredTargetQty > 0 ? String(flooredTargetQty) : '';
     }
   };
 
@@ -554,123 +579,166 @@ const FuturesUI = () => {
   const [placingOrderSide, setPlacingOrderSide] = useState("");
 
   const handlePlaceOrder = async (side) => {
-    if (!selectedCoin?.symbol) {
-      SimpleToast.show(futuresErrSelectPair(), SimpleToast.SHORT);
-      return;
-    }
-
-    const isBuy = side === "BUY";
-    const apiSide = isBuy ? "BUY" : "SELL";
-    const order_type = orderType.toUpperCase();
-
-    const tickSize = Number(selectedCoin?.tick_size) || 0.01;
-    const stepSize = Number(selectedCoin?.step_size) || 0.001;
-    const minQty = Number(selectedCoin?.min_order_qty) || stepSize;
-
-    // Quantity validation
-    const rawQty = parseFloat(String(amount).replace(/,/g, ''));
-    if (!Number.isFinite(rawQty) || rawQty <= 0) {
-      SimpleToast.show(futuresErrInvalidSize(), SimpleToast.SHORT);
-      return;
-    }
-
-    // Convert from Amount/Value to Base Qty logic
-    const isQuoteSize = contractUnit.includes('Value');
-    let baseQty = rawQty;
-
-    const refPrice = Number(liveCoin?.mark_price) || 0;
-    const priceForConversion = orderType === 'Limit' ? parseFloat(String(price).replace(/,/g, '')) || refPrice : refPrice;
-
-    if (isQuoteSize && priceForConversion > 0) {
-      baseQty = rawQty / priceForConversion;
-    }
-
-    if (!Number.isFinite(baseQty) || baseQty <= 0) {
-      SimpleToast.show(futuresErrPriceForValue(), SimpleToast.SHORT);
-      return;
-    }
-
-    // Leverage validation
-    const leverage = Number(marginLeverage) || 1;
-
-    // Removing reduceOnly logic as tabs are now Buy/Sell. Can be added as checkbox later if needed.
-    const reduceOnly = false;
-    const closePosition = false;
-
-    const effectiveTif = postOnly ? "GTX" : tif;
-
-    const payload = {
-      symbol: selectedCoin.symbol,
-      side: apiSide,
-      order_type,
-      quantity: String(formatQtyByStep(baseQty, selectedCoin)),
-      leverage,
-    };
-
-    if (orderType === 'Limit') {
-      const priceVal = parseFloat(String(price).replace(/,/g, ''));
-      if (!Number.isFinite(priceVal) || priceVal <= 0) {
-        SimpleToast.show(futuresErrInvalidLimitPrice(), SimpleToast.SHORT);
-        return;
-      }
-      payload.price = String(priceVal);
-      if (effectiveTif && effectiveTif !== "GTC") {
-        payload.time_in_force = effectiveTif;
-      }
-    } else if (orderType === 'Conditional') {
-      const triggerVal = parseFloat(String(triggerPrice).replace(/,/g, ''));
-      if (!Number.isFinite(triggerVal) || triggerVal <= 0) {
-        SimpleToast.show(futuresErrInvalidTrigger(), SimpleToast.SHORT);
-        return;
-      }
-      payload.trigger_price = String(triggerVal);
-
-      const orderPriceVal = parseFloat(String(conditionalPrice).replace(/,/g, ''));
-      if (Number.isFinite(orderPriceVal) && orderPriceVal > 0) {
-        payload.order_price = String(orderPriceVal);
-      }
-    } else if (orderType === 'Market') {
-      if (showSlippage && slippagePct) {
-        const sp = parseFloat(slippagePct);
-        if (Number.isFinite(sp) && sp > 0 && sp <= 100) {
-          payload.slippage = sp;
-        }
-      }
-    }
-
-    if (showTpSl) {
-      const markPriceForTpSl = Number(futuresPrice?.mark_price) || 0;
-      if (takeProfit && String(takeProfit).trim() !== "") {
-        const tpVal = parseFloat(takeProfit);
-        if (Number.isFinite(tpVal) && tpVal > 0) {
-          if (markPriceForTpSl > 0) {
-            if (apiSide === "BUY" && tpVal <= markPriceForTpSl) { SimpleToast.show(futuresErrTpBuy(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
-            if (apiSide === "SELL" && tpVal >= markPriceForTpSl) { SimpleToast.show(futuresErrTpSell(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
-          }
-          payload.take_profit = String(tpVal);
-        }
-      }
-      if (stopLoss && String(stopLoss).trim() !== "") {
-        const slVal = parseFloat(stopLoss);
-        if (Number.isFinite(slVal) && slVal > 0) {
-          if (markPriceForTpSl > 0) {
-            if (apiSide === "BUY" && slVal >= markPriceForTpSl) { SimpleToast.show(futuresErrSlBuy(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
-            if (apiSide === "SELL" && slVal <= markPriceForTpSl) { SimpleToast.show(futuresErrSlSell(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
-          }
-          payload.stop_loss = String(slVal);
-        }
-      }
-    }
-
-    if (reduceOnly) payload.reduce_only = true;
-    if (closePosition) payload.close_position = true;
-
-    setPlacingOrderSide(apiSide);
+    // console.log("=== handlePlaceOrder START ===", side);
+    setPlacingOrderSide(side === "BUY" ? "BUY" : "SELL");
     try {
-      console.log("=== FUTURES ORDER PAYLOAD ===", JSON.stringify(payload, null, 2));
-      const result = await appOperation.customer.futuresPlaceOrder(payload);
+      if (!selectedCoin?.symbol) {
+        SimpleToast.show(futuresErrSelectPair(), SimpleToast.SHORT);
+        setPlacingOrderSide("");
+        return;
+      }
+
+      const isBuy = side === "BUY";
+      const apiSide = isBuy ? "BUY" : "SELL";
+      const order_type = orderType.toUpperCase();
+      // console.log("=== Order Basics ===", { isBuy, apiSide, order_type, amount, price });
+
+      const tickSize = Number(selectedCoin?.tick_size) || 0.01;
+      const stepSize = Number(selectedCoin?.step_size) || 0.001;
+      const minQty = Number(selectedCoin?.min_order_qty) || stepSize;
+
+      // Quantity validation
+      const rawQty = parseFloat(String(amount).replace(/,/g, ''));
+      // console.log("=== trace 1 rawQty ===", rawQty);
+      if (!Number.isFinite(rawQty) || rawQty <= 0) {
+        // console.log("=== trace 1 return early ===");
+        SimpleToast.show(futuresErrInvalidSize(), SimpleToast.SHORT);
+        return;
+      }
+
+      // Convert from Amount/Value to Base Qty logic
+      const isQuoteSize = contractUnit.includes('Value');
+      let baseQty = rawQty;
+
+      const refPrice = Number(liveCoin?.mark_price) || 0;
+      const priceForConversion = orderType === 'Limit' ? parseFloat(String(price).replace(/,/g, '')) || refPrice : refPrice;
+
+      if (isQuoteSize && priceForConversion > 0) {
+        baseQty = rawQty / priceForConversion;
+      }
+
+      // console.log("=== trace 2 baseQty calculation ===", { isQuoteSize, refPrice, priceForConversion, baseQty });
+
+      if (!Number.isFinite(baseQty) || baseQty <= 0) {
+        // console.log("=== trace 2 return early ===");
+        SimpleToast.show(futuresErrPriceForValue(), SimpleToast.SHORT);
+        return;
+      }
+
+      // Leverage validation
+      const leverage = Number(marginLeverage) || 1;
+
+      // Removing reduceOnly logic as tabs are now Buy/Sell. Can be added as checkbox later if needed.
+      const reduceOnly = false;
+      const closePosition = false;
+
+      const effectiveTif = postOnly ? "GTX" : tif;
+      // console.log("=== trace 3 tif ===", { effectiveTif, tif });
+
+      const getDecimalPlacesLocal = (value) => {
+        if (!value || value >= 1) return 0;
+        const str = String(value);
+        if (str.includes("e-")) {
+          return parseInt(str.split("e-")[1], 10) || 0;
+        }
+        const decimalPart = str.split(".")[1];
+        return decimalPart ? decimalPart.length : 0;
+      };
+
+      const qtyPrec = getDecimalPlacesLocal(stepSize);
+      // console.log("=== trace 4 qtyPrec ===", qtyPrec, "stepSize", stepSize, "baseQty", baseQty);
+      const finalQtyStr = Number(formatQtyByStep(baseQty, selectedCoin)).toFixed(qtyPrec);
+      // console.log("=== trace 5 finalQtyStr ===", finalQtyStr);
+
+      const payload = {
+        symbol: selectedCoin.symbol,
+        side: apiSide,
+        order_type,
+        quantity: finalQtyStr,
+        leverage,
+      };
+
+      // console.log("=== trace 6 checking limits ===", orderType);
+      if (orderType === 'Limit') {
+        const priceVal = parseFloat(String(price).replace(/,/g, ''));
+        // console.log("=== trace 7 priceVal ===", priceVal);
+        if (!Number.isFinite(priceVal) || priceVal <= 0) {
+          // console.log("=== trace 7 return early ===");
+          SimpleToast.show(futuresErrInvalidLimitPrice(), SimpleToast.SHORT);
+          return;
+        }
+        payload.price = String(priceVal);
+        if (effectiveTif && effectiveTif !== "GTC") {
+          payload.time_in_force = effectiveTif;
+        }
+      } else if (orderType === 'Conditional') {
+        const triggerVal = parseFloat(String(triggerPrice).replace(/,/g, ''));
+        if (!Number.isFinite(triggerVal) || triggerVal <= 0) {
+          SimpleToast.show(futuresErrInvalidTrigger(), SimpleToast.SHORT);
+          return;
+        }
+        payload.trigger_price = String(triggerVal);
+
+        const orderPriceVal = parseFloat(String(conditionalPrice).replace(/,/g, ''));
+        if (Number.isFinite(orderPriceVal) && orderPriceVal > 0) {
+          payload.order_price = String(orderPriceVal);
+        }
+      } else if (orderType === 'Market') {
+        if (showSlippage && slippagePct) {
+          const sp = parseFloat(slippagePct);
+          if (Number.isFinite(sp) && sp > 0 && sp <= 100) {
+            payload.slippage = sp;
+          }
+        }
+      }
+
+      if (showTpSl) {
+        console.log("=== trace 8 checking TPSL ===");
+        const markPriceForTpSl = Number(futuresPrice?.mark_price) || 0;
+        if (takeProfit && String(takeProfit).trim() !== "") {
+          const tpVal = parseFloat(takeProfit);
+          if (Number.isFinite(tpVal) && tpVal > 0) {
+            if (markPriceForTpSl > 0) {
+              if (apiSide === "BUY" && tpVal <= markPriceForTpSl) { console.log("=== trace 9 TP return early ==="); SimpleToast.show(futuresErrTpBuy(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+              if (apiSide === "SELL" && tpVal >= markPriceForTpSl) { console.log("=== trace 9 TP return early ==="); SimpleToast.show(futuresErrTpSell(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+            }
+            payload.take_profit = String(tpVal);
+          }
+        }
+        if (stopLoss && String(stopLoss).trim() !== "") {
+          const slVal = parseFloat(stopLoss);
+          if (Number.isFinite(slVal) && slVal > 0) {
+            if (markPriceForTpSl > 0) {
+              if (apiSide === "BUY" && slVal >= markPriceForTpSl) { console.log("=== trace 10 SL return early ==="); SimpleToast.show(futuresErrSlBuy(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+              if (apiSide === "SELL" && slVal <= markPriceForTpSl) { console.log("=== trace 10 SL return early ==="); SimpleToast.show(futuresErrSlSell(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+            }
+            payload.stop_loss = String(slVal);
+          }
+        }
+      }
+
+      if (reduceOnly) payload.reduce_only = true;
+      if (closePosition) payload.close_position = true;
+
+      const client_order_id = "app_" + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+      const finalPayload = {
+        ...payload,
+        client_order_id,
+      };
+
+      console.log("=== FUTURES ORDER PAYLOAD ===", JSON.stringify(finalPayload, null, 2));
+      const result = await appOperation.customer.futuresPlaceOrder(finalPayload);
+      console.log("=== FUTURES ORDER RESULT ===", JSON.stringify(result, null, 2));
       if (result?.success) {
-        SimpleToast.show('Order Placed Successfully!', SimpleToast.SHORT);
+        SimpleToast.show(result?.message || 'Order Placed Successfully!', SimpleToast.SHORT);
+        const orderData = result?.data?.order ?? result?.data;
+        const orderId = orderData?._id ?? orderData?.order_id;
+        if (orderData && orderId) {
+          setFuturesOpenOrders((prev) => {
+            if (prev.some((o) => String(o._id ?? o.order_id) === String(orderId))) return prev;
+            return [orderData, ...prev];
+          });
+        }
 
         // clear form
         setAmount("");
@@ -692,7 +760,8 @@ const FuturesUI = () => {
         SimpleToast.show(formatFuturesApiError(msg), SimpleToast.SHORT);
       }
     } catch (e) {
-      console.warn("futuresPlaceOrder err:", e);
+      console.warn("handlePlaceOrder ENTIRE CATCH:", e);
+      console.log("=== FUTURES ORDER CATCH ERROR ===", e?.message || e);
       let errMsg = futuresErrGeneric();
       if (e?.error?.message) {
         errMsg = e.error.message;
@@ -1703,7 +1772,7 @@ const FuturesUI = () => {
         )}
 
         {/* Post Only (Only for Limit) */}
-        {orderType === 'Limit' && (
+        {/* {orderType === 'Limit' && (
           <TouchableOpacity
             style={[styles.tpslRow, { marginBottom: 12 }]}
             onPress={() => setPostOnly(!postOnly)}
@@ -1716,7 +1785,7 @@ const FuturesUI = () => {
               <AppText type={TWELVE} style={[styles.dashedUnderline]}>Post Only</AppText>
             </View>
           </TouchableOpacity>
-        )}
+        )} */}
 
         {/* Slippage (Only for Market) */}
         {orderType === 'Market' && (

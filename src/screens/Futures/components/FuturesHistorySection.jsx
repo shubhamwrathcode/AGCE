@@ -441,20 +441,24 @@ const FuturesHistorySection = ({
             <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Reduce Only</AppText>
             <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>{reduceOnly}</AppText>
           </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 12 }}>
-            <View style={{ gap: 4 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Status</AppText>
+            <AppText type={FOURTEEN} style={{ color: getStatusColor(order.status || "OPEN", themeColors), fontFamily: fontFamilySemiBold }}>{String(order.status || "OPEN").toUpperCase()}</AppText>
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 12, }}>
+            {/* <View style={{ gap: 4 }}>
               <AppText type={TWELVE} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Reduce Only</AppText>
               <AppText type={TWELVE} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>{reduceOnly}</AppText>
-            </View>
+            </View> */}
             <TouchableOpacity
               onPress={() => { setOrderToCancel(order); setCancelModalVisible(true); }}
               style={{
-                paddingHorizontal: 20,
-                paddingVertical: 6,
+                paddingHorizontal: 30,
+                paddingVertical: 10,
                 borderRadius: 4,
                 backgroundColor: isDark ? "rgba(255,255,255,0.15)" : colors.black,
                 alignItems: "center",
-                justifyContent: "center"
+                justifyContent: "center",
               }}
             >
               <AppText type={TWELVE} style={{ color: colors.white, fontFamily: fontFamilySemiBold }}>Cancel</AppText>

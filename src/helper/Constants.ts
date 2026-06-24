@@ -18,7 +18,7 @@ export const BASE_URL = 'https://backend.arabglobal.ae/';
  * Spot chart WebView (ejected web), e.g. `.../chart/light/BTC_USDT`.
  * Not the API host — keep separate from `BASE_URL`.
  */
-export const CHART_WEB_BASE_URL = 'https://arabglobal.io/'; // or 'https://arabglobal.ae/' if .io doesn't work
+export const CHART_WEB_BASE_URL = 'https://arabglobal.ae/'; // or 'https://arabglobal.ae/' if .io doesn't work
 /**
  * Static / uploaded assets (coin icons, profile images, banners) — same as web
  * `baseImage` / `appUrl2` (`https://backend.demoexchange.wrathcode.com`).
