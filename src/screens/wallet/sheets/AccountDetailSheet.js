@@ -19,6 +19,8 @@ const AccountDetailSheet = ({
   return (
     <RBSheet
       ref={sheetRef}
+      keyboardAvoidingViewEnabled={false}
+      customModalProps={{ statusBarTranslucent: true }}
       closeOnDragDown={true}
       closeOnPressMask={true}
       height={accountSheetHeight}

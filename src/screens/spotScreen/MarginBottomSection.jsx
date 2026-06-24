@@ -79,7 +79,9 @@ const MarginBottomSection = ({
 
   const fmt = (val) => {
     if (val == null || !Number.isFinite(Number(val))) return "0";
-    const res = parseFloat(Number(val).toFixed(5)).toString();
+    const num = Number(val);
+    const truncated = Math.trunc(num * 100000) / 100000;
+    const res = parseFloat(truncated.toFixed(5)).toString();
     return res === "NaN" ? "0" : res;
   };
 

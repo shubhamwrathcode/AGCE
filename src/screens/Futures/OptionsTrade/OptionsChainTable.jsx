@@ -1,8 +1,8 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
-import { BOLD, fontFamilyMedium, fontFamilySemiBold, MEDIUM, REGULAR, SEMI_BOLD } from '../../../theme/typography';
+import { fontFamilyMedium, SEMI_BOLD } from '../../../theme/typography';
 import { colors } from '../../../theme/colors';
 
 const CALLS_HEADERS = [
@@ -46,23 +46,20 @@ const PUTS_HEADERS = [
 const CALLS_WIDTH = CALLS_HEADERS.reduce((a, b) => a + b.w, 0);
 const PUTS_WIDTH = PUTS_HEADERS.reduce((a, b) => a + b.w, 0);
 
-const STRIKES = [
-  { price: '73,500', pct: '-5.13%' },
-  { price: '74,000', pct: '-4.48%' },
-  { price: '74,500', pct: '-3.84%' },
-  { price: '75,000', pct: '-3.19%' },
-  { price: '75,500', pct: '-2.55%' },
-  { price: '76,000', pct: '-1.90%' },
-  { price: '76,500', pct: '-1.26%' },
-  { price: '77,000', pct: '-0.61%' },
-  { price: '77,500', pct: '+0.03%' },
-  { price: '78,000', pct: '+0.68%' },
-];
-
 const ROW_HEIGHT = 56;
 const HEADER_ROW_HEIGHT = 35;
 
-const OptionsChainTable = ({ selectedExpiry }) => {
+function formatVal(v, precision = 2) {
+  if (v === null || v === undefined) return '--';
+  return Number(v).toFixed(precision);
+}
+
+function formatPct(v) {
+  if (v === null || v === undefined) return '--';
+  return Number(v).toFixed(2) + '%';
+}
+
+const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, selectedAsset = '' }) => {
   const { colors: themeColors, isDark } = useTheme();
 
   const leftScrollRef = useRef(null);
@@ -96,9 +93,28 @@ const OptionsChainTable = ({ selectedExpiry }) => {
     setTimeout(() => { isSyncingRight.current = false; }, 50);
   };
 
-  const CURRENT_PRICE = 75500;
-  let activeLineIdx = STRIKES.findIndex(s => parseFloat(s.price.replace(',', '')) > CURRENT_PRICE);
-  if (activeLineIdx === -1) activeLineIdx = STRIKES.length;
+  const rowsToRender = useMemo(() => {
+    let targetChain = chains?.find(c => c.date === selectedExpiry);
+    if (!targetChain && chains?.length > 0) {
+      if (selectedExpiry === 'ALL') {
+        const mergedMap = new Map();
+        chains.forEach(chain => {
+          chain.data.forEach(row => {
+             if (!mergedMap.has(row.strike)) {
+               mergedMap.set(row.strike, { ...row });
+             }
+          });
+        });
+        return Array.from(mergedMap.values()).sort((a,b) => a.strike - b.strike);
+      } else {
+        targetChain = chains[0];
+      }
+    }
+    return targetChain?.data || [];
+  }, [chains, selectedExpiry]);
+
+  let activeLineIdx = rowsToRender.findIndex(s => s.strike > currentPrice);
+  if (activeLineIdx === -1) activeLineIdx = rowsToRender.length;
 
   return (
     <View style={styles.container}>
@@ -114,21 +130,21 @@ const OptionsChainTable = ({ selectedExpiry }) => {
           <View style={styles.dashedTextContainer}>
             <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Underlying:</AppText>
           </View>
-          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> 75,500.0</AppText>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> {currentPrice > 0 ? formatVal(currentPrice, 2) : '...'}</AppText>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={styles.dashedTextContainer}>
             <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Expires in:</AppText>
           </View>
-          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> 1h 3m</AppText>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> --</AppText>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={styles.dashedTextContainer}>
             <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>ATM Vol:</AppText>
           </View>
-          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> 32.08%</AppText>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> --</AppText>
         </View>
       </View>
 
@@ -164,9 +180,9 @@ const OptionsChainTable = ({ selectedExpiry }) => {
                 </View>
 
                 {/* Rows */}
-                {STRIKES.map((item, idx) => {
-                  const strikePriceNum = parseFloat(item.price.replace(',', ''));
-                  const isCallITM = strikePriceNum < CURRENT_PRICE;
+                {rowsToRender.map((row, idx) => {
+                  const strikePriceNum = row.strike;
+                  const isCallITM = strikePriceNum < currentPrice;
                   const callBg = isCallITM ? (isDark ? 'rgba(56, 183, 129, 0.15)' : '#F2FFF6') : 'transparent';
 
                   const isRowAboveLine = idx === activeLineIdx - 1;
@@ -176,57 +192,61 @@ const OptionsChainTable = ({ selectedExpiry }) => {
                   const paddingTop = isRowBelowLine ? 8 : 0;
                   const borderBottomWidth = isRowAboveLine ? 0 : 1;
 
+                  const cRaw = row.callRaw || {};
+                  const cLeg = row.call || {};
+
                   return (
                     <View key={`call-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: CALLS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}>
                       <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>--</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.last)}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>59.65X</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cRaw.leverage ? `${cRaw.leverage}X` : '--'}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>1.87</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vol, 0)}</AppText>
                       </View>
                       <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>0.00</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.oi, 0)}</AppText>
                       </View>
                       <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>3.586</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vega, 4)}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>-196.81</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.theta, 4)}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>0.00061</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.gamma, 5)}</AppText>
                       </View>
                       <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>0.447</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.delta, 3)}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>805.7</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.askSize, 1)}</AppText>
                       </View>
                       <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>11.71%</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cLeg.apr ? formatPct(cLeg.apr) : '--'}</AppText>
                       </View>
                       <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>9.74%</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cLeg.apr ? formatPct(cLeg.apr) : '--'}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>1,413</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.bidSize, 1)}</AppText>
                       </View>
                       <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>2,137</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>4,942.6</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.positions, 0)}</AppText>
                       </View>
                       <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>2,393</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>61.70%</AppText>
+                        <AppText style={{ color: cLeg.markIvPct ? colors.green : themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.mark_price)}</AppText>
+                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.markIvPct)}</AppText>
                       </View>
                       <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>2,212</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>37.05%</AppText>
+                        <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.ask_price)}</AppText>
+                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.askIvPct)}</AppText>
+                      </View>
+                      <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                        <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.bid_price)}</AppText>
+                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.bidIvPct || cLeg.markIvPct)}</AppText>
                       </View>
                     </View>
                   )
@@ -244,7 +264,7 @@ const OptionsChainTable = ({ selectedExpiry }) => {
               </View>
             </View>
 
-            {STRIKES.map((item, idx) => {
+            {rowsToRender.map((row, idx) => {
               const isRowAboveLine = idx === activeLineIdx - 1;
               const isRowBelowLine = idx === activeLineIdx;
               const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
@@ -255,8 +275,8 @@ const OptionsChainTable = ({ selectedExpiry }) => {
               return (
                 <View key={`strike-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, justifyContent: 'center', borderBottomColor: themeColors.themeBorderColor || '#F0F0F0' }]}>
                   <View>
-                    <AppText style={{ fontFamily: fontFamilyMedium, color: themeColors.text, fontSize: 12, textAlign: 'center' }}>{item.price}</AppText>
-                    <AppText style={{ color: themeColors.secondaryText, fontSize: 9, fontFamily: fontFamilyMedium, textAlign: 'center', marginTop: 2 }}>{item.pct}</AppText>
+                    <AppText style={{ fontFamily: fontFamilyMedium, color: themeColors.text, fontSize: 12, textAlign: 'center' }}>{row.strike}</AppText>
+                    <AppText style={{ color: themeColors.secondaryText, fontSize: 9, fontFamily: fontFamilyMedium, textAlign: 'center', marginTop: 2 }}>{formatPct(row.diffPct)}</AppText>
                   </View>
                 </View>
               )
@@ -288,9 +308,9 @@ const OptionsChainTable = ({ selectedExpiry }) => {
                 </View>
 
                 {/* Rows */}
-                {STRIKES.map((item, idx) => {
-                  const strikePriceNum = parseFloat(item.price.replace(',', ''));
-                  const isPutITM = strikePriceNum > CURRENT_PRICE;
+                {rowsToRender.map((row, idx) => {
+                  const strikePriceNum = row.strike;
+                  const isPutITM = strikePriceNum > currentPrice;
                   const putBg = isPutITM ? (isDark ? 'rgba(235, 78, 92, 0.15)' : '#FFF2F2') : 'transparent';
 
                   const isRowAboveLine = idx === activeLineIdx - 1;
@@ -300,57 +320,61 @@ const OptionsChainTable = ({ selectedExpiry }) => {
                   const paddingTop = isRowBelowLine ? 8 : 0;
                   const borderBottomWidth = isRowAboveLine ? 0 : 1;
 
+                  const pRaw = row.putRaw || {};
+                  const pLeg = row.put || {};
+
                   return (
                     <View key={`put-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: PUTS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}>
                       <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>32</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>37.41%</AppText>
+                        <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.bid_price)}</AppText>
+                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.bidIvPct || pLeg.markIvPct)}</AppText>
                       </View>
                       <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>51</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>40.73%</AppText>
+                        <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.ask_price)}</AppText>
+                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.askIvPct)}</AppText>
                       </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>4,942.6</AppText>
-                      </View>
-                      <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>2,137</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>1,413</AppText>
+                      <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                        <AppText style={{ color: pLeg.markIvPct ? colors.green : themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.mark_price)}</AppText>
+                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.markIvPct)}</AppText>
                       </View>
                       <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>9.74%</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.positions, 0)}</AppText>
+                      </View>
+                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.bidSize, 1)}</AppText>
                       </View>
                       <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>11.71%</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pLeg.apr ? formatPct(pLeg.apr) : '--'}</AppText>
+                      </View>
+                      <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pLeg.apr ? formatPct(pLeg.apr) : '--'}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>805.7</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.askSize, 1)}</AppText>
                       </View>
                       <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>0.447</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.delta, 3)}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>0.00061</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.gamma, 5)}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>-196.81</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.theta, 4)}</AppText>
                       </View>
                       <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>3.586</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vega, 4)}</AppText>
                       </View>
                       <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>0.00</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.oi, 0)}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>1.87</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vol, 0)}</AppText>
                       </View>
                       <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>59.65X</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pRaw.leverage ? `${pRaw.leverage}X` : '--'}</AppText>
                       </View>
                       <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>--</AppText>
+                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.last)}</AppText>
                       </View>
                     </View>
                   )
@@ -360,18 +384,17 @@ const OptionsChainTable = ({ selectedExpiry }) => {
           </View>
 
           {/* Current Price Indicator Overlay */}
-          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: HEADER_ROW_HEIGHT + (activeLineIdx * ROW_HEIGHT) + 8, alignItems: 'center', zIndex: 10 }}>
-            {/* The horizontal line */}
-            <View style={{ position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: isDark ? '#FFF' : '#222', top: -0.75 }} />
-            {/* The badge */}
-            <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13 }}>
-              <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 12, fontFamily: fontFamilyMedium }}>75,500.0</AppText>
+          {rowsToRender.length > 0 && currentPrice > 0 && (
+            <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: HEADER_ROW_HEIGHT + (activeLineIdx * ROW_HEIGHT) + 8, alignItems: 'center', zIndex: 10 }}>
+              <View style={{ position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: isDark ? '#FFF' : '#222', top: -0.75 }} />
+              <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13 }}>
+                <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(currentPrice, 2)}</AppText>
+              </View>
             </View>
-          </View>
+          )}
 
         </View>
-        <View style=
-          {{ height: 50 }}></View>
+        <View style={{ height: 50 }}></View>
       </ScrollView>
     </View>
   );

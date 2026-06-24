@@ -33,6 +33,8 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
   return (
     <RBSheet
       ref={ref}
+      keyboardAvoidingViewEnabled={false}
+      customModalProps={{ statusBarTranslucent: true }}
       height={550}
       openDuration={250}
       customStyles={{

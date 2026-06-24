@@ -62,3 +62,146 @@ export function underlyingsFromMarketOverview(overview) {
         };
     });
 }
+
+/** Parse expiry date from symbol e.g. BTC-260925-100000-C → 2026-09-25 */
+export function parseExpiryFromSymbol(symbol) {
+    const m = String(symbol || "").match(/^[A-Z0-9]+-(\d{6})-/i);
+    if (!m) return null;
+    const s = m[1];
+    return `20${s.slice(0, 2)}-${s.slice(2, 4)}-${s.slice(4, 6)}`;
+}
+
+export function parseStrikeFromSymbol(symbol) {
+    const m = String(symbol || "").match(/^[A-Z0-9]+-\d{6}-(\d+)-[CP]$/i);
+    return m ? decNum(m[1]) : 0;
+}
+
+export function fmtTs(ts) {
+    if (!ts) return "—";
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return "—";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function mapContractLeg(c) {
+    const bid = decNum(c.bid_price);
+    const ask = decNum(c.ask_price);
+    const mark = decNum(c.mark_price);
+    const iv = decNum(c.iv);
+    const ivPct = iv > 0 ? iv * 100 : 0;
+    const spread = ask > 0 && bid > 0 ? ask - bid : 0;
+    const oi = decNum(c.open_interest);
+    const vol = decNum(c.volume_24h);
+    const positions = decNum(c.positions);
+    const apr = decNum(c.apr);
+    const bidSize = decNum(c.bid_qty);
+    const askSize = decNum(c.ask_qty);
+    
+    return {
+        symbol: c.symbol,
+        last: mark > 0 ? mark : null,
+        vega: decNum(c.vega),
+        theta: decNum(c.theta),
+        gamma: decNum(c.gamma),
+        delta: decNum(c.delta),
+        bidSize,
+        bidIv: bid > 0 ? bid : null,
+        markIv: mark > 0 ? mark : null,
+        markIvPct: ivPct,
+        iv,
+        spread,
+        spreadBp: mark > 0 ? (spread / mark) * 10000 : 0,
+        askIv: ask > 0 ? ask : null,
+        askIvPct: ivPct,
+        askSize,
+        oi,
+        vol,
+        positions,
+        apr
+    };
+}
+
+/**
+ * Group flat contracts[] into chain rows per expiry for the options table UI.
+ * @returns {Array<{ date, fwd, vol, data }>}
+ */
+export function buildChainsFromContracts(contracts, spotPrice) {
+    if (!Array.isArray(contracts) || contracts.length === 0) return [];
+
+    const byExpiry = new Map();
+    for (const c of contracts) {
+        const expiry = parseExpiryFromSymbol(c.symbol);
+        if (!expiry) continue;
+        if (!byExpiry.has(expiry)) byExpiry.set(expiry, []);
+        byExpiry.get(expiry).push(c);
+    }
+
+    const spot = decNum(spotPrice);
+    const chains = [];
+
+    for (const [date, list] of [...byExpiry.entries()].sort()) {
+        const byStrike = new Map();
+        for (const c of list) {
+            const strike = decNum(c.strike) || parseStrikeFromSymbol(c.symbol);
+            if (!strike) continue;
+            if (!byStrike.has(strike)) {
+                byStrike.set(strike, { strike, call: null, put: null, callRaw: null, putRaw: null });
+            }
+            const row = byStrike.get(strike);
+            const type = String(c.option_type || "").toUpperCase();
+            if (type === "CALL") {
+                row.callRaw = c;
+                row.call = mapContractLeg(c);
+            } else if (type === "PUT") {
+                row.putRaw = c;
+                row.put = mapContractLeg(c);
+            }
+        }
+
+        const data = [...byStrike.values()]
+            .sort((a, b) => a.strike - b.strike)
+            .map(({ strike, call, put, callRaw, putRaw }) => {
+                const diffPct = spot > 0 ? ((strike - spot) / spot) * 100 : 0;
+                const emptyLeg = {
+                    symbol: "",
+                    last: null,
+                    vega: 0,
+                    theta: 0,
+                    gamma: 0,
+                    delta: 0,
+                    bidSize: 0,
+                    bidIv: 0,
+                    markIv: 0,
+                    markIvPct: 0,
+                    spread: 0,
+                    spreadBp: 0,
+                    askIv: 0,
+                    askIvPct: 0,
+                    askSize: 0,
+                    oi: 0,
+                    vol: 0,
+                    positions: 0,
+                    apr: 0
+                };
+                return {
+                    strike,
+                    diffPct,
+                    call: call || emptyLeg,
+                    put: put || emptyLeg,
+                    callRaw,
+                    putRaw,
+                };
+            });
+
+        chains.push({
+            date,
+            dte: "",
+            fwd: spot,
+            vol: "—",
+            data,
+        });
+    }
+
+    return chains;
+}

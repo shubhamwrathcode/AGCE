@@ -147,7 +147,7 @@ const Earning = () => {
 
   return (
     <>
-      <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
+      <AppSafeAreaView style={{ backgroundColor: colors.white }}>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>

@@ -902,6 +902,10 @@ const FutureChartScreen = () => {
     return `${CHART_WEB_BASE_URL}futures-chart/${themeSlug}/${symbol}`;
   }, [theme, pairBase, pairQuote]);
 
+  useEffect(() => {
+    console.log("FutureChart URL ===>", chartUri);
+  }, [chartUri]);
+
 
 
   const handleCurrencyChange = useCallback(
@@ -2053,6 +2057,8 @@ const FutureChartScreen = () => {
 
       <RBSheet
         ref={pairSheetRef}
+        keyboardAvoidingViewEnabled={false}
+        customModalProps={{ statusBarTranslucent: true }}
         closeOnDragDown={true}
         closeOnPressMask={true}
         height={Dimensions.get("window").height * 0.7}

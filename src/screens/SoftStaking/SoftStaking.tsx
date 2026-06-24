@@ -26,44 +26,44 @@ import RBSheet from 'react-native-raw-bottom-sheet';
 
 const STAKING_FAQ_ITEMS = [
   {
-      question: "What is Soft Staking?",
-      answer: "Soft Staking allows users to earn passive rewards on their crypto holdings while maintaining full access to their assets. Unlike traditional staking, your funds remain flexible and can be used or withdrawn at any time."
+    question: "What is Soft Staking?",
+    answer: "Soft Staking allows users to earn passive rewards on their crypto holdings while maintaining full access to their assets. Unlike traditional staking, your funds remain flexible and can be used or withdrawn at any time."
   },
   {
-      question: "How does Soft Staking work?",
-      answer: "Once eligible assets are deposited into your account, they automatically participate in the Soft Staking program. Rewards are generated based on your holdings and are credited according to the platform's reward schedule."
+    question: "How does Soft Staking work?",
+    answer: "Once eligible assets are deposited into your account, they automatically participate in the Soft Staking program. Rewards are generated based on your holdings and are credited according to the platform's reward schedule."
   },
   {
-      question: "Do I need to lock my assets?",
-      answer: "No. Soft Staking does not require a lock-up period. You can access, trade, or withdraw your assets whenever needed without waiting for an unstaking process."
+    question: "Do I need to lock my assets?",
+    answer: "No. Soft Staking does not require a lock-up period. You can access, trade, or withdraw your assets whenever needed without waiting for an unstaking process."
   },
   {
-      question: "Which cryptocurrencies are supported?",
-      answer: "Supported cryptocurrencies may vary depending on the platform. You can view the latest list of eligible assets directly from the Soft Staking dashboard."
+    question: "Which cryptocurrencies are supported?",
+    answer: "Supported cryptocurrencies may vary depending on the platform. You can view the latest list of eligible assets directly from the Soft Staking dashboard."
   },
   {
-      question: "How are staking rewards calculated?",
-      answer: "Rewards are typically calculated based on your average daily balance of eligible assets and the current annual percentage yield (APY) offered for each cryptocurrency."
+    question: "How are staking rewards calculated?",
+    answer: "Rewards are typically calculated based on your average daily balance of eligible assets and the current annual percentage yield (APY) offered for each cryptocurrency."
   },
   {
-      question: "When will I receive my rewards?",
-      answer: "Rewards are typically distributed on a daily, weekly, or monthly basis, depending on the specific program terms. Please refer to the program rules for exact distribution schedules."
+    question: "When will I receive my rewards?",
+    answer: "Rewards are typically distributed on a daily, weekly, or monthly basis, depending on the specific program terms. Please refer to the program rules for exact distribution schedules."
   },
   {
-      question: "Are there any fees for Soft Staking?",
-      answer: "Usually, there are no direct fees for participating in Soft Staking. However, standard network or withdrawal fees may apply when transferring your assets out of the platform."
+    question: "Are there any fees for Soft Staking?",
+    answer: "Usually, there are no direct fees for participating in Soft Staking. However, standard network or withdrawal fees may apply when transferring your assets out of the platform."
   },
   {
-      question: "Is Soft Staking safe?",
-      answer: "Soft Staking is designed to provide a secure and convenient way to earn rewards. However, cryptocurrency investments involve market risks, and users should always conduct their own research before participating."
+    question: "Is Soft Staking safe?",
+    answer: "Soft Staking is designed to provide a secure and convenient way to earn rewards. However, cryptocurrency investments involve market risks, and users should always conduct their own research before participating."
   },
   {
-      question: "Can I stop Soft Staking at any time?",
-      answer: "Yes. Since assets are not locked, you can stop participating simply by withdrawing or transferring your eligible assets from the staking account."
+    question: "Can I stop Soft Staking at any time?",
+    answer: "Yes. Since assets are not locked, you can stop participating simply by withdrawing or transferring your eligible assets from the staking account."
   },
   {
-      question: "Why choose Soft Staking?",
-      answer: "Soft Staking offers a simple way to generate passive income while maintaining liquidity, flexibility, and easy access to your crypto assets without long-term commitments."
+    question: "Why choose Soft Staking?",
+    answer: "Soft Staking offers a simple way to generate passive income while maintaining liquidity, flexibility, and easy access to your crypto assets without long-term commitments."
   }
 ];
 
@@ -153,7 +153,7 @@ const SoftStaking = () => {
   );
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
+    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => NavigationService.goBack()} style={{ padding: 8 }}>
@@ -186,8 +186,8 @@ const SoftStaking = () => {
                 Cumulative Rewards {isHide ? '******' : '0.00 USD'}
               </AppText>
             </View>
-            <TouchableOpacity 
-              style={{ padding: 4 }} 
+            <TouchableOpacity
+              style={{ padding: 4 }}
               onPress={() => Toast.showWithGravity('Coming soon', Toast.SHORT, Toast.BOTTOM)}
             >
               <FastImage source={historyIcon} style={{ width: 20, height: 20 }} tintColor={themeColors.text} resizeMode="contain" />

@@ -1568,12 +1568,12 @@ const FuturesUI = () => {
         <View style={[styles.availableRow, { marginBottom: 2 }]}>
           <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginRight: 8, paddingVertical: 2 }}>Available</AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-            {(!pairData || pairData.length === 0) ? (
+            {(!futuresData || futuresData?.contract?.short_name !== selectedCoin?.short_name) ? (
               <ShimmerBox width={60} height={16} borderRadius={4} />
             ) : (
               <>
                 <AppText type={TWELVE}
-                  style={{ fontFamily: fontFamilyMedium }}>{parseFloat(Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0).toFixed(5))} USDT</AppText>
+                  style={{ fontFamily: fontFamilyMedium }}>{parseFloat((Math.trunc(Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) * 100000) / 100000).toFixed(5))} USDT</AppText>
                 <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
                   <FastImage source={add} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
                 </TouchableOpacity>
@@ -1586,7 +1586,7 @@ const FuturesUI = () => {
         <View style={[styles.availableRow, { marginBottom: 10, flexWrap: 'wrap' }]}>
           <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, { marginRight: 8, paddingVertical: 2 }]}>Margin</AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-            {(!pairData || pairData.length === 0) ? (
+            {(!futuresData || futuresData?.contract?.short_name !== selectedCoin?.short_name) ? (
               <ShimmerBox width={80} height={16} borderRadius={4} />
             ) : (
               <>
@@ -1781,6 +1781,7 @@ const FuturesUI = () => {
         {/* Buttons */}
         {(() => {
           const { maxText, costText } = resolveMaxAndCost();
+          const isKycVerified = userData?.kycVerified ?? userData?.kyc_verified ?? (String(userData?.kyc_status ?? userData?.kycStatus ?? "").toLowerCase() === "approved");
           return (
             <View style={{ width: '100%', marginBottom: 12 }}>
               {(!userData) ? (
@@ -1793,6 +1794,18 @@ const FuturesUI = () => {
                 >
                   <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
                     Login
+                  </AppText>
+                </TouchableOpacity>
+              ) : (!isKycVerified) ? (
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { backgroundColor: activeTab === 'Buy' ? colors.green : colors.red }
+                  ]}
+                  onPress={() => navigation.navigate("KYC_STATUS_SCREEN")}
+                >
+                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
+                    Submit Kyc
                   </AppText>
                 </TouchableOpacity>
               ) : activeTab === 'Buy' ? (
@@ -1834,7 +1847,7 @@ const FuturesUI = () => {
               <View style={{ marginTop: 12, gap: 6 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <AppText type={TWELVE} color={themeColors.secondaryText}>Cost</AppText>
-                  {(!pairData || pairData.length === 0) ? (
+                  {(!futuresData || futuresData?.contract?.short_name !== selectedCoin?.short_name) ? (
                     <ShimmerBox width={60} height={14} borderRadius={4} />
                   ) : (
                     <AppText type={TWELVE} weight={SEMI_BOLD}>{costText}</AppText>
@@ -1842,7 +1855,7 @@ const FuturesUI = () => {
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <AppText type={TWELVE} color={themeColors.secondaryText}>Max</AppText>
-                  {(!pairData || pairData.length === 0) ? (
+                  {(!futuresData || futuresData?.contract?.short_name !== selectedCoin?.short_name) ? (
                     <ShimmerBox width={60} height={14} borderRadius={4} />
                   ) : (
                     <AppText type={TWELVE} weight={SEMI_BOLD}>{maxText}</AppText>
@@ -1951,6 +1964,8 @@ const FuturesUI = () => {
 
         <RBSheet
           ref={pairSheetRef}
+          keyboardAvoidingViewEnabled={false}
+          customModalProps={{ statusBarTranslucent: true }}
           closeOnDragDown={true}
           closeOnPressMask={true}
           height={Dimensions.get("window").height * 0.7}
@@ -1983,6 +1998,8 @@ const FuturesUI = () => {
         {/* Margin Mode Sheet */}
         <RBSheet
           ref={marginModeSheetRef}
+          keyboardAvoidingViewEnabled={false}
+          customModalProps={{ statusBarTranslucent: true }}
           closeOnDragDown={true}
           closeOnPressMask={true}
           height={480}
@@ -2091,6 +2108,8 @@ const FuturesUI = () => {
         {/* Contract Unit Preferences Sheet */}
         <RBSheet
           ref={contractUnitSheetRef}
+          keyboardAvoidingViewEnabled={false}
+          customModalProps={{ statusBarTranslucent: true }}
           closeOnDragDown={true}
           closeOnPressMask={true}
           height={450}
@@ -2204,6 +2223,8 @@ const FuturesUI = () => {
         {/* Adjust Leverage Sheet */}
         <RBSheet
           ref={rbSheetMarginLeverage}
+          keyboardAvoidingViewEnabled={false}
+          customModalProps={{ statusBarTranslucent: true }}
           closeOnDragDown={false}
           closeOnPressMask={true}
           height={640}
@@ -2365,6 +2386,8 @@ const FuturesUI = () => {
 
         <RBSheet
           ref={orderTypeSheetRef}
+          keyboardAvoidingViewEnabled={false}
+          customModalProps={{ statusBarTranslucent: true }}
           closeOnDragDown={true}
           closeOnPressMask={true}
           height={Math.min(540, Dimensions.get("window").height * 0.6)}
@@ -2444,6 +2467,8 @@ const FuturesUI = () => {
           ref={tifSheetRef}
           height={400}
           animationType="slide"
+          keyboardAvoidingViewEnabled={false}
+          customModalProps={{ statusBarTranslucent: true }}
           closeOnDragDown={true}
           closeOnPressMask={true}
           customStyles={{

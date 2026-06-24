@@ -538,6 +538,8 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
 
       <RBSheet
         ref={detailSheetRef}
+        keyboardAvoidingViewEnabled={false}
+        customModalProps={{ statusBarTranslucent: true }}
         closeOnDragDown={true}
         closeOnPressMask={true}
         height={450}

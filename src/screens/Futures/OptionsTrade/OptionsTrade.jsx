@@ -20,7 +20,7 @@ const OptionsTrade = () => {
   const [selectedAsset, setSelectedAsset] = useState('BTC');
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { underlyings, expiries, isMarketLoading } = useOptionsWebSocket(selectedAsset);
+  const { underlyings, expiries, chains, currentPrice, isMarketLoading } = useOptionsWebSocket(selectedAsset);
 
   const [activeTab, setActiveTab] = useState(0);
   const [selectedOptionType, setSelectedOptionType] = useState('All');
@@ -56,11 +56,13 @@ const OptionsTrade = () => {
         setActiveTab={setActiveTab}
         selectedOptionType={selectedOptionType}
         setSelectedOptionType={setSelectedOptionType}
+        selectedAsset={selectedAsset}
         onOpenSettings={() => setSettingsVisible(true)}
         onOpenMoreSheet={() => setMoreSheetVisible(true)}
-        selectedAsset={selectedAsset}
         onOpenPairList={() => pairSheetRef.current?.open()}
       />
+      <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
+
       {activeTab === 0 && (
         <>
           <OptionsExpiries
@@ -70,6 +72,9 @@ const OptionsTrade = () => {
           />
           <OptionsChainTable
             selectedExpiry={selectedExpiry}
+            chains={chains}
+            currentPrice={currentPrice}
+            selectedAsset={selectedAsset}
           />
         </>
       )}

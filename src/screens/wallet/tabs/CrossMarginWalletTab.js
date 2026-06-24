@@ -535,6 +535,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
           keyExtractor={(item) => item.asset}
           style={{ marginTop: 10 }}
           showsVerticalScrollIndicator={false}
+          scrollEnabled={false}
           renderItem={({ item, index }) => {
             const hasBorrow = parseFloat(item.borrowed) > 0;
             const debt = debtByAsset[item.asset] || null;

@@ -722,18 +722,14 @@ const WalletNew = ({ route }) => {
         {contentLoading ? (
           <WalletSkeleton />
         ) : (
-          <TabView
-            lazy
-            navigationState={{ index: topIndex, routes: topRoutes }}
-            onIndexChange={setTopIndex}
-            initialLayout={{ width: layout.width }}
-            renderTabBar={() => (
-              <WalletHeader routes={topRoutes} activeTab={activeTab} setActiveTab={setActiveTab} />
-            )}
-            renderScene={({ route }) => {
+          <View style={{ flex: 1 }}>
+            <WalletHeader routes={topRoutes} activeTab={activeTab} setActiveTab={setActiveTab} />
+            {(() => {
+              const route = topRoutes[topIndex];
+              if (!route) return null;
               if (route.key === "Overview") {
                 return (
-                  <View style={{ marginVertical: 10, paddingHorizontal: 20, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, marginVertical: 10, paddingHorizontal: 20, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <View>
 
 
@@ -1024,7 +1020,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "Spot") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <SpotWalletTab
                         theme={theme}
@@ -1065,7 +1061,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "Margin") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <MarginWalletTab
                         theme={theme}
@@ -1101,7 +1097,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "Cross") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <CrossMarginWalletTab
                         theme={theme}
@@ -1115,7 +1111,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "Main") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <MainWalletTab
                         theme={theme}
@@ -1159,7 +1155,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "P2P") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <P2PWalletTab
                         theme={theme}
@@ -1202,7 +1198,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "Swap") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <SwapWalletTab
                         theme={theme}
@@ -1245,7 +1241,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "Earning") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <EarningWalletTab
                         theme={theme}
@@ -1288,7 +1284,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "Staking") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <StakingWalletTab
                         theme={theme}
@@ -1324,7 +1320,7 @@ const WalletNew = ({ route }) => {
 
               if (route.key === "Futures") {
                 return (
-                  <View style={{ display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
                     <DeferredTabScene>
                       <FuturesWalletTab
                         theme={theme}
@@ -1370,13 +1366,15 @@ const WalletNew = ({ route }) => {
                   {renderWalletTypeScene(route.key)}
                 </View>
               );
-            }}
-          />
+            })}
+          </View>
         )}
         {/* </ImageBackground> */}
       </KeyBoardAware>
       <RBSheet
         ref={depsoitSheet}
+        keyboardAvoidingViewEnabled={false}
+        customModalProps={{ statusBarTranslucent: true }}
         closeOnDragDown={true}
         closeOnPressMask={true}
         height={250}
@@ -1400,6 +1398,8 @@ const WalletNew = ({ route }) => {
       </RBSheet>
       <RBSheet
         ref={withdrawSheet}
+        keyboardAvoidingViewEnabled={false}
+        customModalProps={{ statusBarTranslucent: true }}
         closeOnDragDown={true}
         closeOnPressMask={true}
         height={260}

@@ -73,6 +73,8 @@ const CoinDetailSheet = ({
   return (
     <RBSheet
       ref={sheetRef}
+      keyboardAvoidingViewEnabled={false}
+      customModalProps={{ statusBarTranslucent: true }}
       closeOnDragDown={true}
       closeOnPressMask={true}
       height={390}

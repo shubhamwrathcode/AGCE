@@ -65,6 +65,8 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
     <>
       <RBSheet
         ref={ref}
+        keyboardAvoidingViewEnabled={false}
+        customModalProps={{ statusBarTranslucent: true }}
         height={580}
         openDuration={250}
         customStyles={{
