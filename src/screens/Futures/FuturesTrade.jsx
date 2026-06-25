@@ -547,7 +547,7 @@ const FuturesUI = () => {
       if (Number.isFinite(orderCap) && orderCap > 0) {
         maxQty = Math.min(maxQty, orderCap);
       }
-      
+
       const step = Number(selectedCoin?.step_size) || 0.001;
       const stepDec = (() => {
         const s = String(step);
@@ -557,17 +557,17 @@ const FuturesUI = () => {
         const dot = s.indexOf(".");
         return dot === -1 ? 0 : s.length - dot - 1;
       })();
-      
+
       const maxSteps = Math.floor(maxQty / step + 1e-12);
       const flooredMaxQty = parseFloat((maxSteps * step).toFixed(stepDec));
-      
+
       if (flooredMaxQty <= 0) return '';
-      
+
       const targetQty = (flooredMaxQty * val) / 100;
-      
+
       const multiplier = Math.pow(10, stepDec);
       const flooredTargetQty = Math.floor(targetQty * multiplier) / multiplier;
-      
+
       return flooredTargetQty > 0 ? String(flooredTargetQty) : '';
     }
   };
@@ -611,8 +611,14 @@ const FuturesUI = () => {
       let baseQty = rawQty;
 
       const refPrice = Number(liveCoin?.mark_price) || 0;
-      const priceForConversion = orderType === 'Limit' ? parseFloat(String(price).replace(/,/g, '')) || refPrice : refPrice;
-
+      let priceForConversion = refPrice;
+      if (orderType === 'Limit') {
+        priceForConversion = parseFloat(String(price).replace(/,/g, '')) || refPrice;
+      } else if (orderType === 'Conditional') {
+        const orderPriceVal = parseFloat(String(conditionalPrice).replace(/,/g, ''));
+        const triggerPriceVal = parseFloat(String(triggerPrice).replace(/,/g, ''));
+        priceForConversion = orderPriceVal || triggerPriceVal || refPrice;
+      }
       if (isQuoteSize && priceForConversion > 0) {
         baseQty = rawQty / priceForConversion;
       }
@@ -720,6 +726,36 @@ const FuturesUI = () => {
       if (reduceOnly) payload.reduce_only = true;
       if (closePosition) payload.close_position = true;
 
+      // Local Margin Validation (matches Web App)
+      let orderPriceForCap = 0;
+      if (orderType === "Limit" && payload.price) {
+        orderPriceForCap = parseFloat(payload.price);
+      } else if (orderType === "Market") {
+        orderPriceForCap = Number(selectedCoin?.mark_price) || Number(price) || 0;
+      } else if (orderType === "Conditional") {
+        orderPriceForCap = payload.order_price ? parseFloat(payload.order_price) : parseFloat(payload.trigger_price) || 0;
+      }
+
+      if (Number.isFinite(orderPriceForCap) && orderPriceForCap > 0) {
+        const orderQty = parseFloat(finalQtyStr) || 0;
+        const orderNotional = orderQty * orderPriceForCap;
+
+        if (!reduceOnly && !closePosition) {
+          const feeRate = Number(selectedCoin?.taker_fee_rate);
+          const takerFee = Number.isFinite(feeRate) && feeRate >= 0 ? feeRate : 0;
+          const effAvail = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0);
+          
+          const lev = Math.max(1, Number(leverage) || 1);
+          const requiredMargin = (orderNotional / lev) + (orderNotional * takerFee);
+
+          if (requiredMargin > effAvail + 1e-8) {
+            SimpleToast.show("Insufficient margin. Add funds or reduce your order size.", SimpleToast.SHORT);
+            setPlacingOrderSide("");
+            return;
+          }
+        }
+      }
+
       const client_order_id = "app_" + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
       const finalPayload = {
         ...payload,
@@ -779,9 +815,13 @@ const FuturesUI = () => {
   useEffect(() => {
     // 2. Normal slider recalculation
     if (sliderValue > 0) {
-      setAmount(calculateAmountForSlider(sliderValue, contractUnit, price));
+      let currentRefPrice = price;
+      if (orderType === 'Conditional') {
+        currentRefPrice = conditionalPrice || triggerPrice;
+      }
+      setAmount(calculateAmountForSlider(sliderValue, contractUnit, currentRefPrice));
     }
-  }, [sliderValue, contractUnit, marginLeverage, price]);
+  }, [sliderValue, contractUnit, marginLeverage, price, orderType, conditionalPrice, triggerPrice]);
 
   useEffect(() => {
     if (!futuresPrice) return;
@@ -1618,23 +1658,25 @@ const FuturesUI = () => {
         </View>
 
         {/* Slider */}
-        <View style={{ marginVertical: 10 }}>
-          <PercentQuickSelect
-            activeValue={sliderValue}
-            onSelect={(val) => {
-              Keyboard.dismiss();
-              setIsAmountFocused(false);
-              handleSliderChange(val);
-              if (val === 0) {
-                setAmount('');
-              }
-            }}
-            theme={themeObj.theme}
-          />
-        </View>
+        {orderType !== 'Conditional' && (
+          <View style={{ marginVertical: 10 }}>
+            <PercentQuickSelect
+              activeValue={sliderValue}
+              onSelect={(val) => {
+                Keyboard.dismiss();
+                setIsAmountFocused(false);
+                handleSliderChange(val);
+                if (val === 0) {
+                  setAmount('');
+                }
+              }}
+              theme={themeObj.theme}
+            />
+          </View>
+        )}
 
         {/* Available */}
-        <View style={[styles.availableRow, { marginBottom: 2 }]}>
+        <View style={[styles.availableRow, { marginBottom: 2, marginTop: orderType == 'Conditional' ? 10 : 0 }]}>
           <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginRight: 8, paddingVertical: 2 }}>Available</AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
             {(!futuresData || futuresData?.contract?.short_name !== selectedCoin?.short_name) ? (
