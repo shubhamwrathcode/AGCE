@@ -89,7 +89,8 @@ const MainApp = () => {
 
   return (
     <SafeAreaProvider>
-      <SystemBars style="dark" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+      <SystemBars style="light" />
       <SocketProvider>
         <FutureSocketContextProvider>
           <ChartProvider>

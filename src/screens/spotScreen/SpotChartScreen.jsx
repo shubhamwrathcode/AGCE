@@ -17,29 +17,23 @@ import {
 import Toast from "react-native-simple-toast";
 import WebView from "react-native-webview";
 import LinearGradient from "react-native-linear-gradient";
-import { useRoute, useNavigation, useFocusEffect, useIsFocused } from "@react-navigation/native";
+import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import moment from "moment";
 import { useDispatch } from "react-redux";
 import { useTheme } from "../../hooks/useTheme";
-import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD, THIRTEEN, MEDIUM, FOURTEEN, FIFTEEN, SIXTEEN, EIGHTEEN, TWELVE } from "../../shared";
+import { AppText, SEMI_BOLD, ELEVEN, TEN, BOLD, MEDIUM, FOURTEEN, TWELVE } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
   back_ic,
   downIcon,
   upIcon,
   Refresh,
-  starIcon,
   starFillIcon,
-  right_ic,
   order_1,
   order_2,
   order_3,
-  notification_bell_ic,
   bell_ic,
-  margin,
-  futuresIcon,
-  Robot,
   margin_ic,
   future_ic,
   bots_ic,

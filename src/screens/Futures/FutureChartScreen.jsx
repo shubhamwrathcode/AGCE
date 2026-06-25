@@ -68,7 +68,7 @@ import { colors as themePalette } from "../../theme/colors";
 import { fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 
 const { width: Width, height: Height } = Dimensions.get("window");
-const CHART_BLOCK_HEIGHT = Math.round(Height * 0.45);
+const CHART_BLOCK_HEIGHT = Math.round(Height * 0.38);
 // Render full order book list on this screen (web-like).
 // (Binance shows many rows; we avoid slicing here.)
 const ORDER_BOOK_ROWS = 12;
@@ -1537,7 +1537,7 @@ const FutureChartScreen = () => {
                       <WebView
                         key={chartUri}
                         source={{ uri: chartUri }}
-                        style={{ width: Width, height: CHART_BLOCK_HEIGHT + 30, marginTop: -30, backgroundColor: colors.iconBgColor }}
+                        style={{ width: Width, height: CHART_BLOCK_HEIGHT + 60, marginTop: -30, backgroundColor: colors.iconBgColor }}
                         containerStyle={{ backgroundColor: "transparent" }}
                         opaque={false}
                         androidLayerType="hardware"
@@ -1572,7 +1572,6 @@ const FutureChartScreen = () => {
                     styles.obTabsRow,
                     {
                       paddingHorizontal: 12,
-                      paddingVertical: 0,
                       borderBottomWidth: StyleSheet.hairlineWidth,
                       borderBottomColor: themeColors.themeBorderColor,
                     },
