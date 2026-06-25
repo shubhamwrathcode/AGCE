@@ -19,7 +19,7 @@ const OptionsTrade = () => {
 
   const [selectedAsset, setSelectedAsset] = useState('BTC');
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const { underlyings, expiries, chains, currentPrice, isMarketLoading } = useOptionsWebSocket(selectedAsset);
 
   const [activeTab, setActiveTab] = useState(0);
@@ -27,7 +27,7 @@ const OptionsTrade = () => {
   const [selectedExpiry, setSelectedExpiry] = useState('ALL');
   const [isSettingsVisible, setSettingsVisible] = useState(false);
   const [isMoreSheetVisible, setMoreSheetVisible] = useState(false);
-  
+
   const pairSheetRef = useRef(null);
 
   // Default to first underlying if current selectedAsset is not in the list

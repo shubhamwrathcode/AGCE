@@ -2013,7 +2013,13 @@ const FuturesUI = () => {
           onViewMore={() => {
             navigation.navigate('FutureHistoryScreen', { selectedCoin, initialTab: activeHistoryTab });
           }}
-          onRefresh={fetchFuturesOpenOrders}
+          onRefresh={() => {
+            fetchFuturesPositions();
+            fetchFuturesOpenOrders();
+            fetchFuturesPositionHistory();
+            fetchFuturesOrderHistory();
+            fetchFuturesTransactionHistory();
+          }}
         />
       </View>
     );

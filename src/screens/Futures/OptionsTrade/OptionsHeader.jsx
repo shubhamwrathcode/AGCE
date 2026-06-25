@@ -20,7 +20,7 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
     <View style={styles.container}>
       {/* Top Links */}
       <View style={styles.topLinksRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topLinksScroll}>
+        {/* <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topLinksScroll}>
           {topNavItems.map((item, index) => (
             <TouchableOpacity key={index} style={styles.topLinkItem} onPress={() => setActiveTab(index)}>
               <AppText
@@ -33,10 +33,10 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
               </AppText>
             </TouchableOpacity>
           ))}
-        </ScrollView>
-        <TouchableOpacity style={styles.moreBtn} onPress={onOpenMoreSheet}>
+        </ScrollView> */}
+        {/* <TouchableOpacity style={styles.moreBtn} onPress={onOpenMoreSheet}>
           <FastImage source={menuIcon} style={{ width: 18, height: 18, }} resizeMode='contain' tintColor={colors.black} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Title & Price */}
@@ -57,7 +57,7 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
       )}
 
       {/* Filter Toggles */}
-      {activeTab === 0 && (
+      {/* {activeTab === 0 && (
         <View style={styles.filterRow}>
           <View style={styles.optionTypes}>
             {optionTypes.map((type) => {
@@ -85,7 +85,7 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
             <FastImage source={filterNew} style={{ width: 20, height: 20, }} resizeMode='contain' />
           </TouchableOpacity>
         </View>
-      )}
+      )} */}
     </View>
   );
 };

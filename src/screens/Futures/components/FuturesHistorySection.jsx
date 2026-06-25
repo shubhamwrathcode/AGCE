@@ -76,7 +76,9 @@ const FuturesHistorySection = ({
         ToastAndroid.show(result?.message || 'Order Cancelled', ToastAndroid.SHORT);
         setCancelModalVisible(false);
         setOrderToCancel(null);
-        if (onRefresh) onRefresh();
+        setTimeout(() => {
+          if (onRefresh) onRefresh();
+        }, 1000);
       } else {
         ToastAndroid.show(result?.message || 'Failed to cancel', ToastAndroid.SHORT);
       }
@@ -106,10 +108,12 @@ const FuturesHistorySection = ({
       }
       const result = await appOperation.customer?.futuresPlaceOrder(payload);
       if (result?.success) {
-        ToastAndroid.show('Position close order placed', ToastAndroid.SHORT);
+        ToastAndroid.show(result?.message || 'Position close order placed', ToastAndroid.SHORT);
         setCloseModalVisible(false);
         setPosToClose(null);
-        if (onRefresh) onRefresh();
+        setTimeout(() => {
+          if (onRefresh) onRefresh();
+        }, 1000);
       } else {
         const msg = result?.error?.message || result?.message || 'Failed to close position';
         ToastAndroid.show(msg, ToastAndroid.SHORT);
@@ -168,7 +172,12 @@ const FuturesHistorySection = ({
           </View>
           <TouchableOpacity
             onPress={() => {
-              setPosToClose(pos);
+              setPosToClose({
+                ...pos,
+                computedMark: mark,
+                computedQty: qty,
+                computedEntry: entry
+              });
               setCloseModalVisible(true);
             }}
             style={{

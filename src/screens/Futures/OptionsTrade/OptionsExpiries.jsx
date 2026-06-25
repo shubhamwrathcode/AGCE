@@ -11,7 +11,7 @@ const OptionsExpiries = ({ expiries = [], selectedExpiry, setSelectedExpiry }) =
 
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      {/* <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {expiries.map((date) => {
           const isSelected = selectedExpiry === date;
           const displayDate = date === 'ALL' ? 'All' : date;
@@ -43,7 +43,7 @@ const OptionsExpiries = ({ expiries = [], selectedExpiry, setSelectedExpiry }) =
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </ScrollView> */}
       <View style={styles.chevronContainer}>
         <FastImage source={right_arrow} style={styles.chevronIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
       </View>

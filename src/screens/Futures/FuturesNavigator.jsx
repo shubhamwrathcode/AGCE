@@ -8,7 +8,6 @@ import { useTheme } from '../../hooks/useTheme';
 import { BOLD, fontFamilySemiBold, MEDIUM, SEMI_BOLD } from '../../theme/typography';
 import { back_ic } from '../../helper/ImageAssets';
 import FuturesTrade from './FuturesTrade';
-import TradFiTrade from './TradFiTrade';
 import OptionsTrade from './OptionsTrade/OptionsTrade';
 import { AppText } from '../../common';
 
@@ -46,15 +45,6 @@ const CustomTabBar = ({ state, descriptors, navigation, position, themeColors, i
           const isFocused = state.index === index;
 
           const onPress = () => {
-            if (route.name === 'TradFi') {
-              if (Platform.OS === 'android') {
-                ToastAndroid.show('Coming soon', ToastAndroid.SHORT);
-              } else {
-                Alert.alert('Coming soon');
-              }
-              return;
-            }
-
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,
@@ -110,7 +100,6 @@ const FuturesNavigator = () => {
         }}
       >
         <Tab.Screen name="Futures" component={FuturesTrade} />
-        <Tab.Screen name="TradFi" component={TradFiTrade} />
         <Tab.Screen name="Options" component={OptionsTrade} />
       </Tab.Navigator>
     </View>

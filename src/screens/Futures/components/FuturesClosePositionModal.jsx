@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, TextInput, Platform } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, TextInput, Platform, ScrollView } from 'react-native';
+import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import { AppText, BOLD, FOURTEEN, MEDIUM, SEMI_BOLD, TWELVE, SIXTEEN } from '../../../common';
 import { colors } from '../../../theme/colors';
@@ -26,19 +27,17 @@ const CustomDraggableSlider = ({ value, onValueChange, themeColors, isDark }) =>
         onStartShouldSetResponder={() => true}
         onResponderGrant={(evt) => updateValue(evt.nativeEvent.locationX)}
         onResponderMove={(evt) => updateValue(evt.nativeEvent.locationX)}
-        style={{ height: 30, justifyContent: "center", paddingVertical: 10 }}
+        style={{ height: 40, justifyContent: "center", paddingVertical: 10 }}
       >
-        <View style={{ height: 6, backgroundColor: isDark ? "#2A2A2A" : "#E5E7EB", borderRadius: 3, width: "100%" }} />
-        <View style={{ height: 6, backgroundColor: themeColors.spotTradeBuy || colors.green, borderRadius: 3, width: `${value}%`, position: "absolute", left: 0 }} />
-        <View
-          style={{ position: "absolute", left: `${value}%`, width: 16, height: 16, borderRadius: 8, backgroundColor: themeColors.spotTradeBuy || colors.green, marginLeft: -8 }}
-          pointerEvents="none"
-        />
+        <View style={{ height: 4, backgroundColor: isDark ? "#444" : "#E5E7EB", borderRadius: 2 }}>
+          <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${value}%`, backgroundColor: themeColors.text, borderRadius: 2 }} />
+        </View>
+        <View style={{ position: "absolute", left: `${value}%`, marginLeft: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: themeColors.text, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 2, borderWidth: 2, borderColor: colors.white }} />
       </View>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4, paddingHorizontal: 4 }}>
-        {[0, 25, 50, 75, 100].map((pct) => (
-          <TouchableOpacity key={pct} onPress={() => onValueChange(pct)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <AppText style={{ fontSize: 11, color: value >= pct ? themeColors.text : themeColors.secondaryText }}>{pct}%</AppText>
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        {[0, 25, 50, 75, 100].map((step) => (
+          <TouchableOpacity key={step} onPress={() => onValueChange(step)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 10 }}>{step}%</AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -48,17 +47,17 @@ const CustomDraggableSlider = ({ value, onValueChange, themeColors, isDark }) =>
 
 const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeColors, loading, pos }) => {
   const [closePositionType, setClosePositionType] = useState('MARKET');
-  const [closePositionPrice, setClosePositionPrice] = useState('');
-  const [closePositionQty, setClosePositionQty] = useState('');
-  const [closePositionSliderPct, setClosePositionSliderPct] = useState(0);
+  const [closePositionPrice, setClosePositionPrice] = useState("");
+  const [closePositionQty, setClosePositionQty] = useState("");
+  const [closePositionSliderPct, setClosePositionSliderPct] = useState(100);
   const [isQtyFocused, setIsQtyFocused] = useState(false);
 
   useEffect(() => {
     if (visible && pos) {
       setClosePositionType('MARKET');
-      const markPx = decNum(pos.mark_price);
+      const markPx = decNum(pos.computedMark ?? pos.mark_price);
       if (Number.isFinite(markPx)) setClosePositionPrice(String(markPx));
-      const qty = decNum(pos.quantity);
+      const qty = decNum(pos.computedQty ?? pos.quantity);
       if (Number.isFinite(qty)) {
         setClosePositionQty(String(qty));
         setClosePositionSliderPct(100);
@@ -76,9 +75,7 @@ const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeC
   const baseAsset = pos?.symbol ? pos.symbol.replace(/USDT.*/, '') : "";
   const quoteAsset = pos?.symbol && pos.symbol.includes("USDT") ? "USDT" : "USD";
 
-  const displayQty = (!isQtyFocused && closePositionSliderPct > 0)
-    ? `${closePositionSliderPct}% (≈${closePositionQty})`
-    : closePositionQty;
+  const displayQty = closePositionQty;
 
   const sheetRef = useRef(null);
 
@@ -100,13 +97,14 @@ const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeC
       closeOnDragDown={true}
       closeOnPressMask={true}
       onClose={onClose}
-      height={580}
+      height={600}
       customStyles={{
         wrapper: {
           backgroundColor: "rgba(0,0,0,0.5)"
         },
         draggableIcon: {
-          backgroundColor: "transparent",
+          backgroundColor: isDark ? "#444" : "#E5E7EB",
+          width: 40,
         },
         container: {
           borderTopLeftRadius: 16,
@@ -117,160 +115,160 @@ const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeC
         }
       }}
     >
-      <View style={{ flex: 1 }}>
+      <KeyboardAwareScrollView
+        style={{ flex: 1, marginTop: 8 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
+      >
         {/* Header */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16, marginTop: 4 }}>
-            <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>
-              Close by {closePositionType === "MARKET" ? "Market" : "Limit"}
+        <View style={{ marginBottom: 20 }}>
+          <AppText style={{ color: themeColors.text, fontSize: 18 }} weight={BOLD}>
+            Close Position
+          </AppText>
+        </View>
+
+        {/* Info Block */}
+        <View style={{ marginBottom: 24 }}>
+          {/* Symbol Row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Symbol</AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={SEMI_BOLD}>
+                {baseAsset}{quoteAsset} <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }} weight={MEDIUM}>Perp</AppText>
+              </AppText>
+              <View style={{ backgroundColor: isLong ? 'rgba(38, 166, 154, 0.15)' : 'rgba(239, 83, 80, 0.15)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}>
+                <AppText style={{ color: isLong ? colors.green : colors.red, fontSize: 10 }} weight={SEMI_BOLD}>
+                  {isLong ? 'Long' : 'Short'} {pos?.leverage}x
+                </AppText>
+              </View>
+            </View>
+          </View>
+
+          {/* Entry Price Row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Entry Price ({quoteAsset})</AppText>
+            <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>
+              {Number(decNum(pos?.average_entry_price ?? pos?.entry_price) || 0).toFixed(2)}
             </AppText>
-            <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
-              <AppText style={{ color: themeColors.secondaryText, fontSize: 20 }}>✕</AppText>
+          </View>
+
+          {/* Mark Price Row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Mark Price ({quoteAsset})</AppText>
+            <AppText style={{ color: themeColors.text, fontSize: 14 }} weight={MEDIUM}>
+              {parseFloat(pos?.mark_price || 0).toFixed(2)}
+            </AppText>
+          </View>
+        </View>
+
+        {/* Price Section */}
+        <View style={{ marginBottom: 20 }}>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Price</AppText>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1, backgroundColor: isDark ? "#2A2A2A" : "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, justifyContent: 'center' }}>
+              {closePositionType === "MARKET" ? (
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Market Price</AppText>
+              ) : (
+                <TextInput
+                  style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
+                  placeholder="Price"
+                  placeholderTextColor={themeColors.secondaryText}
+                  keyboardType="numeric"
+                  value={closePositionPrice}
+                  onChangeText={setClosePositionPrice}
+                />
+              )}
+            </View>
+            <TouchableOpacity
+              onPress={() => setClosePositionType(closePositionType === "MARKET" ? "LIMIT" : "MARKET")}
+              style={{ backgroundColor: isDark ? "#2A2A2A" : "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, width: 100, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}
+            >
+              <AppText style={{ color: themeColors.text, fontSize: 14 }}>
+                {closePositionType === "MARKET" ? "Market" : "Limit"}
+              </AppText>
+              <AppText style={{ color: themeColors.secondaryText, fontSize: 10 }}>▼</AppText>
             </TouchableOpacity>
           </View>
-
-          {/* Subtitle */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 16 }}>
-            <AppText style={{ color: themeColors.text, fontSize: 13 }} weight={SEMI_BOLD}>
-              {pos?.symbol ? pos.symbol.replace("USDT", "/USDT") : "—"}
-            </AppText>
-            <AppText style={{ color: themeColors.secondaryText }}>·</AppText>
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 13 }}>
-              {String(pos?.margin_type ?? "ISOLATED").toUpperCase()}
-            </AppText>
-            <AppText style={{ color: themeColors.secondaryText }}>·</AppText>
-            <AppText style={{ color: isLong ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red, fontSize: 13 }} weight={BOLD}>
-              {isLong ? "L" : "S"}
-            </AppText>
-          </View>
-
-          {/* Type Toggle */}
-          <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
-            {["MARKET", "LIMIT"].map((t) => (
-              <TouchableOpacity
-                key={t}
-                onPress={() => {
-                  setClosePositionType(t);
-                  const maxQty = parseFloat(pos?.quantity || 0);
-                  if (t === "LIMIT") {
-                    setClosePositionQty(maxQty > 0 ? maxQty.toFixed(8).replace(/\.?0+$/, "") : "");
-                    setClosePositionSliderPct(100);
-                  } else {
-                    setClosePositionQty(maxQty > 0 ? maxQty.toFixed(8).replace(/\.?0+$/, "") : "");
-                    setClosePositionSliderPct(100);
-                  }
-                }}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: "center",
-                  backgroundColor: closePositionType === t ? (isDark ? colors.white : "#111827") : (isDark ? "#2A2A2A" : "#f3f4f6"),
-                  borderWidth: closePositionType === t ? 0 : 1, borderColor: isDark ? "#444" : "#e5e7eb",
-                }}
-              >
-                <AppText style={{ color: closePositionType === t ? (isDark ? colors.black : colors.white) : themeColors.text, fontSize: 13 }} weight={MEDIUM}>
-                  {t === "MARKET" ? "Market" : "Limit"}
-                </AppText>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Limit Price Input */}
-          {closePositionType === "LIMIT" && (
-            <View style={{ marginBottom: 12, position: "relative" }}>
-              <TextInput
-                style={{
-                  backgroundColor: isDark ? "#2A2A2A" : "#f9fafb", borderWidth: 1, borderColor: isDark ? "#444" : "#e5e7eb",
-                  borderRadius: 10, padding: 12, color: themeColors.text, fontSize: 14,
-                }}
-                placeholder="Price" placeholderTextColor={themeColors.secondaryText} keyboardType="numeric"
-                value={closePositionPrice} onChangeText={setClosePositionPrice}
-              />
-              <View style={{ position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center" }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>{quoteAsset}</AppText>
-              </View>
-            </View>
-          )}
-
-          {/* Size Input */}
-          <View style={{ marginBottom: closePositionType === "LIMIT" ? 4 : 16, position: "relative" }}>
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 4 }}>Size</AppText>
-            <View style={{ position: "relative" }}>
-              <TextInput
-                style={{
-                  backgroundColor: isDark ? "#2A2A2A" : "#f9fafb", borderWidth: 1, borderColor: isDark ? "#444" : "#e5e7eb",
-                  borderRadius: 10, padding: 12, color: themeColors.text, fontSize: 14,
-                }}
-                placeholder="0" placeholderTextColor={themeColors.secondaryText} keyboardType={isQtyFocused ? "numeric" : "default"}
-                editable={closePositionType === "LIMIT" || closePositionType === "MARKET"}
-                value={displayQty}
-                onFocus={() => setIsQtyFocused(true)}
-                onBlur={() => setIsQtyFocused(false)}
-                onChangeText={(val) => {
-                  setClosePositionQty(val);
-                  const maxQty = parseFloat(pos?.quantity || 0);
-                  const v = parseFloat(val || 0);
-                  if (maxQty > 0) {
-                    setClosePositionSliderPct(Math.min(100, Math.round((v / maxQty) * 100)));
-                  }
-                }}
-              />
-              <View style={{ position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center" }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>{baseAsset}</AppText>
-              </View>
-            </View>
-          </View>
-
-          {/* Slider */}
-          <View style={{ marginBottom: 16, marginTop: 12 }}>
-            <CustomDraggableSlider
-              value={closePositionSliderPct}
-              onValueChange={(pct) => {
-                const maxQty = parseFloat(pos?.quantity || 0);
-                const qty = maxQty > 0 ? (maxQty * pct / 100) : 0;
-                setClosePositionQty(qty.toFixed(8).replace(/\.?0+$/, "") || "0");
-                setClosePositionSliderPct(pct);
-              }}
-              themeColors={themeColors}
-              isDark={isDark}
-            />
-          </View>
-
-          {/* Info Rows */}
-          <View style={{ borderTopWidth: 1, borderTopColor: isDark ? "#444" : "#f3f4f6", paddingTop: 12, marginBottom: 16 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
-              <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Holding</AppText>
-              <AppText style={{ color: themeColors.text, fontSize: 12 }} weight={MEDIUM}>
-                {pos?.quantity ? (Math.floor(parseFloat(pos.quantity) * 100000000) / 100000000).toFixed(8).replace(/\.?0+$/, "") : "—"} {baseAsset}
-              </AppText>
-            </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
-              <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Unrealized PNL</AppText>
-              <AppText style={{ color: pos?.unrealized_pnl >= 0 ? colors.green : colors.red, fontSize: 12 }} weight={MEDIUM}>
-                {pos?.unrealized_pnl ? parseFloat(pos.unrealized_pnl).toFixed(4) : "0.0000"} {quoteAsset}
-              </AppText>
-            </View>
-          </View>
-
-          {/* Warning */}
-          {closePositionType === "MARKET" && (
-            <AppText style={{ color: "#d97706", fontSize: 12, marginBottom: 16 }}>
-              The system will cancel position orders and execute the position assets as a market order.
-            </AppText>
-          )}
-
-          {/* Footer */}
-          <TouchableOpacity
-            style={{ backgroundColor: isDark ? colors.white : "#111827", paddingVertical: 14, borderRadius: 10, alignItems: "center" }}
-            disabled={loading}
-            onPress={handleConfirm}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color={isDark ? colors.black : colors.white} />
-            ) : (
-              <AppText style={{ color: isDark ? colors.black : colors.white, fontSize: 15 }} weight={BOLD}>Confirm</AppText>
-            )}
-          </TouchableOpacity>
         </View>
+
+        {/* Amount Section */}
+        <View style={{ marginBottom: 16 }}>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Amount</AppText>
+          <View style={{ backgroundColor: isDark ? "#2A2A2A" : "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <TextInput
+              style={{ color: themeColors.text, fontSize: 14, padding: 0, flex: 1 }}
+              placeholder="0"
+              placeholderTextColor={themeColors.secondaryText}
+              keyboardType={isQtyFocused ? "numeric" : "default"}
+              value={displayQty}
+              onFocus={() => setIsQtyFocused(true)}
+              onBlur={() => setIsQtyFocused(false)}
+              onChangeText={(val) => {
+                setClosePositionQty(val);
+                const maxQty = parseFloat(pos?.quantity || 0);
+                const v = parseFloat(val || 0);
+                if (maxQty > 0) {
+                  setClosePositionSliderPct(Math.min(100, Math.round((v / maxQty) * 100)));
+                }
+              }}
+            />
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 14, marginLeft: 8 }}>{baseAsset}</AppText>
+          </View>
+        </View>
+
+        {/* Slider */}
+        {/*
+        <View style={{ marginBottom: 24, paddingHorizontal: 8 }}>
+          <CustomDraggableSlider
+            value={closePositionSliderPct}
+            onValueChange={(pct) => {
+              const maxQty = parseFloat(pos?.quantity || 0);
+              const qty = maxQty > 0 ? (maxQty * pct / 100) : 0;
+              setClosePositionQty(qty.toFixed(8).replace(/\.?0+$/, "") || "0");
+              setClosePositionSliderPct(pct);
+            }}
+            themeColors={themeColors}
+            isDark={isDark}
+          />
+        </View>
+        */}
+
+        {/* Bottom Summary */}
+        <View style={{ gap: 8, marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 13 }}>Position Amount</AppText>
+            <AppText style={{ color: themeColors.text, fontSize: 13 }} weight={MEDIUM}>
+              {closePositionQty || 0} {baseAsset}
+            </AppText>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 13 }}>Estimated PNL</AppText>
+            <AppText style={{ color: pos?.unrealized_pnl >= 0 ? colors.green : colors.red, fontSize: 13 }} weight={MEDIUM}>
+              {pos?.unrealized_pnl ? ((parseFloat(pos.unrealized_pnl) * closePositionSliderPct) / 100).toFixed(4) : "0.0000"} {quoteAsset}
+            </AppText>
+          </View>
+        </View>
+
+        <View style={{ flex: 1 }} />
+
+        {/* Footer Confirm Button */}
+        <TouchableOpacity
+          style={{ backgroundColor: "#000000", paddingVertical: 14, borderRadius: 10, alignItems: "center" }}
+          disabled={loading}
+          onPress={handleConfirm}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <AppText style={{ color: colors.white, fontSize: 15 }} weight={BOLD}>Confirm</AppText>
+          )}
+        </TouchableOpacity>
+      </KeyboardAwareScrollView>
     </RBSheet>
   );
 };
 
 export default FuturesClosePositionModal;
+

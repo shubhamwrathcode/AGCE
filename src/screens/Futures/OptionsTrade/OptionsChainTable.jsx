@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
+import FastImage from 'react-native-fast-image';
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from '../../../helper/ImageAssets';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
 import { fontFamilyMedium, SEMI_BOLD } from '../../../theme/typography';
@@ -100,12 +102,12 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
         const mergedMap = new Map();
         chains.forEach(chain => {
           chain.data.forEach(row => {
-             if (!mergedMap.has(row.strike)) {
-               mergedMap.set(row.strike, { ...row });
-             }
+            if (!mergedMap.has(row.strike)) {
+              mergedMap.set(row.strike, { ...row });
+            }
           });
         });
-        return Array.from(mergedMap.values()).sort((a,b) => a.strike - b.strike);
+        return Array.from(mergedMap.values()).sort((a, b) => a.strike - b.strike);
       } else {
         targetChain = chains[0];
       }
@@ -151,251 +153,261 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
       <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
 
       {/* Scrollable Table Area */}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-
-        <View style={{ flexDirection: 'row' }}>
-
-          {/* Calls Side */}
-          <View style={{ flex: 1 }}>
-            <ScrollView
-              ref={leftScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleLeftScroll}
-              scrollEventThrottle={16}
-            >
-              <View>
-                {/* Header */}
-                <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: CALLS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
-                  {CALLS_HEADERS.map((h, i) => (
-                    <View key={i} style={{ width: h.w, alignItems: h.align, paddingHorizontal: 6 }}>
-                      <View style={styles.dashedTextContainer}>
-                        <AppText style={{
-                          color: themeColors.secondaryText, fontSize: 11,
-                          fontFamily: fontFamilyMedium
-                        }}>{h.title}</AppText>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Rows */}
-                {rowsToRender.map((row, idx) => {
-                  const strikePriceNum = row.strike;
-                  const isCallITM = strikePriceNum < currentPrice;
-                  const callBg = isCallITM ? (isDark ? 'rgba(56, 183, 129, 0.15)' : '#F2FFF6') : 'transparent';
-
-                  const isRowAboveLine = idx === activeLineIdx - 1;
-                  const isRowBelowLine = idx === activeLineIdx;
-                  const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
-                  const paddingBottom = isRowAboveLine ? 8 : 0;
-                  const paddingTop = isRowBelowLine ? 8 : 0;
-                  const borderBottomWidth = isRowAboveLine ? 0 : 1;
-
-                  const cRaw = row.callRaw || {};
-                  const cLeg = row.call || {};
-
-                  return (
-                    <View key={`call-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: CALLS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}>
-                      <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.last)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cRaw.leverage ? `${cRaw.leverage}X` : '--'}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vol, 0)}</AppText>
-                      </View>
-                      <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.oi, 0)}</AppText>
-                      </View>
-                      <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vega, 4)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.theta, 4)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.gamma, 5)}</AppText>
-                      </View>
-                      <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.delta, 3)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.askSize, 1)}</AppText>
-                      </View>
-                      <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cLeg.apr ? formatPct(cLeg.apr) : '--'}</AppText>
-                      </View>
-                      <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cLeg.apr ? formatPct(cLeg.apr) : '--'}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.bidSize, 1)}</AppText>
-                      </View>
-                      <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.positions, 0)}</AppText>
-                      </View>
-                      <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: cLeg.markIvPct ? colors.green : themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.mark_price)}</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.markIvPct)}</AppText>
-                      </View>
-                      <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.ask_price)}</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.askIvPct)}</AppText>
-                      </View>
-                      <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.bid_price)}</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.bidIvPct || cLeg.markIvPct)}</AppText>
-                      </View>
-                    </View>
-                  )
-                })}
-              </View>
-            </ScrollView>
-          </View>
-
-          {/* Center Strike */}
-          <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', zIndex: 2 }}>
-
-            <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center' }]}>
-              <View style={styles.dashedTextContainer}>
-                <AppText weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, fontSize: 11, textAlign: 'center' }}>Strike</AppText>
-              </View>
-            </View>
-
-            {rowsToRender.map((row, idx) => {
-              const isRowAboveLine = idx === activeLineIdx - 1;
-              const isRowBelowLine = idx === activeLineIdx;
-              const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
-              const paddingBottom = isRowAboveLine ? 8 : 0;
-              const paddingTop = isRowBelowLine ? 8 : 0;
-              const borderBottomWidth = isRowAboveLine ? 0 : 1;
-
-              return (
-                <View key={`strike-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, justifyContent: 'center', borderBottomColor: themeColors.themeBorderColor || '#F0F0F0' }]}>
-                  <View>
-                    <AppText style={{ fontFamily: fontFamilyMedium, color: themeColors.text, fontSize: 12, textAlign: 'center' }}>{row.strike}</AppText>
-                    <AppText style={{ color: themeColors.secondaryText, fontSize: 9, fontFamily: fontFamilyMedium, textAlign: 'center', marginTop: 2 }}>{formatPct(row.diffPct)}</AppText>
-                  </View>
-                </View>
-              )
-            })}
-          </View>
-
-          {/* Puts Side */}
-          <View style={{ flex: 1 }}>
-            <ScrollView
-              ref={rightScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleRightScroll}
-              scrollEventThrottle={16}
-            >
-              <View>
-                {/* Header */}
-                <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: PUTS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
-                  {PUTS_HEADERS.map((h, i) => (
-                    <View key={i} style={{ width: h.w, alignItems: h.align, paddingHorizontal: 6 }}>
-                      <View style={styles.dashedTextContainer}>
-                        <AppText style={{
-                          color: themeColors.secondaryText, fontSize: 11,
-                          fontFamily: fontFamilyMedium
-                        }}>{h.title}</AppText>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Rows */}
-                {rowsToRender.map((row, idx) => {
-                  const strikePriceNum = row.strike;
-                  const isPutITM = strikePriceNum > currentPrice;
-                  const putBg = isPutITM ? (isDark ? 'rgba(235, 78, 92, 0.15)' : '#FFF2F2') : 'transparent';
-
-                  const isRowAboveLine = idx === activeLineIdx - 1;
-                  const isRowBelowLine = idx === activeLineIdx;
-                  const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
-                  const paddingBottom = isRowAboveLine ? 8 : 0;
-                  const paddingTop = isRowBelowLine ? 8 : 0;
-                  const borderBottomWidth = isRowAboveLine ? 0 : 1;
-
-                  const pRaw = row.putRaw || {};
-                  const pLeg = row.put || {};
-
-                  return (
-                    <View key={`put-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: PUTS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}>
-                      <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.bid_price)}</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.bidIvPct || pLeg.markIvPct)}</AppText>
-                      </View>
-                      <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.ask_price)}</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.askIvPct)}</AppText>
-                      </View>
-                      <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                        <AppText style={{ color: pLeg.markIvPct ? colors.green : themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.mark_price)}</AppText>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.markIvPct)}</AppText>
-                      </View>
-                      <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.positions, 0)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.bidSize, 1)}</AppText>
-                      </View>
-                      <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pLeg.apr ? formatPct(pLeg.apr) : '--'}</AppText>
-                      </View>
-                      <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pLeg.apr ? formatPct(pLeg.apr) : '--'}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.askSize, 1)}</AppText>
-                      </View>
-                      <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.delta, 3)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.gamma, 5)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.theta, 4)}</AppText>
-                      </View>
-                      <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vega, 4)}</AppText>
-                      </View>
-                      <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.oi, 0)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vol, 0)}</AppText>
-                      </View>
-                      <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pRaw.leverage ? `${pRaw.leverage}X` : '--'}</AppText>
-                      </View>
-                      <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                        <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.last)}</AppText>
-                      </View>
-                    </View>
-                  )
-                })}
-              </View>
-            </ScrollView>
-          </View>
-
-          {/* Current Price Indicator Overlay */}
-          {rowsToRender.length > 0 && currentPrice > 0 && (
-            <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: HEADER_ROW_HEIGHT + (activeLineIdx * ROW_HEIGHT) + 8, alignItems: 'center', zIndex: 10 }}>
-              <View style={{ position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: isDark ? '#FFF' : '#222', top: -0.75 }} />
-              <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13 }}>
-                <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(currentPrice, 2)}</AppText>
-              </View>
-            </View>
-          )}
-
+      {rowsToRender.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', }}>
+          <FastImage
+            source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+            style={{ width: 100, height: 100 }}
+            resizeMode="contain"
+          />
         </View>
-        <View style={{ height: 50 }}></View>
-      </ScrollView>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+
+          <View style={{ flexDirection: 'row' }}>
+
+            {/* Calls Side */}
+            <View style={{ flex: 1 }}>
+              <ScrollView
+                ref={leftScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                onScroll={handleLeftScroll}
+                scrollEventThrottle={16}
+              >
+                <View>
+                  {/* Header */}
+                  <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: CALLS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
+                    {CALLS_HEADERS.map((h, i) => (
+                      <View key={i} style={{ width: h.w, alignItems: h.align, paddingHorizontal: 6 }}>
+                        <View style={styles.dashedTextContainer}>
+                          <AppText style={{
+                            color: themeColors.secondaryText, fontSize: 11,
+                            fontFamily: fontFamilyMedium
+                          }}>{h.title}</AppText>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Rows */}
+                  {rowsToRender.map((row, idx) => {
+                    const strikePriceNum = row.strike;
+                    const isCallITM = strikePriceNum < currentPrice;
+                    const callBg = isCallITM ? (isDark ? 'rgba(56, 183, 129, 0.15)' : '#F2FFF6') : 'transparent';
+
+                    const isRowAboveLine = idx === activeLineIdx - 1;
+                    const isRowBelowLine = idx === activeLineIdx;
+                    const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
+                    const paddingBottom = isRowAboveLine ? 8 : 0;
+                    const paddingTop = isRowBelowLine ? 8 : 0;
+                    const borderBottomWidth = isRowAboveLine ? 0 : 1;
+
+                    const cRaw = row.callRaw || {};
+                    const cLeg = row.call || {};
+
+                    return (
+                      <View key={`call-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: CALLS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}>
+                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.last)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cRaw.leverage ? `${cRaw.leverage}X` : '--'}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vol, 0)}</AppText>
+                        </View>
+                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.oi, 0)}</AppText>
+                        </View>
+                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vega, 4)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.theta, 4)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.gamma, 5)}</AppText>
+                        </View>
+                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.delta, 3)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.askSize, 1)}</AppText>
+                        </View>
+                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cLeg.apr ? formatPct(cLeg.apr) : '--'}</AppText>
+                        </View>
+                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cLeg.apr ? formatPct(cLeg.apr) : '--'}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.bidSize, 1)}</AppText>
+                        </View>
+                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.positions, 0)}</AppText>
+                        </View>
+                        <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                          <AppText style={{ color: cLeg.markIvPct ? colors.green : themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.mark_price)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.markIvPct)}</AppText>
+                        </View>
+                        <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                          <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.ask_price)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.askIvPct)}</AppText>
+                        </View>
+                        <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                          <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.bid_price)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.bidIvPct || cLeg.markIvPct)}</AppText>
+                        </View>
+                      </View>
+                    )
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+
+            {/* Center Strike */}
+            <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', zIndex: 2 }}>
+
+              <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center' }]}>
+                <View style={styles.dashedTextContainer}>
+                  <AppText weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, fontSize: 11, textAlign: 'center' }}>Strike</AppText>
+                </View>
+              </View>
+
+              {rowsToRender.map((row, idx) => {
+                const isRowAboveLine = idx === activeLineIdx - 1;
+                const isRowBelowLine = idx === activeLineIdx;
+                const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
+                const paddingBottom = isRowAboveLine ? 8 : 0;
+                const paddingTop = isRowBelowLine ? 8 : 0;
+                const borderBottomWidth = isRowAboveLine ? 0 : 1;
+
+                return (
+                  <View key={`strike-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, justifyContent: 'center', borderBottomColor: themeColors.themeBorderColor || '#F0F0F0' }]}>
+                    <View>
+                      <AppText style={{ fontFamily: fontFamilyMedium, color: themeColors.text, fontSize: 12, textAlign: 'center' }}>{row.strike}</AppText>
+                      <AppText style={{ color: themeColors.secondaryText, fontSize: 9, fontFamily: fontFamilyMedium, textAlign: 'center', marginTop: 2 }}>{formatPct(row.diffPct)}</AppText>
+                    </View>
+                  </View>
+                )
+              })}
+            </View>
+
+            {/* Puts Side */}
+            <View style={{ flex: 1 }}>
+              <ScrollView
+                ref={rightScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                onScroll={handleRightScroll}
+                scrollEventThrottle={16}
+              >
+                <View>
+                  {/* Header */}
+                  <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: PUTS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
+                    {PUTS_HEADERS.map((h, i) => (
+                      <View key={i} style={{ width: h.w, alignItems: h.align, paddingHorizontal: 6 }}>
+                        <View style={styles.dashedTextContainer}>
+                          <AppText style={{
+                            color: themeColors.secondaryText, fontSize: 11,
+                            fontFamily: fontFamilyMedium
+                          }}>{h.title}</AppText>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Rows */}
+                  {rowsToRender.map((row, idx) => {
+                    const strikePriceNum = row.strike;
+                    const isPutITM = strikePriceNum > currentPrice;
+                    const putBg = isPutITM ? (isDark ? 'rgba(235, 78, 92, 0.15)' : '#FFF2F2') : 'transparent';
+
+                    const isRowAboveLine = idx === activeLineIdx - 1;
+                    const isRowBelowLine = idx === activeLineIdx;
+                    const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
+                    const paddingBottom = isRowAboveLine ? 8 : 0;
+                    const paddingTop = isRowBelowLine ? 8 : 0;
+                    const borderBottomWidth = isRowAboveLine ? 0 : 1;
+
+                    const pRaw = row.putRaw || {};
+                    const pLeg = row.put || {};
+
+                    return (
+                      <View key={`put-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: PUTS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}>
+                        <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                          <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.bid_price)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.bidIvPct || pLeg.markIvPct)}</AppText>
+                        </View>
+                        <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                          <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.ask_price)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.askIvPct)}</AppText>
+                        </View>
+                        <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                          <AppText style={{ color: pLeg.markIvPct ? colors.green : themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.mark_price)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.markIvPct)}</AppText>
+                        </View>
+                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.positions, 0)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.bidSize, 1)}</AppText>
+                        </View>
+                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pLeg.apr ? formatPct(pLeg.apr) : '--'}</AppText>
+                        </View>
+                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pLeg.apr ? formatPct(pLeg.apr) : '--'}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.askSize, 1)}</AppText>
+                        </View>
+                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.delta, 3)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.gamma, 5)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.theta, 4)}</AppText>
+                        </View>
+                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vega, 4)}</AppText>
+                        </View>
+                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.oi, 0)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vol, 0)}</AppText>
+                        </View>
+                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pRaw.leverage ? `${pRaw.leverage}X` : '--'}</AppText>
+                        </View>
+                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.last)}</AppText>
+                        </View>
+                      </View>
+                    )
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+
+            {/* Current Price Indicator Overlay */}
+            {rowsToRender.length > 0 && currentPrice > 0 && (
+              <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: HEADER_ROW_HEIGHT + (activeLineIdx * ROW_HEIGHT) + 8, alignItems: 'center', zIndex: 10 }}>
+                <View style={{ position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: isDark ? '#FFF' : '#222', top: -0.75 }} />
+                <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13 }}>
+                  <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(currentPrice, 2)}</AppText>
+                </View>
+              </View>
+            )}
+
+          </View>
+          <View style={{ height: 50 }}></View>
+        </ScrollView>
+      )}
     </View>
   );
 };
