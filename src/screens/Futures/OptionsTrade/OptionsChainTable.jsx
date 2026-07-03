@@ -1,13 +1,15 @@
 import React, { useRef, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FastImage from 'react-native-fast-image';
 import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedRef, scrollTo } from 'react-native-reanimated';
-import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from '../../../helper/ImageAssets';
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, checkIc, checkIcon, downIcon } from '../../../helper/ImageAssets';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
 import { fontFamilyMedium, SEMI_BOLD } from '../../../theme/typography';
 import { colors } from '../../../theme/colors';
+import OptionsExpiries from './OptionsExpiries';
+import { applyChainFilters, parseStrikeFilterInput } from './helpers/optionsDataHelpers';
 
 const CALLS_HEADERS = [
   { title: 'Last', w: 60, align: 'center' },
@@ -70,7 +72,7 @@ function formatIvPct(v) {
   return n.toFixed(2) + '%';
 }
 
-const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false }) => {
+const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false, onOpenPairList }) => {
   const { colors: themeColors, isDark } = useTheme();
 
   const [cols, setCols] = useState({
@@ -79,7 +81,32 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
     theta: true,
     gamma: true,
   });
+  const [menuCols, setMenuCols] = useState({
+    last: true,
+    vega: true,
+    theta: true,
+    gamma: true,
+  });
   const [showColMenu, setShowColMenu] = useState(false);
+
+  const [oddSize, setOddSize] = useState(true);
+  const [strikeMinStr, setStrikeMinStr] = useState('');
+  const [strikeMaxStr, setStrikeMaxStr] = useState('');
+  const [debouncedFilters, setDebouncedFilters] = useState({ min: '', max: '' });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCols(menuCols);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [menuCols]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilters({ min: strikeMinStr, max: strikeMaxStr });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [strikeMinStr, strikeMaxStr]);
 
   const activeCallsHeaders = useMemo(() => CALLS_HEADERS.filter(h => {
     if (!cols.last && h.title === 'Last') return false;
@@ -129,13 +156,19 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
   });
 
   const { chainsToRender, chainOffsets, elementsToRender } = useMemo(() => {
-    let targetChain = chains?.find(c => c.date === selectedExpiry);
+    const filteredChains = applyChainFilters(chains, {
+      oddSize,
+      strikeMin: parseStrikeFilterInput(debouncedFilters.min),
+      strikeMax: parseStrikeFilterInput(debouncedFilters.max),
+    });
+
+    let targetChain = filteredChains?.find(c => c.date === selectedExpiry);
     let selectedChains = [];
-    if (!targetChain && chains?.length > 0) {
+    if (!targetChain && filteredChains?.length > 0) {
       if (selectedExpiry === 'ALL') {
-        selectedChains = chains;
+        selectedChains = filteredChains;
       } else {
-        selectedChains = [chains[0]];
+        selectedChains = [filteredChains[0]];
       }
     } else if (targetChain) {
       selectedChains = [targetChain];
@@ -167,32 +200,75 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
     });
 
     return { chainsToRender: selectedChains, chainOffsets: offsets, elementsToRender: flattenedElements };
-  }, [chains, selectedExpiry, currentPrice, cols]);
+  }, [chains, selectedExpiry, currentPrice, oddSize, debouncedFilters]);
 
   return (
     <View style={styles.container}>
-      <View style={[styles.subHeaderStaticRow, { paddingTop: 10 }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={styles.dashedTextContainer}>
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Underlying:</AppText>
-          </View>
-          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> {currentPrice > 0 ? formatVal(currentPrice, 2) : '...'}</AppText>
-        </View>
+      <OptionsExpiries
+        expiries={expiries}
+        selectedExpiry={selectedExpiry}
+        setSelectedExpiry={setSelectedExpiry}
+      />
 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={styles.dashedTextContainer}>
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Expires in:</AppText>
+      {/* Filter Bar */}
+      <ScrollView style={{ flexGrow: 0 }} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => setOddSize(!oddSize)} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
+          <View style={{
+            width: 16, height: 16,
+            borderWidth: oddSize ? 0 : 1.5,
+            borderColor: themeColors.secondaryText,
+            borderRadius: 4,
+            marginRight: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: oddSize ? '#0D6EFD' : 'transparent'
+          }}>
+            {oddSize && <FastImage source={checkIc} style={{ width: 10, height: 10 }} tintColor="#FFF" resizeMode="contain" />}
           </View>
-          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> --</AppText>
-        </View>
+          <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>Odd Size</AppText>
+        </TouchableOpacity>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={styles.dashedTextContainer}>
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>ATM Vol:</AppText>
-          </View>
-          <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}> --</AppText>
-        </View>
-      </View>
+        <TouchableOpacity onPress={onOpenPairList} style={{
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+          borderColor: isDark ? '#333' : '#DDE2E5', borderRadius: 6, paddingHorizontal: 10, height: 32, marginRight: 12
+        }}>
+          <AppText style={{
+            color: themeColors.text, fontSize: 12,
+            fontFamily: fontFamilyMedium
+          }}>{selectedAsset ? (selectedAsset.endsWith('USDT') ? selectedAsset : `${selectedAsset}USDT`) : 'BTCUSDT'}</AppText>
+          <FastImage source={downIcon} style={{ width: 8, height: 8, marginLeft: 6 }} tintColor={themeColors.text} resizeMode="contain" />
+        </TouchableOpacity>
+
+        <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium, marginRight: 8 }}>Strike Price</AppText>
+        <TextInput
+          style={{ width: 60, height: 32, borderWidth: 1, borderColor: isDark ? '#333' : '#DDE2E5', borderRadius: 6, color: themeColors.text, paddingHorizontal: 8, paddingVertical: 0, fontSize: 12, fontFamily: fontFamilyMedium }}
+          placeholder="Min"
+          placeholderTextColor={themeColors.secondaryText}
+          keyboardType="numeric"
+          value={strikeMinStr}
+          onChangeText={setStrikeMinStr}
+        />
+        <AppText style={{ color: themeColors.text, fontSize: 13, marginHorizontal: 6 }}>-</AppText>
+        <TextInput
+          style={{ width: 60, height: 32, borderWidth: 1, borderColor: isDark ? '#333' : '#DDE2E5', borderRadius: 6, color: themeColors.text, paddingHorizontal: 8, paddingVertical: 0, fontSize: 12, fontFamily: fontFamilyMedium }}
+          placeholder="Max"
+          placeholderTextColor={themeColors.secondaryText}
+          keyboardType="numeric"
+          value={strikeMaxStr}
+          onChangeText={setStrikeMaxStr}
+        />
+
+        <TouchableOpacity
+          onPress={() => {
+            setStrikeMinStr('');
+            setStrikeMaxStr('');
+            setOddSize(true);
+          }}
+          style={{ marginLeft: 12 }}
+        >
+          <AppText style={{ color: '#6B7785', fontSize: 13, fontFamily: fontFamilyMedium }}>Reset</AppText>
+        </TouchableOpacity>
+      </ScrollView>
 
       <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
 
@@ -263,7 +339,8 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
                     const { row, isRowAboveLine, isRowBelowLine } = el;
                     const strikePriceNum = row.strike;
                     const isCallITM = strikePriceNum < currentPrice;
-                    const callBg = isCallITM ? (isDark ? 'rgba(56, 183, 129, 0.15)' : '#F2FFF6') : 'transparent';
+                    const itmBg = isDark ? 'rgb(38, 41, 47)' : 'rgba(2, 192, 118, 0.05)';
+                    const callBg = isCallITM ? itmBg : 'transparent';
 
                     const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
                     const paddingBottom = isRowAboveLine ? 8 : 0;
@@ -309,36 +386,46 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
             </View>
 
             {/* Center Strike */}
-            <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', zIndex: 2 }}>
-              <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center', zIndex: 10 }]}>
+            <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', zIndex: 9999, elevation: 9999, overflow: 'visible' }}>
+              <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center', zIndex: 10000, elevation: 10000, overflow: 'visible' }]}>
                 <TouchableOpacity onPress={() => setShowColMenu(!showColMenu)} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, textAlign: 'center', marginRight: 4 }}>Strike Price</AppText>
                 </TouchableOpacity>
 
                 <Modal visible={showColMenu} transparent animationType="fade">
                   <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowColMenu(false)}>
-                    <View style={[styles.colMenuDropdown, { backgroundColor: isDark ? '#2C2D31' : '#FFFFFF' }]}>
-                      {[
-                        { key: 'last', label: 'Last' },
-                        { key: 'vega', label: 'Vega' },
-                        { key: 'theta', label: 'Theta' },
-                        { key: 'gamma', label: 'Gamma' },
-                      ].map(c => (
-                        <TouchableOpacity
-                          key={c.key}
-                          style={styles.colMenuItem}
-                          onPress={() => setCols(prev => ({ ...prev, [c.key]: !prev[c.key] }))}
-                        >
-                          <MaterialCommunityIcons
-                            name={cols[c.key] ? "checkbox-marked" : "checkbox-blank-outline"}
-                            size={18}
-                            color={cols[c.key] ? colors.primary || '#38B781' : themeColors.secondaryText}
-                            style={{ marginRight: 8 }}
-                          />
-                          <AppText style={{ color: themeColors.text, fontSize: 13 }}>{c.label}</AppText>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                    <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+                      <View style={[styles.colMenuDropdown, { backgroundColor: isDark ? '#2C2D31' : '#FFFFFF' }]}>
+                        {[
+                          { key: 'last', label: 'Last' },
+                          { key: 'vega', label: 'Vega' },
+                          { key: 'theta', label: 'Theta' },
+                          { key: 'gamma', label: 'Gamma' },
+                        ].map(c => (
+                          <TouchableOpacity
+                            key={c.key}
+                            style={styles.colMenuItem}
+                            onPress={() => setMenuCols(prev => ({ ...prev, [c.key]: !prev[c.key] }))}
+                          >
+                            <View style={{
+                              width: 16, height: 16,
+                              borderWidth: menuCols[c.key] ? 0 : 1.5,
+                              borderColor: themeColors.secondaryText,
+                              borderRadius: 4,
+                              marginRight: 10,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              backgroundColor: menuCols[c.key] ? (colors.primary || '#38B781') : 'transparent'
+                            }}>
+                              {menuCols[c.key] && (
+                                <FastImage source={checkIc} style={{ width: 10, height: 10 }} tintColor={colors.white} resizeMode="contain" />
+                              )}
+                            </View>
+                            <AppText style={{ color: themeColors.text, fontSize: 13 }}>{c.label}</AppText>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </TouchableOpacity>
                   </TouchableOpacity>
                 </Modal>
               </View>
@@ -408,7 +495,8 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
                     const { row, isRowAboveLine, isRowBelowLine } = el;
                     const strikePriceNum = row.strike;
                     const isPutITM = strikePriceNum > currentPrice;
-                    const putBg = isPutITM ? (isDark ? 'rgba(235, 78, 92, 0.15)' : '#FFF2F2') : 'transparent';
+                    const itmBg = isDark ? 'rgb(38, 41, 47)' : 'rgba(2, 192, 118, 0.05)';
+                    const putBg = isPutITM ? itmBg : 'transparent';
 
                     const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
                     const paddingBottom = isRowAboveLine ? 8 : 0;
@@ -456,9 +544,9 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
             {/* Current Price Indicator Overlay */}
             {chainsToRender.length > 0 && currentPrice > 0 && chainsToRender.map((chain, chainIdx) => {
               return (
-                <View key={`indicator-${chainIdx}`} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: chainOffsets[chainIdx]?.indicatorTop || 0, alignItems: 'center', zIndex: 10 }}>
+                <View key={`indicator-${chainIdx}`} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: chainOffsets[chainIdx]?.indicatorTop || 0, alignItems: 'center', zIndex: 99999, elevation: 99999 }}>
                   <View style={{ position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: isDark ? '#FFF' : '#222', top: -0.75 }} />
-                  <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13 }}>
+                  <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13, zIndex: 99999, elevation: 99999 }}>
                     <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(currentPrice, 2)}</AppText>
                   </View>
                 </View>
@@ -534,11 +622,12 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    paddingTop: 240,
   },
   colMenuDropdown: {
-    width: 200,
+    width: 130,
     borderRadius: 8,
     paddingVertical: 8,
     shadowColor: '#000',

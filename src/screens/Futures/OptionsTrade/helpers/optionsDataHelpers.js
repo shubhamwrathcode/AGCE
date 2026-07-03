@@ -205,3 +205,50 @@ export function buildChainsFromContracts(contracts, spotPrice) {
 
     return chains;
 }
+
+export function parseStrikeFilterInput(v) {
+    const n = parseFloat(String(v ?? "").replace(/,/g, "").trim());
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function inferStandardStrikeStep(strikes) {
+    if (!strikes.length) return null;
+    const sorted = [...strikes].sort((a, b) => a - b);
+    let minGap = null;
+    for (let i = 1; i < sorted.length; i++) {
+        const gap = sorted[i] - sorted[i - 1];
+        if (gap > 0 && (minGap == null || gap < minGap)) minGap = gap;
+    }
+    return minGap;
+}
+
+function isOnStandardStrikeGrid(strike, anchor, step) {
+    if (!step || step <= 0) return true;
+    const offset = strike - anchor;
+    const remainder = Math.abs(offset % step);
+    return remainder < 0.01 || Math.abs(remainder - step) < 0.01;
+}
+
+export function applyChainFilters(chains, { oddSize = true, strikeMin = null, strikeMax = null } = {}) {
+    if (!Array.isArray(chains)) return [];
+
+    return chains
+        .map((chain) => {
+            const strikes = (chain.data || []).map((r) => r.strike);
+            const step = inferStandardStrikeStep(strikes);
+            const anchor = strikes.length ? Math.min(...strikes) : 0;
+
+            const data = (chain.data || []).filter((row) => {
+                const { strike } = row;
+                if (strikeMin != null && strike < strikeMin) return false;
+                if (strikeMax != null && strike > strikeMax) return false;
+                if (!oddSize && step != null && !isOnStandardStrikeGrid(strike, anchor, step)) {
+                    return false;
+                }
+                return true;
+            });
+
+            return { ...chain, data };
+        })
+        .filter((chain) => chain.data.length > 0);
+}

@@ -64,20 +64,16 @@ const OptionsTrade = () => {
       <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
 
       {activeTab === 0 && (
-        <>
-          <OptionsExpiries
-            expiries={expiries}
-            selectedExpiry={selectedExpiry}
-            setSelectedExpiry={setSelectedExpiry}
-          />
-          <OptionsChainTable
-            selectedExpiry={selectedExpiry}
-            chains={chains}
-            currentPrice={currentPrice}
-            selectedAsset={selectedAsset}
-            isMarketLoading={isMarketLoading}
-          />
-        </>
+        <OptionsChainTable
+          expiries={expiries}
+          selectedExpiry={selectedExpiry}
+          setSelectedExpiry={setSelectedExpiry}
+          chains={chains}
+          currentPrice={currentPrice}
+          selectedAsset={selectedAsset}
+          isMarketLoading={isMarketLoading}
+          onOpenPairList={() => pairSheetRef.current?.open()}
+        />
       )}
       {activeTab === 1 && (
         <OptionsEasyMode

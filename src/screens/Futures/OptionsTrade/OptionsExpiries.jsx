@@ -4,15 +4,15 @@ import FastImage from 'react-native-fast-image';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
 import { fontFamilyMedium } from '../../../theme/typography';
-import { right_arrow } from '../../../helper/ImageAssets';
+import { right_ic } from '../../../helper/ImageAssets';
 
 const OptionsExpiries = ({ expiries = [], selectedExpiry, setSelectedExpiry }) => {
   const { colors: themeColors, isDark } = useTheme();
 
   return (
     <View style={styles.container}>
-      {/* <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {expiries.map((date) => {
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {['ALL', ...expiries.filter(d => d !== 'ALL')].map((date) => {
           const isSelected = selectedExpiry === date;
           const displayDate = date === 'ALL' ? 'All' : date;
           
@@ -43,9 +43,9 @@ const OptionsExpiries = ({ expiries = [], selectedExpiry, setSelectedExpiry }) =
             </TouchableOpacity>
           );
         })}
-      </ScrollView> */}
+      </ScrollView>
       <View style={styles.chevronContainer}>
-        <FastImage source={right_arrow} style={styles.chevronIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
+        <FastImage source={right_ic} style={styles.chevronIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
       </View>
     </View>
   );

@@ -29,7 +29,6 @@ import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, right_ic, downIcon } 
 import { useDispatch } from "react-redux";
 import { getPastOrders, cancelOrder } from "../../actions/homeActions";
 import { appOperation } from "../../appOperation";
-import { getTradeHistory } from "../../actions/walletActions";
 import moment from "moment";
 import TradeHistorySkeleton from "./TradeHistorySkeleton";
 import {

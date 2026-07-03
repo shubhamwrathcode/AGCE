@@ -150,6 +150,7 @@ import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 import MarginTransferHistoryScreen from "../screens/spotScreen/MarginTransferHistoryScreen";
 import OptionHistory from "../screens/Futures/OptionsTrade/OptionHistory";
 import FutureHistoryCardDetailPage from "../screens/Futures/FutureHistoryCardDetailPage";
+import OptionHistoryCardDetailPage from "../screens/Futures/OptionsTrade/OptionHistoryCardDetailPage";
 import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
 import StakingDashboard from "../screens/staking/StakingDashboard";
 import StakingPurchase from "../screens/staking/StakingPurchase";
@@ -546,6 +547,10 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name="FutureHistoryCardDetailPage"
         component={FutureHistoryCardDetailPage}
+      />
+      <Stack.Screen
+        name="OptionHistoryCardDetailPage"
+        component={OptionHistoryCardDetailPage}
       />
       <Stack.Screen
         name="FutureHistoryScreen"

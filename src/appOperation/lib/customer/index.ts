@@ -40,6 +40,22 @@ export default (appOperation: AppOperation) => ({
     appOperation.get(`user/launchpad/user_project_total_commits/${data}`, undefined, undefined, CUSTOMER_TYPE),
   banner_list: () =>
     appOperation.get('admin/banner_list', undefined, undefined, CUSTOMER_TYPE),
+  
+  // --- Options Endpoints ---
+  optionsOpenPositions: () =>
+    appOperation.get('options/positions', undefined, undefined, CUSTOMER_TYPE),
+  optionsPositionHistory: (params: any) =>
+    appOperation.get('options/positions/history', params, undefined, CUSTOMER_TYPE),
+  optionsOpenOrders: (params: any) =>
+    appOperation.get('options/open-orders', params, undefined, CUSTOMER_TYPE),
+  optionsOrderHistory: (params: any) =>
+    appOperation.get('options/orders/history', params, undefined, CUSTOMER_TYPE),
+  optionsTradeHistory: (params: any) =>
+    appOperation.get('options/trades', params, undefined, CUSTOMER_TYPE),
+  optionsTransactionHistory: (params: any) =>
+    appOperation.get('options/transaction/history', params, undefined, CUSTOMER_TYPE),
+  // -------------------------
+
   get_profile: () =>
     appOperation.get(`user/profile`, undefined, undefined, CUSTOMER_TYPE),
   get_alert_settings_setting: () =>
