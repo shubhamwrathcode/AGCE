@@ -4,7 +4,7 @@ import { IMAGE_BASE_URL } from "../../../../helper/Constants";
 export function decStr(v) {
     if (v == null) return "";
     if (typeof v === "object" && v.$numberDecimal != null) return String(v.$numberDecimal);
-    return String(v);
+    return String(v).replace(/,/g, '');
 }
 
 export function decNum(v) {
@@ -100,7 +100,7 @@ function mapContractLeg(c) {
     
     return {
         symbol: c.symbol,
-        last: mark > 0 ? mark : null,
+        last: decNum(c.last_price) > 0 ? decNum(c.last_price) : (mark > 0 ? mark : null),
         vega: decNum(c.vega),
         theta: decNum(c.theta),
         gamma: decNum(c.gamma),

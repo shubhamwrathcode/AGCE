@@ -1,6 +1,8 @@
-import React, { useRef, useEffect, useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FastImage from 'react-native-fast-image';
+import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedRef, scrollTo } from 'react-native-reanimated';
 import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from '../../../helper/ImageAssets';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
@@ -9,65 +11,98 @@ import { colors } from '../../../theme/colors';
 
 const CALLS_HEADERS = [
   { title: 'Last', w: 60, align: 'center' },
-  { title: 'Leverage', w: 70, align: 'center' },
-  { title: '24h Vol', w: 70, align: 'center' },
-  { title: 'OI', w: 60, align: 'center' },
   { title: 'Vega', w: 60, align: 'center' },
   { title: 'Theta', w: 70, align: 'center' },
   { title: 'Gamma', w: 70, align: 'center' },
   { title: 'Delta', w: 60, align: 'center' },
-  { title: 'Ask Size', w: 70, align: 'center' },
-  { title: 'APR(Ask)', w: 80, align: 'center' },
-  { title: 'APR(Bid)', w: 80, align: 'center' },
-  { title: 'Bid Size', w: 70, align: 'center' },
-  { title: 'Positions', w: 80, align: 'center' },
+  { title: 'Bid/IV', w: 70, align: 'center' },
   { title: 'Mark/IV', w: 70, align: 'center' },
   { title: 'Ask/IV', w: 70, align: 'center' },
-  { title: 'Bid/IV', w: 70, align: 'center' },
 ];
 
 const PUTS_HEADERS = [
   { title: 'Bid/IV', w: 70, align: 'center' },
-  { title: 'Ask/IV', w: 70, align: 'center' },
   { title: 'Mark/IV', w: 70, align: 'center' },
-  { title: 'Positions', w: 80, align: 'center' },
-  { title: 'Bid Size', w: 70, align: 'center' },
-  { title: 'APR(Bid)', w: 80, align: 'center' },
-  { title: 'APR(Ask)', w: 80, align: 'center' },
-  { title: 'Ask Size', w: 70, align: 'center' },
+  { title: 'Ask/IV', w: 70, align: 'center' },
   { title: 'Delta', w: 60, align: 'center' },
   { title: 'Gamma', w: 70, align: 'center' },
   { title: 'Theta', w: 70, align: 'center' },
   { title: 'Vega', w: 60, align: 'center' },
-  { title: 'OI', w: 60, align: 'center' },
-  { title: '24h Vol', w: 70, align: 'center' },
-  { title: 'Leverage', w: 70, align: 'center' },
   { title: 'Last', w: 60, align: 'center' },
 ];
 
-const CALLS_WIDTH = CALLS_HEADERS.reduce((a, b) => a + b.w, 0);
-const PUTS_WIDTH = PUTS_HEADERS.reduce((a, b) => a + b.w, 0);
+
 
 const ROW_HEIGHT = 56;
 const HEADER_ROW_HEIGHT = 35;
 
+function withCommas(n, precision) {
+  const parts = Number(n).toFixed(precision).split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
+}
+
 function formatVal(v, precision = 2) {
   if (v === null || v === undefined) return '--';
-  return Number(v).toFixed(precision);
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '--';
+  return withCommas(n, precision);
 }
 
 function formatPct(v) {
   if (v === null || v === undefined) return '--';
-  return Number(v).toFixed(2) + '%';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '--';
+  return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
 }
 
-const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, selectedAsset = '' }) => {
+function formatPrice(v, precision = 2) {
+  if (v === null || v === undefined) return '--';
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return '--';
+  return withCommas(n, precision);
+}
+
+function formatIvPct(v) {
+  if (v === null || v === undefined) return '--';
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return '--';
+  return n.toFixed(2) + '%';
+}
+
+const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false }) => {
   const { colors: themeColors, isDark } = useTheme();
 
-  const leftScrollRef = useRef(null);
-  const rightScrollRef = useRef(null);
-  const isSyncingLeft = useRef(false);
-  const isSyncingRight = useRef(false);
+  const [cols, setCols] = useState({
+    last: true,
+    vega: true,
+    theta: true,
+    gamma: true,
+  });
+  const [showColMenu, setShowColMenu] = useState(false);
+
+  const activeCallsHeaders = useMemo(() => CALLS_HEADERS.filter(h => {
+    if (!cols.last && h.title === 'Last') return false;
+    if (!cols.vega && h.title === 'Vega') return false;
+    if (!cols.theta && h.title === 'Theta') return false;
+    if (!cols.gamma && h.title === 'Gamma') return false;
+    return true;
+  }), [cols]);
+
+  const activePutsHeaders = useMemo(() => PUTS_HEADERS.filter(h => {
+    if (!cols.last && h.title === 'Last') return false;
+    if (!cols.vega && h.title === 'Vega') return false;
+    if (!cols.theta && h.title === 'Theta') return false;
+    if (!cols.gamma && h.title === 'Gamma') return false;
+    return true;
+  }), [cols]);
+
+  const ACTIVE_CALLS_WIDTH = activeCallsHeaders.reduce((a, b) => a + b.w, 0);
+  const ACTIVE_PUTS_WIDTH = activePutsHeaders.reduce((a, b) => a + b.w, 0);
+
+  const leftScrollRef = useAnimatedRef();
+  const rightScrollRef = useAnimatedRef();
+  const activeScroll = useSharedValue(0); // 0 = none, 1 = left, 2 = right
 
   useEffect(() => {
     setTimeout(() => {
@@ -75,59 +110,68 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
     }, 100);
   }, []);
 
-  const handleLeftScroll = (e) => {
-    if (isSyncingRight.current) return;
-    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const max = contentSize.width - layoutMeasurement.width;
-    if (max <= 0) return;
-    isSyncingLeft.current = true;
-    rightScrollRef.current?.scrollTo({ x: max - contentOffset.x, animated: false });
-    setTimeout(() => { isSyncingLeft.current = false; }, 50);
-  };
+  const handleLeftScroll = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      if (activeScroll.value !== 1) return;
+      const max = e.contentSize.width - e.layoutMeasurement.width;
+      if (max <= 0) return;
+      scrollTo(rightScrollRef, max - e.contentOffset.x, 0, false);
+    }
+  });
 
-  const handleRightScroll = (e) => {
-    if (isSyncingLeft.current) return;
-    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const max = contentSize.width - layoutMeasurement.width;
-    if (max <= 0) return;
-    isSyncingRight.current = true;
-    leftScrollRef.current?.scrollTo({ x: max - contentOffset.x, animated: false });
-    setTimeout(() => { isSyncingRight.current = false; }, 50);
-  };
+  const handleRightScroll = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      if (activeScroll.value !== 2) return;
+      const max = e.contentSize.width - e.layoutMeasurement.width;
+      if (max <= 0) return;
+      scrollTo(leftScrollRef, max - e.contentOffset.x, 0, false);
+    }
+  });
 
-  const rowsToRender = useMemo(() => {
+  const { chainsToRender, chainOffsets, elementsToRender } = useMemo(() => {
     let targetChain = chains?.find(c => c.date === selectedExpiry);
+    let selectedChains = [];
     if (!targetChain && chains?.length > 0) {
       if (selectedExpiry === 'ALL') {
-        const mergedMap = new Map();
-        chains.forEach(chain => {
-          chain.data.forEach(row => {
-            if (!mergedMap.has(row.strike)) {
-              mergedMap.set(row.strike, { ...row });
-            }
-          });
-        });
-        return Array.from(mergedMap.values()).sort((a, b) => a.strike - b.strike);
+        selectedChains = chains;
       } else {
-        targetChain = chains[0];
+        selectedChains = [chains[0]];
       }
+    } else if (targetChain) {
+      selectedChains = [targetChain];
     }
-    return targetChain?.data || [];
-  }, [chains, selectedExpiry]);
 
-  let activeLineIdx = rowsToRender.findIndex(s => s.strike > currentPrice);
-  if (activeLineIdx === -1) activeLineIdx = rowsToRender.length;
+    // Pre-calculate exact Y offsets for each chain in a single pass (O(N))
+    const offsets = [];
+    const flattenedElements = [];
+    let currentTop = HEADER_ROW_HEIGHT;
+
+    selectedChains.forEach((chain, chainIdx) => {
+      let activeLineIdx = chain.data.findIndex(s => s.strike > currentPrice);
+      if (activeLineIdx === -1) activeLineIdx = chain.data.length;
+
+      offsets.push({
+        headerTop: currentTop,
+        indicatorTop: currentTop + 35 + (activeLineIdx * ROW_HEIGHT) + (activeLineIdx > 0 ? 8 : 0) // exact top of the active line
+      });
+
+      flattenedElements.push({ type: 'header', chainIdx, activeLineIdx, date: chain.date });
+      currentTop += 35; // group header
+
+      chain.data.forEach((row, idx) => {
+        const isRowAboveLine = idx === activeLineIdx - 1;
+        const isRowBelowLine = idx === activeLineIdx;
+        flattenedElements.push({ type: 'row', chainIdx, row, idx, isRowAboveLine, isRowBelowLine });
+        currentTop += ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
+      });
+    });
+
+    return { chainsToRender: selectedChains, chainOffsets: offsets, elementsToRender: flattenedElements };
+  }, [chains, selectedExpiry, currentPrice, cols]);
 
   return (
     <View style={styles.container}>
-      {/* Top Header Row (Static) */}
-      <View style={styles.topHeaderRow}>
-        <AppText style={{ color: themeColors.text, fontSize: 14, flex: 1, fontFamily: fontFamilyMedium }}>Calls</AppText>
-        <AppText style={{ color: themeColors.text, fontSize: 14, flex: 1, textAlign: 'center', fontFamily: fontFamilyMedium }}>{selectedExpiry === 'ALL' ? 'All Expiries' : selectedExpiry}</AppText>
-        <AppText style={{ color: themeColors.text, fontSize: 14, flex: 1, textAlign: 'right', fontFamily: fontFamilyMedium }}>Puts</AppText>
-      </View>
-
-      <View style={styles.subHeaderStaticRow}>
+      <View style={[styles.subHeaderStaticRow, { paddingTop: 10 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={styles.dashedTextContainer}>
             <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Underlying:</AppText>
@@ -153,7 +197,17 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
       <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
 
       {/* Scrollable Table Area */}
-      {rowsToRender.length === 0 ? (
+      {isMarketLoading ? (
+        <View style={{ flex: 1, paddingTop: 10 }}>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <View key={i} style={{ flexDirection: 'row', height: 56, borderBottomWidth: 1, borderColor: isDark ? '#2C2D31' : '#F0F0F0', alignItems: 'center' }}>
+              <View style={{ flex: 1, height: 20, backgroundColor: isDark ? '#2A2A2A' : '#E8E8E8', borderRadius: 4, marginHorizontal: 16 }} />
+              <View style={{ width: 60, height: 20, backgroundColor: isDark ? '#2A2A2A' : '#E8E8E8', borderRadius: 4, marginHorizontal: 10 }} />
+              <View style={{ flex: 1, height: 20, backgroundColor: isDark ? '#2A2A2A' : '#E8E8E8', borderRadius: 4, marginHorizontal: 16 }} />
+            </View>
+          ))}
+        </View>
+      ) : chainsToRender.length === 0 ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', }}>
           <FastImage
             source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
@@ -168,17 +222,27 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
 
             {/* Calls Side */}
             <View style={{ flex: 1 }}>
-              <ScrollView
+              {/* FIXED CALLS HEADERS */}
+              {chainsToRender.map((chain, chainIdx) => {
+                return (
+                  <View key={`fixed-calls-${chainIdx}`} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: chainOffsets[chainIdx]?.headerTop || 0, height: 35, justifyContent: 'center', paddingLeft: 16, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', borderBottomWidth: 1, borderTopWidth: 1, borderColor: themeColors.themeBorderColor || '#F0F0F0', zIndex: 5 }}>
+                    <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>Calls</AppText>
+                  </View>
+                );
+              })}
+
+              <Animated.ScrollView
                 ref={leftScrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 onScroll={handleLeftScroll}
                 scrollEventThrottle={16}
+                onTouchStart={() => { activeScroll.value = 1; }}
               >
                 <View>
                   {/* Header */}
-                  <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: CALLS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
-                    {CALLS_HEADERS.map((h, i) => (
+                  <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: ACTIVE_CALLS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
+                    {activeCallsHeaders.map((h, i) => (
                       <View key={i} style={{ width: h.w, alignItems: h.align, paddingHorizontal: 6 }}>
                         <View style={styles.dashedTextContainer}>
                           <AppText style={{
@@ -191,13 +255,16 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
                   </View>
 
                   {/* Rows */}
-                  {rowsToRender.map((row, idx) => {
+                  {elementsToRender.map((el, i) => {
+                    if (el.type === 'header') {
+                      return <View key={`call-hdr-${i}`} style={{ height: 35, width: ACTIVE_CALLS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', borderBottomWidth: 1, borderTopWidth: 1, borderColor: themeColors.themeBorderColor || '#F0F0F0' }} />;
+                    }
+
+                    const { row, isRowAboveLine, isRowBelowLine } = el;
                     const strikePriceNum = row.strike;
                     const isCallITM = strikePriceNum < currentPrice;
                     const callBg = isCallITM ? (isDark ? 'rgba(56, 183, 129, 0.15)' : '#F2FFF6') : 'transparent';
 
-                    const isRowAboveLine = idx === activeLineIdx - 1;
-                    const isRowBelowLine = idx === activeLineIdx;
                     const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
                     const paddingBottom = isRowAboveLine ? 8 : 0;
                     const paddingTop = isRowBelowLine ? 8 : 0;
@@ -207,106 +274,116 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
                     const cLeg = row.call || {};
 
                     return (
-                      <View key={`call-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: CALLS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}>
+                      <View key={`call-${i}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: ACTIVE_CALLS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}>
+                        {cols.last && <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(cLeg.last, 0)}</AppText>
+                        </View>}
+                        {cols.vega && <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vega, 4)}</AppText>
+                        </View>}
+                        {cols.theta && <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.theta, 4)}</AppText>
+                        </View>}
+                        {cols.gamma && <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.gamma, 6)}</AppText>
+                        </View>}
                         <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.last)}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cRaw.leverage ? `${cRaw.leverage}X` : '--'}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vol, 0)}</AppText>
-                        </View>
-                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.oi, 0)}</AppText>
-                        </View>
-                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.vega, 4)}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.theta, 4)}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.gamma, 5)}</AppText>
-                        </View>
-                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.delta, 3)}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.askSize, 1)}</AppText>
-                        </View>
-                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cLeg.apr ? formatPct(cLeg.apr) : '--'}</AppText>
-                        </View>
-                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{cLeg.apr ? formatPct(cLeg.apr) : '--'}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.bidSize, 1)}</AppText>
-                        </View>
-                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.positions, 0)}</AppText>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(cLeg.delta, 4)}</AppText>
                         </View>
                         <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                          <AppText style={{ color: cLeg.markIvPct ? colors.green : themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.mark_price)}</AppText>
-                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.markIvPct)}</AppText>
+                          <AppText style={{ color: colors.green, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(cLeg.bidIv, 0)}</AppText>
                         </View>
                         <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                          <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.ask_price)}</AppText>
-                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.askIvPct)}</AppText>
+                          <AppText style={{ color: colors.green, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(cLeg.markIv, 1)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatIvPct(cLeg.markIvPct)}</AppText>
                         </View>
                         <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                          <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(cRaw.bid_price)}</AppText>
-                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(cLeg.bidIvPct || cLeg.markIvPct)}</AppText>
+                          <AppText style={{ color: colors.red, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(cLeg.askIv, 0)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatIvPct(cLeg.askIvPct)}</AppText>
                         </View>
                       </View>
-                    )
+                    );
                   })}
                 </View>
-              </ScrollView>
+              </Animated.ScrollView>
             </View>
 
             {/* Center Strike */}
             <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', zIndex: 2 }}>
+              <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center', zIndex: 10 }]}>
+                <TouchableOpacity onPress={() => setShowColMenu(!showColMenu)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, textAlign: 'center', marginRight: 4 }}>Strike Price</AppText>
+                </TouchableOpacity>
 
-              <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center' }]}>
-                <View style={styles.dashedTextContainer}>
-                  <AppText weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, fontSize: 11, textAlign: 'center' }}>Strike</AppText>
-                </View>
+                <Modal visible={showColMenu} transparent animationType="fade">
+                  <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowColMenu(false)}>
+                    <View style={[styles.colMenuDropdown, { backgroundColor: isDark ? '#2C2D31' : '#FFFFFF' }]}>
+                      {[
+                        { key: 'last', label: 'Last' },
+                        { key: 'vega', label: 'Vega' },
+                        { key: 'theta', label: 'Theta' },
+                        { key: 'gamma', label: 'Gamma' },
+                      ].map(c => (
+                        <TouchableOpacity
+                          key={c.key}
+                          style={styles.colMenuItem}
+                          onPress={() => setCols(prev => ({ ...prev, [c.key]: !prev[c.key] }))}
+                        >
+                          <MaterialCommunityIcons
+                            name={cols[c.key] ? "checkbox-marked" : "checkbox-blank-outline"}
+                            size={18}
+                            color={cols[c.key] ? colors.primary || '#38B781' : themeColors.secondaryText}
+                            style={{ marginRight: 8 }}
+                          />
+                          <AppText style={{ color: themeColors.text, fontSize: 13 }}>{c.label}</AppText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
               </View>
 
-              {rowsToRender.map((row, idx) => {
-                const isRowAboveLine = idx === activeLineIdx - 1;
-                const isRowBelowLine = idx === activeLineIdx;
+              {elementsToRender.map((el, i) => {
+                if (el.type === 'header') {
+                  return (
+                    <View key={`strike-hdr-${i}`} style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center', backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
+                      <View style={{ height: 35, justifyContent: 'center', alignItems: 'center' }}>
+                        <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{el.date}</AppText>
+                      </View>
+                    </View>
+                  );
+                }
+
+                const { row, isRowAboveLine, isRowBelowLine } = el;
                 const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
                 const paddingBottom = isRowAboveLine ? 8 : 0;
                 const paddingTop = isRowBelowLine ? 8 : 0;
                 const borderBottomWidth = isRowAboveLine ? 0 : 1;
 
                 return (
-                  <View key={`strike-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, justifyContent: 'center', borderBottomColor: themeColors.themeBorderColor || '#F0F0F0' }]}>
+                  <View key={`strike-${i}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, justifyContent: 'center', borderBottomColor: themeColors.themeBorderColor || '#F0F0F0' }]}>
                     <View>
-                      <AppText style={{ fontFamily: fontFamilyMedium, color: themeColors.text, fontSize: 12, textAlign: 'center' }}>{row.strike}</AppText>
+                      <AppText style={{ fontFamily: fontFamilyMedium, color: themeColors.text, fontSize: 12, textAlign: 'center' }}>{withCommas(row.strike, 0)}</AppText>
                       <AppText style={{ color: themeColors.secondaryText, fontSize: 9, fontFamily: fontFamilyMedium, textAlign: 'center', marginTop: 2 }}>{formatPct(row.diffPct)}</AppText>
                     </View>
                   </View>
-                )
-              })}
-            </View>
+                );
+              })}</View>
 
             {/* Puts Side */}
             <View style={{ flex: 1 }}>
-              <ScrollView
+              <Animated.ScrollView
                 ref={rightScrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 onScroll={handleRightScroll}
                 scrollEventThrottle={16}
+                onTouchStart={() => { activeScroll.value = 2; }}
               >
                 <View>
                   {/* Header */}
-                  <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: PUTS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
-                    {PUTS_HEADERS.map((h, i) => (
+                  <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: ACTIVE_PUTS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
+                    {activePutsHeaders.map((h, i) => (
                       <View key={i} style={{ width: h.w, alignItems: h.align, paddingHorizontal: 6 }}>
                         <View style={styles.dashedTextContainer}>
                           <AppText style={{
@@ -319,13 +396,20 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
                   </View>
 
                   {/* Rows */}
-                  {rowsToRender.map((row, idx) => {
+                  {elementsToRender.map((el, i) => {
+                    if (el.type === 'header') {
+                      return (
+                        <View key={`put-hdr-${i}`} style={{ height: 35, justifyContent: 'center', width: ACTIVE_PUTS_WIDTH, paddingLeft: 16, alignItems: 'flex-start', backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', borderBottomWidth: 1, borderTopWidth: 1, borderColor: themeColors.themeBorderColor || '#F0F0F0' }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>Puts</AppText>
+                        </View>
+                      );
+                    }
+
+                    const { row, isRowAboveLine, isRowBelowLine } = el;
                     const strikePriceNum = row.strike;
                     const isPutITM = strikePriceNum > currentPrice;
                     const putBg = isPutITM ? (isDark ? 'rgba(235, 78, 92, 0.15)' : '#FFF2F2') : 'transparent';
 
-                    const isRowAboveLine = idx === activeLineIdx - 1;
-                    const isRowBelowLine = idx === activeLineIdx;
                     const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
                     const paddingBottom = isRowAboveLine ? 8 : 0;
                     const paddingTop = isRowBelowLine ? 8 : 0;
@@ -335,74 +419,51 @@ const OptionsChainTable = ({ selectedExpiry, chains = [], currentPrice = 0, sele
                     const pLeg = row.put || {};
 
                     return (
-                      <View key={`put-${idx}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: PUTS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}>
+                      <View key={`put-${i}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: ACTIVE_PUTS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}>
                         <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                          <AppText style={{ color: colors.green, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.bid_price)}</AppText>
-                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.bidIvPct || pLeg.markIvPct)}</AppText>
-                        </View>
-                        <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                          <AppText style={{ color: colors.red, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.ask_price)}</AppText>
-                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.askIvPct)}</AppText>
+                          <AppText style={{ color: colors.green, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(pLeg.bidIv, 0)}</AppText>
                         </View>
                         <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
-                          <AppText style={{ color: pLeg.markIvPct ? colors.green : themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>{formatVal(pRaw.mark_price)}</AppText>
-                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatPct(pLeg.markIvPct)}</AppText>
+                          <AppText style={{ color: colors.red, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(pLeg.markIv, 1)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatIvPct(pLeg.markIvPct)}</AppText>
                         </View>
-                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.positions, 0)}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.bidSize, 1)}</AppText>
-                        </View>
-                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pLeg.apr ? formatPct(pLeg.apr) : '--'}</AppText>
-                        </View>
-                        <View style={{ width: 80, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pLeg.apr ? formatPct(pLeg.apr) : '--'}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.askSize, 1)}</AppText>
+                        <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                          <AppText style={{ color: colors.red, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(pLeg.askIv, 0)}</AppText>
+                          <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatIvPct(pLeg.askIvPct)}</AppText>
                         </View>
                         <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.delta, 3)}</AppText>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.delta, 4)}</AppText>
                         </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.gamma, 5)}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.theta, 4)}</AppText>
-                        </View>
-                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vega, 4)}</AppText>
-                        </View>
-                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.oi, 0)}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vol, 0)}</AppText>
-                        </View>
-                        <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{pRaw.leverage ? `${pRaw.leverage}X` : '--'}</AppText>
-                        </View>
-                        <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
-                          <AppText style={{ color: themeColors.text, fontSize: 11, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.last)}</AppText>
-                        </View>
+                        {cols.gamma && <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.gamma, 6)}</AppText>
+                        </View>}
+                        {cols.theta && <View style={{ width: 70, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.theta, 4)}</AppText>
+                        </View>}
+                        {cols.vega && <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(pLeg.vega, 4)}</AppText>
+                        </View>}
+                        {cols.last && <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
+                          <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(pLeg.last, 0)}</AppText>
+                        </View>}
                       </View>
-                    )
+                    );
                   })}
                 </View>
-              </ScrollView>
+              </Animated.ScrollView>
             </View>
 
             {/* Current Price Indicator Overlay */}
-            {rowsToRender.length > 0 && currentPrice > 0 && (
-              <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: HEADER_ROW_HEIGHT + (activeLineIdx * ROW_HEIGHT) + 8, alignItems: 'center', zIndex: 10 }}>
-                <View style={{ position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: isDark ? '#FFF' : '#222', top: -0.75 }} />
-                <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13 }}>
-                  <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(currentPrice, 2)}</AppText>
+            {chainsToRender.length > 0 && currentPrice > 0 && chainsToRender.map((chain, chainIdx) => {
+              return (
+                <View key={`indicator-${chainIdx}`} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: chainOffsets[chainIdx]?.indicatorTop || 0, alignItems: 'center', zIndex: 10 }}>
+                  <View style={{ position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: isDark ? '#FFF' : '#222', top: -0.75 }} />
+                  <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13 }}>
+                    <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 12, fontFamily: fontFamilyMedium }}>{formatVal(currentPrice, 2)}</AppText>
+                  </View>
                 </View>
-              </View>
-            )}
+              );
+            })}
 
           </View>
           <View style={{ height: 50 }}></View>
@@ -469,5 +530,28 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
     zIndex: 11,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colMenuDropdown: {
+    width: 200,
+    borderRadius: 8,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  colMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   }
 });
+

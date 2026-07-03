@@ -15,6 +15,7 @@ export default function useOptionsWebSocket(selectedAsset = "") {
     const [isConnected, setIsConnected] = useState(false);
     const [marketOverview, setMarketOverview] = useState(null);
     const [contractsPayload, setContractsPayload] = useState(null);
+    const lastContractsUpdateRef = useRef(0);
 
     const underlying = underlyingKeyFromAsset(selectedAsset);
 
@@ -49,7 +50,11 @@ export default function useOptionsWebSocket(selectedAsset = "") {
 
         const onContractsUpdate = (data) => {
             if (data && typeof data === "object") {
-                setContractsPayload(data);
+                const now = Date.now();
+                if (now - lastContractsUpdateRef.current > 500) {
+                    setContractsPayload(data);
+                    lastContractsUpdateRef.current = now;
+                }
             }
         };
 

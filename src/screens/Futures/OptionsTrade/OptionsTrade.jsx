@@ -75,6 +75,7 @@ const OptionsTrade = () => {
             chains={chains}
             currentPrice={currentPrice}
             selectedAsset={selectedAsset}
+            isMarketLoading={isMarketLoading}
           />
         </>
       )}
