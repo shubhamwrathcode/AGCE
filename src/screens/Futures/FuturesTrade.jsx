@@ -744,7 +744,7 @@ const FuturesUI = () => {
           const feeRate = Number(selectedCoin?.taker_fee_rate);
           const takerFee = Number.isFinite(feeRate) && feeRate >= 0 ? feeRate : 0;
           const effAvail = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0);
-          
+
           const lev = Math.max(1, Number(leverage) || 1);
           const requiredMargin = (orderNotional / lev) + (orderNotional * takerFee);
 
@@ -1071,17 +1071,6 @@ const FuturesUI = () => {
     subscribeToFutures({ symbol: pair.symbol });
   };
 
-  const filteredPairs = pairData?.filter((pair) => {
-    const term = searchTerm.toLowerCase();
-    const shortName = (pair?.short_name || pair?.base_asset || "").toLowerCase();
-    const marginAsset = (pair?.margin_asset || "").toLowerCase();
-    const name = (pair?.name || pair?.symbol || "").toLowerCase();
-    return (
-      shortName.includes(term) ||
-      marginAsset.includes(term) ||
-      name.includes(term)
-    );
-  });
 
   const Header = () => (
     <View style={{ paddingTop: 10, paddingBottom: 10, paddingHorizontal: 16 }}>
@@ -1979,8 +1968,6 @@ const FuturesUI = () => {
       </View>
     );
   };
-
-
 
   const dynamicHistoryTabs = React.useMemo(() => [
     { id: 'Positions', label: 'Positions', count: futuresPositions?.length || 0 },

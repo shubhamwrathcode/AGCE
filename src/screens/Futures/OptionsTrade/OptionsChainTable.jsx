@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FastImage from 'react-native-fast-image';
 import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedRef, scrollTo } from 'react-native-reanimated';
@@ -74,6 +75,7 @@ function formatIvPct(v) {
 
 const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false, onOpenPairList }) => {
   const { colors: themeColors, isDark } = useTheme();
+  const navigation = useNavigation();
 
   const [cols, setCols] = useState({
     last: true,
@@ -351,7 +353,12 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
                     const cLeg = row.call || {};
 
                     return (
-                      <View key={`call-${i}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: ACTIVE_CALLS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}>
+                      <TouchableOpacity 
+                        key={`call-${i}`}
+                        activeOpacity={0.8}
+                        onPress={() => navigation.navigate('OptionsInstrumentTrade', { item: cRaw, currentPrice, selectedAsset, isCall: true })}
+                        style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: ACTIVE_CALLS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}
+                      >
                         {cols.last && <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
                           <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(cLeg.last, 0)}</AppText>
                         </View>}
@@ -378,7 +385,7 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
                           <AppText style={{ color: colors.red, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(cLeg.askIv, 0)}</AppText>
                           <AppText style={{ color: themeColors.secondaryText, fontSize: 10, fontFamily: fontFamilyMedium, marginTop: 2 }}>{formatIvPct(cLeg.askIvPct)}</AppText>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
@@ -507,7 +514,12 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
                     const pLeg = row.put || {};
 
                     return (
-                      <View key={`put-${i}`} style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: ACTIVE_PUTS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}>
+                      <TouchableOpacity 
+                        key={`put-${i}`}
+                        activeOpacity={0.8}
+                        onPress={() => navigation.navigate('OptionsInstrumentTrade', { item: pRaw, currentPrice, selectedAsset, isCall: false })}
+                        style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: ACTIVE_PUTS_WIDTH, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}
+                      >
                         <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
                           <AppText style={{ color: colors.green, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(pLeg.bidIv, 0)}</AppText>
                         </View>
@@ -534,7 +546,7 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
                         {cols.last && <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
                           <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(pLeg.last, 0)}</AppText>
                         </View>}
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>

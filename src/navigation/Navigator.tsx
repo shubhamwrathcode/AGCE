@@ -154,6 +154,7 @@ import OptionHistoryCardDetailPage from "../screens/Futures/OptionsTrade/OptionH
 import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
 import StakingDashboard from "../screens/staking/StakingDashboard";
 import StakingPurchase from "../screens/staking/StakingPurchase";
+import OptionsInstrumentTrade from "../screens/Futures/OptionsTrade/OptionsInstrumentTrade";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -615,6 +616,11 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name={routes.ADD_FAVOURITE_SCREEN}
         component={AddFavouriteScreen}
+      />
+      <Stack.Screen
+        name="OptionsInstrumentTrade"
+        component={OptionsInstrumentTrade}
+      // options={{ headerShown: false, ...TransitionPresets.SlideFromRightIOS }}
       />
       <Stack.Screen
         name="OptionHistory"
