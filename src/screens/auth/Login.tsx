@@ -338,7 +338,7 @@ const Login = (): JSX.Element => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
+    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
       <KeyBoardAware style={{ paddingHorizontal: 20 }}>
         <AuthHeader
           onSupportPress={openSupport}

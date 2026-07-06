@@ -252,3 +252,44 @@ export function applyChainFilters(chains, { oddSize = true, strikeMin = null, st
         })
         .filter((chain) => chain.data.length > 0);
 }
+
+export function buildOrderbookDisplayRows(levels) {
+    if (!Array.isArray(levels) || levels.length === 0) return [];
+    let cum = 0;
+    const maxCum = levels.reduce((s, r) => s + Number(r.qty || 0), 0);
+    return levels.map((row) => {
+        cum += Number(row.qty || 0);
+        const depth = maxCum > 0 ? Math.round((cum / maxCum) * 100) : 0;
+        return {
+            price: Number(row.price || 0),
+            qty: Number(row.qty || 0),
+            sum: cum,
+            depth,
+        };
+    });
+}
+
+export function fmtTradeTimeShort(ts) {
+    if (!ts) return "—";
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return "—";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+export function computeOptionsPositionAvailable(position, openOrders = []) {
+    const qty = decNum(position?.quantity);
+    const side = String(position?.side || "").toUpperCase();
+    const symbol = position?.symbol;
+    if (!symbol || qty <= 0) return 0;
+
+    let locked = 0;
+    for (const o of openOrders) {
+        if (o.symbol !== symbol) continue;
+        const rem = decNum(o.remaining_quantity);
+        const oSide = String(o.side || "").toUpperCase();
+        if (side === "LONG" && oSide === "SELL") locked += rem;
+        if (side === "SHORT" && oSide === "BUY") locked += rem;
+    }
+    return Math.max(0, qty - locked);
+}

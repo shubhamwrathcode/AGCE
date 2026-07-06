@@ -28,8 +28,8 @@ export class AppOperation {
     }
   }
 
-  post(path: string, params: any, type: string = GUEST_TYPE) {
-    return this.send(path, 'POST', null, params, type);
+  post(path: string, params: any, type: string = GUEST_TYPE, extraHeaders?: Record<string, string>) {
+    return this.send(path, 'POST', null, params, type, extraHeaders);
   }
 
   patch(path: string, params: any, type: string = GUEST_TYPE) {
@@ -48,7 +48,7 @@ export class AppOperation {
     return this.send(path, 'DELETE', params, null, type);
   }
 
-  send(url: string, method: string, params: any, data: any, type: string) {
+  send(url: string, method: string, params: any, data: any, type: string, extraHeaders?: Record<string, string>) {
     let uri: any;
 
     // Ensure no double slashes between base_url and root_path or url
@@ -87,6 +87,9 @@ export class AppOperation {
       const token = String(this.customerToken).trim();
       const prefix = token.startsWith('Bearer ') ? '' : 'Bearer ';
       headers['Authorization'] = `${prefix}${token}`;
+    }
+    if (extraHeaders && typeof extraHeaders === 'object') {
+      Object.assign(headers, extraHeaders);
     }
 
     return new Promise((resolve, reject) => {

@@ -688,8 +688,12 @@ export default (appOperation: AppOperation) => ({
   },
   getOptionsPairs: (data: any) =>
     appOperation.get('options/optionPairs', undefined, undefined, CUSTOMER_TYPE),
-  placeOptionOrder: (data: any) =>
-    appOperation.post('options/placeOrder', data, CUSTOMER_TYPE),
+  placeOptionOrder: (data: any, idempotencyKey?: string) =>
+    idempotencyKey
+      ? appOperation.post('options/order', data, CUSTOMER_TYPE, {
+          'Idempotency-Key': String(idempotencyKey),
+        })
+      : appOperation.post('options/order', data, CUSTOMER_TYPE),
   getExpiryDates: (data: any) =>
     appOperation.get(`options/contractDates?underlying=${data}`, undefined, undefined, CUSTOMER_TYPE),
   cancelFutureOrder: (data: any) => {
