@@ -1,7 +1,6 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import FastImage from 'react-native-fast-image';
 import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedRef, scrollTo } from 'react-native-reanimated';
 import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, checkIc, checkIcon, downIcon } from '../../../helper/ImageAssets';
@@ -11,6 +10,7 @@ import { fontFamilyMedium, SEMI_BOLD } from '../../../theme/typography';
 import { colors } from '../../../theme/colors';
 import OptionsExpiries from './OptionsExpiries';
 import { applyChainFilters, parseStrikeFilterInput } from './helpers/optionsDataHelpers';
+import { ShimmerBox } from '../../spotScreen/Spot';
 
 const CALLS_HEADERS = [
   { title: 'Last', w: 60, align: 'center' },
@@ -73,9 +73,11 @@ function formatIvPct(v) {
   return n.toFixed(2) + '%';
 }
 
-const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false, onOpenPairList }) => {
+const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false, isContractsLoading = false, onOpenPairList }) => {
   const { colors: themeColors, isDark } = useTheme();
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
+  const isChainLoading = isMarketLoading || isContractsLoading;
 
   const [cols, setCols] = useState({
     last: true,
@@ -132,12 +134,61 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
   const leftScrollRef = useAnimatedRef();
   const rightScrollRef = useAnimatedRef();
   const activeScroll = useSharedValue(0); // 0 = none, 1 = left, 2 = right
+  const [callsPaneWidth, setCallsPaneWidth] = useState(0);
+  const callsPaneWidthRef = useRef(0);
 
-  useEffect(() => {
-    setTimeout(() => {
-      leftScrollRef.current?.scrollToEnd({ animated: false });
-    }, 100);
+  const callsScrollOffset = useMemo(
+    () => (callsPaneWidth > 0 ? Math.max(0, ACTIVE_CALLS_WIDTH - callsPaneWidth) : 0),
+    [ACTIVE_CALLS_WIDTH, callsPaneWidth],
+  );
+
+  const alignCallsToStrike = useCallback(() => {
+    const paneW = callsPaneWidthRef.current;
+    const contentW = ACTIVE_CALLS_WIDTH;
+    if (paneW <= 0 || contentW <= 0) return;
+
+    const x = Math.max(0, contentW - paneW);
+    const leftRef = leftScrollRef.current;
+    const rightRef = rightScrollRef.current;
+
+    if (leftRef?.scrollTo) {
+      leftRef.scrollTo({ x, y: 0, animated: false });
+    } else {
+      scrollTo(leftScrollRef, x, 0, false);
+    }
+
+    if (rightRef?.scrollTo) {
+      rightRef.scrollTo({ x: 0, y: 0, animated: false });
+    } else {
+      scrollTo(rightScrollRef, 0, 0, false);
+    }
+  }, [ACTIVE_CALLS_WIDTH, leftScrollRef, rightScrollRef]);
+
+  const handleCallsPaneLayout = useCallback((width) => {
+    if (width <= 0 || width === callsPaneWidthRef.current) return;
+    callsPaneWidthRef.current = width;
+    setCallsPaneWidth(width);
   }, []);
+
+  const handleCallsContentSizeChange = useCallback((contentWidth) => {
+    const paneW = callsPaneWidthRef.current;
+    if (paneW <= 0 || contentWidth <= 0) return;
+
+    const x = Math.max(0, contentWidth - paneW);
+    const leftRef = leftScrollRef.current;
+    if (leftRef?.scrollTo) {
+      leftRef.scrollTo({ x, y: 0, animated: false });
+    } else {
+      scrollTo(leftScrollRef, x, 0, false);
+    }
+
+    const rightRef = rightScrollRef.current;
+    if (rightRef?.scrollTo) {
+      rightRef.scrollTo({ x: 0, y: 0, animated: false });
+    } else {
+      scrollTo(rightScrollRef, 0, 0, false);
+    }
+  }, [leftScrollRef, rightScrollRef]);
 
   const handleLeftScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -204,12 +255,25 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
     return { chainsToRender: selectedChains, chainOffsets: offsets, elementsToRender: flattenedElements };
   }, [chains, selectedExpiry, currentPrice, oddSize, debouncedFilters]);
 
+  useEffect(() => {
+    if (!isFocused || isChainLoading || chainsToRender.length === 0 || callsPaneWidth <= 0) return undefined;
+
+    alignCallsToStrike();
+    const timer = setTimeout(alignCallsToStrike, 100);
+    const timer2 = setTimeout(alignCallsToStrike, 300);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
+  }, [isFocused, isChainLoading, chainsToRender.length, elementsToRender.length, ACTIVE_CALLS_WIDTH, callsPaneWidth, alignCallsToStrike]);
+
   return (
     <View style={styles.container}>
       <OptionsExpiries
         expiries={expiries}
         selectedExpiry={selectedExpiry}
         setSelectedExpiry={setSelectedExpiry}
+        isLoading={isMarketLoading}
       />
 
       {/* Filter Bar */}
@@ -275,13 +339,17 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
       <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
 
       {/* Scrollable Table Area */}
-      {isMarketLoading ? (
+      {isChainLoading ? (
         <View style={{ flex: 1, paddingTop: 10 }}>
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
             <View key={i} style={{ flexDirection: 'row', height: 56, borderBottomWidth: 1, borderColor: isDark ? '#2C2D31' : '#F0F0F0', alignItems: 'center' }}>
-              <View style={{ flex: 1, height: 20, backgroundColor: isDark ? '#2A2A2A' : '#E8E8E8', borderRadius: 4, marginHorizontal: 16 }} />
-              <View style={{ width: 60, height: 20, backgroundColor: isDark ? '#2A2A2A' : '#E8E8E8', borderRadius: 4, marginHorizontal: 10 }} />
-              <View style={{ flex: 1, height: 20, backgroundColor: isDark ? '#2A2A2A' : '#E8E8E8', borderRadius: 4, marginHorizontal: 16 }} />
+              <View style={{ flex: 1, marginHorizontal: 16 }}>
+                <ShimmerBox width="100%" height={20} borderRadius={4} />
+              </View>
+              <ShimmerBox width={60} height={20} borderRadius={4} style={{ marginHorizontal: 10 }} />
+              <View style={{ flex: 1, marginHorizontal: 16 }}>
+                <ShimmerBox width="100%" height={20} borderRadius={4} />
+              </View>
             </View>
           ))}
         </View>
@@ -313,6 +381,9 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
                 ref={leftScrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                contentOffset={callsPaneWidth > 0 ? { x: callsScrollOffset, y: 0 } : undefined}
+                onLayout={(e) => handleCallsPaneLayout(e.nativeEvent.layout.width)}
+                onContentSizeChange={(w) => handleCallsContentSizeChange(w)}
                 onScroll={handleLeftScroll}
                 scrollEventThrottle={16}
                 onTouchStart={() => { activeScroll.value = 1; }}

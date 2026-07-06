@@ -429,20 +429,25 @@ export const ShimmerBox = ({
       : ["transparent", "rgba(255,255,255,0.72)", "transparent"]);
   const shimmerX = useRef(new Animated.Value(-stripW)).current;
   useEffect(() => {
+    const toValue = shimmerToValue !== undefined ? shimmerToValue : (Width + stripW);
     shimmerX.setValue(-stripW);
-    const run = () => {
-      shimmerX.setValue(-stripW);
-      Animated.timing(shimmerX, {
-        toValue: shimmerToValue !== undefined ? shimmerToValue : (Width + stripW),
-        duration: shimmerDuration,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) run();
-      });
-    };
-    run();
-    return () => shimmerX.stopAnimation();
-  }, [shimmerX, stripW, isDark]);
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerX, {
+          toValue,
+          duration: shimmerDuration,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerX, {
+          toValue: -stripW,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [shimmerX, stripW, isDark, shimmerDuration, shimmerToValue]);
   return (
     <View style={[{ width, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
       <Animated.View

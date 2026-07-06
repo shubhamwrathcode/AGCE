@@ -97,6 +97,9 @@ const FuturesNavigator = () => {
         tabBar={props => <CustomTabBar {...props} themeColors={themeColors} isDark={isDark} />}
         screenOptions={{
           swipeEnabled: false,
+          lazy: false,
+          freezeOnBlur: true,
+          animationEnabled: false,
         }}
       >
         <Tab.Screen name="Futures" component={FuturesTrade} />

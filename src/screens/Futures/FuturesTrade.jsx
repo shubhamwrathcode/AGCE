@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated, FlatList, Platform, ToastAndroid, Alert, Keyboard, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal, Pressable, Animated, FlatList, Platform, ToastAndroid, Alert, Keyboard, ActivityIndicator, InteractionManager } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import { setFuturesData } from "../../slices/homeSlice";
 import FastImage from 'react-native-fast-image';
@@ -487,8 +487,9 @@ const FuturesUI = () => {
   }, []);
 
   useEffect(() => {
-    if (isFocused) {
-      // Always fetch to keep counts updated on tabs
+    if (!isFocused) return undefined;
+
+    const task = InteractionManager.runAfterInteractions(() => {
       fetchFuturesPositions();
       fetchFuturesOpenOrders();
 
@@ -499,7 +500,9 @@ const FuturesUI = () => {
       } else if (activeHistoryTab === 'Transaction History') {
         fetchFuturesTransactionHistory();
       }
-    }
+    });
+
+    return () => task.cancel();
   }, [isFocused, activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory, fetchFuturesTransactionHistory]);
 
   const liveCoin = React.useMemo(() => {
@@ -1034,12 +1037,15 @@ const FuturesUI = () => {
   }, [futuresPairs, futuresData]);
 
   useEffect(() => {
-    if (isFocused) {
+    if (!isFocused) return undefined;
+
+    const task = InteractionManager.runAfterInteractions(() => {
       dispatch(getOpenOrders(0, 10, "cross", selectedCoin?.symbol));
       dispatch(getUserFuturesWallet("futures"));
-    }
+    });
 
-  }, [isFocused, pairData.length, subscribeToFutures, unsubscribeFromFutures]);
+    return () => task.cancel();
+  }, [isFocused, pairData.length, subscribeToFutures, unsubscribeFromFutures, dispatch, selectedCoin?.symbol]);
 
   useEffect(() => {
     if (isFocused && selectedCoin) {

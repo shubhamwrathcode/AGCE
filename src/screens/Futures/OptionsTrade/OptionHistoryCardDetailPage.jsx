@@ -120,6 +120,8 @@ const OptionHistoryCardDetailPage = () => {
   const isOrderTab = tabKey === 'openOrders' || tabKey === 'orderHistory';
   const isTradeTab = tabKey === 'tradeHistory';
   const isTransTab = tabKey === 'transactionHistory';
+  const orderType = String(item.order_type || item.orderType || item.type || "LIMIT").toUpperCase();
+  const orderStatus = String(item.status || item.state || "NEW").toUpperCase();
 
   const formatOptionsTransactionType = (type) => {
     const s = String(type || "").toUpperCase();

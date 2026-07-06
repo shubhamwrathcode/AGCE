@@ -354,9 +354,6 @@ const OptionHistory = () => {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.leftTabs}>
           {TABS.map((tab, index) => {
             const isActive = activeTab === index;
-            let displayLabel = tab.label;
-            if (tab.key === 'positions') displayLabel = `Positions(${dataCache.positions?.length || 0})`;
-            if (tab.key === 'openOrders') displayLabel = `Open Orders(${dataCache.openOrders?.length || 0})`;
 
             return (
               <TouchableOpacity key={index} style={styles.tabBtn} onPress={() => setActiveTab(index)}>
@@ -364,16 +361,15 @@ const OptionHistory = () => {
                   color: isActive ? themeColors.text : themeColors.secondaryText,
                   fontFamily: isActive ? fontFamilyBold : fontFamilyMedium
                 }]}>
-                  {displayLabel}
+                  {tab.label}
                 </AppText>
                 {isActive && <View style={[styles.activeUnderline, { backgroundColor: themeColors.text }]} />}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
-        <TouchableOpacity style={styles.filterBtn}>
-          <FastImage source={filterIcon} style={styles.filterIcon} tintColor={themeColors.text} resizeMode="contain" />
-        </TouchableOpacity>
+        
+      
       </View>
 
       {loading && listData.length === 0 ? (
@@ -401,7 +397,6 @@ const OptionHistory = () => {
                 style={styles.emptyIcon}
                 resizeMode="contain"
               />
-              <AppText style={[styles.emptyText, { color: themeColors.secondaryText }]}>No data</AppText>
             </View>
           }
         />

@@ -37,10 +37,12 @@ function matchesContractDetailSymbol(updateSymbol, activeSymbol) {
     return String(updateSymbol).toUpperCase() === String(activeSymbol).toUpperCase();
 }
 
-export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol = null) {
+export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol = null, enabled = true) {
     const userData = useAppSelector((state) => state.auth.userData);
     const isAuthenticated = Boolean(userData);
     const authToken = isAuthenticated ? (appOperation.customerToken || undefined) : undefined;
+    const enabledRef = useRef(enabled);
+    enabledRef.current = enabled;
     const socketRef = useRef(null);
     const subscribedRef = useRef({
         account: false,
@@ -105,12 +107,14 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
             bumpOptionsWsStat("socketDisconnect");
             logOptionsWs("socket disconnect (hook listener)");
             setIsConnected(false);
+            if (!enabledRef.current) return;
             setContractsPayload(null);
             setUserOrdersReady(false);
             setUserPositionsReady(false);
         };
 
         const onMarketOverview = (data) => {
+            if (!enabledRef.current) return;
             if (data && typeof data === "object") {
                 bumpOptionsWsEvent("market_overview");
                 setMarketOverview(data);
@@ -118,6 +122,7 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         };
 
         const onContractsUpdate = (data) => {
+            if (!enabledRef.current) return;
             if (data && typeof data === "object") {
                 bumpOptionsWsEvent("contracts_update");
                 setContractsPayload(data);
@@ -125,6 +130,7 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         };
 
         const onAccountUpdate = (data) => {
+            if (!enabledRef.current) return;
             const normalized = normalizeAccountPayload(data);
             if (normalized) {
                 bumpOptionsWsEvent("account_update");
@@ -133,18 +139,21 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         };
 
         const onUserOrdersUpdate = (orders) => {
+            if (!enabledRef.current) return;
             bumpOptionsWsEvent("user_orders_update");
             setUserOrders(normalizeUserOrdersPayload(orders));
             setUserOrdersReady(true);
         };
 
         const onUserPositionsUpdate = (positions) => {
+            if (!enabledRef.current) return;
             bumpOptionsWsEvent("user_positions_update");
             setUserPositions(normalizeUserPositionsPayload(positions));
             setUserPositionsReady(true);
         };
 
         const onOrderbookUpdate = (data) => {
+            if (!enabledRef.current) return;
             if (!data || typeof data !== "object") return;
             const active = contractDetailSymbolRef.current;
             if (!matchesContractDetailSymbol(data.symbol, active)) return;
@@ -154,6 +163,7 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         };
 
         const onRecentTradesUpdate = (data) => {
+            if (!enabledRef.current) return;
             if (!contractDetailSymbolRef.current) return;
             bumpOptionsWsEvent("recent_trades_update");
             setRecentTrades(Array.isArray(data) ? data : []);
@@ -228,6 +238,18 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
             };
         };
     }, [authToken, underlying, isAuthenticated]);
+
+    useEffect(() => {
+        if (!enabled || !socketRef.current?.connected) return;
+        optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
+        if (underlying) {
+            optionsSocketService.emit("subscribe", {
+                channel: OPTIONS_CHANNELS.CONTRACTS,
+                underlying,
+                expiry: "ALL",
+            });
+        }
+    }, [enabled, underlying]);
 
     useEffect(() => {
         if (!isConnected || !selectedSymbol) {

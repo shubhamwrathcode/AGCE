@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, SafeAreaView } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../../hooks/useTheme';
 import RBSheet from 'react-native-raw-bottom-sheet';
 
@@ -16,11 +17,12 @@ import useOptionsWebSocket from './hooks/useOptionsWebSocket';
 
 const OptionsTrade = () => {
   const { colors: themeColors, theme } = useTheme();
+  const isFocused = useIsFocused();
 
   const [selectedAsset, setSelectedAsset] = useState('BTC');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { underlyings, expiries, chains, currentPrice, isMarketLoading } = useOptionsWebSocket(selectedAsset);
+  const { underlyings, expiries, chains, currentPrice, isMarketLoading, isContractsLoading } = useOptionsWebSocket(selectedAsset, null, isFocused);
 
   const [activeTab, setActiveTab] = useState(0);
   const [selectedOptionType, setSelectedOptionType] = useState('All');
@@ -72,6 +74,7 @@ const OptionsTrade = () => {
           currentPrice={currentPrice}
           selectedAsset={selectedAsset}
           isMarketLoading={isMarketLoading}
+          isContractsLoading={isContractsLoading}
           onOpenPairList={() => pairSheetRef.current?.open()}
         />
       )}

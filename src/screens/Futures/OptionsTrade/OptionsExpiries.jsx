@@ -5,46 +5,66 @@ import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
 import { fontFamilyMedium } from '../../../theme/typography';
 import { right_ic } from '../../../helper/ImageAssets';
+import { ShimmerBox } from '../../spotScreen/Spot';
 
-const OptionsExpiries = ({ expiries = [], selectedExpiry, setSelectedExpiry }) => {
+const OptionsExpiries = ({ expiries = [], selectedExpiry, setSelectedExpiry, isLoading = false }) => {
   const { colors: themeColors, isDark } = useTheme();
+
+  const dateList = ['ALL', ...expiries.filter(d => d !== 'ALL')];
 
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {['ALL', ...expiries.filter(d => d !== 'ALL')].map((date) => {
-          const isSelected = selectedExpiry === date;
-          const displayDate = date === 'ALL' ? 'All' : date;
-          
-          return (
-            <TouchableOpacity
-              key={date}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: isSelected
-                    ? (isDark ? '#FFFFFF' : '#1C1C1E')
-                    : (isDark ? '#2C2D31' : '#F2F3F5')
-                }
-              ]}
-              onPress={() => setSelectedExpiry(date)}
-            >
-              <AppText
-                style={{
-                  fontFamily: fontFamilyMedium,
-                  color: isSelected
-                    ? (isDark ? '#000000' : '#FFFFFF')
-                    : (isDark ? '#FFFFFF' : '#1C1C1E'),
-                  fontSize: 13
-                }}
+      {isLoading ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {[72, 88, 80, 96, 84].map((width, index) => (
+            <ShimmerBox
+              key={index}
+              width={width}
+              height={30}
+              borderRadius={6}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {dateList.map((date) => {
+            const isSelected = selectedExpiry === date;
+            const displayDate = date === 'ALL' ? 'All' : date;
+
+            return (
+              <TouchableOpacity
+                key={date}
+                style={[
+                  styles.pill,
+                  {
+                    backgroundColor: isSelected
+                      ? (isDark ? '#FFFFFF' : '#1C1C1E')
+                      : (isDark ? '#2C2D31' : '#F2F3F5')
+                  }
+                ]}
+                onPress={() => setSelectedExpiry(date)}
               >
-                {displayDate}
-              </AppText>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-      <View style={styles.chevronContainer}>
+                <AppText
+                  style={{
+                    fontFamily: fontFamilyMedium,
+                    color: isSelected
+                      ? (isDark ? '#000000' : '#FFFFFF')
+                      : (isDark ? '#FFFFFF' : '#1C1C1E'),
+                    fontSize: 13
+                  }}
+                >
+                  {displayDate}
+                </AppText>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+      <View style={[styles.chevronContainer, { backgroundColor: isDark ? 'rgba(28,29,33,0.9)' : 'rgba(255,255,255,0.9)' }]}>
         <FastImage source={right_ic} style={styles.chevronIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
       </View>
     </View>
@@ -61,7 +81,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 15,
-    paddingRight: 40, // Space for chevron
+    paddingRight: 40,
     gap: 10,
   },
   pill: {
@@ -77,7 +97,6 @@ const styles = StyleSheet.create({
     width: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)', // Optional gradient/fade effect could be added
   },
   chevronIcon: {
     width: 14,
