@@ -63,7 +63,7 @@ import { toFixedFive } from "../../helper/utility";
 import {
   ACCOUNT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN,
   WALLET_SCREEN, SELECT_COIN_SCREEN,
-  MARGIN_TRANSFER_SCREEN
+  MARGIN_TRANSFER_SCREEN, OPTIONS_PNL_ANALYSIS_SCREEN,
 } from "../../navigation/routes";
 import WalletSkeleton from "./WalletSkeleton";
 import RBSheet from "react-native-raw-bottom-sheet";
@@ -83,6 +83,7 @@ import SwapWalletTab from "./tabs/SwapWalletTab";
 import EarningWalletTab from "./tabs/EarningWalletTab";
 import StakingWalletTab from "./tabs/StakingWalletTab";
 import FuturesWalletTab from "./tabs/FuturesWalletTab";
+import OptionsWalletTab from "./tabs/OptionsWalletTab";
 import MarginWalletTab from "./tabs/MarginWalletTab";
 import CrossMarginWalletTab from "./tabs/CrossMarginWalletTab";
 import WalletTabQuickActions from "./WalletTabQuickActions";
@@ -169,9 +170,11 @@ const WalletNew = ({ route }) => {
       { key: "Cross", title: "Cross" },
       { key: "P2P", title: "P2P" },
       { key: "Futures", title: "Futures" },
+      { key: "Options", title: "Options" },
       { key: "Staking", title: "Staking" },
       { key: "Swap", title: "Swap" },
       { key: "Earning", title: "Earning" },
+
     ],
     []
   );
@@ -190,6 +193,16 @@ const WalletNew = ({ route }) => {
       setActiveTab(route.params.activeTab);
     }
   }, [route?.params?.activeTab, setActiveTab]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!route?.params?.openPnlAnalysis) return undefined;
+      const timer = setTimeout(() => {
+        NavigationService.navigate(OPTIONS_PNL_ANALYSIS_SCREEN);
+      }, 350);
+      return () => clearTimeout(timer);
+    }, [route?.params?.openPnlAnalysis])
+  );
 
   const layout = useWindowDimensions();
   const [showBalance, setShowBalance] = useState(true);
@@ -224,7 +237,7 @@ const WalletNew = ({ route }) => {
       case "Swap": return walletBalanceSwap;
       case "Earning": return walletBalanceEarning;
       case "Futures": return walletBalanceFutures;
-      // case "Options": return walletBalanceOptions;
+      case "Options": return walletBalanceOptions;
       default: return walletBalanceArbitrage;
     }
   }, [activeTab, walletBalance, walletBalanceMain, walletBalanceSpot, walletBalanceSwap, walletBalanceEarning, walletBalanceFutures, walletBalanceOptions, walletBalanceArbitrage]);
@@ -442,7 +455,7 @@ const WalletNew = ({ route }) => {
                         ? userEarningWallet
                         : tabKey === "Futures"
                           ? userFuturesWallet
-                          : ""
+                          : []
               }
               onSheetOpen={handleSheetOpen}
               theme={theme}
@@ -535,6 +548,7 @@ const WalletNew = ({ route }) => {
       walletBalanceSwap?.Currency ||
       walletBalanceEarning?.Currency ||
       walletBalanceFutures?.Currency ||
+      walletBalanceOptions?.Currency ||
       "USD";
 
     const balancesByKey = {
@@ -544,6 +558,7 @@ const WalletNew = ({ route }) => {
       swap: walletBalanceSwap,
       earning: walletBalanceEarning,
       futures: walletBalanceFutures,
+      options: walletBalanceOptions,
       margin: marginSummary ? { dollarPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, currencyPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, Currency: "USD" } : null,
       cross: crossMarginSummary ? { dollarPrice: crossMarginSummary?.net_equity || crossMarginSummary?.account_equity_usd || 0, currencyPrice: crossMarginSummary?.net_equity || crossMarginSummary?.account_equity_usd || 0, Currency: "USD" } : null,
     };
@@ -572,10 +587,11 @@ const WalletNew = ({ route }) => {
       mk("swap", "Swap", balancesByKey.swap),
       mk("earning", "Earning", balancesByKey.earning),
       mk("futures", "Futures", balancesByKey.futures),
+      mk("options", "Options", balancesByKey.options),
       mk("margin", "Isolated Margin", balancesByKey.margin),
       mk("cross", "Cross", balancesByKey.cross),
     ];
-  }, [walletBalance, walletBalanceMain, walletBalanceSpot, walletBalanceSwap, walletBalanceEarning, walletBalanceFutures, marginSummary, safeNum]);
+  }, [walletBalance, walletBalanceMain, walletBalanceSpot, walletBalanceSwap, walletBalanceEarning, walletBalanceFutures, walletBalanceOptions, marginSummary, safeNum]);
 
   const handleSheetOpen = () => {
     depsoitSheet.current?.open();
@@ -702,6 +718,8 @@ const WalletNew = ({ route }) => {
           return "#FF9800"; // orange
         case "futures":
           return "#F44336"; // red
+        case "options":
+          return "#673AB7"; // deep purple
         case "margin":
           return "#00BCD4"; // cyan
         case "cross":
@@ -1360,6 +1378,16 @@ const WalletNew = ({ route }) => {
                           coinDetailSheet.current?.open?.();
                         }}
                       />
+                    </DeferredTabScene>
+                  </View>
+                );
+              }
+
+              if (route.key === "Options") {
+                return (
+                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
+                    <DeferredTabScene>
+                      <OptionsWalletTab theme={theme} themeColors={themeColors} />
                     </DeferredTabScene>
                   </View>
                 );

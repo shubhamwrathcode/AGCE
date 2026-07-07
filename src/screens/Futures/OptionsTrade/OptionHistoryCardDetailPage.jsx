@@ -1,15 +1,17 @@
 import { AppSafeAreaView } from '../../../shared';
-import React from 'react';
-import { View, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import moment from 'moment';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 import { useTheme } from '../../../hooks/useTheme';
-import { AppText, FOURTEEN, SIXTEEN } from '../../../common';
+import { AppText, FOURTEEN, SIXTEEN, SEMI_BOLD } from '../../../common';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../../theme/typography';
 import { colors } from '../../../theme/colors';
 import { back_ic } from '../../../helper/ImageAssets';
+import { appOperation } from '../../../appOperation';
+import { showError, showSuccess } from '../../../helper/logger';
 
 // --- Formatters (duplicated from OptionHistory for brevity) ---
 function safeToFixed(val, p = 2) {
@@ -65,6 +67,7 @@ const OptionHistoryCardDetailPage = () => {
   const { colors: themeColors, isDark } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
+  const [cancelling, setCancelling] = useState(false);
   
   const { item, tabKey, title, userId } = route.params || {};
 
@@ -164,6 +167,25 @@ const OptionHistoryCardDetailPage = () => {
   if (side === 'BUY') intent = "OPEN LONG";
   else if (side === 'SELL') intent = "OPEN SHORT";
   const intentStr = String(item.intent || intent).toUpperCase();
+  const orderId = item.order_id || item.orderId || item.id || item._id;
+
+  const handleCancelOrder = useCallback(async () => {
+    if (!orderId || cancelling) return;
+    setCancelling(true);
+    try {
+      const result = await appOperation.customer.close_option_order({ order_id: String(orderId) });
+      if (!result?.success) {
+        showError(result?.message || "Failed to cancel order.");
+        return;
+      }
+      showSuccess("Order cancelled successfully");
+      navigation.goBack();
+    } catch (err) {
+      showError(err?.message || "Failed to cancel order.");
+    } finally {
+      setCancelling(false);
+    }
+  }, [orderId, cancelling, navigation]);
 
   const renderDetailRow = (label, value, valueColor = themeColors.text, valueFont = fontFamilyMedium) => (
     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
@@ -263,14 +285,25 @@ const OptionHistoryCardDetailPage = () => {
               
               <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, alignItems: 'center' }}>
                 <AppText type={FOURTEEN} style={{ color: labelColor, fontFamily: fontFamilySemiBold }}>Action</AppText>
-                <TouchableOpacity 
+                <TouchableOpacity
                   activeOpacity={0.8}
-                  style={{ backgroundColor: isDark ? "rgba(255,255,255,0.15)" : "#333", paddingHorizontal: 20, paddingVertical: 6, borderRadius: 16 }}
-                  onPress={() => {
-                    // Cancel logic later
+                  style={{
+                    backgroundColor: "#000000",
+                    paddingHorizontal: 20,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    minWidth: 80,
+                    alignItems: "center",
+                    opacity: cancelling ? 0.6 : 1,
                   }}
+                  onPress={handleCancelOrder}
+                  disabled={cancelling || !orderId}
                 >
-                  <AppText style={{ color: colors.white, fontFamily: fontFamilyMedium }}>Cancel</AppText>
+                  {cancelling ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: "#FFFFFF" }}>Cancel</AppText>
+                  )}
                 </TouchableOpacity>
               </View>
             </>

@@ -293,3 +293,32 @@ export function computeOptionsPositionAvailable(position, openOrders = []) {
     }
     return Math.max(0, qty - locked);
 }
+
+/** Sum per-position unrealized PnL from `user_positions_update`. */
+export function sumOptionsPositionsUnrealizedPnl(positions) {
+    if (!Array.isArray(positions)) return null;
+    if (positions.length === 0) return 0;
+    let sum = 0;
+    for (const p of positions) {
+        sum += decNum(p?.unrealized_pnl);
+    }
+    return sum;
+}
+
+/**
+ * Account unrealized PnL — prefer Σ positions when positions snapshot is ready
+ * so the account panel matches the open-positions table.
+ */
+export function resolveOptionsAccountUnrealizedPnl(accountUpdate, positions, positionsReady = false) {
+    if (positionsReady && Array.isArray(positions)) {
+        return sumOptionsPositionsUnrealizedPnl(positions);
+    }
+    return decNum(accountUpdate?.unrealized_pnl);
+}
+
+export {
+    normalizeOptionsPnlAnalysisData,
+    optionsPnlPeriodRange,
+    paginateOptionsPnlSeries,
+    OPTIONS_PNL_PERIOD_DEFAULT,
+} from "./optionsPnlQuery";

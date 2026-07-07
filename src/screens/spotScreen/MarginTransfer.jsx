@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
+  Dimensions,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -363,7 +364,7 @@ const MarginTransfer = () => {
   const getWalletLabel = (key) => {
     const found = availableWallets.find(w => w.key === key);
     if (found && found.label) return found.label;
-    const fallbacks = { main: "Main Wallet", spot: "Spot Wallet", margin: "Isolated Margin Wallet", cross_margin: "Cross Margin Wallet", p2p: "P2P Wallet", futures: "Futures Wallet", swap: "Swap Wallet", earning: "Earning Wallet" };
+    const fallbacks = { main: "Main Wallet", spot: "Spot Wallet", margin: "Isolated Margin Wallet", cross_margin: "Cross Margin Wallet", p2p: "P2P Wallet", futures: "Futures Wallet", options: "Options Wallet", swap: "Swap Wallet", earning: "Earning Wallet" };
     return fallbacks[key] || "Wallet";
   };
 

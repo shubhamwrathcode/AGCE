@@ -149,6 +149,7 @@ import TransferHistoryScreen from "../screens/spotScreen/TransferHistoryScreen";
 import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 import MarginTransferHistoryScreen from "../screens/spotScreen/MarginTransferHistoryScreen";
 import OptionHistory from "../screens/Futures/OptionsTrade/OptionHistory";
+import OptionsPnlAnalysisScreen from "../screens/wallet/OptionsPnlAnalysisScreen";
 import FutureHistoryCardDetailPage from "../screens/Futures/FutureHistoryCardDetailPage";
 import OptionHistoryCardDetailPage from "../screens/Futures/OptionsTrade/OptionHistoryCardDetailPage";
 import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
@@ -625,6 +626,11 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name="OptionHistory"
         component={OptionHistory}
+      />
+      <Stack.Screen
+        name="OptionsPnlAnalysis"
+        component={OptionsPnlAnalysisScreen}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name={routes.STAKING_DASHBOARD_SCREEN}

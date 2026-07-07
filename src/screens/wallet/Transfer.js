@@ -25,6 +25,7 @@ const formatWalletName = (name) => {
   if (lower === "main") return "Main Wallet";
   if (lower === "funding") return "Funding Wallet";
   if (lower === "futures") return "Futures Wallet";
+  if (lower === "options") return "Options Wallet";
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() + " Wallet";
 };
 

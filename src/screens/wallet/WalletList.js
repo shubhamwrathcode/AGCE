@@ -9,21 +9,15 @@ import { AppText, BLACK, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, TEN, TWELVE, YELLOW 
 import { bitcoin_ic, coinActive, externalLinkIcon, searchIcon } from "../../helper/ImageAssets";
 import FastImage from "react-native-fast-image";
 import { colors } from "../../theme/colors";
-import { useAppSelector } from "../../store/hooks";
 import { BASE_URL } from "../../helper/Constants";
 import { toFixedFive, toFixedFour, twoFixedTwo } from "../../helper/utility";
 import { useEffect, useRef, useState } from "react";
-import RBSheet from "react-native-raw-bottom-sheet";
-import DepositSheet from "../../shared/components/DepositSheet";
 
 const WalletList = ({ userWallet, theme, onSheetOpen }) => {
   const [hideAssets, setHideAssets] = useState(true);
   const depsoitSheet = useRef(null);
 
-  const handleSheetOpen = () => {
-    depsoitSheet.current?.open();
-  };
-  // const [filteredCoinList, setFilteredCoinList] = useState([]);
+  const walletRows = Array.isArray(userWallet) ? userWallet : [];
 
   const handleCheckboxChange = (type) => {
     if (type === "balance") {
@@ -36,16 +30,16 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
 
 
   const filteredCoinList = hideAssets
-    ? userWallet?.filter(
+    ? walletRows.filter(
         (item) =>
           (item?.balance + item?.bonus + item?.locked_balance || 0) > 0.000001
       )
-    : userWallet;
+    : walletRows;
   // setFilteredCoinList(data);
 
   const [value, setValue] = useState("");
 
-  const displayList = value === "" ? filteredCoinList : filteredCoinList?.filter((data) => {
+  const displayList = value === "" ? filteredCoinList : filteredCoinList.filter((data) => {
     return data?.short_name?.toLowerCase().includes(value?.toLowerCase());
   });
 

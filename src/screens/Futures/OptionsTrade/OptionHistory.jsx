@@ -7,11 +7,12 @@ import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
 import { fontFamilyMedium, fontFamilySemiBold, fontFamilyBold } from '../../../theme/typography';
 import { back_ic, filterIcon, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, right_ic } from '../../../helper/ImageAssets';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { appOperation } from '../../../appOperation';
 import { useSelector } from 'react-redux';
 import { FOURTEEN, FIFTEEN, MEDIUM, SEMI_BOLD, BOLD } from '../../../shared';
 import { colors } from '../../../theme/colors';
+import { showError, showSuccess } from '../../../helper/logger';
 
 const TABS = [
   { key: 'positions', label: 'Positions', endpoint: 'optionsOpenPositions' },
@@ -85,7 +86,7 @@ function formatSymbolDisplay(symbol) {
   return { primary: sym, secondary: "" };
 }
 
-const OptionsHistoryCard = React.memo(({ item, tabKey, userId, onPress }) => {
+const OptionsHistoryCard = React.memo(({ item, tabKey, userId, onPress, onCancel, cancellingOrderId }) => {
   const { colors: themeColors, isDark } = useTheme();
   const textColor = themeColors.text ?? "#000";
   const labelColor = isDark ? "#8E8E93" : "#666666";
@@ -168,8 +169,11 @@ const OptionsHistoryCard = React.memo(({ item, tabKey, userId, onPress }) => {
   const tradeRoleCased = tradeRole.charAt(0).toUpperCase() + tradeRole.slice(1).toLowerCase();
   const sideDisplay = side && side !== '—' ? (side.charAt(0).toUpperCase() + side.slice(1).toLowerCase()) : "";
 
-  const filledQty = Number(item.filled || item.executed_qty || 0);
+  const filledQty = Number(item.filled || item.executed_qty || item.filled_quantity || item.filledQty || 0);
   const unfilledQty = Number(amount) - filledQty;
+  const orderId = item.order_id || item.orderId || item.id || item._id;
+  const isCancelling = cancellingOrderId != null && String(cancellingOrderId) === String(orderId);
+  const canCancel = tabKey === 'openOrders' && Boolean(orderId) && typeof onCancel === 'function';
 
   let intent = "—";
   if (side === 'BUY') intent = "OPEN LONG";
@@ -235,6 +239,25 @@ const OptionsHistoryCard = React.memo(({ item, tabKey, userId, onPress }) => {
             <TradeKvRow label="Unfilled" value={safeToFixed(unfilledQty > 0 ? unfilledQty : 0)} textColor={textColor} isDark={isDark} />
             <TradeKvRow label="Intent" value={intentStr} textColor={textColor} isDark={isDark} />
             <TradeKvRow label="TIF" value={String(item.time_in_force || item.timeInForce || "GTC").toUpperCase()} textColor={textColor} isDark={isDark} />
+            <View style={styles.tradeKvRow}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.tradeKvK, { color: isDark ? "#8E8E93" : "#666666" }]}>Action</AppText>
+              {canCancel ? (
+                <TouchableOpacity
+                  style={[styles.cancelBtn, isCancelling && styles.cancelBtnDisabled]}
+                  onPress={() => onCancel(orderId)}
+                  disabled={isCancelling}
+                  activeOpacity={0.7}
+                >
+                  {isCancelling ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={styles.cancelBtnText}>Cancel</AppText>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.tradeKvV, { color: textColor }]}>—</AppText>
+              )}
+            </View>
           </>
         )}
 
@@ -289,9 +312,11 @@ const OptionHistory = () => {
 
   const [dataCache, setDataCache] = useState({});
   const [loading, setLoading] = useState(false);
+  const [cancellingOrderId, setCancellingOrderId] = useState(null);
 
   const currentTab = TABS[activeTab];
   const listData = dataCache[currentTab.key] || [];
+  const openOrdersTabIndex = useMemo(() => TABS.findIndex((t) => t.key === 'openOrders'), []);
 
   const fetchData = useCallback(async (tabIndex) => {
     const tabObj = TABS[tabIndex];
@@ -327,11 +352,44 @@ const OptionHistory = () => {
     }
   }, []);
 
+  const handleCancelOrder = useCallback(async (orderId) => {
+    if (!orderId || cancellingOrderId) return;
+    setCancellingOrderId(orderId);
+    try {
+      const result = await appOperation.customer.close_option_order({ order_id: String(orderId) });
+      if (!result?.success) {
+        showError(result?.message || "Failed to cancel order.");
+        return;
+      }
+      showSuccess("Order cancelled successfully");
+      setDataCache((prev) => ({
+        ...prev,
+        openOrders: (prev.openOrders || []).filter((order) => {
+          const id = order.order_id || order.orderId || order.id || order._id;
+          return String(id) !== String(orderId);
+        }),
+      }));
+      if (openOrdersTabIndex >= 0) fetchData(openOrdersTabIndex);
+    } catch (err) {
+      showError(err?.message || "Failed to cancel order.");
+    } finally {
+      setCancellingOrderId(null);
+    }
+  }, [cancellingOrderId, fetchData, openOrdersTabIndex]);
+
   useEffect(() => {
     if (!dataCache[currentTab.key]) {
       fetchData(activeTab);
     }
   }, [activeTab]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (currentTab.key === 'openOrders') {
+        fetchData(openOrdersTabIndex);
+      }
+    }, [currentTab.key, fetchData, openOrdersTabIndex])
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -387,6 +445,8 @@ const OptionHistory = () => {
               item={item}
               tabKey={currentTab.key}
               userId={userId}
+              onCancel={currentTab.key === 'openOrders' ? handleCancelOrder : undefined}
+              cancellingOrderId={cancellingOrderId}
               onPress={() => navigation.navigate('OptionHistoryCardDetailPage', { item, tabKey: currentTab.key, title: currentTab.label, userId })}
             />
           )}
@@ -433,4 +493,17 @@ const styles = StyleSheet.create({
   orderSpotCard: { paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1 },
   orderSpotHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   detailsContainer: { marginTop: 4 },
+  cancelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#000000",
+    backgroundColor: "#000000",
+    minWidth: 72,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelBtnDisabled: { opacity: 0.6 },
+  cancelBtnText: { color: "#FFFFFF", fontSize: 13 },
 });

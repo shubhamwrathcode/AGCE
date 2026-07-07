@@ -1,0 +1,19 @@
+OPTIONS WALLET (MOBILE) — WORK SUMMARY
+
+1. Web ref: arab_global_exchange OptionsAccountPage (equity, PNL, margin, assets/positions, transfer, history).
+
+2. APIs (appOperation): optionsWallet, optionsPnlAnalysis; reused optionsOpenPositions + options WebSocket + Redux wallet fetch.
+
+3. OptionsWalletTab.js — full Options wallet UI; wired in WalletNew.js (tab, overview, balance).
+
+4. Transfer labels (MarginTransfer, Transfer); helpers in optionsDataHelpers.js.
+
+5. Bugfixes: WalletList array normalize; assets sheet Transfer-only + layout fix.
+
+6. Navigation: Transfer, History (OptionHistory), PNL Analysis screen, Trade → Futures Options tab.
+
+7. PNL Analysis (web parity): OptionsPnlAnalysisScreen + OptionsPnlCharts + useOptionsPnlAnalysis + optionsPnlQuery; route in Navigator.
+
+8. PNL polish: theme colors, UTC update time, web-style charts, date picker (Android spinner / iOS modal).
+
+9. Cancel order: API → DELETE options/order/:order_id; Cancel on OptionHistory list + OptionHistoryCardDetailPage.

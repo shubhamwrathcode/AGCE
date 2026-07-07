@@ -42,6 +42,10 @@ export default (appOperation: AppOperation) => ({
     appOperation.get('admin/banner_list', undefined, undefined, CUSTOMER_TYPE),
   
   // --- Options Endpoints ---
+  optionsWallet: () =>
+    appOperation.get('options/wallet', undefined, undefined, CUSTOMER_TYPE),
+  optionsPnlAnalysis: (params: any) =>
+    appOperation.get('options/pnl/analysis', params, undefined, CUSTOMER_TYPE),
   optionsOpenPositions: () =>
     appOperation.get('options/positions', undefined, undefined, CUSTOMER_TYPE),
   optionsPositionHistory: (params: any) =>
@@ -616,8 +620,15 @@ export default (appOperation: AppOperation) => ({
       null,
       CUSTOMER_TYPE,
     ),
-  close_option_order: (data: CancelOrderProps) =>
-    appOperation.post('options/cancelOrder', data, CUSTOMER_TYPE),
+  /** Same as web `AuthService.cancelOptionOrder`: `DELETE /v1/options/order/:order_id` */
+  close_option_order: (data: CancelOrderProps & { orderId?: string }) => {
+    const id = String(data?.order_id ?? data?.orderId ?? '').trim();
+    return appOperation.delete(
+      `options/order/${encodeURIComponent(id)}`,
+      null,
+      CUSTOMER_TYPE,
+    );
+  },
   place_order: (data: PlaceOrderProps) =>
     appOperation.post('spot/v1/orders', data, CUSTOMER_TYPE),
   margin_place_order: (data: any) =>
