@@ -73,6 +73,76 @@ function formatIvPct(v) {
   return n.toFixed(2) + '%';
 }
 
+const SKELETON_ROWS = 10;
+const SKELETON_CELL_W = 42;
+const SKELETON_CELL_H = 14;
+
+function SkelBone({ width = SKELETON_CELL_W, boneColor }) {
+  return (
+    <View
+      style={{
+        width,
+        height: SKELETON_CELL_H,
+        borderRadius: 4,
+        backgroundColor: boneColor,
+      }}
+    />
+  );
+}
+
+const OptionsChainSkeleton = React.memo(function OptionsChainSkeleton({ isDark, themeColors, rowCount = SKELETON_ROWS }) {
+  const borderColor = themeColors.themeBorderColor || (isDark ? '#2C2D31' : '#F0F0F0');
+  const headerBg = isDark ? '#1C1D21' : '#F9F9F9';
+  const boneColor =
+    themeColors?.input ??
+    themeColors?.card ??
+    (isDark ? 'rgba(100, 130, 180, 0.22)' : 'rgba(160, 185, 220, 0.35)');
+
+  const renderSideCells = (prefix) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 }}>
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <SkelBone key={`${prefix}-${idx}`} boneColor={boneColor} />
+      ))}
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, paddingTop: 4 }}>
+      <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, backgroundColor: headerBg, borderBottomWidth: 1, borderColor }]}>
+        <View style={{ flex: 1, justifyContent: 'center', paddingLeft: 12 }}>
+          <ShimmerBox width={44} height={12} borderRadius={4} shimmerStripWidth={48} shimmerDuration={900} />
+        </View>
+        <View style={{ width: 80, alignItems: 'center', justifyContent: 'center' }}>
+          <ShimmerBox width={68} height={12} borderRadius={4} shimmerStripWidth={56} shimmerDuration={900} />
+        </View>
+        <View style={{ flex: 1, alignItems: 'flex-end', paddingRight: 12 }}>
+          <ShimmerBox width={36} height={12} borderRadius={4} shimmerStripWidth={48} shimmerDuration={900} />
+        </View>
+      </View>
+
+      {Array.from({ length: rowCount }).map((_, i) => (
+        <View
+          key={`chain-skel-${i}`}
+          style={{
+            flexDirection: 'row',
+            height: ROW_HEIGHT,
+            borderBottomWidth: 1,
+            borderColor,
+            alignItems: 'center',
+            backgroundColor: i % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)'),
+          }}
+        >
+          <View style={{ flex: 1 }}>{renderSideCells(`call-${i}`)}</View>
+          <View style={{ width: 80, alignItems: 'center', justifyContent: 'center', backgroundColor: headerBg }}>
+            <ShimmerBox width={54} height={SKELETON_CELL_H} borderRadius={4} shimmerStripWidth={60} shimmerDuration={900} />
+          </View>
+          <View style={{ flex: 1 }}>{renderSideCells(`put-${i}`)}</View>
+        </View>
+      ))}
+    </View>
+  );
+});
+
 const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false, isContractsLoading = false, onOpenPairList }) => {
   const { colors: themeColors, isDark } = useTheme();
   const navigation = useNavigation();
@@ -340,19 +410,7 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
 
       {/* Scrollable Table Area */}
       {isChainLoading ? (
-        <View style={{ flex: 1, paddingTop: 10 }}>
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <View key={i} style={{ flexDirection: 'row', height: 56, borderBottomWidth: 1, borderColor: isDark ? '#2C2D31' : '#F0F0F0', alignItems: 'center' }}>
-              <View style={{ flex: 1, marginHorizontal: 16 }}>
-                <ShimmerBox width="100%" height={20} borderRadius={4} />
-              </View>
-              <ShimmerBox width={60} height={20} borderRadius={4} style={{ marginHorizontal: 10 }} />
-              <View style={{ flex: 1, marginHorizontal: 16 }}>
-                <ShimmerBox width="100%" height={20} borderRadius={4} />
-              </View>
-            </View>
-          ))}
-        </View>
+        <OptionsChainSkeleton isDark={isDark} themeColors={themeColors} />
       ) : chainsToRender.length === 0 ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', }}>
           <FastImage

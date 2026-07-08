@@ -38,7 +38,7 @@ export function bumpOptionsWsEvent(eventName, amount = 1) {
 export function logOptionsWs(tag, detail) {
   if (!__DEV__) return;
   const now = Date.now();
-  console.log(`[OptionsWS] ${tag}`, detail ?? "", "| stats:", snapshot());
+  console.log(`[OptionsWS] ${tag}`, detail ?? "");
   if (now - lastSummaryAt >= SUMMARY_INTERVAL_MS) {
     lastSummaryAt = now;
     console.log("[OptionsWS] --- 5s summary ---", snapshot());

@@ -74,6 +74,7 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         socketRef.current = socket;
 
         const resubscribeAll = () => {
+            if (!enabledRef.current) return;
             bumpOptionsWsStat("resubscribeAll");
             logOptionsWs("resubscribeAll", { underlying, isAuthenticated });
             optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
@@ -240,7 +241,36 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
     }, [authToken, underlying, isAuthenticated]);
 
     useEffect(() => {
-        if (!enabled || !socketRef.current?.connected) return;
+        const socket = socketRef.current;
+        if (!socket?.connected) return undefined;
+
+        if (!enabled) {
+            optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
+            if (underlying) {
+                optionsSocketService.emit("unsubscribe", {
+                    channel: OPTIONS_CHANNELS.CONTRACTS,
+                    underlying,
+                    expiry: "ALL",
+                });
+            }
+            if (subscribedRef.current.account) {
+                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.ACCOUNT });
+            }
+            if (subscribedRef.current.userOrders) {
+                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.USER_ORDERS });
+            }
+            if (subscribedRef.current.userPositions) {
+                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.USER_POSITIONS });
+            }
+            if (subscribedRef.current.contractDetail) {
+                optionsSocketService.emit("unsubscribe", {
+                    channel: OPTIONS_CHANNELS.CONTRACT_DETAIL,
+                    symbol: subscribedRef.current.contractDetail,
+                });
+            }
+            return undefined;
+        }
+
         optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
         if (underlying) {
             optionsSocketService.emit("subscribe", {
@@ -249,10 +279,23 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
                 expiry: "ALL",
             });
         }
-    }, [enabled, underlying]);
+        if (isAuthenticated) {
+            optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.ACCOUNT });
+            optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.USER_ORDERS });
+            optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.USER_POSITIONS });
+        }
+        if (subscribedRef.current.contractDetail) {
+            optionsSocketService.emit("subscribe", {
+                channel: OPTIONS_CHANNELS.CONTRACT_DETAIL,
+                symbol: subscribedRef.current.contractDetail,
+            });
+        }
+
+        return undefined;
+    }, [enabled, underlying, isConnected, isAuthenticated]);
 
     useEffect(() => {
-        if (!isConnected || !selectedSymbol) {
+        if (!enabled || !isConnected || !selectedSymbol) {
             return undefined;
         }
 
@@ -296,7 +339,7 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
                 contractDetailSymbolRef.current = null;
             }
         };
-    }, [isConnected, selectedSymbol]);
+    }, [enabled, isConnected, selectedSymbol]);
 
     const refreshLiveTradeChannels = useCallback(() => {
         const socket = socketRef.current;

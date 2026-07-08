@@ -32,7 +32,7 @@ import { bumpOptionsWsStat, logOptionsWs } from './helpers/optionsWsDebug';
 
 import { View, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput, Platform, Keyboard, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../../hooks/useTheme';
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, TWELVE, FOURTEEN, SIXTEEN, TEN, THIRTEEN, AppSafeAreaView } from '../../../common';
 import { colors } from '../../../theme/colors';
@@ -67,6 +67,7 @@ function fmtNum(val, decimals = 2) {
 const OptionsInstrumentTrade = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const isFocused = useIsFocused();
   const themeObj = useTheme();
   const { colors: themeColors, isDark } = themeObj;
 
@@ -158,7 +159,7 @@ const OptionsInstrumentTrade = () => {
     userOrders,
     userPositions,
     refreshLiveTradeChannels,
-  } = useOptionsWebSocket(selectedAsset, symbol);
+  } = useOptionsWebSocket(selectedAsset, symbol, isFocused);
 
   const avblUsdt = useMemo(() => {
     if (!isLoggedIn || !accountUpdate) return 0;

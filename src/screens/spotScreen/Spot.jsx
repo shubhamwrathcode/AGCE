@@ -428,13 +428,18 @@ export const ShimmerBox = ({
       ? ["transparent", "rgba(255,255,255,0.26)", "transparent"]
       : ["transparent", "rgba(255,255,255,0.72)", "transparent"]);
   const shimmerX = useRef(new Animated.Value(-stripW)).current;
+  const travelTo =
+    shimmerToValue !== undefined
+      ? shimmerToValue
+      : typeof width === "number"
+        ? width + stripW * 2
+        : Width + stripW;
   useEffect(() => {
-    const toValue = shimmerToValue !== undefined ? shimmerToValue : (Width + stripW);
     shimmerX.setValue(-stripW);
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerX, {
-          toValue,
+          toValue: travelTo,
           duration: shimmerDuration,
           useNativeDriver: true,
         }),
@@ -447,7 +452,7 @@ export const ShimmerBox = ({
     );
     animation.start();
     return () => animation.stop();
-  }, [shimmerX, stripW, isDark, shimmerDuration, shimmerToValue]);
+  }, [shimmerX, stripW, shimmerDuration, travelTo]);
   return (
     <View style={[{ width, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
       <Animated.View
