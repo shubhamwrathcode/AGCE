@@ -653,28 +653,6 @@ const ChangeLoginPasswordScreen = () => {
     setStep(4);
   };
 
-  const renderCheckItem = (label, isValid) => {
-    const activeColor = allSatisfied ? themeColors.text : (isDark ? '#4CD964' : '#34C759');
-    return (
-      <View style={styles.checkItem}>
-        <FastImage
-          source={checkIc}
-          style={[styles.checkIcon, { tintColor: isValid ? activeColor : '#C1C1C1' }]}
-          resizeMode="contain"
-        />
-        <AppText
-          type={TWELVE}
-          weight={MEDIUM}
-          style={[
-            styles.checkText,
-            { color: isValid ? activeColor : (isDark ? '#8A8A93' : '#8E8E93') }
-          ]}
-        >
-          {label}
-        </AppText>
-      </View>
-    );
-  };
 
   return (
     <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : colors.white }]}>
@@ -1279,11 +1257,11 @@ const styles = StyleSheet.create({
     marginLeft: -4,
   },
   headerTitle: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    zIndex: -1,
+    // position: 'absolute',
+    // left: 0,
+    // right: 0,
+    // textAlign: 'center',
+    // zIndex: -1,
   },
   scroll: {
     flex: 1,

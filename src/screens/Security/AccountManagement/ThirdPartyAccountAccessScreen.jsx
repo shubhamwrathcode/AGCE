@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, ScrollView, Dimensions } from 'react-native';
-import { AppSafeAreaView, AppText, SEMI_BOLD, EIGHTEEN, MEDIUM, FOURTEEN, THIRTEEN } from '../../../shared';
+import { AppSafeAreaView, AppText, SEMI_BOLD, EIGHTEEN, MEDIUM, FOURTEEN, THIRTEEN, SIXTEEN } from '../../../shared';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
 import FastImage from 'react-native-fast-image';
@@ -92,8 +92,8 @@ const ThirdPartyAccountAccessScreen = () => {
           />
         </TouchableOpacity>
 
-        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: valCol }]}>
-          Third Party Account Access Management
+        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: valCol }]}>
+          Third Party Account Access
         </AppText>
         <View style={{ width: 24 }} />
       </View>
@@ -162,12 +162,12 @@ const styles = StyleSheet.create({
     marginLeft: -4,
   },
   headerTitle: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    zIndex: -1,
-    paddingHorizontal: 40,
+    // position: 'absolute',
+    // left: 0,
+    // right: 0,
+    // textAlign: 'center',
+    // zIndex: -1,
+    // paddingHorizontal: 40,
   },
   content: {
     flex: 1,

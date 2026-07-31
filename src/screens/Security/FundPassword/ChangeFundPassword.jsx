@@ -311,11 +311,11 @@ const styles = StyleSheet.create({
     marginLeft: -4,
   },
   headerTitle: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    zIndex: -1,
+    // position: 'absolute',
+    // left: 0,
+    // right: 0,
+    // textAlign: 'center',
+    // zIndex: -1,
   },
   scroll: {
     flex: 1,

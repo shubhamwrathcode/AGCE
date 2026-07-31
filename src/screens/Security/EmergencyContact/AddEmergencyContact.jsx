@@ -223,9 +223,11 @@ const AddEmergencyContact = () => {
           />
         </TouchableOpacity>
 
-        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
+        <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.headerTitle, { color: themeColors.text, marginLeft: -10 }]}>
           {editingContactId ? 'Edit Emergency Contact' : 'Add Emergency Contact'}
         </AppText>
+
+        <View></View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -286,7 +288,7 @@ const AddEmergencyContact = () => {
                 styles.emailSuggestList,
                 {
                   backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-                  
+
                   borderColor: isDark ? '#2C2C2E' : '#E5E5EA',
                 }
               ]}>
@@ -399,17 +401,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     height: Platform.OS === 'ios' ? 44 : 56,
+    justifyContent: 'space-between'
   },
   headerBtn: {
     padding: 4,
     marginLeft: -8,
   },
   headerTitle: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    zIndex: -1,
+    // position: 'absolute',
+    // left: 0,
+    // right: 0,
+    // textAlign: 'center',
+    // zIndex: -1,
   },
   content: {
     paddingHorizontal: 20,
