@@ -2,7 +2,7 @@
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import "react-native-gesture-handler";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import NavigationService from "./NavigationService";
 import * as routes from "./routes";
 import * as React from "react";
@@ -94,10 +94,13 @@ import Search from "../features/trades/screens/MarketSearchScreen";
 import {
   AppText,
   BOLD,
+  ELEVEN,
   MEDIUM,
   TEN,
+  TWELVE,
 } from "../shared";
 import { Platform, StyleSheet, TouchableOpacity, View, Keyboard } from "react-native";
+import Animated, { useSharedValue, withTiming, useAnimatedStyle, Easing as REasing, interpolateColor, interpolate } from 'react-native-reanimated';
 import Toast from "react-native-simple-toast";
 import { useAppSelector } from "../store/hooks";
 import { ChartPreloaderProvider } from "../context/ChartPreloaderContext";
@@ -158,11 +161,61 @@ import StakingPurchase from "../screens/staking/StakingPurchase";
 import OptionsInstrumentTrade from "../screens/Futures/OptionsTrade/OptionsInstrumentTrade";
 
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+const Tab = createMaterialTopTabNavigator();
+
+const TabItem = ({ isFocused, routeName, onPress, onLongPress, icon, label, themeColors, isDark }: any) => {
+  const progress = useSharedValue(isFocused ? 1 : 0);
+
+  React.useEffect(() => {
+    progress.value = withTiming(isFocused ? 1 : 0, {
+      duration: 300,
+      easing: REasing.bezier(0.25, 0.1, 0.25, 1),
+    });
+  }, [isFocused]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      width: interpolate(progress.value, [0, 1], [45, 125]),
+      backgroundColor: interpolateColor(
+        progress.value,
+        [0, 1],
+        ['rgba(0,0,0,0)', colors.orangeTheme]
+      ),
+    };
+  });
+
+  const textStyle = useAnimatedStyle(() => {
+    return {
+      opacity: progress.value,
+      width: interpolate(progress.value, [0, 1], [0, 68]),
+      marginLeft: interpolate(progress.value, [0, 1], [0, 8]),
+    };
+  });
+
+  const tint = isFocused ? colors.white : themeColors.inactiveTab;
+
+  return (
+    <TouchableOpacity onPress={onPress} onLongPress={onLongPress} style={customTabBarStyles.touchable} activeOpacity={0.8}>
+      <Animated.View style={[customTabBarStyles.pill, animatedStyle]}>
+        <FastImage source={icon} style={{ width: 22, height: 22 }} tintColor={tint} resizeMode="contain" />
+        <Animated.View style={[{ overflow: 'hidden', flexDirection: 'row', alignItems: 'center' }, textStyle]}>
+          <AppText weight={BOLD} type={TWELVE} style={{ color: colors.white }} numberOfLines={1}>
+            {label}
+          </AppText>
+        </Animated.View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
 
 const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
   const [visible, setVisible] = React.useState(true);
+  const [localIndex, setLocalIndex] = React.useState(state.index);
   const { colors: themeColors, isDark } = useTheme();
+
+  React.useEffect(() => {
+    setLocalIndex(state.index);
+  }, [state.index]);
 
   React.useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -182,18 +235,26 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
 
   if (!visible) return null;
 
+  const bg = isDark ? "rgba(24, 26, 32, 0.95)" : "rgba(255, 255, 255, 0.95)";
+  const borderCol = isDark ? themeColors.border : "#E5E7EB";
+
   return (
-    <View style={customTabBarStyles.container}>
+    <View style={[customTabBarStyles.container, { backgroundColor: bg, borderTopColor: borderCol }]}>
       {state.routes.map((route: any, index: number) => {
-        const isFocused = state.index === index;
+        const isFocused = localIndex === index;
+
         const onPress = () => {
           const event = navigation.emit({
             type: "tabPress",
             target: route.key,
             canPreventDefault: true,
           });
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
+
+          if (state.index !== index && !event.defaultPrevented) {
+            setLocalIndex(index);
+            setTimeout(() => {
+              navigation.navigate(route.name);
+            }, 50);
           }
         };
 
@@ -220,30 +281,21 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
           [routes.WALLET_SCREEN]: "Wallet",
         };
 
-        const tint = isFocused ? (isDark ? colors.white : colors.black) : "#8E8E93";
         const icon = iconByRoute[route.name];
         const label = labelByRoute[route.name] ?? route.name;
 
-        const bg = isDark ? "rgba(24, 26, 32, 0.95)" : "rgba(255, 255, 255, 0.95)";
-
         return (
-          <View key={route.key} style={[customTabBarStyles.itemWrap, { backgroundColor: bg }]}>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={descriptors[route.key]?.options?.tabBarAccessibilityLabel}
-              testID={descriptors[route.key]?.options?.tabBarTestID}
-              onPress={onPress}
-              onLongPress={onLongPress}
-              style={customTabBarStyles.item}
-              activeOpacity={0.8}
-            >
-              <FastImage source={icon} style={customTabBarStyles.icon} resizeMode="contain" tintColor={tint} />
-              <AppText weight={isFocused ? BOLD : MEDIUM} type={TEN} style={[customTabBarStyles.label, { color: tint }]}>
-                {label}
-              </AppText>
-            </TouchableOpacity>
-          </View>
+          <TabItem
+            key={route.key}
+            isFocused={isFocused}
+            routeName={route.name}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            icon={icon}
+            label={label}
+            themeColors={themeColors}
+            isDark={isDark}
+          />
         );
       })}
     </View>
@@ -687,39 +739,23 @@ const AuthStack = () => (
 
 
 
+const renderTabBar = (props: any) => <CustomBottomTabBar {...props} />;
+
 function BottomNavigation() {
   const { colors: themeColors, isDark } = useTheme();
-  const tabBarBg = "#FFFFFF";
-  const tabBorder = isDark ? themeColors.border : "#E5E7EB";
   const activeIcon = colors.black;
   const inactive = themeColors.inactiveTab;
 
-  const tabBarHeight = Platform.OS === "ios" ? 74 : 62;
+  const tabBarHeight = Platform.OS === "ios" ? 78 : 66;
 
   return (
     <ChartPreloaderProvider>
       <Tab.Navigator
         initialRouteName={routes.HOME_SCREEN}
         backBehavior={"history"}
-        detachInactiveScreens={false}
+        tabBarPosition="bottom"
         sceneContainerStyle={{ backgroundColor: "#FFFFFF" }}
-        tabBar={(props) => <CustomBottomTabBar {...props} />}
-        screenOptions={{
-          headerShown: false,
-          tabBarHideOnKeyboard: true,
-          tabBarShowLabel: false,
-          tabBarActiveTintColor: activeIcon,
-          tabBarInactiveTintColor: inactive,
-          tabBarStyle: {
-            height: tabBarHeight,
-            backgroundColor: "transparent",
-            borderTopWidth: 0,
-          },
-          tabBarItemStyle: {
-            paddingTop: 0,
-            paddingBottom: 0,
-          },
-        }}
+        tabBar={renderTabBar}
       >
         <Tab.Screen
           name={routes.HOME_SCREEN}
@@ -754,8 +790,6 @@ function BottomNavigation() {
         <Tab.Screen
           name={routes.MARKET_SCREEN}
           options={{
-            freezeOnBlur: true,
-            unmountOnBlur: false,
             tabBarIcon: ({ focused }) => (
               <View style={bottomTabStyles.tabColumn}>
                 <View
@@ -786,8 +820,6 @@ function BottomNavigation() {
         <Tab.Screen
           name={routes.TRADE_SCREEN}
           options={{
-            freezeOnBlur: true,
-            unmountOnBlur: false,
             tabBarIcon: ({ focused }) => (
               <View style={bottomTabStyles.tabColumn}>
                 <View
@@ -819,8 +851,6 @@ function BottomNavigation() {
         <Tab.Screen
           name={routes.FUTURES_SCREEN}
           options={{
-            freezeOnBlur: true,
-            unmountOnBlur: false,
             tabBarIcon: ({ focused }) => (
               <View style={bottomTabStyles.tabColumn}>
                 <View
@@ -916,7 +946,7 @@ const customTabBarStyles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === "ios" ? 68 : 56,
+    height: Platform.OS === "ios" ? 78 : 66,
     backgroundColor: "transparent",
     overflow: "hidden",
     flexDirection: "row",
@@ -924,23 +954,20 @@ const customTabBarStyles = StyleSheet.create({
     justifyContent: "space-around",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#E5E7EB",
+    paddingHorizontal: 10,
+    paddingBottom: Platform.OS === "ios" ? 12 : 5,
   },
-  itemWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+  touchable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
   },
-  item: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-  },
-  icon: {
-    width: 22,
-    height: 22,
-  },
-  label: {
-    marginTop: 2,
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 44,
+    borderRadius: 22,
   },
 });
 
