@@ -1,6 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity,  Platform, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity,  Platform, TextInput, ActivityIndicator } from 'react-native';
+import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import { AppText, BOLD, FOURTEEN, SIXTEEN, SEMI_BOLD, TWELVE, MEDIUM, EIGHTEEN, THIRTEEN } from '../../../shared';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
@@ -60,7 +61,14 @@ const SetupAuthenticator = ({ route }) => {
         </AppText>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView 
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
+        keyboardOpeningTime={0}
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.stepsContainer}>
           {/* Step 1 */}
           <View style={[styles.stepRow, { alignItems: 'stretch' }]}>
@@ -177,7 +185,7 @@ const SetupAuthenticator = ({ route }) => {
             )}
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

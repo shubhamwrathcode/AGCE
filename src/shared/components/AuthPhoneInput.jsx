@@ -32,7 +32,7 @@ const AuthPhoneInput = ({
       style={[
         styles.container,
         {
-          backgroundColor: themeColors.input,
+          backgroundColor: '#EDEDEE',
           borderColor: hasError ? colors.red : isDark ? themeColors.border : "transparent",
           borderWidth: hasError ? 1 : isDark ? borderWidth : 0,
         },
@@ -101,6 +101,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
+    width: "100%",
   },
   leftSection: {
     flexDirection: "row",

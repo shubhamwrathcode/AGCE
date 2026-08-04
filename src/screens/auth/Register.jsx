@@ -239,15 +239,15 @@ const Register = () => {
 
   const signupWithGoogle = async () => {
     // Prevent multiple simultaneous calls
-    if (isGoogleSignInInProgress) {
-      console.log(
-        "Google Sign-In already in progress, ignoring duplicate call"
-      );
-      return;
-    }
+    // if (isGoogleSignInInProgress) {
+    //   console.log(
+    //     "Google Sign-In already in progress, ignoring duplicate call"
+    //   );
+    //   return;
+    // }
 
-    Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
-    return;
+    // Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
+    // return;
 
     try {
       console.log("Starting Google Sign-In...");
@@ -265,7 +265,7 @@ const Register = () => {
       console.log("Google tokens:", tokens);
 
       let data = {
-        Token: tokens?.accessToken || account?.data?.idToken,
+        Token: tokens?.idToken || account?.data?.idToken,
         type: 'google',
         referral_code: referCode || '',
       };
@@ -354,7 +354,7 @@ const Register = () => {
   const socialPillBg = isDark ? themeColors.card : "#FFFFFF";
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
+    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
       <KeyBoardAware style={{ paddingHorizontal: 20 }}>
         <AuthHeader
           onSupportPress={openSupport}

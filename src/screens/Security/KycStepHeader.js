@@ -58,7 +58,7 @@ const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupp
       </AppText>
 
       <View style={styles.rightActions}>
-        {onSwitchProfilePress && (
+        {/* {onSwitchProfilePress && (
           <TouchableOpacity
             onPress={onSwitchProfilePress}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -71,7 +71,7 @@ const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupp
               style={{ width: 24, height: 24 }}
             />
           </TouchableOpacity>
-        )}
+        )} */}
 
         {onInfoPress && (
           <TouchableOpacity

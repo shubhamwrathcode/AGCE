@@ -1,3 +1,4 @@
+
 import guest from './lib/guest';
 import customer from './lib/customer';
 import { GUEST_TYPE, CUSTOMER_TYPE } from './types';
@@ -110,11 +111,11 @@ export class AppOperation {
         controller.abort();
       }, 30000); // 30 second timeout
 
-      const fetchInit: RequestInit = {method, headers, signal: controller.signal};
+      const fetchInit: RequestInit = { method, headers, signal: controller.signal };
       if (bodyData !== undefined) {
         fetchInit.body = bodyData;
       }
-      
+
       console.log("=== API FETCHING ===", uri);
 
       fetch(uri, fetchInit)
@@ -128,14 +129,15 @@ export class AppOperation {
                 try {
                   const trimmed = String(responseData ?? '').trim();
                   if (!trimmed) {
-                    resolve({success: true, code: status});
+                    resolve({ success: true, code: status });
                     return;
                   }
                   const jsonData: any = JSON.parse(trimmed);
                   resolve({ ...jsonData, code: status });
                 } catch {
                   // Some proxies/backends return HTML even on 200; surface a readable error.
-                  const preview = String(responseData || '').trim().slice(0, 120);
+                  const preview = String(responseData || '').trim().slice(0, 500); // Increased slice to see more
+                  console.warn('[DEBUG] SERVER RAW HTML:', responseData);
                   reject(
                     new ApiError(
                       preview.startsWith('<')
@@ -157,10 +159,15 @@ export class AppOperation {
               try {
                 parsed = JSON.parse(errorResponse || '{}');
               } catch {
+                const rawError = String(errorResponse || '').trim();
+                console.warn('[DEBUG] SERVER RAW HTML:', rawError);
+                // FORCE IT TO SHOW ON SCREEN SO THEY CAN SEE IT!
+                // Alert.alert("BACKEND HTML ERROR", rawError.slice(0, 1000));
+
                 parsed = {
-                  message: String(errorResponse || '').trim().startsWith('<')
+                  message: rawError.startsWith('<')
                     ? 'Server returned HTML error page.'
-                    : String(errorResponse || '').trim() || 'Unexpected server error.',
+                    : rawError || 'Unexpected server error.',
                 };
               }
               const errData = { code: status, ...parsed };

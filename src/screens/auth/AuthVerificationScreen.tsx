@@ -9,6 +9,7 @@ import {
   Keyboard,
   useWindowDimensions,
   Linking,
+  Alert,
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
@@ -59,6 +60,19 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
     if (has(4) && !passkeyCancelled) return 4;
     if (has(2)) return 2;
+
+    const signIdStr = String(pending2FA?.loginSignId || '').trim();
+    if (signIdStr) {
+      if (signIdStr.includes('@')) {
+        return 1;
+      } else if (/^\d+$/.test(signIdStr)) {
+        return 3;
+      }
+    }
+
+    if (pending2FA?.defaultMethod && has(pending2FA.defaultMethod)) {
+      return pending2FA.defaultMethod;
+    }
     if (has(1)) return 1;
     if (has(3)) return 3;
 
@@ -217,7 +231,8 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   };
 
   const handleGetOtp = () => {
-    const sendTo = selectedAuthMethod === 3 ? "mobile" : "email";
+    const isPhone = pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^\d+$/.test(String(pending2FA.loginSignId));
+    const sendTo = (selectedAuthMethod === 3 || isPhone) ? "mobile" : "email";
     console.log(`[AuthVerification] handleGetOtp called. method: ${selectedAuthMethod}, sendTo: ${sendTo}`);
     setResendTimer(60);
     autoSubmitEnabled.current = true;
@@ -301,7 +316,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   if (!pending2FA) return null;
 
   return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -320,12 +335,18 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
           <>
             <AppText weight={SEMI_BOLD} type={TWENTY_SIX} style={[styles.title, { color: themeColors.text }]}>
-              {selectedAuthMethod === 1 ? "Verify Your Email" : selectedAuthMethod === 3 ? "Verify Your Phone" : getVerificationTitle()}
+              {selectedAuthMethod === 4 ? "Passkey Authentication"
+                : selectedAuthMethod === 2 ? "Authenticator Verification"
+                  : (pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^\d+$/.test(String(pending2FA.loginSignId)))
+                    ? "Verify Your Phone"
+                    : "Verify Your Email"}
             </AppText>
             <AppText type={TWELVE} style={[styles.description, { color: themeColors.secondaryText }]}>
-              {selectedAuthMethod === 1 || selectedAuthMethod === 3
-                ? `The verification code has been sent to your ${selectedAuthMethod === 1 ? "email" : "phone"} ${getMaskedEmail()}, valid for 10 minutes.`
-                : getVerificationDescription()}
+              {selectedAuthMethod === 4
+                ? "Authenticate using Face ID, Touch ID, or your device biometrics."
+                : selectedAuthMethod === 2
+                  ? "Enter the 6-digit code from your authenticator app."
+                  : `The verification code has been sent to your ${(pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^\d+$/.test(String(pending2FA.loginSignId))) ? "phone" : "email"} ${getMaskedEmail()}, valid for 10 minutes.`}
             </AppText>
           </>
 

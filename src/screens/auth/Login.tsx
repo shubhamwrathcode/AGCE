@@ -138,7 +138,7 @@ const Login = (): JSX.Element => {
       console.log("Google tokens:", tokens);
 
       let data = {
-        Token: tokens?.accessToken || account?.data?.idToken,
+        Token: tokens?.idToken || account?.data?.idToken,
         type: 'google',
       };
 

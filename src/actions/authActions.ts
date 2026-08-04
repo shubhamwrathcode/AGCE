@@ -193,7 +193,8 @@ export const googleRegister =
     try {
       dispatch(setLoading(true));
       const response: any = await appOperation.guest.register_google(data);
-      console.log('[third-party-signup] API response:', JSON.stringify(response, null, 2));
+      console.log(response, '====response-=========');
+
       if (!response.success) {
         showError(response.message);
         handleClearCaptcha();
@@ -333,8 +334,18 @@ function resolveLogin2FADefaultMethod(
 
   if (has(4)) return 4;
   if (has(2)) return 2;
-  if (has(1)) return 1;
-  if (has(3)) return 3;
+
+  // Use loginIdentifier to determine if they used email or phone
+  const isEmail = loginIdentifier && loginIdentifier.includes('@');
+  
+  if (isEmail) {
+    if (has(1)) return 1;
+    if (has(3)) return 3;
+  } else {
+    // If not email (likely phone), prefer phone (3)
+    if (has(3)) return 3;
+    if (has(1)) return 1;
+  }
 
   return methods[0]?.type ?? 1;
 }
@@ -459,7 +470,10 @@ export const login = (data: LoginProps & { token?: string }) => async (
 export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
+    console.log('[DEBUG] googleLogin payload:', data);
     const response: any = await appOperation.guest.google_login(data);
+    console.log('[DEBUG] googleLogin response:', response);
+    
     if (!response.success) {
       showError(response.message);
     } else {
@@ -503,6 +517,8 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
       }
     }
   } catch (e: any) {
+    console.log('[DEBUG] googleLogin THREW ERROR:', e);
+    console.log('[DEBUG] googleLogin ERROR RESPONSE:', e?.response?.data || e?.response || e);
     logger(e);
     const errMsg = e?.response?.data?.message ?? e?.message ?? '';
     showError(errMsg || 'Google login failed');

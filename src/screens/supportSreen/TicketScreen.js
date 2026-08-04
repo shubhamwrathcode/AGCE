@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Clipboard,
+  Keyboard,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import {
@@ -120,80 +121,103 @@ const TicketScreen = () => {
     showSuccess("Ticket Id Copied!");
   };
 
+  const [keyboardPadding, setKeyboardPadding] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+        setKeyboardPadding(e.endCoordinates.height);
+      });
+      const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+        setKeyboardPadding(0);
+      });
+      return () => {
+        showSub.remove();
+        hideSub.remove();
+      };
+    }
+  }, []);
+
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <FastImage source={back_ic} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={themeColors.text} />
-        </TouchableOpacity>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <TouchableOpacity onPress={() => copyToClipboard(chat?.ticketId)} style={styles.copyBtn}>
-            <FastImage source={copyIcon} style={{ width: 14, height: 14 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+    <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1, paddingBottom: keyboardPadding }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        enabled={Platform.OS === "ios"}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <FastImage source={back_ic} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={themeColors.text} />
           </TouchableOpacity>
-          <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>#{chat?.ticketId}</AppText>
-        </View>
-        <View style={{ width: 22 }} />
-      </View>
 
-      <View style={styles.content}>
-        {/* Ticket Details summary card */}
-        <View style={[styles.detailCard, { backgroundColor: colors.white, borderColor: themeColors.border }]}>
-          <View style={styles.detailRow}>
-            <View style={styles.detailCol}>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Created On</AppText>
-              <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ marginTop: 2, color: themeColors.text }}>
-                {moment(chat?.createdAt).format('DD MMM, YYYY')}
-              </AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <TouchableOpacity onPress={() => copyToClipboard(chat?.ticketId)} style={styles.copyBtn}>
+              <FastImage source={copyIcon} style={{ width: 14, height: 14 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+            </TouchableOpacity>
+            <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>#{chat?.ticketId}</AppText>
+          </View>
+          <View style={{ width: 22 }} />
+        </View>
+
+        <View style={styles.content}>
+          {/* Ticket Details summary card */}
+          <View style={[styles.detailCard, { backgroundColor: colors.white, borderColor: themeColors.border }]}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailCol}>
+                <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Created On</AppText>
+                <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ marginTop: 2, color: themeColors.text }}>
+                  {moment(chat?.createdAt).format('DD MMM, YYYY')}
+                </AppText>
+              </View>
+              <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
+                <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Priority</AppText>
+                <View style={[styles.priorityBadge, { backgroundColor: themeColors.button + '20' }]}>
+                  <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: themeColors.button, textTransform: 'capitalize' }}>
+                    {chat?.priority || "Medium"}
+                  </AppText>
+                </View>
+              </View>
             </View>
-            <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Priority</AppText>
-              <View style={[styles.priorityBadge, { backgroundColor: themeColors.button + '20' }]}>
-                <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: themeColors.button, textTransform: 'capitalize' }}>
-                  {chat?.priority || "Medium"}
+
+            <View style={[styles.cardDivider, { backgroundColor: themeColors.border }]} />
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailCol}>
+                <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Department</AppText>
+                <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ marginTop: 2, color: themeColors.text, textTransform: 'capitalize' }}>
+                  {chat?.department?.replace(/_/g, ' ')}
+                </AppText>
+              </View>
+              <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
+                <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Category</AppText>
+                <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ marginTop: 2, color: themeColors.text, textTransform: 'capitalize' }}>
+                  {chat?.category?.replace(/_/g, ' ')}
                 </AppText>
               </View>
             </View>
           </View>
 
-          <View style={[styles.cardDivider, { backgroundColor: themeColors.border }]} />
-
-          <View style={styles.detailRow}>
-            <View style={styles.detailCol}>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Subject</AppText>
-              <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ marginTop: 2, color: themeColors.text }} numberOfLines={1}>{chat?.subject}</AppText>
-            </View>
-            <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Category</AppText>
-              <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ marginTop: 2, color: themeColors.text, textTransform: 'capitalize' }}>
-                {chat?.category?.replace(/_/g, ' ')}
-              </AppText>
-            </View>
-          </View>
+          {/* Chat List */}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item, index) => item?._id || index.toString()}
+            renderItem={renderMessage}
+            contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
+            showsVerticalScrollIndicator={false}
+          />
         </View>
 
-        {/* Chat List */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item, index) => item?._id || index.toString()}
-          renderItem={renderMessage}
-          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
-
-      {/* Footer */}
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        {/* Footer */}
         {chat?.status?.toLowerCase() === "open" ? (
-          <View style={[styles.inputContainer, { backgroundColor: themeColors.card, borderTopColor: themeColors.border }]}>
+          <View style={[styles.inputContainer, { backgroundColor: colors.white, borderTopColor: themeColors.border }]}>
             <Input
               placeholder="Type your message..."
               multiline
               mainContainer={{ flex: 1, marginBottom: 0 }}
               value={message}
               onChangeText={setMessage}
-              containerStyle={{ borderWidth: 0, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)" }}
+              containerStyle={{ borderWidth: 0, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : colors.white }}
               inputStyle={{ color: themeColors.text, height: 44, textAlignVertical: 'top', paddingTop: 8 }}
             />
             <TouchableOpacity

@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, BOLD, TWENTY_SIX } from "..";
 import TouchableOpacityView from "./TouchableOpacityView";
-import { closeIcon, headPhoneIcon, logobg } from "../../helper/ImageAssets";
+import { APP_LOGO, closeIcon, headPhoneIcon, logobg } from "../../helper/ImageAssets";
 import { useTheme } from "../../hooks/useTheme";
 
 /**
@@ -17,7 +17,7 @@ const AuthHeader = ({ onSupportPress, onClosePress, title }) => {
     <View>
       <View style={styles.headerRow}>
         <View style={[styles.logoWrap, { backgroundColor: logoBg }]}>
-          <FastImage source={logobg} style={styles.logoImg} resizeMode="cover" />
+          <FastImage source={APP_LOGO} style={styles.logoImg} resizeMode="cover" />
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacityView onPress={onSupportPress} style={styles.headerIconBtn}>
@@ -64,10 +64,12 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 25,
     overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center"
   },
   logoImg: {
-    width: "100%",
-    height: "100%",
+    width: "60%",
+    height: "60%",
   },
   headerActions: {
     flexDirection: "row",

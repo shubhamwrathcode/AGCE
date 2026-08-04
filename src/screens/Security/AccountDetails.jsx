@@ -483,7 +483,7 @@ const AccountDetails = () => {
                 onPress={() => NavigationService.navigate(routes.KYC_STATUS_SCREEN)}
               />
               <MenuItem label="VIP Privilege" badge={`VIP ${userData?.vipLevel || 0}`} />
-              <MenuItem
+              {/* <MenuItem
                 label="Personal Page"
                 onPress={() => NavigationService.navigate(routes.PERSONAL_PAGE_SCREEN, {
                   userData,
@@ -493,14 +493,14 @@ const AccountDetails = () => {
                   maskedPhone,
                   displayName
                 })}
-              />
+              /> */}
               <MenuItem
                 label="Nickname"
                 value={displayName}
                 onPress={() => NavigationService.navigate(routes.NICKNAME_SETTINGS_SCREEN, { currentNickname: displayName })}
               />
               <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(202, 195, 182, 0.15)" badgeTextColor="#D1AA67" />
-              <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" />
+              {/* <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" /> */}
               <MenuItem
                 label="Notification Setting"
                 onPress={() => NavigationService.navigate(routes.NOTIFICATION_SETTINGS_SCREEN)}
@@ -509,7 +509,7 @@ const AccountDetails = () => {
                 label="Direct Message Management"
                 onPress={() => NavigationService.navigate(routes.DIRECT_MESSAGE_MANAGEMENT_SCREEN)}
               />
-              <MenuItem
+              {/* <MenuItem
                 label="Switch Account"
                 onPress={() => NavigationService.navigate(routes.SWITCH_ACCOUNT_SCREEN, {
                   userData,
@@ -520,7 +520,7 @@ const AccountDetails = () => {
                   displayName,
                   initials
                 })}
-              />
+              /> */}
               <MenuItem
                 label="Log Out"
                 isLogout

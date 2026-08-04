@@ -779,7 +779,7 @@ export const ticketMessages =
       if (response.success) {
         dispatch(getUserTickets());
         setMessage();
-        showSuccess(response?.message || "Message sent");
+        // showSuccess(response?.message || "Message sent");
       } else {
         showError(response?.message || "Failed to send message");
       }

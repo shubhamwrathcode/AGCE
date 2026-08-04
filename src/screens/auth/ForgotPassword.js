@@ -206,7 +206,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
+    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
       <KeyBoardAware>
         <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
           <AuthHeader
@@ -246,6 +246,7 @@ const ForgotPassword = () => {
                   onBlur={() => { }}
                   onSubmitEditing={() => onGetOtp()}
                   onEndEditing={() => { }}
+
                 />
               ) : (
                 <Input
