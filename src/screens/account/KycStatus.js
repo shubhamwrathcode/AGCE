@@ -47,11 +47,11 @@ import {
 } from "../../helper/ImageAssets";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import NavigationService from "../../navigation/NavigationService";
-import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, TRADE_SCREEN, NAVIGATION_BOTTOM_TAB_STACK, CREATE_TICKET_SCREEN } from "../../navigation/routes";
+import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, CREATE_TICKET_SCREEN } from "../../navigation/routes";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLoading } from "../../slices/authSlice";
-import { getUserProfile, getKycStatus, createKycSession } from "../../actions/accountActions";
+import { getUserProfile, getKycStatus, createKycSession, createKybSession } from "../../actions/accountActions";
 import KycStepHeader from "./KycStepHeader";
 import { useTheme } from "../../hooks/useTheme";
 import WebView from "react-native-webview";
@@ -203,39 +203,6 @@ function KycAvatarInitialsRing({ initials }) {
     </LinearGradient>
   );
 }
-const UnlockedFeatures = () => {
-  const { colors: themeColors, isDark } = useTheme();
-  return (
-    <View style={{ marginTop: 24 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-        <View style={{ width: 4, height: 16, backgroundColor: themeColors.green, borderRadius: 2, marginRight: 10 }} />
-        <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-          Benefits Unlocked
-        </AppText>
-      </View>
-
-      <View style={{ gap: 12 }}>
-        {[
-          { title: "Unlimited Withdrawals", desc: "Send crypto anywhere, anytime.", icon: withdrawIcon },
-          { title: "Full Deposit Access", desc: "Add funds with maximum limits.", icon: depositIcon },
-          { title: "Spot & Futures", desc: "Trade over 200+ pairs instantly.", icon: tradeIcon },
-          { title: "P2P Trading", desc: "Secure peer-to-peer exchanges.", icon: p2p_Icon }
-        ].map((item, index) => (
-          <View key={index} style={[styles.featureCard, { backgroundColor: isDark ? "#1E222D" : "#F9FAFB", borderColor: themeColors.border }]}>
-            <View style={[styles.featureIconWrap, { backgroundColor: "rgba(16, 185, 129, 0.1)" }]}>
-              <FastImage source={item.icon} style={{ width: 22, height: 22 }} tintColor={themeColors.green} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 2 }}>{item.title}</AppText>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{item.desc}</AppText>
-            </View>
-            <FastImage source={checkIc} style={{ width: 16, height: 16 }} tintColor={themeColors.green} />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-};
 
 const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, onVerifyPress }) => {
   const { colors: themeColors, isDark } = useTheme();
@@ -428,17 +395,11 @@ const KycRejected = ({ onVerifyPress }) => {
         ))}
       </View>
 
-      {/* Business Verification Footer */}
-      {/* <TouchableOpacity style={{ marginTop: 30, marginBottom: 20 }}>
-        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
-          Business Verification
-        </AppText>
-      </TouchableOpacity> */}
     </View>
   );
 };
 
-const KycDue = ({ onVerifyPress }) => {
+const KycDue = ({ onVerifyPress, isKyb }) => {
   const { colors: themeColors, isDark } = useTheme();
   const isLoading = useAppSelector((state) => state.auth.isLoading);
 
@@ -454,7 +415,7 @@ const KycDue = ({ onVerifyPress }) => {
 
         {/* Title & Subtitle */}
         <AppText type={TWENTY_TWO} weight={SEMI_BOLD} style={{ color: "#111827", textAlign: "center", marginBottom: 10 }}>
-          Complete Identity Verification
+          {isKyb ? "Complete Business Verification" : "Complete Identity Verification"}
         </AppText>
         <AppText type={FOURTEEN} style={{ color: "#6B7280", textAlign: "center", paddingHorizontal: 30, marginBottom: 12 }}>
           Unlock deposits, trading, and payments by verifying your account.
@@ -497,9 +458,9 @@ const KycDue = ({ onVerifyPress }) => {
       </View>
 
       {/* Action Buttons */}
-      <View style={{ width: "100%", position: "absolute", bottom: 0 }}>
+      <View style={{ width: "100%", paddingHorizontal: 0, paddingBottom: 30 }}>
         <Button
-          children="Verify Now"
+          children={isKyb ? "Verify KYB" : "Verify Now"}
           onPress={onVerifyPress}
           loading={isLoading}
           containerStyle={styles.primaryActionBtn}
@@ -631,13 +592,15 @@ const faqData = [
   { q: "Why is an advanced verification necessary?", a: "Advanced verification unlocks higher limits. Rewards Hub with exclusive beginner rewards, and gain access to more platform features, including deposits, buy crypto, trade, and more." },
 ];
 
-const KycStatus = () => {
+const KycStatus = ({ route }) => {
   const { colors: themeColors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const userData = useAppSelector((state) => state.auth.userData);
   const dispatch = useAppDispatch();
   const { width: screenWidth } = useWindowDimensions();
   const kycVerified = userData?.kycVerified != null ? Number(userData.kycVerified) : 0;
+
+  const isKyb = route?.params?.from === 'kyb';
 
   useEffect(() => {
     console.log("=== USER KYC STATUS LOG ===", {
@@ -721,7 +684,8 @@ const KycStatus = () => {
     diditWebCompleteOnceRef.current = false;
     setDiditWebviewUrl(null);
     diditExternalOpenedRef.current = false;
-  }, []);
+    refreshAfterDiditFlow();
+  }, [refreshAfterDiditFlow]);
 
   const tryFinishDiditFromUrl = useCallback(
     (url) => {
@@ -808,7 +772,12 @@ const KycStatus = () => {
   };
 
   const openVerifyModal = async () => {
-    const sessionResponse = await dispatch(createKycSession(userData));
+    let sessionResponse;
+    if (isKyb) {
+      sessionResponse = await dispatch(createKybSession(userData));
+    } else {
+      sessionResponse = await dispatch(createKycSession(userData));
+    }
     const diditOpenUrl = sessionResponse?.diditUrl || sessionResponse?.url;
     if (diditOpenUrl) {
       diditExternalOpenedRef.current = true;
@@ -820,7 +789,12 @@ const KycStatus = () => {
   };
 
   const openVerifyAgainModal = async () => {
-    const sessionResponse = await dispatch(createKycSession(userData, true));
+    let sessionResponse;
+    if (isKyb) {
+      sessionResponse = await dispatch(createKybSession(userData));
+    } else {
+      sessionResponse = await dispatch(createKycSession(userData, true));
+    }
     const diditOpenUrl = sessionResponse?.diditUrl || sessionResponse?.url;
     if (diditOpenUrl) {
       diditExternalOpenedRef.current = true;
@@ -830,7 +804,12 @@ const KycStatus = () => {
   };
 
   const openResubmitModal = async () => {
-    const sessionResponse = await dispatch(createKycSession(userData));
+    let sessionResponse;
+    if (isKyb) {
+      sessionResponse = await dispatch(createKybSession(userData));
+    } else {
+      sessionResponse = await dispatch(createKycSession(userData));
+    }
     const diditOpenUrl = sessionResponse?.diditUrl || sessionResponse?.url;
     if (diditOpenUrl) {
       diditExternalOpenedRef.current = true;
@@ -899,7 +878,7 @@ const KycStatus = () => {
     }
 
     // 3. Defaults (NOT_STARTED, EXPIRED, tier 0)
-    return <KycDue onVerifyPress={openVerifyModal} screenWidth={screenWidth} />;
+    return <KycDue onVerifyPress={openVerifyModal} screenWidth={screenWidth} isKyb={isKyb} />;
   };
 
   return (
@@ -988,7 +967,7 @@ const KycStatus = () => {
               <FastImage source={back_ic} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={themeColors.text} />
             </TouchableOpacity>
             <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-              Identity verification
+              {isKyb ? "Business verification" : "Identity verification"}
             </AppText>
             <View style={{ width: 16 }} />
           </View>

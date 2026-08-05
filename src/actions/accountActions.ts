@@ -612,6 +612,55 @@ export const createKycSession = (userDetails: any, forceNew?: boolean) => async 
   }
 };
 
+export const createKybSession = (userDetails: any) => async (dispatch: AppDispatch) => {
+  try {
+    dispatch(setLoading(true));
+    const cc = userDetails?.country_code || userDetails?.countryCode;
+    const mobile = userDetails?.mobileNumber || userDetails?.phoneNumber || userDetails?.phone;
+    const phone = mobile ? `${cc ? String(cc).replace(/\s/g, "") : ""}${String(mobile).replace(/\s/g, "")}` : undefined;
+    const emailRaw = userDetails?.emailId ?? userDetails?.email;
+    const first = userDetails?.firstName ?? userDetails?.first_name;
+    const last = userDetails?.lastName ?? userDetails?.last_name;
+
+    const webOrigin = String(CHART_WEB_BASE_URL || "").replace(/\/+$/, "");
+    const body: Record<string, unknown> = {
+      jurisdiction: "GLOBAL",
+      ...(emailRaw ? { email: String(emailRaw) } : {}),
+      ...(phone && phone.length > 4 ? { phone } : {}),
+      ...(first ? { firstName: String(first) } : {}),
+      ...(last ? { lastName: String(last) } : {}),
+      returnUrl: webOrigin
+        ? `${webOrigin}/user_profile/kyc/submitted?open_in_app=1`
+        : "agce://kyc_return?kyc_return=1",
+    };
+
+    const response: any = await appOperation.customer.create_kyb_session(body);
+    if (__DEV__) {
+      const data = response?.data;
+      console.log('[KYB API] create_kyb_session', {
+        success: response?.success,
+        message: response?.message,
+        code: response?.code,
+        hasOpenUrl: !!(data && typeof data === 'object' && ((data as any).diditUrl || (data as any).url)),
+      });
+    }
+    if (response?.success) {
+      return response?.data;
+    } else {
+      if (__DEV__) console.warn('[KYB API] create_kyb_session failed', response);
+      showError(response?.message || 'Failed to start business verification');
+      return null;
+    }
+  } catch (e: any) {
+    if (__DEV__) console.warn('[KYB API] create_kyb_session error', e);
+    logger(e);
+    showError(e?.message || 'Something went wrong');
+    return null;
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
 export const kycVerification = (data: any) => async (dispatch: AppDispatch) => {
   const isResubmission = !!(data && typeof (data as any).get === 'function' && (data as any).get('is_resubmission') === 'true');
   try {

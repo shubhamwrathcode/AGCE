@@ -375,7 +375,7 @@ const AccountDetails = () => {
     }
     return { label: "Unverified", bg: isDark ? "rgba(249, 115, 22, 0.15)" : "#FFEDD5", fg: isDark ? "#FB923C" : "#EA580C" };
   }, [userData?.kycVerified, userData?.kyc_verified, userData?.kyc_status, userData?.kycStatus, isDark]);
-
+  // console.log(kycBadge, '===kycbadge')
   return (
     <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
       <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} onSwitchProfilePress={() => {
@@ -482,6 +482,11 @@ const AccountDetails = () => {
                 badgeTextColor={kycBadge.fg}
                 onPress={() => NavigationService.navigate(routes.KYC_STATUS_SCREEN)}
               />
+
+              <MenuItem label="Kyb"
+                onPress={() => NavigationService.navigate(routes.KYC_STATUS_SCREEN, { from: 'kyb' })}
+              />
+
               <MenuItem label="VIP Privilege" badge={`VIP ${userData?.vipLevel || 0}`} />
               {/* <MenuItem
                 label="Personal Page"

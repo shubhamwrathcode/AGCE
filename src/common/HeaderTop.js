@@ -11,9 +11,8 @@ import {
 import NavigationService from "../navigation/NavigationService";
 import { NOTIFICATION_SCREEN } from "../navigation/routes";
 import { useAppSelector } from "../store/hooks";
-import { IMAGE_BASE_URL, BASE_URL } from "../helper/Constants";
+import { BASE_URL } from "../helper/Constants";
 import { useTheme } from "../hooks/useTheme";
-import { AppText, BOLD, EIGHTEEN, SIXTEEN } from "./AppText";
 import { colors, lightTheme } from "../theme/colors";
 import { appOperation } from "../appOperation";
 import { useFocusEffect } from "@react-navigation/native";
@@ -126,7 +125,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 5,
     marginBottom: 8,
-    marginTop: 12
+    marginTop: 12,
   },
   sideSlot: {
     width: 96,

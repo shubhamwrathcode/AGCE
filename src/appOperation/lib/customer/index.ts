@@ -285,6 +285,8 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('user/submit-kyc', data, CUSTOMER_TYPE),
   create_kyc_session: (data: any) =>
     appOperation.post('api/v1/kyc/session', data, CUSTOMER_TYPE),
+  create_kyb_session: (data: any) =>
+    appOperation.post('api/v1/kyb/session', data, CUSTOMER_TYPE),
   /** Didit / web parity: `GET /api/v1/kyc/status` (SessionPayload). Legacy: `GET v1/user/kyc-status`. */
   get_kyc_status: () =>
     appOperation.get('api/v1/kyc/status', undefined, undefined, CUSTOMER_TYPE),
