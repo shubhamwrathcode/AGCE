@@ -145,6 +145,7 @@ import AddFavouriteScreen from '../screens/other/AddFavouriteScreen';
 import Earning from '../screens/earning/Earning';
 import SoftStaking from '../screens/SoftStaking/SoftStaking';
 import AccountDetails from "../screens/Security/AccountDetails";
+import VipServices from "../screens/account/VipServices";
 import PersonalPage from "../screens/account/PersonalPage";
 import MarginHistoryScreen from "../screens/account/MarginHistoryScreen";
 import MarginBorrowRepayHistory from "../screens/spotScreen/MarginBorrowRepayHistory";
@@ -336,6 +337,7 @@ const MyAuthLoadingStack = () => {
         component={BottomNavigation}
       />
       <Stack.Screen name={routes.ACCOUNT_SCREEN} component={AccountDetails} />
+      <Stack.Screen name={routes.VIP_SERVICES_SCREEN} component={VipServices} />
       <Stack.Screen name={routes.PERSONAL_PAGE_SCREEN} component={PersonalPage} />
       <Stack.Screen name={routes.SWITCH_ACCOUNT_SCREEN} component={SwitchAccountScreen} />
       <Stack.Screen name={routes.EDIT_PROFILE_SCREEN} component={EditProfile} />

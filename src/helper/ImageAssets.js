@@ -383,6 +383,21 @@ export const referAndEarn = require('../../assets/images/referAndEarn.png');
 export const stakingNew = require('../../assets/images/stakingNew.png');
 export const simpleEarn = require('../../assets/images/simpleEarn.png');
 export const vip = require('../../assets/images/vip.png');
+export const vip_hero_img = require('../../assets/images/vip_hero_img.png');
+export const vip_servies_herobg = require('../../assets/images/vip_servies_herobg.jpg');
+export const vipserviceBanner = require('../../assets/images/vipserviceBanner.png');
+
+
+export const feeNegotiation = require('../../assets/images/feeNegotiation.png');
+export const higherLimits = require('../../assets/images/higherLimits.png');
+export const slaSupport = require('../../assets/images/slaSupport.png');
+export const subAccounts = require('../../assets/images/subAccounts.png');
+export const apiLimits = require('../../assets/images/apiLimits.png');
+export const autoTier = require('../../assets/images/autoTier.png');
+export const earlyAccess = require('../../assets/images/earlyAccess.png');
+export const vipOverride = require('../../assets/images/vipOverride.png');
+
+
 
 
 

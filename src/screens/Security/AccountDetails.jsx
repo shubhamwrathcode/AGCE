@@ -487,7 +487,11 @@ const AccountDetails = () => {
                 onPress={() => NavigationService.navigate(routes.KYC_STATUS_SCREEN, { from: 'kyb' })}
               />
 
-              <MenuItem label="VIP Privilege" badge={`VIP ${userData?.vipLevel || 0}`} />
+              <MenuItem 
+                label="VIP Privilege" 
+                badge={`VIP ${userData?.vipLevel || 0}`} 
+                onPress={() => NavigationService.navigate(routes.VIP_SERVICES_SCREEN)}
+              />
               {/* <MenuItem
                 label="Personal Page"
                 onPress={() => NavigationService.navigate(routes.PERSONAL_PAGE_SCREEN, {
