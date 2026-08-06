@@ -65,7 +65,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     if (signIdStr) {
       if (signIdStr.includes('@')) {
         return 1;
-      } else if (/^\d+$/.test(signIdStr)) {
+      } else if (/^[\+\d\s\-\(\)]+$/.test(signIdStr)) {
         return 3;
       }
     }
@@ -231,7 +231,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   };
 
   const handleGetOtp = () => {
-    const isPhone = pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^\d+$/.test(String(pending2FA.loginSignId));
+    const isPhone = pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId));
     const sendTo = (selectedAuthMethod === 3 || isPhone) ? "mobile" : "email";
     console.log(`[AuthVerification] handleGetOtp called. method: ${selectedAuthMethod}, sendTo: ${sendTo}`);
     setResendTimer(60);
@@ -337,7 +337,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             <AppText weight={SEMI_BOLD} type={TWENTY_SIX} style={[styles.title, { color: themeColors.text }]}>
               {selectedAuthMethod === 4 ? "Passkey Authentication"
                 : selectedAuthMethod === 2 ? "Authenticator Verification"
-                  : (pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^\d+$/.test(String(pending2FA.loginSignId)))
+                  : (pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId)))
                     ? "Verify Your Phone"
                     : "Verify Your Email"}
             </AppText>
@@ -346,7 +346,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                 ? "Authenticate using Face ID, Touch ID, or your device biometrics."
                 : selectedAuthMethod === 2
                   ? "Enter the 6-digit code from your authenticator app."
-                  : `The verification code has been sent to your ${(pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^\d+$/.test(String(pending2FA.loginSignId))) ? "phone" : "email"} ${getMaskedEmail()}, valid for 10 minutes.`}
+                  : `The verification code has been sent to your ${(pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId))) ? "phone" : "email"} ${getMaskedEmail()}, valid for 10 minutes.`}
             </AppText>
           </>
 

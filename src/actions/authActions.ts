@@ -283,6 +283,22 @@ function loginFailureHighlights(kind: LoginFailureKind): {
   }
 }
 
+function extractSignIdFromToken(token: string | undefined | null): string | null {
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    const payload = JSON.parse(jsonPayload);
+    return payload?.data?.signId ?? null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function loginFailMessage(response: any): string {
   return String(response?.message ?? response?.data?.message ?? '').trim() || 'Login failed';
 }
@@ -337,7 +353,7 @@ function resolveLogin2FADefaultMethod(
 
   // Use loginIdentifier to determine if they used email or phone
   const isEmail = loginIdentifier && loginIdentifier.includes('@');
-  
+
   if (isEmail) {
     if (has(1)) return 1;
     if (has(3)) return 3;
@@ -363,6 +379,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
     dispatch(setLoading(true));
     const response: any = await appOperation.guest.login(data);
 
+    console.log('response login', response)
     if (!response.success) {
       if (response?.code == 403) {
         const failMsg = loginFailMessage(response);
@@ -401,42 +418,28 @@ export const login = (data: LoginProps & { token?: string }) => async (
     } else if (webShape) {
       dispatch(setUserData(d));
       const methods = getNormalizedAvailableMethods(d);
-      const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, data?.email_or_phone);
+      const signIdFromToken = extractSignIdFromToken(d?.tempToken ?? d?.token);
+      const signId = d?.signId ?? signIdFromToken ?? data?.email_or_phone;
+      const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, signId);
       dispatch(setPending2FA({
-        loginSignId: d?.signId ?? data?.email_or_phone,
+        loginSignId: signId,
         availableMethods: methods,
         defaultMethod: defaultMethod,
         data: d,
       }));
-      if (defaultMethod === 1 || defaultMethod === 3) {
-        const sendTo = defaultMethod === 3 ? 'mobile' : 'email';
-        const signId = d?.signId ?? data?.email_or_phone;
-        const m = methods?.find((x: any) => x.type === defaultMethod);
-        const identifier = m?.value ?? signId;
-        if (identifier) {
-          dispatch(sendLoginOtp(identifier, sendTo));
-        }
-      }
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
     } else {
       dispatch(setUserData(d));
       const methods = getNormalizedAvailableMethods(d);
-      const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.['2fa'], data?.email_or_phone);
+      const signIdFromToken = extractSignIdFromToken(d?.tempToken ?? d?.token);
+      const signId = d?.signId ?? signIdFromToken ?? data?.email_or_phone;
+      const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.['2fa'], signId);
       dispatch(setPending2FA({
-        loginSignId: data?.email_or_phone,
+        loginSignId: signId,
         availableMethods: methods,
         defaultMethod: defaultMethod,
         data: d?.['2fa'] === 2 ? data : d,
       }));
-      if (defaultMethod === 1 || defaultMethod === 3) {
-        const sendTo = defaultMethod === 3 ? 'mobile' : 'email';
-        const signId = data?.email_or_phone;
-        const m = methods?.find((x: any) => x.type === defaultMethod);
-        const identifier = m?.value ?? signId;
-        if (identifier) {
-          dispatch(sendLoginOtp(identifier, sendTo));
-        }
-      }
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
     }
     return { success: true };
@@ -473,7 +476,7 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
     console.log('[DEBUG] googleLogin payload:', data);
     const response: any = await appOperation.guest.google_login(data);
     console.log('[DEBUG] googleLogin response:', response);
-    
+
     if (!response.success) {
       showError(response.message);
     } else {
@@ -489,24 +492,16 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
         NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
       } else if (webShape || (d?.['2fa'] && d?.['2fa'] !== 0)) {
         dispatch(setUserData(d));
-        const signId = d?.signId ?? d?.emailId ?? d?.mobileNumber ?? '';
+        const signIdFromToken = extractSignIdFromToken(d?.tempToken ?? d?.token);
+        const signId = d?.signId ?? signIdFromToken ?? d?.emailId ?? d?.mobileNumber ?? '';
         const methods = getNormalizedAvailableMethods(d);
-        const loginHint = String(d?.emailId || d?.mobileNumber || signId || '');
-        const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, loginHint);
+        const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, signId);
         dispatch(setPending2FA({
           loginSignId: signId,
           availableMethods: methods,
           defaultMethod: defaultMethod,
           data: d,
         }));
-        if (defaultMethod === 1 || defaultMethod === 3) {
-          const sendTo = defaultMethod === 3 ? 'mobile' : 'email';
-          const m = methods?.find((x: any) => x.type === defaultMethod);
-          const identifier = m?.value ?? signId;
-          if (identifier) {
-            dispatch(sendLoginOtp(identifier, sendTo));
-          }
-        }
         NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
       } else {
         appOperation.setCustomerToken(d?.token);
