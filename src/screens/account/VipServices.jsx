@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, ImageBackground, Dimensions } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppSafeAreaView, AppText, TWENTY_SIX, TWENTY_TWO } from "../../shared";
+import { AppSafeAreaView, AppText, NORMAL, TWENTY_SIX, TWENTY_TWO } from "../../shared";
 import { EIGHTEEN, FOURTEEN, SIXTEEN, TWELVE, TWENTY, TEN } from "../../helper/Constants";
 import { BOLD, MEDIUM, REGULAR, SEMI_BOLD } from "../../helper/Constants";
 import NavigationService from "../../navigation/NavigationService";
@@ -9,9 +9,11 @@ import {
   vip_hero_img, vip_servies_herobg, vipserviceBanner, back_ic,
   feeNegotiation, higherLimits, slaSupport, subAccounts,
   apiLimits, autoTier, earlyAccess,
-  vipOverride
+  vipOverride,
+  vip0, vip1, vip2, vip3, vip4
 } from "../../helper/ImageAssets";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 
 const { width } = Dimensions.get("window");
 
@@ -23,11 +25,11 @@ const TEXT_WHITE = "#FFFFFF";
 const TEXT_GRAY = "rgba(255, 255, 255, 0.6)";
 
 const vipTiers = [
-  { id: 'VIP0', volume: '< $50,000', makerFee: '0.10%', takerFee: '0.15%', benefits: 'Standard access', iconColor: '#A0A0A0' },
-  { id: 'VIP1', volume: '$50k – $500k', makerFee: '0.08%', takerFee: '0.08% / 0.12%', benefits: 'Priority support', iconColor: '#CD7F32' },
-  { id: 'VIP2', volume: '$500k – $2M', makerFee: '0.06%', takerFee: '0.10%', benefits: 'Higher API limits', iconColor: '#50C878' },
-  { id: 'VIP3', volume: '$2M – $10M', makerFee: '0.04%', takerFee: '0.08%', benefits: 'Dedicated manager', iconColor: '#4169E1' },
-  { id: 'VIP4', volume: '> $10M', makerFee: 'Negotiated', takerFee: 'Negotiated', benefits: 'OTC desk access', iconColor: '#9370DB' },
+  { id: 'VIP0', volume: '< $50,000', makerFee: '0.10%', takerFee: '0.15%', benefits: 'Standard access', iconColor: '#A0A0A0', image: vip0 },
+  { id: 'VIP1', volume: '$50k – $500k', makerFee: '0.08%', takerFee: '0.08% / 0.12%', benefits: 'Priority support', iconColor: '#CD7F32', image: vip1 },
+  { id: 'VIP2', volume: '$500k – $2M', makerFee: '0.06%', takerFee: '0.10%', benefits: 'Higher API limits', iconColor: '#50C878', image: vip2 },
+  { id: 'VIP3', volume: '$2M – $10M', makerFee: '0.04%', takerFee: '0.08%', benefits: 'Dedicated manager', iconColor: '#4169E1', image: vip3 },
+  { id: 'VIP4', volume: '> $10M', makerFee: 'Negotiated', takerFee: 'Negotiated', benefits: 'OTC desk access', iconColor: '#9370DB', image: vip4 },
 ];
 
 const vipFeatures = [
@@ -43,12 +45,12 @@ const vipFeatures = [
 
 const SectionTitle = ({ title }) => (
   <View style={styles.sectionTitleContainer}>
-    <AppText weight={SEMI_BOLD} style={{ color: TEXT_WHITE, marginBottom: 8, fontSize: 15 }}>
+    <AppText style={{ color: TEXT_WHITE, marginBottom: 8, fontSize: 20, fontFamily: fontFamilySemiBold }}>
       {title}
     </AppText>
     <View style={styles.titleUnderlineContainer}>
       <View style={styles.titleLine} />
-      <FastImage source={vipOverride} style={{ width: 15, height: 15 }} resizeMode="contain" />
+      <FastImage source={vipOverride} style={{ width: 20, height: 20 }} resizeMode="contain" />
       <View style={styles.titleLine} />
     </View>
   </View>
@@ -111,7 +113,10 @@ const VipServices = () => {
               style={styles.heroImage}
               resizeMode="contain"
             />
-            <AppText weight={BOLD} style={{ color: GOLD, marginTop: 16, marginBottom: 4, fontSize: 20 }}>
+            <AppText style={{
+              color: GOLD, marginTop: 16, marginBottom: 4, fontSize: 22,
+              fontFamily: fontFamilySemiBold
+            }}>
               AGCE VIP Services
             </AppText>
             <AppText style={{ color: TEXT_WHITE, fontSize: 14 }}>
@@ -127,17 +132,14 @@ const VipServices = () => {
           <View style={styles.tierList}>
             {vipTiers.map((tier, index) => (
               <TouchableOpacity
+                disabled
                 key={tier.id}
                 style={styles.tierCard}
-                onPress={() => setSelectedTier(tier)}
+              // onPress={() => setSelectedTier(tier)}
               >
                 {/* Left Side: Tier Badge */}
-                <View style={styles.tierCardLeft}>
-                  <Icon name="hexagon-multiple" size={24} color={tier.iconColor} style={{ marginRight: 8 }} />
-                  <View>
-                    <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: TEXT_WHITE }}>{tier.id}</AppText>
-                    <AppText style={{ color: TEXT_GRAY, fontSize: 9, marginTop: 2 }}>{tier.volume}</AppText>
-                  </View>
+                <View style={[styles.tierCardLeft, { justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 8 }]}>
+                  <FastImage source={tier.image} style={{ width: '100%', height: 40 }} resizeMode="contain" />
                 </View>
 
                 {/* Right Side: Details */}
@@ -153,7 +155,6 @@ const VipServices = () => {
                   </View>
 
                   <View style={styles.benefitBadge}>
-                    <Icon name="file-document-outline" size={12} color={GOLD} style={{ marginRight: 4 }} />
                     <AppText style={{ color: TEXT_WHITE, fontSize: 9, flex: 1 }} numberOfLines={2}>
                       {tier.benefits}
                     </AppText>
@@ -205,7 +206,7 @@ const VipServices = () => {
             />
           </View>
         </View>
-        <View style={{ marginTop: 20 }}></View>
+        {/* <View style={{ marginTop: 20 }}></View> */}
 
       </ScrollView>
       {renderTierModal()}
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 24,
   },
   sectionTitleContainer: {
     alignItems: 'center',
@@ -270,10 +271,11 @@ const styles = StyleSheet.create({
   titleUnderlineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 5
   },
   titleLine: {
     height: 1,
-    width: 32,
+    width: 50,
     backgroundColor: GOLD,
   },
   tierList: {
@@ -281,7 +283,7 @@ const styles = StyleSheet.create({
   },
   tierCard: {
     flexDirection: 'row',
-    backgroundColor: CARD_BG,
+    // backgroundColor: CARD_BG,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: BORDER,
@@ -290,7 +292,7 @@ const styles = StyleSheet.create({
   tierCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#161616', // slightly lighter for distinction
+    // backgroundColor: '#161616', // slightly lighter for distinction
     paddingVertical: 12,
     paddingHorizontal: 12,
     width: '32%',
@@ -344,8 +346,9 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   vipCardImage: {
-    width: width,
+    width: "100%",
     height: 180,
+    borderRadius: 8,
   },
   modalOverlay: {
     flex: 1,

@@ -397,6 +397,11 @@ export const autoTier = require('../../assets/images/autoTier.png');
 export const earlyAccess = require('../../assets/images/earlyAccess.png');
 export const vipOverride = require('../../assets/images/vipOverride.png');
 
+export const vip4 = require('../../assets/images/vip4.png');
+export const vip3 = require('../../assets/images/vip3.png');
+export const vip2 = require('../../assets/images/vip2.png');
+export const vip1 = require('../../assets/images/vip1.png');
+export const vip0 = require('../../assets/images/vip0.png');
 
 
 
