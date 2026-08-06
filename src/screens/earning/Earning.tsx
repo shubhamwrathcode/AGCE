@@ -6,10 +6,12 @@ import { useTheme } from '../../hooks/useTheme';
 import {
   back_ic, searchIcon, historyIcon, eye_open_icon, eye_close_icon,
   launchpad, referAndEarn, vip, simpleEarn, stakingNew,
-  upDown, NO_NOTIFICATION_ICON, closeIcon, usdtIcon
+  upDown, NO_NOTIFICATION_ICON, closeIcon, usdtIcon,
+  infoNewIc,
+  INFO
 } from '../../helper/ImageAssets';
 import NavigationService from '../../navigation/NavigationService';
-import { SOFT_STAKING_SCREEN, STAKING_DASHBOARD_SCREEN } from '../../navigation/routes';
+import { SOFT_STAKING_SCREEN, STAKING_DASHBOARD_SCREEN, VIP_SERVICES_SCREEN } from '../../navigation/routes';
 import Toast from 'react-native-simple-toast';
 import { colors } from '../../theme/colors';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
@@ -25,10 +27,10 @@ const { width } = Dimensions.get('window');
 const gridItems = [
   { id: 1, title: 'Launchpad', icon: launchpad },
   { id: 2, title: 'Refer & Earn', icon: referAndEarn },
-  { id: 3, title: 'VIP', icon: vip },
+  { id: 3, title: 'VIP', icon: vip, route: VIP_SERVICES_SCREEN },
   { id: 5, title: 'Staking', icon: stakingNew, route: STAKING_DASHBOARD_SCREEN },
   { id: 6, title: 'Soft Staking', icon: stakingNew, route: SOFT_STAKING_SCREEN },
-  { id: 4, title: 'Simple Earn', icon: simpleEarn },
+  // { id: 4, title: 'Simple Earn', icon: simpleEarn },
 ];
 
 const STAKING_TYPE_LABELS: any = {
@@ -36,6 +38,29 @@ const STAKING_TYPE_LABELS: any = {
   FLEXIBLE: "Flexible Staking",
   TOKENIZED: "Tokenized Staking",
 };
+
+const STAKING_FAQ_ITEMS = [
+  {
+    question: "What is Staking?",
+    answer: "Staking is the process of locking up cryptocurrency assets to participate in transaction validation on a Proof-of-Stake (PoS) blockchain. In return for securing the network, participants earn staking rewards."
+  },
+  {
+    question: "What is Proof of Stake (PoS)?",
+    answer: "Proof of Stake (PoS) is a consensus mechanism used by blockchains to agree on the validity of transactions. Instead of using computing power like Proof of Work (mining), PoS relies on users who 'stake' their tokens to secure the network."
+  },
+  {
+    question: "When will I receive my staking return?",
+    answer: "Staking returns are typically calculated daily and distributed according to the rules of the specific product. Depending on the asset, rewards may be credited to your account daily or at the end of a fixed staking period."
+  },
+  {
+    question: "Why choose AGCE Staking?",
+    answer: "AGCE Staking offers a safe and seamless experience with competitive yields across a wide pool of top PoS products. We provide a low threshold for entry, 100% Proof of Reserve security, and a flexible redemption process."
+  },
+  {
+    question: "How is the Est. APR calculated?",
+    answer: "The Estimated Annual Percentage Rate (APR) is dynamically calculated based on the underlying blockchain's on-chain reward rates, total network participation, and platform conditions. The actual rate may fluctuate over time."
+  }
+];
 
 const formatApr = (pkg: any) => {
   const min = pkg?.aprMin;
@@ -55,12 +80,18 @@ const Earning = () => {
   // Staking logic
   const sheetRef = useRef<any>(null);
   const planSheetRef = useRef<any>(null);
+  const faqSheetRef = useRef<any>(null);
   const dispatch = useDispatch<any>();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [planPackages, setPlanPackages] = useState<any[]>([]);
   const [planLoading, setPlanLoading] = useState(false);
   const [isListLoading, setIsListLoading] = useState(true);
+  const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
+
+  const toggleFaq = (index: number) => {
+    setExpandedFaqIndex(expandedFaqIndex === index ? null : index);
+  };
 
   const { stakingHome, coinBalance } = useSelector((state: any) => state.home);
 
@@ -155,7 +186,6 @@ const Earning = () => {
               <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
             </TouchableOpacity>
             <AppText style={[styles.title, { color: themeColors.text }]} weight={SEMI_BOLD}>Earn</AppText>
-            {/* <AppText style={[styles.subTitle, { color: themeColors.secondaryText }]}>Launch</AppText> */}
           </View>
 
         </View>
@@ -181,12 +211,12 @@ const Earning = () => {
                   Yesterday's PnL {isHide ? '******' : '+0.00 USD'}
                 </AppText>
               </View>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={{ padding: 4 }}
-                onPress={() => Toast.showWithGravity('Coming soon', Toast.SHORT, Toast.BOTTOM)}
+                onPress={() => faqSheetRef.current?.open()}
               >
-                <FastImage source={historyIcon} style={{ width: 20, height: 20 }} tintColor={themeColors.text} resizeMode="contain" />
-              </TouchableOpacity>
+                <FastImage source={INFO} style={{ width: 20, height: 20 }} tintColor={themeColors.text} resizeMode="contain" />
+              </TouchableOpacity> */}
             </View>
           </View>
 
@@ -398,6 +428,59 @@ const Earning = () => {
               </TouchableOpacity>
             ))
           )}
+        </ScrollView>
+      </RBSheet>
+
+      <RBSheet
+        ref={faqSheetRef}
+        keyboardAvoidingViewEnabled={false}
+        {...({ customModalProps: { statusBarTranslucent: true } } as any)}
+        closeOnDragDown={true}
+        closeOnPressMask={true}
+        height={480}
+        customStyles={{
+          wrapper: {
+            backgroundColor: "rgba(0,0,0,0.5)"
+          },
+          draggableIcon: {
+            backgroundColor: "transparent",
+          },
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingBottom: 20,
+            backgroundColor: isDark ? themeColors.background : colors.white
+          }
+        }}
+      >
+        <View style={[styles.planHeader, { borderBottomColor: themeColors.border }]}>
+          <AppText style={[styles.planHeaderTitle, { color: themeColors.text }]}>FAQ</AppText>
+          <TouchableOpacity onPress={() => faqSheetRef.current?.close()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <FastImage source={closeIcon} style={{ width: 16, height: 16 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+          {STAKING_FAQ_ITEMS.map((faq, index) => (
+            <View key={index} style={[styles.faqItem, { borderBottomColor: themeColors.border }]}>
+              <TouchableOpacity
+                style={styles.faqQuestionRow}
+                onPress={() => toggleFaq(index)}
+                activeOpacity={0.7}
+              >
+                <AppText style={[styles.faqQuestionText, { color: themeColors.text }]}>{faq.question}</AppText>
+                <FastImage
+                  source={back_ic}
+                  style={{ width: 12, height: 12, transform: [{ rotate: expandedFaqIndex === index ? '90deg' : '-90deg' }] }}
+                  tintColor={themeColors.secondaryText}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              {expandedFaqIndex === index && (
+                <AppText style={[styles.faqAnswerText, { color: themeColors.secondaryText }]}>{faq.answer}</AppText>
+              )}
+            </View>
+          ))}
         </ScrollView>
       </RBSheet>
     </>
@@ -664,6 +747,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     fontFamily: fontFamilyMedium,
+  },
+  faqItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  faqQuestionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  faqQuestionText: {
+    fontSize: 14,
+    fontFamily: fontFamilySemiBold,
+    flex: 1,
+    marginRight: 16,
+  },
+  faqAnswerText: {
+    fontSize: 13,
+    fontFamily: fontFamilyMedium,
+    marginTop: 12,
+    lineHeight: 20,
   }
 });
 
