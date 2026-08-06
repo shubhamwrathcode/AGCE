@@ -979,6 +979,29 @@ export default (appOperation: AppOperation) => ({
       undefined,
       CUSTOMER_TYPE,
     ),
+  Launchpad_Projects: () =>
+    appOperation.get(
+      'launchpad/get-launchpads',
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  Launchpad_Project_Detail: (id: string) =>
+    appOperation.get(
+      `launchpad/${id}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  Launchpad_Buy_Token: (data: any) =>
+    appOperation.post('launchpad/buy-token', data, CUSTOMER_TYPE),
+  Launchpad_User_Balance: (currencyId: string, walletType: string = 'earning') =>
+    appOperation.get(
+      `launchpad/user-balance?currencyId=${currencyId}&walletType=${walletType}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
   place_staking: (data: any) =>
     appOperation.post('staking/place_staking', data, CUSTOMER_TYPE),
 

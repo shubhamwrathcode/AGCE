@@ -160,6 +160,8 @@ import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
 import StakingDashboard from "../screens/staking/StakingDashboard";
 import StakingPurchase from "../screens/staking/StakingPurchase";
 import OptionsInstrumentTrade from "../screens/Futures/OptionsTrade/OptionsInstrumentTrade";
+import Launchpad from "../screens/Launchpad/Launchpad";
+import LaunchpadDetail from "../screens/Launchpad/LaunchpadDetail";
 
 const Stack = createStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -703,6 +705,8 @@ const MyAuthLoadingStack = () => {
         name={routes.SOFT_STAKING_SCREEN}
         component={SoftStaking}
       />
+      <Stack.Screen name={routes.LAUNCHPAD_SCREEN} component={Launchpad} />
+      <Stack.Screen name={routes.LAUNCHPAD_DETAIL_SCREEN} component={LaunchpadDetail} />
     </Stack.Navigator>
   );
 };

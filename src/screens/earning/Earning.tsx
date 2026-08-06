@@ -11,7 +11,7 @@ import {
   INFO
 } from '../../helper/ImageAssets';
 import NavigationService from '../../navigation/NavigationService';
-import { SOFT_STAKING_SCREEN, STAKING_DASHBOARD_SCREEN, VIP_SERVICES_SCREEN } from '../../navigation/routes';
+import { SOFT_STAKING_SCREEN, STAKING_DASHBOARD_SCREEN, VIP_SERVICES_SCREEN, LAUNCHPAD_SCREEN } from '../../navigation/routes';
 import Toast from 'react-native-simple-toast';
 import { colors } from '../../theme/colors';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
@@ -25,7 +25,7 @@ import { appOperation } from '../../appOperation';
 const { width } = Dimensions.get('window');
 
 const gridItems = [
-  { id: 1, title: 'Launchpad', icon: launchpad },
+  { id: 1, title: 'Launchpad', icon: launchpad, route: LAUNCHPAD_SCREEN },
   { id: 2, title: 'Refer & Earn', icon: referAndEarn },
   { id: 3, title: 'VIP', icon: vip, route: VIP_SERVICES_SCREEN },
   { id: 5, title: 'Staking', icon: stakingNew, route: STAKING_DASHBOARD_SCREEN },

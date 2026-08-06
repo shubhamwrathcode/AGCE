@@ -517,19 +517,19 @@ const SoftStaking = () => {
           </View>
 
           <AppText style={styles.statusDesc}>
-            {isSoftStakingEnabled 
+            {isSoftStakingEnabled
               ? "Disabling soft staking will stop your eligible assets from earning rewards. You can re-enable it anytime."
               : "Enable soft staking to automatically earn rewards on your eligible holdings. Rewards become eligible from the next day (00:00 UTC)."}
           </AppText>
 
-          <TouchableOpacity 
-            style={[styles.statusCancelBtn, { backgroundColor: isDark ? themeColors.background : '#F7F7F7' }]} 
+          <TouchableOpacity
+            style={[styles.statusCancelBtn, { backgroundColor: isDark ? themeColors.background : '#F7F7F7' }]}
             onPress={() => statusSheetRef.current?.close()}
           >
             <AppText style={{ color: themeColors.text, fontSize: 16, fontFamily: fontFamilySemiBold }}>Cancel</AppText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.statusActionBtn, isSoftStakingEnabled ? styles.statusDisableBtn : styles.statusEnableBtn]}
             onPress={() => {
               const nextStatus = !isSoftStakingEnabled;
