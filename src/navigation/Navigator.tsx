@@ -162,6 +162,7 @@ import StakingPurchase from "../screens/staking/StakingPurchase";
 import OptionsInstrumentTrade from "../screens/Futures/OptionsTrade/OptionsInstrumentTrade";
 import Launchpad from "../screens/Launchpad/Launchpad";
 import LaunchpadDetail from "../screens/Launchpad/LaunchpadDetail";
+import ReferAndEarn from "../screens/earning/ReferAndEarn";
 
 const Stack = createStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -707,6 +708,7 @@ const MyAuthLoadingStack = () => {
       />
       <Stack.Screen name={routes.LAUNCHPAD_SCREEN} component={Launchpad} />
       <Stack.Screen name={routes.LAUNCHPAD_DETAIL_SCREEN} component={LaunchpadDetail} />
+      <Stack.Screen name={routes.REFER_AND_EARN_SCREEN} component={ReferAndEarn} />
     </Stack.Navigator>
   );
 };

@@ -403,6 +403,8 @@ export const vip2 = require('../../assets/images/vip2.png');
 export const vip1 = require('../../assets/images/vip1.png');
 export const vip0 = require('../../assets/images/vip0.png');
 export const launchpad_acge = require('../../assets/images/launchpad_acge.png');
+export const invite_earn_img = require('../../assets/images/invite_earn_img.png');
+
 
 
 
