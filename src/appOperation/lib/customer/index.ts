@@ -290,6 +290,8 @@ export default (appOperation: AppOperation) => ({
   /** Didit / web parity: `GET /api/v1/kyc/status` (SessionPayload). Legacy: `GET v1/user/kyc-status`. */
   get_kyc_status: () =>
     appOperation.get('api/v1/kyc/status', undefined, undefined, CUSTOMER_TYPE),
+  get_kyb_status: () =>
+    appOperation.get('api/v1/kyb/status', undefined, undefined, CUSTOMER_TYPE),
   get_kyc_status_legacy: () =>
     appOperation.get('user/kyc-status', undefined, undefined, CUSTOMER_TYPE),
   /** Same as web: GET api/meta/countries - list of { code, name, flag } (no v1 prefix) */

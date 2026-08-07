@@ -272,14 +272,14 @@ const ReferAndEarn = () => {
           <View style={[styles.overviewHeader, { zIndex: 10 }]}>
             <AppText style={[styles.overviewTitle, { color: isDark ? colors.white : colors.black }]}>Overview</AppText>
             <View style={{ position: 'relative', zIndex: 10 }}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.dropdownBtn, { backgroundColor: isDark ? '#161616' : '#F5F5F5', borderColor: isDark ? '#222' : '#EEE' }]}
                 onPress={() => setTimeframeDropdownOpen(!timeframeDropdownOpen)}
               >
                 <AppText style={[styles.dropdownText, { color: isDark ? '#A0A0A0' : '#666' }]}>{selectedTimeframe}</AppText>
                 <AppText style={[styles.dropdownIcon, { color: isDark ? '#A0A0A0' : '#666' }]}>{timeframeDropdownOpen ? '⌃' : '⌄'}</AppText>
               </TouchableOpacity>
-              
+
               {timeframeDropdownOpen && (
                 <View style={[styles.dropdownMenu, { backgroundColor: isDark ? '#161616' : '#fff', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
                   {timeframes.map((tf) => (
@@ -367,7 +367,7 @@ const ReferAndEarn = () => {
               <AppText style={[styles.commissionTitle, { color: isDark ? colors.white : colors.black }]}>Performance</AppText>
             </View>
             <View style={{ position: 'relative', zIndex: 10 }}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.dateBtn, { backgroundColor: isDark ? '#161616' : '#F9F9F9', borderColor: isDark ? '#222' : '#EEE' }]}
                 onPress={() => setDatePopoverOpen(!datePopoverOpen)}
               >
@@ -380,7 +380,7 @@ const ReferAndEarn = () => {
               {datePopoverOpen && (
                 <View style={[styles.datePopover, { backgroundColor: isDark ? '#161616' : '#fff', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
                   <AppText style={[styles.dateLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Start Date</AppText>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.dateInput, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? '#222' : '#EEE' }]}
                     onPress={() => {
                       setDatePickerType('start');
@@ -394,7 +394,7 @@ const ReferAndEarn = () => {
                   </TouchableOpacity>
 
                   <AppText style={[styles.dateLabel, { color: isDark ? '#A0A0A0' : '#666', marginTop: 16 }]}>End Date</AppText>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.dateInput, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? '#222' : '#EEE' }]}
                     onPress={() => {
                       setDatePickerType('end');
@@ -407,7 +407,7 @@ const ReferAndEarn = () => {
                     <AppText style={styles.calendarIconSm}>📅</AppText>
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.applyBtn}
                     onPress={() => setDatePopoverOpen(false)}
                   >

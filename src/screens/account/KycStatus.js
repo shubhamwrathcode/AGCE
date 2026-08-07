@@ -51,7 +51,7 @@ import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, CREATE_TICKET_SCREEN } from "
 import { useFocusEffect } from "@react-navigation/native";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLoading } from "../../slices/authSlice";
-import { getUserProfile, getKycStatus, createKycSession, createKybSession } from "../../actions/accountActions";
+import { getUserProfile, getKycStatus, getKybStatus, createKycSession, createKybSession } from "../../actions/accountActions";
 import KycStepHeader from "./KycStepHeader";
 import { useTheme } from "../../hooks/useTheme";
 import WebView from "react-native-webview";
@@ -204,7 +204,7 @@ function KycAvatarInitialsRing({ initials }) {
   );
 }
 
-const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, onVerifyPress }) => {
+const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, onVerifyPress, isKyb }) => {
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
   const isLoading = useAppSelector((state) => state.auth.isLoading);
@@ -240,7 +240,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, on
             <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
               {isInProgress
                 ? "Your verification session is still open. Resume it to complete the remaining steps."
-                : "Your KYC verification is currently under review. Please ensure that the uploaded document is a clear photo of your original ID. Scanned or copied documents are not accepted."}
+                : `Your ${isKyb ? "Business" : "KYC"} verification is currently under review. Please ensure that the uploaded document is a clear photo of your original ID. Scanned or copied documents are not accepted.`}
             </AppText>
           </View>
         </View>
@@ -304,7 +304,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, on
   );
 };
 
-const KycRejected = ({ onVerifyPress }) => {
+const KycRejected = ({ onVerifyPress, isKyb }) => {
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
   const isLoading = useAppSelector((state) => state.auth.isLoading);
@@ -336,7 +336,7 @@ const KycRejected = ({ onVerifyPress }) => {
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
-              {kyc_reject_reason || "Your verification is incomplete. Please submit the required details and complete facial recognition."}
+              {kyc_reject_reason || `Your ${isKyb ? "business" : "identity"} verification is incomplete. Please submit the required details and complete facial recognition.`}
             </AppText>
           </View>
         </View>
@@ -471,7 +471,7 @@ const KycDue = ({ onVerifyPress, isKyb }) => {
   );
 };
 
-const KycCompleted = () => {
+const KycCompleted = ({ isKyb }) => {
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
 
@@ -505,7 +505,7 @@ const KycCompleted = () => {
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <AppText type={TWELVE} style={{ color: themeColors.text, lineHeight: 20 }}>
-              Your identity verification is complete. You now have full access to all features, including higher limits and P2P trading.
+              Your {isKyb ? "business" : "identity"} verification is complete. You now have full access to all features, including higher limits and P2P trading.
             </AppText>
           </View>
         </View>
@@ -635,8 +635,11 @@ const KycStatus = ({ route }) => {
   const faqSheetRef = useRef(null);
 
   const applyKycStatusData = useCallback((data) => {
-    if (!data) return;
-
+    if (!data) {
+      console.log("[KYB/KYC] No data returned from action.");
+      return;
+    }
+    console.log("[KYB/KYC] applyKycStatusData payload:", JSON.stringify(data, null, 2));
 
 
     setIdDocStatus(data.id_document_status ?? null);
@@ -675,10 +678,11 @@ const KycStatus = ({ route }) => {
   const refreshAfterDiditFlow = useCallback(() => {
     diditExternalOpenedRef.current = false;
     dispatch(getUserProfile(false, false, true));
-    void dispatch(getKycStatus()).then((data) => {
+    const statusAction = isKyb ? getKybStatus() : getKycStatus();
+    void dispatch(statusAction).then((data) => {
       applyKycStatusData(data);
     });
-  }, [dispatch, applyKycStatusData]);
+  }, [dispatch, applyKycStatusData, isKyb]);
 
   const closeDiditWebview = useCallback(() => {
     diditWebCompleteOnceRef.current = false;
@@ -737,7 +741,8 @@ const KycStatus = ({ route }) => {
     let mounted = true;
 
     const fetchStatus = async () => {
-      const data = await dispatch(getKycStatus());
+      const statusAction = isKyb ? getKybStatus() : getKycStatus();
+      const data = await dispatch(statusAction);
       if (!mounted) return;
 
       setContentLoading(false);
@@ -831,6 +836,7 @@ const KycStatus = ({ route }) => {
 
   const kycStatusView = () => {
     const effectiveTier = kycVerifiedFromApi !== null ? kycVerifiedFromApi : kycVerified;
+    console.log("[KYB/KYC] kycStatusView eval =>", { isKyb, effectiveTier, kycVerifiedFromApi, kycVerified, statusCanonical, trackingStatus });
 
     // 1. Prioritize Resubmission requested (matches web kycPayloadRequestsResubmission)
     const hasResubmitRequest = statusCanonical === "RESUBMISSION_REQUESTED" ||
@@ -850,17 +856,18 @@ const KycStatus = ({ route }) => {
           onResubmitPress={openResubmitModal}
           diditVendorStatus={diditVendorStatus}
           onVerifyPress={openVerifyModal}
+          isKyb={isKyb}
         />
       );
     }
 
     // 2. Map Tiers and Canonical Status strings (matches web resolveKycView)
     if (effectiveTier === 2 || statusCanonical === "APPROVED") {
-      return <KycCompleted />;
+      return <KycCompleted isKyb={isKyb} />;
     }
 
     if (effectiveTier === 3 || statusCanonical === "REJECTED") {
-      return <KycRejected onVerifyPress={openVerifyAgainModal} />;
+      return <KycRejected onVerifyPress={openVerifyAgainModal} isKyb={isKyb} />;
     }
 
     if (effectiveTier === 1 || statusCanonical === "PENDING") {
@@ -873,6 +880,7 @@ const KycStatus = ({ route }) => {
           submittedTaxDocType={submittedTaxDocType}
           diditVendorStatus={diditVendorStatus}
           onVerifyPress={openVerifyModal}
+          isKyb={isKyb}
         />
       );
     }

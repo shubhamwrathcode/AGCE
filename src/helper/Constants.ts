@@ -8,6 +8,9 @@ export const SELECTED_LANGUAGE = 'SELECTED_LANGUAGE';
  */
 
 export const BASE_URL = 'https://backend.arabglobal.ae/';
+// export const BASE_URL = 'https://jw1ptnmg-9503.inc1.devtunnels.ms/';
+
+
 
 
 // export const BASE_URL = 'https://agcebackend.wrathcode.com/';

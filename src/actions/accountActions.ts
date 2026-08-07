@@ -511,6 +511,42 @@ export const getKycStatus = () => async () => {
   return normalizeKycStatusForUi(payload);
 };
 
+export const getKybStatus = () => async () => {
+  let response: any = null;
+  let payload: any = null;
+  try {
+    response = await appOperation.customer.get_kyb_status();
+    console.log(response, '[[[responsee]]');
+
+    if (response != null) {
+      if (response.success === true && response.data != null) {
+        if (typeof response.data === 'object' && response.data.data != null && !Array.isArray(response.data.data)) {
+          payload = response.data.data;
+        } else {
+          payload = response.data;
+        }
+      } else if (response.data != null && response.data.status) {
+        payload = response.data;
+      } else if (response.status) {
+        payload = response;
+      }
+    }
+  } catch (e: any) {
+    if (__DEV__) console.log('[KYB API] get_kyb_status failed', e?.code, e?.message);
+    if (e?.response?.data) {
+      const errData = e.response.data;
+      if (errData?.data?.status) payload = errData.data;
+      else if (errData?.status) payload = errData;
+    }
+  }
+
+  if (payload == null) {
+    if (__DEV__) console.warn('[KYB API] get_kyb_status: no payload found');
+    return null;
+  }
+  return normalizeKycStatusForUi(payload);
+};
+
 /** Same as web: GET api/meta/countries - list of { code, name, flag } */
 export const getCountries = () => async () => {
   try {
