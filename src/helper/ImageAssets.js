@@ -404,8 +404,9 @@ export const vip1 = require('../../assets/images/vip1.png');
 export const vip0 = require('../../assets/images/vip0.png');
 export const launchpad_acge = require('../../assets/images/launchpad_acge.png');
 export const invite_earn_img = require('../../assets/images/invite_earn_img.png');
-
-
+export const earn_link_icon = require('../../assets/images/earn_link_icon.png');
+export const link_friends = require('../../assets/images/link_friends.png');
+export const share_link = require('../../assets/images/share_link.png');
 
 
 
