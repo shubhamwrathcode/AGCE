@@ -275,7 +275,7 @@ const DirectMessageManagement = () => {
   const channel = tab === "message" ? "message" : "email";
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       {/* Header */}
       <Toolbar isSecond title="Direct Message Management" style={{ width: '85%', }} />
 

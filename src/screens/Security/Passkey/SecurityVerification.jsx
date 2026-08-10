@@ -593,7 +593,7 @@ const SecurityVerification = ({ route }) => {
 
           {!params.hideChooseOther && (
             <TouchableOpacity style={styles.linkContainer} onPress={() => sheetRef.current?.open()}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: colors.black }]}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: themeColors.text }]}>
                 Choose other verification method
               </AppText>
             </TouchableOpacity>

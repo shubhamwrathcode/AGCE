@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 import FastImage from 'react-native-fast-image';
 import { AppSafeAreaView, AppText, SEMI_BOLD } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
-import { back_ic, invite_earn_img, share_link, link_friends, earn_link_icon, infoNewIc, INFO, calendarIcon } from '../../helper/ImageAssets';
+import { back_ic, invite_earn_img, share_link, link_friends, earn_link_icon, infoNewIc, INFO, calendarIcon, paste1, pasteImg } from '../../helper/ImageAssets';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Toast from 'react-native-simple-toast';
 import { colors } from '../../theme/colors';
@@ -104,7 +104,7 @@ const pickReferList = (payload: any) => {
 };
 
 const ReferAndEarn = () => {
-  const { isDark } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
 
   const [referralCode, setReferralCode] = useState("");
   const [referCount, setReferCount] = useState(0);
@@ -185,15 +185,15 @@ const ReferAndEarn = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => NavigationService.goBack()}>
-          <FastImage source={back_ic} style={styles.backIcon} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
+          <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
         </TouchableOpacity>
-        <AppText style={[styles.headerTitle, { color: isDark ? colors.white : colors.black }]}>Referral Program</AppText>
+        <AppText style={[styles.headerTitle, { color: themeColors.text }]}>Referral Program</AppText>
         <TouchableOpacity style={styles.backBtn} onPress={() => faqSheetRef.current?.open()}>
-          <FastImage source={INFO} style={styles.backIcon} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
+          <FastImage source={INFO} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
         </TouchableOpacity>
       </View>
 
@@ -201,7 +201,7 @@ const ReferAndEarn = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <View style={styles.textSection}>
-            <AppText style={[styles.titleTop, { color: isDark ? colors.white : colors.black }]}>Invite. Earn.</AppText>
+            <AppText style={[styles.titleTop, { color: themeColors.text }]}>Invite. Earn.</AppText>
             <AppText style={[styles.titleBottom, { color: '#EABE53' }]}>Grow Together.</AppText>
 
             <AppText style={[styles.desc, { color: isDark ? '#A0A0A0' : '#666' }]}>
@@ -225,34 +225,34 @@ const ReferAndEarn = () => {
           </View>
 
           {/* Stats Section */}
-          <View style={[styles.statsContainer, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9' }]}>
+          <View style={[styles.statsContainer, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9' }]}>
             <AppText style={[styles.sectionHeader, { color: isDark ? '#A0A0A0' : '#666' }]}>Your Referral Code</AppText>
-            <AppText style={[styles.referralCodeText, { color: isDark ? colors.white : colors.black }]}>
+            <AppText style={[styles.referralCodeText, { color: themeColors.text }]}>
               {referralCode || (referralLoading ? "…" : "—")}
             </AppText>
 
             <View style={styles.gridContainer}>
-              <View style={[styles.gridItem, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
+              <View style={[styles.gridItem, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
                 <AppText style={[styles.gridLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Your Commission Rate</AppText>
                 <AppText style={[styles.gridValue, { color: '#EABE53' }]}>15%</AppText>
               </View>
-              <View style={[styles.gridItem, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
+              <View style={[styles.gridItem, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
                 <AppText style={[styles.gridLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Friends' Kickback Rate</AppText>
-                <AppText style={[styles.gridValue, { color: isDark ? colors.white : colors.black }]}>0%</AppText>
+                <AppText style={[styles.gridValue, { color: themeColors.text }]}>0%</AppText>
               </View>
-              <View style={[styles.gridItem, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
+              <View style={[styles.gridItem, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
                 <AppText style={[styles.gridLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Friends You've Invited</AppText>
-                <AppText style={[styles.gridValue, { color: isDark ? colors.white : colors.black }]}>{friendsInvited}</AppText>
+                <AppText style={[styles.gridValue, { color: themeColors.text }]}>{friendsInvited}</AppText>
               </View>
-              <View style={[styles.gridItem, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
+              <View style={[styles.gridItem, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
                 <AppText style={[styles.gridLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Total Rewards Earned</AppText>
-                <AppText style={[styles.gridValue, { color: isDark ? colors.white : colors.black }]}>0 USDT</AppText>
+                <AppText style={[styles.gridValue, { color: themeColors.text }]}>0 USDT</AppText>
               </View>
             </View>
 
             <AppText style={[styles.sectionHeader, { color: isDark ? '#A0A0A0' : '#666', marginTop: 10, }]}>Share Your Link</AppText>
-            <View style={[styles.linkBox, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
-              <AppText style={[styles.linkText, { color: isDark ? colors.white : colors.black }]} numberOfLines={1}>
+            <View style={[styles.linkBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
+              <AppText style={[styles.linkText, { color: themeColors.text }]} numberOfLines={1}>
                 {referralLink || "Sign in to get your referral link"}
               </AppText>
               <TouchableOpacity
@@ -261,7 +261,10 @@ const ReferAndEarn = () => {
                   Clipboard.setString(referralLink);
                   Toast.showWithGravity('Copied to clipboard', Toast.SHORT, Toast.BOTTOM);
                 }}>
-                <AppText style={styles.copyIcon}>❐</AppText>
+                <FastImage source={pasteImg}
+                  resizeMode='contain'
+                  tintColor={isDark ? colors.white : colors.themeElevationColor}
+                  style={{ width: 18, height: 18, }} />
               </TouchableOpacity>
             </View>
           </View>
@@ -270,10 +273,10 @@ const ReferAndEarn = () => {
         {/* Overview Section */}
         <View style={styles.overviewContainer}>
           <View style={[styles.overviewHeader, { zIndex: 10 }]}>
-            <AppText style={[styles.overviewTitle, { color: isDark ? colors.white : colors.black }]}>Overview</AppText>
+            <AppText style={[styles.overviewTitle, { color: themeColors.text }]}>Overview</AppText>
             <View style={{ position: 'relative', zIndex: 10 }}>
               <TouchableOpacity
-                style={[styles.dropdownBtn, { backgroundColor: isDark ? '#161616' : '#F5F5F5', borderColor: isDark ? '#222' : '#EEE' }]}
+                style={[styles.dropdownBtn, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}
                 onPress={() => setTimeframeDropdownOpen(!timeframeDropdownOpen)}
               >
                 <AppText style={[styles.dropdownText, { color: isDark ? '#A0A0A0' : '#666' }]}>{selectedTimeframe}</AppText>
@@ -281,7 +284,7 @@ const ReferAndEarn = () => {
               </TouchableOpacity>
 
               {timeframeDropdownOpen && (
-                <View style={[styles.dropdownMenu, { backgroundColor: isDark ? '#161616' : '#fff', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
+                <View style={[styles.dropdownMenu, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#E0E0E0' }]}>
                   {timeframes.map((tf) => (
                     <TouchableOpacity
                       key={tf}
@@ -291,7 +294,7 @@ const ReferAndEarn = () => {
                         setTimeframeDropdownOpen(false);
                       }}
                     >
-                      <AppText style={[styles.dropdownMenuText, { color: isDark ? colors.white : colors.black }]}>{tf}</AppText>
+                      <AppText style={[styles.dropdownMenuText, { color: themeColors.text }]}>{tf}</AppText>
                       {selectedTimeframe === tf && (
                         <View style={styles.checkCircle}>
                           <AppText style={styles.checkIcon}>✓</AppText>
@@ -305,53 +308,53 @@ const ReferAndEarn = () => {
           </View>
 
           <View style={styles.overviewGrid}>
-            <View style={[styles.overviewCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.overviewCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
               <View style={styles.cardInner}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(2, 192, 118, 0.1)' }]}>
                   <AppText style={styles.iconEmoji}>💹</AppText>
                 </View>
                 <View style={styles.cardContent}>
                   <AppText style={[styles.cardLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Total Earnings</AppText>
-                  <AppText style={[styles.cardValue, { color: isDark ? colors.white : colors.black }]}>0 USDT</AppText>
+                  <AppText style={[styles.cardValue, { color: themeColors.text }]}>0 USDT</AppText>
                   <AppText style={[styles.cardSubValue, { color: isDark ? '#666' : '#999' }]}>≈ $0.00</AppText>
                 </View>
               </View>
             </View>
 
-            <View style={[styles.overviewCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.overviewCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
               <View style={styles.cardInner}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(243, 156, 18, 0.1)' }]}>
                   <AppText style={styles.iconEmoji}>⏳</AppText>
                 </View>
                 <View style={styles.cardContent}>
                   <AppText style={[styles.cardLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Pending Earnings</AppText>
-                  <AppText style={[styles.cardValue, { color: isDark ? colors.white : colors.black }]}>0 USDT</AppText>
+                  <AppText style={[styles.cardValue, { color: themeColors.text }]}>0 USDT</AppText>
                   <AppText style={[styles.cardSubValue, { color: isDark ? '#666' : '#999' }]}>≈ $0.00</AppText>
                 </View>
               </View>
             </View>
 
-            <View style={[styles.overviewCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.overviewCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
               <View style={styles.cardInner}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 152, 219, 0.1)' }]}>
                   <AppText style={styles.iconEmoji}>👥</AppText>
                 </View>
                 <View style={styles.cardContent}>
                   <AppText style={[styles.cardLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Total Friends</AppText>
-                  <AppText style={[styles.cardValue, { color: isDark ? colors.white : colors.black }]}>{friendsInvited}</AppText>
+                  <AppText style={[styles.cardValue, { color: themeColors.text }]}>{friendsInvited}</AppText>
                   <AppText style={[styles.cardSubValue, { color: isDark ? '#666' : '#999' }]}>From your referrals</AppText>
                 </View>
               </View>
             </View>
 
-            <View style={[styles.overviewCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.overviewCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
               <View style={styles.cardInner}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(155, 89, 182, 0.1)' }]}>
                   <AppText style={styles.iconEmoji}>📊</AppText>
                 </View>
                 <View style={styles.cardContent}>
                   <AppText style={[styles.cardLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Total Trades</AppText>
-                  <AppText style={[styles.cardValue, { color: isDark ? colors.white : colors.black }]}>0</AppText>
+                  <AppText style={[styles.cardValue, { color: themeColors.text }]}>0</AppText>
                   <AppText style={[styles.cardSubValue, { color: isDark ? '#666' : '#999' }]}>+0 this month</AppText>
                 </View>
               </View>
@@ -363,12 +366,12 @@ const ReferAndEarn = () => {
         <View style={styles.commissionContainer}>
           <View style={[styles.commissionHeader, { zIndex: 10 }]}>
             <View>
-              <AppText style={[styles.commissionTitle, { color: isDark ? colors.white : colors.black }]}>Commission</AppText>
-              <AppText style={[styles.commissionTitle, { color: isDark ? colors.white : colors.black }]}>Performance</AppText>
+              <AppText style={[styles.commissionTitle, { color: themeColors.text }]}>Commission</AppText>
+              <AppText style={[styles.commissionTitle, { color: themeColors.text }]}>Performance</AppText>
             </View>
             <View style={{ position: 'relative', zIndex: 10 }}>
               <TouchableOpacity
-                style={[styles.dateBtn, { backgroundColor: isDark ? '#161616' : '#F9F9F9', borderColor: isDark ? '#222' : '#EEE' }]}
+                style={[styles.dateBtn, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}
                 onPress={() => setDatePopoverOpen(!datePopoverOpen)}
               >
                 <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
@@ -381,16 +384,16 @@ const ReferAndEarn = () => {
               </TouchableOpacity>
 
               {datePopoverOpen && (
-                <View style={[styles.datePopover, { backgroundColor: isDark ? '#161616' : '#fff', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
+                <View style={[styles.datePopover, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#E0E0E0' }]}>
                   <AppText style={[styles.dateLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Start Date</AppText>
                   <TouchableOpacity
-                    style={[styles.dateInput, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? '#222' : '#EEE' }]}
+                    style={[styles.dateInput, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}
                     onPress={() => {
                       setDatePickerType('start');
                       setDatePickerVisibility(true);
                     }}
                   >
-                    <AppText style={[styles.dateInputValue, { color: isDark ? colors.white : colors.black }]}>
+                    <AppText style={[styles.dateInputValue, { color: themeColors.text }]}>
                       {formatInputDate(startDate)}
                     </AppText>
                     <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
@@ -400,13 +403,13 @@ const ReferAndEarn = () => {
 
                   <AppText style={[styles.dateLabel, { color: isDark ? '#A0A0A0' : '#666', marginTop: 16 }]}>End Date</AppText>
                   <TouchableOpacity
-                    style={[styles.dateInput, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? '#222' : '#EEE' }]}
+                    style={[styles.dateInput, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}
                     onPress={() => {
                       setDatePickerType('end');
                       setDatePickerVisibility(true);
                     }}
                   >
-                    <AppText style={[styles.dateInputValue, { color: isDark ? colors.white : colors.black }]}>
+                    <AppText style={[styles.dateInputValue, { color: themeColors.text }]}>
                       {formatInputDate(endDate)}
                     </AppText>
                     <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
@@ -426,19 +429,19 @@ const ReferAndEarn = () => {
           </View>
 
           {/* Base Commission Card */}
-          <View style={[styles.baseCommissionCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+          <View style={[styles.baseCommissionCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
             <AppText style={[styles.baseCommLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Your Base Commission Rate</AppText>
             <View style={styles.gaugeContainer}>
               <View style={[styles.gaugeBackground, { borderColor: isDark ? '#222' : '#E0E0E0' }]} />
               <View style={styles.gaugeProgress} />
-              <AppText style={[styles.gaugeText, { color: isDark ? colors.white : colors.black }]}>15%</AppText>
+              <AppText style={[styles.gaugeText, { color: themeColors.text }]}>15%</AppText>
             </View>
           </View>
 
           {/* Target Cards */}
-          <View style={[styles.targetCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+          <View style={[styles.targetCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
             <View style={{ flex: 1 }}>
-              <AppText style={[styles.targetTitle, { color: isDark ? colors.white : colors.black }]}>
+              <AppText style={[styles.targetTitle, { color: themeColors.text }]}>
                 Reach <AppText style={{ color: '#EABE53' }}>$1,000 USDT</AppText> in trading volume
               </AppText>
               <AppText style={[styles.targetSub, { color: isDark ? '#A0A0A0' : '#666' }]}>your commission rate will rise to</AppText>
@@ -446,9 +449,9 @@ const ReferAndEarn = () => {
             <AppText style={[styles.targetValue, { color: '#EABE53' }]}>25% ↗</AppText>
           </View>
 
-          <View style={[styles.targetCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+          <View style={[styles.targetCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
             <View style={{ flex: 1 }}>
-              <AppText style={[styles.targetTitle, { color: isDark ? colors.white : colors.black }]}>
+              <AppText style={[styles.targetTitle, { color: themeColors.text }]}>
                 Reach <AppText style={{ color: '#EABE53' }}>$10,000 USDT</AppText> in trading volume
               </AppText>
               <AppText style={[styles.targetSub, { color: isDark ? '#A0A0A0' : '#666' }]}>your commission rate will rise to</AppText>
@@ -457,13 +460,13 @@ const ReferAndEarn = () => {
           </View>
 
           {/* Mini Stats with Graph */}
-          <View style={[styles.miniStatCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-            <View style={[styles.miniIconBox, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
+          <View style={[styles.miniStatCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.miniIconBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
               <AppText style={styles.miniIcon}>👤</AppText>
             </View>
             <View style={styles.miniStatContent}>
               <AppText style={[styles.miniStatLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Valid Invites</AppText>
-              <AppText style={[styles.miniStatValue, { color: isDark ? colors.white : colors.black }]}>{friendsInvited}</AppText>
+              <AppText style={[styles.miniStatValue, { color: themeColors.text }]}>{friendsInvited}</AppText>
             </View>
             <View style={styles.sparklineContainer}>
               <Svg height="100%" width="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
@@ -472,13 +475,13 @@ const ReferAndEarn = () => {
             </View>
           </View>
 
-          <View style={[styles.miniStatCard, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-            <View style={[styles.miniIconBox, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
+          <View style={[styles.miniStatCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.miniIconBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
               <AppText style={styles.miniIcon}>📊</AppText>
             </View>
             <View style={styles.miniStatContent}>
               <AppText style={[styles.miniStatLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Trading Volume</AppText>
-              <AppText style={[styles.miniStatValue, { color: isDark ? colors.white : colors.black }]}>0 USDT</AppText>
+              <AppText style={[styles.miniStatValue, { color: themeColors.text }]}>0 USDT</AppText>
             </View>
             <View style={styles.sparklineContainer}>
               <Svg height="100%" width="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
@@ -490,7 +493,7 @@ const ReferAndEarn = () => {
 
         {/* How to Invite Section */}
         <View style={styles.howToInviteContainer}>
-          <AppText style={[styles.howToInviteTitle, { color: isDark ? colors.white : colors.black }]}>
+          <AppText style={[styles.howToInviteTitle, { color: themeColors.text }]}>
             How to <AppText style={{ color: '#EABE53' }}>Invite?</AppText>
           </AppText>
           <AppText style={[styles.howToInviteSub, { color: isDark ? '#A0A0A0' : '#666' }]}>
@@ -499,40 +502,40 @@ const ReferAndEarn = () => {
 
           <View style={styles.stepsContainer}>
             {/* Step 1 */}
-            <View style={[styles.stepWrapper, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.stepWrapper, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
               <View style={styles.stepNumberBadge}>
                 <AppText style={styles.stepNumberText}>01</AppText>
               </View>
-              <View style={[styles.stepIconBox, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
-                <FastImage source={share_link} style={styles.stepIcon} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
+              <View style={[styles.stepIconBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
+                <FastImage source={share_link} style={styles.stepIcon} tintColor={themeColors.text} resizeMode="contain" />
               </View>
-              <AppText style={[styles.stepTitle, { color: isDark ? colors.white : colors.black }]}>Share Your Referral{'\n'}Code or Link</AppText>
+              <AppText style={[styles.stepTitle, { color: themeColors.text }]}>Share Your Referral{'\n'}Code or Link</AppText>
               <View style={[styles.stepDivider, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]} />
               <AppText style={[styles.stepDesc, { color: isDark ? '#A0A0A0' : '#666' }]}>Refer friends to AGCE &{'\n'}get rewarded.</AppText>
             </View>
 
             {/* Step 2 */}
-            <View style={[styles.stepWrapper, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.stepWrapper, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
               <View style={styles.stepNumberBadge}>
                 <AppText style={styles.stepNumberText}>02</AppText>
               </View>
-              <View style={[styles.stepIconBox, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
-                <FastImage source={link_friends} style={styles.stepIcon} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
+              <View style={[styles.stepIconBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
+                <FastImage source={link_friends} style={styles.stepIcon} tintColor={themeColors.text} resizeMode="contain" />
               </View>
-              <AppText style={[styles.stepTitle, { color: isDark ? colors.white : colors.black }]}>Link Up with{'\n'}Friends</AppText>
+              <AppText style={[styles.stepTitle, { color: themeColors.text }]}>Link Up with{'\n'}Friends</AppText>
               <View style={[styles.stepDivider, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]} />
               <AppText style={[styles.stepDesc, { color: isDark ? '#A0A0A0' : '#666' }]}>Friends connect upon{'\n'}registration.</AppText>
             </View>
 
             {/* Step 3 */}
-            <View style={[styles.stepWrapper, { backgroundColor: isDark ? '#0F0F0F' : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+            <View style={[styles.stepWrapper, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
               <View style={styles.stepNumberBadge}>
                 <AppText style={styles.stepNumberText}>03</AppText>
               </View>
-              <View style={[styles.stepIconBox, { backgroundColor: isDark ? '#161616' : colors.white, borderColor: isDark ? '#222' : '#EEE' }]}>
-                <FastImage source={earn_link_icon} style={styles.stepIcon} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
+              <View style={[styles.stepIconBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
+                <FastImage source={earn_link_icon} style={styles.stepIcon} tintColor={themeColors.text} resizeMode="contain" />
               </View>
-              <AppText style={[styles.stepTitle, { color: isDark ? colors.white : colors.black }]}>Earn Commissions{'\n'}and More</AppText>
+              <AppText style={[styles.stepTitle, { color: themeColors.text }]}>Earn Commissions{'\n'}and More</AppText>
               <View style={[styles.stepDivider, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]} />
               <AppText style={[styles.stepDesc, { color: isDark ? '#A0A0A0' : '#666' }]}>Earn rewards when your{'\n'}friends start trading.</AppText>
             </View>
@@ -548,7 +551,7 @@ const ReferAndEarn = () => {
         openDuration={250}
         customStyles={{
           container: {
-            backgroundColor: isDark ? '#111' : '#fff',
+            backgroundColor: isDark ? colors.newThemeColor : colors.white,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             padding: 24,
@@ -556,7 +559,7 @@ const ReferAndEarn = () => {
         }}
       >
         <View style={styles.sheetHeader}>
-          <AppText style={[styles.sheetTitle, { color: isDark ? colors.white : colors.black }]}>FAQ</AppText>
+          <AppText style={[styles.sheetTitle, { color: themeColors.text }]}>FAQ</AppText>
           <TouchableOpacity onPress={() => faqSheetRef.current?.close()}>
             <AppText style={[styles.closeIcon, { color: isDark ? '#A0A0A0' : '#666' }]}>✕</AppText>
           </TouchableOpacity>
@@ -568,7 +571,7 @@ const ReferAndEarn = () => {
                 style={styles.faqQuestionBtn}
                 onPress={() => setActiveFaq(activeFaq === index ? null : index)}
               >
-                <AppText style={[styles.faqQuestion, { color: isDark ? colors.white : colors.black }]}>{faq.question}</AppText>
+                <AppText style={[styles.faqQuestion, { color: themeColors.text }]}>{faq.question}</AppText>
                 <AppText style={{ color: isDark ? '#A0A0A0' : '#666', fontSize: 20 }}>{activeFaq === index ? '⌃' : '⌄'}</AppText>
               </TouchableOpacity>
               {activeFaq === index && (
@@ -586,7 +589,7 @@ const ReferAndEarn = () => {
         isDarkModeEnabled={isDark}
         {...(Platform.OS === 'ios' && {
           themeVariant: isDark ? "dark" : "light",
-          textColor: isDark ? "#FFFFFF" : "#000000"
+          textColor: themeColors.text
         })}
         onConfirm={(date) => {
           if (datePickerType === 'start') {
@@ -694,9 +697,9 @@ const styles = StyleSheet.create({
     height: 220,
   },
   statsContainer: {
-    marginTop: 40,
+    marginTop: 30,
     borderRadius: 24,
-    padding: 5,
+    padding: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',
   },

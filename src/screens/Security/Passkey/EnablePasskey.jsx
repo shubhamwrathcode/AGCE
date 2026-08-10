@@ -311,7 +311,7 @@ const EnablePasskey = ({ route, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.white }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F0' }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
@@ -351,7 +351,7 @@ const EnablePasskey = ({ route, navigation }) => {
 
             <View style={styles.passkeyList}>
               {passkeys.map((pk) => (
-                <View key={pk._id} style={[styles.passkeyCard, { backgroundColor: isDark ? '#1E1E22' : '#F9F9FB', borderColor: isDark ? '#2A2A2E' : '#EBEBF0' }]}>
+                <View key={pk._id} style={[styles.passkeyCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9FB', borderColor: isDark ? '#2A2A2E' : '#EBEBF0' }]}>
                   <View style={styles.passkeyCardMain}>
                     <View style={[styles.passkeyIconWrap, { backgroundColor: isDark ? '#2A2A2E' : '#ECECF0' }]}>
                       <FastImage source={FINGERPRINT} tintColor={isDark ? colors.white : colors.black} style={{ width: 30, height: 30 }} resizeMode='contain' />
@@ -385,11 +385,11 @@ const EnablePasskey = ({ route, navigation }) => {
           {/* Add Another Passkey Bottom CTA */}
           <View style={styles.bottomContainer}>
             <TouchableOpacity
-              style={[styles.addBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
+              style={[styles.addBtn, { backgroundColor: isDark ? themeColors.button : '#2A2A2E' }]}
               activeOpacity={0.8}
               onPress={handleAddPasskey}
             >
-              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
+              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? themeColors.text : '#FFFFFF' }}>
                 Add Another Passkey
               </AppText>
             </TouchableOpacity>

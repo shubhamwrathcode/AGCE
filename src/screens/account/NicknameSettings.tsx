@@ -14,13 +14,11 @@ const NicknameSettings = () => {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { colors: themeColors, isDark } = useTheme();
-
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialNickname, setInitialNickname] = useState('');
 
   useEffect(() => {
-    // If currentNickname was passed in route params, use it as fallback until API responds
     if (route.params?.currentNickname) {
       setNickname(route.params.currentNickname);
       setInitialNickname(route.params.currentNickname);
@@ -81,24 +79,24 @@ const NicknameSettings = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       {/* Custom Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => NavigationService.goBack()}>
-          <FastImage source={back_ic} style={styles.backIcon} tintColor={colors.black} resizeMode="contain" />
+          <FastImage source={back_ic} style={styles.backIcon} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
         </TouchableOpacity>
-        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={styles.headerTitle}>
+        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
           Nickname Settings
         </AppText>
         <TouchableOpacity
-          style={[styles.okButton, isDark && { backgroundColor: '#333' }]}
+          style={[styles.okButton, isDark && { backgroundColor: colors.themeElevationColor }]}
           onPress={handleSave}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <AppText weight={SEMI_BOLD} style={styles.okButtonText}>Ok</AppText>
+            <AppText weight={SEMI_BOLD} style={[styles.okButtonText, { color: themeColors.text }]}>Ok</AppText>
           )}
         </TouchableOpacity>
       </View>
@@ -173,7 +171,7 @@ const styles = StyleSheet.create({
     height: 16,
   },
   headerTitle: {
-    color: colors.black,
+
     fontSize: 18,
   },
   okButton: {
@@ -186,7 +184,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   okButtonText: {
-    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -199,10 +196,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'ios' ? 14 : 4,
     marginBottom: 30,
+    borderColor: colors.themeElevationColor,
+    borderWidth: 1
   },
   input: {
     fontSize: 15,
     fontFamily: 'Inter-Medium',
+
   },
   rulesContainer: {
     paddingHorizontal: 4,

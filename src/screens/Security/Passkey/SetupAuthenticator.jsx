@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity,  Platform, TextInput, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, TextInput, ActivityIndicator } from 'react-native';
 import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import { AppText, BOLD, FOURTEEN, SIXTEEN, SEMI_BOLD, TWELVE, MEDIUM, EIGHTEEN, THIRTEEN } from '../../../shared';
 import { useTheme } from '../../../hooks/useTheme';
@@ -50,10 +50,10 @@ const SetupAuthenticator = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.white }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F0' }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
-          <FastImage source={back_ic} tintColor={colors.black} style={{ width: 18, height: 18 }} resizeMode='contain' />
+          <FastImage source={back_ic} tintColor={isDark ? colors.white : colors.black} style={{ width: 18, height: 18 }} resizeMode='contain' />
         </TouchableOpacity>
 
         <AppText type={EIGHTEEN} weight={BOLD} style={[styles.headerTitle, { color: themeColors.text }]}>
@@ -61,12 +61,12 @@ const SetupAuthenticator = ({ route }) => {
         </AppText>
       </View>
 
-      <KeyboardAwareScrollView 
+      <KeyboardAwareScrollView
         enableOnAndroid={true}
         enableAutomaticScroll={true}
         extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
         keyboardOpeningTime={0}
-        contentContainerStyle={styles.scrollContent} 
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.stepsContainer}>
@@ -78,7 +78,9 @@ const SetupAuthenticator = ({ route }) => {
                   <AppText type={TWELVE} weight={BOLD} style={{ color: '#FFFFFF', fontSize: 10, lineHeight: 12 }}>1</AppText>
                 </View>
               </View>
-              <View style={styles.stepLine} />
+              <View style={[styles.stepLine, {
+                backgroundColor: isDark ? colors.white : colors.black,
+              }]} />
             </View>
             <View style={styles.stepContent}>
               <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.stepText, { color: themeColors.text }]}>
@@ -223,7 +225,7 @@ const styles = StyleSheet.create({
   stepLine: {
     width: 1.5,
     flex: 1,
-    backgroundColor: '#000000',
+
     marginTop: 0,
     marginBottom: -12,
   },

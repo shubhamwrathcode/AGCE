@@ -21,7 +21,7 @@ const CHANNEL_OPTIONS = [
     value: "always",
     label: "Notify regardless if I was online or not",
     tag: "(Recommended)",
-    tagClass: { color: colors.green }, // Assuming colors.green exists or we can use a hex
+    tagClass: { color: colors.green },
   },
   {
     value: "offline_only",
@@ -68,8 +68,8 @@ const RadioGroup = ({ options, value, onChange, disabled, themeColors }: any) =>
             disabled={disabled}
             activeOpacity={0.7}
           >
-            <View style={[styles.radioOuterCircle, { borderColor: themeColors.secondaryText }, isSelected && styles.radioOuterCircleSelected]}>
-              {isSelected && <View style={styles.radioInnerCircle} />}
+            <View style={[styles.radioOuterCircle, { borderColor: themeColors.secondaryText }, isSelected && { borderColor: themeColors.text }]}>
+              {isSelected && <View style={[styles.radioInnerCircle, { backgroundColor: themeColors.text }]} />}
             </View>
             <View style={styles.radioTextContainer}>
               <AppText weight={MEDIUM} style={[styles.radioLabel, { color: themeColors.text }]}>{opt.label}</AppText>
@@ -153,7 +153,7 @@ const NotificationSettings = () => {
   }, []);
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <Toolbar isSecond title="Notification Settings" style={{ width: "72%", backgroundColor: "transparent" }} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
@@ -161,14 +161,14 @@ const NotificationSettings = () => {
           <ActivityIndicator size="large" color={themeColors.text} style={styles.loader} />
         ) : (
           <>
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : colors.iconBgColor }]}>
               <AppText weight={SEMI_BOLD} style={[styles.cardTitle, { color: themeColors.text }]}>Asset change notice</AppText>
               <AppText style={[styles.infoText, { color: themeColors.secondaryText }]}>
                 We will notify you through email or short message when there is a deposit.
               </AppText>
             </View>
 
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : colors.iconBgColor }]}>
               <AppText weight={SEMI_BOLD} style={[styles.cardTitle, { color: themeColors.text }]}>Email notification</AppText>
               <RadioGroup
                 options={CHANNEL_OPTIONS}
@@ -179,7 +179,7 @@ const NotificationSettings = () => {
               />
             </View>
 
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : colors.iconBgColor }]}>
               <AppText weight={SEMI_BOLD} style={[styles.cardTitle, { color: themeColors.text }]}>Short message</AppText>
               <RadioGroup
                 options={CHANNEL_OPTIONS}
@@ -190,7 +190,7 @@ const NotificationSettings = () => {
               />
             </View>
 
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : colors.iconBgColor }]}>
               <AppText weight={SEMI_BOLD} style={[styles.cardTitle, { color: themeColors.text }]}>Notification</AppText>
               <RadioGroup
                 options={NOTIFICATION_DISPLAY_OPTIONS}
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   card: {
-    backgroundColor: colors.white,
+
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
@@ -256,13 +256,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   radioOuterCircleSelected: {
-    borderColor: colors.black, // Theme primary/gold color for active states
+
   },
   radioInnerCircle: {
     height: 10,
     width: 10,
     borderRadius: 15,
-    backgroundColor: colors.black,
+
   },
   radioTextContainer: {
     flex: 1,

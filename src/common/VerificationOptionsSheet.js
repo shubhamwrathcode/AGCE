@@ -37,7 +37,7 @@ export const VerificationOptionsSheet = ({
         container: {
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          backgroundColor: themeColors.card,
+          backgroundColor: themeColors.background,
           paddingBottom: 24,
           height: 'auto',
         },
@@ -85,7 +85,7 @@ export const VerificationOptionsSheet = ({
                   <FastImage
                     source={checkIc}
                     style={styles.checkIcon}
-                    // tintColor={colors.orangeTheme}
+                    tintColor={isDark ? colors.white : colors.orangeTheme}
                     resizeMode="contain"
                   />
                 )}
