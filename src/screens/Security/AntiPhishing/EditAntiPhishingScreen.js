@@ -2,14 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   TextInput,
   Keyboard,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import { useNavigation } from '@react-navigation/native';
 import FastImage from 'react-native-fast-image';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
@@ -113,13 +112,10 @@ const EditAntiPhishingScreen = ({ route }) => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
+      <View style={styles.flex}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: isDark ? '#1E1E22' : '#F0F0F0' }]}>
+        <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
@@ -128,12 +124,12 @@ const EditAntiPhishingScreen = ({ route }) => {
             <FastImage
               source={back_ic}
               style={styles.backIcon}
-              tintColor={isDark ? '#FFFFFF' : '#000000'}
+              tintColor={isDark ? colors.white : colors.black}
               resizeMode="contain"
             />
           </TouchableOpacity>
           <View style={styles.titleContainer}>
-            <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+            <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
               Edit Anti-Phishing Code
             </AppText>
           </View>
@@ -149,18 +145,21 @@ const EditAntiPhishingScreen = ({ route }) => {
           </View>
         ) : (
           <>
-            <ScrollView
-              style={styles.scroll}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 8 }]}>
+            <KeyboardAwareScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
+        >
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: themeColors.text, marginTop: 8 }]}>
                 Anti-Phishing Code
               </AppText>
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
+              <View style={[styles.inputContainer, { backgroundColor: themeColors.input, flexDirection: 'row', alignItems: 'center' }]}>
                 <TextInput
-                  style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+                  style={[styles.textInput, { color: themeColors.text, flex: 1 }]}
                   placeholder="5–8 digits"
                   placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
                   value={newCode}
@@ -168,7 +167,7 @@ const EditAntiPhishingScreen = ({ route }) => {
                   secureTextEntry={secureEntry}
                   keyboardType="number-pad"
                   maxLength={8}
-                  cursorColor={colors.black}
+                  cursorColor={colors.orangeTheme}
                 />
                 <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)} style={styles.eyeBtn}>
                   <FastImage
@@ -181,10 +180,10 @@ const EditAntiPhishingScreen = ({ route }) => {
               </View>
 
               {/* Validation helper text */}
-              <AppText type={TWELVE} style={[styles.fieldLabel, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 8, fontWeight: 'normal' }]}>
+              <AppText type={TWELVE} style={[styles.fieldLabel, { color: themeColors.secondaryText, marginTop: 8, fontWeight: 'normal' }]}>
                 Enter 5 to 8 digits only.
               </AppText>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             {/* Action button at bottom */}
             <View style={styles.bottomSection}>
@@ -192,9 +191,9 @@ const EditAntiPhishingScreen = ({ route }) => {
                 activeOpacity={0.8}
                 onPress={handleConfirm}
                 disabled={!isNewCodeValid}
-                style={[styles.confirmBtn, { backgroundColor: isDark ? '#2E2E32' : '#22252A', opacity: isNewCodeValid ? 1 : 0.5 }]}
+                style={[styles.confirmBtn, { backgroundColor: isDark ? colors.white : '#22252A', opacity: isNewCodeValid ? 1 : 0.5 }]}
               >
-                <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
+                <AppText type={SIXTEEN} weight={BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>
                   Confirm
                 </AppText>
               </TouchableOpacity>
@@ -202,7 +201,7 @@ const EditAntiPhishingScreen = ({ route }) => {
             </View>
           </>
         )}
-      </KeyboardAvoidingView>
+      </View>
     </AppSafeAreaView>
   );
 };

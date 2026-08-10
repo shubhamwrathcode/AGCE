@@ -2,16 +2,16 @@ import React, { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   Animated,
   Easing,
   TextInput,
   Keyboard,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
@@ -309,11 +309,8 @@ const AddEmailScreen = () => {
   }, []);
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
+      <View style={styles.flex}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: isDark ? '#1E1E22' : '#F0F0F0' }]}>
           <TouchableOpacity
@@ -351,7 +348,7 @@ const AddEmailScreen = () => {
           >
             {/* Linked Email Row */}
             <View style={styles.row}>
-              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
                 Linked Email
               </AppText>
               <AppText type={SIXTEEN} style={{ color: isDark ? '#8A8A93' : '#9E9EAE' }}>
@@ -372,7 +369,7 @@ const AddEmailScreen = () => {
                 }
               }}
             >
-              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
                 {hasEmail ? 'Change Email' : 'Add Email'}
               </AppText>
               <FastImage
@@ -395,7 +392,7 @@ const AddEmailScreen = () => {
 
             {/* Login Switch Row */}
             <View style={styles.switchRow}>
-              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
                 Login
               </AppText>
               <ToggleSwitch
@@ -407,7 +404,7 @@ const AddEmailScreen = () => {
 
             {/* Security Settings Switch Row */}
             <View style={styles.switchRow}>
-              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
                 Security Settings
               </AppText>
               <ToggleSwitch
@@ -419,7 +416,7 @@ const AddEmailScreen = () => {
 
             {/* Withdrawal Switch Row */}
             <View style={styles.switchRow}>
-              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
                 Withdrawal
               </AppText>
               <ToggleSwitch
@@ -431,16 +428,19 @@ const AddEmailScreen = () => {
           </ScrollView>
         ) : (
           <View style={styles.flex}>
-            <ScrollView
+            <KeyboardAwareScrollView
               style={styles.scroll}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              enableOnAndroid={true}
+              enableAutomaticScroll={true}
+              extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
             >
               {/* Warnings Box */}
-              <View style={[styles.warningBox, { backgroundColor: isDark ? '#1E1E22' : '#F5F5F7' }]}>
+              <View style={[styles.warningBox, { backgroundColor: isDark ? colors.inputBorder : '#F5F5F7' }]}>
 
-                <FastImage source={warningImg} style={{ width: 18, height: 18 }} resizeMode='contain' />
+                <FastImage source={warningImg} style={{ width: 18, height: 18 }} tintColor={isDark ? colors.white : colors.black} resizeMode='contain' />
 
                 <View style={styles.warningList}>
                   <AppText type={ELEVEN} style={[styles.warningPoint, { color: isDark ? '#D1D1D6' : '#4E4E54', }]}>
@@ -456,21 +456,21 @@ const AddEmailScreen = () => {
               </View>
 
               {/* New Email field */}
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: themeColors.text }]}>
                 New Email
               </AppText>
               <View style={[styles.emailSuggestWrap]}>
-                <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+                <View style={[styles.inputContainer, { backgroundColor: themeColors.input }]}>
                   <TextInput
-                    style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
+                    style={[styles.textInput, { color: themeColors.text }]}
                     placeholder="Enter your new email address"
-                    placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                    placeholderTextColor={themeColors.secondaryText}
                     value={newEmail}
                     onChangeText={setNewEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
-                    cursorColor={colors.black}
+                    cursorColor={colors.orangeTheme}
                     onFocus={() => {
                       clearEmailSuggestBlurTimer();
                       setEmailSuggestListVisible(true);
@@ -488,14 +488,14 @@ const AddEmailScreen = () => {
                   <View style={[
                     styles.emailSuggestList,
                     {
-                      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-                      borderColor: isDark ? '#2C2C2E' : '#E5E5EA',
+                      backgroundColor: themeColors.background,
+                      borderColor: themeColors.border,
                     }
                   ]}>
                     <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled style={styles.emailSuggestScroll}>
                       {emailDomainSuggestions.map((domain) => (
                         <TouchableOpacity key={domain} style={styles.emailSuggestRow} onPress={() => applyEmailDomain(domain)}>
-                          <AppText type={FOURTEEN} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>@{domain}</AppText>
+                          <AppText type={FOURTEEN} style={{ color: themeColors.text }}>@{domain}</AppText>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -504,19 +504,19 @@ const AddEmailScreen = () => {
               </View>
 
               {/* New Email Verification Code field */}
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: themeColors.text }]}>
                 New Email Verification Code
               </AppText>
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
+              <View style={[styles.inputContainer, { backgroundColor: themeColors.input, flexDirection: 'row', alignItems: 'center' }]}>
                 <TextInput
-                  style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+                  style={[styles.textInput, { color: themeColors.text, flex: 1 }]}
                   placeholder="Enter the verification code"
-                  placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                  placeholderTextColor={themeColors.secondaryText}
                   value={verificationCode}
                   onChangeText={setVerificationCode}
                   keyboardType="number-pad"
                   maxLength={6}
-                  cursorColor={colors.black}
+                  cursorColor={colors.orangeTheme}
                 />
                 <TouchableOpacity
                   activeOpacity={0.7}
@@ -535,16 +535,16 @@ const AddEmailScreen = () => {
               </View>
 
               {/* Valid for 10 minutes */}
-              <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE' }]}>
+              <AppText type={TWELVE} style={[styles.validText, { color: themeColors.secondaryText }]}>
                 Valid for 10 minutes
               </AppText>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             {/* Confirm Button */}
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleConfirmChange}
-              style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#22252A' }]}
+              style={[styles.confirmBtn, { backgroundColor: isDark ? colors.white : '#22252A' }]}
             >
               <AppText
                 type={SIXTEEN}
@@ -556,7 +556,7 @@ const AddEmailScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </View>
 
       <RBSheet
         ref={confirmSheetRef}
@@ -576,7 +576,7 @@ const AddEmailScreen = () => {
         }}
         customStyles={{
           container: {
-            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+            backgroundColor: themeColors.background,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
           },
@@ -606,7 +606,7 @@ const AddEmailScreen = () => {
           <AppText
             type={EIGHTEEN}
             weight={SEMI_BOLD}
-            style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
+            style={[styles.sheetTitle, { color: themeColors.text }]}
           >
             Are you sure you want to change your email?
           </AppText>
@@ -631,7 +631,7 @@ const AddEmailScreen = () => {
               <AppText
                 type={SIXTEEN}
                 weight={SEMI_BOLD}
-                style={{ color: isDark ? '#FFFFFF' : '#1C1C1E' }}
+                style={{ color: themeColors.text }}
               >
                 Cancel
               </AppText>
@@ -644,7 +644,7 @@ const AddEmailScreen = () => {
                 shouldNavigateRef.current = true;
                 confirmSheetRef.current?.close();
               }}
-              style={[styles.sheetBtn, { backgroundColor: isDark ? '#FFFFFF' : '#22252A' }]}
+              style={[styles.sheetBtn, { backgroundColor: isDark ? colors.white : '#22252A' }]}
             >
               <AppText
                 type={SIXTEEN}

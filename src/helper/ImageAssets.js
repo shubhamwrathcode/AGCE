@@ -408,6 +408,7 @@ export const earn_link_icon = require('../../assets/images/earn_link_icon.png');
 export const link_friends = require('../../assets/images/link_friends.png');
 export const share_link = require('../../assets/images/share_link.png');
 export const themeIcon = require('../../assets/images/themeIcon.png');
+export const emergency_vector_light = require('../../assets/images/emergency_vector_light.png');
 
 
 

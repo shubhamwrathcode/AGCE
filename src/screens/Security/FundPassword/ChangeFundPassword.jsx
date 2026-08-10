@@ -150,7 +150,7 @@ const ChangeFundPassword = () => {
   }, []);
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -185,7 +185,7 @@ const ChangeFundPassword = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
             New Fund Password
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
             <TextInput
               style={[styles.input, { color: themeColors.text }]}
               placeholder="Please enter"
@@ -213,7 +213,7 @@ const ChangeFundPassword = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
             Confirm Fund Password
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
             <TextInput
               style={[styles.input, { color: themeColors.text }]}
               placeholder="Please enter"
@@ -238,7 +238,7 @@ const ChangeFundPassword = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
             {getVerifyLabel()}
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
             <TextInput
               style={[styles.input, { color: themeColors.text }]}
               placeholder="Please enter"

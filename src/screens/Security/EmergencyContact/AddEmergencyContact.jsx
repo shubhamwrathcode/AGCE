@@ -211,9 +211,9 @@ const AddEmergencyContact = () => {
   };
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : '#FFFFFF' }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header matching mockup */}
-      <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F0' }]}>
+      <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
           <FastImage
             source={back_ic}
@@ -237,7 +237,7 @@ const AddEmergencyContact = () => {
           <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.label, { color: themeColors.text }]}>
             Emergency Contact Name
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: themeColors.input }]}>
             <TextInput
               style={[styles.input, { color: themeColors.text }]}
               placeholder="Please Enter"
@@ -245,10 +245,10 @@ const AddEmergencyContact = () => {
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
-              cursorColor={colors.black}
+              cursorColor={colors.orangeTheme}
             />
           </View>
-          <AppText type={TWELVE} style={[styles.helpText, { color: isDark ? '#8A8A93' : '#8E8E93' }]}>
+          <AppText type={TWELVE} style={[styles.helpText, { color: themeColors.secondaryText }]}>
             Enter the full name of your trusted emergency contact. This name will be used for communication and verification purposes.
           </AppText>
         </View>
@@ -259,7 +259,7 @@ const AddEmergencyContact = () => {
             Contact Information
           </AppText>
           <View style={[styles.emailSuggestWrap]}>
-            <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+            <View style={[styles.inputContainer, { backgroundColor: themeColors.input }]}>
               <TextInput
                 style={[styles.input, { color: themeColors.text }]}
                 placeholder="Enter Email Address"
@@ -269,7 +269,7 @@ const AddEmergencyContact = () => {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                cursorColor={colors.black}
+                cursorColor={colors.orangeTheme}
                 onFocus={() => {
                   clearEmailSuggestBlurTimer();
                   setEmailSuggestListVisible(true);
@@ -287,15 +287,15 @@ const AddEmergencyContact = () => {
               <View style={[
                 styles.emailSuggestList,
                 {
-                  backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                  backgroundColor: themeColors.background,
 
-                  borderColor: isDark ? '#2C2C2E' : '#E5E5EA',
+                  borderColor: themeColors.border,
                 }
               ]}>
                 <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled style={styles.emailSuggestScroll}>
                   {emailDomainSuggestions.map((domain) => (
                     <TouchableOpacity key={domain} style={styles.emailSuggestRow} onPress={() => applyEmailDomain(domain)}>
-                      <AppText type={FOURTEEN} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>@{domain}</AppText>
+                      <AppText type={FOURTEEN} style={{ color: themeColors.text }}>@{domain}</AppText>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -309,7 +309,7 @@ const AddEmergencyContact = () => {
           <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.label, { color: themeColors.text }]}>
             Phone Number
           </AppText>
-          <View style={[styles.phoneInputRow, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.phoneInputRow, { backgroundColor: themeColors.input }]}>
             {/* Country Selector */}
             <TouchableOpacity
               style={styles.countryPickerBtn}
@@ -326,7 +326,7 @@ const AddEmergencyContact = () => {
             </TouchableOpacity>
 
             {/* Vertical Divider */}
-            <View style={[styles.divider, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]} />
+            <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
 
             {/* Phone TextInput */}
             <TextInput
@@ -336,13 +336,13 @@ const AddEmergencyContact = () => {
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
-              cursorColor={colors.black}
+              cursorColor={colors.orangeTheme}
             />
           </View>
 
           {/* Golden Highlighted Helper Text */}
           <View style={styles.helpTextContainer}>
-            <AppText type={TWELVE} style={{ color: isDark ? '#8A8A93' : '#8E8E93', lineHeight: 18 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
               Your emergency contact may be notified if unusual account inactivity is detected. For a smoother verification process, it is recommended that your emergency contact is also an <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#D4AF37' }}>AGCE</AppText> user.
             </AppText>
           </View>

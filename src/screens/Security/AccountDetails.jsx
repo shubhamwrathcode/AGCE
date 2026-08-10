@@ -689,7 +689,7 @@ const AccountDetails = () => {
               />
 
               {/* Security Logs (Account Management) */}
-              <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+              {/* <View style={[styles.sectionHeader, { marginTop: 20 }]}>
                 <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>
                   Account Management
                 </AppText>
@@ -702,7 +702,7 @@ const AccountDetails = () => {
               <MenuItem
                 label="Close Account"
                 onPress={() => NavigationService.navigate(routes.CLOSE_ACCOUNT_REASON_SCREEN)}
-              />
+              /> */}
 
               {/* Other Settings */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>

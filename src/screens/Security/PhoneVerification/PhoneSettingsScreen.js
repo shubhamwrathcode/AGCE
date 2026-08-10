@@ -25,6 +25,7 @@ import {
 import FastImage from 'react-native-fast-image';
 import { back_ic, right_ic } from '../../../helper/ImageAssets';
 import * as routes from '../../../navigation/routes';
+import { colors } from '../../../theme/colors';
 const PhoneSettingsScreen = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
@@ -74,13 +75,13 @@ const PhoneSettingsScreen = () => {
   const displayPhone = maskPhone(profileMobile);
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: isDark ? '#1E1E22' : '#F0F0F0' }]}>
+        <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
@@ -89,12 +90,12 @@ const PhoneSettingsScreen = () => {
             <FastImage
               source={back_ic}
               style={styles.backIcon}
-              tintColor={isDark ? '#FFFFFF' : '#000000'}
+              tintColor={isDark ? colors.white : colors.black}
               resizeMode="contain"
             />
           </TouchableOpacity>
           <View style={styles.titleContainer}>
-            <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+            <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
               Phone Number
             </AppText>
           </View>
@@ -106,10 +107,10 @@ const PhoneSettingsScreen = () => {
           {/* Phone Number Row */}
           {userHasPhone ? (
             <View style={styles.row}>
-              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+              <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
                 Phone Number
               </AppText>
-              <AppText type={SIXTEEN} style={{ color: isDark ? '#8A8A93' : '#9E9EAE' }}>
+              <AppText type={SIXTEEN} style={{ color: themeColors.secondaryText }}>
                 {displayPhone}
               </AppText>
             </View>
@@ -146,7 +147,7 @@ const PhoneSettingsScreen = () => {
               });
             }}
           >
-            <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+            <AppText type={SIXTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
               {userHasPhone ? 'Change Phone Number' : 'Add Phone Number'}
             </AppText>
             <FastImage

@@ -290,7 +290,7 @@ const TwoFactor = () => {
   const hasEmail = !!emailId;
   const hasMobile = !!profileMobile;
   const hasGoogleAuth = current2fa === 2;
-  
+
   const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
   const effectiveHasFundPassword =
     fundPasswordStatus ?? (userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
@@ -433,14 +433,14 @@ const TwoFactor = () => {
           showError('You need an email, mobile number, or Passkey to set up Google Authenticator');
           return;
         }
-        
+
         // Pick preferred method: Passkey > Email > Mobile
         let preferred = 'email';
         if (hasPasskey) preferred = 'passkey';
         else if (hasEmail) preferred = 'email';
         else if (hasMobile) preferred = 'mobile';
 
-        navigation.navigate(ADD_EMAIL_SCREEN, { 
+        navigation.navigate(ADD_EMAIL_SCREEN, {
           mode: 'verify_for_ga',
           preferredMethod: preferred
         });
@@ -795,7 +795,7 @@ const TwoFactor = () => {
             <View style={styles.restrictContent}>
               <FastImage source={account_restrictions} style={styles.restrictImg} resizeMode="contain" />
               <AppText weight={BOLD} type={EIGHTEEN} style={[styles.restrictTitle, { color: themeColors.text }]}>
-                {isFund 
+                {isFund
                   ? (effectiveHasFundPassword ? "Are you sure you want to change the fund password?" : "Are you sure you want to set your fund password?")
                   : "Account Restrictions"
                 }

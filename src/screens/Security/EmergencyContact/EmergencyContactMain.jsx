@@ -18,7 +18,7 @@ import {
   THIRTEEN,
   MEDIUM,
 } from '../../../shared';
-import { back_ic, emergencyContact as emergencyImg, profileNewIcon } from '../../../helper/ImageAssets';
+import { back_ic, emergency_vector_light, emergencyContact as emergencyImg, profileNewIcon } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import { appOperation } from '../../../appOperation';
 import { showError, showSuccess } from '../../../helper/logger';
@@ -41,7 +41,7 @@ const EmergencyContactMain = () => {
       if (result?.success) {
         const list = Array.isArray(result.data) ? result.data : [];
         setContacts(list);
-        
+
         const drafts = {};
         list.forEach((c) => {
           drafts[String(c._id)] = c.message != null ? String(c.message) : '';
@@ -198,7 +198,7 @@ const EmergencyContactMain = () => {
   };
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : '#FFFFFF' }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header matching mockup */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
@@ -221,7 +221,7 @@ const EmergencyContactMain = () => {
           <ScrollView contentContainerStyle={styles.setupContainer}>
             <View style={styles.illustrationContainer}>
               <FastImage
-                source={emergencyImg}
+                source={isDark ? emergency_vector_light : emergencyImg}
                 style={styles.illustration}
                 resizeMode='contain'
               />
@@ -238,7 +238,7 @@ const EmergencyContactMain = () => {
             <AppText
               type={TWELVE}
               weight={MEDIUM}
-              style={[styles.mainSubtitle, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
+              style={[styles.mainSubtitle, { color: themeColors.secondaryText }]}
             >
               At AGCE, the security of your digital assets remains our highest priority. The Emergency Contact feature is designed to help protect your account by allowing us to send email and SMS notifications to you and your trusted contacts if your account becomes inactive for an extended period. Your selected emergency contacts may also request account access support or initiate an inheritance claim process when necessary.
             </AppText>
@@ -255,7 +255,7 @@ const EmergencyContactMain = () => {
             <AppText
               type={TWELVE}
               weight={MEDIUM}
-              style={[styles.listSubtitle, { color: isDark ? '#8A8A93' : '#8E8E93', marginBottom: 16 }]}
+              style={[styles.listSubtitle, { color: themeColors.secondaryText, marginBottom: 16 }]}
             >
               Configure up to 5 emergency contacts. You can save optional messages for each contact.
             </AppText>
@@ -270,8 +270,8 @@ const EmergencyContactMain = () => {
                   style={[
                     styles.card,
                     {
-                      backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7',
-                      borderColor: isDark ? '#2C2C2E' : '#E5E5EA',
+                      backgroundColor: themeColors.input,
+                      borderColor: themeColors.border,
                       marginBottom: 16,
                     },
                   ]}
@@ -288,10 +288,10 @@ const EmergencyContactMain = () => {
                         <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                           {contact.fullName}
                         </AppText>
-                        <AppText type={TWELVE} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 2 }}>
+                        <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
                           {contact.emailId}
                         </AppText>
-                        <AppText type={TWELVE} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 2 }}>
+                        <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
                           {contact.mobileNumber}
                         </AppText>
                       </View>
@@ -327,16 +327,16 @@ const EmergencyContactMain = () => {
                     </View>
                   </View>
 
-                  <View style={[styles.dividerLine, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA', marginVertical: 12 }]} />
+                  <View style={[styles.dividerLine, { backgroundColor: themeColors.border, marginVertical: 12 }]} />
 
-                  <AppText type={TWELVE} weight={MEDIUM} style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginBottom: 6 }}>
+                  <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 6 }}>
                     Message (optional)
                   </AppText>
                   <TextInput
                     style={[
                       styles.messageInput,
                       {
-                        backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+                        backgroundColor: themeColors.input,
                         color: themeColors.text,
                         borderColor: isDark ? 'transparent' : '#E5E5EA',
                         borderWidth: isDark ? 0 : 1,

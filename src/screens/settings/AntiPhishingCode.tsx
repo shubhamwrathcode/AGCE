@@ -194,14 +194,8 @@ const AntiPhishingCode = () => {
         dispatch(getAntiPhishingStatus()),
         dispatch(getPasskeyList())
       ]);
-
-      console.log('AntiPhishingStatus Response:', data);
-      console.log('PasskeyList Response:', passkeyRes);
-
       const hasPasskeyVal = passkeyRes?.success && passkeyRes?.data?.passkeys?.length > 0;
       setHasPasskey(hasPasskeyVal);
-      console.log('Is Passkey available for user?', hasPasskeyVal);
-
       if (data) {
         setHasCode(data.hasAntiPhishingCode);
         setCurrentCode(data.antiPhishingCode);
@@ -244,7 +238,6 @@ const AntiPhishingCode = () => {
   };
 
   const handleMethodSelect = (methodValue: any) => {
-    console.log('Verification Method Selected:', methodValue);
     const method = availableMethods.find(m => m.value === methodValue);
     setSelectedMethod(method);
     setIsOtpSent(false);
@@ -254,7 +247,6 @@ const AntiPhishingCode = () => {
 
   const handleSendOtp = async () => {
     if (!selectedMethod || isOtpLoading) return;
-    console.log('Sending OTP for method:', selectedMethod.value);
     setIsOtpLoading(true);
     try {
       const success = await dispatch(sendAntiPhishingOtp(selectedMethod.value));
@@ -268,7 +260,6 @@ const AntiPhishingCode = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('Submitting Anti-Phishing Setup...');
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {

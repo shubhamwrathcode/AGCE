@@ -158,7 +158,7 @@ const AddPhoneNumberScreen = () => {
     if (route.params?.savedPhone && route.params?.savedSmsOtp) {
       setNewPhone(route.params.savedPhone);
       setVerificationCode(route.params.savedSmsOtp);
-      
+
       if (route.params?.autoSubmit && route.params?.tofaCode && !autoSubmitDone.current) {
         autoSubmitDone.current = true;
         navigation.setParams({ autoSubmit: false }); // Prevent duplicate triggers
@@ -168,13 +168,13 @@ const AddPhoneNumberScreen = () => {
   }, [route.params?.savedPhone, route.params?.savedSmsOtp, route.params?.autoSubmit, route.params?.tofaCode]);
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: isDark ? '#1E1E22' : '#F0F0F0' }]}>
+        <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
@@ -183,12 +183,12 @@ const AddPhoneNumberScreen = () => {
             <FastImage
               source={back_ic}
               style={styles.backIcon}
-              tintColor={isDark ? '#FFFFFF' : '#000000'}
+              tintColor={isDark ? colors.white : colors.black}
               resizeMode="contain"
             />
           </TouchableOpacity>
           <View style={styles.titleContainer}>
-            <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+            <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
               Add Phone Number
             </AppText>
           </View>
@@ -202,34 +202,34 @@ const AddPhoneNumberScreen = () => {
           keyboardShouldPersistTaps="handled"
         >
           {/* Warnings Box */}
-          <View style={[styles.warningBox, { backgroundColor: isDark ? '#1E1E22' : '#F5F5F7' }]}>
+          <View style={[styles.warningBox, { backgroundColor: isDark ? colors.inputBorder : '#F5F5F7' }]}>
             <FastImage source={warningImg} style={{ width: 18, height: 18, marginTop: 2 }} resizeMode="contain" />
             <View style={styles.warningList}>
-              <AppText type={ELEVEN} style={[styles.warningPoint, { color: isDark ? '#D1D1D6' : '#4E4E54' }]}>
+              <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
                 1. To protect your account, withdrawals and P2P transactions will be restricted for 24 hours after adding your phone number.
               </AppText>
-              <AppText type={ELEVEN} style={[styles.warningPoint, { color: isDark ? '#D1D1D6' : '#4E4E54' }]}>
+              <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
                 2. Phone number additions on the primary account will also sync across linked subaccounts.
               </AppText>
             </View>
           </View>
 
           {/* New Phone Number Section */}
-          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: themeColors.text }]}>
             Phone Number
           </AppText>
-          <View style={[styles.phoneInputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.phoneInputContainer, { backgroundColor: themeColors.input }]}>
             <TouchableOpacity style={styles.countryPicker} activeOpacity={0.8}>
               <AppText style={{ fontSize: 18 }}>🇮🇳</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.countryCode, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.countryCode, { color: themeColors.text }]}>
                 +91
               </AppText>
             </TouchableOpacity>
             <View style={[styles.divider, { backgroundColor: isDark ? '#2D2D30' : '#E5E5EA' }]} />
             <TextInput
-              style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+              style={[styles.textInput, { color: themeColors.text, flex: 1 }]}
               placeholder="Enter your phone number"
-              placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+              placeholderTextColor={themeColors.secondaryText}
               keyboardType="number-pad"
               value={newPhone}
               onChangeText={(val) => setNewPhone(val.replace(/\D/g, ''))}
@@ -238,14 +238,14 @@ const AddPhoneNumberScreen = () => {
           </View>
 
           {/* SMS Verification Code Section */}
-          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: themeColors.text }]}>
             SMS Verification Code
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: themeColors.input, flexDirection: 'row', alignItems: 'center' }]}>
             <TextInput
-              style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+              style={[styles.textInput, { color: themeColors.text, flex: 1 }]}
               placeholder="Enter the verification code"
-              placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+              placeholderTextColor={themeColors.secondaryText}
               value={verificationCode}
               onChangeText={setVerificationCode}
               keyboardType="number-pad"
@@ -268,7 +268,7 @@ const AddPhoneNumberScreen = () => {
           </View>
 
           {/* Valid for 10 minutes */}
-          <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE' }]}>
+          <AppText type={TWELVE} style={[styles.validText, { color: themeColors.secondaryText }]}>
             Valid for 10 minutes
           </AppText>
         </ScrollView>

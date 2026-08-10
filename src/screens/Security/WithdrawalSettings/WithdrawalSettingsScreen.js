@@ -3,14 +3,13 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   TextInput,
   Pressable,
   ActivityIndicator,
   Keyboard,
-  ScrollView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from "../../../hooks/useTheme";
 import { useAppSelector } from "../../../store/hooks";
@@ -680,11 +679,8 @@ const WithdrawalSettingsScreen = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: 'white', flex: 1 }}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
+      <View style={styles.flex}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: borderColor }]}>
           <TouchableOpacity
@@ -712,7 +708,15 @@ const WithdrawalSettingsScreen = () => {
             <ActivityIndicator size="large" color={primaryColor} />
           </View>
         ) : (
-          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          <KeyboardAwareScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
+        >
             {/* Description Card */}
             <View style={[styles.infoCard, { backgroundColor: cardBg, borderColor }]}>
               <AppText type={TWELVE} weight={MEDIUM} style={{ color: subTextColor, lineHeight: 18 }}>
@@ -804,7 +808,7 @@ const WithdrawalSettingsScreen = () => {
                 isDark={isDark}
               />
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         )}
 
         <RBSheet
@@ -820,7 +824,7 @@ const WithdrawalSettingsScreen = () => {
             container: {
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
-              backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+              backgroundColor: themeColors.background,
               paddingBottom: Platform.OS === 'ios' ? 34 : 24,
               paddingHorizontal: 20,
               paddingTop: 8,
@@ -833,7 +837,7 @@ const WithdrawalSettingsScreen = () => {
           {renderSheetContent()}
         </RBSheet>
 
-      </KeyboardAvoidingView>
+      </View>
     </AppSafeAreaView>
   );
 };

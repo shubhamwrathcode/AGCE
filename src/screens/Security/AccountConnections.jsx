@@ -36,7 +36,7 @@ const AccountConnections = () => {
   };
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : '#FFFFFF' }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -58,7 +58,7 @@ const AccountConnections = () => {
         <AppText
           type={TWENTY}
           weight={SEMI_BOLD}
-          style={[styles.mainTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}
+          style={[styles.mainTitle, { color: themeColors.text }]}
         >
           Account Connections
         </AppText>
@@ -66,7 +66,7 @@ const AccountConnections = () => {
         <AppText
           type={THIRTEEN}
           weight={MEDIUM}
-          style={[styles.mainSubtitle, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
+          style={[styles.mainSubtitle, { color: themeColors.secondaryText }]}
         >
           Connect your AGCE account with trusted third-party platforms for faster login and enhanced account access.
         </AppText>
@@ -77,7 +77,7 @@ const AccountConnections = () => {
           {/* Google Row */}
           <View style={styles.rowItem}>
             <View style={styles.rowLeft}>
-              <View style={[styles.iconWrapper, { backgroundColor: isDark ? '#1C1C1E' : colors.iconBgColor }]}>
+              <View style={[styles.iconWrapper, { backgroundColor: themeColors.input }]}>
                 <FastImage
                   source={googleIcon}
                   style={styles.platformIcon}
@@ -91,7 +91,7 @@ const AccountConnections = () => {
                 <AppText
                   type={TWELVE}
                   weight={MEDIUM}
-                  style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 2 }}
+                  style={{ color: themeColors.secondaryText, marginTop: 2 }}
                 >
                   {googleConnected ? 'jl*****@gmail.com' : 'Not Connected'}
                 </AppText>
@@ -104,9 +104,9 @@ const AccountConnections = () => {
               style={[
                 styles.actionBtn,
                 {
-                  backgroundColor: googleConnected
+                  backgroundColor: appleConnected
                     ? (isDark ? '#2A2A2E' : '#F5F5F7')
-                    : colors.black
+                    : (isDark ? colors.white : colors.black)
                 }
               ]}
             >
@@ -127,11 +127,11 @@ const AccountConnections = () => {
           {/* Apple Row */}
           <View style={styles.rowItem}>
             <View style={styles.rowLeft}>
-              <View style={[styles.iconWrapper, { backgroundColor: isDark ? '#1C1C1E' : colors.iconBgColor }]}>
+              <View style={[styles.iconWrapper, { backgroundColor: themeColors.input }]}>
                 <FastImage
                   source={apple}
                   style={styles.platformIcon}
-                  tintColor={isDark ? '#FFFFFF' : '#000000'}
+                  tintColor={isDark ? colors.white : colors.black}
                   resizeMode="contain"
                 />
               </View>
@@ -142,7 +142,7 @@ const AccountConnections = () => {
                 <AppText
                   type={TWELVE}
                   weight={MEDIUM}
-                  style={{ color: isDark ? '#8A8A93' : '#8E8E93', marginTop: 2 }}
+                  style={{ color: themeColors.secondaryText, marginTop: 2 }}
                 >
                   {appleConnected ? 'Apple Connected' : 'Not Connected'}
                 </AppText>
@@ -157,7 +157,7 @@ const AccountConnections = () => {
                 {
                   backgroundColor: appleConnected
                     ? (isDark ? '#2A2A2E' : '#F5F5F7')
-                    : colors.black
+                    : (isDark ? colors.white : colors.black)
                 }
               ]}
             >

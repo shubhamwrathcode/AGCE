@@ -44,7 +44,7 @@ const ResetFundPassword = () => {
   }, []);
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -78,7 +78,7 @@ const ResetFundPassword = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
             New password
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: themeColors.input }]}>
             <TextInput
               style={[styles.input, { color: themeColors.text }]}
               placeholder="Please enter"
@@ -106,7 +106,7 @@ const ResetFundPassword = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
             New password again
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: themeColors.input }]}>
             <TextInput
               style={[styles.input, { color: themeColors.text }]}
               placeholder="Please enter"
@@ -129,7 +129,7 @@ const ResetFundPassword = () => {
 
       {/* Bottom Confirm Button - Hidden when keyboard is open */}
       {!isKeyboardVisible && (
-        <View style={[styles.bottomContainer, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+        <View style={[styles.bottomContainer, { backgroundColor: themeColors.background }]}>
           <TouchableOpacity
             style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
             activeOpacity={0.8}

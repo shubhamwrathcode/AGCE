@@ -203,9 +203,8 @@ const AntiPhishingStatus = ({ route }) => {
   }, [route?.params, dispatch, fetchStatus, navigation]);
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
-      {/* Header Title dynamically changes based on active state exactly like mockup */}
-      <View style={[styles.header, { borderBottomColor: isDark ? '#1E1E22' : '#F0F0F0' }]}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
+      <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
@@ -214,12 +213,12 @@ const AntiPhishingStatus = ({ route }) => {
           <FastImage
             source={back_ic}
             style={styles.backIcon}
-            tintColor={isDark ? '#FFFFFF' : '#000000'}
+            tintColor={themeColors.text}
             resizeMode="contain"
           />
         </TouchableOpacity>
         <View style={styles.titleContainer}>
-          <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+          <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
             {hasCode ? 'Anti-Phishing Code Setting' : 'Anti-Phishing Code'}
           </AppText>
         </View>
@@ -248,11 +247,11 @@ const AntiPhishingStatus = ({ route }) => {
                 <AgceGoldCard code={maskCode(currentCode)} isDark={isDark} />
 
                 {statusMessage ? (
-                  <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
+                  <AppText type={TWELVE} style={[styles.validText, { color: themeColors.secondaryText, marginTop: 10, marginBottom: 10 }]}>
                     {statusMessage}
                   </AppText>
                 ) : (
-                  <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
+                  <AppText type={TWELVE} style={[styles.validText, { color: themeColors.secondaryText, marginTop: 10, marginBottom: 10 }]}>
                     This code identifies official AGCE emails.
                   </AppText>
                 )}
@@ -263,7 +262,7 @@ const AntiPhishingStatus = ({ route }) => {
                   activeOpacity={0.7}
                   onPress={() => navigation.navigate(routes.EDIT_ANTI_PHISHING_SCREEN)}
                 >
-                  <AppText type={SIXTEEN} weight={NORMAL} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+                  <AppText type={SIXTEEN} weight={NORMAL} style={{ color: themeColors.text }}>
                     Change Anti-Phishing Code
                   </AppText>
                   <FastImage
@@ -282,7 +281,7 @@ const AntiPhishingStatus = ({ route }) => {
                   activeOpacity={0.7}
                   onPress={handleDisablePress}
                 >
-                  <AppText type={SIXTEEN} weight={NORMAL} style={{ color: isDark ? '#FFFFFF' : '#1A1A1C' }}>
+                  <AppText type={SIXTEEN} weight={NORMAL} style={{ color: themeColors.text }}>
                     Disable Anti-Phishing Code
                   </AppText>
                   <FastImage

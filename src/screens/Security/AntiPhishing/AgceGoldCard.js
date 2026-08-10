@@ -7,7 +7,7 @@ import { colors } from '../../../theme/colors';
 
 const AgceGoldCard = ({ code = 'X X X X X X', isDark }) => {
   return (
-    <View style={[styles.cardContainer, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderColor: isDark ? '#2D2D30' : '#E5E5EA' }]}>
+    <View style={[styles.cardContainer, { backgroundColor: isDark ? colors.inputBorder : '#FFFFFF', borderColor: isDark ? '#2D2D30' : '#E5E5EA' }]}>
       {/* Top Gold Border */}
       <View style={styles.topGoldBorder} />
 
@@ -19,7 +19,9 @@ const AgceGoldCard = ({ code = 'X X X X X X', isDark }) => {
             <FastImage source={agceLogoName} style={{ width: 100, height: 45 }} resizeMode='contain' />
           </View>
 
-          <AppText type={TWELVE} style={styles.codeLabel}>
+          <AppText type={TWELVE} style={[styles.codeLabel, {
+            color: colors.white
+          }]}>
             Anti-Phishing Code
           </AppText>
 
@@ -78,7 +80,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   codeLabel: {
-    color: colors.black,
     marginBottom: 4,
   },
   codeValue: {

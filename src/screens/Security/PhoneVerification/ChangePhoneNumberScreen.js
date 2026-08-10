@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   TextInput,
 } from 'react-native';
+import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from "../../../hooks/useTheme";
 import {
@@ -31,6 +30,7 @@ import { useRoute } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { appOperation } from '../../../appOperation';
 import { getUserProfile } from '../../../actions/accountActions';
+import { ColorSpace } from 'react-native-reanimated';
 
 const ChangePhoneNumberScreen = () => {
   const navigation = useNavigation();
@@ -174,13 +174,10 @@ const ChangePhoneNumberScreen = () => {
   }, [route.params?.savedPhone, route.params?.savedSmsOtp, route.params?.autoSubmit, route.params?.tofaCode]);
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
+      <View style={styles.flex}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: isDark ? '#1E1E22' : '#F0F0F0' }]}>
+        <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
@@ -189,76 +186,79 @@ const ChangePhoneNumberScreen = () => {
             <FastImage
               source={back_ic}
               style={styles.backIcon}
-              tintColor={isDark ? '#FFFFFF' : '#000000'}
+              tintColor={isDark ? colors.white : colors.black}
               resizeMode="contain"
             />
           </TouchableOpacity>
           <View style={styles.titleContainer}>
-            <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+            <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={[styles.headerTitle, { color: themeColors.text }]}>
               Change Phone Number
             </AppText>
           </View>
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
         >
           {/* Warnings Box */}
-          <View style={[styles.warningBox, { backgroundColor: isDark ? '#1E1E22' : '#F5F5F7' }]}>
-            <FastImage source={warningImg} style={{ width: 18, height: 18, marginTop: 2 }} resizeMode="contain" />
+          <View style={[styles.warningBox, { backgroundColor: themeColors.input }]}>
+            <FastImage source={warningImg} style={{ width: 18, height: 18, marginTop: 2 }} resizeMode="contain" tintColor={isDark ? colors.white : colors.black} />
             <View style={styles.warningList}>
-              <AppText type={ELEVEN} style={[styles.warningPoint, { color: isDark ? '#D1D1D6' : '#4E4E54' }]}>
+              <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
                 1. To protect your account, withdrawals and P2P transactions will be restricted for 24 hours after updating your phone number.
               </AppText>
-              <AppText type={ELEVEN} style={[styles.warningPoint, { color: isDark ? '#D1D1D6' : '#4E4E54' }]}>
+              <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
                 2. If your phone number is currently used as your username, it will automatically be replaced with the updated number.
               </AppText>
-              <AppText type={ELEVEN} style={[styles.warningPoint, { color: isDark ? '#D1D1D6' : '#4E4E54' }]}>
+              <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
                 3. Phone number updates on the primary account will also sync across linked subaccounts. Separate subaccounts with independent settings will remain unchanged.
               </AppText>
             </View>
           </View>
 
           {/* New Phone Number Section */}
-          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: themeColors.text }]}>
             New Phone Number
           </AppText>
-          <View style={[styles.phoneInputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+          <View style={[styles.phoneInputContainer, { backgroundColor: themeColors.input }]}>
             <TouchableOpacity style={styles.countryPicker} activeOpacity={0.8}>
               <AppText style={{ fontSize: 18 }}>🇮🇳</AppText>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.countryCode, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.countryCode, { color: themeColors.text }]}>
                 +91
               </AppText>
             </TouchableOpacity>
-            <View style={[styles.divider, { backgroundColor: isDark ? '#2D2D30' : '#E5E5EA' }]} />
+            <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
             <TextInput
-              style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+              style={[styles.textInput, { color: themeColors.text, flex: 1 }]}
               placeholder="Enter your new phone number"
-              placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+              placeholderTextColor={themeColors.secondaryText}
               keyboardType="number-pad"
               value={newPhone}
               onChangeText={(val) => setNewPhone(val.replace(/\D/g, ''))}
-              cursorColor={colors.black}
+              cursorColor={colors.orangeTheme}
             />
           </View>
 
           {/* SMS Verification Code Section */}
-          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1A1A1C' }]}>
+          <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: themeColors.text }]}>
             New SMS Verification Code
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', flexDirection: 'row', alignItems: 'center' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: themeColors.input, flexDirection: 'row', alignItems: 'center' }]}>
             <TextInput
-              style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E', flex: 1 }]}
+              style={[styles.textInput, { color: themeColors.text, flex: 1 }]}
               placeholder="Enter the verification code"
-              placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+              placeholderTextColor={themeColors.secondaryText}
               value={verificationCode}
               onChangeText={setVerificationCode}
               keyboardType="number-pad"
-              cursorColor={colors.black}
+              cursorColor={colors.orangeTheme}
               maxLength={6}
             />
             <TouchableOpacity
@@ -269,7 +269,7 @@ const ChangePhoneNumberScreen = () => {
               <AppText
                 type={FOURTEEN}
                 weight={MEDIUM}
-                style={{ color: (countdown > 0 || isLoading) ? (isDark ? '#4E4E54' : '#C7C7CC') : colors.orangeTheme }}
+                style={{ color: (countdown > 0 || isLoading) ? themeColors.secondaryText : colors.orangeTheme }}
               >
                 {countdown > 0 ? `${countdown}s` : 'Send'}
               </AppText>
@@ -277,25 +277,25 @@ const ChangePhoneNumberScreen = () => {
           </View>
 
           {/* Valid for 10 minutes */}
-          <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE' }]}>
+          <AppText type={TWELVE} style={[styles.validText, { color: themeColors.secondaryText }]}>
             Valid for 10 minutes
           </AppText>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         {/* Bottom anchored Confirm Button */}
         <View style={styles.bottomWrapper}>
           <TouchableOpacity
-            style={[styles.confirmButton, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
+            style={[styles.confirmButton, { backgroundColor: isDark ? colors.white : colors.black }]}
             activeOpacity={0.8}
             onPress={handleConfirm}
             disabled={isLoading}
           >
-            <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
+            <AppText type={SIXTEEN} weight={BOLD} style={{ color: !isDark ? colors.white : ColorSpace.black }}>
               {isLoading ? 'Processing...' : 'Confirm'}
             </AppText>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </AppSafeAreaView>
   );
 };

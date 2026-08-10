@@ -655,7 +655,7 @@ const ChangeLoginPasswordScreen = () => {
 
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -831,33 +831,7 @@ const ChangeLoginPasswordScreen = () => {
                 <AppText type={TWELVE} style={{ color: '#999', marginBottom: 16 }}>
                   Verify your identity using Face ID, Touch ID, or device lock.
                 </AppText>
-                {/* <TouchableOpacity
-                  style={[styles.confirmBtn, { backgroundColor: colors.orangeTheme, alignSelf: 'stretch', width: '100%', marginTop: 8 }]}
-                  activeOpacity={0.8}
-                  onPress={async () => {
-                    const signId = emailId || profileMobile;
-                    if (!signId) {
-                      showError('Account identifier missing for passkey verification.');
-                      return;
-                    }
-                    setIsSubmitting(true);
-                    try {
-                      const passkeyUserId = await dispatch(verifySecurityPasskey(signId));
-                      if (passkeyUserId) {
-                        showSuccess('Passkey verified successfully');
-                        setStep(3);
-                      }
-                    } catch (err) {
-                      showError('Passkey verification failed');
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  }}
-                >
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
-                    Verify with Passkey
-                  </AppText>
-                </TouchableOpacity> */}
+
               </View>
             )}
           </View>
@@ -1072,9 +1046,9 @@ const ChangeLoginPasswordScreen = () => {
 
       {/* Bottom Confirm Button & Forgot Password Link */}
       {step === 1 ? (
-        <View style={[styles.bottomContainer, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+        <View style={[styles.bottomContainer, { backgroundColor: themeColors.background }]}>
           <TouchableOpacity
-            style={[styles.confirmBtn, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
+            style={[styles.confirmBtn, { backgroundColor: isDark ? colors.white : '#2A2A2E' }]}
             activeOpacity={0.8}
             onPress={handleRestrictConfirm}
             disabled={isSubmitting}
@@ -1082,7 +1056,7 @@ const ChangeLoginPasswordScreen = () => {
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
+              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>
                 Confirm
               </AppText>
             )}
@@ -1090,9 +1064,9 @@ const ChangeLoginPasswordScreen = () => {
         </View>
       ) : step === 2 ? (
         !isKeyboardVisible && (
-          <View style={[styles.bottomContainer, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+          <View style={[styles.bottomContainer, { backgroundColor: themeColors.background }]}>
             <TouchableOpacity
-              style={[styles.confirmBtn, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
+              style={[styles.confirmBtn, { backgroundColor: isDark ? colors.white : '#2A2A2E' }]}
               activeOpacity={0.8}
               onPress={handleVerifyCode}
               disabled={isSubmitting}
@@ -1100,7 +1074,7 @@ const ChangeLoginPasswordScreen = () => {
               {isSubmitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>
+                <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>
                   Confirm
                 </AppText>
               )}
@@ -1121,7 +1095,7 @@ const ChangeLoginPasswordScreen = () => {
         )
       ) : step === 3 ? (
         !isKeyboardVisible && (
-          <View style={[styles.bottomContainer, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+          <View style={[styles.bottomContainer, { backgroundColor: themeColors.background }]}>
             <TouchableOpacity
               style={[
                 styles.confirmBtn,
@@ -1157,7 +1131,7 @@ const ChangeLoginPasswordScreen = () => {
         )
       ) : step === 4 ? (
         !isKeyboardVisible && (
-          <View style={[styles.bottomContainer, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+          <View style={[styles.bottomContainer, { backgroundColor: themeColors.background }]}>
             <TouchableOpacity
               style={[
                 styles.confirmBtn,
@@ -1183,7 +1157,7 @@ const ChangeLoginPasswordScreen = () => {
         )
       ) : step === 5 ? (
         !isKeyboardVisible && (
-          <View style={[styles.bottomContainer, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+          <View style={[styles.bottomContainer, { backgroundColor: themeColors.background }]}>
             <TouchableOpacity
               style={[
                 styles.confirmBtn,

@@ -436,7 +436,7 @@ const SecurityVerification = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : '#FFFFFF' }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
@@ -475,11 +475,11 @@ const SecurityVerification = ({ route }) => {
                   onChangeText={(v) => setSmsCode(v.replace(/\D/g, '').slice(0, 6))}
                   keyboardType="number-pad"
                   maxLength={6}
-                  cursorColor={colors.black}
+                  cursorColor={colors.orangeTheme}
                 />
                 <TouchableOpacity onPress={handleSendSmsOtp} disabled={smsCountdown > 0 || isSendingSmsOtp} style={styles.actionBtn}>
                   {isSendingSmsOtp ? (
-                    <ActivityIndicator size="small" color={colors.black} />
+                    <ActivityIndicator size="small" color={isDark ? colors.white : colors.black} />
                   ) : (
                     <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: smsCountdown > 0 ? '#999' : colors.orangeTheme }}>
                       {smsCountdown > 0 ? `${smsCountdown}s` : 'Send'}
@@ -512,11 +512,11 @@ const SecurityVerification = ({ route }) => {
                   onChangeText={(v) => setEmailCode(v.replace(/\D/g, '').slice(0, 6))}
                   keyboardType="number-pad"
                   maxLength={6}
-                  cursorColor={colors.black}
+                  cursorColor={colors.orangeTheme}
                 />
                 <TouchableOpacity onPress={handleSendEmailOtp} disabled={emailCountdown > 0 || isSendingEmailOtp} style={styles.actionBtn}>
                   {isSendingEmailOtp ? (
-                    <ActivityIndicator size="small" color={colors.black} />
+                    <ActivityIndicator size={'large'} color={isDark ? colors.white : colors.black} />
                   ) : (
                     <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: emailCountdown > 0 ? '#999' : colors.orangeTheme }}>
                       {emailCountdown > 0 ? `${emailCountdown}s` : 'Send'}
@@ -549,7 +549,7 @@ const SecurityVerification = ({ route }) => {
                   onChangeText={(v) => setTotpCode(v.replace(/\D/g, '').slice(0, 6))}
                   keyboardType="number-pad"
                   maxLength={6}
-                  cursorColor={colors.black}
+                  cursorColor={colors.orangeTheme}
                 />
               </View>
               <View style={styles.inputFooter}>
@@ -566,7 +566,7 @@ const SecurityVerification = ({ route }) => {
           {activeMethods.includes('passkey') && (
             <View style={[styles.inputGroup, { alignItems: 'center', marginVertical: 40 }]}>
               {isSubmitting ? (
-                <ActivityIndicator size={'large'} color={colors.black} />
+                <ActivityIndicator size={'large'} color={isDark ? colors.white : colors.black} />
               ) : null}
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: '#999', marginTop: 15, textAlign: 'center', lineHeight: 20 }}>
                 Please use your device's biometric prompt (Face ID, Touch ID, or PIN) to verify your identity.
@@ -583,7 +583,7 @@ const SecurityVerification = ({ route }) => {
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator size={'small'} color={isDark ? '#000' : '#FFF'} />
+              <ActivityIndicator size={'large'} color={isDark ? colors.white : colors.black} />
             ) : (
               <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? '#000000' : '#FFFFFF' }}>
                 Confirm

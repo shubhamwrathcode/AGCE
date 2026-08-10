@@ -239,10 +239,8 @@ const LoginTwoStepVerificationScreen = () => {
     try {
       setLoadingSettings(true);
       const res = await appOperation.customer.securityCheckTwoLogin2Step();
-      console.log('[Login2Step] syncSettings API response:', res);
       if (res?.success) {
         const n = normalizeCheckTwoLogin2StepPayload(res);
-        console.log('[Login2Step] syncSettings normalized payload:', n);
         setGoogleAuth(n.totp);
         setSmsVerification(n.mobile);
         setEmailVerification(n.email);
@@ -306,8 +304,6 @@ const LoginTwoStepVerificationScreen = () => {
   }, [route?.params]);
 
   const handleToggleSwitch = async (method, enable) => {
-    console.log('[Login2Step] handleToggleSwitch called:', { method, enable });
-    
     // 1. Lockout protection and Signup Method restriction
     if (!enable) {
       if (method === 'email' && (userData?.registeredBy === 'email' || userData?.registeredBy === 'google')) {
@@ -337,7 +333,6 @@ const LoginTwoStepVerificationScreen = () => {
     // 2. Unbound state redirects (with Bind Prompt):
     if (method === 'phone' && enable) {
       const isPhoneBound = !!(userData?.mobileNumber || userData?.mobile_number);
-      console.log('[Login2Step] Phone bound check:', isPhoneBound, 'userData:', userData?.mobileNumber, userData?.mobile_number);
       if (!isPhoneBound) {
         setBindPrompt({
           visible: true,
@@ -370,7 +365,6 @@ const LoginTwoStepVerificationScreen = () => {
 
     if (method === 'totp' && enable) {
       const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
-      console.log('[Login2Step] GA bound check:', hasGA, 'userData:', userData?.['2fa'], userData?.twoFaEnabled);
       if (!hasGA) {
         setBindPrompt({
           visible: true,
@@ -403,7 +397,6 @@ const LoginTwoStepVerificationScreen = () => {
 
     if (method === 'email' && enable) {
       const isEmailBound = !!(userData?.emailId || userData?.email);
-      console.log('[Login2Step] Email bound check:', isEmailBound, 'userData:', userData?.emailId, userData?.email);
       if (!isEmailBound) {
         setBindPrompt({
           visible: true,
@@ -413,9 +406,9 @@ const LoginTwoStepVerificationScreen = () => {
             setBindPrompt(prev => ({ ...prev, visible: false }));
             // Normally routes to change email flow
             navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
-              targetScreen: routes.CHANGE_EMAIL_SCREEN, // assuming this exists or similar
+              targetScreen: routes.CHANGE_EMAIL_SCREEN,
               purpose: 'change_email',
-              verifyMethods: ['mobile', 'totp'], // fallback
+              verifyMethods: ['mobile', 'totp'],
               skipDirectVerification: true,
               hideChooseOther: true,
               targetParams: {
@@ -451,13 +444,13 @@ const LoginTwoStepVerificationScreen = () => {
 
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: isDark ? '#1E1E22' : '#F0F0F0' }]}>
+        <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
@@ -535,12 +528,12 @@ const LoginTwoStepVerificationScreen = () => {
         onRequestClose={() => setBindPrompt(prev => ({ ...prev, visible: false }))}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackdrop} 
-            activeOpacity={1} 
-            onPress={() => setBindPrompt(prev => ({ ...prev, visible: false }))} 
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setBindPrompt(prev => ({ ...prev, visible: false }))}
           />
-          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
             <AppText type={EIGHTEEN} weight={BOLD} style={{ color: textColor, marginBottom: 12, textAlign: 'center' }}>
               {bindPrompt.title}
             </AppText>

@@ -136,20 +136,16 @@ const ConfirmEmergencyContact = () => {
 
     if (hasPasskey) {
       const signId = emailId || profileMobile;
-      console.log('[DEBUG][ConfirmEmergencyContact] Enrolled passkey found. signId:', signId);
       if (signId) {
         setIsSaving(true);
         try {
-          console.log('[DEBUG][ConfirmEmergencyContact] Invoking getPasskeyAuthCredential...');
           // Trigger the passkey biometric prompt directly (silent = true to suppress initial toast)
           const credential = await dispatch(getPasskeyAuthCredential(signId, true));
-          console.log('[DEBUG][ConfirmEmergencyContact] getPasskeyAuthCredential Result:', JSON.stringify(credential, null, 2));
 
           if (credential) {
             let res;
             if (contactData._id) {
               // Edit mode
-              console.log('[DEBUG][ConfirmEmergencyContact] Invoking editEmergencyContact API with passkey...');
               res = await appOperation.customer.editEmergencyContact({
                 contactId: contactData._id,
                 fullName: contactData.name,
@@ -161,7 +157,6 @@ const ConfirmEmergencyContact = () => {
               });
             } else {
               // Add mode
-              console.log('[DEBUG][ConfirmEmergencyContact] Invoking addEmergencyContact API with passkey...');
               res = await appOperation.customer.addEmergencyContact({
                 fullName: contactData.name,
                 emailId: contactData.email,
@@ -172,7 +167,6 @@ const ConfirmEmergencyContact = () => {
               });
             }
 
-            console.log('[DEBUG][ConfirmEmergencyContact] Save Contact API Response:', JSON.stringify(res, null, 2));
 
             if (res?.success) {
               showSuccess(res.message || 'Emergency contact saved successfully.');
@@ -184,11 +178,9 @@ const ConfirmEmergencyContact = () => {
           } else {
             // Biometric prompt returned null (e.g. cancelled, or no credential found on local device).
             // Fall back immediately to the general Security Verification page!
-            console.log('[DEBUG][ConfirmEmergencyContact] No credential returned. Falling back to Security Verification screen.');
             navigateToSecurityVerification();
           }
         } catch (err) {
-          console.warn('[ConfirmEmergencyContact] Direct passkey verification failed:', err);
           navigateToSecurityVerification();
         } finally {
           setIsSaving(false);
@@ -197,7 +189,6 @@ const ConfirmEmergencyContact = () => {
       }
     }
 
-    console.log('[DEBUG][ConfirmEmergencyContact] No passkey or signId, directing to Security Verification screen.');
     navigateToSecurityVerification();
   };
 
@@ -240,9 +231,9 @@ const ConfirmEmergencyContact = () => {
   };
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? '#121214' : '#FFFFFF' }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header matching mockup */}
-      <View style={[styles.header, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F0' }]}>
+      <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
           <FastImage
             source={back_ic}
@@ -260,7 +251,7 @@ const ConfirmEmergencyContact = () => {
         <AppText
           type={TWENTY}
           weight={SEMI_BOLD}
-          style={[styles.mainTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}
+          style={[styles.mainTitle, { color: themeColors.text }]}
         >
           Confirm Information
         </AppText>
@@ -268,13 +259,13 @@ const ConfirmEmergencyContact = () => {
         <AppText
           type={THIRTEEN}
           weight={MEDIUM}
-          style={[styles.mainSubtitle, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
+          style={[styles.mainSubtitle, { color: themeColors.secondaryText }]}
         >
           Please review the contact details carefully before continuing. We will use this information to reach your emergency contact when the conditions you set are triggered.
         </AppText>
 
         {/* Contact detail box/card */}
-        <View style={[styles.card, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', }]}>
+        <View style={[styles.card, { backgroundColor: isDark ? colors.inputBorder : '#FFFFFF', }]}>
 
           {/* Header row: User Avatar + Name + Action Buttons */}
           <View style={styles.cardHeaderRow}>
@@ -282,7 +273,7 @@ const ConfirmEmergencyContact = () => {
               <FastImage
                 source={profileNewIcon}
                 style={styles.userIcon}
-                tintColor={'#000000'}
+                tintColor={isDark ? colors.white : '#000000'}
                 resizeMode="contain"
               />
               <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
@@ -304,7 +295,7 @@ const ConfirmEmergencyContact = () => {
                 <FastImage
                   source={binIcon}
                   style={[styles.actionIcon, { width: 18, height: 18 }]}
-                  tintColor={colors.black}
+                  tintColor={isDark ? colors.white : '#000000'}
                   resizeMode="contain"
                 />
               </TouchableOpacity>
@@ -313,7 +304,7 @@ const ConfirmEmergencyContact = () => {
 
           {/* Details Row: Contact Email */}
           <View style={[styles.detailRow, { borderBottomColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-            <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: isDark ? '#8A8A93' : '#8E8E93' }}>
+            <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
               Contact Email
             </AppText>
             <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
@@ -323,7 +314,7 @@ const ConfirmEmergencyContact = () => {
 
           {/* Details Row: Contact Phone Number */}
           <View style={styles.detailRow}>
-            <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: isDark ? '#8A8A93' : '#8E8E93' }}>
+            <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
               Contact Phone Number
             </AppText>
             <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
@@ -393,7 +384,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 12,
-    padding: 5,
+    padding: 10,
     marginTop: 8,
   },
   cardHeaderRow: {
