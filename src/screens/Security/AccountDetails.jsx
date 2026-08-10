@@ -10,7 +10,6 @@ import {
   RefreshControl,
 } from "react-native";
 import FastImage from "react-native-fast-image";
-import LottieView from "lottie-react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Toast from "react-native-simple-toast";
 import { useDispatch } from "react-redux";
@@ -21,11 +20,8 @@ import {
   FOURTEEN,
   SEMI_BOLD,
   SIXTEEN,
-  THIRTEEN,
   TWELVE,
   TWENTY,
-  MEDIUM,
-  TWENTY_FOUR,
   FIFTEEN,
   EIGHTEEN,
 } from "../../shared";
@@ -312,7 +308,7 @@ const AccountDetails = () => {
       <View style={{ flex: 1 }}>
         <AppText
           type={FIFTEEN}
-          style={{ color: isLogout ? colors.red : colors.black }}
+          style={{ color: isLogout ? colors.red : themeColors.text }}
         >
           {label}
         </AppText>
@@ -377,7 +373,7 @@ const AccountDetails = () => {
   }, [userData?.kycVerified, userData?.kyc_verified, userData?.kyc_status, userData?.kycStatus, isDark]);
   // console.log(kycBadge, '===kycbadge')
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <KycStepHeader title="" onBackPress={() => NavigationService.goBack()} onSwitchProfilePress={() => {
         NavigationService.navigate(routes.SWITCH_ACCOUNT_SCREEN, {
           userData,
@@ -405,8 +401,8 @@ const AccountDetails = () => {
             marginHorizontal: 16,
             borderRadius: 16,
             marginTop: 10,
-            borderWidth: isDark ? 1 : 0,
-            borderColor: isDark ? "#2A2A2E" : "transparent"
+            borderWidth: 1,
+            borderColor: isDark ? "#2A2A2E" : "#E8E8E8"
           }]}
         >
           <View style={styles.avatarContainer}>
@@ -428,8 +424,8 @@ const AccountDetails = () => {
                 </AppText>
               </LinearGradient>
             )}
-            <TouchableOpacity style={styles.editBadge} onPress={() => setIsAvatarModalVisible(true)}>
-              <FastImage source={editIcon} style={{ width: 12, height: 12 }} tintColor={colors.black} />
+            <TouchableOpacity style={[styles.editBadge, { backgroundColor: isDark ? "#2A2A2E" : "#FFFFFF", borderColor: isDark ? themeColors.border : "#E5E7EB" }]} onPress={() => setIsAvatarModalVisible(true)}>
+              <FastImage source={editIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.text} />
             </TouchableOpacity>
           </View>
           <View style={{ bottom: 8 }}>
@@ -450,7 +446,7 @@ const AccountDetails = () => {
         </LinearGradient>
 
         {/* Tabs */}
-        <View style={styles.tabBar}>
+        <View style={[styles.tabBar, { borderBottomColor: isDark ? themeColors.border : "#F3F4F6" }]}>
           {["Profile", "Security"].map((tab) => (
             <TouchableOpacity
               key={tab}
@@ -487,9 +483,9 @@ const AccountDetails = () => {
                 onPress={() => NavigationService.navigate(routes.KYC_STATUS_SCREEN, { from: 'kyb' })}
               />
 
-              <MenuItem 
-                label="VIP Privilege" 
-                badge={`VIP ${userData?.vipLevel || 0}`} 
+              <MenuItem
+                label="VIP Privilege"
+                badge={`VIP ${userData?.vipLevel || 0}`}
                 onPress={() => NavigationService.navigate(routes.VIP_SERVICES_SCREEN)}
               />
               {/* <MenuItem
@@ -508,7 +504,9 @@ const AccountDetails = () => {
                 value={displayName}
                 onPress={() => NavigationService.navigate(routes.NICKNAME_SETTINGS_SCREEN, { currentNickname: displayName })}
               />
-              <MenuItem label="Referral" badge="40% commission" badgeBgColor="rgba(202, 195, 182, 0.15)" badgeTextColor="#D1AA67" />
+              <MenuItem label="Referral"
+                onPress={() => NavigationService.navigate(routes.REFER_AND_EARN_SCREEN)}
+              />
               {/* <MenuItem label="Affiliate" badge="Exclusive Commissions" badgeBgColor="rgba(209, 170, 103, 0.15)" badgeTextColor="#D1AA67" /> */}
               <MenuItem
                 label="Notification Setting"
@@ -769,14 +767,7 @@ const AccountDetails = () => {
               },
             ]}
           >
-            {/* <View style={styles.logoutLottieWrap}>
-              <LottieView
-                source={require("../../../assets/lottie/logout.json")}
-                autoPlay
-                loop
-                style={styles.logoutLottie}
-              />
-            </View> */}
+
 
             <AppText style={[styles.logoutTitle, { color: themeColors.text }]}>Logout</AppText>
             <AppText style={[styles.logoutDesc, { color: themeColors.secondaryText }]}>

@@ -177,7 +177,7 @@ export default function CreateTicket() {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <KeyBoardAware style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -190,7 +190,7 @@ export default function CreateTicket() {
             onPress={() => NavigationService.navigate("Support")}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <FastImage source={printIcon} style={{ width: 20, height: 20 }} resizeMode="contain" />
+            <FastImage source={printIcon} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={themeColors.text} />
           </TouchableOpacity>
         </View>
 

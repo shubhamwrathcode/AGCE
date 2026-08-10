@@ -231,7 +231,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, on
       </View>
 
       {/* Info Message Box */}
-      <View style={[styles.statusMessageBox, { borderLeftColor: orangeColor, borderLeftWidth: 4 }]}>
+      <View style={[styles.statusMessageBox, { backgroundColor: isDark ? "#1E222D" : "#F9FAFB", borderLeftColor: orangeColor, borderLeftWidth: 4 }]}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           <View style={[styles.statusIconWrap, { backgroundColor: "rgba(245, 158, 11, 0.1)" }]}>
             <FastImage source={pending_kyc} style={{ width: 24, height: 24 }} tintColor={orangeColor} />
@@ -329,7 +329,7 @@ const KycRejected = ({ onVerifyPress, isKyb }) => {
       </View>
 
       {/* Error Message Box */}
-      <View style={[styles.statusMessageBox, { borderLeftColor: themeColors.red, borderLeftWidth: 4 }]}>
+      <View style={[styles.statusMessageBox, { backgroundColor: isDark ? "#1E222D" : "#F9FAFB", borderLeftColor: themeColors.red, borderLeftWidth: 4 }]}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           <View style={[styles.statusIconWrap, { backgroundColor: 'transparent' }]}>
             <FastImage source={failed} style={{ width: 24, height: 24 }} tintColor={themeColors.red} />
@@ -414,7 +414,7 @@ const KycDue = ({ onVerifyPress, isKyb }) => {
         />
 
         {/* Title & Subtitle */}
-        <AppText type={TWENTY_TWO} weight={SEMI_BOLD} style={{ color: "#111827", textAlign: "center", marginBottom: 10 }}>
+        <AppText type={TWENTY_TWO} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "center", marginBottom: 10 }}>
           {isKyb ? "Complete Business Verification" : "Complete Identity Verification"}
         </AppText>
         <AppText type={FOURTEEN} style={{ color: "#6B7280", textAlign: "center", paddingHorizontal: 30, marginBottom: 12 }}>
@@ -446,12 +446,16 @@ const KycDue = ({ onVerifyPress, isKyb }) => {
           {/* Bottom Section (Transparent) */}
           <View style={{ padding: 16 }}>
             <View style={styles.checkStep}>
-              <View style={styles.bullet} />
-              <AppText type={THIRTEEN} style={{ color: colors.black }}>Submit your basic details</AppText>
+              <View style={[styles.bullet, {
+                backgroundColor: isDark ? colors.white : lightTheme.input
+              }]} />
+              <AppText type={THIRTEEN} style={{ color: themeColors.text }}>Submit your basic details</AppText>
             </View>
             <View style={styles.checkStep}>
-              <View style={styles.bullet} />
-              <AppText type={THIRTEEN} style={{ color: colors.black }}>Complete document & facial verification</AppText>
+              <View style={[styles.bullet, {
+                backgroundColor: isDark ? colors.white : lightTheme.input
+              }]} />
+              <AppText type={THIRTEEN} style={{ color: themeColors.text }}>Complete document & facial verification</AppText>
             </View>
           </View>
         </View>
@@ -498,7 +502,7 @@ const KycCompleted = ({ isKyb }) => {
       </View>
 
       {/* Info Message Box */}
-      <View style={[styles.statusMessageBox, { borderLeftColor: greenColor, borderLeftWidth: 4 }]}>
+      <View style={[styles.statusMessageBox, { backgroundColor: isDark ? "#1E222D" : "#F9FAFB", borderLeftColor: greenColor, borderLeftWidth: 4 }]}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           <View style={[styles.statusIconWrap, {}]}>
             <FastImage source={kyc_complete} style={{ width: 24, height: 24 }} tintColor={greenColor} />
@@ -602,16 +606,6 @@ const KycStatus = ({ route }) => {
 
   const isKyb = route?.params?.from === 'kyb';
 
-  useEffect(() => {
-    console.log("=== USER KYC STATUS LOG ===", {
-      kycVerified: userData?.kycVerified,
-      kyc_verified: userData?.kyc_verified,
-      kycStatus: userData?.kycStatus,
-      kyc_status: userData?.kyc_status,
-      userData: JSON.stringify(userData, null, 2)
-    });
-  }, [userData]);
-
   const [idDocStatus, setIdDocStatus] = useState(null);
   const [taxDocStatus, setTaxDocStatus] = useState(null);
   const [selfieStatus, setSelfieStatus] = useState(null);
@@ -636,12 +630,8 @@ const KycStatus = ({ route }) => {
 
   const applyKycStatusData = useCallback((data) => {
     if (!data) {
-      console.log("[KYB/KYC] No data returned from action.");
       return;
     }
-    console.log("[KYB/KYC] applyKycStatusData payload:", JSON.stringify(data, null, 2));
-
-
     setIdDocStatus(data.id_document_status ?? null);
     setTaxDocStatus(data.tax_document_status ?? null);
     setSelfieStatus(data.selfie_status ?? null);
@@ -836,8 +826,6 @@ const KycStatus = ({ route }) => {
 
   const kycStatusView = () => {
     const effectiveTier = kycVerifiedFromApi !== null ? kycVerifiedFromApi : kycVerified;
-    console.log("[KYB/KYC] kycStatusView eval =>", { isKyb, effectiveTier, kycVerifiedFromApi, kycVerified, statusCanonical, trackingStatus });
-
     // 1. Prioritize Resubmission requested (matches web kycPayloadRequestsResubmission)
     const hasResubmitRequest = statusCanonical === "RESUBMISSION_REQUESTED" ||
       String(trackingStatus).toLowerCase() === "resubmission" ||
@@ -890,26 +878,30 @@ const KycStatus = ({ route }) => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1 }}>
-      <KeyBoardAware style={{ flex: 1 }}>
-        <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-          <KycStepHeader
-            title={"Verification Center"}
-            theme={isDark ? "Dark" : "Light"}
-            onInfoPress={() => faqSheetRef.current?.open()}
-            onSupportPress={() => { NavigationService.navigate("Support") }}
-          />
-          <View style={styles.sectionWrapper}>
-            {contentLoading ? <KycStatusSkeleton /> : kycStatusView()}
-          </View>
-        </ScrollView>
-      </KeyBoardAware>
+    <View style={{ flex: 1, backgroundColor: isDark ? themeColors.background : "#fff" }}>
+      <AppSafeAreaView style={{ flex: 1, backgroundColor: isDark ? themeColors.background : "#fff" }}>
+        <KeyBoardAware style={{ flex: 1 }}>
+          <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+            <KycStepHeader
+              title={"Verification Center"}
+              theme={isDark ? "Dark" : "Light"}
+              onInfoPress={() => faqSheetRef.current?.open()}
+              onSupportPress={() => { NavigationService.navigate("Support") }}
+            />
+            <View style={styles.sectionWrapper}>
+              {contentLoading ? <KycStatusSkeleton /> : kycStatusView()}
+            </View>
+          </ScrollView>
+        </KeyBoardAware>
+      </AppSafeAreaView>
 
       <RBSheet
         ref={faqSheetRef}
         closeOnDragDown
         closeOnPressMask
         height={350}
+        keyboardAvoidingViewEnabled={false}
+        customModalProps={{ statusBarTranslucent: true, navigationBarTranslucent: true }}
         customStyles={{
           container: {
             backgroundColor: themeColors.background,
@@ -948,7 +940,7 @@ const KycStatus = ({ route }) => {
                   />
                 </TouchableOpacity>
                 {faqActiveIndex === index && (
-                  <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.05)" }}>
+                  <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: themeColors.border }}>
                     <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, lineHeight: 20 }}>{item.a}</AppText>
                   </View>
                 )}
@@ -959,7 +951,7 @@ const KycStatus = ({ route }) => {
       </RBSheet>
 
       <Modal visible={!!diditWebviewUrl} animationType="slide" presentationStyle="fullScreen" onRequestClose={closeDiditWebview}>
-        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.white }}>
+        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: isDark ? themeColors.background : "#fff" }}>
           <View
             style={{
               flexDirection: "row",
@@ -1005,7 +997,7 @@ const KycStatus = ({ route }) => {
           ) : null}
         </View>
       </Modal>
-    </AppSafeAreaView>
+    </View>
   );
 };
 
@@ -1100,8 +1092,7 @@ const styles = StyleSheet.create({
   bullet: {
     width: 6,
     height: 6,
-    borderRadius: 3,
-    backgroundColor: "#000",
+    borderRadius: 10,
     marginRight: 12,
   },
   statusHeaderRow: {

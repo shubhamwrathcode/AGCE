@@ -8,6 +8,7 @@ import { back_ic, headPhoneIcon, helpicon, INFO, switchprofile } from "../../hel
 import { useAppSelector } from "../../store/hooks";
 import NavigationService from "../../navigation/NavigationService";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { useTheme } from "../../hooks/useTheme";
 
 const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
 
@@ -23,9 +24,9 @@ const getInitials = (name) => {
 const BACK_ICON_SIZE = 18;
 const INFO_ICON_SIZE = 22;
 
-const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupportPress, onSwitchProfilePress }) => {
-  const isDark = theme === "Dark";
-  const textColor = colors.black;
+const KycStepHeader = ({ title, onBackPress, onInfoPress, onSupportPress, onSwitchProfilePress }) => {
+  const { isDark } = useTheme();
+  const textColor = isDark ? colors.white : colors.black;
   const onPress = onBackPress ?? (() => NavigationService.goBack());
   const userData = useAppSelector((state) => state.auth.userData);
   const displayName = userData?.firstName && userData?.lastName
@@ -58,20 +59,7 @@ const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupp
       </AppText>
 
       <View style={styles.rightActions}>
-        {/* {onSwitchProfilePress && (
-          <TouchableOpacity
-            onPress={onSwitchProfilePress}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={styles.actionBtn}
-          >
-            <FastImage
-              source={switchprofile}
-              resizeMode="contain"
-              tintColor={textColor}
-              style={{ width: 24, height: 24 }}
-            />
-          </TouchableOpacity>
-        )} */}
+
 
         {onInfoPress && (
           <TouchableOpacity

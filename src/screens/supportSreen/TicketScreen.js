@@ -139,7 +139,7 @@ const TicketScreen = () => {
   }, []);
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white, flex: 1, paddingBottom: keyboardPadding }}>
+    <AppSafeAreaView style={{ backgroundColor: isDark ? themeColors.background : colors.white, flex: 1, paddingBottom: keyboardPadding }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "padding"}
@@ -161,7 +161,7 @@ const TicketScreen = () => {
 
         <View style={styles.content}>
           {/* Ticket Details summary card */}
-          <View style={[styles.detailCard, { backgroundColor: colors.white, borderColor: themeColors.border }]}>
+          <View style={[styles.detailCard, { backgroundColor: isDark ? themeColors.background : colors.white, borderColor: themeColors.border }]}>
             <View style={styles.detailRow}>
               <View style={styles.detailCol}>
                 <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Created On</AppText>
@@ -210,7 +210,7 @@ const TicketScreen = () => {
 
         {/* Footer */}
         {chat?.status?.toLowerCase() === "open" ? (
-          <View style={[styles.inputContainer, { backgroundColor: colors.white, borderTopColor: themeColors.border }]}>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? themeColors.background : colors.white, borderTopColor: themeColors.border }]}>
             <Input
               placeholder="Type your message..."
               multiline

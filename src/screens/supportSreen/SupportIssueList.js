@@ -245,7 +245,7 @@ export default function SupportIssueList() {
           My Tickets
         </AppText>
         <TouchableOpacity style={{ borderWidth: 1, borderColor: colors.grey, borderRadius: 5, paddingHorizontal: 10, paddingVertical: 8 }} onPress={() => NavigationService.navigate(CREATE_TICKET_SCREEN)} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
-          <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: themeColors.button }}>
+          <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: isDark ? colors.white : colors.black }}>
             Create
           </AppText>
         </TouchableOpacity>

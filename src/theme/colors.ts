@@ -86,7 +86,7 @@ export const colors = {
 };
 
 /** Light canvas: not pure #fff so the app reads distinct from the cloned template. */
-export const lightScreenBackground = '#F5F6F8';
+export const lightScreenBackground = '#fff';
 
 export const lightTheme = {
   background: lightScreenBackground,
@@ -114,7 +114,7 @@ export const darkTheme = {
   background: '#171a20',
   text: '#FFFFFF',
   secondaryText: 'rgba(255, 255, 255, 0.6)',
-  button: '#1e56f5',
+  button: '#D1AA67',
   buttonText: '#FFFFFF',
   card: '#2b313d',
   border: '#3b4659',

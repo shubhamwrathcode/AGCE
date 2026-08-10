@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, ImageBackground, Dimensions } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppSafeAreaView, AppText, NORMAL, TWENTY_SIX, TWENTY_TWO } from "../../shared";
-import { EIGHTEEN, FOURTEEN, SIXTEEN, TWELVE, TWENTY, TEN } from "../../helper/Constants";
-import { BOLD, MEDIUM, REGULAR, SEMI_BOLD } from "../../helper/Constants";
+import { AppSafeAreaView, AppText, } from "../../shared";
+import { EIGHTEEN, FOURTEEN, TWELVE, TWENTY, } from "../../helper/Constants";
+import { BOLD, MEDIUM, SEMI_BOLD } from "../../helper/Constants";
 import NavigationService from "../../navigation/NavigationService";
 import {
   vip_hero_img, vip_servies_herobg, vipserviceBanner, back_ic,
@@ -13,7 +13,7 @@ import {
   vip0, vip1, vip2, vip3, vip4
 } from "../../helper/ImageAssets";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
+import { fontFamilySemiBold } from "../../theme/typography";
 
 const { width } = Dimensions.get("window");
 

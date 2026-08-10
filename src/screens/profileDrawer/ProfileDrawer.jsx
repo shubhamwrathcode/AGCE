@@ -3,12 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  StatusBar,
-  FlatList,
   Animated,
   Easing,
   Platform,
@@ -39,31 +36,18 @@ import {
   newWidthrawIcon,
   orderIcon,
   rewardHubIcon,
-  giftIc,
   inviteIcon,
-  editIcon,
-  p2p_Icon,
   buyCrypto,
   convertIcon,
-  convertIconDark,
-  graphIcon,
-  right,
   settings,
-  settings_ic,
   spottradingIcon,
-  swap,
   swapHistory,
   tradehistory,
   transactionhis,
   walletIcon,
   walletTransferIcon,
-  withdrawImage,
   copyIcon,
   INFERNAL_TRANSFER,
-  DISPLAY_PIC,
-  defaultPic,
-  withdrawImageDark,
-  depositImageDark,
   memeXProfile,
   memeXProfileDark,
   stakingDrawer,
@@ -79,30 +63,23 @@ import {
   walletTransferIconLight,
   tradehistoryLight,
   swapHistoryLight,
-  infernalTransferLight,
   bonusHistoryLight,
   INFERNAL_TRANSFER_Light,
   airdropDark,
   airdropLight,
-  contact_ic,
-  contact_us,
   headPhoneIcon,
-  scanner,
   setting_icon,
   referralProfile,
   bots_ic,
   newsicon,
   p2pIcon,
   spottradingIconNew,
-  checkIcon,
-  arrowRightIcon,
   right_ic,
   editnew,
   softStaking,
+  themeIcon,
 } from "../../helper/ImageAssets";
-import AntDesign from "react-native-vector-icons/AntDesign";
 import { AppText, BLACK, BOLD, DISCLAIMTEXT, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
-import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import NavigationService from "../../navigation/NavigationService";
 import { languages } from "../../helper/languages";
 import { checkValue, copyText } from "../../helper/utility";
@@ -132,6 +109,7 @@ import { colors, darkTheme } from "../../theme/colors";
 import { fontFamilySemiBold } from "../../theme/typography";
 import { useTheme } from "../../hooks/useTheme";
 import { useDispatch } from "react-redux";
+import { setTheme } from "../../slices/authSlice";
 
 
 const Width = Dimensions.get("window").width;
@@ -145,12 +123,6 @@ const getGeneralFeaturesData = (theme) => [
       NavigationService.navigate(MARKET_SCREEN, { from: "home", tab: "MemeX" }),
   },
 
-  // {
-  //   id: '2',
-  //   title: 'FIT Bot',
-  //   icon: arbitary,
-  //   onPress: () => NavigationService.navigate(ARBITORY_SCREEN),
-  // },
   {
     id: "4",
     title: "Staking",
@@ -196,24 +168,14 @@ const getSupportToolsData = (theme) => [
     onPress: () =>
       NavigationService.navigate(ACCOUNT_SCREEN, { from: "home" }),
   },
-  // {
-  //   id: '5',
-  //   title: "Bank Account",
-  //   icon: bank_ic,
-  //   onPress: () => NavigationService.navigate(PAYMENT_OPTIONS_SCREEN),
-  // },
+
   {
     id: "6",
     title: "Help Center",
     icon: theme !== "Dark" ? helpiconLight : helpicon,
     onPress: () => NavigationService.navigate("Support"),
   },
-  // {
-  //   id: "7",
-  //   title: "Currency Preference",
-  //   icon:  theme !== "Dark" ? currencyPreferLight : currencyPreferIcon,
-  //   onPress: () => NavigationService.navigate(CURRENCY_PREFERENCE_SCREEN),
-  // },
+
 ];
 const getHistoryData = (theme) => [
   {
@@ -469,7 +431,7 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
         width: PROFILE_GRID_ICON_WRAP,
         height: PROFILE_GRID_ICON_WRAP,
         borderRadius: 20,
-        backgroundColor: colors.iconBgColor,
+        backgroundColor: isDark ? "#2A2A2E" : colors.iconBgColor,
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -478,7 +440,7 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
         source={iconSource}
         style={{ width: PROFILE_GRID_ICON_INNER, height: PROFILE_GRID_ICON_INNER }}
         resizeMode="contain"
-        {...(iconTintColor != null ? { tintColor: iconTintColor } : {})}
+        tintColor={iconTintColor != null ? iconTintColor : (isDark ? "#FFFFFF" : "#000000")}
       />
     </View>
     <AppText
@@ -633,7 +595,7 @@ const ProfileDrawer = () => {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: 'white', paddingTop: insets.top }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background, paddingTop: insets.top }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -648,16 +610,15 @@ const ProfileDrawer = () => {
           </TouchableOpacity>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <TouchableOpacity
-              onPress={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
+              onPress={() => dispatch(setTheme(isDark ? 'Light' : 'Dark'))}
               hitSlop={8}
-            >
-              <FastImage source={scanner} resizeMode="contain" style={{ width: 22, height: 22 }} />
+            > <FastImage source={themeIcon} resizeMode="contain" style={{ width: 25, height: 25 }} tintColor={themeColors.text} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => NavigationService.navigate(SETTING_SCREEN_New)} hitSlop={8}>
-              <FastImage source={setting_icon} resizeMode="contain" style={{ width: 22, height: 22 }} />
+              <FastImage source={setting_icon} resizeMode="contain" style={{ width: 22, height: 22 }} tintColor={themeColors.text} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => NavigationService.navigate("Support")} hitSlop={8}>
-              <FastImage source={headPhoneIcon} resizeMode="contain" style={{ width: 22, height: 22 }} />
+              <FastImage source={headPhoneIcon} resizeMode="contain" style={{ width: 22, height: 22 }} tintColor={themeColors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -671,8 +632,8 @@ const ProfileDrawer = () => {
             alignItems: "center",
             padding: 5,
             borderRadius: 16,
-            borderWidth: isDark ? 1 : 0,
-            borderColor: isDark ? "#2A2A2E" : "transparent",
+            borderWidth: 1,
+            borderColor: isDark ? "#2A2A2E" : "#E8E8E8",
           }}
         >
           <View
@@ -801,7 +762,6 @@ const ProfileDrawer = () => {
               themeColors={drawerColors}
               isDark={isDark}
               itemWidth={gridItemWidth}
-              iconTintColor={colors.black}
             />
           ))}
         </View>

@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 import FastImage from 'react-native-fast-image';
 import { AppSafeAreaView, AppText, SEMI_BOLD } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
-import { back_ic, invite_earn_img, share_link, link_friends, earn_link_icon, infoNewIc, INFO } from '../../helper/ImageAssets';
+import { back_ic, invite_earn_img, share_link, link_friends, earn_link_icon, infoNewIc, INFO, calendarIcon } from '../../helper/ImageAssets';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Toast from 'react-native-simple-toast';
 import { colors } from '../../theme/colors';
@@ -128,7 +128,7 @@ const ReferAndEarn = () => {
 
   const formatDisplayDate = (d: Date) => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${months[d.getMonth()]} ${String(d.getDate()).padStart(2, '0')}, ${d.getFullYear()}`;
+    return `${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]} '${String(d.getFullYear()).slice(-2)}`;
   };
 
   const loadReferralData = useCallback(async () => {
@@ -371,7 +371,10 @@ const ReferAndEarn = () => {
                 style={[styles.dateBtn, { backgroundColor: isDark ? '#161616' : '#F9F9F9', borderColor: isDark ? '#222' : '#EEE' }]}
                 onPress={() => setDatePopoverOpen(!datePopoverOpen)}
               >
-                <AppText style={styles.dateIcon}>📅</AppText>
+                <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
+                  tintColor={colors.disabledText}
+                  resizeMode='contain' />
+
                 <AppText style={[styles.dateText, { color: isDark ? '#A0A0A0' : '#666' }]}>
                   {formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}
                 </AppText>
@@ -390,7 +393,9 @@ const ReferAndEarn = () => {
                     <AppText style={[styles.dateInputValue, { color: isDark ? colors.white : colors.black }]}>
                       {formatInputDate(startDate)}
                     </AppText>
-                    <AppText style={styles.calendarIconSm}>📅</AppText>
+                    <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
+                      tintColor={colors.disabledText}
+                      resizeMode='contain' />
                   </TouchableOpacity>
 
                   <AppText style={[styles.dateLabel, { color: isDark ? '#A0A0A0' : '#666', marginTop: 16 }]}>End Date</AppText>
@@ -404,7 +409,9 @@ const ReferAndEarn = () => {
                     <AppText style={[styles.dateInputValue, { color: isDark ? colors.white : colors.black }]}>
                       {formatInputDate(endDate)}
                     </AppText>
-                    <AppText style={styles.calendarIconSm}>📅</AppText>
+                    <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
+                      tintColor={colors.disabledText}
+                      resizeMode='contain' />
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -874,14 +881,14 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   commissionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: fontFamilyBold,
   },
   dateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
   },
@@ -890,8 +897,9 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   dateText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: fontFamilyMedium,
+    marginLeft: 6,
   },
   datePopover: {
     position: 'absolute',

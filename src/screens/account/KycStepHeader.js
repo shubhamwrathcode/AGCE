@@ -1,31 +1,19 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import FastImage from "react-native-fast-image";
-import LinearGradient from "react-native-linear-gradient";
 import { AppText, FIFTEEN, SEMI_BOLD, SIXTEEN, TWENTY, BOLD, TWELVE } from "../../shared";
 import { colors } from "../../theme/colors";
 import { back_ic, headPhoneIcon, helpicon, INFO } from "../../helper/ImageAssets";
 import { useAppSelector } from "../../store/hooks";
 import NavigationService from "../../navigation/NavigationService";
-import { IMAGE_BASE_URL } from "../../helper/Constants";
-
-const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
-
-const getInitials = (name) => {
-  const parts = (name || "User").trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name?.slice(0, 2).toUpperCase() || "U";
-};
-
+import { useTheme } from "../../hooks/useTheme";
 
 const BACK_ICON_SIZE = 18;
 const INFO_ICON_SIZE = 22;
 
-const KycStepHeader = ({ title, theme = "Dark", onBackPress, onInfoPress, onSupportPress }) => {
-  const isDark = theme === "Dark";
-  const textColor = colors.black;
+const KycStepHeader = ({ title, onBackPress, onInfoPress, onSupportPress }) => {
+  const { isDark } = useTheme();
+  const textColor = isDark ? colors.white : colors.black;
   const onPress = onBackPress ?? (() => NavigationService.goBack());
   const userData = useAppSelector((state) => state.auth.userData);
   const displayName = userData?.firstName && userData?.lastName

@@ -59,7 +59,7 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
             await AsyncStorage.removeItem('avatar_next_allowed_at');
           }
         }
-        
+
         // Then query the server just in case the user cleared app data
         const res: any = await appOperation.customer.get_avatar_setting();
         if (res?.data?.next_allowed_at) {
@@ -69,7 +69,7 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
             AsyncStorage.setItem('avatar_next_allowed_at', serverDate.toISOString());
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     if (isVisible) {
       loadNextAllowedAt();
@@ -190,6 +190,9 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
         } as any);
       }
 
+      console.log(fd, '====FD');
+
+
       const result: any = await appOperation.customer.change_avatar_setting(fd);
       console.log('Avatar upload response:', JSON.stringify(result, null, 2));
 
@@ -207,15 +210,15 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
       if (result?.success === true) {
         Toast.showWithGravity(result?.message || 'Avatar updated.', Toast.SHORT, Toast.BOTTOM);
         let rel = String(result?.data?.avatar || result?.data?.data?.avatar || "").trim();
-        
+
         let finalDisplay = rel;
         // If the server returns a relative path or no path, we'll use our local image as a fallback so it updates immediately
         if (!finalDisplay || !finalDisplay.startsWith('http')) {
-           if (pickerTab === 'upload' && uploadFile) {
-               finalDisplay = uploadFile.path;
-           } else {
-               finalDisplay = selected.src;
-           }
+          if (pickerTab === 'upload' && uploadFile) {
+            finalDisplay = uploadFile.path;
+          } else {
+            finalDisplay = selected.src;
+          }
         }
 
         onAvatarCommitted?.(finalDisplay || null);
@@ -349,16 +352,16 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
             <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 15 }}>Cancel</AppText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.footerBtn, { backgroundColor: canSave && !nextAllowedAt ? colors.black : (isDark ? '#3A3A3C' : '#D1D1D6') }]}
+            style={[styles.footerBtn, { backgroundColor: canSave && !nextAllowedAt ? (isDark ? colors.white : colors.black) : (isDark ? '#3A3A3C' : '#D1D1D6') }]}
             onPress={handleSave}
             disabled={!canSave || loading || !!nextAllowedAt}
           >
             {loading ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color={isDark ? colors.black : colors.white} />
             ) : nextAllowedAt ? (
-              <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 13, textAlign: 'center' }}>{timerText}</AppText>
+              <AppText weight={SEMI_BOLD} style={{ color: isDark ? colors.black : colors.white, fontSize: 13, textAlign: 'center' }}>{timerText}</AppText>
             ) : (
-              <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 15 }}>Save</AppText>
+              <AppText weight={SEMI_BOLD} style={{ color: isDark ? colors.black : colors.white, fontSize: 15 }}>Save</AppText>
             )}
           </TouchableOpacity>
         </View>
