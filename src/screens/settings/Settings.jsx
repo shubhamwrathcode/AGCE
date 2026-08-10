@@ -254,9 +254,9 @@ const SettingsScreen = () => {
     <TouchableOpacity
       activeOpacity={0.8}
       style={[
-         styles.currencyCard, 
-         { backgroundColor: themeColors.input },
-         selectedCurrency === code && { borderColor: themeColors.button, backgroundColor: `${themeColors.button}15` }
+        styles.currencyCard,
+        { backgroundColor: themeColors.input },
+        selectedCurrency === code && { borderColor: themeColors.button, backgroundColor: `${themeColors.button}15` }
       ]}
       onPress={() => setSelectedCurrency(code)}
     >
@@ -286,9 +286,9 @@ const SettingsScreen = () => {
         <SettingsScreenSkeleton />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
+
           {/* Profile Section */}
-          <View style={[styles.webStyleCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+          <View style={[styles.webStyleCard, { backgroundColor: isDark ? colors.newThemeColor : themeColors.card, borderColor: themeColors.border }]}>
             <SectionHeader title="Profile" desc="To protect your account, we recommend that you enable at least one 2FA" />
             <View style={[styles.profileInnerContent, { borderColor: themeColors.border }]}>
               {/* Row 1: Icon + Title */}
@@ -318,15 +318,11 @@ const SettingsScreen = () => {
                 </View>
               </View>
 
-              {/* Change Button - Full Width style */}
-              {/* <TouchableOpacity style={[styles.changeBtnFull, { borderColor: themeColors.border, backgroundColor: themeColors.input }]} onPress={handleEditProfile}>
-                <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Change</AppText>
-              </TouchableOpacity> */}
             </View>
           </View>
 
           {/* Currency Preference */}
-          <View style={[styles.webStyleCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+          <View style={[styles.webStyleCard, { backgroundColor: isDark ? colors.newThemeColor : themeColors.card, borderColor: themeColors.border }]}>
             <SectionHeader title="Currency Preference" desc="Select your preferred display currency for all markets" />
 
             <View style={styles.currencyGrid}>
@@ -343,7 +339,7 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           </View>
 
-        
+
         </ScrollView>
       )}
 

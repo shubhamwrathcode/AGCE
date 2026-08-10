@@ -45,7 +45,7 @@ function tabIdForStatus(status) {
   return "open";
 }
 
-const TicketCard = ({ item, onSupportChat }) => {
+const TicketCard = ({ item, onSupportChat, isDark }) => {
   const { colors: themeColors } = useTheme();
 
   const getStatusColor = (status) => {
@@ -68,7 +68,7 @@ const TicketCard = ({ item, onSupportChat }) => {
       style={[
         styles.ticketCard,
         {
-          backgroundColor: themeColors.card,
+          backgroundColor: isDark ? colors.newThemeColor : themeColors.card,
           borderColor: themeColors.border,
         },
       ]}
@@ -215,7 +215,7 @@ export default function SupportIssueList() {
               style={[
                 styles.filterChip,
                 {
-                  backgroundColor: selected ? themeColors.button : themeColors.card,
+                  backgroundColor: selected ? themeColors.button : isDark ? colors.newThemeColor : themeColors.card,
                   borderColor: themeColors.border,
                 },
               ]}
@@ -258,7 +258,7 @@ export default function SupportIssueList() {
           <FlatList
             data={filteredTickets}
             ListHeaderComponent={listHeader}
-            renderItem={({ item }) => <TicketCard item={item} onSupportChat={handleSupportChat} />}
+            renderItem={({ item }) => <TicketCard item={item} onSupportChat={handleSupportChat} isDark={isDark} />}
             keyExtractor={(item) => (item?._id != null ? String(item._id) : String(item?.ticketId))}
             ListEmptyComponent={renderEmpty}
             contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}

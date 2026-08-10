@@ -14,15 +14,12 @@ import {
 } from "../../helper/ImageAssets";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { fontFamilySemiBold } from "../../theme/typography";
+import { useTheme } from "../../hooks/useTheme";
+import { colors } from "../../theme/colors";
 
 const { width } = Dimensions.get("window");
 
 const GOLD = "#D1AA67";
-const DARK_BG = "#000000";
-const CARD_BG = "#111111";
-const BORDER = "#222222";
-const TEXT_WHITE = "#FFFFFF";
-const TEXT_GRAY = "rgba(255, 255, 255, 0.6)";
 
 const vipTiers = [
   { id: 'VIP0', volume: '< $50,000', makerFee: '0.10%', takerFee: '0.15%', benefits: 'Standard access', iconColor: '#A0A0A0', image: vip0 },
@@ -43,9 +40,9 @@ const vipFeatures = [
   { title: "Sub- Accounts", desc: "Operate up to 20 sub-accounts under one master account.", image: subAccounts },
 ];
 
-const SectionTitle = ({ title }) => (
+const SectionTitle = ({ title, themeColors }) => (
   <View style={styles.sectionTitleContainer}>
-    <AppText style={{ color: TEXT_WHITE, marginBottom: 8, fontSize: 20, fontFamily: fontFamilySemiBold }}>
+    <AppText style={{ color: themeColors.text, marginBottom: 8, fontSize: 20, fontFamily: fontFamilySemiBold }}>
       {title}
     </AppText>
     <View style={styles.titleUnderlineContainer}>
@@ -58,6 +55,13 @@ const SectionTitle = ({ title }) => (
 
 const VipServices = () => {
   const [selectedTier, setSelectedTier] = useState(null);
+  const { colors: themeColors, isDark } = useTheme();
+
+  const DARK_BG = isDark ? themeColors.background : colors.white;
+  const CARD_BG = isDark ? "#111111" : colors.white;
+  const BORDER = themeColors.border;
+  const TEXT_WHITE = themeColors.text;
+  const TEXT_GRAY = themeColors.secondaryText;
 
   const renderTierModal = () => {
     if (!selectedTier) return null;
@@ -66,20 +70,20 @@ const VipServices = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: TEXT_WHITE }}>
+              <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                 {selectedTier.id} Details
               </AppText>
               <TouchableOpacity onPress={() => setSelectedTier(null)}>
-                <AppText type={TWENTY} style={{ color: TEXT_WHITE }}>×</AppText>
+                <AppText type={TWENTY} style={{ color: themeColors.text }}>×</AppText>
               </TouchableOpacity>
             </View>
 
             <View style={styles.modalBody}>
-              <DetailRow label="Tier" value={selectedTier.id} />
-              <DetailRow label="30d Volume (USD)" value={selectedTier.volume} />
-              <DetailRow label="Maker Fee" value={selectedTier.makerFee} />
-              <DetailRow label="Taker Fee" value={selectedTier.takerFee} />
-              <DetailRow label="Benefits" value={selectedTier.benefits} />
+              <DetailRow label="Tier" themeColors={themeColors} value={selectedTier.id} />
+              <DetailRow label="30d Volume (USD)" themeColors={themeColors} value={selectedTier.volume} />
+              <DetailRow label="Maker Fee" themeColors={themeColors} value={selectedTier.makerFee} />
+              <DetailRow label="Taker Fee" themeColors={themeColors} value={selectedTier.takerFee} />
+              <DetailRow label="Benefits" themeColors={themeColors} value={selectedTier.benefits} />
             </View>
           </View>
         </View>
@@ -88,12 +92,12 @@ const VipServices = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: DARK_BG, flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <View style={styles.customHeader}>
         <TouchableOpacity style={styles.backBtn} onPress={() => NavigationService.goBack()}>
-          <FastImage source={back_ic} style={styles.backIcon} tintColor={TEXT_WHITE} resizeMode="contain" />
+          <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
         </TouchableOpacity>
-        <AppText weight={SEMI_BOLD} style={{ color: TEXT_WHITE, fontSize: 20 }}>
+        <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 20 }}>
           VIP Services
         </AppText>
         <View style={styles.headerSpacer} />
@@ -119,7 +123,7 @@ const VipServices = () => {
             }}>
               AGCE VIP Services
             </AppText>
-            <AppText style={{ color: TEXT_WHITE, fontSize: 14 }}>
+            <AppText style={{ color: themeColors.text, fontSize: 14 }}>
               Enjoy Exclusive Privileges
             </AppText>
           </View>
@@ -127,7 +131,7 @@ const VipServices = () => {
 
         {/* VIP Tier Structure */}
         <View style={styles.section}>
-          <SectionTitle title="VIP Tier Structure" />
+          <SectionTitle title="VIP Tier Structure" themeColors={themeColors} />
 
           <View style={styles.tierList}>
             {vipTiers.map((tier, index) => (
@@ -135,27 +139,24 @@ const VipServices = () => {
                 disabled
                 key={tier.id}
                 style={styles.tierCard}
-              // onPress={() => setSelectedTier(tier)}
               >
-                {/* Left Side: Tier Badge */}
                 <View style={[styles.tierCardLeft, { justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 8 }]}>
                   <FastImage source={tier.image} style={{ width: '100%', height: 40 }} resizeMode="contain" />
                 </View>
 
-                {/* Right Side: Details */}
                 <View style={styles.tierCardRight}>
                   <View style={styles.feeColumn}>
-                    <AppText style={{ color: TEXT_GRAY, fontSize: 9, marginBottom: 4 }}>Maker Fee</AppText>
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: TEXT_WHITE }}>{tier.makerFee}</AppText>
+                    <AppText style={{ color: themeColors.secondaryText, fontSize: 9, marginBottom: 4 }}>Maker Fee</AppText>
+                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{tier.makerFee}</AppText>
                   </View>
 
                   <View style={styles.feeColumn}>
-                    <AppText style={{ color: TEXT_GRAY, fontSize: 9, marginBottom: 4 }}>Taker Fee</AppText>
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: TEXT_WHITE }}>{tier.takerFee}</AppText>
+                    <AppText style={{ color: themeColors.secondaryText, fontSize: 9, marginBottom: 4 }}>Taker Fee</AppText>
+                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{tier.takerFee}</AppText>
                   </View>
 
                   <View style={styles.benefitBadge}>
-                    <AppText style={{ color: TEXT_WHITE, fontSize: 9, flex: 1 }} numberOfLines={2}>
+                    <AppText style={{ color: themeColors.text, fontSize: 9, flex: 1 }} numberOfLines={2}>
                       {tier.benefits}
                     </AppText>
                   </View>
@@ -163,14 +164,14 @@ const VipServices = () => {
               </TouchableOpacity>
             ))}
           </View>
-          <AppText style={{ color: TEXT_GRAY, fontSize: 9, marginTop: 8 }}>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 9, marginTop: 8 }}>
             * 30D Volume (USD)
           </AppText>
         </View>
 
         {/* VIP Features */}
         <View style={styles.section}>
-          <SectionTitle title="VIP Features" />
+          <SectionTitle title="VIP Features" themeColors={themeColors} />
 
           <View style={styles.featuresContainer}>
             {vipFeatures.map((feature, index) => (
@@ -186,7 +187,7 @@ const VipServices = () => {
                   <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: GOLD, marginBottom: 4 }}>
                     {feature.title}
                   </AppText>
-                  <AppText style={{ color: TEXT_GRAY, fontSize: 9, lineHeight: 12 }}>
+                  <AppText style={{ color: themeColors.secondaryText, fontSize: 9, lineHeight: 12 }}>
                     {feature.desc}
                   </AppText>
                 </View>
@@ -197,7 +198,7 @@ const VipServices = () => {
 
         {/* Coming Soon */}
         <View style={styles.section}>
-          <SectionTitle title="Coming Soon" />
+          <SectionTitle title="Coming Soon" themeColors={themeColors} />
           <View style={styles.vipCardContainer}>
             <FastImage
               source={vipserviceBanner}
@@ -214,10 +215,10 @@ const VipServices = () => {
   );
 };
 
-const DetailRow = ({ label, value }) => (
+const DetailRow = ({ label, value, themeColors }) => (
   <View style={styles.detailRow}>
-    <AppText type={FOURTEEN} style={{ color: TEXT_GRAY, flex: 1 }}>{label}</AppText>
-    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: TEXT_WHITE, flex: 1, textAlign: 'right' }}>{value}</AppText>
+    <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, flex: 1 }}>{label}</AppText>
+    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, flex: 1, textAlign: 'right' }}>{value}</AppText>
   </View>
 );
 
@@ -231,7 +232,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: DARK_BG,
   },
   backBtn: {
   },
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   heroBgImage: {
-    opacity: 0.6,
+    // opacity: 0.6,
   },
   heroOverlay: {
     alignItems: 'center',
@@ -283,16 +283,14 @@ const styles = StyleSheet.create({
   },
   tierCard: {
     flexDirection: 'row',
-    // backgroundColor: CARD_BG,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: BORDER,
     overflow: 'hidden',
+    borderColor: colors.themeElevationColor
   },
   tierCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    // backgroundColor: '#161616', // slightly lighter for distinction
     paddingVertical: 12,
     paddingHorizontal: 12,
     width: '32%',
@@ -311,7 +309,7 @@ const styles = StyleSheet.create({
   benefitBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.newThemeColor,
     borderWidth: 1,
     borderColor: '#333333',
     borderRadius: 4,
@@ -329,10 +327,9 @@ const styles = StyleSheet.create({
     width: "48%",
     flexDirection: "row",
     // alignItems: "center",
-    backgroundColor: CARD_BG,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(209, 170, 103, 0.2)", // Subtle gold border
+    borderColor: "rgba(209, 170, 103, 0.2)",
     padding: 12,
   },
   featureIconContainer: {
@@ -361,9 +358,7 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 16,
     padding: 20,
-    backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: BORDER,
   },
   modalHeader: {
     flexDirection: "row",
