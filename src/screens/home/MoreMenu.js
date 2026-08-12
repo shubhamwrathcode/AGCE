@@ -131,7 +131,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={isDark ? newDepositDarkIcon : newDepositIcon}
                   resizeMode="contain"
@@ -146,7 +146,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(WALLET_WITHDRAW_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={isDark ? newWidthrawDarkIcon : newWidthrawIcon}
                   resizeMode="contain"
@@ -161,7 +161,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(EARING_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={!isDark ? walletDrawerDark : walletIcon}
                   resizeMode="contain"
@@ -176,7 +176,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(MARGIN_TRANSFER_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={!isDark ? INFERNAL_TRANSFER_Light : INFERNAL_TRANSFER}
                   resizeMode="contain"
@@ -208,7 +208,7 @@ const MoreMenu = () => {
                 NavigationService.navigate(MARKET_SCREEN, { tab: "memex" })
               }
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={isDark ? memeXProfileDark : memeXProfile}
                   resizeMode="contain"
@@ -223,7 +223,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(WALLET_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={isDark ? spotTradingMenu : spotBottomDark}
                   resizeMode="contain"
@@ -256,7 +256,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(CONVERT_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={isDark ? swapLight : swap}
                   // tintColor={isDark ? colors.white : colors.black}
@@ -279,7 +279,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={isDark ? stakingDrawerDark : stakingDrawer}
                   resizeMode="contain"
@@ -294,7 +294,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(INVITE_AND_EARN_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={isDark ? newHubIcon : newHubIconLight}
                   resizeMode="contain"
@@ -309,7 +309,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate("Launchpad")}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={!isDark ? launchpadDark : launchpadLight}
                   resizeMode="contain"
@@ -332,7 +332,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(SETTING_SCREEN_New)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={!isDark ? profileDark : profileLight}
                   resizeMode="contain"
@@ -348,7 +348,7 @@ const MoreMenu = () => {
               </AppText>
             </TouchableOpacity>
             <View style={{ alignItems: "center" }}>
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={!isDark ? currencyPreferLight : currencyPreferIcon}
                   resizeMode="contain"
@@ -385,7 +385,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(NOTIFICATION_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={isDark ? alarmDark : alarm}
                   resizeMode="contain"
@@ -400,7 +400,7 @@ const MoreMenu = () => {
               style={{ alignItems: "center" }}
               onPress={() => NavigationService.navigate(KYC_STATUS_SCREEN)}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={!isDark ? kycixonLight : kycixon}
                   resizeMode="contain"
@@ -417,7 +417,7 @@ const MoreMenu = () => {
                 NavigationService.navigate(ACCOUNT_SCREEN)
               }
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={!isDark ? lockLight : lock}
                   resizeMode="contain"
@@ -432,7 +432,7 @@ const MoreMenu = () => {
               onPress={() => NavigationService.navigate("Support")}
               style={{ alignItems: "center" }}
             >
-              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.themeSelection : "#F0F3F6" }]}>
+              <View style={[styles.iconBox, { backgroundColor: isDark ? themeColors.input : "#F0F3F6" }]}>
                 <FastImage
                   source={!isDark ? helpiconLight : helpicon}
                   resizeMode="contain"

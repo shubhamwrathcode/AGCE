@@ -26,7 +26,6 @@ const MarginHeaderDropdowns = ({
 }) => {
   const rbSheetMarginMode = useRef();
   const rbSheetMarginLeverage = useRef();
-
   const isCross = marginMode === "Cross";
   const quoteSymbol = currencyData?.quote_currency || "USDT";
   const baseSymbol = currencyData?.base_currency || "BTC";
@@ -35,16 +34,16 @@ const MarginHeaderDropdowns = ({
 
   const minLeverage = currencyData?.margin_config?.min_leverage ?? 1;
   const maxLeverage = (isCross ? crossAccount?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;
-  
-  const allowedLeveragesRaw = isCross 
-    ? currencyData?.margin_config?.cross_allowed_leverages 
+
+  const allowedLeveragesRaw = isCross
+    ? currencyData?.margin_config?.cross_allowed_leverages
     : currencyData?.margin_config?.isolated_allowed_leverages;
   const allowedLeverages = Array.isArray(allowedLeveragesRaw) ? allowedLeveragesRaw : [];
   const hasAllowed = allowedLeverages.length > 0;
 
   const DEFAULT_QUICK_LEVERAGE = [1, 2, 3, 5, 10, 20];
-  const quickLeverages = hasAllowed 
-    ? allowedLeverages 
+  const quickLeverages = hasAllowed
+    ? allowedLeverages
     : DEFAULT_QUICK_LEVERAGE.filter((x) => x >= minLeverage && x <= maxLeverage);
 
   const snapToAllowed = (n) => {
@@ -70,7 +69,7 @@ const MarginHeaderDropdowns = ({
 
   const socketNetEquity = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
   const refPrice = parseFloat(buy_price) || parseFloat(price) || 0;
-  
+
   const computedNetEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
     ? socketNetEquity
     : Math.max(0, (Qf - Qb) + (Bf - Bb) * refPrice);
@@ -79,7 +78,7 @@ const MarginHeaderDropdowns = ({
   const crossSummary = crossAccount?.summary || crossAccount || {};
   const crossNetEquity = crossSummary?.net_equity != null ? Number(crossSummary.net_equity) : computedNetEquity;
   const crossCurrentLoan = crossSummary?.total_liability != null ? Number(crossSummary.total_liability) : Qb;
-  
+
   const netEquity = isCross ? crossNetEquity : computedNetEquity;
   const currentLoan = isCross ? crossCurrentLoan : Qb;
 
@@ -119,15 +118,16 @@ const MarginHeaderDropdowns = ({
         style={[
           styles.dropdown,
           {
-            backgroundColor: lightTheme.input,
+            backgroundColor: isDark ? themeColors.background : lightTheme.input,
             flex: 1,
             borderRadius: 10,
-            borderWidth: 0,
+            borderWidth: isDark ? 1 : 0,
             paddingVertical: 6,
             paddingHorizontal: 12,
             marginBottom: 0,
             flexDirection: "row",
             alignItems: "center",
+            borderColor: isDark ? colors.themeElevationColor : "transparent"
           },
         ]}
       >
@@ -148,15 +148,16 @@ const MarginHeaderDropdowns = ({
         style={[
           styles.dropdown,
           {
-            backgroundColor: lightTheme.input,
+            backgroundColor: isDark ? colors.newThemeColor : lightTheme.input,
             width: 75,
             borderRadius: 10,
-            borderWidth: 0,
+            borderWidth: isDark ? 1 : 0,
             paddingVertical: 6,
             paddingHorizontal: 12,
             marginBottom: 0,
             flexDirection: "row",
             alignItems: "center",
+            borderColor: isDark ? colors.themeElevationColor : "transparent"
           },
         ]}
       >
@@ -297,7 +298,7 @@ const MarginHeaderDropdowns = ({
             </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
-            
+
             {/* Coin Row */}
             <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Coin</AppText>
             <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7", padding: 12, borderRadius: 10, marginBottom: 16 }}>
@@ -316,27 +317,27 @@ const MarginHeaderDropdowns = ({
             {/* Quick selector row */}
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               {quickLeverages.map((x) => {
-                  const levStr = `${x}x`;
-                  const isSelected = leverageDraft === x;
-                  return (
-                    <TouchableOpacity
-                      key={levStr}
-                      onPress={() => safeSet(x)}
-                      style={{
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: isSelected ? themeColors.text : "transparent",
-                        backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7",
-                      }}
-                    >
-                      <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>
-                        {levStr}
-                      </AppText>
-                    </TouchableOpacity>
-                  );
-                })}
+                const levStr = `${x}x`;
+                const isSelected = leverageDraft === x;
+                return (
+                  <TouchableOpacity
+                    key={levStr}
+                    onPress={() => safeSet(x)}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: isSelected ? themeColors.text : "transparent",
+                      backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7",
+                    }}
+                  >
+                    <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>
+                      {levStr}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Details List */}

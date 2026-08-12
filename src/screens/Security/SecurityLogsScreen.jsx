@@ -8,9 +8,6 @@ import { back_ic, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from '../..
 import { colors } from '../../theme/colors';
 import { appOperation } from '../../appOperation';
 import { SpinnerSecond } from '../../shared/components/SpinnerSecond';
-import { showError } from '../../helper/logger';
-
-const { width } = Dimensions.get('window');
 
 const TAB_LOGINS = 'Logins History';
 const TAB_SETTINGS = 'Security Settings History';
@@ -24,15 +21,45 @@ const normalizeLogsPayload = (raw) => {
   return [raw];
 };
 
-const formatLoginLocation = (item) => {
-  const d = item?.device || {};
-  const parts = [];
-  if (d.device) parts.push(d.device);
-  const osLine = [d.os, d.osVersion].filter(Boolean).join(' ');
-  if (osLine) parts.push(osLine);
-  const browserLine = [d.browser, d.browserVersion].filter(Boolean).join(' ');
-  if (browserLine) parts.push(browserLine);
-  return parts.length ? parts.join(' · ') : '—';
+const pad2 = (n) => String(n).padStart(2, '0');
+
+const formatAbsoluteTime = (ts) => {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '—';
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+};
+
+const formatRelativeTime = (ts) => {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  let diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diffSec < 0) diffSec = 0;
+  if (diffSec < 60) return 'just now';
+  const mins = Math.floor(diffSec / 60);
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hours < 24) {
+    return remMins > 0 ? `${hours} hours ${remMins} min ago` : `${hours} hours ago`;
+  }
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `${days} days ${remHours} hours ago` : `${days} days ago`;
+};
+
+const formatType = (item) => {
+  const platform = item?.metadata?.platform || item?.metadata?.client || item?.metadata?.source;
+  if (platform && typeof platform === 'string') {
+    const p = platform.trim().toUpperCase();
+    if (p === 'WEB' || p === 'APP' || p === 'API') return p;
+  }
+  const device = String(item?.device?.device || '').toLowerCase();
+  if (device.includes('mobile') || device.includes('tablet') || device.includes('phone')) {
+    return 'APP';
+  }
+  return 'WEB';
 };
 
 const formatStatus = (s) => {
@@ -41,18 +68,24 @@ const formatStatus = (s) => {
   return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '—';
 };
 
+const formatLoginLocation = (item) => {
+  const loc = item?.location || {};
+  if (loc.country) return loc.country;
+  if (loc.city && loc.region) return `${loc.city}, ${loc.region}`;
+  if (loc.city) return loc.city;
+  if (loc.region) return loc.region;
+  return '—';
+};
+
+const logTimestamp = (item) => item?.createdAt || item?.date || item?.updatedAt;
+
 const mapLoginLogToRow = (item, idx) => {
-  const type =
-    item?.metadata?.method ||
-    item?.Activity ||
-    item?.activity ||
-    '—';
-  const ts = item?.createdAt || item?.date || item?.updatedAt;
-  const time = ts ? new Date(ts).toLocaleString() : '—';
+  const ts = logTimestamp(item);
   return {
     id: item?._id || item?.id || idx,
-    type,
-    time,
+    type: formatType(item),
+    absTime: formatAbsoluteTime(ts),
+    relTime: formatRelativeTime(ts),
     status: formatStatus(item?.status),
     ip: item?.IP || item?.ip || '—',
     location: formatLoginLocation(item),
@@ -60,18 +93,13 @@ const mapLoginLogToRow = (item, idx) => {
 };
 
 const mapSecuritySettingsLogToRow = (item, idx) => {
-  const ts = item?.createdAt || item?.date || item?.updatedAt;
-  const time = ts ? new Date(ts).toLocaleString() : '—';
-  const statusStr = formatStatus(item?.status);
-  const category = item?.category ? String(item.category).trim() : '';
-  const actionParts = [];
-  if (item?.status != null && String(item.status).trim() !== '') actionParts.push(statusStr);
-  if (category) actionParts.push(category);
-  const actions = actionParts.length ? actionParts.join(' · ') : '—';
+  const ts = logTimestamp(item);
+  const actions = item?.Activity || item?.activity || '—';
   return {
     id: item?._id || item?.id || idx,
-    type: item?.Activity || item?.activity || '—',
-    time,
+    type: formatType(item),
+    absTime: formatAbsoluteTime(ts),
+    relTime: '', // Web doesn't show relative time for settings logs
     ip: item?.IP || item?.ip || item?.metadata?.ip || '—',
     actions,
   };
@@ -141,13 +169,13 @@ const SecurityLogsScreen = () => {
 
   const rows = activeMainTab === TAB_LOGINS ? loginRows : settingsRows;
 
-  const cardBg = isDark ? '#1C1C1E' : colors.white;
-  const borderCol = isDark ? '#2C2C2E' : '#E5E5EA';
+  const cardBg = isDark ? colors.newThemeColor : colors.white;
+  const borderCol = isDark ? '#8A8A93' : '#E5E5EA';
   const labelCol = isDark ? '#8A8A93' : '#8E8E93';
   const valCol = themeColors.text;
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: colors.white }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={[styles.header, {}]}>
         <TouchableOpacity
@@ -226,7 +254,12 @@ const SecurityLogsScreen = () => {
                     </View>
                     <View style={[styles.cardRow, { borderBottomColor: borderCol }]}>
                       <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: labelCol }}>Time</AppText>
-                      <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: valCol }}>{row.time}</AppText>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: valCol }}>{row.absTime}</AppText>
+                        {!!row.relTime && (
+                          <AppText type={TWELVE} weight={MEDIUM} style={{ color: labelCol, marginTop: 2 }}>{row.relTime}</AppText>
+                        )}
+                      </View>
                     </View>
                     <View style={[styles.cardRow, { borderBottomColor: borderCol }]}>
                       <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: labelCol }}>Status</AppText>
@@ -255,7 +288,12 @@ const SecurityLogsScreen = () => {
                     </View>
                     <View style={[styles.cardRow, { borderBottomColor: borderCol }]}>
                       <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: labelCol }}>Time</AppText>
-                      <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: valCol }}>{row.time}</AppText>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: valCol }}>{row.absTime}</AppText>
+                        {!!row.relTime && (
+                          <AppText type={TWELVE} weight={MEDIUM} style={{ color: labelCol, marginTop: 2 }}>{row.relTime}</AppText>
+                        )}
+                      </View>
                     </View>
                     <View style={[styles.cardRow, { borderBottomColor: borderCol }]}>
                       <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: labelCol }}>IP</AppText>

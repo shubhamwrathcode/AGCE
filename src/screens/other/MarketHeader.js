@@ -50,7 +50,7 @@ const MarketHeader = ({
   activeSubCategory = "All",
   onSubCategoryChange,
 }) => {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
 
   const textColor = themeColors.text;
   const placeholderColor = '#9e9fa3';
@@ -99,10 +99,10 @@ const MarketHeader = ({
   }, [activeTab, animateUnderlineTo]);
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: colors.white }]}>
+    <View style={[styles.wrapper, { backgroundColor: themeColors.background }]}>
       {/* Search bar - full width, reference style */}
       {showSearch && (
-        <View style={[styles.searchBar, { backgroundColor: '#F4F4F4', borderColor: 'transparent', borderWidth: 0.8 }]}>
+        <View style={[styles.searchBar, { backgroundColor: isDark ? themeColors.input : '#F4F4F4', borderColor: 'transparent', borderWidth: 0.8 }]}>
           <FastImage
             source={searchIcon}
             resizeMode="contain"
@@ -118,17 +118,20 @@ const MarketHeader = ({
             returnKeyType="search"
           />
         </View>
-      )}
+      )
+      }
 
-      {!showSearch && (
-        <TouchableOpacity
-          onPress={() => NavigationService.navigate(SEARCH_SCREEN)}
-          style={[styles.searchBar, { backgroundColor: themeColors.card, }]}
-        >
-          <FastImage source={searchIcon} resizeMode="contain" style={styles.searchIcon} tintColor={placeholderColor} />
-          <AppText weight={SEMI_BOLD} type={FOURTEEN} style={[styles.searchPlaceholder, { color: placeholderColor }]}>Search Coins</AppText>
-        </TouchableOpacity>
-      )}
+      {
+        !showSearch && (
+          <TouchableOpacity
+            onPress={() => NavigationService.navigate(SEARCH_SCREEN)}
+            style={[styles.searchBar, { backgroundColor: themeColors.card, }]}
+          >
+            <FastImage source={searchIcon} resizeMode="contain" style={styles.searchIcon} tintColor={placeholderColor} />
+            <AppText weight={SEMI_BOLD} type={FOURTEEN} style={[styles.searchPlaceholder, { color: placeholderColor }]}>Search Coins</AppText>
+          </TouchableOpacity>
+        )
+      }
 
       {/* Primary tabs - yellow underline for selected */}
       <ScrollView
@@ -181,42 +184,44 @@ const MarketHeader = ({
         </View>
       </ScrollView>
 
-      {showSubTabs && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.subTabsScroll}
-          style={styles.subTabsRow}
-        >
-          {(Array.isArray(subTabItems) && subTabItems.length > 0
-            ? subTabItems
-            : ["All", ...(Array.isArray(subCategories) ? subCategories : [])].map((k) => ({
-              key: k,
-              label: formatSubCategoryLabel(k),
-            }))).map((it) => {
-              const isActive = activeSubCategory === it.key;
-              return (
-                <TouchableOpacity
-                  key={it.key}
-                  activeOpacity={0.85}
-                  onPress={() => onSubCategoryChange?.(it.key)}
-                  style={[
-                    styles.subTabChip,
-                    {
-                      backgroundColor: isActive ? '#F4F4F4' : "transparent",
-                      borderColor: "transparent",
-                    },
-                  ]}
-                >
-                  <AppText weight={MEDIUM} type={TWELVE} style={[styles.subTabText, { color: isActive ? themeColors.text : '#84888C' }]}>
-                    {it.label}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-        </ScrollView>
-      )}
-    </View>
+      {
+        showSubTabs && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.subTabsScroll}
+            style={styles.subTabsRow}
+          >
+            {(Array.isArray(subTabItems) && subTabItems.length > 0
+              ? subTabItems
+              : ["All", ...(Array.isArray(subCategories) ? subCategories : [])].map((k) => ({
+                key: k,
+                label: formatSubCategoryLabel(k),
+              }))).map((it) => {
+                const isActive = activeSubCategory === it.key;
+                return (
+                  <TouchableOpacity
+                    key={it.key}
+                    activeOpacity={0.85}
+                    onPress={() => onSubCategoryChange?.(it.key)}
+                    style={[
+                      styles.subTabChip,
+                      {
+                        backgroundColor: isActive ? isDark ? colors.orangeTheme : '#F4F4F4' : "transparent",
+                        borderColor: "transparent",
+                      },
+                    ]}
+                  >
+                    <AppText weight={MEDIUM} type={TWELVE} style={[styles.subTabText, { color: isActive ? themeColors.text : '#84888C' }]}>
+                      {it.label}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
+          </ScrollView>
+        )
+      }
+    </View >
   );
 };
 

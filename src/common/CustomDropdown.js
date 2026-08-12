@@ -33,7 +33,7 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
   const isPlaceholder = !selected || selected.toLowerCase().includes("select");
 
   return (
-    <View>
+    <View style={{ zIndex: 9999, elevation: 9999 }}>
       <TouchableOpacity
         ref={buttonRef}
         style={[
@@ -82,7 +82,7 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
           style={[
             styles.inlineContent,
             {
-              backgroundColor: themeColors.card,
+              backgroundColor: isDark ? colors.newThemeColor : "rgba(0,0,0,0.05)",
               borderColor: themeColors.border,
             }
           ]}
@@ -147,6 +147,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   inlineContent: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    elevation: 9999,
     maxHeight: 250,
     borderRadius: 8,
     borderWidth: 1,

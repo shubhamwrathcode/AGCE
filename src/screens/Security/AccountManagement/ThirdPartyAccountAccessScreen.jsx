@@ -70,13 +70,13 @@ const ThirdPartyAccountAccessScreen = () => {
     fetchLogs();
   }, [fetchLogs]);
 
-  const cardBg = isDark ? '#1C1C1E' : colors.white;
-  const borderCol = isDark ? '#2C2C2E' : '#E5E5EA';
+  const cardBg = isDark ? colors.newThemeColor : colors.white;
+  const borderCol = isDark ? '#8A8A93' : '#E5E5EA';
   const labelCol = isDark ? '#8A8A93' : '#8E8E93';
   const valCol = themeColors.text;
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: colors.white }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: colors.newThemeColor }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -107,9 +107,7 @@ const ThirdPartyAccountAccessScreen = () => {
               style={{ width: 100, height: 100 }}
               resizeMode="contain"
             />
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ marginTop: 16, color: valCol }}>
-              No data
-            </AppText>
+
           </View>
         ) : (
           <ScrollView

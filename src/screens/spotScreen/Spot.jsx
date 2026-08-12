@@ -1017,7 +1017,7 @@ const OrderBookSection = memo(({
           style={[
             sty.spotObAggTrigger,
             {
-              backgroundColor: themeColors.input,
+              backgroundColor: isDark ? '#2A2A2E' : themeColors.input,
               borderColor: themeColors.themeBorderColor,
               borderRadius: 5
             },
@@ -1038,7 +1038,7 @@ const OrderBookSection = memo(({
           style={[
             sty.spotObViewCycleBtn,
             {
-              backgroundColor: themeColors.input,
+              backgroundColor: isDark ? '#2A2A2E' : themeColors.input,
               borderColor: themeColors.themeBorderColor,
             },
           ]}
@@ -1057,7 +1057,7 @@ const OrderBookSection = memo(({
               {
                 top: aggMenuLayout.y + aggMenuLayout.h + 4,
                 left: Math.max(8, Math.min(aggMenuLayout.x + aggMenuLayout.w - 144, Width - 8 - 144)),
-                backgroundColor: themeColors.card,
+                backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.card,
                 borderColor: themeColors.themeBorderColor,
               },
             ]}
@@ -2570,7 +2570,7 @@ const Spot = () => {
               width: 34,
               height: 34,
               borderRadius: 17,
-              backgroundColor: colors.newThemeColor,
+              backgroundColor: isDark ? colors.themeElevationColor : colors.newThemeColor,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -2586,8 +2586,8 @@ const Spot = () => {
             </AppText>
           </View>
           {selected ? (
-            <View style={{ width: 16, height: 16, borderRadius: 10, backgroundColor: colors.black, alignItems: "center", justifyContent: "center" }}>
-              <FastImage source={tick} tintColor={colors.white} style={{ width: 8, height: 8 }} resizeMode="contain" />
+            <View style={{ width: 16, height: 16, borderRadius: 10, backgroundColor: isDark ? colors.white : colors.black, alignItems: "center", justifyContent: "center" }}>
+              <FastImage source={tick} style={{ width: 8, height: 8 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />
             </View>
           ) : (
             <View style={{ width: 26 }} />
@@ -2630,7 +2630,7 @@ const Spot = () => {
               borderColor: themeColors.themeBorderColor,
             }}
           >
-            <FastImage source={REMOVE} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={colors.black} />
+            <FastImage source={REMOVE} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={isDark ? colors.white : colors.black} />
           </TouchableOpacity>
         </View>
 
@@ -2670,7 +2670,9 @@ const Spot = () => {
                 )
               }
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ marginLeft: 4, top: 2 }}
+              style={{
+                marginLeft: 4, top: 2,
+              }}
             >
               <FastImage source={INFO} style={{ width: 12, height: 12 }} resizeMode="contain" />
             </TouchableOpacity>
@@ -2932,12 +2934,6 @@ const Spot = () => {
 
       </View>
     );
-  };
-
-  const handleCancelOrder = (orderId) => {
-    let tt = undefined;
-    if (headerTab === "Margin") tt = marginMode === "Cross" ? "cross" : "margin";
-    dispatch(cancelOrder({ order_id: orderId, tradeType: tt }));
   };
 
   const selectNumber = (item) => {
@@ -3636,14 +3632,14 @@ const Spot = () => {
   }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor, isDark]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.white, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.background, paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         contentContainerStyle={[
           styles.container,
-          { backgroundColor: colors.white },
+          { backgroundColor: themeColors.background },
         ]}
       >
         <SpotHeader
@@ -3781,7 +3777,7 @@ const Spot = () => {
                     style={[
                       styles.dropdown,
                       {
-                        backgroundColor: lightTheme.input,
+                        backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
                         flex: 1,
                         borderRadius: 10,
                         borderWidth: 0,
@@ -3821,7 +3817,7 @@ const Spot = () => {
                     style={[
                       styles.spotOrderFieldCard,
                       {
-                        backgroundColor: lightTheme.input,
+                        backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
                         borderWidth: 0,
                       },
                     ]}
@@ -3953,7 +3949,7 @@ const Spot = () => {
                       style={[
                         styles.spotOrderFieldCard,
                         {
-                          backgroundColor: lightTheme.input,
+                          backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
                           borderWidth: 0,
                         },
                       ]}
@@ -4033,7 +4029,7 @@ const Spot = () => {
                     style={[
                       styles.spotOrderFieldCard,
                       {
-                        backgroundColor: lightTheme.input,
+                        backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
                         borderWidth: 0,
                       },
                     ]}
@@ -4157,7 +4153,7 @@ const Spot = () => {
                       style={[
                         styles.spotOrderFieldCard,
                         {
-                          backgroundColor: lightTheme.input,
+                          backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
                           borderWidth: 0,
                         },
                       ]}
@@ -4249,7 +4245,8 @@ const Spot = () => {
                         >
                           <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
                             {limitIoc ? (
-                              <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                              <FastImage source={checkIc} tintColor={isDark ? colors.white : colors.black} style={[styles.slippageCheckIcon, {
+                              }]} resizeMode="contain" />
                             ) : null}
                           </View>
                           <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>IOC</AppText>
@@ -4267,7 +4264,7 @@ const Spot = () => {
                         >
                           <View style={[styles.slippageCheckbox, { borderColor: themeColors.themeBorderColor }]}>
                             {limitFok ? (
-                              <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                              <FastImage source={checkIc} tintColor={isDark ? colors.white : colors.black} style={styles.slippageCheckIcon} resizeMode="contain" />
                             ) : null}
                           </View>
                           <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>FOK</AppText>
@@ -4288,7 +4285,7 @@ const Spot = () => {
                           ]}
                         >
                           {slippageEnabled ? (
-                            <FastImage source={checkIc} style={styles.slippageCheckIcon} resizeMode="contain" />
+                            <FastImage source={checkIc} tintColor={isDark ? colors.white : colors.black} style={styles.slippageCheckIcon} resizeMode="contain" />
                           ) : null}
                         </View>
                         <AppText style={[styles.spotOrderTifText, { color: themeColors.text }]}>Slippage</AppText>
@@ -4306,7 +4303,7 @@ const Spot = () => {
                         style={[
                           styles.spotOrderFieldCard,
                           {
-                            backgroundColor: lightTheme.input,
+                            backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
                             borderWidth: 0,
                           },
                         ]}
@@ -4589,7 +4586,7 @@ const Spot = () => {
                               minWidth: 24,
                               height: 2,
                               marginTop: 2,
-                              backgroundColor: activeTab === t.id ? colors.buttonBg : "transparent",
+                              backgroundColor: activeTab === t.id ? isDark ? colors.white : colors.buttonBg : "transparent",
                               borderRadius: 1,
                             }}
                           />
@@ -4613,7 +4610,7 @@ const Spot = () => {
                               keyboardShouldPersistTaps="handled"
                               contentContainerStyle={{
                                 flexDirection: "row",
-                                alignItems: "center",
+                                alignItems: "flex-start",
                                 gap: 6,
                                 paddingVertical: 2,
                                 paddingRight: 14,
@@ -4645,7 +4642,7 @@ const Spot = () => {
                                   </TouchableOpacity>
                                 );
                               })}
-                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 2, alignSelf: "flex-start" }}>
+                              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, marginLeft: 2, alignSelf: "flex-start" }}>
                                 <View style={{ width: 102 }}>
                                   <CustomDropdown
                                     compact
@@ -4668,7 +4665,7 @@ const Spot = () => {
                                     marginLeft: 2,
                                   }}
                                 >
-                                  <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                                  <FastImage source={Refresh} tintColor={isDark ? colors.white : colors.black} style={{ width: 12, height: 12 }} resizeMode="contain" />
                                   <AppText weight={MEDIUM} style={{ fontSize: 12, color: themeColors.secondaryText }}>Reset</AppText>
                                 </TouchableOpacity>
                               </View>
@@ -4753,7 +4750,7 @@ const Spot = () => {
                                 alignSelf: "flex-start",
                               }}
                             >
-                              <View style={{ width: 102 }}>
+                              <View style={{ width: 110 }}>
                                 <CustomDropdown
                                   compact
                                   data={SPOT_SIDE_DROPDOWN_LABELS}
@@ -4771,7 +4768,7 @@ const Spot = () => {
                                   paddingLeft: 4,
                                 }}
                               >
-                                <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+                                <FastImage source={Refresh} tintColor={isDark ? colors.white : colors.black} style={{ width: 12, height: 12 }} resizeMode="contain" />
                                 <AppText style={{ fontSize: 13, color: themeColors.secondaryText }}>Reset</AppText>
                               </TouchableOpacity>
                             </View>
@@ -4796,7 +4793,7 @@ const Spot = () => {
           animationType="none"
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor,
+              backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.themeElevationColor,
               height: 300,
               borderRadius: 10,
               paddingHorizontal: universalPaddingHorizontal,
@@ -4819,7 +4816,7 @@ const Spot = () => {
           animationType="slide"
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor,
+              backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.themeElevationColor,
               height: orderTypeSheetHeight,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
@@ -4848,7 +4845,7 @@ const Spot = () => {
           animationType="slide"
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor,
+              backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.themeElevationColor,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingHorizontal: universalPaddingHorizontal,
@@ -4883,7 +4880,7 @@ const Spot = () => {
           animationType="slide"
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor,
+              backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.themeElevationColor,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingHorizontal: universalPaddingHorizontal,
@@ -4913,7 +4910,7 @@ const Spot = () => {
         >
           <View
             style={{
-              backgroundColor: themeColors.themeElevationColor,
+              backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.themeElevationColor,
               borderRadius: 20,
               padding: 25,
               width: Width * 0.85,

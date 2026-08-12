@@ -649,11 +649,11 @@ const AccountDetails = () => {
                 value={hasEmergencyContact ? "Manage" : "Not enabled"}
                 onPress={() => NavigationService.navigate(routes.EMERGENCY_CONTACT_SCREEN)}
               />
-              <MenuItem
+              {/* <MenuItem
                 label="Account Connections"
                 value="Manage"
                 onPress={() => NavigationService.navigate(routes.ACCOUNT_CONNECTIONS_SCREEN)}
-              />
+              /> */}
 
               {/* Password Management */}
               <View style={[styles.sectionHeader, { marginTop: 20 }]}>

@@ -10,14 +10,9 @@ import {
   AppText,
   BLACK,
   EIGHTEEN,
-  ELEVEN,
-  FIFTEEN,
-  FOURTEEN,
   NORMAL,
   SEMI_BOLD,
   SIXTEEN,
-  THIRTEEN,
-  WHITE,
   YELLOW,
 } from "../../shared";
 import React, { useState, useCallback } from "react";
@@ -29,11 +24,9 @@ import {
   NOTIFICATION_SCREEN,
 } from "../../navigation/routes";
 import { FlatList } from "react-native-gesture-handler";
-import { BASE_URL } from "../../helper/Constants";
 import { useAppSelector } from "../../store/hooks";
 import moment from "moment";
 import { commonStyles } from "../../theme/commonStyles";
-import { checkValue } from "../../helper/utility";
 
 const ListEmptyComponent = ({ theme }) => {
   return (
@@ -54,7 +47,6 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
   );
   const notificationRows = Array.isArray(notificationList) ? notificationList : [];
 
-  // ✅ Memoize renderItem with useCallback for performance
   const renderItem = useCallback(({ item }) => {
     return (
       <TouchableOpacityView
@@ -90,7 +82,6 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
     );
   }, [theme]);
 
-  // ✅ Memoize keyExtractor
   const keyExtractor = useCallback(
     (item) => String(item?._id ?? item?.id ?? ""),
     []
@@ -198,7 +189,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
           initialNumToRender={8}
           windowSize={10}
           getItemLayout={(data, index) => ({
-            length: 60, // Approximate item height
+            length: 60,
             offset: 60 * index,
             index,
           })}
@@ -213,7 +204,6 @@ export default HomeCoinList;
 
 export const styles = StyleSheet.create({
   rawContainer: {
-    // flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
     marginTop: 10,
@@ -225,6 +215,6 @@ export const styles = StyleSheet.create({
     height: 40,
     borderRadius: 5,
     justifyContent: "space-between",
-    backgroundColor: "#EFEFEF",
+    // backgroundColor: isDark ? '#2A2A2E' : '#EFEFEF',
   },
 });

@@ -43,7 +43,7 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'CTEX' do
+target 'AGCX' do
   config = use_native_modules!
 
   if linkage.nil?
@@ -55,7 +55,7 @@ target 'CTEX' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  target 'CTEXTests' do
+  target 'AGCXTests' do
     inherit! :complete
     # Pods for testing
   end

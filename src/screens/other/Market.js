@@ -276,7 +276,7 @@ const Market = () => {
 
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
         {/* Featured cards – Carousel (same as Home CoinSlider) */}
         <MarketHeader
@@ -291,38 +291,7 @@ const Market = () => {
           activeSubCategory={activeTab === "ALPHA" ? alphaSubTab : spotSubCategory}
           onSubCategoryChange={activeTab === "ALPHA" ? setAlphaSubTab : setSpotSubCategory}
         />
-        {/* {featuredCoins?.length > 0 && (
-          <View style={styles.carouselWrap}>
-            <Carousel
-              loop
-              width={ITEM_WIDTH}
-              height={150}
-              autoPlay
-              data={featuredCoins}
-              scrollAnimationDuration={1000}
-              onSnapToItem={(index) => setCarouselIndex(index)}
-              renderItem={({ item, index }) => (
-                <View style={styles.cardWrapper}>
-                  <MarketFeaturedCard data={item} chartData={item?.chart_data} chartId={`market-${index}`} onPress={handleFeaturedPress} />
-                </View>
-              )}
-              mode="parallax"
-              modeConfig={{
-                parallaxScrollingScale: 1,
-                parallaxScrollingOffset: 0,
-              }}
-              panGestureHandlerProps={{
-                activeOffsetX: [-10, 10],
-              }}
-              style={styles.carousel}
-            />
-            <View style={styles.dotContainer}>
-              {featuredCoins.map((_, index) => (
-                <CustomDots key={index} index={index} activeIndex={carouselIndex} />
-              ))}
-            </View>
-          </View>
-        )} */}
+
         {contentLoading ? (
           <MarketSkeleton />
         ) : (

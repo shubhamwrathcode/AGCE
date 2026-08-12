@@ -1392,10 +1392,10 @@ const SpotChartScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.white, paddingTop: insets.top }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background, paddingTop: insets.top }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
 
-      <View style={[styles.header, { backgroundColor: colors.white }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.background }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <FastImage
@@ -1645,7 +1645,6 @@ const SpotChartScreen = () => {
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
-                  {/* Agg menu and Layout toggle moved to OrderBook Header */}
                 </View>
 
                 <Modal visible={orderBookAggOpen} transparent animationType="fade" onRequestClose={closeAggMenu}>
@@ -1657,7 +1656,7 @@ const SpotChartScreen = () => {
                         {
                           top: aggMenuLayout.y + aggMenuLayout.h + 4,
                           left: Math.max(8, Math.min(aggMenuLayout.x + aggMenuLayout.w - 160, Width - 8 - 160)),
-                          backgroundColor: themeColors.card,
+                          backgroundColor: isDark ? colors.newThemeColor : "rgba(0,0,0,0.05)",
                           borderColor: themeColors.themeBorderColor,
                         },
                       ]}
@@ -1669,7 +1668,7 @@ const SpotChartScreen = () => {
                             key={String(opt)}
                             style={[
                               styles.aggMenuRow,
-                              selected && { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" },
+                              selected && { backgroundColor: isDark ? colors.themeElevationColor : "rgba(0,0,0,0.02)" },
                             ]}
                             activeOpacity={0.7}
                             onPress={() => selectAggStep(opt)}
@@ -2023,7 +2022,7 @@ const SpotChartScreen = () => {
         style={[
           styles.chartBottomBar,
           {
-            backgroundColor: colors.white,
+            backgroundColor: themeColors.background,
             paddingBottom: Math.max(insets.bottom, 10),
           },
         ]}
@@ -2032,7 +2031,7 @@ const SpotChartScreen = () => {
           {[
             { id: "margin", label: "Margin", icon: margin_ic },
             { id: "futures", label: "Futures", icon: future_ic },
-            { id: "bots", label: "Bots", icon: bots_ic },
+            // { id: "bots", label: "Bots", icon: bots_ic },
           ].map((it) => (
             <TouchableOpacity
               key={it.id}

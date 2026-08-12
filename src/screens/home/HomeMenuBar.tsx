@@ -63,7 +63,7 @@ const MenuItem = React.memo(({ item, index }: any) => {
           style={[
             item?.id === "6" ? styles.iconWrapMore : styles.iconWrap,
             {
-              backgroundColor: colors.iconBgColor,
+              backgroundColor: isDark ? themeColors.input : colors.iconBgColor,
               borderRadius: 20,
             },
           ]}
@@ -71,7 +71,13 @@ const MenuItem = React.memo(({ item, index }: any) => {
           <FastImage
             resizeMode="contain"
             source={item.icon}
-            tintColor={item?.id === "6" ? themeColors.text : item?.id === "7" ? "#000" : undefined}
+            tintColor={
+              item?.id === "1" 
+                ? undefined 
+                : isDark 
+                  ? colors.white 
+                  : (item?.id === "6" ? themeColors.text : item?.id === "7" ? "#000" : undefined)
+            }
             style={item?.id === "6" ? styles.iconMore : styles.icon}
           />
         </View>

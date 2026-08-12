@@ -42,7 +42,6 @@ import ResetPassword from "../screens/settings/ResetPassword";
 import CurrencyPreference from "../screens/account/CurrencyPreference";
 import WalletDetails from "../features/wallet/screens/WalletDetailsScreen";
 import WalletHistoryDetails from "../screens/wallet/WalletHistoryDetails";
-import TradeHistoryDetails from "../screens/wallet/TradeHistoryDetails";
 import KycVerificationScreen from "../screens/account/KycVerificationScreen";
 import KycResubmitScreen from "../screens/account/KycResubmitScreen";
 import { KycFormProvider } from "../context/KycFormContext";
@@ -396,10 +395,10 @@ const MyAuthLoadingStack = () => {
         name={routes.WALLET_HISTORY_DETAILS_SCREEN}
         component={WalletHistoryDetails}
       />
-      <Stack.Screen
+      {/* <Stack.Screen
         name={routes.TRADE_HISTORY_DETAILS_SCREEN}
         component={TradeHistoryDetails}
-      />
+      /> */}
 
       <Stack.Screen
         name={routes.COIN_DETAILS_CHART_SCREEN}

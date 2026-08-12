@@ -12,6 +12,7 @@ import moment from "moment";
 import { toFixedEight, spotOpenOrderMarketLabel } from "../../helper/utility";
 import { fontFamilyBold, fontFamilySemiBold } from "../../theme/typography";
 import { cancelOrder } from "../../actions/homeActions";
+import { AppSafeAreaView } from "../../common/AppSafeAreaView";
 
 const SpotOrderHistoryDetail = () => {
   const route = useRoute();
@@ -107,7 +108,7 @@ const SpotOrderHistoryDetail = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       {/* Header Bar */}
       <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
         <TouchableOpacity onPress={() => NavigationService.goBack()} style={styles.headerBtn}>
@@ -206,7 +207,7 @@ const SpotOrderHistoryDetail = () => {
           </TouchableOpacity>
         ) : null}
       </ScrollView>
-    </View>
+    </AppSafeAreaView>
   );
 };
 

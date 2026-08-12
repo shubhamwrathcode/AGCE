@@ -23,7 +23,6 @@ import { back_ic } from "../../helper/ImageAssets";
 import { useDispatch } from "react-redux";
 import { setBuyOrders, setSellOrders, setSpotSelectedPair, setFuturesSelectedPair } from "../../slices/homeSlice";
 import { useTheme } from "../../hooks/useTheme";
-import { IMAGE_BASE_URL } from "../../helper/Constants";
 
 const CoinList = React.memo(() => {
   const { colors: themeColors, isDark } = useTheme();
@@ -351,10 +350,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingTop: 5,
   },
-  tableHeaderText: {
-    fontSize: 11,
-    color: "#9CA3AF",
-  },
+  // tableHeaderText: {
+  //   fontSize: 11,
+  //   color: themeColors.secondaryText,
+  // },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -366,35 +365,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F3F4F6",
-    overflow: "hidden",
-  },
-  coinName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  coinSym: {
-    marginTop: 0,
-    fontSize: 10,
-    color: "#9CA3AF",
-  },
-  priceMain: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  priceSub: {
-    marginTop: 2,
-    fontSize: 10,
-    color: "#9CA3AF",
-  },
+  // iconCircle: {
+  //   width: 38,
+  //   height: 38,
+  //   borderRadius: 19,
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   backgroundColor: themeColors.input,
+  //   overflow: "hidden",
+  // },
+  // coinName: {
+  //   fontSize: 13,
+  //   fontWeight: "700",
+  //   color: themeColors.text,
+  // },
+  // coinSym: {
+  //   marginTop: 0,
+  //   fontSize: 10,
+  //   color: themeColors.secondaryText,
+  // },
+  // priceMain: {
+  //   fontSize: 13,
+  //   fontWeight: "700",
+  //   color: themeColors.text,
+  // },
+  // priceSub: {
+  //   marginTop: 2,
+  //   fontSize: 10,
+  //   color: themeColors.secondaryText,
+  // },
   changePill: {
     minWidth: 70,
     paddingHorizontal: 8,

@@ -14,13 +14,14 @@ import {
 } from "../../helper/ImageAssets";
 import FastImage from "react-native-fast-image";
 import { AppText, ELEVEN, FOURTEEN, MEDIUM, NINE, SEMI_BOLD, TEN, TWELVE } from "../../shared";
-import { colors, lightTheme } from "../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import {
   DEPOSIT_COIN_SCREEN,
   KYC_STEP_ONE_SCREEN,
   WALLET_SCREEN,
 } from "../../navigation/routes";
+import { useTheme } from "../../hooks/useTheme";
 
 const SLIDER_HEIGHT = 84;
 const AUTO_PLAY_MS = 3600;
@@ -110,15 +111,16 @@ const HomeSlider = () => {
     }, AUTO_PLAY_MS);
     return () => clearInterval(id);
   }, [slideCount]);
+  const { isDark } = useTheme();
 
   const renderItem = useCallback(
     ({ item }) => {
       const total = slideCount || 1;
       const current = Math.min(activeIndex + 1, total);
-      const totalColor = current === total ? "#000" : "#9CA3AF";
+      const totalColor = current === total ? isDark ? colors.white : "#000" : "#9CA3AF";
 
       return (
-        <View style={[styles.slideOuter, { backgroundColor: '#F7F7F7' }]}>
+        <View style={[styles.slideOuter, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
           <TouchableOpacity
             style={styles.slideInner}
             onPress={item?.onPress}
@@ -131,7 +133,7 @@ const HomeSlider = () => {
             />
 
             <View style={styles.textBlock}>
-              <AppText type={ELEVEN} weight={MEDIUM} style={{ color: '#9ca3af' }} numberOfLines={1}>
+              <AppText type={ELEVEN} weight={MEDIUM} style={{ color: isDark ? '#8A8A93' : '#9ca3af' }} numberOfLines={1}>
                 Events
               </AppText>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} numberOfLines={2} style={styles.titleText}>
@@ -142,9 +144,11 @@ const HomeSlider = () => {
               </AppText>
             </View>
 
-            <View style={styles.counterBadge}>
+            <View style={[styles.counterBadge, { backgroundColor: isDark ? darkTheme.cardBgColor : '#E5E7EB' }]}>
               <Text numberOfLines={1}>
-                <Text style={styles.counterCurrent}>{current}</Text>
+                <Text style={[styles.counterCurrent, {
+                  color: isDark ? colors.white : "#000",
+                }]}>{current}</Text>
                 <Text style={[styles.counterTotal, { color: totalColor }]}>{`/${total}`}</Text>
               </Text>
             </View>
@@ -167,6 +171,7 @@ const HomeSlider = () => {
           {
             width: carouselWidth,
             height: SLIDER_HEIGHT,
+            backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0',
           },
         ]}
       >
@@ -203,7 +208,7 @@ const styles = StyleSheet.create({
   card: {
     alignSelf: "center",
     marginBottom: 5,
-    backgroundColor: lightTheme.input,
+
     borderRadius: 12,
     overflow: "hidden",
   },
@@ -243,7 +248,7 @@ const styles = StyleSheet.create({
     bottom: 6,
     minWidth: 40,
     borderRadius: 5,
-    backgroundColor: "#E5E7EB",
+
     paddingVertical: 2,
     paddingHorizontal: 5,
     alignItems: "center",
@@ -251,7 +256,7 @@ const styles = StyleSheet.create({
   },
   counterCurrent: {
     fontSize: 11,
-    color: "#000",
+
     fontWeight: "600",
   },
   counterTotal: {

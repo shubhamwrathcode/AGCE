@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from "react-native";
 import FastImage from "react-native-fast-image";
 import {
   agceLogoName,
+  agceLogoNamelight,
   APP_LOGO,
   bell_ic,
   defaultPic,
@@ -21,7 +22,7 @@ import { useFocusEffect } from "@react-navigation/native";
 const HeaderTop = () => {
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth.userData);
-  const iconTint = isDark ? themeColors.text : "#000000";
+  const iconTint = isDark ? '#C1C1C1' : "#000000";
   const titleColor = isDark ? themeColors.text : "#000000";
 
   const [serverAvatar, setServerAvatar] = useState(null);
@@ -56,12 +57,17 @@ const HeaderTop = () => {
   };
 
   const finalAvatarUri = getFullAvatarUrl(serverAvatar || userData?.profilepicture);
+  console.log(finalAvatarUri, '===uri');
+
   return (
     <View style={[styles.headerBar,]}>
       <View style={styles.sideSlot}>
         <TouchableOpacity
           onPress={() => NavigationService.navigate("ProfileDrawer")}
-          style={[styles.avatarContainer, { borderColor: themeColors.border }]}
+          style={[styles.avatarContainer, {
+            borderColor: themeColors.border,
+            backgroundColor: lightTheme.input
+          }]}
         >
           <FastImage
             source={finalAvatarUri ? { uri: finalAvatarUri } : defaultPic}
@@ -73,17 +79,11 @@ const HeaderTop = () => {
 
       <View style={styles.brandCenter}>
         <FastImage
-          source={agceLogoName}
+          source={agceLogoNamelight}
           resizeMode="contain"
           style={styles.brandLogo}
         />
-        {/* <AppText
-          weight={BOLD}
-          type={SIXTEEN}
-          style={[styles.brandTitle, { color: titleColor }]}
-        >
-          AGCE
-        </AppText> */}
+
       </View>
 
       <View style={[styles.sideSlot, styles.sideRight]}>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: lightTheme.input
+
   },
   avatar: {
     width: 40,

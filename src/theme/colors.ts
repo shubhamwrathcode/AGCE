@@ -130,4 +130,6 @@ export const darkTheme = {
   green: '#4ED46C',
   spotTradeBuy: '#38B781',
   spotTradeSell: '#ED4E4E',
+  cardBgColor: "#3A3A3C",
+  sheetDarkColor: '#0F141C'
 };

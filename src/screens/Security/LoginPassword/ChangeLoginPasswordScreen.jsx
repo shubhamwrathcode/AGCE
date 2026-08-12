@@ -26,7 +26,7 @@ import {
   TWENTY_TWO,
   THIRTEEN,
 } from '../../../shared';
-import { back_ic, checkIc, account_restrictions, pasteImg, closeIcon, minus } from '../../../helper/ImageAssets';
+import { back_ic, checkIc, account_restrictions, pasteImg, closeIcon, minus, security_risk_vector_light } from '../../../helper/ImageAssets';
 import { validatePasswordStrict } from '../../../helper/utility';
 import { colors } from '../../../theme/colors';
 import * as routes from '../../../navigation/routes';
@@ -701,7 +701,7 @@ const ChangeLoginPasswordScreen = () => {
         {step === 1 && (
           <View style={styles.stepOneContainer}>
             <FastImage
-              source={account_restrictions}
+              source={isDark ? security_risk_vector_light : account_restrictions}
               style={styles.illustration}
               resizeMode="contain"
             />

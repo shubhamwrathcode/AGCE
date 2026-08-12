@@ -40,7 +40,7 @@ import { useTheme } from "../../hooks/useTheme";
 import NotificationSkeleton from "./NotificationSkeleton";
 import { showError, showSuccess } from "../../helper/logger";
 import { BASE_URL } from "../../helper/Constants";
-import { lightTheme } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 
 const PAGE_SIZE = 10;
 
@@ -79,7 +79,7 @@ const ListEmptyComponent = ({ hasSearch }) => {
 
 const Notification = () => {
   const dispatch = useAppDispatch();
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   const languages = useAppSelector((state) => state.account.languages);
 
   const [page, setPage] = useState(1);
@@ -367,7 +367,7 @@ const Notification = () => {
         <TouchableOpacity
           style={[
             styles.markAllBtn,
-            { backgroundColor: lightTheme.input },
+            { backgroundColor: isDark ? colors.themeElevationColor : lightTheme.input },
             markingAll && styles.markAllBtnDisabled,
           ]}
           disabled={markingAll}
@@ -426,7 +426,7 @@ const Notification = () => {
         onRequestClose={closeDetail}
       >
         <Pressable style={styles.modalOverlay} onPress={closeDetail}>
-          <Pressable style={[styles.modalCard, { backgroundColor: themeColors.card }]} onPress={() => {}}>
+          <Pressable style={[styles.modalCard, { backgroundColor: themeColors.card }]} onPress={() => { }}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
                 <AppText weight={SEMI_BOLD} type={THIRTEEN} color={themeColors.text}>

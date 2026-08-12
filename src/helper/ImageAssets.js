@@ -82,6 +82,7 @@ export const DOWN_ARROW = require('../../assets/images/downArrow.png');
 export const Down_Imgs = require('../../assets/images/downImgs.png');
 export const splash = require('../../assets/images/updatedSplash.png');
 export const agceLogoName = require('../../assets/images/agceLogoName.jpg');
+export const agceLogoNamelight = require('../../assets/images/agceLogoNamelight.png');
 export const eye_close = require('../../assets/images/eye_close.png');
 export const tick = require('../../assets/images/tick.png');
 export const captchaIcon = require('../../assets/images/captchaIcon.png');
@@ -210,6 +211,7 @@ export const linkIcon = require('../../assets/images/linkIcon.png');
 export const externalLinkIcon = require('../../assets/images/externalLinkIcon.png');
 export const editImageIcon = require('../../assets/images/editImageIcon.png');
 export const verificationImage = require('../../assets/images/verificationImage.png');
+export const verificationImageLight = require('../../assets/images/verificationImageLight.png');
 export const futuresIcon = require('../../assets/images/futuresIcon.png');
 export const futuresActiveIcon = require('../../assets/images/futuresActiveIcon.png');
 export const SHARE_NEW_ICON = require('../../assets/images/shareNew.png');
@@ -409,7 +411,7 @@ export const link_friends = require('../../assets/images/link_friends.png');
 export const share_link = require('../../assets/images/share_link.png');
 export const themeIcon = require('../../assets/images/themeIcon.png');
 export const emergency_vector_light = require('../../assets/images/emergency_vector_light.png');
-
+export const security_risk_vector_light = require('../../assets/images/security_risk_vector_light.png');
 
 
 

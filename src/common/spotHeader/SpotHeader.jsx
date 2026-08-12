@@ -166,7 +166,7 @@ const SpotHeader = ({
 
   return (
     <>
-      <View style={[styles.container, { backgroundColor: colors.white }]}>
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.topRow}>
           <TouchableOpacity
             onPress={onBackPress}
@@ -175,10 +175,12 @@ const SpotHeader = ({
             disabled={!onBackPress}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <FastImage source={back_ic} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={colors.black} />
+            <FastImage source={back_ic} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={darkMode ? colors.white : colors.black} />
           </TouchableOpacity>
           <View style={styles.topTabs}>
-            {["Spot", "Margin", "Fiat", "P2P", "Convert"].map((t, idx, arr) => {
+            {["Spot", "Margin",
+              // "Fiat", "P2P", "Convert"
+            ].map((t, idx, arr) => {
               const active = t === activeHeaderTab;
               const isAvailableTab = t === "Spot" || t === "Margin" || t === "Convert";
               return (

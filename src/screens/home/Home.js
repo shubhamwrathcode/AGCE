@@ -56,6 +56,7 @@ import {
   static_coin2,
   eye_close_icon,
   eye_open_icon,
+  verificationImageLight,
 } from "../../helper/ImageAssets";
 import {
   getBannerList,
@@ -85,7 +86,7 @@ import HeaderTop from "../../shared/components/HeaderTop";
 import FastImage from "react-native-fast-image";
 import { KYC_STATUS_SCREEN, SEARCH_SCREEN, WALLET_SCREEN, DEPOSIT_COIN_SCREEN } from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
-import { colors, lightTheme } from "../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import { SocketContext } from "../../SocketProvider";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -212,7 +213,7 @@ const Home = () => {
 
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <ScrollView
         style={[authStyles.mainContainer, commonStyles.zeroPadding]}
         contentContainerStyle={{
@@ -234,7 +235,7 @@ const Home = () => {
             style={[
               styles.homeSearchBar,
               {
-                backgroundColor: '#F7F7F7',
+                backgroundColor: themeColors.input,
                 borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
                 borderColor: themeColors.border,
               },
@@ -279,7 +280,7 @@ const Home = () => {
 
               <View style={{ marginTop: 5 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-                  <AppText type={TWENTY_SIX} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                  <AppText type={TWENTY_SIX} weight={SEMI_BOLD} color={isDark ? DISCLAIMTEXT : themeColors.text} >
                     {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5)}{" "}
                   </AppText>
                   <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>
@@ -295,9 +296,9 @@ const Home = () => {
             </View>
 
             <TouchableOpacity
-              onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}//////////
+              onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
               style={{
-                backgroundColor: '#303236',
+                backgroundColor: isDark ? darkTheme.cardBgColor : '#303236',
                 paddingHorizontal: 20,
                 paddingVertical: 8,
                 borderRadius: 20,
@@ -311,14 +312,14 @@ const Home = () => {
         {(kycVerified === 0 || kycVerified === 3) && (
           <View
             style={{
-              backgroundColor: colors.iconBgColor,
+              backgroundColor: isDark ? '#3A3A3C' : themeColors.input,
               marginHorizontal: 12,
               height: 188,
               padding: 10,
               borderRadius: 6,
               marginVertical: 10,
               borderWidth: 0.5,
-              borderColor: lightTheme.input,
+              borderColor: themeColors.border,
             }}
           >
             <View
@@ -330,11 +331,11 @@ const Home = () => {
               }}
             >
               <FastImage
-                source={verificationImage}
+                source={isDark ? verificationImageLight : verificationImage}
                 style={{ width: 104, height: 104 }}
                 resizeMode="contain"
               />
-              <View style={{ width: "70%", bottom: 20, marginLeft: 5 }}>
+              <View style={{ width: "70%", bottom: 20, marginLeft: 3 }}>
                 <AppText style={{ color: themeColors.button }} type={EIGHTEEN} weight={SEMI_BOLD}>
                   Verification
                 </AppText>
