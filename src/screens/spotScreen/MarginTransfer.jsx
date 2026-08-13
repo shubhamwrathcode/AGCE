@@ -9,10 +9,11 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
-  KeyboardAvoidingView,
+
   Dimensions,
 } from "react-native";
 import FastImage from "react-native-fast-image";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
 import { AppText, SEMI_BOLD, Button, MEDIUM } from "../../shared";
@@ -370,7 +371,7 @@ const MarginTransfer = () => {
 
   const renderWalletCard = (type, labelText, onPress) => {
     return (
-      <View style={[styles.directionCard, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7" }]}>
+      <View style={[styles.directionCard, { backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7" }]}>
         <AppText style={styles.directionLabel}>{labelText}</AppText>
         <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.selectRow}>
           <AppText weight={SEMI_BOLD} style={[styles.directionValue, { color: themeColors.text }]}>
@@ -383,7 +384,7 @@ const MarginTransfer = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? "#171a20" : colors.white }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.headerLeft}>
           <FastImage source={back_ic} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={themeColors.text} />
@@ -394,11 +395,13 @@ const MarginTransfer = () => {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40, flexGrow: 1 }}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}>
           {isScreenLoading ? (
             <MarginTransferSkeleton />
           ) : (
@@ -407,7 +410,8 @@ const MarginTransfer = () => {
               <View style={styles.directionContainer}>
                 {renderWalletCard(fromWalletType, "From", () => { setSelectingWalletFor("from"); rbSheetWallet.current?.open(); })}
                 <View style={styles.swapBtnWrapper}>
-                  <TouchableOpacity activeOpacity={0.9} onPress={handleSwapDirection} style={[styles.swapCircle, { backgroundColor: colors.iconBgColor, borderColor: isDark ? "#171a20" : colors.white }]}>
+                  <TouchableOpacity activeOpacity={0.9} onPress={handleSwapDirection} style={[styles.swapCircle,
+                  { backgroundColor: isDark ? colors.white : colors.iconBgColor, borderColor: isDark ? colors.white : themeColors.background }]}>
                     <FastImage source={transferNew} style={{ width: 18, height: 18 }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
@@ -421,7 +425,7 @@ const MarginTransfer = () => {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => rbSheetMarginPairs.current?.open()}
-                    style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7", marginBottom: 16 }]}
+                    style={[styles.inputContainer, { backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7", marginBottom: 16 }]}
                   >
                     {selectedMarginPair?.icon_path && (
                       <FastImage
@@ -460,7 +464,7 @@ const MarginTransfer = () => {
                                   paddingHorizontal: 12,
                                   paddingVertical: 12,
                                   borderColor: isSelected ? "#D1AA67" : themeColors.themeBorderColor,
-                                  backgroundColor: isSelected ? (isDark ? "#2A241C" : "#FCF2E1") : (isDark ? "#1C1C1E" : colors.white),
+                                  backgroundColor: isSelected ? (isDark ? "#2A241C" : "#FCF2E1") : (isDark ? "#2A2A2E" : colors.white),
                                 }
                               ]}
                             >
@@ -503,7 +507,7 @@ const MarginTransfer = () => {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => rbSheetCoins.current?.open()}
-                    style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7", marginBottom: 16 }]}
+                    style={[styles.inputContainer, { backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7", marginBottom: 16 }]}
                   >
                     {selectedCurrency ? (
                       <FastImage
@@ -522,14 +526,14 @@ const MarginTransfer = () => {
 
               {/* Amount Input Section */}
               <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Amount</AppText>
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7" }]}>
+              <View style={[styles.inputContainer, { backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7" }]}>
                 <TextInput
                   placeholder="0.00"
                   placeholderTextColor={isDark ? "#5A5A5C" : "#C7C7CC"}
                   value={transferAmount}
                   onChangeText={setTransferAmount}
                   keyboardType="numeric"
-                  cursorColor={colors.black}
+                  cursorColor={isDark ? colors.white : colors.black}
                   style={{
                     flex: 1,
                     color: themeColors.text,
@@ -556,8 +560,7 @@ const MarginTransfer = () => {
               </View>
             </>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
 
       {/* Confirm Button */}
       <View style={[styles.bottomBtnWrap, { borderTopColor: themeColors.themeBorderColor }]}>
@@ -580,7 +583,7 @@ const MarginTransfer = () => {
         closeOnDragDown={true}
         height={600}
         customStyles={{
-          container: { backgroundColor: isDark ? "#171a20" : colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16 },
+          container: { backgroundColor: themeColors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16 },
           draggableIcon: { backgroundColor: isDark ? "#3A3A3C" : "#E5E5EA", width: 40 },
         }}
       >
@@ -596,8 +599,8 @@ const MarginTransfer = () => {
                 style={[
                   styles.accountCard,
                   {
-                    borderColor: lightTheme.input,
-                    backgroundColor: isDark ? "#1C1C1E" : colors.white,
+                    borderColor: isDark ? themeColors.border : lightTheme.input,
+                    backgroundColor: isDark ? "transparent" : colors.white,
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "space-between"
@@ -612,15 +615,15 @@ const MarginTransfer = () => {
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   {WALLET_ICONS[item.key] ? (
-                    <FastImage source={WALLET_ICONS[item.key]} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                    <FastImage source={WALLET_ICONS[item.key]} style={{ width: 24, height: 24 }} resizeMode="contain" tintColor={isDark ? "#FFF" : undefined} />
                   ) : (
                     <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "#E5E5E5" }} />
                   )}
                   <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: themeColors.text, marginLeft: 12 }}>{item.label}</AppText>
                 </View>
                 {isSelected && (
-                  <View style={{ width: 18, height: 18, borderRadius: 10, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}>
-                    <FastImage source={checkIc} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor="#FFF" />
+                  <View style={{ width: 18, height: 18, borderRadius: 10, backgroundColor: isDark ? colors.white : "#000", alignItems: "center", justifyContent: "center" }}>
+                    <FastImage source={checkIc} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor={isDark ? "#000" : "#FFF"} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -635,7 +638,7 @@ const MarginTransfer = () => {
         closeOnDragDown={true}
         height={600}
         customStyles={{
-          container: { backgroundColor: isDark ? "#171a20" : colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16 },
+          container: { backgroundColor: themeColors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16 },
           draggableIcon: { backgroundColor: isDark ? "#3A3A3C" : "#E5E5EA", width: 40 },
         }}
       >
@@ -647,7 +650,7 @@ const MarginTransfer = () => {
 
           onChangeText={setCoinSearch}
           style={{
-            backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7", color: themeColors.text,
+            backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7", color: themeColors.text,
             borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 16,
             fontFamily: fontFamilyMedium
           }}
@@ -685,7 +688,7 @@ const MarginTransfer = () => {
         closeOnDragDown={true}
         height={600}
         customStyles={{
-          container: { backgroundColor: isDark ? "#171a20" : colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16 },
+          container: { backgroundColor: themeColors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16 },
           draggableIcon: { backgroundColor: isDark ? "#3A3A3C" : "#E5E5EA", width: 40 },
         }}
       >

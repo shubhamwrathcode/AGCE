@@ -9,8 +9,8 @@ import {
   Platform,
   Vibration,
   PanResponder,
-  Modal,
 } from "react-native";
+import RBSheet from "react-native-raw-bottom-sheet";
 import {
   AppSafeAreaView,
   AppText,
@@ -42,7 +42,7 @@ import NavigationService from "../../../navigation/NavigationService";
 import { useAppSelector } from "../../../store/hooks";
 import { useDispatch } from "react-redux";
 import { getDepositFiatCoins, getWithdrawActiveCoins, getUserMainWallet } from "../../../actions/walletActions";
-import { colors } from "../../../theme/colors";
+import { colors, lightTheme } from "../../../theme/colors";
 import { useTheme } from "../../../hooks/useTheme";
 import {
   isWithdrawCoinDisabled,
@@ -140,7 +140,7 @@ const SelectCoin = () => {
   const isFrom = route?.params?.data;
 
   const [activeTab, setActiveTab] = useState(isFrom || "Crypto");
-  const [showWithdrawFaqModal, setShowWithdrawFaqModal] = useState(false);
+  const withdrawFaqSheetRef = useRef(null);
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
 
   const faqData = [
@@ -372,7 +372,7 @@ const SelectCoin = () => {
           <TouchableOpacity
             onPress={() => {
               setFaqActiveIndex(null);
-              setShowWithdrawFaqModal(true);
+              withdrawFaqSheetRef.current?.open();
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -385,7 +385,7 @@ const SelectCoin = () => {
       </View>
 
       <View style={styles.searchSection}>
-        <View style={[styles.searchBar, { backgroundColor: colors.iconBgColor }]}>
+        <View style={[styles.searchBar, { backgroundColor: isDark ? '#2A2A2E' : lightTheme.input }]}>
           <FastImage source={searchIcon} style={styles.searchIconStyle} tintColor={colors.textGray} resizeMode="contain" />
           <TextInput
             placeholder="Search for Coin"
@@ -472,64 +472,73 @@ const SelectCoin = () => {
         </View>
       )}
 
-      <Modal visible={showWithdrawFaqModal} animationType="slide" transparent onRequestClose={() => setShowWithdrawFaqModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : "#EEE", borderWidth: 1 },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
-                Withdraw help
+      <RBSheet customModalProps={{ statusBarTranslucent: true }}
+        ref={withdrawFaqSheetRef}
+        height={420}
+        closeOnDragDown
+        closeOnPressMask
+        keyboardAvoidingViewEnabled={false}
+        customStyles={{
+          container: {
+            backgroundColor: themeColors.background,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            // borderColor: isDark ? themeColors.border : "#EEE",
+            // borderWidth: 1,
+          },
+          draggableIcon: { backgroundColor: isDark ? "#374151" : "#E5E7EB", width: 40 },
+        }}
+      >
+        <View style={{ padding: 20, flex: 1 }}>
+          <View style={styles.modalHeader}>
+            <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+              Withdraw help
+            </AppText>
+            <TouchableOpacity onPress={() => withdrawFaqSheetRef.current?.close()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <AppText type={TWENTY} style={{ color: themeColors.text }}>
+                ×
               </AppText>
-              <TouchableOpacity onPress={() => setShowWithdrawFaqModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <AppText type={TWENTY} style={{ color: themeColors.text }}>
-                  ×
-                </AppText>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              {faqData.map((item, index) => (
-                <View
-                  key={String(index)}
-                  style={[
-                    styles.faqItemInner,
-                    index === faqData.length - 1 && styles.faqItemInnerLast,
-                    { borderColor: isDark ? themeColors.border : colors.inputBorder },
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.faqQuestionRow}
-                    onPress={() => setFaqActiveIndex(faqActiveIndex === index ? null : index)}
-                    activeOpacity={0.7}
-                  >
-                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.faqQuestion, { color: themeColors.secondaryText }]}>
-                      {item.title}
-                    </AppText>
-                    <FastImage
-                      source={faqActiveIndex === index ? upIcon : downIcon}
-                      resizeMode="contain"
-                      style={styles.faqArrow}
-                      tintColor={themeColors.secondaryText}
-                    />
-                  </TouchableOpacity>
-                  {faqActiveIndex === index && (
-                    <View style={styles.faqAnswer}>
-                      {item.content.split("\n").map((line, lineIndex) => (
-                        <AppText key={lineIndex} type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
-                          {line}
-                        </AppText>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
+            </TouchableOpacity>
           </View>
+          <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {faqData.map((item, index) => (
+              <View
+                key={String(index)}
+                style={[
+                  styles.faqItemInner,
+                  index === faqData.length - 1 && styles.faqItemInnerLast,
+                  { borderColor: isDark ? themeColors.border : colors.inputBorder },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.faqQuestionRow}
+                  onPress={() => setFaqActiveIndex(faqActiveIndex === index ? null : index)}
+                  activeOpacity={0.7}
+                >
+                  <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.faqQuestion, { color: themeColors.secondaryText }]}>
+                    {item.title}
+                  </AppText>
+                  <FastImage
+                    source={faqActiveIndex === index ? upIcon : downIcon}
+                    resizeMode="contain"
+                    style={styles.faqArrow}
+                    tintColor={themeColors.secondaryText}
+                  />
+                </TouchableOpacity>
+                {faqActiveIndex === index && (
+                  <View style={styles.faqAnswer}>
+                    {item.content.split("\n").map((line, lineIndex) => (
+                      <AppText key={lineIndex} type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
+                        {line}
+                      </AppText>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
         </View>
-      </Modal>
+      </RBSheet>
     </AppSafeAreaView>
   );
 };

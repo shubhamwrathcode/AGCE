@@ -15,19 +15,30 @@ import { useTheme } from '../hooks/useTheme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const CustomDropdown = ({ data = [], onSelect, selected, compact = false, triggerStyle, icon }) => {
+const CustomDropdown = ({ data = [], onSelect, selected, compact = false, triggerStyle, icon, isOpen, onToggle }) => {
   const { colors: themeColors, isDark } = useTheme();
   const [visible, setVisible] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const buttonRef = useRef(null);
 
+  const isControlled = isOpen !== undefined;
+  const isVisible = isControlled ? isOpen : visible;
+
   const handleSelect = (item) => {
     onSelect(item);
-    setVisible(false);
+    if (isControlled) {
+      onToggle && onToggle(false);
+    } else {
+      setVisible(false);
+    }
   };
 
   const openDropdown = () => {
-    setVisible((prev) => !prev);
+    if (isControlled) {
+      onToggle && onToggle(!isOpen);
+    } else {
+      setVisible((prev) => !prev);
+    }
   };
 
   const isPlaceholder = !selected || selected.toLowerCase().includes("select");
@@ -70,14 +81,14 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
           source={icon || downIcon}
           style={[
             compact ? styles.arrowCompact : styles.arrow,
-            { transform: [{ rotate: visible ? '180deg' : '0deg' }] },
+            { transform: [{ rotate: isVisible ? '180deg' : '0deg' }] },
           ]}
           tintColor={themeColors.secondaryText}
           resizeMode='contain'
         />
       </TouchableOpacity>
 
-      {visible && (
+      {isVisible && (
         <View
           style={[
             styles.inlineContent,

@@ -106,13 +106,13 @@ const WithdrawalHistory = () => {
           styles.historyItem,
           {
             backgroundColor: 'transparent',
-            borderColor: lightTheme.input
+            borderColor: isDark ? themeColors.border : lightTheme.input
           }
         ]}
       >
         <View style={styles.dateStatusRow}>
           <AppText weight={BOLD} type={FIFTEEN} style={{ color: themeColors.text }}>{date}</AppText>
-          <View style={[styles.statusBadge, { backgroundColor: tone === 'success' ? '#E9F9F1' : tone === 'pending' ? '#FFF9E6' : '#FEECEC' }]}>
+          <View style={[styles.statusBadge, { backgroundColor: tone === 'success' ? (isDark ? 'rgba(5, 196, 107, 0.15)' : '#E9F9F1') : tone === 'pending' ? (isDark ? 'rgba(255, 195, 18, 0.15)' : '#FFF9E6') : (isDark ? 'rgba(255, 63, 52, 0.15)' : '#FEECEC') }]}>
             <AppText type={TWELVE} weight={BOLD} style={{ color: tone === 'success' ? '#05C46B' : tone === 'pending' ? '#FFC312' : '#FF3F34' }}>{status}</AppText>
           </View>
         </View>
@@ -141,8 +141,8 @@ const WithdrawalHistory = () => {
                 <TouchableOpacity onPress={() => {
                   Clipboard.setString(recipient);
                   showSuccess("Copied to clipboard");
-                }} style={styles.iconBtn}>
-                  <FastImage source={pasteImg} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={colors.black} />
+                }} style={[styles.iconBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#F0F0F0" }]}>
+                  <FastImage source={pasteImg} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={isDark ? themeColors.secondaryText : colors.black} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -157,8 +157,8 @@ const WithdrawalHistory = () => {
                   <TouchableOpacity onPress={() => {
                     Clipboard.setString(txId);
                     showSuccess("Copied to clipboard");
-                  }} style={styles.iconBtn}>
-                    <FastImage source={pasteImg} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={colors.black} />
+                  }} style={[styles.iconBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#F0F0F0" }]}>
+                    <FastImage source={pasteImg} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={isDark ? themeColors.secondaryText : colors.black} />
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -170,10 +170,10 @@ const WithdrawalHistory = () => {
   };
 
   return (
-    <AppSafeAreaView style={[styles.container, { backgroundColor: colors.white }]}>
+    <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Toolbar isSecond title={"Withdrawal History"} style={{ width: "68%", backgroundColor: "transparent" }} />
 
-      <View style={styles.tabsContainer}>
+      <View style={[styles.tabsContainer, { borderBottomColor: isDark ? themeColors.border : "#E5E7EB" }]}>
         <TouchableOpacity
           onPress={() => setActiveTab("address")}
           style={[styles.tabPill]}
@@ -185,7 +185,7 @@ const WithdrawalHistory = () => {
           >
             Address
           </AppText>
-          {activeTab === "address" && <View style={styles.activeIndicator} />}
+          {activeTab === "address" && <View style={[styles.activeIndicator, { backgroundColor: themeColors.text }]} />}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setActiveTab("agce")}
@@ -198,7 +198,7 @@ const WithdrawalHistory = () => {
           >
             AGCE user
           </AppText>
-          {activeTab === "agce" && <View style={styles.activeIndicator} />}
+          {activeTab === "agce" && <View style={[styles.activeIndicator, { backgroundColor: themeColors.text }]} />}
         </TouchableOpacity>
       </View>
 

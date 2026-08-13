@@ -5,8 +5,9 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  
-  ScrollView} from "react-native";
+
+  ScrollView
+} from "react-native";
 import FastImage from "react-native-fast-image";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import {
@@ -16,7 +17,7 @@ import {
   FOURTEEN,
 } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
-import { colors } from "../../theme/colors";
+import { colors, lightTheme } from "../../theme/colors";
 import { back_ic, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, filterIcon, REMOVE, calendarIcon } from "../../helper/ImageAssets";
 import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
@@ -98,10 +99,10 @@ const TradeKvRow = React.memo(({ label, value, color, secColor }) => {
 
 const HistoryCard = React.memo(({ item, themeColors, isDark }) => {
   const textColor = themeColors.text ?? "#000000";
-  const secColor = isDark ? "#8E8E93" : "#888888";
+  const secColor = isDark ? "#8E8E93" : "#666666";
 
   return (
-    <View style={[styles.historyCard, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "transparent" }]}>
+    <View style={[styles.historyCard, { backgroundColor: "transparent", borderColor: isDark ? themeColors.border : lightTheme.input }]}>
       {/* Pair / Coin Header */}
       <View style={styles.headerRow}>
         <AppText weight={BOLD} style={{ fontSize: 15, color: textColor }}>
@@ -117,7 +118,6 @@ const HistoryCard = React.memo(({ item, themeColors, isDark }) => {
         <TradeKvRow label="From" value={item.from} color={secColor} secColor={secColor} />
         <TradeKvRow label="To" value={item.to} color={secColor} secColor={secColor} />
       </View>
-      <View style={[styles.divider, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} />
     </View>
   );
 });
@@ -155,6 +155,7 @@ const TransferHistoryScreen = () => {
   const [tempFromWallet, setTempFromWallet] = useState(fromWallet);
   const [tempToWallet, setTempToWallet] = useState(toWallet);
   const [tempCoin, setTempCoin] = useState(coin);
+  const [openDropdown, setOpenDropdown] = useState(null);
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -208,6 +209,7 @@ const TransferHistoryScreen = () => {
   }, [hasMore, loadingMore, loading, page, fetchData]);
 
   const openFilterSheet = () => {
+    setOpenDropdown(null);
     setTempFromWallet(fromWallet);
     setTempToWallet(toWallet);
     setTempCoin(coin);
@@ -215,6 +217,7 @@ const TransferHistoryScreen = () => {
   };
 
   const closeFilterSheet = () => {
+    setOpenDropdown(null);
     filterSheetRef.current?.close();
   };
 
@@ -290,36 +293,58 @@ const TransferHistoryScreen = () => {
         ref={filterSheetRef}
         height={550}
         openDuration={250}
+        customModalProps={{ statusBarTranslucent: true }}
+        closeOnDragDown
+        closeOnPressMask
         customStyles={{
           container: {
-            backgroundColor: isDark ? "#121212" : colors.white,
+            backgroundColor: themeColors.background,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             paddingTop: 16,
           },
+          draggableIcon: { backgroundColor: isDark ? "#374151" : "#E5E7EB", width: 40 },
         }}
       >
         <View style={styles.sheetHeader}>
           <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text }}>Filters</AppText>
         </View>
 
-        <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 250 }}>
           {/* From */}
-          <View style={styles.filterSection}>
+          <View style={[styles.filterSection, { zIndex: 3000 }]}>
             <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>From</AppText>
-            <CustomDropdown data={WALLET_OPTIONS} selected={tempFromWallet} onSelect={setTempFromWallet} />
+            <CustomDropdown
+              data={WALLET_OPTIONS}
+              selected={tempFromWallet}
+              onSelect={setTempFromWallet}
+              isOpen={openDropdown === 'from'}
+              onToggle={(val) => setOpenDropdown(val ? 'from' : null)}
+            />
           </View>
 
           {/* To */}
-          <View style={styles.filterSection}>
+          <View style={[styles.filterSection, { zIndex: 2000 }]}>
             <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>To</AppText>
-            <CustomDropdown data={WALLET_OPTIONS} selected={tempToWallet} onSelect={setTempToWallet} />
+            <CustomDropdown
+              data={WALLET_OPTIONS}
+              selected={tempToWallet}
+              onSelect={setTempToWallet}
+              isOpen={openDropdown === 'to'}
+              onToggle={(val) => setOpenDropdown(val ? 'to' : null)}
+            />
           </View>
 
           {/* Coin */}
-          <View style={styles.filterSection}>
+          <View style={[styles.filterSection, { zIndex: 1000 }]}>
             <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Coin</AppText>
-            <CustomDropdown data={coinOptions} selected={tempCoin} onSelect={setTempCoin} />
+            <CustomDropdown
+              data={coinOptions}
+              selected={tempCoin}
+              onSelect={setTempCoin}
+              isOpen={openDropdown === 'coin'}
+              onToggle={(val) => setOpenDropdown(val ? 'coin' : null)}
+            />
           </View>
 
         </ScrollView>
@@ -352,7 +377,10 @@ const styles = StyleSheet.create({
   },
   listContent: { paddingHorizontal: 16, paddingVertical: 4, paddingBottom: 100, flexGrow: 1 },
   historyCard: {
-    paddingTop: 16,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
+    borderBottomWidth: 1,
   },
   headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   detailsContainer: { gap: 14 },

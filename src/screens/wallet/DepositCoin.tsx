@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RBSheet from 'react-native-raw-bottom-sheet';
-import ReactNativeModal from 'react-native-modal';
 import {
     AppSafeAreaView,
     AppText,
@@ -53,7 +52,6 @@ import NavigationService from '../../navigation/NavigationService';
 import { buildCoinImageUri } from '../../helper/coinIconUrl';
 import { colors, lightTheme } from '../../theme/colors';
 import { useTheme } from '../../hooks/useTheme';
-import { universalPaddingHorizontalHigh } from '../../theme/dimens';
 import {
     getDepositActiveCoins,
     verifyDeposit,
@@ -65,7 +63,6 @@ import { setLoading } from '../../slices/authSlice';
 // setWalletAddress removed: deposit address handled locally for web parity (address + memo)
 import { showError } from '../../helper/logger';
 import moment from 'moment';
-import { WALLET_HISTORY_SCREEN } from '../../navigation/routes';
 import { appOperation } from '../../appOperation';
 import ShimmerBone from '../../shared/components/ShimmerBone';
 
