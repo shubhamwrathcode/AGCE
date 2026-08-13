@@ -168,7 +168,7 @@ const SetPassword = () => {
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <View style={styles.wrap}>
         <AuthHeader
-          onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })}
+          onSupportPress={() => Linking.openURL("https://arabglobal.ae/TermsofUse").catch(() => { })}
           onClosePress={() => NavigationService.goBack()}
         />
 
@@ -178,7 +178,7 @@ const SetPassword = () => {
         <AppText type={THIRTEEN} style={{ color: "#9AA3AF", marginTop: 6 }}>
           Set the password to complete the signup
         </AppText>
-        <AppText color={themeColors.text} type={FOURTEEN} weight={SEMI_BOLD} style={{ marginTop: 10 }}>Password</AppText>
+        {/* <AppText color={themeColors.text} type={FOURTEEN} weight={SEMI_BOLD} style={{ marginTop: 10 }}>Password</AppText> */}
         <Input
           placeholder={"Enter a password"}
           value={password}
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   passwordInput: {
-    marginTop: 8,
+    marginTop: 15,
   },
   rulesBox: {
     marginTop: 6,

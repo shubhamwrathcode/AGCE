@@ -26,15 +26,22 @@ const AuthPhoneInput = ({
 }) => {
   const { colors: themeColors, isDark } = useTheme();
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View
       style={[
         styles.container,
         {
-          backgroundColor: '#EDEDEE',
-          borderColor: hasError ? colors.red : isDark ? themeColors.border : "transparent",
-          borderWidth: hasError ? 1 : isDark ? borderWidth : 0,
+          backgroundColor: isDark ? 'transparent' : '#EDEDEE',
+          borderColor: hasError
+            ? colors.red
+            : isFocused
+              ? themeColors.button
+              : isDark
+                ? themeColors.border
+                : "transparent",
+          borderWidth: hasError ? 1 : isFocused ? 1 : isDark ? borderWidth : 0,
         },
       ]}
     >
@@ -47,7 +54,8 @@ const AuthPhoneInput = ({
           }}
           withFilter
           withCallingCode={false}
-          withEmoji
+          withEmoji={false}
+          withFlag={true}
           countryCode={country}
           visible={pickerVisible}
           onClose={() => setPickerVisible(false)}
@@ -55,8 +63,15 @@ const AuthPhoneInput = ({
           theme={{
             backgroundColor: isDark ? themeColors.background : colors.white,
             onBackgroundTextColor: themeColors.text,
+            primaryColor: isDark ? themeColors.background : colors.white,
+            primaryColorVariant: isDark ? colors.themeElevationColor : '#EEEEEE',
+            filterPlaceholderTextColor: isDark ? colors.disabledText : '#999999',
             fontSize: 14,
             itemHeight: 50,
+          }}
+          filterProps={{
+            cursorColor: themeColors.text,
+            selectionColor: themeColors.text + '40'
           }}
         />
         <FastImage
@@ -83,8 +98,14 @@ const AuthPhoneInput = ({
         selectionColor={themeColors.text + '40'}
         cursorColor={themeColors.text}
         maxLength={maxLength}
-        onFocus={onFocus}
-        onBlur={onBlur}
+        onFocus={(e) => {
+          setIsFocused(true);
+          onFocus(e);
+        }}
+        onBlur={(e) => {
+          setIsFocused(false);
+          onBlur(e);
+        }}
         onSubmitEditing={onSubmitEditing}
         onEndEditing={onEndEditing}
       />

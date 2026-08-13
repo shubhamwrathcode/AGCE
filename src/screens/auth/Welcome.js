@@ -36,7 +36,7 @@ import {
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN, REGISTER_SCREEN, TRADE_SCREEN, FUTURES_SCREEN, NAVIGATION_BOTTOM_TAB_STACK } from "../../navigation/routes";
 import { useTheme } from "../../hooks/useTheme";
-import { colors, lightTheme } from "../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import Toast from "react-native-simple-toast";
 import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
@@ -45,6 +45,10 @@ import { setFuturesPairs } from "../../slices/homeSlice";
 import { fontFamilyMedium } from "../../theme/typography";
 import WebView from "react-native-webview";
 import { CHART_WEB_BASE_URL } from "../../helper/Constants";
+import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
+import { googleLogin } from "../../actions/authActions";
+import { setLoading } from "../../slices/authSlice";
+import { showError } from "../../helper/logger";
 
 const formatVol = (vol) => {
   const n = Number(vol);
@@ -125,6 +129,24 @@ const Welcome = () => {
   const dispatch = useDispatch();
   const socketContextVars = useContext(SocketContext) || {};
   const { subscribeToMarket, unsubscribeFromMarket } = socketContextVars;
+  const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
+
+  useEffect(() => {
+    try {
+      GoogleSignin.configure({
+        webClientId:
+          "512474198099-lbg03gjaesa8n6vhf73c5t9f9j55t7tf.apps.googleusercontent.com",
+        offlineAccess: true,
+        forceCodeForRefreshToken: true,
+      });
+    } catch (e) {
+      console.warn("GoogleSignin.configure error", e);
+    }
+
+    return () => {
+      setIsGoogleSignInInProgress(false);
+    };
+  }, []);
 
   useEffect(() => {
     if (subscribeToMarket) subscribeToMarket();
@@ -276,9 +298,59 @@ const Welcome = () => {
     NavigationService.navigate(REGISTER_SCREEN);
   }, []);
 
-  const onGoogle = useCallback(() => {
-    Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
-  }, []);
+  const onGoogle = async () => {
+    if (isGoogleSignInInProgress) return;
+    try {
+      console.log("Starting Google Sign-In...");
+      setIsGoogleSignInInProgress(true);
+      dispatch(setLoading(true));
+
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+      const account = await GoogleSignin.signIn();
+      const tokens = await GoogleSignin.getTokens();
+
+      let data = {
+        Token: tokens?.idToken || account?.data?.idToken,
+        type: 'google',
+      };
+
+      dispatch(googleLogin(data));
+    } catch (error) {
+      console.error("Google Sign In Error:", error?.code, error?.message, error);
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof error.message === "string" &&
+        error.message.includes("User cancelled flow")
+      ) {
+        showError("Google Sign-In was cancelled");
+      } else if (error?.message && error.message.includes("Network error")) {
+        showError("Network error. Please check your internet connection.");
+      } else if (error?.message && error.message.includes("Invalid client")) {
+        showError("Google Sign-In configuration error. Please contact support.");
+      } else if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
+        showError("Google Sign-In was cancelled");
+      } else if (error?.code === statusCodes.IN_PROGRESS) {
+        showError("Google Sign-In already in progress");
+      } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        showError("Google Play Services not available or outdated");
+      } else {
+        const fallbackMessage =
+          (typeof error === "string" && error) ||
+          error?.message ||
+          error?.error ||
+          error?.error_description ||
+          "Google Sign-In failed. Please try again.";
+        showError(fallbackMessage);
+      }
+    } finally {
+      setIsGoogleSignInInProgress(false);
+      dispatch(setLoading(false));
+    }
+  };
 
   const footerPad = Math.max(insets.bottom, 12);
 
@@ -304,7 +376,7 @@ const Welcome = () => {
           </View>
 
           {/* Hero card */}
-          <View style={[styles.heroCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <View style={[styles.heroCard, { backgroundColor: isDark ? darkTheme.inputBorder : palette.card, borderColor: palette.border }]}>
             <View style={styles.heroStripeWrap} pointerEvents="none">
               {[...Array(24)].map((_, i) => (
                 <View key={i} style={[styles.heroStripe, { backgroundColor: palette.stripe }]} />
@@ -321,7 +393,7 @@ const Welcome = () => {
               onPress={onLogin}
               activeOpacity={0.85}
             >
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: palette.btnText }}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : palette.btnText }}>
                 Log In to Trade
               </AppText>
             </TouchableOpacity>
@@ -453,27 +525,27 @@ const Welcome = () => {
                     </TouchableOpacity>
 
                     {expandedRow === idx && !isFutures && (
-                      <View style={{ marginHorizontal: -16, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: palette.card }}>
+                      <View style={{ marginHorizontal: -16, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: isDark ? darkTheme.sheetDarkColor : palette.card }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 20, marginTop: 8 }}>
                           <TouchableOpacity
-                            style={{ flex: 1, paddingVertical: 6, backgroundColor: isDark ? '#2D2D2D' : '#1A1A1A', borderRadius: 30, alignItems: 'center', justifyContent: 'center' }}
+                            style={{ flex: 1, paddingVertical: 6, backgroundColor: isDark ? colors.white : '#1A1A1A', borderRadius: 30, alignItems: 'center', justifyContent: 'center' }}
                             onPress={() => NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, { screen: TRADE_SCREEN, params: { coinDetail: item } })}
                             activeOpacity={0.8}
                           >
-                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>Trade</AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>Trade</AppText>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={{ flex: 1, paddingVertical: 6, backgroundColor: isDark ? '#2D2D2D' : '#1A1A1A', borderRadius: 30, alignItems: 'center', justifyContent: 'center' }}
-                            onPress={() => NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, { 
-                              screen: FUTURES_SCREEN, 
-                              params: { 
-                                screen: 'Futures', 
-                                params: { coin: item } 
-                              } 
+                            style={{ flex: 1, paddingVertical: 6, backgroundColor: isDark ? colors.white : '#1A1A1A', borderRadius: 30, alignItems: 'center', justifyContent: 'center' }}
+                            onPress={() => NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, {
+                              screen: FUTURES_SCREEN,
+                              params: {
+                                screen: 'Futures',
+                                params: { coin: item }
+                              }
                             })}
                             activeOpacity={0.8}
                           >
-                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#FFFFFF' }}>Futures</AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>Futures</AppText>
                           </TouchableOpacity>
                         </View>
 
@@ -575,7 +647,7 @@ const Welcome = () => {
           ]}
         >
           <TouchableOpacity style={[styles.signUpBtn, { backgroundColor: palette.btn }]} onPress={onRegister} activeOpacity={0.88}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: palette.btnText }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : palette.btnText }}>
               Sign Up
             </AppText>
           </TouchableOpacity>
@@ -588,10 +660,10 @@ const Welcome = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.socialBtn, { backgroundColor: palette.card, borderColor: palette.border }]}
-            onPress={onGoogle}
+            onPress={() => { }}
             activeOpacity={0.8}
           >
-            <FastImage source={apple} style={styles.socialIcon} resizeMode="contain" />
+            <FastImage source={apple} tintColor={isDark ? colors.white : colors.black} style={[styles.socialIcon, {}]} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>

@@ -14,7 +14,7 @@ import Register from "../screens/auth/Register";
 import SetPassword from "../screens/auth/SetPassword";
 import VerifyAccount from "../screens/auth/VerifyAccount";
 import AccountActivated from "../screens/auth/AccountActivated";
-import OtpVerify from "../screens/auth/OtpVerify";
+// import OtpVerify from "../screens/auth/OtpVerify";
 import AuthVerificationScreen from "../screens/auth/AuthVerificationScreen";
 import FastImage from "react-native-fast-image";
 import { commonStyles } from "../theme/commonStyles";
@@ -723,7 +723,7 @@ const AuthStack = () => (
     <Stack.Screen name={routes.SET_PASSWORD_SCREEN} component={SetPassword} />
     <Stack.Screen name={routes.VERIFY_ACCOUNT_SCREEN} component={VerifyAccount} />
     <Stack.Screen name={routes.ACCOUNT_ACTIVATED_SCREEN} component={AccountActivated} />
-    <Stack.Screen name={routes.OTP_VERIFY_SCREEN} component={OtpVerify} />
+    {/* <Stack.Screen name={routes.OTP_VERIFY_SCREEN} component={OtpVerify} /> */}
     <Stack.Screen
       name={routes.AUTH_VERIFICATION_SCREEN}
       component={AuthVerificationScreen}

@@ -334,11 +334,11 @@ const Login = (): JSX.Element => {
   };
 
   const openSupport = () => {
-    Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { });
+    Linking.openURL("https://arabglobal.ae/help_center").catch(() => { });
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware style={{ paddingHorizontal: 20 }}>
         <AuthHeader
           onSupportPress={openSupport}
@@ -522,9 +522,9 @@ const Login = (): JSX.Element => {
             {isPasskeySignInInProgress ? (
               <ActivityIndicator size={"small"} color={themeColors.text} />
             ) : (
-              <FastImage source={passkey_login} resizeMode="contain" style={styles.socialBrandIcon} tintColor={colors.black} />
+              <FastImage source={passkey_login} resizeMode="contain" style={styles.socialBrandIcon} tintColor={isDark ? colors.white : colors.black} />
             )}
-            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: isDark ? colors.white : themeColors.secondaryText }}>
               Continue with Passkey
             </AppText>
           </TouchableOpacityView>
@@ -539,7 +539,7 @@ const Login = (): JSX.Element => {
             ) : (
               <FastImage source={googleIcon} resizeMode="contain" style={styles.socialBrandIcon} />
             )}
-            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: isDark ? colors.white : themeColors.secondaryText }}>
               Continue with Google
             </AppText>
           </TouchableOpacityView>
@@ -553,7 +553,9 @@ const Login = (): JSX.Element => {
               {isAppleSignInInProgress ? (
                 <ActivityIndicator size={"small"} color={themeColors.text} />
               ) : (
-                <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
+                <FastImage source={apple}
+                  tintColor={isDark ? colors.white : colors.black}
+                  resizeMode="contain" style={styles.socialBrandIcon} />
               )}
               <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
                 Continue with Apple
@@ -571,7 +573,7 @@ const Login = (): JSX.Element => {
           </TouchableOpacityView>
         </View>
       </KeyBoardAware>
-    </AppSafeAreaView>
+    </AppSafeAreaView >
   );
 };
 

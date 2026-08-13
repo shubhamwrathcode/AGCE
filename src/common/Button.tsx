@@ -38,6 +38,7 @@ const Button = ({
     <TouchableOpacityView
       style={[
         styles.buttonStyle,
+        { backgroundColor: theme === 'Dark' ? colors.orangeTheme : colors.buttonBg },
         containerStyle,
         disabled || loading ? { opacity: 0.3 } : {},
       ]}
@@ -47,13 +48,13 @@ const Button = ({
       }
       {...rest}>
       {loading ? (
-        <ActivityIndicator size={'small'} color={colors.white} />
+        <ActivityIndicator size={'small'} color={theme === 'Dark' ? colors.white : colors.white} />
       ) : (
         typeof children === 'string' ? (
           <AppText
             type={SIXTEEN}
             weight={SEMI_BOLD}
-            style={StyleSheet.flatten([{ color: colors.white }, titleStyle])}>
+            style={StyleSheet.flatten([{ color: theme === 'Dark' ? colors.black : colors.white }, titleStyle])}>
             {children}
           </AppText>
         ) : (

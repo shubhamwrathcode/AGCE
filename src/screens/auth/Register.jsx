@@ -327,7 +327,7 @@ const Register = () => {
   };
 
   const openSupport = () => {
-    Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { });
+    Linking.openURL("https://arabglobal.ae/help_center").catch(() => { });
   };
 
   // Captcha commented out – flow matches web.
@@ -354,7 +354,7 @@ const Register = () => {
   const socialPillBg = isDark ? themeColors.card : "#FFFFFF";
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware style={{ paddingHorizontal: 20 }}>
         <AuthHeader
           onSupportPress={openSupport}
@@ -471,16 +471,12 @@ const Register = () => {
             />
           )}
 
-          <TouchableOpacityView
+          <View
             style={{
               flexDirection: "row",
               alignItems: "center",
               marginVertical: 12,
               gap: 8,
-            }}
-            onPress={() => {
-              if (index === 0) setCheckTermsEmail((c) => !c);
-              else setCheckTermsPhone((c) => !c);
             }}
           >
             <Checkbox
@@ -490,21 +486,31 @@ const Register = () => {
                 else setCheckTermsPhone((c) => !c);
               }}
             />
-            <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
-              I agree to AGCE{" "}
-              <AppText
-                type={TWELVE} weight={MEDIUM}
-                style={{ color: colors.buttonBg, textDecorationLine: "underline" }}
+            <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+              <TouchableOpacityView
+                onPress={() => {
+                  if (index === 0) setCheckTermsEmail((c) => !c);
+                  else setCheckTermsPhone((c) => !c);
+                }}
+              >
+                <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
+                  I agree to AGCE{" "}
+                </AppText>
+              </TouchableOpacityView>
+              <TouchableOpacityView
                 onPress={() =>
-                  NavigationService.navigate(CMS_SCREEN, {
-                    id: "https://agce.wrathcode.com/terms_conditions",
-                  })
+                  Linking.openURL('https://arabglobal.ae/TermsofUse')
                 }
               >
-                Terms and Use
-              </AppText>
-            </AppText>
-          </TouchableOpacityView>
+                <AppText
+                  type={TWELVE} weight={MEDIUM}
+                  style={{ color: isDark ? colors.orangeTheme : colors.buttonBg, textDecorationLine: "underline" }}
+                >
+                  Terms and Use
+                </AppText>
+              </TouchableOpacityView>
+            </View>
+          </View>
 
 
           <Button
@@ -536,7 +542,7 @@ const Register = () => {
             ) : (
               <FastImage source={googleIcon} resizeMode="contain" style={styles.socialBrandIcon} />
             )}
-            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+            <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: isDark ? colors.white : themeColors.secondaryText }}>
               Continue with Google
             </AppText>
           </TouchableOpacityView>
@@ -550,28 +556,17 @@ const Register = () => {
               {isAppleSignInInProgress ? (
                 <ActivityIndicator size={"small"} color={themeColors.text} />
               ) : (
-                <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon} />
+                <FastImage source={apple} resizeMode="contain" style={styles.socialBrandIcon}
+                  tintColor={isDark ? colors.white : colors.black}
+                />
               )}
-              <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+              <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: isDark ? colors.white : themeColors.secondaryText }}>
                 Continue with Apple
               </AppText>
             </TouchableOpacityView>
           ) : null}
 
-          <AppText type={ELEVEN} style={{ color: themeColors.secondaryText, marginTop: 4, marginLeft: 5 }}>
-            By signing up, I agree to AGCE Exchange user{" "}
-            <AppText
-              style={{ color: colors.buttonBg, textDecorationLine: "underline" }}
-              type={TEN}
-              onPress={() => {
-                NavigationService.navigate(CMS_SCREEN, {
-                  id: "https://agce.wrathcode.com/terms_conditions",
-                });
-              }}
-            >
-              Terms and Conditions
-            </AppText>
-          </AppText>
+
         </View>
       </KeyBoardAware>
 

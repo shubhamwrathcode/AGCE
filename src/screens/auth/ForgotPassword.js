@@ -12,8 +12,9 @@ import {
   TWENTY_SIX,
 } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
-import { Keyboard, Linking, View } from "react-native";
+import { Keyboard, Linking, View, ScrollView, StyleSheet } from "react-native";
 import { authStyles } from "./authStyles";
+import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import { showError } from "../../helper/logger";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { forgotOtp, forgotPassword } from "../../actions/authActions";
@@ -90,6 +91,30 @@ const ForgotPassword = () => {
   const [otpError, setOtpError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [timer, setTimer] = useState(0);
+
+  const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
+  const emailSuggestBlurTimer = React.useRef(null);
+
+  const clearEmailSuggestBlurTimer = () => {
+    if (emailSuggestBlurTimer.current) {
+      clearTimeout(emailSuggestBlurTimer.current);
+      emailSuggestBlurTimer.current = null;
+    }
+  };
+
+  const emailDomainSuggestions = React.useMemo(
+    () => (index === 0 ? getEmailDomainSuggestions(userName) : []),
+    [index, userName]
+  );
+
+  const applyEmailDomain = (domain) => {
+    setUserName(userName.split("@")[0] + "@" + domain);
+    setEmailSuggestListVisible(false);
+  };
+
+  useEffect(() => {
+    return () => clearEmailSuggestBlurTimer();
+  }, []);
 
   useEffect(() => {
     let interval;
@@ -206,12 +231,12 @@ const ForgotPassword = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware>
         <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
           <AuthHeader
             onSupportPress={() =>
-              Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })
+              Linking.openURL("https://arabglobal.ae/TermsofUse").catch(() => { })
             }
             onClosePress={() => NavigationService.navigate(LOGIN_SCREEN)}
             title={""}
@@ -249,20 +274,62 @@ const ForgotPassword = () => {
 
                 />
               ) : (
-                <Input
-                  placeholder={checkValue(languages?.place_email)}
-                  value={userName}
-                  onChangeText={(text) => {
-                    if (userNameError) setUserNameError(false);
-                    setUserName(text);
-                  }}
-                  keyboardType={"email-address"}
-                  autoCapitalize="none"
-                  returnKeyType="done"
-                  onSubmitEditing={() => onGetOtp()}
-                  hasError={userNameError}
-                  mainContainer={authStyles.mobileInput}
-                />
+                <View style={[authStyles.mobileContainer, styles.emailSuggestWrap]}>
+                  <Input
+                    placeholder={checkValue(languages?.place_email)}
+                    value={userName}
+                    onChangeText={(text) => {
+                      if (userNameError) setUserNameError(false);
+                      setUserName(text);
+                    }}
+                    keyboardType={"email-address"}
+                    autoCapitalize="none"
+                    returnKeyType="done"
+                    onfocus={() => {
+                      clearEmailSuggestBlurTimer();
+                      setEmailSuggestListVisible(true);
+                    }}
+                    onBlur={() => {
+                      clearEmailSuggestBlurTimer();
+                      emailSuggestBlurTimer.current = setTimeout(() => {
+                        setEmailSuggestListVisible(false);
+                        emailSuggestBlurTimer.current = null;
+                      }, 200);
+                    }}
+                    onSubmitEditing={() => onGetOtp()}
+                    hasError={userNameError}
+                    mainContainer={[authStyles.mobileInput, styles.emailFieldMain]}
+                  />
+                  {emailSuggestListVisible && emailDomainSuggestions.length > 0 ? (
+                    <View
+                      style={[
+                        styles.emailSuggestList,
+                        {
+                          backgroundColor: themeColors.input,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                    >
+                      <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        nestedScrollEnabled
+                        style={styles.emailSuggestScroll}
+                      >
+                        {emailDomainSuggestions.map((domain) => (
+                          <TouchableOpacityView
+                            key={domain}
+                            style={styles.emailSuggestRow}
+                            onPress={() => applyEmailDomain(domain)}
+                          >
+                            <AppText type={FOURTEEN} style={{ color: themeColors.text }}>
+                              @{domain}
+                            </AppText>
+                          </TouchableOpacityView>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  ) : null}
+                </View>
               )}
             </View>
             <Input
@@ -310,7 +377,7 @@ const ForgotPassword = () => {
               <AppText
                 weight={MEDIUM}
                 type={FOURTEEN}
-                style={[authStyles.termsText, { color: colors.buttonBg }]}
+                style={[authStyles.termsText, { color: isDark ? colors.orangeTheme : colors.buttonBg }]}
                 onPress={() => onLogin()}
               >
                 {checkValue(languages?.register_eight)}
@@ -323,5 +390,37 @@ const ForgotPassword = () => {
     </AppSafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  emailFieldMain: {
+    flex: 0,
+    alignSelf: "stretch",
+    width: "100%",
+    marginBottom: 0,
+  },
+  emailSuggestWrap: {
+    zIndex: 10,
+    flexDirection: "column",
+    alignItems: "stretch",
+    alignSelf: "stretch",
+    width: "100%",
+    justifyContent: "flex-start",
+    marginBottom: 12,
+  },
+  emailSuggestList: {
+    marginTop: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 8,
+    maxHeight: 220,
+    overflow: "hidden",
+  },
+  emailSuggestScroll: {
+    maxHeight: 220,
+  },
+  emailSuggestRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+});
 
 export default ForgotPassword;

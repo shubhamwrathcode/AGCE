@@ -280,15 +280,15 @@ const Home = () => {
 
               <View style={{ marginTop: 5 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-                  <AppText type={TWENTY_SIX} weight={SEMI_BOLD} color={isDark ? DISCLAIMTEXT : themeColors.text} >
+                  <AppText type={TWENTY_SIX} weight={SEMI_BOLD} color={isDark ? colors.white : themeColors.text} >
                     {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5)}{" "}
                   </AppText>
-                  <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>
+                  <AppText type={FIFTEEN} color={isDark ? colors.white : DISCLAIMTEXT} style={{ top: 5 }}>
                     {portfolioPreferredCurrency(walletBalance)}
                   </AppText>
                 </View>
                 <View style={{ marginTop: 6 }}>
-                  <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
+                  <AppText type={FOURTEEN} color={isDark ? colors.white : DISCLAIMTEXT}>
                     ≈ {!showBalance ? "****" : formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5)} USD
                   </AppText>
                 </View>

@@ -12,7 +12,7 @@ export const initialState = {
   /** 'otp' = Get OTP / Send OTP (don't show loader on primary buttons), 'primary' | null = show on buttons */
   loadingFor: null as 'primary' | 'otp' | null,
   userData: undefined,
-  theme: 'Light',
+  theme: 'Dark',
   appVersion: '',
   /** When set, Login screen shows 2FA verification modals (web-style) instead of navigating to EnterOtp */
   pending2FA: null as Pending2FA,

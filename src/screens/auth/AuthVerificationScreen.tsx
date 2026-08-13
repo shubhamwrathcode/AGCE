@@ -43,7 +43,6 @@ export interface AuthVerificationContentProps {
   onClose: () => void;
 }
 
-/** 2FA verification content – use inside full screen or inside RBSheet on Login. */
 export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProps) => {
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
@@ -109,19 +108,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     draggableIcon: { backgroundColor: "transparent" as const },
   };
 
-  // const onVerify = async () => {
-  //   if (!pending2FA) return;
-  //   if (selectedAuthMethod === 1 || selectedAuthMethod === 3) {
-  //     // Email or Mobile OTP flow
-  //     await dispatch(sendLoginOtp(pending2FA.loginSignId, selectedAuthMethod, otpCode, true));
-  //   } else if (selectedAuthMethod === 2) {
-  //     // Google Authenticator flow
-  //     await dispatch(verifyUser(pending2FA.loginSignId, selectedAuthMethod, true));
-  //   } else if (selectedAuthMethod === 4) {
-  //     // Passkey flow – allowed only via switch method after cancellation
-  //     await dispatch(verifyPasskeyLogin(pending2FA.loginSignId, false));
-  //   }
-  // };
+
 
   useEffect(() => {
     console.log("[AuthVerification] Hook 1 triggered. pending2FA:", !!pending2FA);
@@ -200,40 +187,11 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     return signId;
   };
 
-  const getVerificationTitle = (): string => {
-    switch (selectedAuthMethod) {
-      case 1: return "Email Verification";
-      case 2: return "Authenticator Verification";
-      case 3: return "Phone Verification";
-      case 4: return "Passkey Authentication";
-      default: return "Verification";
-    }
-  };
-
-  const getVerificationDescription = (): string => {
-    const method = pending2FA?.availableMethods?.find((m: any) => m.type === selectedAuthMethod);
-    const masked = method?.maskedValue;
-    if (selectedAuthMethod === 1) return `Enter the 6-digit verification code sent to ${masked || "your email"}.`;
-    if (selectedAuthMethod === 2) return "Enter the 6-digit code from your authenticator app.";
-    if (selectedAuthMethod === 3) return `Enter the 6-digit verification code sent to ${masked || "your phone"}.`;
-    if (selectedAuthMethod === 4) return "Authenticate using Face ID, Touch ID, or your device biometrics.";
-    return "Enter your verification code.";
-  };
-
-  const getInputLabel = (): string => {
-    switch (selectedAuthMethod) {
-      case 1: return "Email Verification Code";
-      case 2: return "Authenticator Code";
-      case 3: return "Phone Verification Code";
-      case 4: return "Passkey Authentication";
-      default: return "Verification Code";
-    }
-  };
 
   const handleGetOtp = () => {
     const isPhone = pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId));
     const sendTo = (selectedAuthMethod === 3 || isPhone) ? "mobile" : "email";
-    console.log(`[AuthVerification] handleGetOtp called. method: ${selectedAuthMethod}, sendTo: ${sendTo}`);
+    // console.log(`[AuthVerification] handleGetOtp called. method: ${selectedAuthMethod}, sendTo: ${sendTo}`);
     setResendTimer(60);
     autoSubmitEnabled.current = true;
     dispatch(sendLoginOtp(getVerifySignId(), sendTo, setResendTimer));
@@ -328,7 +286,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
           showsVerticalScrollIndicator={false}
         >
           <AuthHeader
-            onSupportPress={() => Linking.openURL("https://agce.wrathcode.com/help_center").catch(() => { })}
+            onSupportPress={() => Linking.openURL("https://arabglobal.ae/TermsofUse").catch(() => { })}
             onClosePress={onClose}
             title={""}
           />
@@ -413,7 +371,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                       source={pasteImg}
                       resizeMode="contain"
                       style={{ width: 16, height: 16 }}
-                      tintColor={themeColors.text}
+                      tintColor={isDark ? colors.white : themeColors.text}
                     />
                   </TouchableOpacityView>
                 </View>

@@ -28,10 +28,11 @@ import { useTheme } from "../../hooks/useTheme";
 import FastImage from "react-native-fast-image";
 import { pasteImg } from "../../helper/ImageAssets";
 import { SpinnerSecond } from "../../shared/components/SpinnerSecond";
+import { colors } from "../../theme/colors";
 
 const VerifyAccount = () => {
   const dispatch = useAppDispatch();
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   const showButtonLoading = useAppSelector((state) => state.auth.isLoading && state.auth.loadingFor === 'otp');
 
   const [otp, setOtp] = useState("");
@@ -117,7 +118,6 @@ const VerifyAccount = () => {
       isVerifyingRef.current = false;
     }
   };
-
   const onGetOtp = async (showLoader = true) => {
     if (!userData?.signId) return;
     const data = {
@@ -230,7 +230,7 @@ const VerifyAccount = () => {
             <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
               Paste
             </AppText>
-            <FastImage source={pasteImg} style={{ width: 15, height: 15 }} resizeMode="contain" />
+            <FastImage source={pasteImg} style={{ width: 15, height: 15 }} tintColor={isDark ? colors.white : colors.black} resizeMode="contain" />
           </TouchableOpacityView>
         </View>
 

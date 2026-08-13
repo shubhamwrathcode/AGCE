@@ -85,7 +85,7 @@ const Input = ({
         style={[
           styles.container,
           {
-            backgroundColor: '#EDEDEE',
+            backgroundColor: isDark ? 'transparent' : '#EDEDEE',
             borderColor: hasError
               ? colors.red
               : isFocused
