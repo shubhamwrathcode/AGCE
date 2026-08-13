@@ -52,7 +52,7 @@ const OptionsTrade = () => {
   ) || [];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.white }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <OptionsHeader
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -113,7 +113,7 @@ const OptionsTrade = () => {
           container: {
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            backgroundColor: theme === 'dark' ? '#1D1D1D' : colors.white,
+            backgroundColor: themeColors.background,
           }
         }}
       >

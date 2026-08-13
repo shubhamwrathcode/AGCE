@@ -18,7 +18,7 @@ const CustomTabBar = ({ state, descriptors, navigation, position, themeColors, i
   const iconTint = isDark ? themeColors.text : "#222";
 
   return (
-    <View style={[styles.tabBarContainer, { backgroundColor: "#fff" }]}>
+    <View style={[styles.tabBarContainer, { backgroundColor: themeColors.background }]}>
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -100,6 +100,7 @@ const FuturesNavigator = () => {
           lazy: false,
           freezeOnBlur: true,
           animationEnabled: false,
+          sceneContainerStyle: { backgroundColor: themeColors.background },
         }}
       >
         <Tab.Screen name="Futures" component={FuturesTrade} />

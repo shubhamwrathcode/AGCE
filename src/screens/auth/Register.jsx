@@ -195,11 +195,11 @@ const Register = () => {
       setSignUpIdError(false);
     }
     if (index === 0 && !checkTermsEmail) {
-      showError("Please agree to AGCE Terms and Use");
+      showError("Please agree to AGCX Terms and Use");
       return;
     }
     if (index === 1 && !checkTermsPhone) {
-      showError("Please agree to AGCE Terms and Use");
+      showError("Please agree to AGCX Terms and Use");
       return;
     }
 
@@ -494,7 +494,7 @@ const Register = () => {
                 }}
               >
                 <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
-                  I agree to AGCE{" "}
+                  I agree to AGCX{" "}
                 </AppText>
               </TouchableOpacityView>
               <TouchableOpacityView

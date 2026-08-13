@@ -267,13 +267,13 @@ const Home = () => {
           >
             <View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                <AppText type={SIXTEEN} color={DISCLAIMTEXT}>Estimated Balance</AppText>
+                <AppText type={SIXTEEN} color={isDark ? colors.white : DISCLAIMTEXT}>Estimated Balance</AppText>
                 <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
                   <FastImage
                     source={!showBalance ? eye_close_icon : eye_open_icon}
                     resizeMode="contain"
                     style={{ width: 16, height: 16 }}
-                    tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
+                    tintColor={theme !== "Dark" ? colors.disclaimText : colors.white}
                   />
                 </TouchableOpacity>
               </View>

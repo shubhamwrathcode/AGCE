@@ -168,7 +168,7 @@ const WalletNew = ({ route }) => {
       { key: "Main", title: "Main" },
       { key: "Margin", title: "Isolated" },
       { key: "Cross", title: "Cross" },
-      { key: "P2P", title: "P2P" },
+      // { key: "P2P", title: "P2P" },
       { key: "Futures", title: "Futures" },
       { key: "Options", title: "Options" },
       { key: "Staking", title: "Staking" },
@@ -732,7 +732,7 @@ const WalletNew = ({ route }) => {
   );
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       <KeyBoardAware
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
@@ -764,17 +764,17 @@ const WalletNew = ({ route }) => {
                           marginTop: 12,
                           paddingVertical: 0,
                           borderRadius: 14,
-                          backgroundColor: colors.white,
+                          backgroundColor: isDark ? themeColors.background : colors.white,
                         }}
                       >
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                          <AppText type={SIXTEEN} color={DISCLAIMTEXT}>Estimated Balance</AppText>
+                          <AppText type={SIXTEEN} color={isDark ? colors.white : DISCLAIMTEXT}>Estimated Balance</AppText>
                           <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
                             <FastImage
                               source={!showBalance ? eye_close_icon : eye_open_icon}
                               resizeMode="contain"
                               style={{ width: 16, height: 16 }}
-                              tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
+                              tintColor={theme !== "Dark" ? colors.disclaimText : colors.white}
                             />
                           </TouchableOpacity>
                         </View>
@@ -784,12 +784,12 @@ const WalletNew = ({ route }) => {
                             <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>
                               {!showBalance ? "****" : formatEstimateHeader(portfolioPreferredAmount(currentBalance), 5)}{" "}
                             </AppText>
-                            <AppText color={DISCLAIMTEXT} type={FIFTEEN} style={{ top: 5 }}>
+                            <AppText color={isDark ? colors.white : DISCLAIMTEXT} type={FIFTEEN} style={{ top: 5 }}>
                               {portfolioPreferredCurrency(currentBalance)}
                             </AppText>
                           </View>
                           <View style={{ marginTop: 6 }}>
-                            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
+                            <AppText type={FOURTEEN} color={isDark ? colors.white : DISCLAIMTEXT}>
                               ≈ {!showBalance ? "****" : formatEstimateHeader(portfolioUsdtEstimate(currentBalance), 5)} USD
                             </AppText>
                           </View>
@@ -837,7 +837,7 @@ const WalletNew = ({ route }) => {
                                     height: 3,
                                     width: 22,
                                     borderRadius: 2,
-                                    backgroundColor: overviewInnerTab === "crypto" ? colors.buttonBg : "transparent",
+                                    backgroundColor: overviewInnerTab === "crypto" ? isDark ? colors.white : colors.buttonBg : "transparent",
                                   }}
                                 />
                               </TouchableOpacity>
@@ -846,7 +846,7 @@ const WalletNew = ({ route }) => {
                                 <AppText
                                   type={FOURTEEN}
                                   weight={SEMI_BOLD}
-                                  color={overviewInnerTab === "account" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}
+                                  color={overviewInnerTab === "account" ? (isDark ? colors.white : colors.black) : DISCLAIMTEXT}
                                 >
                                   Account
                                 </AppText>
@@ -856,7 +856,7 @@ const WalletNew = ({ route }) => {
                                     height: 3,
                                     width: 22,
                                     borderRadius: 2,
-                                    backgroundColor: overviewInnerTab === "account" ? colors.buttonBg : "transparent",
+                                    backgroundColor: overviewInnerTab === "account" ? isDark ? colors.white : colors.buttonBg : "transparent",
                                   }}
                                 />
                               </TouchableOpacity>
@@ -883,30 +883,31 @@ const WalletNew = ({ route }) => {
                                       source={checkIc}
                                       style={{ width: 8, height: 8 }}
                                       resizeMode="contain"
-                                      tintColor={colors.buttonBg}
+                                      tintColor={isDark ? colors.white : colors.buttonBg}
                                     />
                                   ) : null}
                                 </View>
-                                <AppText type={TWELVE} color={DISCLAIMTEXT}>Hide 0 Balance</AppText>
+                                <AppText type={TWELVE} color={isDark ? colors.white : DISCLAIMTEXT}>Hide 0 Balance</AppText>
                               </TouchableOpacity>
                             ) : null}
                           </View>
 
                           {shouldShowCryptoSearch ? (
-                            <View style={styles.aoCryptoSearchRow}>
+                            <View style={[styles.aoCryptoSearchRow, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
                               <FastImage
                                 source={searchIcon}
                                 resizeMode="contain"
                                 style={{ width: 14, height: 14 }}
-                                tintColor={"#787878"}
+                                tintColor={themeColors.secondaryText}
                               />
                               <TextInput
                                 ref={searchInputRef}
                                 value={search}
                                 onChangeText={setSearch}
                                 placeholder="Search Crypto"
-                                placeholderTextColor={"#787878"}
-                                style={{ flex: 1, height: 38, fontSize: 13, color: theme !== "Dark" ? "#000" : "#FFF" }}
+                                placeholderTextColor={themeColors.secondaryText}
+                                cursorColor={isDark ? colors.white : colors.black}
+                                style={{ flex: 1, height: 38, fontSize: 13, color: themeColors.text }}
                                 returnKeyType="search"
                               />
                             </View>
@@ -962,7 +963,8 @@ const WalletNew = ({ route }) => {
                                         coinDetailSheet.current?.open?.();
                                       }}
                                     >
-                                      <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain" tintColor={DISCLAIMTEXT} />
+                                      <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain"
+                                        tintColor={isDark ? colors.white : DISCLAIMTEXT} />
                                     </TouchableOpacity>
                                   </View>
                                 );
@@ -1024,7 +1026,7 @@ const WalletNew = ({ route }) => {
                                       accountDetailSheet.current?.open?.();
                                     }}
                                   >
-                                    <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain" tintColor={DISCLAIMTEXT} />
+                                    <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain" tintColor={isDark ? colors.white : DISCLAIMTEXT} />
                                   </TouchableOpacity>
                                 </View>
                               )}
@@ -1456,6 +1458,7 @@ const WalletNew = ({ route }) => {
 
       <CoinDetailSheet
         sheetRef={coinDetailSheet}
+        theme={theme}
         themeColors={themeColors}
         walletType={selectedCoinSheetWalletType}
         selectedCoin={selectedCoinForSheet}

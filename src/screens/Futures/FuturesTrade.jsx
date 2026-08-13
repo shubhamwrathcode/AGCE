@@ -11,10 +11,9 @@ import FuturePairList from './FuturePairList';
 import { useFuturesSocket } from './useFuturesSocket';
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, TWELVE, FOURTEEN, SIXTEEN, TEN, THIRTEEN, Button } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
-import { colors } from '../../theme/colors';
+import { colors, darkTheme } from '../../theme/colors';
 import ToggleSwitch from '../../common/ToggleSwitch';
 import PercentQuickSelect from '../../shared/components/PercentQuickSelect';
-// Dummy icons (replace with actual from ImageAssets when available)
 import {
   back_ic,
   downIcon,
@@ -702,7 +701,6 @@ const FuturesUI = () => {
       }
 
       if (showTpSl) {
-        console.log("=== trace 8 checking TPSL ===");
         const markPriceForTpSl = Number(futuresPrice?.mark_price) || 0;
         if (takeProfit && String(takeProfit).trim() !== "") {
           const tpVal = parseFloat(takeProfit);
@@ -765,9 +763,7 @@ const FuturesUI = () => {
         client_order_id,
       };
 
-      console.log("=== FUTURES ORDER PAYLOAD ===", JSON.stringify(finalPayload, null, 2));
       const result = await appOperation.customer.futuresPlaceOrder(finalPayload);
-      console.log("=== FUTURES ORDER RESULT ===", JSON.stringify(result, null, 2));
       if (result?.success) {
         SimpleToast.show(result?.message || 'Order Placed Successfully!', SimpleToast.SHORT);
         const orderData = result?.data?.order ?? result?.data;
@@ -799,8 +795,6 @@ const FuturesUI = () => {
         SimpleToast.show(formatFuturesApiError(msg), SimpleToast.SHORT);
       }
     } catch (e) {
-      console.warn("handlePlaceOrder ENTIRE CATCH:", e);
-      console.log("=== FUTURES ORDER CATCH ERROR ===", e?.message || e);
       let errMsg = futuresErrGeneric();
       if (e?.error?.message) {
         errMsg = e.error.message;
@@ -971,7 +965,7 @@ const FuturesUI = () => {
           paddingVertical: 14,
           paddingHorizontal: 4,
           borderBottomWidth: index - 1 ? 0 : StyleSheet.hairlineWidth,
-          borderBottomColor: index - 1 ? 'transparent' : themeColors.themeBorderColor || "#ccc",
+          borderBottomColor: index - 1 ? 'transparent' : themeColors.themeBorderColor,
         }}
       >
         <View
@@ -979,7 +973,7 @@ const FuturesUI = () => {
             width: 34,
             height: 34,
             borderRadius: 17,
-            backgroundColor: colors.newThemeColor || "#2C2D31",
+            backgroundColor: isDark ? colors.themeElevationColor : colors.newThemeColor,
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -1079,7 +1073,7 @@ const FuturesUI = () => {
 
 
   const Header = () => (
-    <View style={{ paddingTop: 10, paddingBottom: 10, paddingHorizontal: 16 }}>
+    <View style={{ paddingTop: 10, paddingBottom: 10, paddingHorizontal: 16, backgroundColor: themeColors.background }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View>
           <TouchableOpacity style={styles.pairRow} onPress={() => pairSheetRef.current?.open()} disabled={!liveCoin}>
@@ -1227,10 +1221,7 @@ const FuturesUI = () => {
 
   const renderOrderBook = () => (
     <View style={styles.leftColumn}>
-      {/* <View style={styles.fundingRow}>
-        <AppText type={TEN} color={themeColors.secondaryText} style={[styles.dashedUnderline, { alignSelf: 'flex-start' }]}>Funding / Countdown</AppText>
-        <AppText type={TEN} weight={SEMI_BOLD} style={[styles.dashedUnderline, { marginTop: 4, alignSelf: 'flex-start' }]}>0.0100% / 03:23:21</AppText>
-      </View> */}
+
 
       <View style={styles.obHeader}>
         <AppText type={TEN} color={themeColors.secondaryText}>Price{"\n"}(USDT)</AppText>
@@ -1324,7 +1315,7 @@ const FuturesUI = () => {
         <TouchableOpacity
           ref={precisionTriggerRef}
           onPress={openObPrecisionMenu}
-          style={[styles.spotObAggTrigger, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor, borderRadius: 5 }]}
+          style={[styles.spotObAggTrigger, { backgroundColor: isDark ? '#2A2A2E' : themeColors.input, borderColor: themeColors.themeBorderColor, borderRadius: 5 }]}
           activeOpacity={0.75}
         >
           <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>{precision}</AppText>
@@ -1332,7 +1323,7 @@ const FuturesUI = () => {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={cycleViewMode}
-          style={[styles.spotObViewCycleBtn, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor }]}
+          style={[styles.spotObViewCycleBtn, { backgroundColor: isDark ? '#2A2A2E' : themeColors.input, borderColor: themeColors.themeBorderColor }]}
           activeOpacity={0.75}
         >
           <FastImage source={SPOT_OB_VIEW_ICONS[viewModeIndex]} style={styles.layoutIcon} resizeMode='contain' />
@@ -1348,7 +1339,7 @@ const FuturesUI = () => {
               {
                 top: obPrecisionLayout.y + obPrecisionLayout.h + 4,
                 left: Math.max(8, Math.min(obPrecisionLayout.x + obPrecisionLayout.w - 144, Width - 8 - 144)),
-                backgroundColor: themeColors.card,
+                backgroundColor: isDark ? '#2A2A2E' : themeColors.card,
                 borderColor: themeColors.themeBorderColor,
               },
             ]}
@@ -1451,7 +1442,7 @@ const FuturesUI = () => {
     return (
       <View style={styles.rightColumn}>
         {/* Buy / Sell Toggle */}
-        <View style={styles.toggleContainer}>
+        <View style={[styles.toggleContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
           <TouchableOpacity style={[styles.toggleBtn, activeTab === 'Buy' && styles.toggleActive]} onPress={() => setActiveTab('Buy')}>
             <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: activeTab === 'Buy' ? colors.white : themeColors.secondaryText }}>Buy</AppText>
           </TouchableOpacity>
@@ -1463,7 +1454,7 @@ const FuturesUI = () => {
         {/* Margin / Leverage */}
         <View style={[styles.marginRow, { marginBottom: 8 }]}>
           <TouchableOpacity
-            style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
+            style={[styles.marginBox, { paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}
             onPress={() => orderTypeSheetRef.current?.open()}
             activeOpacity={0.7}
           >
@@ -1473,7 +1464,7 @@ const FuturesUI = () => {
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.marginBox, { flex: 0.6, paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}
+            style={[styles.marginBox, { flex: 0.6, paddingVertical: 8, borderRadius: 6, backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}
             onPress={() => rbSheetMarginLeverage.current?.open()}
             activeOpacity={0.7}
           >
@@ -1487,7 +1478,7 @@ const FuturesUI = () => {
         {/* Trigger Price Input (Only for Conditional) */}
         {orderType === 'Conditional' && (
           <View style={[styles.inputRow, { marginBottom: 12 }]}>
-            <View style={[styles.inputBox, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+            <View style={[styles.inputBox, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
               <View style={{ justifyContent: 'center', flex: 1 }}>
                 <Animated.View
                   pointerEvents="none"
@@ -1514,7 +1505,7 @@ const FuturesUI = () => {
                   </Animated.Text>
                 </Animated.View>
                 <TextInput
-                  cursorColor={colors.black}
+                  cursorColor={isDark ? colors.white : colors.black}
                   value={triggerPrice}
                   onChangeText={setTriggerPrice}
                   onFocus={() => setIsTriggerFocused(true)}
@@ -1531,7 +1522,7 @@ const FuturesUI = () => {
 
         {/* Price Input */}
         <View style={styles.inputRow}>
-          <View style={[styles.inputBox, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+          <View style={[styles.inputBox, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
             <View style={{ justifyContent: 'center', flex: 1 }}>
               <Animated.View
                 pointerEvents="none"
@@ -1558,7 +1549,7 @@ const FuturesUI = () => {
                 </Animated.Text>
               </Animated.View>
               <TextInput
-                cursorColor={colors.black}
+                cursorColor={isDark ? colors.white : colors.black}
                 value={orderType === 'Market' ? '---Best Market Price---' : (orderType === 'Conditional' ? conditionalPrice : price)}
                 onChangeText={orderType === 'Conditional' ? setConditionalPrice : setPrice}
                 onFocus={() => orderType === 'Conditional' ? setIsConditionalPriceFocused(true) : setIsPriceFocused(true)}
@@ -1586,7 +1577,7 @@ const FuturesUI = () => {
         </View>
 
         {/* Amount Input */}
-        <View style={[styles.inputBox, { flex: 0, marginTop: 12, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+        <View style={[styles.inputBox, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', flex: 0, marginTop: 12, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
           <View style={{ justifyContent: 'center', flex: 1 }}>
             <Animated.View
               pointerEvents="none"
@@ -1613,7 +1604,7 @@ const FuturesUI = () => {
               </Animated.Text>
             </Animated.View>
             <TextInput
-              cursorColor={colors.black}
+              cursorColor={isDark ? colors.white : colors.black}
               value={amount}
               onChangeText={(text) => {
                 if (isAmountFocused) {
@@ -1681,7 +1672,7 @@ const FuturesUI = () => {
                 <AppText type={TWELVE}
                   style={{ fontFamily: fontFamilyMedium }}>{parseFloat((Math.trunc(Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) * 100000) / 100000).toFixed(5))} USDT</AppText>
                 <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
-                  <FastImage source={add} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
+                  <FastImage source={add} tintColor={isDark ? colors.white : colors.black} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
                 </TouchableOpacity>
               </>
             )}
@@ -1690,7 +1681,11 @@ const FuturesUI = () => {
 
         {/* Margin */}
         <View style={[styles.availableRow, { marginBottom: 10, flexWrap: 'wrap' }]}>
-          <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, { marginRight: 8, paddingVertical: 2 }]}>Margin</AppText>
+          <AppText type={TWELVE} color={themeColors.secondaryText} style={[styles.dashedUnderline, {
+            marginRight: 8, paddingVertical: 2,
+            color: isDark ? colors.white : colors.black,
+            borderBottomColor: isDark ? colors.white : colors.black,
+          }]}>Margin</AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
             {(!futuresData || futuresData?.contract?.short_name !== selectedCoin?.short_name) ? (
               <ShimmerBox width={80} height={16} borderRadius={4} />
@@ -1715,7 +1710,10 @@ const FuturesUI = () => {
             <View style={[styles.checkbox, showTpSl && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
               {showTpSl && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
             </View>
-            <AppText type={TWELVE} style={[styles.dashedUnderline]}>TP/SL</AppText>
+            <AppText type={TWELVE} style={[styles.dashedUnderline, {
+              color: isDark ? colors.white : colors.black,
+              borderBottomColor: isDark ? colors.white : colors.black,
+            }]}>TP/SL</AppText>
           </View>
           {showTpSl && <AppText type={TWELVE}>Advanced</AppText>}
         </TouchableOpacity>
@@ -1724,7 +1722,7 @@ const FuturesUI = () => {
           <View style={{ marginBottom: 12 }}>
             {/* TP Input */}
             <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginBottom: 6 }}>TP</AppText>
-            <View style={[styles.inputBox, { flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative", marginBottom: 12 }]}>
+            <View style={[styles.inputBox, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative", marginBottom: 12 }]}>
               <View style={{ justifyContent: 'center', flex: 1 }}>
                 <Animated.View
                   pointerEvents="none"
@@ -1751,7 +1749,7 @@ const FuturesUI = () => {
                   </Animated.Text>
                 </Animated.View>
                 <TextInput
-                  cursorColor={colors.black}
+                  cursorColor={isDark ? colors.white : colors.black}
                   value={takeProfit}
                   onChangeText={setTakeProfit}
                   onFocus={() => setIsTpFocused(true)}
@@ -1766,7 +1764,7 @@ const FuturesUI = () => {
 
             {/* SL Input */}
             <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginBottom: 6 }}>SL</AppText>
-            <View style={[styles.inputBox, { flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+            <View style={[styles.inputBox, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
               <View style={{ justifyContent: 'center', flex: 1 }}>
                 <Animated.View
                   pointerEvents="none"
@@ -1793,7 +1791,7 @@ const FuturesUI = () => {
                   </Animated.Text>
                 </Animated.View>
                 <TextInput
-                  cursorColor={colors.black}
+                  cursorColor={isDark ? colors.white : colors.black}
                   value={stopLoss}
                   onChangeText={setStopLoss}
                   onFocus={() => setIsSlFocused(true)}
@@ -1836,12 +1834,14 @@ const FuturesUI = () => {
                 <View style={[styles.checkbox, showSlippage && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
                   {showSlippage && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
                 </View>
-                <AppText type={TWELVE} style={[styles.dashedUnderline]}>Slippage</AppText>
+                <AppText type={TWELVE} style={[styles.dashedUnderline, {
+                  color: isDark ? colors.white : colors.black
+                }]}>Slippage</AppText>
               </View>
             </TouchableOpacity>
 
             {showSlippage && (
-              <View style={[styles.inputBox, { flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
+              <View style={[styles.inputBox, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', flex: 0, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: "relative" }]}>
                 <View style={{ justifyContent: 'center', flex: 1 }}>
                   <Animated.View
                     pointerEvents="none"
@@ -1856,7 +1856,7 @@ const FuturesUI = () => {
                     </Animated.Text>
                   </Animated.View>
                   <TextInput
-                    cursorColor={colors.black}
+                    cursorColor={isDark ? colors.white : colors.black}
                     value={slippagePct}
                     onChangeText={setSlippagePct}
                     placeholder="0.01~2"
@@ -2014,7 +2014,7 @@ const FuturesUI = () => {
                 width: 20,
                 height: 10,
                 marginTop: 2,
-                backgroundColor: activeHistoryTab === t.id ? colors.black : "transparent",
+                backgroundColor: activeHistoryTab === t.id ? isDark ? colors.white : colors.black : "transparent",
                 borderRadius: 2,
               }}
             />
@@ -2061,7 +2061,7 @@ const FuturesUI = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.white }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Header />
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.mainContent}>
@@ -2082,7 +2082,7 @@ const FuturesUI = () => {
           animationType="slide"
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor || themeColors.background,
+              backgroundColor: themeColors.background,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
             },
@@ -2116,7 +2116,7 @@ const FuturesUI = () => {
           animationType="slide"
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor || themeColors.background,
+              backgroundColor: themeColors.background,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingHorizontal: 20,
@@ -2226,7 +2226,7 @@ const FuturesUI = () => {
           animationType="slide"
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor || themeColors.background,
+              backgroundColor: themeColors.background,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingHorizontal: 20,
@@ -2504,7 +2504,7 @@ const FuturesUI = () => {
           animationType="slide"
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor || themeColors.background,
+              backgroundColor: themeColors.background,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingHorizontal: 16,
@@ -2542,14 +2542,14 @@ const FuturesUI = () => {
                   width: 36,
                   height: 36,
                   borderRadius: 18,
-                  backgroundColor: themeColors.themeElevationColor || themeColors.background,
+                  backgroundColor: isDark ? colors.themeElevationColor : themeColors.background,
                   alignItems: "center",
                   justifyContent: "center",
                   borderWidth: StyleSheet.hairlineWidth,
                   borderColor: themeColors.themeBorderColor,
                 }}
               >
-                <FastImage source={REMOVE} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={colors.black} />
+                <FastImage source={REMOVE} style={{ width: 18, height: 18 }} resizeMode="contain" tintColor={isDark ? colors.white : colors.black} />
               </TouchableOpacity>
             </View>
 
@@ -2583,7 +2583,7 @@ const FuturesUI = () => {
           closeOnPressMask={true}
           customStyles={{
             container: {
-              backgroundColor: themeColors.themeElevationColor || themeColors.background,
+              backgroundColor: themeColors.background,
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingHorizontal: 20,
@@ -2621,12 +2621,12 @@ const FuturesUI = () => {
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    backgroundColor: themeColors.bg || (isDark ? '#1a1a1a' : '#f5f5f5'),
+                    backgroundColor: isDark ? colors.themeElevationColor : themeColors.bg || (isDark ? '#1a1a1a' : '#f5f5f5'),
                     padding: 16,
                     borderRadius: 12,
                     marginBottom: 12,
                     borderWidth: 1,
-                    borderColor: tif === item.id ? (themeColors.primary || '#000') : 'transparent'
+                    borderColor: tif === item.id ? isDark ? colors.themeElevationColor : (themeColors.primary || '#000') : 'transparent'
                   }}
                 >
                   <View style={{ flex: 1, paddingRight: 12 }}>
@@ -2704,9 +2704,9 @@ const styles = StyleSheet.create({
   },
   dashedUnderline: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.black,
+
     borderStyle: 'dashed',
-    color: colors.black
+
   },
   fundingRow: {
     marginBottom: 16,

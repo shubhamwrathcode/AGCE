@@ -565,6 +565,7 @@ const StakingWalletTab = ({ theme, themeColors }) => {
                     onChangeText={setCancelReason}
                     placeholder="e.g. Need funds urgently"
                     placeholderTextColor={themeColors?.secondaryText}
+                    cursorColor={isDark ? colors.white : colors.black}
                     style={{
                       borderWidth: 1,
                       borderColor: themeColors?.themeBorderColor || "#EEE",
@@ -573,14 +574,15 @@ const StakingWalletTab = ({ theme, themeColors }) => {
                       minHeight: 80,
                       color: themeColors?.text,
                       textAlignVertical: "top",
-                      fontSize: 14
+                      fontSize: 14,
+                      backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7'
                     }}
                     multiline
                   />
                 </View>
 
                 {/* Details Box */}
-                <View style={{ backgroundColor: colors.inputBackground, padding: 16, borderRadius: 12, marginBottom: 24 }}>
+                <View style={{ backgroundColor: isDark ? '#2A2A2E' : colors.inputBackground, padding: 16, borderRadius: 12, marginBottom: 24 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: isDark ? "#3f4650" : "#eaecef" }}>
                     <AppText style={{ color: themeColors?.secondaryText, fontSize: 14 }}>Total Invested</AppText>
                     <AppText style={{ color: themeColors?.text, fontSize: 14, fontWeight: '600' }}>{safeToFixed(invested)} {currency}</AppText>
@@ -655,12 +657,13 @@ const StakingWalletTab = ({ theme, themeColors }) => {
 
                 <AppText style={{ color: themeColors?.secondaryText, marginBottom: 8, fontSize: 14 }} weight={SEMI_BOLD}>Amount</AppText>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: themeColors?.themeBorderColor || "#EEE", borderRadius: 8, paddingHorizontal: 12, height: 50, marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: themeColors?.themeBorderColor || "#EEE", borderRadius: 8, paddingHorizontal: 12, height: 50, marginBottom: 8, backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }}>
                   <TextInput
                     value={redeemAmount}
                     onChangeText={setRedeemAmount}
                     placeholder={`Min. ${minAmount}`}
                     placeholderTextColor={themeColors?.secondaryText}
+                    cursorColor={isDark ? colors.white : colors.black}
                     keyboardType="numeric"
                     style={{ flex: 1, color: themeColors?.text, fontSize: 15 }}
                   />

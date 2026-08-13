@@ -307,15 +307,15 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
       </View>
 
       {/* Summary Card */}
-      <View style={styles.summaryCard}>
+      <View style={[styles.summaryCard, { backgroundColor: theme === 'Dark' ? themeColors.background : colors.white }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
-            <AppText type={SIXTEEN} color={DISCLAIMTEXT} weight={SEMI_BOLD}>Total Balance</AppText>
+            <AppText type={SIXTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} weight={SEMI_BOLD}>Total Balance</AppText>
             <View style={styles.summaryValueRow}>
               <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>{totalBalanceUsdt != null ? fmt(totalBalanceUsdt, 8) : "—"} </AppText>
-              <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>USDT</AppText>
+              <AppText type={FIFTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ top: 5 }}>USDT</AppText>
             </View>
-            {totalBalanceUsdt != null && <AppText type={FOURTEEN} color={DISCLAIMTEXT}>≈ ${fmtPrice(totalBalanceUsdt)}</AppText>}
+            {totalBalanceUsdt != null && <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>≈ ${fmtPrice(totalBalanceUsdt)}</AppText>}
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme, marginBottom: 5 }}>Cross {risk?.max_leverage ?? account?.max_leverage ?? "—"}x</AppText>
@@ -336,11 +336,11 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
 
         <View style={styles.equityGrid}>
           <View style={{ flex: 1 }}>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Margin Level</AppText>
+            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Margin Level</AppText>
             <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: marginLevel != null && marginLevel < 1.1 ? colors.red : marginLevel != null && marginLevel < 1.3 ? "#f59e0b" : themeColors.text }}>
               {marginLevel != null ? fmt(marginLevel, 4) : "—"}
             </AppText>
-            <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 2 }}>
+            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ marginTop: 2 }}>
               Call at {fmtPrice(marginCallLevel)} · Liq. at {fmtPrice(liquidationLevel)}
             </AppText>
           </View>
@@ -453,10 +453,10 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
         {/* Action Buttons Row */}
         <View style={{ flexDirection: "row", gap: 10, marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: themeColors.border }}>
           <TouchableOpacity
-            style={{ flex: 1.5, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBgColor }}
+            style={{ flex: 1.5, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }}
             onPress={() => {
-              const firstDebt = debts[0] ?? assets.find((a) => parseFloat(a.borrowed) > 0);
-              const firstAsset = assets[0];
+              const firstDebt = Object.values(marginAssets).find(a => parseFloat(a.borrowed) > 0);
+              const firstAsset = Object.values(marginAssets).find(a => parseFloat(a.free) > 0);
               const targetAsset = firstDebt || firstAsset;
               if (targetAsset) {
                 NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, {
@@ -472,7 +472,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
             <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Borrow / Repay</AppText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBgColor }}
+            style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }}
             onPress={() => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "cross_margin" })}
           >
             <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Transfer</AppText>
@@ -497,14 +497,15 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
 
       {/* Filters */}
       <View style={styles.filtersRow}>
-        <View style={[styles.searchBox, { backgroundColor: theme === "Dark" ? "#2C2C2E" : "#F5F6F7" }]}>
-          <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={"#787878"} />
+        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? '#2A2A2E' : '#F7F7F7' }]}>
+          <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder={activeTab === "funds" ? "Search asset" : "Search coin"}
-            placeholderTextColor={"#787878"}
-            style={[styles.searchInput, { color: theme !== "Dark" ? "#000" : "#FFF" }]}
+            placeholderTextColor={themeColors.secondaryText}
+            cursorColor={theme === 'Dark' ? colors.white : colors.black}
+            style={[styles.searchInput, { color: themeColors.text }]}
             returnKeyType="search"
           />
         </View>
@@ -513,17 +514,17 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
       <View style={styles.checkboxesRow}>
         <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setHideSmall((v) => !v)}>
           <View style={styles.checkbox}>
-            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={colors.buttonBg} /> : null}
+            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
           </View>
-          <AppText type={TWELVE} color={DISCLAIMTEXT}>{activeTab === "funds" ? "Hide small balances" : "Hide low positions"}</AppText>
+          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>{activeTab === "funds" ? "Hide small balances" : "Hide low positions"}</AppText>
         </TouchableOpacity>
 
         {activeTab === "funds" && (
           <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setDebtOnly((v) => !v)}>
             <View style={styles.checkbox}>
-              {debtOnly ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={colors.buttonBg} /> : null}
+              {debtOnly ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
             </View>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Only show debts</AppText>
+            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Only show debts</AppText>
           </TouchableOpacity>
         )}
       </View>
@@ -566,7 +567,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
                     }}
                     style={styles.moreBtn}
                   >
-                    <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={DISCLAIMTEXT} />
+                    <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={theme === 'Dark' ? colors.white : colors.black} />
                   </TouchableOpacity>
                 </View>
               </View>

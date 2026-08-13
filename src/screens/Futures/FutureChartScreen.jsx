@@ -1361,10 +1361,10 @@ const FutureChartScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.white, paddingTop: insets.top }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background, paddingTop: insets.top }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
 
-      <View style={[styles.header, { backgroundColor: colors.white }]}>
+      <View style={[styles.header, { backgroundColor: themeColors.background }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <FastImage
@@ -1522,7 +1522,7 @@ const FutureChartScreen = () => {
               }}
             >
               <View style={{ width: Width }}>
-                <View style={[styles.chartWrap, { backgroundColor: colors.white, height: CHART_BLOCK_HEIGHT }]}>
+                <View style={[styles.chartWrap, { backgroundColor: themeColors.background, height: CHART_BLOCK_HEIGHT }]}>
                   <View
                     style={[
                       styles.chartWebWrap,
@@ -1983,7 +1983,7 @@ const FutureChartScreen = () => {
         style={[
           styles.chartBottomBar,
           {
-            backgroundColor: colors.white,
+            backgroundColor: isDark ? themeColors.background : colors.white,
             paddingBottom: Math.max(insets.bottom, 10),
           },
         ]}
@@ -1992,7 +1992,7 @@ const FutureChartScreen = () => {
           {[
             { id: "margin", label: "Margin", icon: margin_ic },
             { id: "futures", label: "Futures", icon: future_ic },
-            { id: "bots", label: "Bots", icon: bots_ic },
+            // { id: "bots", label: "Bots", icon: bots_ic },
           ].map((it) => (
             <TouchableOpacity
               key={it.id}
@@ -2024,7 +2024,7 @@ const FutureChartScreen = () => {
           ))}
         </View>
 
-        <View style={styles.chartBottomBtnsWrap}>
+        <View style={[styles.chartBottomBtnsWrap]}>
           <TouchableOpacity
             style={[
               styles.chartBottomBtn,

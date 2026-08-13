@@ -568,7 +568,7 @@ const Login = (): JSX.Element => {
             onPress={() => NavigationService.navigate(REGISTER_SCREEN)}
           >
             <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, textDecorationLine: "underline" }}>
-              Create a AGCE Account
+              Create a AGCX Account
             </AppText>
           </TouchableOpacityView>
         </View>

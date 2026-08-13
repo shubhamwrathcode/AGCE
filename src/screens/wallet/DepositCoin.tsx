@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RBSheet from 'react-native-raw-bottom-sheet';
+import ReactNativeModal from 'react-native-modal';
 import {
     AppSafeAreaView,
     AppText,
@@ -463,7 +464,7 @@ const DepositCoin = () => {
     const [checkDepositStatus, setCheckDepositStatus] = useState(false);
     const [announcements, setAnnouncements] = useState<any[]>([]);
     const [faqActiveIndex, setFaqActiveIndex] = useState<number | null>(null);
-    const [showSelectCoinFaqModal, setShowSelectCoinFaqModal] = useState(false);
+    const selectCoinFaqSheetRef = useRef<any>(null);
     const [recentShortNames, setRecentShortNames] = useState<string[]>([]);
     // NOTE: We no longer hide networks based on legacy `wallet/generate-address` errors.
     // Web parity uses `wallet/get-and-generate-address` with tokenAssetId; if backend supports it,
@@ -505,9 +506,9 @@ const DepositCoin = () => {
     const [bubbleLetter, setBubbleLetter] = useState<string | null>(null);
 
     // Modal states
-    const [showMoreDetailsModal, setShowMoreDetailsModal] = useState(false);
-    const [showDepositDetailsModal, setShowDepositDetailsModal] = useState(false);
-    const [showDepositConfirmedModal, setShowDepositConfirmedModal] = useState(false);
+    const moreDetailsSheetRef = useRef<any>(null);
+    const depositDetailsSheetRef = useRef<any>(null);
+    const depositConfirmedSheetRef = useRef<any>(null);
     const [selectCoinListLoading, setSelectCoinListLoading] = useState(() => {
         return !(depositActiveCoins && depositActiveCoins.length > 0);
     });
@@ -932,7 +933,7 @@ const DepositCoin = () => {
                         if (filteredData) {
                             const shortTxHash = shortenAddress(filteredData?.transaction_hash);
                             setModalData({ ...filteredData, shortTxHash });
-                            setShowDepositConfirmedModal(true);
+                            depositConfirmedSheetRef.current?.open();
                         }
                     }
                 } else {
@@ -969,7 +970,7 @@ const DepositCoin = () => {
         const shortToAddress = shortenAddress(item?.to_address);
         const shortTxHash = shortenAddress(item?.transaction_hash);
         setModalData({ ...item, shortAddress, shortTxHash, shortToAddress });
-        setShowDepositDetailsModal(true);
+        depositDetailsSheetRef.current?.open();
     };
 
     const renderCoinListItem = ({ item }: { item: any }) => {
@@ -1208,7 +1209,7 @@ const DepositCoin = () => {
             <View
                 style={[
                     styles.depositSectionHeader,
-                    { backgroundColor: colors.white },
+                    { backgroundColor: themeColors.background },
                 ]}
             >
                 <AppText weight={SEMI_BOLD} type={THIRTEEN} style={{ color: themeColors.text }}>
@@ -1324,7 +1325,7 @@ const DepositCoin = () => {
     }, [selectedCurrency, selectedNetwork]);
 
     return (
-        <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+        <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
             <View style={styles.headerView}>
                 <TouchableOpacity onPress={handleHeaderBack}>
                     <FastImage
@@ -1346,7 +1347,7 @@ const DepositCoin = () => {
                         <TouchableOpacity
                             onPress={() => {
                                 setFaqActiveIndex(null);
-                                setShowSelectCoinFaqModal(true);
+                                selectCoinFaqSheetRef.current?.open();
                             }}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
@@ -1374,7 +1375,7 @@ const DepositCoin = () => {
                         <TouchableOpacity
                             onPress={() => {
                                 setFaqActiveIndex(null);
-                                setShowSelectCoinFaqModal(true);
+                                selectCoinFaqSheetRef.current?.open();
                             }}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
@@ -1405,24 +1406,24 @@ const DepositCoin = () => {
                     <DepositCoinSelectListSkeleton />
                 ) : (
                     <View style={styles.selectCoinPhase}>
-                        <View style={[styles.selectCoinSearchWrap, { backgroundColor: lightTheme.input }]}>
+                        <View style={[styles.selectCoinSearchWrap, { backgroundColor: isDark ? '#2A2A2E' : lightTheme.input }]}>
                             <FastImage
                                 source={searchIcon}
                                 style={styles.selectCoinSearchIcon}
                                 resizeMode="contain"
-                                tintColor={colors.textGray}
+                                tintColor={themeColors.secondaryText}
                             />
                             <TextInput
                                 style={[
                                     styles.selectCoinSearchInput,
                                     {
-                                        backgroundColor: lightTheme.input,
-                                        borderColor: isDark ? themeColors.border : '#EEE',
+                                        backgroundColor: 'transparent',
                                         color: themeColors.text,
                                     },
                                 ]}
                                 placeholder="Search Coins"
                                 placeholderTextColor={themeColors.secondaryText}
+                                cursorColor={isDark ? colors.white : colors.black}
                                 value={searchPair}
                                 onChangeText={setSearchPair}
                             />
@@ -1597,7 +1598,7 @@ const DepositCoin = () => {
                                         <TouchableOpacity
                                             disabled={true}
                                             style={styles.depositAddressHeadRow}
-                                            onPress={() => setShowMoreDetailsModal(true)}
+                                            onPress={() => moreDetailsSheetRef.current?.open()}
                                             activeOpacity={0.7}
                                         >
                                             <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
@@ -1610,7 +1611,7 @@ const DepositCoin = () => {
                                                 weight={MEDIUM}
                                                 type={FOURTEEN}
                                                 numberOfLines={2}
-                                                style={{ flex: 1, color: colors.buttonBg }}
+                                                style={{ flex: 1, color: isDark ? colors.white : colors.buttonBg }}
                                             >
                                                 {depositAddress}
                                             </AppText>
@@ -1675,7 +1676,7 @@ const DepositCoin = () => {
                                     </View>
 
                                     <TouchableOpacity
-                                        onPress={() => setShowMoreDetailsModal(true)}
+                                        onPress={() => moreDetailsSheetRef.current?.open()}
                                         style={styles.depositMoreDetailsCenter}
                                         activeOpacity={0.7}
                                     >
@@ -1807,52 +1808,6 @@ const DepositCoin = () => {
                                 </View>
                             )}
 
-                            {/* Recent Deposits Section */}
-                            {/* {!resolvingDepositAddress && (
-                                <View style={styles.recentDepositsSection}>
-                                    <View style={styles.recentDepositsHeader}>
-                                        <View style={styles.recentDepositsTitleRow}>
-                                            <AppText weight={SEMI_BOLD} type={FIFTEEN} style={styles.sectionTitle}>
-                                                Recent Deposits
-                                            </AppText>
-                                            {loadingDeposit && (
-                                                <View style={styles.loadingIndicator}>
-                                                    <AppText type={TEN} color={colors.textGray}>
-                                                        Syncing recent deposits
-                                                    </AppText>
-                                                    <ActivityIndicator
-                                                        size="small"
-                                                        color={YELLOW}
-                                                        style={{ marginLeft: 5 }}
-                                                    />
-                                                </View>
-                                            )}
-                                        </View>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                NavigationService.navigate("Wallet_History")
-                                            }}
-                                        >
-                                            <AppText type={FOURTEEN} color={YELLOW}>
-                                                More &gt;
-                                            </AppText>
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    {recentDepositHistory && recentDepositHistory.length > 0 ? (
-                                        <View>
-                                            {recentDepositHistory.map((item, index) => (
-                                                <View key={item?._id || index.toString()}>
-                                                    {renderDepositHistoryItem({ item })}
-                                                </View>
-                                            ))}
-                                        </View>
-                                    ) : (
-                                        <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 120, height: 80, alignSelf: 'center' }}
-                                            resizeMode='contain' />
-                                    )}
-                                </View>
-                            )} */}
                         </ScrollView>
 
 
@@ -1860,7 +1815,8 @@ const DepositCoin = () => {
                 </KeyBoardAware>
             )}
 
-            <RBSheet
+            {/* @ts-ignore */}
+            <RBSheet customModalProps={{ statusBarTranslucent: true, navigationBarTranslucent: true }}
                 ref={networkSheetRef}
                 height={SHEET_HEIGHT}
                 closeOnDragDown
@@ -1941,452 +1897,461 @@ const DepositCoin = () => {
                             );
                         })}
                     </ScrollView>
-                    <View style={styles.networkSheetNotice}>
-                        <FastImage source={INFO} style={styles.networkSheetNoticeIcon} resizeMode="contain" tintColor={colors.textGray} />
+                    <View style={[styles.networkSheetNotice, {
+                        backgroundColor: isDark ? colors.themeElevationColor : '#fff5ea',
+                    }]}>
+                        <FastImage source={INFO} style={styles.networkSheetNoticeIcon} resizeMode="contain" tintColor={isDark ? colors.white : colors.textGray} />
                         <AppText type={TWELVE} color={colors.textGray} style={{ flex: 1, lineHeight: 18 }}>
                             Ensure that the selected deposit network is the same as the network. Otherwise, you'll not be able to withdraw later. Want help to choose a network?
                         </AppText>
                     </View>
                 </View>
             </RBSheet>
-
-            <Modal
-                visible={showSelectCoinFaqModal}
-                animationType="slide"
-                transparent
-                onRequestClose={() => setShowSelectCoinFaqModal(false)}
+            {/* @ts-ignore */}
+            <RBSheet customModalProps={{ statusBarTranslucent: true }}
+                ref={selectCoinFaqSheetRef}
+                height={SHEET_HEIGHT - 200}
+                closeOnDragDown
+                closeOnPressMask
+                customStyles={{
+                    container: {
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
+                        backgroundColor: themeColors.background,
+                    },
+                    wrapper: { backgroundColor: 'rgba(0,0,0,0.6)' },
+                    draggableIcon: { backgroundColor: colors.textGray },
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            {
-                                backgroundColor: themeColors.background,
-                                borderColor: isDark ? themeColors.border : '#EEE',
-                                borderWidth: 1,
-                            },
-                        ]}
-                    >
-                        <View style={styles.modalHeader}>
-                            <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
-                                Deposit help
-                            </AppText>
-                            <TouchableOpacity
-                                onPress={() => setShowSelectCoinFaqModal(false)}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                                <AppText type={TWENTY} style={{ color: themeColors.text }}>
-                                    ×
-                                </AppText>
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView
-                            style={styles.modalList}
-                            showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
+                <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
+                    <View style={styles.modalHeader}>
+                        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+                            Deposit help
+                        </AppText>
+                        <TouchableOpacity
+                            onPress={() => selectCoinFaqSheetRef.current?.close()}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                            {faqData.map((item, index) => (
-                                <View
-                                    key={String(index)}
-                                    style={[
-                                        styles.faqItemInner,
-                                        index === faqData.length - 1 && styles.faqItemInnerLast,
-                                        { borderColor: colors.inputBorder },
-                                    ]}
-                                >
-                                    <TouchableOpacity
-                                        style={styles.faqQuestionRow}
-                                        onPress={() =>
-                                            setFaqActiveIndex(faqActiveIndex === index ? null : index)
-                                        }
-                                        activeOpacity={0.7}
-                                    >
-                                        <AppText
-                                            type={THIRTEEN}
-                                            weight={SEMI_BOLD}
-                                            style={[styles.faqQuestion, { color: themeColors.secondaryText }] as any}
-                                        >
-                                            {item.title}
-                                        </AppText>
-                                        <FastImage
-                                            source={faqActiveIndex === index ? upIcon : downIcon}
-                                            resizeMode="contain"
-                                            style={styles.faqArrow}
-                                            tintColor={themeColors.secondaryText}
-                                        />
-                                    </TouchableOpacity>
-                                    {faqActiveIndex === index && (
-                                        <View style={styles.faqAnswer}>
-                                            {item.content.split('\n').map((line: string, lineIndex: number) => (
-                                                <AppText
-                                                    key={lineIndex}
-                                                    type={TWELVE}
-                                                    style={{ color: themeColors.secondaryText, lineHeight: 18 }}
-                                                >
-                                                    {line}
-                                                </AppText>
-                                            ))}
-                                        </View>
-                                    )}
-                                </View>
-                            ))}
-                        </ScrollView>
+                            <AppText type={TWENTY} style={{ color: themeColors.text }}>
+                                ×
+                            </AppText>
+                        </TouchableOpacity>
                     </View>
+                    <ScrollView
+                        style={styles.modalList}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {faqData.map((item, index) => (
+                            <View
+                                key={String(index)}
+                                style={[
+                                    styles.faqItemInner,
+                                    index === faqData.length - 1 && styles.faqItemInnerLast,
+                                    { borderColor: colors.inputBorder },
+                                ]}
+                            >
+                                <TouchableOpacity
+                                    style={styles.faqQuestionRow}
+                                    onPress={() =>
+                                        setFaqActiveIndex(faqActiveIndex === index ? null : index)
+                                    }
+                                    activeOpacity={0.7}
+                                >
+                                    <AppText
+                                        type={THIRTEEN}
+                                        weight={SEMI_BOLD}
+                                        style={[styles.faqQuestion, { color: themeColors.secondaryText }] as any}
+                                    >
+                                        {item.title}
+                                    </AppText>
+                                    <FastImage
+                                        source={faqActiveIndex === index ? upIcon : downIcon}
+                                        resizeMode="contain"
+                                        style={styles.faqArrow}
+                                        tintColor={themeColors.secondaryText}
+                                    />
+                                </TouchableOpacity>
+                                {faqActiveIndex === index && (
+                                    <View style={styles.faqAnswer}>
+                                        {item.content.split('\n').map((line: string, lineIndex: number) => (
+                                            <AppText
+                                                key={lineIndex}
+                                                type={TWELVE}
+                                                style={{ color: themeColors.secondaryText, lineHeight: 18 }}
+                                            >
+                                                {line}
+                                            </AppText>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+                        ))}
+                    </ScrollView>
                 </View>
-            </Modal>
+            </RBSheet>
 
             {/* More Details Modal */}
-            <Modal
-                visible={showMoreDetailsModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowMoreDetailsModal(false)}
+            {/* @ts-ignore */}
+            <RBSheet customModalProps={{ statusBarTranslucent: true }}
+                ref={moreDetailsSheetRef}
+                height={SHEET_HEIGHT}
+                closeOnDragDown
+                closeOnPressMask
+                customStyles={{
+                    container: {
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
+                        backgroundColor: themeColors.background,
+                    },
+                    wrapper: { backgroundColor: 'rgba(0,0,0,0.6)' },
+                    draggableIcon: { backgroundColor: colors.textGray },
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : '#EEE', borderWidth: 1 },
-                        ]}
-                    >
-                        <View style={styles.modalHeader}>
-                            <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: themeColors.text }}>
-                                More Info
+                <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
+                    <View style={styles.modalHeader}>
+                        <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: themeColors.text }}>
+                            More Info
+                        </AppText>
+                        <TouchableOpacity onPress={() => moreDetailsSheetRef.current?.close()}>
+                            <AppText type={TWENTY} style={{ color: themeColors.text }}>×</AppText>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.detailsContainer}>
+                        <View style={styles.detailRow}>
+                            <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
+                                Minimum deposit
                             </AppText>
-                            <TouchableOpacity onPress={() => setShowMoreDetailsModal(false)}>
-                                <AppText type={TWENTY} style={{ color: themeColors.text }}>×</AppText>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.detailsContainer}>
-                            <View style={styles.detailRow}>
-                                <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
-                                    Minimum deposit
-                                </AppText>
-                                <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
-                                    {limitForChain(selectedCurrency?.min_deposit, selectedNetwork) ??
-                                        '—'}{' '}
-                                    {selectedCurrency?.short_name}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
-                                    Maximum deposit
-                                </AppText>
-                                <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
-                                    {limitForChain(selectedCurrency?.max_deposit, selectedNetwork) ??
-                                        '—'}{' '}
-                                    {selectedCurrency?.short_name}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
-                                    Wallet
-                                </AppText>
-                                <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
-                                    Spot Wallet
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
-                                    Credited (Trading enabled)
-                                </AppText>
-                                <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
-                                    After 2 network confirmations
-                                </AppText>
-                            </View>
-                            <AppText type={TEN} color={colors.textGray} style={styles.warningText}>
-                                • Do not send NFTs to this address{'\n'}• Do not transact with
-                                Sanctioned Entities{'\n'}• This is {selectedNetwork} deposit address
-                                type. Transferring to an unsupported network could result in loss of
-                                deposit.
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
+                                {limitForChain(selectedCurrency?.min_deposit, selectedNetwork) ??
+                                    '—'}{' '}
+                                {selectedCurrency?.short_name}
                             </AppText>
                         </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
+                                Maximum deposit
+                            </AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
+                                {limitForChain(selectedCurrency?.max_deposit, selectedNetwork) ??
+                                    '—'}{' '}
+                                {selectedCurrency?.short_name}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
+                                Wallet
+                            </AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
+                                Spot Wallet
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
+                                Credited (Trading enabled)
+                            </AppText>
+                            <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.modalValueText} color={themeColors.text}>
+                                After 2 network confirmations
+                            </AppText>
+                        </View>
+                        <AppText type={TEN} color={colors.textGray} style={styles.warningText}>
+                            • Do not send NFTs to this address{'\n'}• Do not transact with
+                            Sanctioned Entities{'\n'}• This is {selectedNetwork} deposit address
+                            type. Transferring to an unsupported network could result in loss of
+                            deposit.
+                        </AppText>
                     </View>
                 </View>
-            </Modal>
+            </RBSheet>
 
             {/* Deposit Details Modal */}
-            <Modal
-                visible={showDepositDetailsModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowDepositDetailsModal(false)}
+            {/* @ts-ignore */}
+            <RBSheet customModalProps={{ statusBarTranslucent: true }}
+                ref={depositDetailsSheetRef}
+                height={SHEET_HEIGHT}
+                closeOnDragDown
+                closeOnPressMask
+                customStyles={{
+                    container: {
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
+                        backgroundColor: themeColors.background,
+                    },
+                    wrapper: { backgroundColor: 'rgba(0,0,0,0.6)' },
+                    draggableIcon: { backgroundColor: colors.textGray },
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : '#EEE', borderWidth: 1 },
-                        ]}
-                    >
-                        <View style={styles.modalHeader}>
-                            <AppText weight={SEMI_BOLD} type={SIXTEEN}>
-                                Deposit Details
+                <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
+                    <View style={styles.modalHeader}>
+                        <AppText weight={SEMI_BOLD} type={SIXTEEN}>
+                            Deposit Details
+                        </AppText>
+                        <TouchableOpacity onPress={() => depositDetailsSheetRef.current?.close()}>
+                            <AppText type={TWENTY}>×</AppText>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.detailsContainer}>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                Status
                             </AppText>
-                            <TouchableOpacity onPress={() => setShowDepositDetailsModal(false)}>
-                                <AppText type={TWENTY}>×</AppText>
-                            </TouchableOpacity>
+                            <AppText
+                                type={FOURTEEN}
+                                weight={SEMI_BOLD}
+                                color={modalData?.status === 'SUCCESS' ? GREEN : themeColors.text}
+                                style={styles.modalValue}
+                            >
+                                {modalData?.status === 'SUCCESS' ? 'Completed' : 'Pending'}
+                            </AppText>
                         </View>
-                        <View style={styles.detailsContainer}>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    Status
-                                </AppText>
-                                <AppText
-                                    type={FOURTEEN}
-                                    weight={SEMI_BOLD}
-                                    color={modalData?.status === 'SUCCESS' ? GREEN : themeColors.text}
-                                    style={styles.modalValue}
-                                >
-                                    {modalData?.status === 'SUCCESS' ? 'Completed' : 'Pending'}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    Date
-                                </AppText>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                Date
+                            </AppText>
+                            <AppText
+                                type={FOURTEEN}
+                                weight={SEMI_BOLD}
+                                color={themeColors.text}
+                                style={styles.modalValue}
+                            >
+                                {moment(modalData?.updatedAt).format('DD-MM-YYYY hh:mm A')}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                Coin
+                            </AppText>
+                            <AppText
+                                type={FOURTEEN}
+                                weight={SEMI_BOLD}
+                                color={themeColors.text}
+                                style={styles.modalValue}
+                            >
+                                {modalData?.short_name}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                Deposit amount
+                            </AppText>
+                            <AppText
+                                type={FOURTEEN}
+                                weight={SEMI_BOLD}
+                                color={themeColors.text}
+                                style={styles.modalValue}
+                            >
+                                {modalData?.amount} {modalData?.short_name}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                Network
+                            </AppText>
+                            <AppText
+                                type={FOURTEEN}
+                                weight={SEMI_BOLD}
+                                color={themeColors.text}
+                                style={styles.modalValue}
+                            >
+                                {modalData?.chain || 'Internal Transaction'}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                From Address
+                            </AppText>
+                            <View style={[styles.addressRow, styles.modalValue]}>
                                 <AppText
                                     type={FOURTEEN}
                                     weight={SEMI_BOLD}
                                     color={themeColors.text}
-                                    style={styles.modalValue}
+                                    style={{ flex: 1 }}
+                                    numberOfLines={1}
                                 >
-                                    {moment(modalData?.updatedAt).format('DD-MM-YYYY hh:mm A')}
+                                    {modalData?.shortAddress || modalData?.from_address || '----'}
                                 </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    Coin
-                                </AppText>
-                                <AppText
-                                    type={FOURTEEN}
-                                    weight={SEMI_BOLD}
-                                    color={themeColors.text}
-                                    style={styles.modalValue}
-                                >
-                                    {modalData?.short_name}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    Deposit amount
-                                </AppText>
-                                <AppText
-                                    type={FOURTEEN}
-                                    weight={SEMI_BOLD}
-                                    color={themeColors.text}
-                                    style={styles.modalValue}
-                                >
-                                    {modalData?.amount} {modalData?.short_name}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    Network
-                                </AppText>
-                                <AppText
-                                    type={FOURTEEN}
-                                    weight={SEMI_BOLD}
-                                    color={themeColors.text}
-                                    style={styles.modalValue}
-                                >
-                                    {modalData?.chain || 'Internal Transaction'}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    From Address
-                                </AppText>
-                                <View style={[styles.addressRow, styles.modalValue]}>
-                                    <AppText
-                                        type={FOURTEEN}
-                                        weight={SEMI_BOLD}
-                                        color={themeColors.text}
-                                        style={{ flex: 1 }}
-                                        numberOfLines={1}
+                                {modalData?.from_address && (
+                                    <TouchableOpacity
+                                        onPress={() => copyText(modalData?.from_address)}
+                                        style={styles.copyButton}
                                     >
-                                        {modalData?.shortAddress || modalData?.from_address || '----'}
-                                    </AppText>
-                                    {modalData?.from_address && (
-                                        <TouchableOpacity
-                                            onPress={() => copyText(modalData?.from_address)}
-                                            style={styles.copyButton}
-                                        >
-                                            <FastImage
-                                                source={copyIcon}
-                                                style={styles.copyIcon}
-                                                resizeMode="contain"
-                                                tintColor={colors.textGray}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
+                                        <FastImage
+                                            source={copyIcon}
+                                            style={styles.copyIcon}
+                                            resizeMode="contain"
+                                            tintColor={colors.textGray}
+                                        />
+                                    </TouchableOpacity>
+                                )}
                             </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    Deposit Address
-                                </AppText>
-                                <View style={[styles.addressRow, styles.modalValue]}>
-                                    <AppText
-                                        type={FOURTEEN}
-                                        weight={SEMI_BOLD}
-                                        color={themeColors.text}
-                                        style={{ flex: 1 }}
-                                        numberOfLines={1}
-                                    >
-                                        {modalData?.shortToAddress || modalData?.to_address || '----'}
-                                    </AppText>
-                                    {modalData?.to_address && (
-                                        <TouchableOpacity
-                                            onPress={() => copyText(modalData?.to_address)}
-                                            style={styles.copyButton}
-                                        >
-                                            <FastImage
-                                                source={copyIcon}
-                                                style={styles.copyIcon}
-                                                resizeMode="contain"
-                                                tintColor={colors.textGray}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    TxID
-                                </AppText>
-                                <View style={[styles.addressRow, styles.modalValue]}>
-                                    <AppText
-                                        type={FOURTEEN}
-                                        weight={SEMI_BOLD}
-                                        color={themeColors.text}
-                                        style={{ flex: 1 }}
-                                        numberOfLines={1}
-                                    >
-                                        {modalData?.shortTxHash || modalData?.transaction_hash || '----'}
-                                    </AppText>
-                                    {modalData?.transaction_hash && (
-                                        <TouchableOpacity
-                                            onPress={() => copyText(modalData?.transaction_hash)}
-                                            style={styles.copyButton}
-                                        >
-                                            <FastImage
-                                                source={copyIcon}
-                                                style={styles.copyIcon}
-                                                resizeMode="contain"
-                                                tintColor={colors.textGray}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
-                                    Deposit wallet
-                                </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                Deposit Address
+                            </AppText>
+                            <View style={[styles.addressRow, styles.modalValue]}>
                                 <AppText
                                     type={FOURTEEN}
                                     weight={SEMI_BOLD}
                                     color={themeColors.text}
-                                    style={styles.modalValue}
+                                    style={{ flex: 1 }}
+                                    numberOfLines={1}
                                 >
-                                    {modalData?.description?.includes('bonus')
-                                        ? 'Bonus Wallet'
-                                        : 'Main Wallet'}
+                                    {modalData?.shortToAddress || modalData?.to_address || '----'}
                                 </AppText>
+                                {modalData?.to_address && (
+                                    <TouchableOpacity
+                                        onPress={() => copyText(modalData?.to_address)}
+                                        style={styles.copyButton}
+                                    >
+                                        <FastImage
+                                            source={copyIcon}
+                                            style={styles.copyIcon}
+                                            resizeMode="contain"
+                                            tintColor={colors.textGray}
+                                        />
+                                    </TouchableOpacity>
+                                )}
                             </View>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                TxID
+                            </AppText>
+                            <View style={[styles.addressRow, styles.modalValue]}>
+                                <AppText
+                                    type={FOURTEEN}
+                                    weight={SEMI_BOLD}
+                                    color={themeColors.text}
+                                    style={{ flex: 1 }}
+                                    numberOfLines={1}
+                                >
+                                    {modalData?.shortTxHash || modalData?.transaction_hash || '----'}
+                                </AppText>
+                                {modalData?.transaction_hash && (
+                                    <TouchableOpacity
+                                        onPress={() => copyText(modalData?.transaction_hash)}
+                                        style={styles.copyButton}
+                                    >
+                                        <FastImage
+                                            source={copyIcon}
+                                            style={styles.copyIcon}
+                                            resizeMode="contain"
+                                            tintColor={colors.textGray}
+                                        />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
+                                Deposit wallet
+                            </AppText>
+                            <AppText
+                                type={FOURTEEN}
+                                weight={SEMI_BOLD}
+                                color={themeColors.text}
+                                style={styles.modalValue}
+                            >
+                                {modalData?.description?.includes('bonus')
+                                    ? 'Bonus Wallet'
+                                    : 'Main Wallet'}
+                            </AppText>
                         </View>
                     </View>
                 </View>
-            </Modal>
+            </RBSheet>
 
             {/* Deposit Confirmed Modal */}
-            <Modal
-                visible={showDepositConfirmedModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowDepositConfirmedModal(false)}
+            {/* @ts-ignore */}
+            <RBSheet customModalProps={{ statusBarTranslucent: true }}
+                ref={depositConfirmedSheetRef}
+                height={SHEET_HEIGHT}
+                closeOnDragDown
+                closeOnPressMask
+                customStyles={{
+                    container: {
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
+                        backgroundColor: themeColors.background,
+                    },
+                    wrapper: { backgroundColor: 'rgba(0,0,0,0.6)' },
+                    draggableIcon: { backgroundColor: colors.textGray },
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalContent,
-                            { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : '#EEE', borderWidth: 1 },
-                        ]}
-                    >
-                        <View style={styles.modalHeader}>
-                            <View style={styles.confirmedHeader}>
-                                <AppText weight={SEMI_BOLD} type={SIXTEEN}>
-                                    Deposit Processing
-                                </AppText>
-                                <AppText type={TWENTY} color={GREEN}>
-                                    ✓
-                                </AppText>
-                            </View>
-                            <TouchableOpacity onPress={() => setShowDepositConfirmedModal(false)}>
-                                <AppText type={TWENTY}>×</AppText>
-                            </TouchableOpacity>
+                <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
+                    <View style={styles.modalHeader}>
+                        <View style={styles.confirmedHeader}>
+                            <AppText weight={SEMI_BOLD} type={SIXTEEN}>
+                                Deposit Processing
+                            </AppText>
+                            <AppText type={TWENTY} color={GREEN}>
+                                ✓
+                            </AppText>
                         </View>
-                        <View style={styles.detailsContainer}>
-                            <View style={styles.stepContainer}>
-                                <AppText weight={SEMI_BOLD} type={FOURTEEN}>
-                                    Deposit order submitted
-                                </AppText>
-                                <AppText type={TEN} color={colors.textGray}>
-                                    {moment(modalData.createdAt).format('DD-MM-YYYY hh:mm A')}
-                                </AppText>
-                            </View>
-                            <View style={styles.stepContainer}>
-                                <AppText weight={SEMI_BOLD} type={FOURTEEN}>
-                                    System processing
-                                </AppText>
-                                <AppText type={TEN} color={colors.textGray}>
-                                    {moment(modalData.createdAt).format('DD-MM-YYYY hh:mm A')}
-                                </AppText>
-                            </View>
-                            <View style={styles.stepContainer}>
-                                <AppText weight={SEMI_BOLD} type={FOURTEEN}>
-                                    Deposit completed
-                                </AppText>
-                                <AppText type={TEN} color={colors.textGray}>
-                                    ----
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>Status</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD} color={YELLOW}>
-                                    Pending
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>Coin</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD}>
-                                    {modalData?.short_name}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>Deposited amount</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD}>
-                                    {modalData?.amount}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>Network</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD}>
-                                    {modalData?.chain}
-                                </AppText>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <AppText type={FOURTEEN}>TxID</AppText>
-                                <AppText type={FOURTEEN} weight={SEMI_BOLD}>
-                                    {modalData?.shortTxHash?.trim() || '----'}
-                                </AppText>
-                            </View>
+                        <TouchableOpacity onPress={() => depositConfirmedSheetRef.current?.close()}>
+                            <AppText type={TWENTY}>×</AppText>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.detailsContainer}>
+                        <View style={styles.stepContainer}>
+                            <AppText weight={SEMI_BOLD} type={FOURTEEN}>
+                                Deposit order submitted
+                            </AppText>
+                            <AppText type={TEN} color={colors.textGray}>
+                                {moment(modalData.createdAt).format('DD-MM-YYYY hh:mm A')}
+                            </AppText>
+                        </View>
+                        <View style={styles.stepContainer}>
+                            <AppText weight={SEMI_BOLD} type={FOURTEEN}>
+                                System processing
+                            </AppText>
+                            <AppText type={TEN} color={colors.textGray}>
+                                {moment(modalData.createdAt).format('DD-MM-YYYY hh:mm A')}
+                            </AppText>
+                        </View>
+                        <View style={styles.stepContainer}>
+                            <AppText weight={SEMI_BOLD} type={FOURTEEN}>
+                                Deposit completed
+                            </AppText>
+                            <AppText type={TEN} color={colors.textGray}>
+                                ----
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN}>Status</AppText>
+                            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={YELLOW}>
+                                Pending
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN}>Coin</AppText>
+                            <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                {modalData?.short_name}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN}>Deposited amount</AppText>
+                            <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                {modalData?.amount}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN}>Network</AppText>
+                            <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                {modalData?.chain}
+                            </AppText>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <AppText type={FOURTEEN}>TxID</AppText>
+                            <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                                {modalData?.shortTxHash?.trim() || '----'}
+                            </AppText>
                         </View>
                     </View>
                 </View>
-            </Modal>
-        </AppSafeAreaView>
+            </RBSheet>
+        </AppSafeAreaView >
     );
 };
 
@@ -2788,6 +2753,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,
+        paddingBottom: 20,
         maxHeight: '80%',
     },
     modalHeader: {
@@ -3046,7 +3012,6 @@ const styles = StyleSheet.create({
     networkSheetNotice: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#fff5ea',
         padding: 12,
         borderRadius: 10,
         marginTop: 4,

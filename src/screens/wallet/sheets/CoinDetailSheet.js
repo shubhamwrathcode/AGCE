@@ -9,6 +9,7 @@ import { colors } from "../../../theme/colors";
 
 const CoinDetailSheet = ({
   sheetRef,
+  theme,
   themeColors,
   walletType,
   selectedCoin,
@@ -81,7 +82,7 @@ const CoinDetailSheet = ({
       animationType="fade"
       customStyles={{
         container: {
-          backgroundColor: colors.white,
+          backgroundColor: themeColors.background,
           height: 390,
           borderTopRightRadius: 26,
           borderTopLeftRadius: 26,
@@ -97,7 +98,7 @@ const CoinDetailSheet = ({
       }}
     >
       {selectedCoin ? (
-        <View style={{ flex: 1, backgroundColor: colors.white }}>
+        <View style={{ flex: 1, backgroundColor: themeColors.background }}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 6 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -164,7 +165,7 @@ const CoinDetailSheet = ({
                     sheetRef.current?.close?.();
                     b.onPress?.();
                   }}
-                  style={[styles.sheetBtn, { backgroundColor: colors.iconBgColor, borderColor: 'transparent' }]}
+                  style={[styles.sheetBtn, { backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor, borderColor: 'transparent' }]}
                 >
                   <AppText weight={SEMI_BOLD} type={FOURTEEN}>{b.label}</AppText>
                 </TouchableOpacity>

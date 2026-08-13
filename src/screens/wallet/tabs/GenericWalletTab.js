@@ -69,17 +69,17 @@ const GenericWalletTab = ({
           marginTop: 12,
           paddingVertical: 0,
           borderRadius: 14,
-          backgroundColor: colors.white,
+          backgroundColor: theme === 'Dark' ? themeColors.background : colors.white,
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <AppText type={SIXTEEN} color={DISCLAIMTEXT} weight={SEMI_BOLD}>Total Assets</AppText>
+          <AppText type={SIXTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} weight={SEMI_BOLD}>Total Assets</AppText>
           <TouchableOpacity onPress={() => setShowBalance((v) => !v)}>
             <FastImage
               source={showBalance ? eyeCloseIcon : eyeOpenIcon}
               resizeMode="contain"
               style={{ width: 16, height: 16 }}
-              tintColor={theme !== "Dark" ? colors.disclaimText : colors.disclaimDarText}
+              tintColor={theme !== "Dark" ? colors.disclaimText : colors.white}
             />
           </TouchableOpacity>
         </View>
@@ -88,10 +88,10 @@ const GenericWalletTab = ({
             <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>
               {showBalance ? formatEstimateHeader(portfolioPreferredAmount(walletBalance), 5) : "****"}{" "}
             </AppText>
-            <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>{portfolioPreferredCurrency(walletBalance)}</AppText>
+            <AppText type={FIFTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ top: 5 }}>{portfolioPreferredCurrency(walletBalance)}</AppText>
           </View>
           <View style={{ marginTop: 6 }}>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
+            <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>
               ≈ {showBalance ? formatEstimateHeader(portfolioUsdtEstimate(walletBalance), 5) : "****"}{" "}
               {walletBalance?.Currency || "USD"}
             </AppText>
@@ -102,14 +102,15 @@ const GenericWalletTab = ({
       {actions?.length ? <WalletTabQuickActions theme={theme} themeColors={themeColors} items={actions} /> : null}
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14 }}>
-        <View style={[styles.searchBox, { backgroundColor: "#F5F6F7" }]}>
-          <FastImage source={searchIcon} style={{ width: 14, height: 14 }} resizeMode="contain" tintColor={"#787878"} />
+        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? '#2A2A2E' : '#F7F7F7' }]}>
+          <FastImage source={searchIcon} style={{ width: 14, height: 14 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Search"
-            placeholderTextColor={"#787878"}
-            style={{ flex: 1, height: 40, fontSize: 13, color: theme !== "Dark" ? "#000" : "#FFF" }}
+            placeholderTextColor={themeColors.secondaryText}
+            cursorColor={theme === 'Dark' ? colors.white : colors.black}
+            style={{ flex: 1, height: 40, fontSize: 13, color: themeColors.text }}
             returnKeyType="search"
           />
         </View>
@@ -117,10 +118,10 @@ const GenericWalletTab = ({
         <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 8 }} onPress={() => setHideZero((v) => !v)}>
           <View style={styles.checkbox}>
             {hideZero ? (
-              <FastImage source={checkIc} style={{ width: 8, height: 8 }} resizeMode="contain" tintColor={colors.buttonBg} />
+              <FastImage source={checkIc} style={{ width: 8, height: 8 }} resizeMode="contain" tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} />
             ) : null}
           </View>
-          <AppText type={TWELVE} color={DISCLAIMTEXT}>Hide 0 balances</AppText>
+          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Hide 0 balances</AppText>
         </TouchableOpacity>
       </View>
 
@@ -176,7 +177,7 @@ const GenericWalletTab = ({
               </View>
 
               <TouchableOpacity style={{ paddingLeft: 10, paddingVertical: 6 }} onPress={() => onOpenCoinSheet?.(item)}>
-                <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain" tintColor={DISCLAIMTEXT} />
+                <FastImage source={moreOption} style={{ width: 18, height: 18, transform: [{ rotate: "90deg" }] }} resizeMode="contain" tintColor={theme === 'Dark' ? colors.white : colors.black} />
               </TouchableOpacity>
             </View>
           );

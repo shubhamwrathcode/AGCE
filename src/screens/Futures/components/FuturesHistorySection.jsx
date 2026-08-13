@@ -328,16 +328,10 @@ const FuturesHistorySection = ({
   };
 
   const renderFuturesOpenOrderItem = ({ item: order, isLast }) => {
-    console.log("Futures Open Order Data:", order);
     const isBuy = String(order.side ?? "").toUpperCase() === "BUY";
     const sideColor = isBuy ? colors.green : colors.red;
     const filledQty = decNum(order.executed_quantity ?? order.filledQty ?? 0);
     const totalQty = decNum(order.quantity ?? order.origQty ?? 0);
-
-    const handleCancelOrder = () => {
-      setOrderToCancel(order);
-      setCancelModalVisible(true);
-    };
 
     const orderType = String(order.order_type ?? order.type ?? "Limit").charAt(0).toUpperCase() + String(order.order_type ?? order.type ?? "Limit").slice(1).toLowerCase();
     const leverage = order.leverage ? `${order.leverage}x` : "1x";

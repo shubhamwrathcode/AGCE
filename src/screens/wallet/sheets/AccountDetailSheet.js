@@ -27,7 +27,7 @@ const AccountDetailSheet = ({
       animationType="fade"
       customStyles={{
         container: {
-          backgroundColor: colors.white,
+          backgroundColor: themeColors.background,
           height: accountSheetHeight,
           borderTopRightRadius: 26,
           borderTopLeftRadius: 26,
@@ -118,7 +118,7 @@ const AccountDetailSheet = ({
                   sheetRef.current?.close?.();
                   onTransfer?.(selectedAccount);
                 }}
-                style={[styles.sheetBtn, { backgroundColor: colors.iconBgColor }]}
+                style={[styles.sheetBtn, { backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }]}
               >
                 <AppText weight={SEMI_BOLD} type={FOURTEEN}>Transfer</AppText>
               </TouchableOpacity>
@@ -127,7 +127,7 @@ const AccountDetailSheet = ({
                   sheetRef.current?.close?.();
                   Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM);
                 }}
-                style={[styles.sheetBtn, { backgroundColor: colors.iconBgColor }]}
+                style={[styles.sheetBtn, { backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }]}
               >
                 <AppText weight={SEMI_BOLD} type={FOURTEEN}>History</AppText>
               </TouchableOpacity>

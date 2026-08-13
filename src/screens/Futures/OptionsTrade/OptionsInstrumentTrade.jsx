@@ -72,7 +72,7 @@ const OptionsInstrumentTrade = () => {
   const { colors: themeColors, isDark } = themeObj;
 
   const { item, currentPrice, selectedAsset, isCall } = route.params || {};
-  const symbol = item?.symbol ;
+  const symbol = item?.symbol;
 
   const renderCountRef = React.useRef(0);
   renderCountRef.current += 1;
@@ -331,17 +331,17 @@ const OptionsInstrumentTrade = () => {
     let bestPrice = null;
     let bestTs = -Infinity;
     for (const t of trades) {
-        const price = decNum(t.price);
-        if (price <= 0) continue;
-        let ts = decNum(t.timestamp);
-        if (!Number.isFinite(ts) || ts <= 0) {
-            const d = new Date(t.timestamp);
-            ts = Number.isNaN(d.getTime()) ? 0 : d.getTime();
-        }
-        if (ts >= bestTs) {
-            bestTs = ts;
-            bestPrice = price;
-        }
+      const price = decNum(t.price);
+      if (price <= 0) continue;
+      let ts = decNum(t.timestamp);
+      if (!Number.isFinite(ts) || ts <= 0) {
+        const d = new Date(t.timestamp);
+        ts = Number.isNaN(d.getTime()) ? 0 : d.getTime();
+      }
+      if (ts >= bestTs) {
+        bestTs = ts;
+        bestPrice = price;
+      }
     }
     return bestPrice;
   }, []);
@@ -664,7 +664,7 @@ const OptionsInstrumentTrade = () => {
   );
 
   return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <KeyboardAwareScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
@@ -766,7 +766,7 @@ const OptionsInstrumentTrade = () => {
                 {/* <TouchableOpacity
                   ref={precisionTriggerRef}
                   onPress={openObPrecisionMenu}
-                  style={[styles.spotObAggTrigger, { backgroundColor: themeColors.input, borderColor: themeColors.themeBorderColor, borderRadius: 5 }]}
+                  style={[styles.spotObAggTrigger, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', borderColor: themeColors.themeBorderColor, borderRadius: 5 }]}
                   activeOpacity={0.75}
                 >
                   <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, lineHeight: 14 }}>{precision}</AppText>
@@ -781,7 +781,7 @@ const OptionsInstrumentTrade = () => {
                         onPress={() => setViewModeIndex(index)}
                         style={[
                           styles.spotObViewModeBtn,
-                          selected && { backgroundColor: themeColors.input },
+                          selected && { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' },
                         ]}
                         activeOpacity={0.75}
                       >
@@ -869,7 +869,7 @@ const OptionsInstrumentTrade = () => {
             {/* Order Entry Right */}
             <View style={{ width: RIGHT_W }}>
               {/* Buy / Sell Toggle */}
-              <View style={[styles.toggleContainer, { backgroundColor: themeColors.input }]}>
+              <View style={[styles.toggleContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
                 <TouchableOpacity style={[styles.toggleBtn, tradeTab === 'buy' && styles.toggleActive]} onPress={() => setTradeTab('buy')}>
                   <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: tradeTab === 'buy' ? colors.white : themeColors.secondaryText }}>Buy</AppText>
                 </TouchableOpacity>
@@ -900,11 +900,12 @@ const OptionsInstrumentTrade = () => {
                 <AppText type={TEN} style={{ color: '#b9b9b9', marginLeft: 8 }}>Tick {hasTickConfig ? decStr(tickSize) : "--"}</AppText>
               </View>
 
-              <View style={[styles.inputContainer, { backgroundColor: themeColors.input, flexDirection: 'row', alignItems: 'center' }, priceBandError && { borderColor: colors.red, borderWidth: 1 }]}>
+              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', flexDirection: 'row', alignItems: 'center' }, priceBandError && { borderColor: colors.red, borderWidth: 1 }]}>
                 {isLiveDataLoading && !orderPrice ? (
                   <ShimmerBox width={120} height={18} borderRadius={4} style={{ flex: 1 }} />
                 ) : (
                   <TextInput
+                    cursorColor={isDark ? colors.white : colors.black}
                     value={orderPrice}
                     onChangeText={(val) => {
                       if (!isValidIncrementInput(val, tickSize)) return;
@@ -945,8 +946,9 @@ const OptionsInstrumentTrade = () => {
                 <AppText type={TEN} style={{ color: '#b9b9b9', marginLeft: 8 }}>Step {hasStepConfig ? decStr(stepSize) : "--"}</AppText>
               </View>
 
-              <View style={[styles.inputContainer, { backgroundColor: themeColors.input, flexDirection: 'row', alignItems: 'center' }]}>
+              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', flexDirection: 'row', alignItems: 'center' }]}>
                 <TextInput
+                  cursorColor={isDark ? colors.white : colors.black}
                   value={orderAmount}
                   onChangeText={(val) => {
                     if (!isValidIncrementInput(val, stepSize)) return;
@@ -966,7 +968,7 @@ const OptionsInstrumentTrade = () => {
                 {contractHint}
               </AppText>
 
-           
+
 
               {/* Slider */}
               <View style={{ marginVertical: 8 }}>
@@ -1001,9 +1003,9 @@ const OptionsInstrumentTrade = () => {
                       position: 'absolute',
                       top: tifMenuLayout.y + tifMenuLayout.h + 2,
                       right: Math.max(16, Width - tifMenuLayout.x - tifMenuLayout.w),
-                      backgroundColor: themeColors.card,
+                      backgroundColor: isDark ? '#2A2A2E' : themeColors.card,
                       borderColor: themeColors.themeBorderColor,
-                      borderWidth: 1,
+                      borderWidth: isDark ? 0.5 : 1,
                       borderRadius: 5,
                       paddingVertical: 4,
                       minWidth: 88,

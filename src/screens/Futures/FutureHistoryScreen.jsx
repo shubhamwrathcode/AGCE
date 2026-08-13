@@ -58,7 +58,6 @@ const FutureHistoryScreen = () => {
         setFuturesPositions(result.data?.positions ?? []);
       }
     } catch (e) {
-      console.warn("fetchFuturesPositions err:", e);
     } finally {
       setLoadingPositions(false);
     }
@@ -74,7 +73,6 @@ const FutureHistoryScreen = () => {
         setFuturesPositionHistory(result.data?.positions ?? []);
       }
     } catch (e) {
-      console.warn("[PositionHistory] fetchFuturesPositionHistory err:", e);
     } finally {
       setLoadingPositionHistory(false);
     }
@@ -176,7 +174,7 @@ const FutureHistoryScreen = () => {
                 width: 25,
                 height: 4,
                 marginTop: 8,
-                backgroundColor: activeHistoryTab === t.id ? colors.black : "transparent",
+                backgroundColor: activeHistoryTab === t.id ? isDark ? colors.white : colors.black : "transparent",
                 borderRadius: 2,
               }}
             />

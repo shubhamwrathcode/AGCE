@@ -88,7 +88,7 @@ const FutureHistoryCardDetailPage = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <View style={{
         flexDirection: 'row',
         alignItems: 'center',

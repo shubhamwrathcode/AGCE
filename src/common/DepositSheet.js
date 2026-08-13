@@ -1,15 +1,11 @@
-import React, { useEffect } from "react";
+import React, { } from "react";
 
 import {
   View,
   TouchableOpacity,
   StyleSheet,
-  ImageBackground,
 } from "react-native";
-import RBSheet from "react-native-raw-bottom-sheet";
 import FastImage from "react-native-fast-image";
-
-import { useDispatch, useSelector } from "react-redux";
 import {
   AppText,
   BLACK,
@@ -26,7 +22,6 @@ import {
   TWENTY,
 } from "./AppText";
 import { colors } from "../theme/colors";
-import KeyBoardAware from "./KeyboardAware";
 import {
   Screen,
   borderWidth,
@@ -34,75 +29,63 @@ import {
   universalPaddingHorizontalHigh,
 } from "../theme/dimens";
 import {
-  arrowRightIcon,
   back_ic,
-  closeIcon,
-  convertBg,
-  depositIcon,
-  fiatDespositDarkIcon,
-  fiatDespositIcon,
   newDepositDarkIcon,
   newDepositIcon,
   right_ic,
 } from "../helper/ImageAssets";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
-import TouchableOpacityView from "./TouchableOpacityView";
-import { BASE_URL } from "../helper/Constants";
-import { Button } from "./Button";
-import { toFixedFive } from "../helper/utility";
-import { swapToken } from "../actions/homeActions";
 import NavigationService from "../navigation/NavigationService";
-import { CONVERT_HISTORY_SCREEN, DEPOSIT_WALLET_SCREEN } from "../navigation/routes";
+import { DEPOSIT_WALLET_SCREEN } from "../navigation/routes";
 
-const DepositSheet = ({theme}) => {
+const DepositSheet = ({ theme }) => {
   return (
-        <View style={{ paddingHorizontal: 20, flex: 1 }}>
-          <AppText
-            color={BLACK}
-            weight={BOLD}
-            type={TWENTY}
-            style={{ alignSelf: "center" }}
+    <View style={{ paddingHorizontal: 20, flex: 1 }}>
+      <AppText
+        color={theme !== "Dark" ? BLACK : "#FFF"}
+        weight={BOLD}
+        type={TWENTY}
+        style={{ alignSelf: "center" }}
+      >
+        Deposit
+      </AppText>
+      <View>
+        <View style={{ marginTop: 40 }}>
+          <AppText type={FOURTEEN} color={theme !== "Dark" ? BLACK : "#FFF"}>I have crypto assets</AppText>
+          <TouchableOpacity
+            style={{
+              marginTop: 15,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+            onPress={() => NavigationService.navigate(DEPOSIT_WALLET_SCREEN, { data: "Crypto" })}
           >
-            Deposit
-          </AppText>
-          <View>
-            <View style={{ marginTop: 40 }}>
-              <AppText type={FOURTEEN}>I have crypto assets</AppText>
-              <TouchableOpacity
-                style={{
-                  marginTop: 15,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-                onPress={() => NavigationService.navigate(DEPOSIT_WALLET_SCREEN, {data: "Crypto"})}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <FastImage
-                    source={theme !== "Dark" ? newDepositIcon : newDepositDarkIcon}
-                    resizeMode="contain"
-                    style={{ width: 30, height: 30 }}
-                  />
-                  <View style={{ marginLeft: 10 }}>
-                    <AppText type={SIXTEEN} weight={SEMI_BOLD}>
-                      Deposit Crypto
-                    </AppText>
-                    <AppText style={{color:  theme !== "Dark" ?"#454444" :colors.offWhite }}>Deposit Crypto assets via the blockchain</AppText>
-                  </View>
-                </View>
-                <FastImage
-                  source={back_ic}
-                  resizeMode="contain"
-                  style={{
-                    width: 15,
-                    height: 15,
-                    transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
-                  }}
-                  tintColor={theme !== "Dark" ? colors.black : colors.white}
-                />
-              </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <FastImage
+                source={theme !== "Dark" ? newDepositIcon : newDepositDarkIcon}
+                resizeMode="contain"
+                style={{ width: 30, height: 30 }}
+              />
+              <View style={{ marginLeft: 10 }}>
+                <AppText type={SIXTEEN} weight={SEMI_BOLD} color={theme !== "Dark" ? BLACK : "#FFF"}>
+                  Deposit Crypto
+                </AppText>
+                <AppText style={{ color: theme !== "Dark" ? "#454444" : colors.offWhite }}>Deposit Crypto assets via the blockchain</AppText>
+              </View>
             </View>
-            {/* <View style={{ marginTop: 40 }}>
+            <FastImage
+              source={back_ic}
+              resizeMode="contain"
+              style={{
+                width: 15,
+                height: 15,
+                transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
+              }}
+              tintColor={theme !== "Dark" ? colors.black : colors.white}
+            />
+          </TouchableOpacity>
+        </View>
+        {/* <View style={{ marginTop: 40 }}>
               <AppText type={FOURTEEN}>I don’t have crypto assets</AppText>
               <TouchableOpacity
                 style={{
@@ -138,8 +121,8 @@ const DepositSheet = ({theme}) => {
                 />
               </TouchableOpacity>
             </View> */}
-          </View>
-        </View>
+      </View>
+    </View>
   );
 };
 

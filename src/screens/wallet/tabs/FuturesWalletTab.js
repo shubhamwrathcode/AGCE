@@ -342,20 +342,20 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
       </View>
 
       {/* Summary Card */}
-      <View style={styles.summaryCard}>
+      <View style={[styles.summaryCard, { backgroundColor: theme === 'Dark' ? themeColors.background : colors.white }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
-            <AppText type={SIXTEEN} color={DISCLAIMTEXT} weight={SEMI_BOLD}>Total Assets</AppText>
+            <AppText type={SIXTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} weight={SEMI_BOLD}>Total Assets</AppText>
             <View style={styles.summaryValueRow}>
               <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>{fmt(totalWalletBalance, 2)} </AppText>
-              <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>USDT</AppText>
+              <AppText type={FIFTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ top: 5 }}>USDT</AppText>
             </View>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>≈ ${fmt(totalWalletBalance, 2)} USD</AppText>
+            <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>≈ ${fmt(totalWalletBalance, 2)} USD</AppText>
           </View>
         </View>
 
         <View style={{ marginTop: 15 }}>
-          <AppText type={TWELVE} color={DISCLAIMTEXT}>Unrealized PNL</AppText>
+          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Unrealized PNL</AppText>
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: totalUnrealizedPnl >= 0 ? colors.green : colors.red }}>
             {totalUnrealizedPnl >= 0 ? "+" : ""}{totalUnrealizedPnl.toFixed(2)} USDT
           </AppText>
@@ -363,11 +363,11 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
 
         <View style={[styles.equityGrid, { marginTop: 15 }]}>
           <View style={{ flex: 1 }}>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Available Balance</AppText>
+            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Available Balance</AppText>
             <AppText type={SIXTEEN} weight={SEMI_BOLD}>{fmt(totalAvailable, 2)} USDT</AppText>
           </View>
           <View style={{ flex: 1, alignItems: "flex-end" }}>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>In Use</AppText>
+            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>In Use</AppText>
             <AppText type={SIXTEEN} weight={SEMI_BOLD}>{fmt(totalLocked + totalIsolatedReserved, 2)} USDT</AppText>
           </View>
         </View>
@@ -375,13 +375,13 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
         {/* Action Buttons Row */}
         <View style={{ flexDirection: "row", gap: 10, marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: themeColors.border }}>
           <TouchableOpacity
-            style={{ flex: 1.5, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBgColor }}
+            style={{ flex: 1.5, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }}
             onPress={() => NavigationService.navigate(FUTURES_SCREEN)}
           >
             <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Trade</AppText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBgColor }}
+            style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }}
             onPress={() => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "futures", coin: "USDT" })}
           >
             <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Transfer</AppText>
@@ -406,14 +406,15 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
 
       {/* Filters */}
       <View style={styles.filtersRow}>
-        <View style={[styles.searchBox, { backgroundColor: theme === "Dark" ? "#2C2C2E" : "#F5F6F7" }]}>
-          <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={"#787878"} />
+        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? '#2A2A2E' : '#F7F7F7' }]}>
+          <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder={activeTab === "assets" ? "Search asset" : "Search contract"}
-            placeholderTextColor={"#787878"}
-            style={[styles.searchInput, { color: theme !== "Dark" ? "#000" : "#FFF" }]}
+            placeholderTextColor={themeColors.secondaryText}
+            cursorColor={theme === 'Dark' ? colors.white : colors.black}
+            style={[styles.searchInput, { color: themeColors.text }]}
             returnKeyType="search"
           />
         </View>
@@ -422,9 +423,9 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
       <View style={styles.checkboxesRow}>
         <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setHideSmall((v) => !v)}>
           <View style={styles.checkbox}>
-            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={colors.buttonBg} /> : null}
+            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
           </View>
-          <AppText type={TWELVE} color={DISCLAIMTEXT}>{activeTab === "assets" ? "Hide small balances" : "Hide small positions"}</AppText>
+          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>{activeTab === "assets" ? "Hide small balances" : "Hide small positions"}</AppText>
         </TouchableOpacity>
       </View>
 
@@ -461,7 +462,7 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
                     }}
                     style={styles.moreBtn}
                   >
-                    <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={DISCLAIMTEXT} />
+                    <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={theme === 'Dark' ? colors.white : colors.black} />
                   </TouchableOpacity>
                 </View>
               </View>

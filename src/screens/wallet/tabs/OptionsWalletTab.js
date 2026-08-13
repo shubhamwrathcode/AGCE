@@ -402,9 +402,9 @@ const OptionsWalletTab = ({ theme, themeColors }) => {
         <AppText weight={SEMI_BOLD} type={EIGHTEEN}>Options Wallet</AppText>
       </View>
 
-      <View style={styles.summaryCard}>
+      <View style={[styles.summaryCard, { backgroundColor: isDark ? themeColors.background : colors.white }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <AppText type={SIXTEEN} color={DISCLAIMTEXT} weight={SEMI_BOLD}>Total Equity</AppText>
+          <AppText type={SIXTEEN} color={isDark ? colors.white : DISCLAIMTEXT} weight={SEMI_BOLD}>Total Equity</AppText>
           <TouchableOpacity onPress={() => setShowBalance((v) => !v)}>
             <FastImage
               source={showBalance ? eye_close_icon : eye_open_icon}
@@ -419,14 +419,14 @@ const OptionsWalletTab = ({ theme, themeColors }) => {
           <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>
             {loading ? "—" : mask(fmt(totalEquity, 4))}
           </AppText>
-          <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}> USDT</AppText>
+          <AppText type={FIFTEEN} color={isDark ? colors.white : DISCLAIMTEXT} style={{ top: 5 }}> USDT</AppText>
         </View>
-        <AppText type={FOURTEEN} color={DISCLAIMTEXT}>
+        <AppText type={FOURTEEN} color={isDark ? colors.white : DISCLAIMTEXT}>
           ≈ {loading ? "—" : mask(fmtUsd(totalEquity))}
         </AppText>
 
         <View style={{ marginTop: 10 }}>
-          <AppText type={TWELVE} color={DISCLAIMTEXT}>Daily PNL</AppText>
+          <AppText type={TWELVE} color={isDark ? colors.white : DISCLAIMTEXT}>Daily PNL</AppText>
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: pnlColor(dailyPnl) }}>
             {loading || dailyPnlLoading
               ? "—"
@@ -436,34 +436,34 @@ const OptionsWalletTab = ({ theme, themeColors }) => {
 
         <View style={[styles.equityGrid, { marginTop: 15 }]}>
           <View style={{ flex: 1 }}>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Margin Balance (USDT)</AppText>
+            <AppText type={TWELVE} color={isDark ? colors.white : DISCLAIMTEXT}>Margin Balance (USDT)</AppText>
             <AppText type={SIXTEEN} weight={SEMI_BOLD}>{loading ? "—" : mask(fmt(marginBalance, 4))}</AppText>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>≈ {loading ? "—" : mask(fmtUsd(marginBalance))}</AppText>
+            <AppText type={TWELVE} color={isDark ? colors.white : DISCLAIMTEXT}>≈ {loading ? "—" : mask(fmtUsd(marginBalance))}</AppText>
           </View>
           <View style={{ flex: 1, alignItems: "flex-end" }}>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Unrealized PNL (USDT)</AppText>
+            <AppText type={TWELVE} color={isDark ? colors.white : DISCLAIMTEXT}>Unrealized PNL (USDT)</AppText>
             <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: pnlColor(unrealizedPnl) }}>
               {loading ? "—" : mask(fmt(unrealizedPnl, 4))}
             </AppText>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>≈ {loading ? "—" : mask(fmtUsd(unrealizedPnl))}</AppText>
+            <AppText type={TWELVE} color={isDark ? colors.white : DISCLAIMTEXT}>≈ {loading ? "—" : mask(fmtUsd(unrealizedPnl))}</AppText>
           </View>
         </View>
 
         <View style={{ flexDirection: "row", gap: 8, marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: themeColors.border }}>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.iconBgColor }]}
+            style={[styles.actionBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]}
             onPress={openTransfer}
           >
             <AppText type={TWELVE} weight={SEMI_BOLD} color={themeColors.text}>Transfer</AppText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.iconBgColor }]}
+            style={[styles.actionBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]}
             onPress={openPnlAnalysis}
           >
             <AppText type={TWELVE} weight={SEMI_BOLD} color={themeColors.text}>PNL Analysis</AppText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.iconBgColor }]}
+            style={[styles.actionBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]}
             onPress={openTransactionHistory}
           >
             <AppText type={TWELVE} weight={SEMI_BOLD} color={themeColors.text}>History</AppText>
@@ -475,11 +475,11 @@ const OptionsWalletTab = ({ theme, themeColors }) => {
         <View style={{ flexDirection: "row", gap: 18, alignItems: "flex-end" }}>
           <TouchableOpacity onPress={() => { setActiveTab("assets"); setSearch(""); setHideSmall(false); }} style={{ alignItems: "center" }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} color={activeTab === "assets" ? (isDark ? colors.white : colors.black) : DISCLAIMTEXT}>Assets</AppText>
-            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "assets" ? colors.buttonBg : "transparent" }]} />
+            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "assets" ? isDark ? colors.white : colors.buttonBg : "transparent" }]} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { setActiveTab("positions"); setSearch(""); setHideSmall(false); }} style={{ alignItems: "center" }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} color={activeTab === "positions" ? (isDark ? colors.white : colors.black) : DISCLAIMTEXT}>Positions</AppText>
-            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "positions" ? colors.buttonBg : "transparent" }]} />
+            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "positions" ? isDark ? colors.white : colors.buttonBg : "transparent" }]} />
           </TouchableOpacity>
         </View>
       </View>
@@ -487,14 +487,15 @@ const OptionsWalletTab = ({ theme, themeColors }) => {
       {activeTab === "positions" && (
         <>
           <View style={styles.filtersRow}>
-            <View style={[styles.searchBox, { backgroundColor: isDark ? "#2C2C2E" : "#F5F6F7" }]}>
-              <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor="#787878" />
+            <View style={[styles.searchBox, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
+              <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
               <TextInput
                 value={search}
                 onChangeText={setSearch}
                 placeholder="Search contract"
-                placeholderTextColor="#787878"
-                style={[styles.searchInput, { color: isDark ? "#FFF" : "#000" }]}
+                placeholderTextColor={themeColors.secondaryText}
+                cursorColor={isDark ? colors.white : colors.black}
+                style={[styles.searchInput, { color: themeColors.text }]}
                 returnKeyType="search"
               />
             </View>
@@ -502,9 +503,9 @@ const OptionsWalletTab = ({ theme, themeColors }) => {
           <View style={styles.checkboxesRow}>
             <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setHideSmall((v) => !v)}>
               <View style={styles.checkbox}>
-                {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={colors.buttonBg} /> : null}
+                {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={isDark ? colors.white : colors.buttonBg} /> : null}
               </View>
-              <AppText type={TWELVE} color={DISCLAIMTEXT}>Hide small positions</AppText>
+              <AppText type={TWELVE} color={isDark ? colors.white : DISCLAIMTEXT}>Hide small positions</AppText>
             </TouchableOpacity>
           </View>
         </>
@@ -536,7 +537,7 @@ const OptionsWalletTab = ({ theme, themeColors }) => {
                 }}
                 style={styles.moreBtn}
               >
-                <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={DISCLAIMTEXT} />
+                <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={isDark ? colors.white : colors.black} />
               </TouchableOpacity>
             </View>
           </View>

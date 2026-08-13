@@ -68,11 +68,10 @@ const ListEmptyComponent = ({ hasSearch }) => {
         source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
         resizeMode="contain"
         style={{ width: 80, height: 80 }}
-        tintColor={isDark ? themeColors.text : undefined}
       />
-      <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginTop: 12 }}>
+      {/* <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginTop: 12 }}>
         {hasSearch ? "No matches on this page." : "No notifications yet."}
-      </AppText>
+      </AppText> */}
     </View>
   );
 };

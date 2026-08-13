@@ -51,11 +51,11 @@ function formatSymbolDisplay(symbol) {
     const typeLabel = cp.toUpperCase() === "C" ? "Call" : "Put";
     const strikeNum = Number(strikeRaw);
     const strikeLabel = strikeNum > 0
-        ? strikeNum.toLocaleString(undefined, { maximumFractionDigits: 3 })
-        : strikeRaw;
+      ? strikeNum.toLocaleString(undefined, { maximumFractionDigits: 3 })
+      : strikeRaw;
     return {
-        primary: `${base}-${expiryCode}`,
-        secondary: `${strikeLabel}-${typeLabel}`,
+      primary: `${base}-${expiryCode}`,
+      secondary: `${strikeLabel}-${typeLabel}`,
     };
   }
   return { primary: sym, secondary: "" };
@@ -68,7 +68,7 @@ const OptionHistoryCardDetailPage = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const [cancelling, setCancelling] = useState(false);
-  
+
   const { item, tabKey, title, userId } = route.params || {};
 
   if (!item) {
@@ -96,7 +96,7 @@ const OptionHistoryCardDetailPage = () => {
   };
 
   const symDisplay = formatSymbolDisplay(item.symbol || item.currency_pair || item.asset);
-  
+
   let side = String(item.side || item.position_side || item.type || "").toUpperCase();
   let feeVal = Number(item.fee || 0);
 
@@ -105,17 +105,17 @@ const OptionHistoryCardDetailPage = () => {
   const sellerId = String(item.seller_id || "");
 
   if (uid && buyerId && buyerId === uid) {
-      side = "BUY";
-      feeVal = Number(item.buyer_fee || 0);
+    side = "BUY";
+    feeVal = Number(item.buyer_fee || 0);
   } else if (uid && sellerId && sellerId === uid) {
-      side = "SELL";
-      feeVal = Number(item.seller_fee || 0);
+    side = "SELL";
+    feeVal = Number(item.seller_fee || 0);
   }
 
   const sideColor = getSideColor(side);
   const ts = item.updated_at || item.created_at || item.timestamp || item.time || item.date || item.closed_at;
   const headerDateTime = ts ? moment(ts).format("DD/MM/YYYY HH:mm:ss") : "—";
-  
+
   const expiryDate = item.expiry_time ? moment(item.expiry_time).format("DD/MM/YYYY HH:mm:ss") : (item.expiry_date || item.expiryDate || "—");
   const strikePrice = item.strike_price || item.strikePrice || item.strike || "—";
   const amount = item.amount || item.size || item.quantity || item.qty || "—";
@@ -129,9 +129,9 @@ const OptionHistoryCardDetailPage = () => {
   const formatOptionsTransactionType = (type) => {
     const s = String(type || "").toUpperCase();
     const labels = {
-        TRANSFER_IN: "Transfer In", TRANSFER_OUT: "Transfer Out", TRADING_FEE: "Trading Fee",
-        PREMIUM: "Premium", SETTLEMENT: "Settlement", EXERCISE: "Exercise",
-        LIQUIDATION: "Liquidation", TRANSFER: "Transfer", TRADE: "Trade", FEE: "Fee",
+      TRANSFER_IN: "Transfer In", TRANSFER_OUT: "Transfer Out", TRADING_FEE: "Trading Fee",
+      PREMIUM: "Premium", SETTLEMENT: "Settlement", EXERCISE: "Exercise",
+      LIQUIDATION: "Liquidation", TRANSFER: "Transfer", TRADE: "Trade", FEE: "Fee",
     };
     return labels[s] || (s ? s.replace(/_/g, " ") : "—");
   };
@@ -147,19 +147,19 @@ const OptionHistoryCardDetailPage = () => {
 
   let tradeRole = String(item.role || "");
   if (!tradeRole) {
-     const buyerRate = Number(item.buyer_fee_rate || 0);
-     const sellerRate = Number(item.seller_fee_rate || 0);
-     if (side && (buyerRate > 0 || sellerRate > 0)) {
-         if (buyerRate < sellerRate) tradeRole = side === "BUY" ? "Maker" : "Taker";
-         else if (sellerRate < buyerRate) tradeRole = side === "SELL" ? "Maker" : "Taker";
-         else tradeRole = "Taker";
-     } else {
-         tradeRole = "Taker";
-     }
+    const buyerRate = Number(item.buyer_fee_rate || 0);
+    const sellerRate = Number(item.seller_fee_rate || 0);
+    if (side && (buyerRate > 0 || sellerRate > 0)) {
+      if (buyerRate < sellerRate) tradeRole = side === "BUY" ? "Maker" : "Taker";
+      else if (sellerRate < buyerRate) tradeRole = side === "SELL" ? "Maker" : "Taker";
+      else tradeRole = "Taker";
+    } else {
+      tradeRole = "Taker";
+    }
   }
   const tradeRoleCased = tradeRole.charAt(0).toUpperCase() + tradeRole.slice(1).toLowerCase();
   const sideDisplay = side && side !== '—' ? (side.charAt(0).toUpperCase() + side.slice(1).toLowerCase()) : "";
-  
+
   const filledQty = Number(item.filled || item.executed_qty || 0);
   const unfilledQty = Number(amount) - filledQty;
 
@@ -197,7 +197,7 @@ const OptionHistoryCardDetailPage = () => {
   );
 
   return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <View style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -234,7 +234,7 @@ const OptionHistoryCardDetailPage = () => {
             </AppText>
           </View>
           <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilyMedium }}>
-            {isOrderTab 
+            {isOrderTab
               ? `${sideDisplay} · ${orderType} · ${orderStatus}`
               : isTradeTab
                 ? `${sideDisplay} · ${tradeRoleCased}`
@@ -282,7 +282,7 @@ const OptionHistoryCardDetailPage = () => {
               {renderDetailRow("Intent", intentStr)}
               {renderDetailRow("TIF", String(item.time_in_force || item.timeInForce || "GTC").toUpperCase())}
               {renderDetailRow("Reduce Only", item.reduce_only ? "Yes" : "No")}
-              
+
               <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, alignItems: 'center' }}>
                 <AppText type={FOURTEEN} style={{ color: labelColor, fontFamily: fontFamilySemiBold }}>Action</AppText>
                 <TouchableOpacity

@@ -18,26 +18,7 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
 
   return (
     <View style={styles.container}>
-      {/* Top Links */}
-      <View style={styles.topLinksRow}>
-        {/* <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topLinksScroll}>
-          {topNavItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.topLinkItem} onPress={() => setActiveTab(index)}>
-              <AppText
-                style={{
-                  fontFamily: fontFamilySemiBold,
-                  color: activeTab === index ? themeColors.text : themeColors.secondaryText, fontSize: 15
-                }}
-              >
-                {item}
-              </AppText>
-            </TouchableOpacity>
-          ))}
-        </ScrollView> */}
-        {/* <TouchableOpacity style={styles.moreBtn} onPress={onOpenMoreSheet}>
-          <FastImage source={menuIcon} style={{ width: 18, height: 18, }} resizeMode='contain' tintColor={colors.black} />
-        </TouchableOpacity> */}
-      </View>
+
 
       {/* Title & Price */}
       {activeTab !== 2 && (
@@ -55,37 +36,6 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Filter Toggles */}
-      {/* {activeTab === 0 && (
-        <View style={styles.filterRow}>
-          <View style={styles.optionTypes}>
-            {optionTypes.map((type) => {
-              const isSelected = selectedOptionType === type;
-              return (
-                <TouchableOpacity
-                  key={type}
-                  style={styles.optionTypeBtn}
-                  onPress={() => setSelectedOptionType(type)}
-                >
-                  <AppText
-                    style={{
-                      color: isSelected ? themeColors.text : themeColors.secondaryText, fontSize: 14,
-                      fontFamily: fontFamilySemiBold
-                    }}
-                  >
-                    {type}
-                  </AppText>
-                  {isSelected && <View style={[styles.activeLine, { backgroundColor: themeColors.text }]} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <TouchableOpacity style={styles.filterIconBtn} onPress={onOpenSettings}>
-            <FastImage source={filterNew} style={{ width: 20, height: 20, }} resizeMode='contain' />
-          </TouchableOpacity>
-        </View>
-      )} */}
     </View>
   );
 };

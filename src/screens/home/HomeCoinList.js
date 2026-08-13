@@ -27,6 +27,7 @@ import { FlatList } from "react-native-gesture-handler";
 import { useAppSelector } from "../../store/hooks";
 import moment from "moment";
 import { commonStyles } from "../../theme/commonStyles";
+import { useTheme } from "../../hooks/useTheme";
 
 const ListEmptyComponent = ({ theme }) => {
   return (
@@ -46,6 +47,8 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
     (state) => state.home.notificationList
   );
   const notificationRows = Array.isArray(notificationList) ? notificationList : [];
+  const { colors: themeColors, isDark } = useTheme();
+
 
   const renderItem = useCallback(({ item }) => {
     return (
@@ -172,7 +175,7 @@ const HomeCoinList = ({ filterData, activeTabList, hideViewMore = false }) => {
               top: 1,
               transform: [{ rotateX: "360deg" }, { rotateZ: "180deg" }],
             }}
-            tintColor={colors.black}
+            tintColor={isDark ? colors.white : colors.black}
           />
         </View>
       </View>

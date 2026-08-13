@@ -59,7 +59,7 @@ const WithdrawSheet = ({theme}) => {
   return (
         <View style={{ paddingHorizontal: 20, flex: 1 }}>
           <AppText
-            color={BLACK}
+            color={theme !== "Dark" ? BLACK : "#FFF"}
             weight={BOLD}
             type={TWENTY}
             style={{ alignSelf: "center" }}
@@ -68,7 +68,7 @@ const WithdrawSheet = ({theme}) => {
           </AppText>
           <View>
             <View style={{ marginTop: 40 }}>
-              <AppText type={FOURTEEN}>I want to withdraw crypto assets</AppText>
+              <AppText type={FOURTEEN} color={theme !== "Dark" ? BLACK : "#FFF"}>I want to withdraw crypto assets</AppText>
               <TouchableOpacity
                 style={{
                   marginTop: 15,
@@ -85,7 +85,7 @@ const WithdrawSheet = ({theme}) => {
                     style={{ width: 30, height: 30 }}
                   />
                   <View style={{ marginLeft: 10 }}>
-                    <AppText type={SIXTEEN} weight={SEMI_BOLD}>
+                    <AppText type={SIXTEEN} weight={SEMI_BOLD} color={theme !== "Dark" ? BLACK : "#FFF"}>
                     Withdraw Crypto
                     </AppText>
                     <AppText style={{color:  theme !== "Dark" ? "#454444" :colors.offWhite }}>Withdraw Crypto assets via the blockchain</AppText>

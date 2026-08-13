@@ -327,6 +327,7 @@ export const PHONE = require('../../assets/images/phone.png');
 export const googleAuthApp = require('../../assets/images/googleAuthApp.png');
 export const download = require('../../assets/images/download.png');
 export const paste1 = require('../../assets/images/paste1.png');
+export const copyIcon = require('../../assets/images/paste1.png');
 export const warningImg = require('../../assets/images/warningImg.png');
 export const antiphisingFrame = require('../../assets/images/antiphisingFrame.png');
 export const antiphising3d = require('../../assets/images/antiphising3d.png');

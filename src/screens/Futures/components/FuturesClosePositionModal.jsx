@@ -111,7 +111,7 @@ const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeC
           borderTopRightRadius: 16,
           paddingHorizontal: 16,
           paddingBottom: 24,
-          backgroundColor: isDark ? colors.bottomsheetDark || "#1E1E1E" : colors.white
+          backgroundColor: isDark ? themeColors.background || "#1E1E1E" : colors.white
         }
       }}
     >
@@ -255,14 +255,14 @@ const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeC
 
         {/* Footer Confirm Button */}
         <TouchableOpacity
-          style={{ backgroundColor: "#000000", paddingVertical: 14, borderRadius: 10, alignItems: "center" }}
+          style={{ backgroundColor: isDark ? colors.white : "#000000", paddingVertical: 14, borderRadius: 10, alignItems: "center" }}
           disabled={loading}
           onPress={handleConfirm}
         >
           {loading ? (
-            <ActivityIndicator size="small" color={colors.white} />
+            <ActivityIndicator size="small" color={isDark ? colors.black : colors.white} />
           ) : (
-            <AppText style={{ color: colors.white, fontSize: 15 }} weight={BOLD}>Confirm</AppText>
+            <AppText style={{ color: isDark ? colors.black : colors.white, fontSize: 15 }} weight={BOLD}>Confirm</AppText>
           )}
         </TouchableOpacity>
       </KeyboardAwareScrollView>

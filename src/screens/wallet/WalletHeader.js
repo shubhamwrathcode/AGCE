@@ -8,7 +8,7 @@ import FastImage from "react-native-fast-image";
 import { useTheme } from "../../hooks/useTheme";
 
 const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
-  const { colors: themeColors, theme } = useTheme();
+  const { colors: themeColors, theme, isDark } = useTheme();
   const scrollRef = useRef(null);
   const [layoutWidth, setLayoutWidth] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
@@ -46,10 +46,9 @@ const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: 10,
-        backgroundColor: colors.white
+        backgroundColor: themeColors.background
       }}
     >
-      {/* Left scroll icon (show when can scroll left) */}
       {canScrollLeft && (
         <RNTouchableOpacity
           activeOpacity={0.7}
@@ -68,14 +67,12 @@ const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
               width: 15,
               height: 15,
               bottom: 3
-              // transform: [{ rotateX: "180deg" }, { rotateZ: "3.2rad" }],
             }}
             tintColor={theme !== "Dark" ? colors.black : colors.white}
           />
         </RNTouchableOpacity>
       )}
 
-      {/* Horizontal scrollable tabs */}
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -101,7 +98,7 @@ const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
               <AppText
                 weight={BOLD}
                 type={FIFTEEN}
-                style={{ color: isActive ? colors.buttonBg : themeColors.secondaryText }}
+                style={{ color: isActive ? isDark ? colors.white : colors.buttonBg : themeColors.secondaryText }}
               >
                 {r.title}
               </AppText>
@@ -111,7 +108,7 @@ const WalletHeader = ({ routes = [], activeTab, setActiveTab }) => {
                   height: 3,
                   width: 22,
                   borderRadius: 2,
-                  backgroundColor: isActive ? colors.buttonBg : "transparent",
+                  backgroundColor: isActive ? isDark ? colors.white : colors.buttonBg : "transparent",
                 }}
               />
             </TouchableOpacity>

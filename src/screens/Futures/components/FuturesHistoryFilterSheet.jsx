@@ -10,6 +10,8 @@ import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from '../../../t
 import CustomDropdown from '../../../shared/components/CustomDropdown';
 import { colors } from '../../../theme/colors';
 
+
+
 const FUTURES_WALLET_TX_TYPE_OPTIONS = [
   { value: "", label: "All Types" },
   { value: "TRANSFER", label: "Transfer" },
@@ -101,10 +103,11 @@ const FuturesHistoryFilterSheet = ({
       transparent
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: isDark ? "#1C1C1E" : "#FFFFFF" }]}>
+        <View style={[styles.sheet, { backgroundColor: themeColors.background }]}>
 
           <View style={styles.header}>
             <AppText type={SIXTEEN} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>Filters</AppText>
@@ -198,6 +201,7 @@ const FuturesHistoryFilterSheet = ({
             <DateTimePickerModal
               isVisible={isFromPickerVisible}
               mode="date"
+              display='spinner'
               onConfirm={(date) => {
                 setFromDate(moment(date).format("YYYY-MM-DD"));
                 setPreset("");
@@ -206,9 +210,10 @@ const FuturesHistoryFilterSheet = ({
               onCancel={() => setFromPickerVisible(false)}
               date={fromDate ? new Date(fromDate) : new Date()}
             />
-            
+
             <DateTimePickerModal
               isVisible={isToPickerVisible}
+              display='spinner'
               mode="date"
               onConfirm={(date) => {
                 setToDate(moment(date).format("YYYY-MM-DD"));
@@ -231,7 +236,7 @@ const FuturesHistoryFilterSheet = ({
                   width: '100%',
                   backgroundColor: themeColors.text,
                 }}
-                titleStyle={{ color: colors.white }}
+                titleStyle={{ color: isDark ? colors.black : colors.white }}
               >
                 Apply
               </Button>

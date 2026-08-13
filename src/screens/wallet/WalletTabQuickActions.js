@@ -2,7 +2,7 @@ import React from "react";
 import { Platform, TouchableOpacity, View } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, MEDIUM, SEMI_BOLD, TWELVE } from "../../shared";
-import { colors } from "../../theme/colors";
+import { colors, darkTheme } from "../../theme/colors";
 import {
   buyCrypto,
   earningAsset1,
@@ -96,7 +96,7 @@ const WalletTabQuickActions = ({ theme, themeColors, items }) => {
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: colors.iconBgColor,
+                backgroundColor: isDark ? colors.themeElevationColor : colors.iconBgColor,
                 alignItems: "center",
                 justifyContent: "center",
               }}
@@ -105,7 +105,7 @@ const WalletTabQuickActions = ({ theme, themeColors, items }) => {
                 source={src}
                 style={{ width: 26, height: 26 }}
                 resizeMode="contain"
-                tintColor={variant === "futures" ? "#787878" : colors.black}
+                tintColor={variant === "futures" ? "#787878" : isDark ? colors.white : colors.black}
               />
             </View>
             <AppText

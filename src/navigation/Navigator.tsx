@@ -104,7 +104,6 @@ import Toast from "react-native-simple-toast";
 import { useAppSelector } from "../store/hooks";
 import { ChartPreloaderProvider } from "../context/ChartPreloaderContext";
 import SpotOrderHistoryDetail from "../screens/spotScreen/SpotOrderHistoryDetail";
-import WalletHistory from "../features/wallet/screens/WalletHistoryScreen";
 import Market from "../screens/other/Market";
 import SpotMarket from "../screens/other/SpotMarket";
 import MoreMenu from "../features/home/screens/MoreOptionsScreen";
@@ -553,10 +552,6 @@ const MyAuthLoadingStack = () => {
       />
       <Stack.Screen name={routes.MARGIN_HISTORY_SCREEN} component={MarginHistoryScreen} />
       <Stack.Screen name={routes.SPOT_ORDER_HISTORY_DETAIL} component={SpotOrderHistoryDetail} />
-      <Stack.Screen
-        name={routes.WALLET_HISTORY_SCREEN}
-        component={WalletHistory}
-      />
       <Stack.Screen name={routes.SPOT_MARKET_SCREEN} component={SpotMarket as any} />
       <Stack.Screen name={routes.SPOT_CHART_SCREEN} component={SpotChartScreen} />
       <Stack.Screen name="FutureChartScreen" component={FutureChartScreen} />

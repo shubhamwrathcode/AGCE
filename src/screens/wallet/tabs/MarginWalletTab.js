@@ -179,26 +179,26 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
       </View>
 
       {/* Summary Card */}
-      <View style={styles.summaryCard}>
-        <AppText type={SIXTEEN} color={DISCLAIMTEXT} weight={SEMI_BOLD}>Total Assets</AppText>
+      <View style={[styles.summaryCard, { backgroundColor: theme === 'Dark' ? themeColors.background : colors.white }]}>
+        <AppText type={SIXTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} weight={SEMI_BOLD}>Total Assets</AppText>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
             <View style={styles.summaryValueRow}>
               <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>{marginSummary?.total_assets_usd ?? "0.00"} </AppText>
-              <AppText type={FIFTEEN} color={DISCLAIMTEXT} style={{ top: 5 }}>USD</AppText>
+              <AppText type={FIFTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ top: 5 }}>USD</AppText>
             </View>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>≈{marginSummary?.total_assets_btc ?? "0.00000000"} BTC</AppText>
+            <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>≈{marginSummary?.total_assets_btc ?? "0.00000000"} BTC</AppText>
           </View>
           <TouchableOpacity
-            style={[styles.transferBtn, { backgroundColor: colors.iconBgColor }]}
+            style={[styles.transferBtn, { backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }]}
             onPress={() => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "margin" })}
           >
-            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.black }}>Transfer</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: theme === 'Dark' ? colors.white : colors.black }}>Transfer</AppText>
           </TouchableOpacity>
         </View>
 
         <View style={{ marginTop: 15, flexDirection: "row", alignItems: "center" }}>
-          <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Today's PnL </AppText>
+          <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Today's PnL </AppText>
           <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: parseFloat(marginSummary?.today_pnl_usd || 0) < 0 ? "#e45561" : "#01bc8d" }}>
             {marginSummary?.today_pnl_usd ?? "0.00"} USD
           </AppText>
@@ -206,17 +206,17 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
 
         <View style={{ marginTop: 15, flexDirection: "row", justifyContent: "space-between" }}>
           <View style={{ flex: 1 }}>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Account Equity</AppText>
+            <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Account Equity</AppText>
             <View style={{ flexDirection: "row", alignItems: "flex-end", marginTop: 4 }}>
               <AppText type={EIGHTEEN} weight={SEMI_BOLD}>{marginSummary?.account_equity_usd ?? "0.00"} </AppText>
-              <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginBottom: 2 }}>USD</AppText>
+              <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ marginBottom: 2 }}>USD</AppText>
             </View>
           </View>
           <View style={{ flex: 1 }}>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Total Liabilities</AppText>
+            <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Total Liabilities</AppText>
             <View style={{ flexDirection: "row", alignItems: "flex-end", marginTop: 4 }}>
               <AppText type={EIGHTEEN} weight={SEMI_BOLD}>{marginSummary?.total_liabilities_usd ?? "0.00"} </AppText>
-              <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginBottom: 2 }}>USD</AppText>
+              <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ marginBottom: 2 }}>USD</AppText>
             </View>
           </View>
         </View>
@@ -224,14 +224,15 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
 
       {/* Filters */}
       <View style={styles.filtersRow}>
-        <View style={[styles.searchBox, { backgroundColor: theme === "Dark" ? "#2C2C2E" : "#F5F6F7" }]}>
-          <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={"#787878"} />
+        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? '#2A2A2E' : '#F7F7F7' }]}>
+          <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Search"
-            placeholderTextColor={"#787878"}
-            style={[styles.searchInput, { color: theme !== "Dark" ? "#000" : "#FFF" }]}
+            placeholderTextColor={themeColors.secondaryText}
+            cursorColor={theme === 'Dark' ? colors.white : colors.black}
+            style={[styles.searchInput, { color: themeColors.text }]}
             returnKeyType="search"
           />
         </View>
@@ -240,15 +241,15 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
       <View style={styles.checkboxesRow}>
         <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setLiabilitiesOnly((v) => !v)}>
           <View style={styles.checkbox}>
-            {liabilitiesOnly ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={colors.buttonBg} /> : null}
+            {liabilitiesOnly ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
           </View>
-          <AppText type={TWELVE} color={DISCLAIMTEXT}>Liabilities only</AppText>
+          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Liabilities only</AppText>
         </TouchableOpacity>
         <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setHideSmall((v) => !v)}>
           <View style={styles.checkbox}>
-            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={colors.buttonBg} /> : null}
+            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
           </View>
-          <AppText type={TWELVE} color={DISCLAIMTEXT}>Hide assets {'<'} $1</AppText>
+          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Hide small assets</AppText>
         </TouchableOpacity>
       </View>
 
@@ -292,7 +293,7 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
                 <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.availableQuote}</AppText>
               </View>
               <TouchableOpacity onPress={() => { setSelectedPair(item); sheetRef.current?.open(); }} style={styles.moreBtn}>
-                <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={DISCLAIMTEXT} />
+                <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={theme === 'Dark' ? colors.white : colors.black} />
               </TouchableOpacity>
             </View>
           </View>

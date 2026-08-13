@@ -311,7 +311,6 @@ const CoinList = React.memo(() => {
 
 CoinList.displayName = "CoinList";
 
-const HOME_HORIZONTAL_PADDING = 12;
 
 const styles = StyleSheet.create({
   container: {

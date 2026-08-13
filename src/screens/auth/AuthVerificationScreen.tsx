@@ -274,7 +274,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   if (!pending2FA) return null;
 
   return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

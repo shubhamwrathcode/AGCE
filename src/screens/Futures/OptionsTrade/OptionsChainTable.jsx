@@ -470,8 +470,7 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
                     const { row, isRowAboveLine, isRowBelowLine } = el;
                     const strikePriceNum = row.strike;
                     const isCallITM = strikePriceNum < currentPrice;
-                    const itmBg = isDark ? 'rgb(38, 41, 47)' : 'rgba(2, 192, 118, 0.05)';
-                    const callBg = isCallITM ? itmBg : 'transparent';
+                    const callBg = (isCallITM && !isDark) ? 'rgba(2, 192, 118, 0.05)' : 'transparent';
 
                     const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
                     const paddingBottom = isRowAboveLine ? 8 : 0;
@@ -631,8 +630,7 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
                     const { row, isRowAboveLine, isRowBelowLine } = el;
                     const strikePriceNum = row.strike;
                     const isPutITM = strikePriceNum > currentPrice;
-                    const itmBg = isDark ? 'rgb(38, 41, 47)' : 'rgba(2, 192, 118, 0.05)';
-                    const putBg = isPutITM ? itmBg : 'transparent';
+                    const putBg = (isPutITM && !isDark) ? 'rgba(2, 192, 118, 0.05)' : 'transparent';
 
                     const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
                     const paddingBottom = isRowAboveLine ? 8 : 0;

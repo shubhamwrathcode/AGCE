@@ -11,6 +11,7 @@ import { AppText, ELEVEN, FOURTEEN, SEMI_BOLD, MEDIUM } from "../../shared";
 import { colors } from "../../theme/colors";
 import { closeIcon, NO_NOTIFICATION_ICON, searchIcon } from "../../helper/ImageAssets";
 import { IMAGE_BASE_URL } from '../../helper/Constants';
+import { useTheme } from '../../hooks/useTheme';
 
 const OptionsPairList = ({
   pairs = [],
@@ -21,7 +22,7 @@ const OptionsPairList = ({
   theme = "Dark",
   onClose,
 }) => {
-  const isDark = theme === "Dark";
+  const { colors: themeColors, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState("USDT");
 
   const handleSelect = (pair) => {
@@ -44,7 +45,7 @@ const OptionsPairList = ({
     <View
       style={[
         styles.container,
-        { backgroundColor: isDark ? "#1D1D1D" : colors.white },
+        { backgroundColor: themeColors.background },
       ]}
     >
       {/* Header */}
@@ -52,31 +53,32 @@ const OptionsPairList = ({
         <AppText
           type={FOURTEEN}
           weight={SEMI_BOLD}
-          style={[styles.title, { color: isDark ? colors.white : colors.black, fontSize: 18 }]}
+          style={[styles.title, { color: themeColors.text, fontSize: 18 }]}
         >
           Select Asset
         </AppText>
 
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
 
       {/* Search Bar */}
       <View
         style={[
           styles.searchWrapper,
-          { backgroundColor: isDark ? "#2A2A2A" : "#F8F8F8" },
+          { backgroundColor: isDark ? colors.themeElevationColor : '#fff', borderWidth: 0 },
         ]}
       >
-        <FastImage source={searchIcon} style={{ width: 16, height: 16, marginRight: 8 }} tintColor={isDark ? "#6F6F6F" : "#9D9D9D"} resizeMode="contain" />
+        <FastImage source={searchIcon} style={{ width: 16, height: 16, marginRight: 8 }} tintColor={themeColors.secondaryText} resizeMode="contain" />
         <TextInput
           value={searchTerm}
           onChangeText={onSearchChange}
           placeholder="Search"
-          placeholderTextColor={isDark ? "#6F6F6F" : "#9D9D9D"}
+          placeholderTextColor={themeColors.secondaryText}
+          cursorColor={isDark ? colors.white : colors.black}
           style={[
             styles.searchInput,
-            { color: isDark ? colors.white : colors.black },
+            { color: themeColors.text },
           ]}
         />
       </View>
@@ -89,22 +91,21 @@ const OptionsPairList = ({
               style={{
                 fontFamily: SEMI_BOLD,
                 fontSize: 15,
-                color: activeTab === tab ? (isDark ? colors.white : colors.black) : "#9D9D9D"
+                color: activeTab === tab ? themeColors.text : themeColors.secondaryText
               }}
             >
               {tab}
             </AppText>
             {activeTab === tab && <View style={[styles.activeIndicator,
-            { backgroundColor: isDark ? colors.white : colors.black }]} />}
+            { backgroundColor: themeColors.text }]} />}
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Column Headers */}
       <View style={styles.columnsHeader}>
-        <AppText style={[styles.columnText, { flex: 1, textAlign: 'left' }]}>Pair</AppText>
-        <AppText style={[styles.columnText, { flex: 1.5, textAlign: 'right' }]}>Price</AppText>
-        <AppText style={[styles.columnText, { flex: 1, textAlign: 'right' }]}>Change</AppText>
+        <AppText style={[styles.columnText, { flex: 1, textAlign: 'left', color: themeColors.secondaryText }]}>Pair</AppText>
+        <AppText style={[styles.columnText, { flex: 1.5, textAlign: 'right', color: themeColors.secondaryText }]}>Price</AppText>
+        <AppText style={[styles.columnText, { flex: 1, textAlign: 'right', color: themeColors.secondaryText }]}>Change</AppText>
       </View>
 
       <FlatList
@@ -131,7 +132,7 @@ const OptionsPairList = ({
                 styles.row,
                 {
                   backgroundColor: isSelected
-                    ? (isDark ? "#2A2A2A" : "#F8F8F8")
+                    ? (isDark ? "#2A2A2E" : "#F7F7F7")
                     : "transparent",
                 },
               ]}
@@ -146,13 +147,13 @@ const OptionsPairList = ({
                 <View style={{ marginLeft: 8 }}>
                   <AppText
                     weight={SEMI_BOLD}
-                    style={{ color: isDark ? colors.white : colors.black, fontSize: 15 }}
+                    style={{ color: themeColors.text, fontSize: 15 }}
                   >
                     {item?.base_currency}/{item?.quote_currency}
                   </AppText>
                   <AppText
                     weight={MEDIUM}
-                    style={{ color: isDark ? "#9D9D9D" : "#9D9D9D", fontSize: 13, marginTop: 2 }}
+                    style={{ color: themeColors.secondaryText, fontSize: 13, marginTop: 2 }}
                   >
                     {item?.base_currency}
                   </AppText>
@@ -163,18 +164,18 @@ const OptionsPairList = ({
               <View style={[styles.cell, { flex: 1.5, alignItems: 'flex-end', justifyContent: 'center' }]}>
                 <AppText
                   weight={SEMI_BOLD}
-                  style={{ color: isDark ? colors.white : colors.black, fontSize: 14 }}
+                  style={{ color: themeColors.text, fontSize: 14 }}
                 >
                   {formatNumber(item?.price)}
                 </AppText>
-                <AppText style={{ color: "#9D9D9D", fontSize: 12, marginTop: 2 }}>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginTop: 2 }}>
                   ${formatNumber(item?.price)}
                 </AppText>
               </View>
 
               {/* Change Info */}
               <View style={[styles.cell, { flex: 1, alignItems: 'flex-end', justifyContent: 'center' }]}>
-                <AppText style={{ color: "#9D9D9D", fontSize: 14 }}>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>
                   —
                 </AppText>
               </View>
