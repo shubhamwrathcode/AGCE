@@ -157,7 +157,7 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
         const pathParts = uploadFile.path.split('/');
         const fileName = pathParts[pathParts.length - 1] || 'avatar.jpg';
 
-        fd.append('avatar', {
+        fd.append('profilepicture', {
           uri: uploadFile.path,
           type: uploadFile.mime || 'image/jpeg',
           name: fileName,
@@ -183,7 +183,7 @@ const EditAvatarModal = ({ isVisible, onClose, currentAvatarUrl, onSaved, onAvat
         // Let's create a temporary file or pass it directly.
         // Actually, the appOperation may handle base64 or file URIs. We will use the selected.src directly if the server allows it? 
         // No, server expects a file. We will use a standard RN approach for remote images:
-        fd.append('avatar', {
+        fd.append('profilepicture', {
           uri: selected.src,
           type: 'image/png',
           name: 'avatar.png',

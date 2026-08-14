@@ -81,6 +81,8 @@ import {
   themeIcon,
   spotIconDarkTheme,
   stakingImgBlack,
+  launchpad,
+  vip,
 } from "../../helper/ImageAssets";
 import { AppText, BLACK, BOLD, DISCLAIMTEXT, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
 import NavigationService from "../../navigation/NavigationService";
@@ -105,6 +107,8 @@ import {
   REFERRAL_LIST,
   NAVIGATION_BOTTOM_TAB_STACK,
   TRADE_SCREEN,
+  LAUNCHPAD_SCREEN,
+  VIP_SERVICES_SCREEN,
 } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { getUserProfile } from "../../actions/accountActions";
@@ -272,6 +276,19 @@ const getShortcutMenuItems = (theme) => [
     icon: newsicon,
     onPress: () => NavigationService.navigate(NOTIFICATION_SCREEN),
   },
+  {
+    id: "sh7",
+    title: "Launchpad",
+    icon: launchpad,
+    onPress: () => NavigationService.navigate(LAUNCHPAD_SCREEN),
+  },
+  {
+    id: "sh8",
+    title: "VIP Services",
+    icon: vip,
+    onPress: () => NavigationService.navigate(VIP_SERVICES_SCREEN),
+  },
+
 ];
 
 const getPopularMenuItems = (theme) => [
