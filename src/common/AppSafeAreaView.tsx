@@ -43,7 +43,7 @@ const AppSafeAreaView = ({
   const insets = useSafeAreaInsets();
   const splashLight = Boolean(darkStatusBarOnLightSplash && source);
   const shellBg = splashLight ? SPLASH_BODY_BG : themeColors.background;
-  const barStyle = forceBarStyle ? forceBarStyle : 'dark-content';
+  const barStyle = forceBarStyle ? forceBarStyle : (isDark ? 'light-content' : 'dark-content');
   const androidStatusBg = colors.white;
 
   const splashTopOverlay =

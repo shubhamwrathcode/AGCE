@@ -403,6 +403,34 @@
 	[
 		{
 			"backtrace" : 4,
+			"id" : "react_codegen_AsyncStorageSpec::@15af80695a6281ecf900"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_rnclipboard::@6385240493dfcaf22ab7"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_RNDateTimePickerCGen::@59b70ddc31ba2f8ef1d2"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_RNGoogleSignInCGen::@337b7b353bd94a4215c0"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_rnpicker::@e8bb2e9e833f47d0d516"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_lottiereactnative::@0fa4dc904d7e359a99fb"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_RNEdgeToEdge::@668218a48b60eb28aa9e"
+		},
+		{
+			"backtrace" : 4,
 			"id" : "react_codegen_rngesturehandler_codegen::@39f233abcd2c728bc6ec"
 		},
 		{
@@ -412,14 +440,6 @@
 		{
 			"backtrace" : 4,
 			"id" : "react_codegen_pagerview::@7032a8921530ec438d60"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_AsyncStorageSpec::@15af80695a6281ecf900"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_rnclipboard::@6385240493dfcaf22ab7"
 		},
 		{
 			"backtrace" : 4,
@@ -452,26 +472,6 @@
 		{
 			"backtrace" : 4,
 			"id" : "react_codegen_RNCWebViewSpec::@eb48929f9f7453740a6c"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_RNDateTimePickerCGen::@59b70ddc31ba2f8ef1d2"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_RNGoogleSignInCGen::@337b7b353bd94a4215c0"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_rnpicker::@e8bb2e9e833f47d0d516"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_lottiereactnative::@0fa4dc904d7e359a99fb"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_RNEdgeToEdge::@668218a48b60eb28aa9e"
 		}
 	],
 	"id" : "appmodules::@6890427a1f51a3e7e1df",
