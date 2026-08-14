@@ -96,7 +96,7 @@ const AddWithdrawalAddressBasics = ({
         <View>
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Label</AppText>
-            <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
+            <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
               <TextInput
                 placeholder="4-20 characters"
                 placeholderTextColor={themeColors.secondaryText}
@@ -115,8 +115,8 @@ const AddWithdrawalAddressBasics = ({
                 setSaveAddrCoinOpen(!saveAddrCoinOpen);
               }}
               style={{
-                backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16,
-                height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF"
+                backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16,
+                height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF"
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -143,8 +143,8 @@ const AddWithdrawalAddressBasics = ({
             </TouchableOpacity>
             {saveAddrCoinOpen && (
               <View style={{
-                marginTop: 8, backgroundColor: isDark ? "#1A1A1A" : "#F5F6F8", borderRadius: 8,
-                overflow: "hidden", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF", maxHeight: 180, minHeight: 100
+                marginTop: 8, backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8,
+                overflow: "hidden", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF", maxHeight: 180, minHeight: 100
               }}>
                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
                   {withdrawCoins.map((item) => (
@@ -152,7 +152,7 @@ const AddWithdrawalAddressBasics = ({
                       key={item.short_name}
                       style={{
                         paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1,
-                        borderBottomColor: isDark ? "#333" : "#EEE", flexDirection: "row", justifyContent: "space-between", alignItems: "center"
+                        borderBottomColor: isDark ? themeColors.border : "#EEE", flexDirection: "row", justifyContent: "space-between", alignItems: "center"
                       }}
                       onPress={() => {
                         setSaveAddrCoin(item.short_name);
@@ -186,7 +186,7 @@ const AddWithdrawalAddressBasics = ({
                 setSaveAddrCoinOpen(false);
                 setSaveAddrNetworkOpen(!saveAddrNetworkOpen);
               }}
-              style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}
+              style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}
             >
               <AppText type={FOURTEEN} style={{ color: saveAddrNetwork ? themeColors.text : themeColors.secondaryText }}>
                 {saveAddrNetworkDisplay || "Select Network"}
@@ -199,7 +199,7 @@ const AddWithdrawalAddressBasics = ({
               />
             </TouchableOpacity>
             {saveAddrNetworkOpen && (
-              <View style={{ marginTop: 8, backgroundColor: isDark ? "#1A1A1A" : "#F5F6F8", borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF", maxHeight: 240 }}>
+              <View style={{ marginTop: 8, backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 12, overflow: "hidden", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF", maxHeight: 240 }}>
                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
                   {(() => {
                     const coin = withdrawCoins.find(c => c.short_name === saveAddrCoin);
@@ -216,7 +216,7 @@ const AddWithdrawalAddressBasics = ({
                             paddingVertical: 5,
                             paddingHorizontal: 16,
                             borderBottomWidth: 1,
-                            borderBottomColor: isDark ? "#333" : "#EEE",
+                            borderBottomColor: isDark ? themeColors.border : "#EEE",
                             flexDirection: "row",
                             justifyContent: "space-between",
                             alignItems: "center",
@@ -255,8 +255,8 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Address</AppText>
             <View style={{
-              backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16,
-              height: 48, justifyContent: "center", borderWidth: 1, borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? "#EF4444" : (isDark ? themeColors.border : "#E8EAEF")
+              backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16,
+              height: 48, justifyContent: "center", borderWidth: (saveAddrAddressInlineError || saveAddrAddressValidError) ? 1 : (isDark ? 0 : 1), borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? "#EF4444" : (isDark ? "transparent" : "#E8EAEF")
             }}>
               <TextInput
                 placeholder="Enter wallet address"
@@ -286,7 +286,7 @@ const AddWithdrawalAddressBasics = ({
 
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Memo (Optional)</AppText>
-            <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
+            <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
               <TextInput
                 placeholder="e.g. XRP destination tag"
                 placeholderTextColor={themeColors.secondaryText}
@@ -351,7 +351,7 @@ const AddWithdrawalAddressBasics = ({
 
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full legal name</AppText>
-              <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
+              <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
                 <TextInput
                   placeholder="Enter full legal name"
                   placeholderTextColor={themeColors.secondaryText}
@@ -364,7 +364,7 @@ const AddWithdrawalAddressBasics = ({
 
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PAN or National ID</AppText>
-              <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
+              <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
                 <TextInput
                   placeholder="Enter PAN or National ID"
                   placeholderTextColor={themeColors.secondaryText}
@@ -380,15 +380,15 @@ const AddWithdrawalAddressBasics = ({
               <TouchableOpacity
                 onPress={() => saveAddrCountrySheetRef.current?.open()}
                 style={{
-                  backgroundColor: isDark ? themeColors.card : "#F5F6F8",
+                  backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8",
                   borderRadius: 8,
                   paddingHorizontal: 16,
                   height: 48,
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  borderWidth: 1,
-                  borderColor: isDark ? themeColors.border : "#E8EAEF"
+                  borderWidth: isDark ? 0 : 1,
+                  borderColor: isDark ? "transparent" : "#E8EAEF"
                 }}
               >
                 <AppText type={FOURTEEN} style={{ color: saveAddrBenCountry ? themeColors.text : themeColors.secondaryText }}>
@@ -399,7 +399,7 @@ const AddWithdrawalAddressBasics = ({
 
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PIN / Postal code</AppText>
-              <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
+              <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
                 <TextInput
                   placeholder="Enter PIN or Postal code"
                   placeholderTextColor={themeColors.secondaryText}
@@ -412,7 +412,7 @@ const AddWithdrawalAddressBasics = ({
 
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full residential address</AppText>
-              <View style={{ backgroundColor: isDark ? themeColors.card : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, minHeight: 80, paddingTop: 12, borderWidth: 1, borderColor: isDark ? themeColors.border : "#E8EAEF" }}>
+              <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, minHeight: 80, paddingTop: 12, borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
                 <TextInput
                   placeholder="Enter address"
                   placeholderTextColor={themeColors.secondaryText}
@@ -524,7 +524,7 @@ const AddWithdrawalAddressBasics = ({
               style={{
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: isDark ? "#2A2E39" : "#E5E7EB",
+                borderColor: isDark ? themeColors.border : "#E5E7EB",
                 backgroundColor: 'transparent',
                 paddingHorizontal: 16,
                 flexDirection: "row",
@@ -545,7 +545,7 @@ const AddWithdrawalAddressBasics = ({
                 backgroundColor: 'transparent',
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: isDark ? "#2A2E39" : "#E5E7EB",
+                borderColor: isDark ? themeColors.border : "#E5E7EB",
                 marginTop: -5,
                 overflow: "hidden",
                 zIndex: 10

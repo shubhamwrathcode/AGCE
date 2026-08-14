@@ -394,7 +394,7 @@ const WithdrawForm = () => {
   const [isSecurityVerificationOpen, setIsSecurityVerificationOpen] = useState(false);
   const [withdrawConfirmBusy, setWithdrawConfirmBusy] = useState(false);
   const agceCountrySheetRef = useRef(null);
-  const [showWithdrawFaqModal, setShowWithdrawFaqModal] = useState(false);
+  const faqSheetRef = useRef(null);
   const [announcements, setAnnouncements] = useState([]);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -1886,7 +1886,7 @@ const WithdrawForm = () => {
           styles.faqHeader,
           styles.withdrawAnnouncementHeaderInner,
           {
-            backgroundColor: isDark ? "#1A1A1A" : "#F5F5F5",
+            backgroundColor: isDark ? "#2A2A2E" : "#F5F5F5",
             borderColor: isDark ? themeColors.border : "#EEE",
           },
         ]}
@@ -1913,7 +1913,7 @@ const WithdrawForm = () => {
           styles.faqContent,
           styles.withdrawAnnouncementContentInner,
           {
-            backgroundColor: isDark ? themeColors.background : "#FFFFFF",
+            backgroundColor: themeColors.background,
             borderColor: isDark ? themeColors.border : "#EEE",
           },
         ]}
@@ -1933,7 +1933,7 @@ const WithdrawForm = () => {
 
 
   const withdrawNetworkSheetOnly = (
-    <RBSheet
+    <RBSheet customModalProps={{ statusBarTranslucent: true }}
       ref={networkSheetRef}
       height={SHEET_HEIGHT}
       closeOnDragDown
@@ -2009,7 +2009,7 @@ const WithdrawForm = () => {
 
 
   const withdrawAgceCountrySheetOnly = (
-    <RBSheet
+    <RBSheet customModalProps={{ statusBarTranslucent: true }}
       ref={agceCountrySheetRef}
       height={AGCE_COUNTRY_SHEET_HEIGHT}
       closeOnDragDown
@@ -2065,7 +2065,7 @@ const WithdrawForm = () => {
     </RBSheet>
   );
   const saveAddrBeneficiaryCountrySheetOnly = (
-    <RBSheet
+    <RBSheet customModalProps={{ statusBarTranslucent: true }}
       ref={saveAddrCountrySheetRef}
       height={AGCE_COUNTRY_SHEET_HEIGHT}
       closeOnDragDown
@@ -2120,7 +2120,7 @@ const WithdrawForm = () => {
   );
 
   const withdrawLimitInfoSheetOnly = (
-    <RBSheet
+    <RBSheet customModalProps={{ statusBarTranslucent: true }}
       ref={withdrawLimitInfoSheetRef}
       height={210}
       closeOnDragDown
@@ -2152,7 +2152,7 @@ const WithdrawForm = () => {
   const NETWORK_FEE_INFO_SHEET_HEIGHT = Math.round(Dimensions.get("window").height * 0.35);
 
   const networkFeeInfoSheetOnly = (
-    <RBSheet
+    <RBSheet customModalProps={{ statusBarTranslucent: true }}
       ref={networkFeeInfoSheetRef}
       height={NETWORK_FEE_INFO_SHEET_HEIGHT}
       closeOnDragDown
@@ -2373,7 +2373,7 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("fund_password") && (
             <View style={{ marginBottom: 28 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Fund password</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#1E222D" : "#F3F4F6", borderRadius: 12, paddingRight: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6", borderRadius: 12, paddingRight: 16 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
@@ -2442,7 +2442,7 @@ const WithdrawForm = () => {
   }
 
   return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <View style={[styles.headerView, { paddingHorizontal: 16 }]}>
         <TouchableOpacity onPress={handleHeaderBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <FastImage source={back_ic} resizeMode="contain" style={{ width: 16, height: 16 }} tintColor={themeColors.text} />
@@ -2454,7 +2454,7 @@ const WithdrawForm = () => {
           <TouchableOpacity
             onPress={() => {
               setFaqActiveIndex(null);
-              setShowWithdrawFaqModal(true);
+              faqSheetRef.current?.open();
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -2472,13 +2472,7 @@ const WithdrawForm = () => {
         containerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}
       >
-
-
-        {/* Web `WithdrawPageSteps12`: step badges + sections — no vertical rail (per product request). */}
-
-
         <View style={styles.wdStepBlock}>
-
 
           {/* Top Tabs */}
           <View style={{ flexDirection: "row", gap: 30, paddingHorizontal: 4, marginVertical: 20 }}>
@@ -2519,12 +2513,12 @@ const WithdrawForm = () => {
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  backgroundColor: isDark ? "#1E222D" : "#F3F4F6",
+                  backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                   borderColor: isDark ? "#2A2E39" : "#E5E7EB",
                   opacity: activeWithdrawChains.length === 0 ? 0.6 : 1
                 }}
               >
-                <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: network ? colors.black : colors.placeholderColor }}>
+                <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: network ? (isDark ? colors.white : colors.placeholderColor) : (isDark ? colors.white : colors.placeholderColor) }}>
                   {network ? String(network).toUpperCase() : "Select Network"}
                 </AppText>
                 <FastImage source={down_arrow} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
@@ -2539,7 +2533,7 @@ const WithdrawForm = () => {
                   paddingHorizontal: 20,
                   flexDirection: "row",
                   alignItems: "center",
-                  backgroundColor: isDark ? "#1E222D" : "#F3F4F6",
+                  backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                   borderColor: isDark ? "#2A2E39" : "#E5E7EB",
                 }}
               >
@@ -2604,7 +2598,7 @@ const WithdrawForm = () => {
                         backgroundColor: active ? (isDark ? colors.iconBgColor : "#E5E7EB") : "transparent"
                       }}
                     >
-                      <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: active ? themeColors.text : themeColors.secondaryText }}>{t.label}</AppText>
+                      <AppText weight={SEMI_BOLD} type={TWELVE} style={{ color: active ? isDark ? colors.black : themeColors.text : themeColors.secondaryText }}>{t.label}</AppText>
                     </TouchableOpacity>
                   );
                 })}
@@ -2639,7 +2633,7 @@ const WithdrawForm = () => {
                       height: 48,
                       borderColor: isDark ? "#373C4B" : "#E5E7EB",
                       borderRadius: 12,
-                      backgroundColor: isDark ? "#1E222D" : "#F3F4F6",
+                      backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                       paddingHorizontal: 4, // Input component internally has padding usually
                     }}
                     mainContainer={styles.emailFieldMain}
@@ -2682,7 +2676,7 @@ const WithdrawForm = () => {
                   <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>Phone Number</AppText>
                   <View style={[styles.wdAgcePhoneRow, {
                     borderColor: isDark ? "#373C4B" : "#E5E7EB",
-                    backgroundColor: isDark ? "#1E222D" : "#F3F4F6",
+                    backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                     borderRadius: 12,
                     height: 48,
                     paddingHorizontal: 12,
@@ -2731,7 +2725,7 @@ const WithdrawForm = () => {
                       height: 48,
                       borderColor: isDark ? "#373C4B" : "#E5E7EB",
                       borderRadius: 12,
-                      backgroundColor: isDark ? "#1E222D" : "#F3F4F6"
+                      backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6"
                     }}
                   />
                   <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
@@ -2760,7 +2754,7 @@ const WithdrawForm = () => {
                 paddingHorizontal: 16,
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: isDark ? "#1E222D" : "#F3F4F6",
+                backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                 borderColor: isDark ? "#2A2E39" : "#E5E7EB"
               }}>
                 <TextInput
@@ -2775,7 +2769,7 @@ const WithdrawForm = () => {
                   keyboardType="numeric"
                 />
                 <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text, marginRight: 12 }}>{selectedCurrency.short_name}</AppText>
-                <View style={{ width: 1, height: 18, backgroundColor: isDark ? "#2A2E39" : "#D1D5DB" }} />
+                <View style={{ width: 1, height: 18, backgroundColor: isDark ? themeColors.border : "#D1D5DB" }} />
                 <TouchableOpacity style={{ marginLeft: 12 }} onPress={handleMaxWithdrawal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                   <AppText weight={BOLD} type={FOURTEEN} style={{ color: "#E2B24C" }}>MAX</AppText>
                 </TouchableOpacity>
@@ -2843,7 +2837,7 @@ const WithdrawForm = () => {
         <View style={{
           padding: 16,
           paddingBottom: Platform.OS === 'ios' ? 24 : 16,
-          backgroundColor: colors.white,
+          backgroundColor: themeColors.background,
           borderTopWidth: 1,
           borderTopColor: isDark ? "#2A2E39" : "#E5E7EB"
         }}>
@@ -2940,7 +2934,7 @@ const WithdrawForm = () => {
       />
 
       {/* Remove Address Confirmation Sheet */}
-      <RBSheet
+      <RBSheet customModalProps={{ statusBarTranslucent: true }}
         ref={addressDeleteSheetRef}
         closeOnDragDown
         closeOnPressMask
@@ -2953,7 +2947,7 @@ const WithdrawForm = () => {
             padding: 20,
           },
           draggableIcon: {
-            backgroundColor: isDark ? "#333" : "#DDD"
+            backgroundColor: isDark ? themeColors.border : "#DDD"
           }
         }}
       >
@@ -2962,7 +2956,7 @@ const WithdrawForm = () => {
             <View style={{
               width: 80,
               height: 80,
-              backgroundColor: isDark ? "#2A2E39" : "#F3F4F6",
+              backgroundColor: isDark ? themeColors.border : "#F3F4F6",
               borderRadius: 40,
               justifyContent: "center",
               alignItems: "center",
@@ -2983,7 +2977,7 @@ const WithdrawForm = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 borderWidth: 2,
-                borderColor: isDark ? "#2A2E39" : "#F3F4F6"
+                borderColor: isDark ? themeColors.border : "#F3F4F6"
               }}>
                 <AppText weight={BOLD} style={{ color: "#FFF", fontSize: 10 }}>!</AppText>
               </View>
@@ -3020,7 +3014,7 @@ const WithdrawForm = () => {
                 flex: 1,
                 paddingVertical: 12,
                 borderRadius: 100,
-                backgroundColor: "#1E222D",
+                backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                 alignItems: "center"
               }}
             >
@@ -3037,7 +3031,7 @@ const WithdrawForm = () => {
 
       {withdrawAgceCountrySheetOnly}
       {saveAddrBeneficiaryCountrySheetOnly}
-      <RBSheet
+      <RBSheet customModalProps={{ statusBarTranslucent: true }}
         ref={withdrawConfirmSheetRef}
         closeOnDragDown
         closeOnPressMask
@@ -3108,7 +3102,7 @@ const WithdrawForm = () => {
         </View>
       </RBSheet>
 
-      <RBSheet
+      <RBSheet customModalProps={{ statusBarTranslucent: true }}
         ref={withdrawSummarySheetRef}
         closeOnDragDown
         closeOnPressMask
@@ -3201,14 +3195,14 @@ const WithdrawForm = () => {
         </View>
       </RBSheet>
 
-      <RBSheet
+      <RBSheet customModalProps={{ statusBarTranslucent: true }}
         ref={withdrawSecuritySheetRef}
         closeOnDragDown
         closeOnPressMask
         height={480}
         customStyles={{
           container: {
-            backgroundColor: colors.white,
+            backgroundColor: themeColors.background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
           },
@@ -3289,64 +3283,66 @@ const WithdrawForm = () => {
       {withdrawLimitInfoSheetOnly}
       {networkFeeInfoSheetOnly}
 
-      <Modal visible={showWithdrawFaqModal} animationType="slide" transparent onRequestClose={() => setShowWithdrawFaqModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : "#EEE", borderWidth: 1 },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
-                Withdraw help
+      <RBSheet customModalProps={{ statusBarTranslucent: true }}
+        ref={faqSheetRef}
+        height={600}
+        closeOnDragDown
+        closeOnPressMask
+        customStyles={{
+          container: { backgroundColor: themeColors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
+          draggableIcon: { backgroundColor: isDark ? themeColors.border : "#DDD" }
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <View style={styles.modalHeader}>
+            <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+              Withdraw help
+            </AppText>
+            <TouchableOpacity onPress={() => faqSheetRef.current?.close()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <AppText type={TWENTY} style={{ color: themeColors.text }}>
+                ×
               </AppText>
-              <TouchableOpacity onPress={() => setShowWithdrawFaqModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <AppText type={TWENTY} style={{ color: themeColors.text }}>
-                  ×
-                </AppText>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              {faqData.map((item, index) => (
-                <View
-                  key={String(index)}
-                  style={[
-                    styles.faqItemInner,
-                    index === faqData.length - 1 && styles.faqItemInnerLast,
-                    { borderColor: isDark ? themeColors.border : colors.inputBorder },
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.faqQuestionRow}
-                    onPress={() => setFaqActiveIndex(faqActiveIndex === index ? null : index)}
-                    activeOpacity={0.7}
-                  >
-                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.faqQuestion, { color: themeColors.secondaryText }]}>
-                      {item.title}
-                    </AppText>
-                    <FastImage
-                      source={faqActiveIndex === index ? upIcon : downIcon}
-                      resizeMode="contain"
-                      style={styles.faqArrow}
-                      tintColor={themeColors.secondaryText}
-                    />
-                  </TouchableOpacity>
-                  {faqActiveIndex === index && (
-                    <View style={styles.faqAnswer}>
-                      {item.content.split("\n").map((line, lineIndex) => (
-                        <AppText key={lineIndex} type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
-                          {line}
-                        </AppText>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
+            </TouchableOpacity>
           </View>
+          <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {faqData.map((item, index) => (
+              <View
+                key={String(index)}
+                style={[
+                  styles.faqItemInner,
+                  index === faqData.length - 1 && styles.faqItemInnerLast,
+                  { borderColor: isDark ? themeColors.border : colors.inputBorder },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.faqQuestionRow}
+                  onPress={() => setFaqActiveIndex(faqActiveIndex === index ? null : index)}
+                  activeOpacity={0.7}
+                >
+                  <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.faqQuestion, { color: themeColors.secondaryText }]}>
+                    {item.title}
+                  </AppText>
+                  <FastImage
+                    source={faqActiveIndex === index ? upIcon : downIcon}
+                    resizeMode="contain"
+                    style={styles.faqArrow}
+                    tintColor={themeColors.secondaryText}
+                  />
+                </TouchableOpacity>
+                {faqActiveIndex === index && (
+                  <View style={styles.faqAnswer}>
+                    {item.content.split("\n").map((line, lineIndex) => (
+                      <AppText key={lineIndex} type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
+                        {line}
+                      </AppText>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
         </View>
-      </Modal>
+      </RBSheet>
 
       <Modal visible={withdrawAvailSourceOpen} animationType="fade" transparent onRequestClose={() => setWithdrawAvailSourceOpen(false)}>
         <View style={[styles.modalOverlay, { justifyContent: "center", paddingBottom: 24 }]}>
@@ -3390,7 +3386,7 @@ const WithdrawForm = () => {
       </Modal>
 
       {/* Verification Reminder Sheet */}
-      <RBSheet
+      <RBSheet customModalProps={{ statusBarTranslucent: true }}
         ref={verifyReminderSheetRef}
         height={300}
         closeOnDragDown
@@ -3437,7 +3433,7 @@ const WithdrawForm = () => {
       </RBSheet>
 
       {/* Add Withdrawal Address Form Sheet */}
-      <RBSheet
+      <RBSheet customModalProps={{ statusBarTranslucent: true }}
         ref={saveAddressSheetRef}
         closeOnDragDown={false}
         closeOnPressBack={false}
@@ -3587,7 +3583,7 @@ const WithdrawForm = () => {
                 containerStyle={{
                   flex: 1,
                   marginRight: 10,
-                  backgroundColor: isDark ? "#333" : "#E5E7EB",
+                  backgroundColor: isDark ? themeColors.border : "#E5E7EB",
                   borderRadius: 100,
                   height: 44
                 }}
@@ -4057,7 +4053,7 @@ const WithdrawForm = () => {
                 NavigationService.navigate(KYC_STATUS_SCREEN);
               }}
               style={{
-                backgroundColor: "#22252D",
+                backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                 height: 56,
                 borderRadius: 28,
                 justifyContent: "center",

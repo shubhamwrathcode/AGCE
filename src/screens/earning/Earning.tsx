@@ -80,6 +80,7 @@ const formatApr = (pkg: any) => {
 
 const Earning = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(themeColors, isDark), [themeColors, isDark]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHide, setIsHide] = useState(false);
 
@@ -184,7 +185,7 @@ const Earning = () => {
 
   return (
     <>
-      <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+      <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -236,7 +237,7 @@ const Earning = () => {
                 activeOpacity={0.7}
               >
                 <View style={[styles.iconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                  <FastImage source={item.icon} style={styles.gridIcon} resizeMode="contain" />
+                  <FastImage source={item.icon} style={styles.gridIcon} resizeMode="contain" {...(isDark ? { tintColor: '#FFFFFF' } : {})} />
                 </View>
                 <AppText style={[styles.gridText, { color: themeColors.text }]} numberOfLines={2}>
                   {item.title}
@@ -493,7 +494,7 @@ const Earning = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -598,7 +599,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontSize: 12,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   aprHeader: {
@@ -655,7 +656,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   sheetHeader: {
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
   },
   sheetLabel: {
     fontSize: 14,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   sheetValue: {
@@ -689,7 +690,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   stakeBtn: {
-    backgroundColor: colors.black,
+    backgroundColor: isDark ? themeColors.button : colors.black,
     borderRadius: 8,
     height: 48,
     justifyContent: 'center',
@@ -698,7 +699,7 @@ const styles = StyleSheet.create({
   },
   stakeBtnText: {
     fontSize: 16,
-    color: colors.white,
+    color: isDark ? themeColors.buttonText : colors.white,
     fontFamily: fontFamilySemiBold,
   },
   planHeader: {
@@ -723,6 +724,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
+    backgroundColor: isDark ? themeColors.card : '#F9F9F9',
   },
   planRowTop: {
     flexDirection: 'row',
@@ -746,17 +748,18 @@ const styles = StyleSheet.create({
   },
   planLimits: {
     fontSize: 12,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   planEstAprLabel: {
     fontSize: 12,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   faqItem: {
     paddingVertical: 16,
     borderBottomWidth: 1,
+    backgroundColor: isDark ? themeColors.background : colors.white,
   },
   faqQuestionRow: {
     flexDirection: 'row',

@@ -10,7 +10,7 @@ const MarginHistoryScreen = ({ route }) => {
   const { activeTab, currencyData } = route?.params || {};
 
   return (
-    <AppSafeAreaView style={[styles.container, { backgroundColor: colors.white }]}>
+    <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Toolbar isSecond title={"Margin History"} style={{ width: "62%", backgroundColor: "transparent" }} />
       <View style={{ flex: 1 }}>
         <MarginHistorySection

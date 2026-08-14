@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState } from 'react';
 import {
   AppSafeAreaView,
@@ -85,6 +86,7 @@ const Settings = () => {
   const toggleTheme = () => {
     const newTheme = theme === 'Dark' ? 'Light' : 'Dark';
     dispatch(setTheme(newTheme));
+    AsyncStorage.setItem('theme', newTheme);
   };
 
   const DATA = [

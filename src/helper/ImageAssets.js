@@ -325,6 +325,7 @@ export const securityrisk = require('../../assets/images/securityrisk.png');
 export const googleAuthenticator = require('../../assets/images/googleAuthenticator.png');
 export const PHONE = require('../../assets/images/phone.png');
 export const googleAuthApp = require('../../assets/images/googleAuthApp.png');
+export const spotIconDarkTheme = require('../../assets/images/spotIconDarkTheme.png');
 export const download = require('../../assets/images/download.png');
 export const paste1 = require('../../assets/images/paste1.png');
 export const copyIcon = require('../../assets/images/paste1.png');
@@ -413,6 +414,8 @@ export const share_link = require('../../assets/images/share_link.png');
 export const themeIcon = require('../../assets/images/themeIcon.png');
 export const emergency_vector_light = require('../../assets/images/emergency_vector_light.png');
 export const security_risk_vector_light = require('../../assets/images/security_risk_vector_light.png');
+export const stakingImgBlack = require('../../assets/images/stakingImgBlack.png');
+export const stakingBannerDark = require('../../assets/images/stakingBannerDark.png');
 
 
 

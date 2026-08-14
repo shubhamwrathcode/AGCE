@@ -79,7 +79,7 @@ const HeaderTop = () => {
 
       <View style={styles.brandCenter}>
         <FastImage
-          source={agceLogoNamelight}
+          source={isDark ? agceLogoNamelight : agceLogoName}
           resizeMode="contain"
           style={styles.brandLogo}
         />

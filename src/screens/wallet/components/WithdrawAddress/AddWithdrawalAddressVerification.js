@@ -158,8 +158,7 @@ const AddWithdrawalAddressVerification = ({
               borderRadius: 16,
               padding: 20,
               alignItems: "center",
-              borderWidth: 1,
-              borderColor: isDark ? "#333" : "#F3F4F6",
+              borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#F3F4F6",
               marginBottom: 20,
               width: "100%"
             }}>
@@ -189,12 +188,11 @@ const AddWithdrawalAddressVerification = ({
                 </AppText>
                 <View style={{
                   flexDirection: "row",
-                  backgroundColor: isDark ? "#000" : "#F3F4F6",
+                  backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                   borderRadius: 12,
                   padding: 6,
                   alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: isDark ? "#333" : "#E5E7EB"
+                  borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E5E7EB"
                 }}>
                   <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
                     {saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "—"}
@@ -222,12 +220,11 @@ const AddWithdrawalAddressVerification = ({
                   </AppText>
                   <View style={{
                     flexDirection: "row",
-                    backgroundColor: isDark ? "#000" : "#F3F4F6",
+                    backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
                     borderRadius: 12,
                     padding: 6,
                     alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: isDark ? "#333" : "#E5E7EB"
+                    borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E5E7EB"
                   }}>
                     <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
                       {saveAddrWhitelistData.memo}
@@ -274,7 +271,7 @@ const AddWithdrawalAddressVerification = ({
           )}
 
           {satoshiWhitelistAwaitingProof && (
-            <View style={{ backgroundColor: "transparent", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: isDark ? "#2A2E39" : "#E5E7EB", marginBottom: 16 }}>
+            <View style={{ backgroundColor: "transparent", borderRadius: 12, padding: 12, borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E5E7EB", marginBottom: 16 }}>
               <AppText type={THIRTEEN} weight={BOLD} style={{ color: isDark ? "#FFF" : "black", marginBottom: 6 }}>Deposit not confirmed yet</AppText>
               <AppText type={ELEVEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
                 Your micro-deposit can take time to arrive and for our systems to detect it. {"\n\n"}

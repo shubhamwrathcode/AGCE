@@ -157,6 +157,7 @@ import OptionHistoryCardDetailPage from "../screens/Futures/OptionsTrade/OptionH
 import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
 import StakingDashboard from "../screens/staking/StakingDashboard";
 import StakingPurchase from "../screens/staking/StakingPurchase";
+import StakingUserAgreement from "../screens/staking/StakingUserAgreement";
 import OptionsInstrumentTrade from "../screens/Futures/OptionsTrade/OptionsInstrumentTrade";
 import Launchpad from "../screens/Launchpad/Launchpad";
 import LaunchpadDetail from "../screens/Launchpad/LaunchpadDetail";
@@ -690,6 +691,11 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name="StakingPurchase"
         component={StakingPurchase}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="StakingUserAgreement"
+        component={StakingUserAgreement}
         options={{ headerShown: false }}
       />
       <Stack.Screen

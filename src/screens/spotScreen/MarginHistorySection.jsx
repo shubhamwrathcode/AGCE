@@ -1113,7 +1113,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 <View
                   style={[
                     styles.activeIndicator,
-                    { backgroundColor: isActive ? colors.black : "transparent" },
+                    { backgroundColor: isActive ? isDark ? colors.white : colors.black : "transparent" },
                   ]}
                 />
               </TouchableOpacity>

@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   View,
@@ -78,12 +79,17 @@ import {
   editnew,
   softStaking,
   themeIcon,
+  spotIconDarkTheme,
+  stakingImgBlack,
 } from "../../helper/ImageAssets";
 import { AppText, BLACK, BOLD, DISCLAIMTEXT, ELEVEN, FOURTEEN, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE, YELLOW } from "../../shared";
 import NavigationService from "../../navigation/NavigationService";
 import { languages } from "../../helper/languages";
 import { checkValue, copyText } from "../../helper/utility";
 import {
+  STAKING_DASHBOARD_SCREEN,
+  SOFT_STAKING_SCREEN,
+  REFER_AND_EARN_SCREEN,
   DEPOSIT_COIN_SCREEN,
   EARING_SCREEN,
   ACCOUNT_SCREEN,
@@ -127,7 +133,7 @@ const getGeneralFeaturesData = (theme) => [
     id: "4",
     title: "Staking",
     icon: theme !== "Dark" ? stakingDrawer : stakingDrawerDark,
-    onPress: () => NavigationService.navigate(ACCOUNT_SCREEN),
+    onPress: () => NavigationService.navigate(STAKING_DASHBOARD_SCREEN),
   },
   {
     id: "5",
@@ -230,41 +236,41 @@ const gridSpacing = 10;
 const gridItemWidth = (Width - 32 - gridSpacing * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
 
 const getShortcutMenuItems = (theme) => [
-  {
-    id: "sh1",
-    title: "Rewards Hub",
-    icon: rewardHubIcon,
-    onPress: showComingSoonToast,
-  },
+  // {
+  //   id: "sh1",
+  //   title: "Rewards Hub",
+  //   icon: rewardHubIcon,
+  //   onPress: showComingSoonToast,
+  // },
   {
     id: "sh2",
     title: "Invite Friends",
     icon: inviteIcon,
-    onPress: showComingSoonToast,
+    onPress: () => NavigationService.navigate(REFER_AND_EARN_SCREEN),
   },
-  {
-    id: "sh3",
-    title: "Bots",
-    icon: bots_ic,
-    onPress: showComingSoonToast,
-  },
-  {
-    id: "sh4",
-    title: "Copy Trading",
-    icon: spottradingIcon,
-    onPress: showComingSoonToast,
-  },
-  {
-    id: "sh5",
-    title: "Edit",
-    icon: editnew,
-    onPress: showComingSoonToast,
-  },
+  // {
+  //   id: "sh3",
+  //   title: "Bots",
+  //   icon: bots_ic,
+  //   onPress: showComingSoonToast,
+  // },
+  // {
+  //   id: "sh4",
+  //   title: "Copy Trading",
+  //   icon: spottradingIcon,
+  //   onPress: showComingSoonToast,
+  // },
+  // {
+  //   id: "sh5",
+  //   title: "Edit",
+  //   icon: editnew,
+  //   onPress: showComingSoonToast,
+  // },
   {
     id: "sh6",
     title: "News",
     icon: newsicon,
-    onPress: showComingSoonToast,
+    onPress: () => NavigationService.navigate(NOTIFICATION_SCREEN),
   },
 ];
 
@@ -275,42 +281,50 @@ const getPopularMenuItems = (theme) => [
     icon: newDepositIcon,
     onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN),
   },
-  {
-    id: "p2",
-    title: "P2P",
-    icon: p2pIcon,
-    onPress: showComingSoonToast,
-  },
+  // {
+  //   id: "p2",
+  //   title: "P2P",
+  //   icon: p2pIcon,
+  //   onPress: showComingSoonToast,
+  // },
   {
     id: "p3",
     title: "Withdrawal",
     icon: newWidthrawIcon,
     onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN),
   },
-  {
-    id: "p4",
-    title: "Convert",
-    icon: convertIcon,
-    onPress: showComingSoonToast,
-  },
+  // {
+  //   id: "p4",
+  //   title: "Convert",
+  //   icon: convertIcon,
+  //   onPress: showComingSoonToast,
+  // },
   {
     id: "p5",
     title: "Spot",
-    icon: spottradingIconNew,
+    icon: theme == "Dark" ? spotIconDarkTheme : spottradingIconNew,
+    ignoreTint: true,
+    iconSize: theme == "Dark" ? 42 : undefined,
     onPress: () =>
       NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, { screen: TRADE_SCREEN }),
   },
+  // {
+  //   id: "p6",
+  //   title: "Buy Crypto",
+  //   icon: buyCrypto,
+  //   onPress: showComingSoonToast,
+  // },
   {
-    id: "p6",
-    title: "Buy Crypto",
-    icon: buyCrypto,
-    onPress: showComingSoonToast,
+    id: "p6_staking",
+    title: "Staking",
+    icon: stakingImgBlack,
+    onPress: () => NavigationService.navigate(STAKING_DASHBOARD_SCREEN),
   },
   {
     id: "p7",
     title: "Soft Staking",
     icon: softStaking,
-    onPress: showComingSoonToast,
+    onPress: () => NavigationService.navigate(SOFT_STAKING_SCREEN),
   },
 ];
 
@@ -420,7 +434,7 @@ function getInitials(userData, serverNick) {
 const PROFILE_GRID_ICON_WRAP = 42;
 const PROFILE_GRID_ICON_INNER = 25;
 
-const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, itemWidth, iconTintColor }) => (
+const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, itemWidth, ignoreTint, iconSize }) => (
   <TouchableOpacity
     style={{ width: itemWidth, alignItems: "center", marginBottom: 8 }}
     onPress={onPress}
@@ -438,9 +452,9 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
     >
       <FastImage
         source={iconSource}
-        style={{ width: PROFILE_GRID_ICON_INNER, height: PROFILE_GRID_ICON_INNER }}
+        style={{ width: iconSize || PROFILE_GRID_ICON_INNER, height: iconSize || PROFILE_GRID_ICON_INNER }}
         resizeMode="contain"
-        tintColor={iconTintColor != null ? iconTintColor : (isDark ? "#FFFFFF" : "#000000")}
+        {...(ignoreTint ? {} : { tintColor: isDark ? "#FFFFFF" : "#000000" })}
       />
     </View>
     <AppText
@@ -610,7 +624,11 @@ const ProfileDrawer = () => {
           </TouchableOpacity>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <TouchableOpacity
-              onPress={() => dispatch(setTheme(isDark ? 'Light' : 'Dark'))}
+              onPress={() => {
+                const newTheme = isDark ? 'Light' : 'Dark';
+                dispatch(setTheme(newTheme));
+                AsyncStorage.setItem('theme', newTheme);
+              }}
               hitSlop={8}
             > <FastImage source={themeIcon} resizeMode="contain" style={{ width: 25, height: 25 }} tintColor={themeColors.text} />
             </TouchableOpacity>
@@ -758,6 +776,8 @@ const ProfileDrawer = () => {
               key={item.id}
               title={item.title}
               iconSource={item.icon}
+              ignoreTint={item.ignoreTint}
+              iconSize={item.iconSize}
               onPress={item.onPress}
               themeColors={drawerColors}
               isDark={isDark}
@@ -779,6 +799,8 @@ const ProfileDrawer = () => {
               key={item.id}
               title={item.title}
               iconSource={item.icon}
+              ignoreTint={item.ignoreTint}
+              iconSize={item.iconSize}
               onPress={item.onPress}
               themeColors={drawerColors}
               isDark={isDark}
@@ -796,6 +818,8 @@ const ProfileDrawer = () => {
               key={item.id}
               title={item.title}
               iconSource={item.icon}
+              ignoreTint={item.ignoreTint}
+              iconSize={item.iconSize}
               onPress={item.onPress}
               themeColors={drawerColors}
               isDark={isDark}

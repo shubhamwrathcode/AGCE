@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, FlatList, StatusBar } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import { AppSafeAreaView, AppText, MEDIUM, NORMAL, SEMI_BOLD } from '../../shared';
@@ -135,6 +135,7 @@ const MOCK_ONGOING_PROJECTS = [
 
 const SoftStaking = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(themeColors, isDark), [themeColors, isDark]);
   const [isHide, setIsHide] = useState(false);
   const [isSoftStakingEnabled, setIsSoftStakingEnabled] = useState(false);
   const [activeTab, setActiveTab] = useState<'All Products' | 'Ongoing'>('All Products');
@@ -204,7 +205,7 @@ const SoftStaking = () => {
   );
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => NavigationService.goBack()} style={{ padding: 8 }}>
@@ -237,18 +238,18 @@ const SoftStaking = () => {
                 Cumulative Rewards {isHide ? '******' : '0.00 USD'}
               </AppText>
             </View>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={{ padding: 4 }}
               onPress={() => Toast.showWithGravity('Coming soon', Toast.SHORT, Toast.BOTTOM)}
             >
               <FastImage source={historyIcon} style={{ width: 20, height: 20 }} tintColor={themeColors.text} resizeMode="contain" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           {/* Enabled Pill */}
           {isSoftStakingEnabled ? (
             <TouchableOpacity
-              style={[styles.statusPill, { backgroundColor: '#F0F0F0' }]}
+              style={[styles.statusPill, { backgroundColor: isDark ? '#303237' : '#F0F0F0' }]}
               onPress={() => statusSheetRef.current?.open()}
             >
               <AppText style={{ color: themeColors.text, fontSize: 14, fontFamily: fontFamilyMedium, marginRight: 8 }}>Soft Staking</AppText>
@@ -256,10 +257,10 @@ const SoftStaking = () => {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.statusPill, { backgroundColor: colors.black, justifyContent: 'center' }]}
+              style={[styles.statusPill, { backgroundColor: isDark ? themeColors.button : colors.black, justifyContent: 'center' }]}
               onPress={() => statusSheetRef.current?.open()}
             >
-              <AppText style={{ color: colors.white, fontSize: 14, fontFamily: fontFamilyMedium }}>Start Earning</AppText>
+              <AppText style={{ color: isDark ? themeColors.buttonText : colors.white, fontSize: 14, fontFamily: fontFamilyMedium }}>Start Earning</AppText>
             </TouchableOpacity>
           )}
         </View>
@@ -277,7 +278,7 @@ const SoftStaking = () => {
         {activeTab === 'All Products' ? (
           <View style={styles.productsContainer}>
             {/* Search */}
-            <View style={[styles.searchContainer, { backgroundColor: '#F0F0F0' }]}>
+            <View style={[styles.searchContainer, { backgroundColor: isDark ? themeColors.card : '#F0F0F0' }]}>
               <FastImage source={searchIcon} style={styles.searchIconSmall} resizeMode="contain" tintColor={themeColors.secondaryText} />
               <TextInput
                 style={[styles.searchInput, { color: themeColors.text }]}
@@ -329,9 +330,9 @@ const SoftStaking = () => {
         ) : (
           <View style={styles.ongoingContainer}>
             {MOCK_ONGOING_PROJECTS.map((project) => (
-              <View key={project.id} style={[styles.projectCard, { backgroundColor: isDark ? themeColors.card : '#F9F9F9', borderColor: isDark ? themeColors.border : '#EAEAEA' }]}>
+              <View key={project.id} style={[styles.projectCard, { backgroundColor: isDark ? themeColors.background : '#F9F9F9', borderColor: isDark ? themeColors.border : '#EAEAEA' }]}>
                 {/* Status Badge Top Right */}
-                <View style={[styles.projectStatusBadge, { backgroundColor: isDark ? themeColors.background : '#EAEAEA' }]}>
+                <View style={[styles.projectStatusBadge, { backgroundColor: isDark ? themeColors.card : '#EAEAEA' }]}>
                   <AppText style={[styles.projectStatusText, { color: isDark ? themeColors.secondaryText : '#888' }]}>{project.status}</AppText>
                 </View>
 
@@ -370,7 +371,7 @@ const SoftStaking = () => {
 
                 {/* Pools */}
                 {project.pools.map((pool, pIdx) => (
-                  <View key={pIdx} style={[styles.poolCard, { backgroundColor: isDark ? themeColors.background : colors.white, borderColor: isDark ? themeColors.border : '#EAEAEA' }]}>
+                  <View key={pIdx} style={[styles.poolCard, { backgroundColor: isDark ? 'transparent' : colors.white, borderColor: isDark ? themeColors.border : '#EAEAEA' }]}>
                     <View style={styles.poolHeader}>
                       <FastImage source={getIconForCoin(pool.coinIcon)} style={styles.poolIcon} resizeMode="contain" />
                       <AppText style={[styles.poolName, { color: themeColors.text }]}>{pool.name}</AppText>
@@ -398,7 +399,7 @@ const SoftStaking = () => {
                       </View>
                     </View>
 
-                    <View style={[styles.poolDivider, { backgroundColor: isDark ? themeColors.border : '#EAEAEA' }]} />
+                    <View style={[styles.poolDivider, { backgroundColor: isDark ? '#303744' : '#EAEAEA' }]} />
 
                     <View style={styles.poolSummaryRow}>
                       <AppText style={styles.infoLabel}>Staking Type</AppText>
@@ -409,7 +410,7 @@ const SoftStaking = () => {
                       <AppText style={[styles.poolSummaryValue, { color: themeColors.text }]}>{pool.poolParticipants}</AppText>
                     </View>
 
-                    <TouchableOpacity style={[styles.tradeBtn, { backgroundColor: isDark ? themeColors.border : '#F0F0F0' }]} onPress={() => NavigationService.navigate(TRADE_SCREEN)}>
+                    <TouchableOpacity style={[styles.tradeBtn, { backgroundColor: isDark ? '#303237' : '#F0F0F0' }]} onPress={() => NavigationService.navigate(TRADE_SCREEN)}>
                       <AppText style={[styles.tradeBtnText, { color: themeColors.text }]}>Trade</AppText>
                     </TouchableOpacity>
                   </View>
@@ -438,7 +439,7 @@ const SoftStaking = () => {
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingBottom: 20,
-            backgroundColor: isDark ? themeColors.card : colors.white
+            backgroundColor: isDark ? themeColors.background : colors.white
           }
         }}
       >
@@ -492,7 +493,7 @@ const SoftStaking = () => {
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingBottom: 20,
-            backgroundColor: isDark ? themeColors.card : colors.white
+            backgroundColor: isDark ? themeColors.background : colors.white
           }
         }}
       >
@@ -509,7 +510,7 @@ const SoftStaking = () => {
         <View style={styles.statusSheetContent}>
           <View style={styles.statusRow}>
             <AppText style={[styles.statusLabel, { color: themeColors.text }]}>Current Status</AppText>
-            <View style={isSoftStakingEnabled ? styles.statusBadgeEnabled : [styles.statusBadgeDisabled, { backgroundColor: isDark ? themeColors.border : '#EAEAEA' }]}>
+            <View style={isSoftStakingEnabled ? styles.statusBadgeEnabled : [styles.statusBadgeDisabled, { backgroundColor: isDark ? '#303744' : '#EAEAEA' }]}>
               <AppText style={isSoftStakingEnabled ? styles.statusBadgeTextEnabled : styles.statusBadgeTextDisabled}>
                 {isSoftStakingEnabled ? 'Enabled' : 'Disabled'}
               </AppText>
@@ -538,7 +539,7 @@ const SoftStaking = () => {
               Toast.showWithGravity(nextStatus ? 'Soft staking enabled' : 'Soft staking disabled', Toast.SHORT, Toast.BOTTOM);
             }}
           >
-            <AppText style={{ color: colors.white, fontSize: 16, fontFamily: fontFamilySemiBold }}>
+            <AppText style={{ color: isDark ? themeColors.buttonText : colors.white, fontSize: 16, fontFamily: fontFamilySemiBold }}>
               {isSoftStakingEnabled ? 'Disable' : 'Enable'}
             </AppText>
           </TouchableOpacity>
@@ -548,7 +549,7 @@ const SoftStaking = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -616,7 +617,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontSize: 12,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   coinRowContainer: {
@@ -722,14 +723,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   projectFlexibleBadge: {
-    backgroundColor: '#E0F7FA',
+    backgroundColor: isDark ? 'rgba(0,131,158, 0.2)' : '#E0F7FA',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     alignSelf: 'flex-start',
   },
   projectFlexibleText: {
-    color: '#00839e',
+    color: isDark ? '#00A8CC' : '#00839e',
     fontSize: 10,
     fontFamily: fontFamilyMedium,
   },
@@ -741,7 +742,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: NORMAL,
     marginBottom: 2,
   },
@@ -880,13 +881,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilySemiBold,
   },
   statusBadgeEnabled: {
-    backgroundColor: '#D1F0E0',
+    backgroundColor: isDark ? 'rgba(3,166,109, 0.2)' : '#D1F0E0',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   statusBadgeDisabled: {
-    backgroundColor: '#EAEAEA',
+    backgroundColor: isDark ? '#303744' : '#EAEAEA',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -897,14 +898,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilySemiBold,
   },
   statusBadgeTextDisabled: {
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontSize: 14,
     fontFamily: fontFamilySemiBold,
   },
   statusDesc: {
     fontSize: 14,
     fontFamily: fontFamilyMedium,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     lineHeight: 20,
     marginBottom: 30,
   },
@@ -918,7 +919,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#F7F7F7',
+    backgroundColor: isDark ? themeColors.border : '#F7F7F7',
     marginBottom: 12,
   },
   statusEnableBtn: {

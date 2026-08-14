@@ -415,6 +415,14 @@
 		},
 		{
 			"backtrace" : 4,
+			"id" : "react_codegen_AsyncStorageSpec::@15af80695a6281ecf900"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_rnclipboard::@6385240493dfcaf22ab7"
+		},
+		{
+			"backtrace" : 4,
 			"id" : "react_codegen_Passkey::@a374f04898e95cb6f80e"
 		},
 		{
@@ -444,14 +452,6 @@
 		{
 			"backtrace" : 4,
 			"id" : "react_codegen_RNCWebViewSpec::@eb48929f9f7453740a6c"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_AsyncStorageSpec::@15af80695a6281ecf900"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_rnclipboard::@6385240493dfcaf22ab7"
 		},
 		{
 			"backtrace" : 4,

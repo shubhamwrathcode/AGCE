@@ -4,7 +4,7 @@ import FastImage from 'react-native-fast-image';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import { AppSafeAreaView, AppText } from '../../shared';
 import { colors } from '../../theme/colors';
-import { staking_bnr_img, back_ic, INFO, searchIcon, upDown, usdtIcon, checkIcon, closeIcon, checkIc, wallet_ic, SECURITY_SHEIELD, earningIcon, secure_icon, crypto_staking_icon, crypto_staking_icon2, crypto_staking_icon3, stake_crypto, stake_acge_icon, stake_acge_icon2, stake_acge_icon3, deposit_icon2, withdrawal_icon2, upIcon, downIcon, NO_NOTIFICATION_ICON } from '../../helper/ImageAssets';
+import { staking_bnr_img, back_ic, INFO, searchIcon, upDown, usdtIcon, checkIcon, closeIcon, checkIc, wallet_ic, SECURITY_SHEIELD, earningIcon, secure_icon, crypto_staking_icon, crypto_staking_icon2, crypto_staking_icon3, stake_crypto, stake_acge_icon, stake_acge_icon2, stake_acge_icon3, deposit_icon2, withdrawal_icon2, upIcon, downIcon, NO_NOTIFICATION_ICON, stakingBannerDark } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import NavigationService from '../../navigation/NavigationService';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getStaking } from '../../actions/homeActions';
 import { IMAGE_BASE_URL } from '../../helper/Constants';
 import { appOperation } from '../../appOperation';
+import { useTheme } from '../../hooks/useTheme';
 
 const faqData = [
   {
@@ -27,8 +28,8 @@ const faqData = [
     content: "Staking returns are typically calculated daily and distributed according to the rules of the specific product. Depending on the asset, rewards may be credited to your account daily or at the end of a fixed staking period."
   },
   {
-    title: "Why choose AGCE Staking?",
-    content: "AGCE Staking offers a safe and seamless experience with competitive yields across a wide pool of top PoS products. We provide a low threshold for entry, 100% Proof of Reserve security, and a flexible redemption process."
+    title: "Why choose AGCX Staking?",
+    content: "AGCX Staking offers a safe and seamless experience with competitive yields across a wide pool of top PoS products. We provide a low threshold for entry, 100% Proof of Reserve security, and a flexible redemption process."
   },
   {
     title: "How is the Est. APR calculated?",
@@ -140,17 +141,19 @@ const StakingDashboard = () => {
       NavigationService.navigate('StakingPurchase', { plan });
     }, 400);
   };
+  const { colors: themeColors, theme, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(themeColors, isDark), [themeColors, isDark]);
 
   return (
     <>
-      <AppSafeAreaView style={styles.container} forceBarStyle="dark-content">
+      <AppSafeAreaView style={{ ...styles.container, backgroundColor: themeColors.background }} forceBarStyle="dark-content">
         <View style={styles.header}>
           <TouchableOpacity style={styles.iconBtn} onPress={() => NavigationService.goBack()}>
-            <FastImage source={back_ic} style={styles.icon} resizeMode="contain" tintColor={colors.black} />
+            <FastImage source={back_ic} style={styles.icon} resizeMode="contain" tintColor={themeColors.text} />
           </TouchableOpacity>
           <AppText style={styles.headerTitle}>Staking</AppText>
           <TouchableOpacity style={styles.iconBtn} onPress={() => faqSheetRef.current?.open()}>
-            <FastImage source={INFO} style={styles.icon} resizeMode="contain" tintColor={colors.black} />
+            <FastImage source={INFO} style={styles.icon} resizeMode="contain" tintColor={themeColors.text} />
           </TouchableOpacity>
         </View>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -163,11 +166,13 @@ const StakingDashboard = () => {
 
             </View>
             <View style={styles.bannerImgContainer}>
-              <FastImage source={staking_bnr_img} style={styles.bannerImg} resizeMode="contain" />
+              <FastImage source={isDark ? stakingBannerDark : staking_bnr_img} style={styles.bannerImg} resizeMode="contain" />
             </View>
           </View>
 
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, {
+            backgroundColor: isDark ? colors.newThemeColor : colors.white,
+          }]}>
             <View style={styles.sectionHeaderRow}>
               <AppText style={styles.sectionTitle}>All Products</AppText>
             </View>
@@ -197,10 +202,10 @@ const StakingDashboard = () => {
               Array.from({ length: 5 }).map((_, i) => (
                 <View key={i} style={styles.tableRow}>
                   <View style={styles.coinInfo}>
-                    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#EEE', marginRight: 10 }} />
-                    <View style={{ width: 60, height: 16, borderRadius: 4, backgroundColor: '#EEE' }} />
+                    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: isDark ? themeColors.border : '#EEE', marginRight: 10 }} />
+                    <View style={{ width: 60, height: 16, borderRadius: 4, backgroundColor: isDark ? themeColors.border : '#EEE' }} />
                   </View>
-                  <View style={{ width: 50, height: 16, borderRadius: 4, backgroundColor: '#EEE' }} />
+                  <View style={{ width: 50, height: 16, borderRadius: 4, backgroundColor: isDark ? themeColors.border : '#EEE' }} />
                 </View>
               ))
             ) : (
@@ -291,13 +296,13 @@ const StakingDashboard = () => {
 
 
           <View style={styles.howToStakeSection}>
-            <AppText style={styles.whyStakeTitle}>How to stake on AGCE ?</AppText>
+            <AppText style={styles.whyStakeTitle}>How to stake on AGCX ?</AppText>
 
             <View style={styles.gridContainer}>
               <View style={styles.gridItem}>
                 <View style={styles.gridIconWrapper}>
                   <View style={styles.gridIconCircle}>
-                    <FastImage source={wallet_ic} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                    <FastImage source={wallet_ic} style={styles.gridIcon} resizeMode="contain" tintColor={themeColors.text} />
                   </View>
                   <View style={styles.badgeContainer}>
                     <AppText style={styles.badgeText}>1</AppText>
@@ -310,7 +315,7 @@ const StakingDashboard = () => {
               <View style={styles.gridItem}>
                 <View style={styles.gridIconWrapper}>
                   <View style={styles.gridIconCircle}>
-                    <FastImage source={deposit_icon2} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                    <FastImage source={deposit_icon2} style={styles.gridIcon} resizeMode="contain" tintColor={themeColors.text} />
                   </View>
                   <View style={styles.badgeContainer}>
                     <AppText style={styles.badgeText}>2</AppText>
@@ -323,7 +328,7 @@ const StakingDashboard = () => {
               <View style={styles.gridItem}>
                 <View style={styles.gridIconWrapper}>
                   <View style={styles.gridIconCircle}>
-                    <FastImage source={crypto_staking_icon} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                    <FastImage source={crypto_staking_icon} style={styles.gridIcon} resizeMode="contain" tintColor={themeColors.text} />
                   </View>
                   <View style={styles.badgeContainer}>
                     <AppText style={styles.badgeText}>3</AppText>
@@ -336,7 +341,7 @@ const StakingDashboard = () => {
               <View style={styles.gridItem}>
                 <View style={styles.gridIconWrapper}>
                   <View style={styles.gridIconCircle}>
-                    <FastImage source={earningIcon} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                    <FastImage source={earningIcon} style={styles.gridIcon} resizeMode="contain" tintColor={themeColors.text} />
                   </View>
                   <View style={styles.badgeContainer}>
                     <AppText style={styles.badgeText}>4</AppText>
@@ -349,7 +354,7 @@ const StakingDashboard = () => {
               <View style={styles.gridItem}>
                 <View style={styles.gridIconWrapper}>
                   <View style={styles.gridIconCircle}>
-                    <FastImage source={withdrawal_icon2} style={styles.gridIcon} resizeMode="contain" tintColor={colors.black} />
+                    <FastImage source={withdrawal_icon2} style={styles.gridIcon} resizeMode="contain" tintColor={themeColors.text} />
                   </View>
                   <View style={styles.badgeContainer}>
                     <AppText style={styles.badgeText}>5</AppText>
@@ -382,7 +387,7 @@ const StakingDashboard = () => {
             height: 340,
             paddingHorizontal: 20,
             paddingBottom: 30,
-            backgroundColor: colors.white
+            backgroundColor: isDark ? themeColors.background : colors.white
           }
         }}
       >
@@ -430,7 +435,7 @@ const StakingDashboard = () => {
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingBottom: 20,
-            backgroundColor: colors.white
+            backgroundColor: isDark ? themeColors.background : colors.white
           }
         }}
       >
@@ -451,11 +456,11 @@ const StakingDashboard = () => {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}>
           {planLoading ? (
             <View style={{ padding: 40, alignItems: 'center' }}>
-              <AppText style={{ color: '#848e9c' }}>Loading plans...</AppText>
+              <AppText style={{ color: isDark ? themeColors.secondaryText : '#848e9c' }}>Loading plans...</AppText>
             </View>
           ) : planPackages.length === 0 ? (
             <View style={{ padding: 40, alignItems: 'center' }}>
-              <AppText style={{ color: '#848e9c' }}>No plans available.</AppText>
+              <AppText style={{ color: isDark ? themeColors.secondaryText : '#848e9c' }}>No plans available.</AppText>
             </View>
           ) : (
             planPackages.map((plan: any) => (
@@ -494,7 +499,7 @@ const StakingDashboard = () => {
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingBottom: 20,
-            backgroundColor: colors.white
+            backgroundColor: isDark ? themeColors.background : colors.white
           }
         }}
       >
@@ -517,7 +522,7 @@ const StakingDashboard = () => {
                   source={faqActiveIndex === index ? upIcon : downIcon}
                   resizeMode="contain"
                   style={styles.faqArrow}
-                  tintColor="#333"
+                  tintColor={isDark ? colors.white : "#333"}
                 />
               </TouchableOpacity>
               {faqActiveIndex === index && (
@@ -534,10 +539,10 @@ const StakingDashboard = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white
+
   },
   header: {
     flexDirection: 'row',
@@ -556,7 +561,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   bannerContainer: {
     flexDirection: 'row',
@@ -571,18 +576,18 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     fontSize: 22,
-    color: colors.black,
+    color: themeColors.text,
     marginBottom: 8,
     fontFamily: fontFamilySemiBold
   },
   bannerSubtitle: {
     fontSize: 14,
-    color: '#333333',
+    color: isDark ? themeColors.secondaryText : '#333333',
     marginBottom: 20,
     lineHeight: 18,
   },
   aboutBtn: {
-    backgroundColor: '#F0F0F5',
+    backgroundColor: isDark ? themeColors.themeSelection : '#F0F0F5',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -590,7 +595,7 @@ const styles = StyleSheet.create({
   },
   aboutBtnText: {
     fontSize: 14,
-    color: colors.black,
+    color: themeColors.text,
     fontFamily: fontFamilyMedium
   },
   bannerImgContainer: {
@@ -607,7 +612,7 @@ const styles = StyleSheet.create({
   sectionContainer: {
     paddingHorizontal: 20,
     marginTop: 10,
-    backgroundColor: colors.white,
+
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -618,7 +623,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   filterRow: {
     marginBottom: 20,
@@ -626,7 +631,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F7F7',
+    backgroundColor: isDark ? themeColors.card : '#F7F7F7',
     borderRadius: 8,
     paddingHorizontal: 12,
     height: 40,
@@ -640,7 +645,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 12,
-    color: colors.black,
+    color: themeColors.text,
     padding: 0,
     fontFamily: fontFamilyMedium,
   },
@@ -651,7 +656,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontSize: 12,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   aprHeader: {
@@ -681,7 +686,7 @@ const styles = StyleSheet.create({
   coinName: {
     fontSize: 14,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
     marginRight: 8,
   },
   newBadge: {
@@ -693,12 +698,12 @@ const styles = StyleSheet.create({
   newBadgeText: {
     fontSize: 10,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   aprText: {
     fontSize: 14,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   infoSection: {
     paddingHorizontal: 20,
@@ -707,7 +712,7 @@ const styles = StyleSheet.create({
   infoSectionTitle: {
     fontSize: 18,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
     marginBottom: 20,
   },
   stepContainer: {
@@ -722,7 +727,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 24,
-    backgroundColor: '#F3E5D8',
+    backgroundColor: isDark ? 'rgba(209,170,103,0.15)' : '#F3E5D8',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
@@ -734,7 +739,7 @@ const styles = StyleSheet.create({
   stepLine: {
     width: 2,
     flex: 1,
-    backgroundColor: '#E6D2C0',
+    backgroundColor: isDark ? 'rgba(209,170,103,0.3)' : '#E6D2C0',
     marginTop: -8,
     marginBottom: -8,
     zIndex: 1,
@@ -747,12 +752,12 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 14,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
     marginBottom: 4,
   },
   stepDesc: {
     fontSize: 12,
-    color: '#666',
+    color: isDark ? themeColors.secondaryText : '#666',
     lineHeight: 16,
     fontFamily: fontFamilyMedium,
   },
@@ -764,12 +769,12 @@ const styles = StyleSheet.create({
   whyStakeTitle: {
     fontSize: 18,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
     marginBottom: 20,
   },
   featureCard: {
     flexDirection: 'row',
-    backgroundColor: '#F9F9F9',
+    backgroundColor: isDark ? themeColors.card : '#F9F9F9',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -779,7 +784,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: isDark ? themeColors.card : '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -794,12 +799,12 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 14,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
     marginBottom: 4,
   },
   featureDesc: {
     fontSize: 12,
-    color: '#666',
+    color: isDark ? themeColors.secondaryText : '#666',
     lineHeight: 16,
     fontFamily: fontFamilyMedium,
   },
@@ -827,7 +832,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: isDark ? themeColors.card : '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: "#000",
@@ -847,7 +852,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#F3E5D8',
+    backgroundColor: isDark ? 'rgba(209,170,103,0.15)' : '#F3E5D8',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -855,18 +860,18 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   gridTitle: {
     fontSize: 15,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
     marginBottom: 6,
     textAlign: 'center',
   },
   gridDesc: {
     fontSize: 12,
-    color: '#666',
+    color: isDark ? themeColors.secondaryText : '#666',
     lineHeight: 16,
     fontFamily: fontFamilyMedium,
     textAlign: 'center',
@@ -882,7 +887,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: 18,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   closeIcon: {
     width: 20,
@@ -893,7 +898,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0'
+    borderBottomColor: isDark ? themeColors.border : '#f0f0f0'
   },
   emptyContainer: {
     alignItems: 'center',
@@ -908,7 +913,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   sheetRow: {
@@ -917,16 +922,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F5',
+    borderBottomColor: isDark ? themeColors.border : '#F0F0F5',
   },
   sheetLabel: {
     fontSize: 14,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
   },
   sheetValue: {
     fontSize: 14,
-    color: colors.black,
+    color: themeColors.text,
     fontFamily: fontFamilySemiBold,
   },
   sheetCoinIcon: {
@@ -934,7 +939,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   stakeBtn: {
-    backgroundColor: '#2b2f36',
+    backgroundColor: isDark ? themeColors.button : '#2b2f36',
     borderRadius: 8,
     height: 50,
     justifyContent: 'center',
@@ -943,7 +948,7 @@ const styles = StyleSheet.create({
   },
   stakeBtnText: {
     fontSize: 14,
-    color: colors.white,
+    color: isDark ? themeColors.buttonText : colors.white,
     fontFamily: fontFamilyMedium,
   },
   planHeader: {
@@ -953,7 +958,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f5',
+    borderBottomColor: isDark ? themeColors.border : '#f0f0f5',
     marginBottom: 10,
   },
   planHeaderIcon: {
@@ -964,15 +969,15 @@ const styles = StyleSheet.create({
   planHeaderTitle: {
     fontSize: 18,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   planCard: {
     borderWidth: 1,
-    borderColor: '#eaecef',
+    borderColor: isDark ? themeColors.border : '#eaecef',
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
-    backgroundColor: colors.white,
+    backgroundColor: isDark ? themeColors.card : colors.white,
   },
   planRowTop: {
     flexDirection: 'row',
@@ -983,7 +988,7 @@ const styles = StyleSheet.create({
   planDuration: {
     fontSize: 15,
     fontFamily: fontFamilySemiBold,
-    color: '#1e2329',
+    color: isDark ? themeColors.text : '#1e2329',
   },
   planApr: {
     fontSize: 16,
@@ -997,12 +1002,12 @@ const styles = StyleSheet.create({
   },
   planLimits: {
     fontSize: 12,
-    color: '#848e9c',
+    color: isDark ? themeColors.secondaryText : '#848e9c',
     fontFamily: fontFamilyMedium,
   },
   planEstAprLabel: {
     fontSize: 11,
-    color: '#848e9c',
+    color: isDark ? themeColors.secondaryText : '#848e9c',
     fontFamily: fontFamilyMedium,
   },
   modalOverlay: {
@@ -1022,16 +1027,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F5',
+    borderBottomColor: isDark ? themeColors.border : '#F0F0F5',
   },
   modalTitle: {
     fontSize: 18,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   modalCloseText: {
     fontSize: 24,
-    color: colors.black,
+    color: themeColors.text,
   },
   modalList: {
     paddingHorizontal: 20,
@@ -1040,7 +1045,7 @@ const styles = StyleSheet.create({
   faqItemInner: {
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F5',
+    borderBottomColor: isDark ? themeColors.border : '#F0F0F5',
   },
   faqItemInnerLast: {
     borderBottomWidth: 0,
@@ -1054,7 +1059,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: fontFamilySemiBold,
-    color: colors.black,
+    color: themeColors.text,
   },
   faqArrow: {
     width: 14,
@@ -1066,7 +1071,7 @@ const styles = StyleSheet.create({
   },
   faqAnswerText: {
     fontSize: 13,
-    color: '#666',
+    color: isDark ? themeColors.secondaryText : '#666',
     lineHeight: 20,
     fontFamily: fontFamilyMedium,
   },

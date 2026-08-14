@@ -18,6 +18,7 @@ import {
   spotIcon,
   earningAsset1,
   lockLight,
+  spotIconDarkTheme,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import { ACCOUNT_SCREEN, EARNING_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
@@ -72,13 +73,13 @@ const MenuItem = React.memo(({ item, index }: any) => {
             resizeMode="contain"
             source={item.icon}
             tintColor={
-              item?.id === "1" 
-                ? undefined 
-                : isDark 
-                  ? colors.white 
+              item?.id === "1"
+                ? undefined
+                : isDark
+                  ? colors.white
                   : (item?.id === "6" ? themeColors.text : item?.id === "7" ? "#000" : undefined)
             }
-            style={item?.id === "6" ? styles.iconMore : styles.icon}
+            style={[item?.id === "6" ? styles.iconMore : styles.icon, item?.id === "1" && isDark && { width: 45, height: 45 }]}
           />
         </View>
         <AppText style={{ color: themeColors.text }} type={THIRTEEN}>
@@ -90,6 +91,8 @@ const MenuItem = React.memo(({ item, index }: any) => {
 });
 
 const HomeMenuBar = () => {
+  const { colors: themeColors, theme, isDark } = useTheme();
+
   const languages = useAppSelector((state) => {
     return state.account.languages;
   });
@@ -97,7 +100,7 @@ const HomeMenuBar = () => {
     {
       id: "1",
       title: checkValue(languages?.spot),
-      icon: spotIcon,
+      icon: isDark ? spotIconDarkTheme : spotIcon,
       onPress: () => NavigationService.navigate(TRADE_SCREEN),
     },
     {
@@ -112,12 +115,12 @@ const HomeMenuBar = () => {
       icon: wallet_ic,
       onPress: () => NavigationService.navigate(WALLET_SCREEN),
     },
-    {
-      id: "4",
-      title: checkValue("Swap"),
-      icon: swap,
-      onPress: showComingSoonToast,
-    },
+    // {
+    //   id: "4",
+    //   title: checkValue("Swap"),
+    //   icon: swap,
+    //   onPress: showComingSoonToast,
+    // },
     {
       id: "5",
       title: "Earning",
@@ -160,6 +163,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
     marginBottom: 0,
+    paddingHorizontal: 15
   },
   container: {
     width: "100%",

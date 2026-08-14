@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import { AppSafeAreaView, AppText, SEMI_BOLD } from '../../shared';
@@ -95,6 +95,7 @@ const normalizeLaunchpad = (item: any) => {
 
 const Launchpad = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(themeColors, isDark), [themeColors, isDark]);
   const [activeTab, setActiveTab] = useState<'Ongoing' | 'Upcoming' | 'Ended'>('Ongoing');
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +142,7 @@ const Launchpad = () => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: colors.white }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => NavigationService.goBack()} style={{ padding: 8 }}>
@@ -197,12 +198,12 @@ const Launchpad = () => {
             currentProjects.map((project, idx) => (
               <TouchableOpacity
                 key={project.id || idx}
-                style={[styles.projectCard, { backgroundColor: isDark ? themeColors.card : '#F9F9F9', borderColor: isDark ? themeColors.border : '#EAEAEA' }]}
+                style={[styles.projectCard, { backgroundColor: isDark ? themeColors.background : '#F9F9F9', borderColor: isDark ? themeColors.border : '#EAEAEA' }]}
                 onPress={() => NavigationService.navigate(LAUNCHPAD_DETAIL_SCREEN, { projectId: project.id })}
                 activeOpacity={0.8}
               >
                 {/* Status Badge */}
-                <View style={[styles.projectStatusBadge, { backgroundColor: isDark ? themeColors.background : '#EAEAEA' }]}>
+                <View style={[styles.projectStatusBadge, { backgroundColor: isDark ? themeColors.card : '#EAEAEA' }]}>
                   <AppText style={[styles.projectStatusText, { color: isDark ? themeColors.secondaryText : '#888' }]}>{project.status}</AppText>
                 </View>
 
@@ -238,7 +239,7 @@ const Launchpad = () => {
 
                 {/* Pools */}
                 {project.pools.map((pool: any, pIdx: number) => (
-                  <View key={pIdx} style={[styles.poolCard, { backgroundColor: isDark ? themeColors.background : colors.white, borderColor: isDark ? themeColors.border : '#EAEAEA' }]}>
+                  <View key={pIdx} style={[styles.poolCard, { backgroundColor: isDark ? 'transparent' : colors.white, borderColor: isDark ? themeColors.border : '#EAEAEA' }]}>
                     <View style={styles.poolHeader}>
                       <FastImage source={getIconForCoin(pool.coinIcon, pool.iconPath)} style={styles.poolIcon} resizeMode="contain" />
                       <AppText style={[styles.poolName, { color: themeColors.text }]}>{pool.name}</AppText>
@@ -268,7 +269,7 @@ const Launchpad = () => {
                       </View>
                     </View>
 
-                    <View style={[styles.poolDivider, { backgroundColor: isDark ? themeColors.border : '#EAEAEA' }]} />
+                    <View style={[styles.poolDivider, { backgroundColor: isDark ? '#303744' : '#EAEAEA' }]} />
 
                     <View style={styles.poolSummaryRow}>
                       <AppText style={styles.infoLabel}>Subscription Price</AppText>
@@ -279,7 +280,7 @@ const Launchpad = () => {
                       <AppText style={[styles.poolSummaryValue, { color: themeColors.text }]}>{pool.poolParticipants}</AppText>
                     </View>
 
-                    <TouchableOpacity style={[styles.tradeBtn, { backgroundColor: isDark ? themeColors.border : '#F0F0F0' }]}
+                    <TouchableOpacity style={[styles.tradeBtn, { backgroundColor: isDark ? '#303237' : '#F0F0F0' }]}
                       onPress={() => NavigationService.navigate(LAUNCHPAD_DETAIL_SCREEN, { projectId: project.id })}
                     >
                       <AppText style={[styles.tradeBtnText, { color: themeColors.text }]}>Trade</AppText>
@@ -311,7 +312,7 @@ const Launchpad = () => {
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingBottom: 20,
-            backgroundColor: isDark ? themeColors.card : colors.white
+            backgroundColor: isDark ? themeColors.background : colors.white
           }
         }}
       >
@@ -350,7 +351,7 @@ const Launchpad = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -391,13 +392,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   aboutBtn: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: isDark ? themeColors.border : '#F0F0F0',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   aboutBtnText: {
-    color: '#333',
+    color: isDark ? themeColors.text : '#333',
     fontSize: 14,
     fontFamily: fontFamilySemiBold,
   },
@@ -413,7 +414,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#EAEAEA',
+    borderBottomColor: isDark ? themeColors.border : '#EAEAEA',
     marginBottom: 16,
     paddingHorizontal: 20,
   },
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 13,
-    color: '#888',
+    color: isDark ? themeColors.secondaryText : '#888',
     fontFamily: fontFamilyMedium,
     marginBottom: 4,
   },
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F5',
+    borderBottomColor: isDark ? themeColors.border : '#F0F0F5',
   },
   modalTitle: {
     fontSize: 18,
@@ -555,7 +556,7 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: 28,
     lineHeight: 32,
-    color: '#999',
+    color: isDark ? themeColors.secondaryText : '#999',
   },
   modalList: {
     paddingHorizontal: 20,

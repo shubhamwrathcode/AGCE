@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, ImageBackground, Dimensions } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppSafeAreaView, AppText, } from "../../shared";
@@ -40,7 +40,7 @@ const vipFeatures = [
   { title: "Sub- Accounts", desc: "Operate up to 20 sub-accounts under one master account.", image: subAccounts },
 ];
 
-const SectionTitle = ({ title, themeColors }) => (
+const SectionTitle = ({ title, themeColors, styles }) => (
   <View style={styles.sectionTitleContainer}>
     <AppText style={{ color: themeColors.text, marginBottom: 8, fontSize: 20, fontFamily: fontFamilySemiBold }}>
       {title}
@@ -131,7 +131,7 @@ const VipServices = () => {
 
         {/* VIP Tier Structure */}
         <View style={styles.section}>
-          <SectionTitle title="VIP Tier Structure" themeColors={themeColors} />
+          <SectionTitle title="VIP Tier Structure" themeColors={themeColors} styles={styles} />
 
           <View style={styles.tierList}>
             {vipTiers.map((tier, index) => (
@@ -171,7 +171,7 @@ const VipServices = () => {
 
         {/* VIP Features */}
         <View style={styles.section}>
-          <SectionTitle title="VIP Features" themeColors={themeColors} />
+          <SectionTitle title="VIP Features" themeColors={themeColors} styles={styles} />
 
           <View style={styles.featuresContainer}>
             {vipFeatures.map((feature, index) => (
@@ -198,7 +198,7 @@ const VipServices = () => {
 
         {/* Coming Soon */}
         <View style={styles.section}>
-          <SectionTitle title="Coming Soon" themeColors={themeColors} />
+          <SectionTitle title="Coming Soon" themeColors={themeColors} styles={styles} />
           <View style={styles.vipCardContainer}>
             <FastImage
               source={vipserviceBanner}
@@ -222,7 +222,7 @@ const DetailRow = ({ label, value, themeColors }) => (
   </View>
 );
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors, isDark) => StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
-    borderColor: colors.themeElevationColor
+    borderColor: isDark ? themeColors.border : '#EAEAEA'
   },
   tierCardLeft: {
     flexDirection: 'row',
@@ -309,9 +309,9 @@ const styles = StyleSheet.create({
   benefitBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.newThemeColor,
+    backgroundColor: isDark ? themeColors.card : '#F9F9F9',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: isDark ? themeColors.border : '#EAEAEA',
     borderRadius: 4,
     paddingVertical: 6,
     paddingHorizontal: 6,
