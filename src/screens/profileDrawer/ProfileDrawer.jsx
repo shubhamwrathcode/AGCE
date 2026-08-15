@@ -652,9 +652,9 @@ const ProfileDrawer = () => {
               hitSlop={8}
             > <FastImage source={themeIcon} resizeMode="contain" style={{ width: 25, height: 25 }} tintColor={themeColors.text} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => NavigationService.navigate(SETTING_SCREEN_New)} hitSlop={8}>
+            {/* <TouchableOpacity onPress={() => NavigationService.navigate(SETTING_SCREEN_New)} hitSlop={8}>
               <FastImage source={setting_icon} resizeMode="contain" style={{ width: 22, height: 22 }} tintColor={themeColors.text} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity onPress={() => NavigationService.navigate("Support")} hitSlop={8}>
               <FastImage source={headPhoneIcon} resizeMode="contain" style={{ width: 22, height: 22 }} tintColor={themeColors.text} />
             </TouchableOpacity>
