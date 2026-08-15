@@ -717,7 +717,7 @@ const ChangeLoginPasswordScreen = () => {
               weight={MEDIUM}
               style={[styles.stepOneDesc, { color: isDark ? '#A9A9B2' : '#6E6E73' }]}
             >
-              For the security of your account, withdrawals and P2P selling will be temporarily locked for 24 hours after a password change.
+              For the security of your account, withdrawals will be temporarily locked for 24 hours after a password change.
             </AppText>
           </View>
         )}
@@ -737,7 +737,7 @@ const ChangeLoginPasswordScreen = () => {
                 <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
                   Code sent to: {displayEmail || 'your registered email'}
                 </AppText>
-                <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
+                <View style={[styles.inputContainer, { backgroundColor: isDark ? 'transparent' : '#EDEDEE', borderColor: isDark ? themeColors.border : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
                   <TextInput
                     style={[styles.input, { color: themeColors.text }]}
                     placeholder="Please enter Email Code"
@@ -769,7 +769,7 @@ const ChangeLoginPasswordScreen = () => {
                 <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
                   Code sent to: {displayPhone || 'your registered phone'}
                 </AppText>
-                <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
+                <View style={[styles.inputContainer, { backgroundColor: isDark ? 'transparent' : '#EDEDEE', borderColor: isDark ? themeColors.border : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
                   <TextInput
                     style={[styles.input, { color: themeColors.text }]}
                     placeholder="Please enter SMS Code"
@@ -801,7 +801,7 @@ const ChangeLoginPasswordScreen = () => {
                 <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.label, { color: themeColors.text }]}>
                   Google Authenticator Code
                 </AppText>
-                <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
+                <View style={[styles.inputContainer, { backgroundColor: isDark ? 'transparent' : '#EDEDEE', borderColor: isDark ? themeColors.border : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
                   <TextInput
                     style={[styles.input, { color: themeColors.text }]}
                     placeholder="Please enter 6-digit TOTP Code"
@@ -855,7 +855,7 @@ const ChangeLoginPasswordScreen = () => {
                 textContentType="password"
                 autoComplete="current-password"
                 importantForAutofill="yes"
-                containerStyle={{ backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }}
+
               />
             </View>
 
@@ -872,7 +872,7 @@ const ChangeLoginPasswordScreen = () => {
                 onPressVisible={() => setShowNewPass(!showNewPass)}
                 value={newPassword}
                 onChangeText={setNewPassword}
-                containerStyle={{ backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }}
+
               />
 
               {/* Validation Checklist */}
@@ -901,7 +901,7 @@ const ChangeLoginPasswordScreen = () => {
                 onPressVisible={() => setShowConfirmPass(!showConfirmPass)}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                containerStyle={{ backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }}
+
               />
             </View>
           </>
@@ -924,7 +924,7 @@ const ChangeLoginPasswordScreen = () => {
                   onChangeText={setResetEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  containerStyle={{ backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }}
+  
                 />
               </View>
             ) : (
@@ -959,7 +959,7 @@ const ChangeLoginPasswordScreen = () => {
             </AppText>
 
             <View style={styles.inputGroup}>
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
+              <View style={[styles.inputContainer, { backgroundColor: isDark ? 'transparent' : '#EDEDEE', borderColor: isDark ? themeColors.border : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
                 <TextInput
                   style={[styles.input, { color: themeColors.text }]}
                   placeholder="Please enter Verification Code"
@@ -1008,7 +1008,7 @@ const ChangeLoginPasswordScreen = () => {
                 onPressVisible={() => setShowNewResetPass(!showNewResetPass)}
                 value={newResetPassword}
                 onChangeText={setNewResetPassword}
-                containerStyle={{ backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }}
+
               />
 
               {/* Checklist */}
@@ -1037,7 +1037,7 @@ const ChangeLoginPasswordScreen = () => {
                 onPressVisible={() => setShowConfirmResetPass(!showConfirmResetPass)}
                 value={confirmResetPassword}
                 onChangeText={setConfirmResetPassword}
-                containerStyle={{ backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }}
+
               />
             </View>
           </View>
@@ -1054,7 +1054,7 @@ const ChangeLoginPasswordScreen = () => {
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={isDark ? colors.black : "#FFFFFF"} />
             ) : (
               <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>
                 Confirm
@@ -1072,7 +1072,7 @@ const ChangeLoginPasswordScreen = () => {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={isDark ? colors.black : "#FFFFFF"} />
               ) : (
                 <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>
                   Confirm
@@ -1099,19 +1099,19 @@ const ChangeLoginPasswordScreen = () => {
             <TouchableOpacity
               style={[
                 styles.confirmBtn,
-                { backgroundColor: allSatisfied ? colors.black : (isDark ? '#2E2E32' : '#EBEBEB') }
+                { backgroundColor: allSatisfied ? (isDark ? colors.white : colors.black) : (isDark ? '#2E2E32' : '#EBEBEB') }
               ]}
               activeOpacity={allSatisfied ? 0.8 : 1}
               onPress={allSatisfied ? handleChangePasswordSubmit : undefined}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={isDark ? colors.black : "#FFFFFF"} />
               ) : (
                 <AppText
                   type={SIXTEEN}
                   weight={SEMI_BOLD}
-                  style={{ color: allSatisfied ? '#FFFFFF' : (isDark ? '#6E6E73' : '#A9A9B2') }}
+                  style={{ color: allSatisfied ? (isDark ? colors.black : '#FFFFFF') : (isDark ? '#6E6E73' : '#A9A9B2') }}
                 >
                   Confirm
                 </AppText>
@@ -1135,19 +1135,19 @@ const ChangeLoginPasswordScreen = () => {
             <TouchableOpacity
               style={[
                 styles.confirmBtn,
-                { backgroundColor: ((forgotIndex === 0 ? resetEmail.trim() : resetPhone.trim())) ? colors.black : (isDark ? '#2E2E32' : '#EBEBEB') }
+                { backgroundColor: ((forgotIndex === 0 ? resetEmail.trim() : resetPhone.trim())) ? (isDark ? colors.white : colors.black) : (isDark ? '#2E2E32' : '#EBEBEB') }
               ]}
               activeOpacity={0.8}
               onPress={handleResetNext}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={isDark ? colors.black : "#FFFFFF"} />
               ) : (
                 <AppText
                   type={SIXTEEN}
                   weight={SEMI_BOLD}
-                  style={{ color: ((forgotIndex === 0 ? resetEmail.trim() : resetPhone.trim())) ? '#FFFFFF' : (isDark ? '#6E6E73' : '#A9A9B2') }}
+                  style={{ color: ((forgotIndex === 0 ? resetEmail.trim() : resetPhone.trim())) ? (isDark ? colors.black : '#FFFFFF') : (isDark ? '#6E6E73' : '#A9A9B2') }}
                 >
                   Next
                 </AppText>
@@ -1161,18 +1161,23 @@ const ChangeLoginPasswordScreen = () => {
             <TouchableOpacity
               style={[
                 styles.confirmBtn,
-                { backgroundColor: resetOtp.length === 6 ? colors.black : (isDark ? '#2E2E32' : '#EBEBEB') }
+                { backgroundColor: resetOtp.length === 6 ? (isDark ? colors.white : colors.black) : (isDark ? '#2E2E32' : '#EBEBEB') }
               ]}
               activeOpacity={0.8}
               onPress={handleResetVerifyNext}
+              disabled={isSubmitting}
             >
-              <AppText
-                type={SIXTEEN}
-                weight={SEMI_BOLD}
-                style={{ color: resetOtp.length === 6 ? '#FFFFFF' : (isDark ? '#6E6E73' : '#A9A9B2') }}
-              >
-                Confirm
-              </AppText>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={isDark ? colors.black : "#FFFFFF"} />
+              ) : (
+                <AppText
+                  type={SIXTEEN}
+                  weight={SEMI_BOLD}
+                  style={{ color: resetOtp.length === 6 ? (isDark ? colors.black : '#FFFFFF') : (isDark ? '#6E6E73' : '#A9A9B2') }}
+                >
+                  Confirm
+                </AppText>
+              )}
             </TouchableOpacity>
           </View>
         )
@@ -1182,19 +1187,19 @@ const ChangeLoginPasswordScreen = () => {
             <TouchableOpacity
               style={[
                 styles.confirmBtn,
-                { backgroundColor: resetAllSatisfied && confirmResetPassword === newResetPassword ? colors.black : (isDark ? '#2E2E32' : '#EBEBEB') }
+                { backgroundColor: resetAllSatisfied && confirmResetPassword === newResetPassword ? (isDark ? colors.white : colors.black) : (isDark ? '#2E2E32' : '#EBEBEB') }
               ]}
               activeOpacity={0.8}
               onPress={handleResetPasswordSubmit}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={isDark ? colors.black : "#FFFFFF"} />
               ) : (
                 <AppText
                   type={SIXTEEN}
                   weight={SEMI_BOLD}
-                  style={{ color: resetAllSatisfied && confirmResetPassword === newResetPassword ? '#FFFFFF' : (isDark ? '#6E6E73' : '#A9A9B2') }}
+                  style={{ color: resetAllSatisfied && confirmResetPassword === newResetPassword ? (isDark ? colors.black : '#FFFFFF') : (isDark ? '#6E6E73' : '#A9A9B2') }}
                 >
                   Reset
                 </AppText>

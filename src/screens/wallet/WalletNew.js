@@ -172,7 +172,7 @@ const WalletNew = ({ route }) => {
       { key: "Futures", title: "Futures" },
       { key: "Options", title: "Options" },
       { key: "Staking", title: "Staking" },
-      { key: "Swap", title: "Swap" },
+      // { key: "Swap", title: "Swap" },
       { key: "Earning", title: "Earning" },
 
     ],

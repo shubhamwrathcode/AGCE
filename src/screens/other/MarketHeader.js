@@ -25,7 +25,7 @@ const TABS = [
   { key: "Spot", label: "Spot" },
   { key: "Cryptos", label: "Cryptos" },
   { key: "USD_M_FUTURES", label: "USDⓈ-M Futures" },
-  { key: "COIN_M_FUTURES", label: "COIN-M Futures" },
+  // { key: "COIN_M_FUTURES", label: "COIN-M Futures" },
   { key: "OPTIONS", label: "Options" },
   { key: "ALPHA", label: "Alpha" },
 ];

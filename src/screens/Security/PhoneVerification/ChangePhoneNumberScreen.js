@@ -212,7 +212,7 @@ const ChangePhoneNumberScreen = () => {
             <FastImage source={warningImg} style={{ width: 18, height: 18, marginTop: 2 }} resizeMode="contain" tintColor={isDark ? colors.white : colors.black} />
             <View style={styles.warningList}>
               <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
-                1. To protect your account, withdrawals and P2P transactions will be restricted for 24 hours after updating your phone number.
+                1. To protect your account, withdrawals will be restricted for 24 hours after updating your phone number.
               </AppText>
               <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
                 2. If your phone number is currently used as your username, it will automatically be replaced with the updated number.
@@ -227,7 +227,7 @@ const ChangePhoneNumberScreen = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: themeColors.text }]}>
             New Phone Number
           </AppText>
-          <View style={[styles.phoneInputContainer, { backgroundColor: themeColors.input }]}>
+          <View style={[styles.phoneInputContainer, { backgroundColor: isDark ? 'transparent' : '#EDEDEE', borderColor: isDark ? themeColors.border : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
             <TouchableOpacity style={styles.countryPicker} activeOpacity={0.8}>
               <AppText style={{ fontSize: 18 }}>🇮🇳</AppText>
               <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.countryCode, { color: themeColors.text }]}>
@@ -250,7 +250,7 @@ const ChangePhoneNumberScreen = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: themeColors.text }]}>
             New SMS Verification Code
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: themeColors.input, flexDirection: 'row', alignItems: 'center' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? 'transparent' : '#EDEDEE', borderColor: isDark ? themeColors.border : 'transparent', borderWidth: isDark ? 1 : 0, flexDirection: 'row', alignItems: 'center' }]}>
             <TextInput
               style={[styles.textInput, { color: themeColors.text, flex: 1 }]}
               placeholder="Enter the verification code"

@@ -4,7 +4,7 @@ import RBSheet from 'react-native-raw-bottom-sheet';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Svg, { Path } from 'react-native-svg';
 import FastImage from 'react-native-fast-image';
-import { AppSafeAreaView, AppText, SEMI_BOLD } from '../../shared';
+import { AppSafeAreaView, AppText, MEDIUM, SEMI_BOLD } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
 import { back_ic, invite_earn_img, share_link, link_friends, earn_link_icon, infoNewIc, INFO, calendarIcon, paste1, pasteImg } from '../../helper/ImageAssets';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -13,18 +13,19 @@ import { colors } from '../../theme/colors';
 import NavigationService from '../../navigation/NavigationService';
 import { fontFamilySemiBold, fontFamilyMedium, fontFamilyBold } from '../../theme/typography';
 import { appOperation } from '../../appOperation';
+import { CHART_WEB_BASE_URL } from '../../helper/Constants';
 
 const REFERRAL_FAQ_ITEMS = [
   {
-    question: "What is the AGCE Referral Program?",
-    answer: "The AGCE Referral Program is an incentive system that rewards you for bringing new users to the platform. By sharing your personal invite link or referral code, you can earn a percentage of the trading fees paid by your invitees on their trades."
+    question: "What is the AGCX Referral Program?",
+    answer: "The AGCX Referral Program is an incentive system that rewards you for bringing new users to the platform. By sharing your personal invite link or referral code, you can earn a percentage of the trading fees paid by your invitees on their trades."
   },
   {
-    question: "How does the AGCE Referral System work?",
-    answer: "When a new user registers using your referral link or enters your code during sign-up, their account is permanently linked to yours. Every time they trade on AGCE, a share of the commission fee paid by them is automatically credited to your referral earnings."
+    question: "How does the AGCX Referral System work?",
+    answer: "When a new user registers using your referral link or enters your code during sign-up, their account is permanently linked to yours. Every time they trade on AGCX, a share of the commission fee paid by them is automatically credited to your referral earnings."
   },
   {
-    question: "How can I invite friends to AGCE?",
+    question: "How can I invite friends to AGCX?",
     answer: "Simply copy your unique referral link or code from the dashboard above and share it with your friends. You can post it on social media, share it in chats, or send it directly. Ensure they use it during signup to successfully link their account."
   },
   {
@@ -103,6 +104,44 @@ const pickReferList = (payload: any) => {
   return [];
 };
 
+const resolveKycBadge = (item: any) => {
+  const raw =
+    item?.kycStatus ??
+    item?.kyc_status ??
+    item?.kycVerified ??
+    item?.kyc_verified ??
+    item?.status;
+  const s = String(raw ?? "").toLowerCase();
+  if (raw === true || raw === 2 || raw === "2" || s === "verified" || s === "approved") {
+    return { label: "Verified", color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)' };
+  }
+  if (raw === 1 || raw === "1" || s === "pending") {
+    return { label: "Pending", color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)' };
+  }
+  if (raw === 3 || raw === "3" || s === "rejected") {
+    return { label: "Rejected", color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)' };
+  }
+  return { label: "Not Verified", color: '#6B7280', bg: 'rgba(107, 114, 128, 0.1)' };
+};
+
+const maskSignId = (value: any) => {
+  const s = String(value || "").trim();
+  if (!s) return "-----";
+  if (s.length <= 6) return s;
+  return `${s.slice(0, 3)}***${s.slice(-4)}`;
+};
+
+const formatJoinDate = (value: any) => {
+  if (!value) return "-----";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 const ReferAndEarn = () => {
   const { colors: themeColors, isDark } = useTheme();
 
@@ -168,7 +207,8 @@ const ReferAndEarn = () => {
   }, [loadReferralData]);
 
   const friendsInvited = referCount || referList.length || 0;
-  const referralLink = referralCode ? `http://localhost:9502/signup?referral_code=${referralCode}` : '';
+  const baseWebUrl = CHART_WEB_BASE_URL.replace(/\/$/, "");
+  const referralLink = referralCode ? `${baseWebUrl}/signup?referral_code=${referralCode}` : '';
 
   const onShare = async () => {
     try {
@@ -177,7 +217,7 @@ const ReferAndEarn = () => {
         return;
       }
       await Share.share({
-        message: `Join AGCE using my referral link!\n${referralLink}`,
+        message: `Join AGCX using my referral link!\n${referralLink}`,
       });
     } catch (error: any) {
       Toast.showWithGravity(error.message, Toast.SHORT, Toast.BOTTOM);
@@ -232,269 +272,100 @@ const ReferAndEarn = () => {
             </AppText>
 
             <View style={styles.gridContainer}>
-              <View style={[styles.gridItem, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
-                <AppText style={[styles.gridLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Your Commission Rate</AppText>
-                <AppText style={[styles.gridValue, { color: '#EABE53' }]}>15%</AppText>
-              </View>
-              <View style={[styles.gridItem, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
-                <AppText style={[styles.gridLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Friends' Kickback Rate</AppText>
-                <AppText style={[styles.gridValue, { color: themeColors.text }]}>0%</AppText>
-              </View>
-              <View style={[styles.gridItem, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
+
+              <View style={[styles.gridItem, { width: '100%', paddingVertical: 16, backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
                 <AppText style={[styles.gridLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Friends You've Invited</AppText>
                 <AppText style={[styles.gridValue, { color: themeColors.text }]}>{friendsInvited}</AppText>
               </View>
-              <View style={[styles.gridItem, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
-                <AppText style={[styles.gridLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Total Rewards Earned</AppText>
-                <AppText style={[styles.gridValue, { color: themeColors.text }]}>0 USDT</AppText>
-              </View>
+
             </View>
 
-            <AppText style={[styles.sectionHeader, { color: isDark ? '#A0A0A0' : '#666', marginTop: 10, }]}>Share Your Link</AppText>
-            <View style={[styles.linkBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
-              <AppText style={[styles.linkText, { color: themeColors.text }]} numberOfLines={1}>
-                {referralLink || "Sign in to get your referral link"}
-              </AppText>
-              <TouchableOpacity
-                disabled={!referralLink}
-                onPress={() => {
-                  Clipboard.setString(referralLink);
-                  Toast.showWithGravity('Copied to clipboard', Toast.SHORT, Toast.BOTTOM);
-                }}>
-                <FastImage source={pasteImg}
-                  resizeMode='contain'
-                  tintColor={isDark ? colors.white : colors.themeElevationColor}
-                  style={{ width: 18, height: 18, }} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Overview Section */}
-        <View style={styles.overviewContainer}>
-          <View style={[styles.overviewHeader, { zIndex: 10 }]}>
-            <AppText style={[styles.overviewTitle, { color: themeColors.text }]}>Overview</AppText>
-            <View style={{ position: 'relative', zIndex: 10 }}>
-              <TouchableOpacity
-                style={[styles.dropdownBtn, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}
-                onPress={() => setTimeframeDropdownOpen(!timeframeDropdownOpen)}
-              >
-                <AppText style={[styles.dropdownText, { color: isDark ? '#A0A0A0' : '#666' }]}>{selectedTimeframe}</AppText>
-                <AppText style={[styles.dropdownIcon, { color: isDark ? '#A0A0A0' : '#666' }]}>{timeframeDropdownOpen ? '⌃' : '⌄'}</AppText>
-              </TouchableOpacity>
-
-              {timeframeDropdownOpen && (
-                <View style={[styles.dropdownMenu, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#E0E0E0' }]}>
-                  {timeframes.map((tf) => (
-                    <TouchableOpacity
-                      key={tf}
-                      style={styles.dropdownMenuItem}
-                      onPress={() => {
-                        setSelectedTimeframe(tf);
-                        setTimeframeDropdownOpen(false);
-                      }}
-                    >
-                      <AppText style={[styles.dropdownMenuText, { color: themeColors.text }]}>{tf}</AppText>
-                      {selectedTimeframe === tf && (
-                        <View style={styles.checkCircle}>
-                          <AppText style={styles.checkIcon}>✓</AppText>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.overviewGrid}>
-            <View style={[styles.overviewCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-              <View style={styles.cardInner}>
-                <View style={[styles.iconBox, { backgroundColor: 'rgba(2, 192, 118, 0.1)' }]}>
-                  <AppText style={styles.iconEmoji}>💹</AppText>
-                </View>
-                <View style={styles.cardContent}>
-                  <AppText style={[styles.cardLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Total Earnings</AppText>
-                  <AppText style={[styles.cardValue, { color: themeColors.text }]}>0 USDT</AppText>
-                  <AppText style={[styles.cardSubValue, { color: isDark ? '#666' : '#999' }]}>≈ $0.00</AppText>
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.overviewCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-              <View style={styles.cardInner}>
-                <View style={[styles.iconBox, { backgroundColor: 'rgba(243, 156, 18, 0.1)' }]}>
-                  <AppText style={styles.iconEmoji}>⏳</AppText>
-                </View>
-                <View style={styles.cardContent}>
-                  <AppText style={[styles.cardLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Pending Earnings</AppText>
-                  <AppText style={[styles.cardValue, { color: themeColors.text }]}>0 USDT</AppText>
-                  <AppText style={[styles.cardSubValue, { color: isDark ? '#666' : '#999' }]}>≈ $0.00</AppText>
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.overviewCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-              <View style={styles.cardInner}>
-                <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 152, 219, 0.1)' }]}>
-                  <AppText style={styles.iconEmoji}>👥</AppText>
-                </View>
-                <View style={styles.cardContent}>
-                  <AppText style={[styles.cardLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Total Friends</AppText>
-                  <AppText style={[styles.cardValue, { color: themeColors.text }]}>{friendsInvited}</AppText>
-                  <AppText style={[styles.cardSubValue, { color: isDark ? '#666' : '#999' }]}>From your referrals</AppText>
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.overviewCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-              <View style={styles.cardInner}>
-                <View style={[styles.iconBox, { backgroundColor: 'rgba(155, 89, 182, 0.1)' }]}>
-                  <AppText style={styles.iconEmoji}>📊</AppText>
-                </View>
-                <View style={styles.cardContent}>
-                  <AppText style={[styles.cardLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Total Trades</AppText>
-                  <AppText style={[styles.cardValue, { color: themeColors.text }]}>0</AppText>
-                  <AppText style={[styles.cardSubValue, { color: isDark ? '#666' : '#999' }]}>+0 this month</AppText>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Commission Performance Section */}
-        <View style={styles.commissionContainer}>
-          <View style={[styles.commissionHeader, { zIndex: 10 }]}>
-            <View>
-              <AppText style={[styles.commissionTitle, { color: themeColors.text }]}>Commission</AppText>
-              <AppText style={[styles.commissionTitle, { color: themeColors.text }]}>Performance</AppText>
-            </View>
-            <View style={{ position: 'relative', zIndex: 10 }}>
-              <TouchableOpacity
-                style={[styles.dateBtn, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}
-                onPress={() => setDatePopoverOpen(!datePopoverOpen)}
-              >
-                <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
-                  tintColor={colors.disabledText}
-                  resizeMode='contain' />
-
-                <AppText style={[styles.dateText, { color: isDark ? '#A0A0A0' : '#666' }]}>
-                  {formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}
+            <View style={styles.shareLinkSection}>
+              <AppText style={[styles.shareLabel, { color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)' }]}>Share Your Link</AppText>
+              <View style={[styles.shareInputWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                <AppText style={[styles.shareInput, { color: themeColors.text }]} numberOfLines={1}>
+                  {referralLink || "Sign in to get your referral link"}
                 </AppText>
-              </TouchableOpacity>
-
-              {datePopoverOpen && (
-                <View style={[styles.datePopover, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#E0E0E0' }]}>
-                  <AppText style={[styles.dateLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Start Date</AppText>
-                  <TouchableOpacity
-                    style={[styles.dateInput, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}
-                    onPress={() => {
-                      setDatePickerType('start');
-                      setDatePickerVisibility(true);
-                    }}
-                  >
-                    <AppText style={[styles.dateInputValue, { color: themeColors.text }]}>
-                      {formatInputDate(startDate)}
-                    </AppText>
-                    <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
-                      tintColor={colors.disabledText}
-                      resizeMode='contain' />
-                  </TouchableOpacity>
-
-                  <AppText style={[styles.dateLabel, { color: isDark ? '#A0A0A0' : '#666', marginTop: 16 }]}>End Date</AppText>
-                  <TouchableOpacity
-                    style={[styles.dateInput, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}
-                    onPress={() => {
-                      setDatePickerType('end');
-                      setDatePickerVisibility(true);
-                    }}
-                  >
-                    <AppText style={[styles.dateInputValue, { color: themeColors.text }]}>
-                      {formatInputDate(endDate)}
-                    </AppText>
-                    <FastImage source={calendarIcon} style={{ width: 20, height: 20 }}
-                      tintColor={colors.disabledText}
-                      resizeMode='contain' />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.applyBtn}
-                    onPress={() => setDatePopoverOpen(false)}
-                  >
-                    <AppText style={styles.applyBtnText}>Apply</AppText>
-                  </TouchableOpacity>
-                </View>
-              )}
+                <TouchableOpacity
+                  style={styles.shareCopyBtn}
+                  disabled={!referralLink}
+                  onPress={() => {
+                    Clipboard.setString(referralLink);
+                    Toast.showWithGravity('Copied to clipboard', Toast.SHORT, Toast.BOTTOM);
+                  }}>
+                  <FastImage source={pasteImg}
+                    resizeMode='contain'
+                    tintColor={isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.4)'}
+                    style={{ width: 20, height: 20 }} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
+        </View>
 
-          {/* Base Commission Card */}
-          <View style={[styles.baseCommissionCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-            <AppText style={[styles.baseCommLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Your Base Commission Rate</AppText>
-            <View style={styles.gaugeContainer}>
-              <View style={[styles.gaugeBackground, { borderColor: isDark ? '#222' : '#E0E0E0' }]} />
-              <View style={styles.gaugeProgress} />
-              <AppText style={[styles.gaugeText, { color: themeColors.text }]}>15%</AppText>
-            </View>
-          </View>
 
-          {/* Target Cards */}
-          <View style={[styles.targetCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-            <View style={{ flex: 1 }}>
-              <AppText style={[styles.targetTitle, { color: themeColors.text }]}>
-                Reach <AppText style={{ color: '#EABE53' }}>$1,000 USDT</AppText> in trading volume
+
+
+        {/* Referral History Section */}
+        <View style={styles.historyContainer}>
+          <AppText style={[styles.historyTitle, { color: themeColors.text }]}>Referral History</AppText>
+          {(!referList || referList.length === 0) ? (
+            <View style={[styles.emptyHistoryBox, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+              <AppText style={[styles.emptyHistoryText, { color: isDark ? '#A0A0A0' : '#666' }]}>
+                {referralLoading ? "Loading referrals…" : "No referral history found"}
               </AppText>
-              <AppText style={[styles.targetSub, { color: isDark ? '#A0A0A0' : '#666' }]}>your commission rate will rise to</AppText>
             </View>
-            <AppText style={[styles.targetValue, { color: '#EABE53' }]}>25% ↗</AppText>
-          </View>
+          ) : (
+            <View style={styles.historyList}>
+              {referList.map((item: any, index: number) => {
+                const kyc = resolveKycBadge(item);
+                const name =
+                  item?.full_name_masked ||
+                  item?.name ||
+                  item?.fullName ||
+                  item?.full_name ||
+                  item?.email ||
+                  "-----";
+                const signId =
+                  item?.masked_id ||
+                  maskSignId(item?.userId || item?.user_id || item?.signId || item?.sign_id);
+                const joinDate = formatJoinDate(item?.signup_date || item?.createdAt);
 
-          <View style={[styles.targetCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-            <View style={{ flex: 1 }}>
-              <AppText style={[styles.targetTitle, { color: themeColors.text }]}>
-                Reach <AppText style={{ color: '#EABE53' }}>$10,000 USDT</AppText> in trading volume
-              </AppText>
-              <AppText style={[styles.targetSub, { color: isDark ? '#A0A0A0' : '#666' }]}>your commission rate will rise to</AppText>
+                return (
+                  <View key={index} style={[styles.historyCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE', borderWidth: 1 }]}>
+                    <View style={[styles.historyRowData, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+                      <AppText style={styles.historyRowLabel}>S.No</AppText>
+                      <AppText style={[styles.historyRowValue, { color: themeColors.text }]}>{index + 1}</AppText>
+                    </View>
+                    <View style={[styles.historyRowData, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+                      <AppText style={styles.historyRowLabel}>Name</AppText>
+                      <AppText style={[styles.historyRowValue, { color: themeColors.text }]}>{name}</AppText>
+                    </View>
+                    <View style={[styles.historyRowData, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+                      <AppText style={styles.historyRowLabel}>Sign ID</AppText>
+                      <AppText style={[styles.historyRowValue, { color: themeColors.text }]}>{signId}</AppText>
+                    </View>
+                    <View style={[styles.historyRowData, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
+                      <AppText style={styles.historyRowLabel}>KYC Status</AppText>
+                      <View style={[styles.kycBadge, { backgroundColor: kyc.bg }]}>
+                        <AppText style={[styles.kycText, { color: kyc.color }]}>{kyc.label}</AppText>
+                      </View>
+                    </View>
+                    <View style={[styles.historyRowData, { borderBottomWidth: 0 }]}>
+                      <AppText style={styles.historyRowLabel}>Join Date</AppText>
+                      <AppText style={[styles.historyRowValue, { color: themeColors.text }]}>{joinDate}</AppText>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
-            <AppText style={[styles.targetValue, { color: '#EABE53' }]}>35% ↗</AppText>
-          </View>
-
-          {/* Mini Stats with Graph */}
-          <View style={[styles.miniStatCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-            <View style={[styles.miniIconBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
-              <AppText style={styles.miniIcon}>👤</AppText>
-            </View>
-            <View style={styles.miniStatContent}>
-              <AppText style={[styles.miniStatLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Valid Invites</AppText>
-              <AppText style={[styles.miniStatValue, { color: themeColors.text }]}>{friendsInvited}</AppText>
-            </View>
-            <View style={styles.sparklineContainer}>
-              <Svg height="100%" width="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
-                <Path d="M0 15 Q 15 0, 30 20 T 60 5 T 80 25 T 100 10" fill="none" stroke="#EABE53" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            </View>
-          </View>
-
-          <View style={[styles.miniStatCard, { backgroundColor: isDark ? colors.newThemeColor : '#F9F9F9', borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#EEE' }]}>
-            <View style={[styles.miniIconBox, { backgroundColor: isDark ? colors.newThemeColor : colors.white, borderColor: isDark ? colors.themeElevationColor : '#EEE' }]}>
-              <AppText style={styles.miniIcon}>📊</AppText>
-            </View>
-            <View style={styles.miniStatContent}>
-              <AppText style={[styles.miniStatLabel, { color: isDark ? '#A0A0A0' : '#666' }]}>Trading Volume</AppText>
-              <AppText style={[styles.miniStatValue, { color: themeColors.text }]}>0 USDT</AppText>
-            </View>
-            <View style={styles.sparklineContainer}>
-              <Svg height="100%" width="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
-                <Path d="M0 25 Q 25 10, 50 25 T 100 5" fill="none" stroke="#EABE53" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* How to Invite Section */}
         <View style={styles.howToInviteContainer}>
           <AppText style={[styles.howToInviteTitle, { color: themeColors.text }]}>
-            How to <AppText style={{ color: '#EABE53' }}>Invite?</AppText>
+            How to <AppText weight={MEDIUM} style={{ color: '#EABE53', fontSize: 24 }}>Invite?</AppText>
           </AppText>
           <AppText style={[styles.howToInviteSub, { color: isDark ? '#A0A0A0' : '#666' }]}>
             Get started with referrals and grow your rewards.
@@ -511,7 +382,7 @@ const ReferAndEarn = () => {
               </View>
               <AppText style={[styles.stepTitle, { color: themeColors.text }]}>Share Your Referral{'\n'}Code or Link</AppText>
               <View style={[styles.stepDivider, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]} />
-              <AppText style={[styles.stepDesc, { color: isDark ? '#A0A0A0' : '#666' }]}>Refer friends to AGCE &{'\n'}get rewarded.</AppText>
+              <AppText style={[styles.stepDesc, { color: isDark ? '#A0A0A0' : '#666' }]}>Refer friends to AGCX &{'\n'}get rewarded.</AppText>
             </View>
 
             {/* Step 2 */}
@@ -752,6 +623,36 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyMedium,
     flex: 1,
     marginRight: 10,
+  },
+  shareLinkSection: {
+    width: '100%',
+    flexDirection: 'column',
+    gap: 10,
+    marginTop: 15,
+  },
+  shareLabel: {
+    fontSize: 12,
+    fontFamily: fontFamilyMedium,
+  },
+  shareInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingLeft: 16,
+    paddingRight: 8,
+  },
+  shareInput: {
+    fontSize: 14,
+    fontFamily: fontFamilyMedium,
+    flex: 1,
+    marginRight: 10,
+  },
+  shareCopyBtn: {
+    width: 36,
+    height: 33,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   copyIcon: {
     fontSize: 16,
@@ -1168,6 +1069,62 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  historyContainer: {
+    paddingHorizontal: 16,
+    marginTop: 30,
+    marginBottom: 10,
+  },
+  historyTitle: {
+    fontSize: 22,
+    fontFamily: fontFamilyBold,
+    marginBottom: 16,
+  },
+  emptyHistoryBox: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  emptyHistoryText: {
+    fontSize: 14,
+    fontFamily: fontFamilyMedium,
+  },
+  historyList: {
+    gap: 12,
+  },
+  historyCard: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  historyRowData: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  historyRowLabel: {
+    fontSize: 14,
+    fontFamily: fontFamilyMedium,
+    color: '#84888C',
+  },
+  historyRowValue: {
+    fontSize: 14,
+    fontFamily: fontFamilyMedium,
+  },
+  kycBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  kycText: {
+    fontSize: 12,
+    fontFamily: fontFamilySemiBold,
+  }
 });
 
 export default ReferAndEarn;

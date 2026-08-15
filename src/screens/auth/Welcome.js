@@ -658,13 +658,13 @@ const Welcome = () => {
           >
             <FastImage source={googleIcon} style={styles.socialIcon} resizeMode="contain" />
           </TouchableOpacity>
-          <TouchableOpacity
+          {Platform.OS === 'ios' && <TouchableOpacity
             style={[styles.socialBtn, { backgroundColor: palette.card, borderColor: palette.border }]}
             onPress={() => { }}
             activeOpacity={0.8}
           >
             <FastImage source={apple} tintColor={isDark ? colors.white : colors.black} style={[styles.socialIcon, {}]} resizeMode="contain" />
-          </TouchableOpacity>
+          </TouchableOpacity>}
         </View>
       </View>
     </AppSafeAreaView>

@@ -120,7 +120,9 @@ const Market = () => {
   const [spotSubCategory, setSpotSubCategory] = useState("All");
   const [alphaSubTab, setAlphaSubTab] = useState("ALL_CHAIN");
   const TAB_KEYS = useMemo(
-    () => ["Favorites", "Spot", "Cryptos", "USD_M_FUTURES", "COIN_M_FUTURES", "OPTIONS", "ALPHA"],
+    () => ["Favorites", "Spot", "Cryptos", "USD_M_FUTURES",
+      // "COIN_M_FUTURES",
+      "OPTIONS", "ALPHA"],
     []
   );
   const activeTabIndex = useMemo(() => Math.max(0, TAB_KEYS.indexOf(activeTab)), [TAB_KEYS, activeTab]);
@@ -168,7 +170,7 @@ const Market = () => {
   useEffect(() => {
     if (route?.params?.tab) {
       const t = route.params.tab;
-      if (["Favorites", "Spot", "Cryptos", "USD_M_FUTURES", "COIN_M_FUTURES", "OPTIONS", "ALPHA"].includes(t)) setActiveTab(t);
+      if (["Favorites", "Spot", "Cryptos", "USD_M_FUTURES", /* "COIN_M_FUTURES", */ "OPTIONS", "ALPHA"].includes(t)) setActiveTab(t);
       else if (t === "Favourite") setActiveTab("Favorites");
       else if (t === "Futures") setActiveTab("USD_M_FUTURES");
       else if (t === "Alpha") setActiveTab("ALPHA");
@@ -340,11 +342,11 @@ const Market = () => {
                 </View>
               )}
 
-              {activeTab === "COIN_M_FUTURES" && (
+              {/* {activeTab === "COIN_M_FUTURES" && (
                 <View style={styles.tabContent}>
                   <MarketPlaceholder message="COIN-M futures markets are not available yet." />
                 </View>
-              )}
+              )} */}
 
               {activeTab === "OPTIONS" && (
                 <View style={styles.tabContent}>

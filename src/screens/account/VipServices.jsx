@@ -63,6 +63,8 @@ const VipServices = () => {
   const TEXT_WHITE = themeColors.text;
   const TEXT_GRAY = themeColors.secondaryText;
 
+  const styles = useMemo(() => getStyles(themeColors, isDark), [themeColors, isDark]);
+
   const renderTierModal = () => {
     if (!selectedTier) return null;
     return (

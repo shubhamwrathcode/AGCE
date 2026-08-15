@@ -129,7 +129,7 @@ const CreateAntiPhishingScreen = ({ route }) => {
   };
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: isDark ? '#121214' : '#FFFFFF', flex: 1 }}>
+    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -174,18 +174,22 @@ const CreateAntiPhishingScreen = ({ route }) => {
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#1C1C1E', marginTop: 8 }]}>
                 Anti-Phishing Code
               </AppText>
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7' }]}>
+              <View style={[styles.inputContainer, {
+                backgroundColor: isDark ? 'transparent' : '#EDEDEE',
+                borderColor: isDark ? themeColors.border : 'transparent',
+                borderWidth: isDark ? 1 : 0
+              }]}>
                 <TextInput
-                  style={[styles.textInput, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
+                  style={[styles.textInput, { color: themeColors.text }]}
                   placeholder="5–8 digits"
-                  placeholderTextColor={isDark ? '#8A8A93' : '#9E9EAE'}
+                  placeholderTextColor={'#84888C'}
                   value={newCodeField}
                   onChangeText={(t) => setNewCodeField(t.replace(/[^0-9]/g, ''))}
                   keyboardType="number-pad"
                   maxLength={8}
                   autoCorrect={false}
                   autoCapitalize="none"
-                  cursorColor={colors.black}
+                  cursorColor={isDark ? colors.white : themeColors.text}
                 />
               </View>
 
@@ -203,12 +207,12 @@ const CreateAntiPhishingScreen = ({ route }) => {
               style={[
                 styles.confirmBtn,
                 {
-                  backgroundColor: isDark ? '#2E2E32' : '#22252A',
+                  backgroundColor: isDark ? colors.white : '#22252A',
                   opacity: isAntiCodeValid ? 1 : 0.5,
                 },
               ]}
             >
-              <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
+              <AppText type={SIXTEEN} weight={BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>
                 Confirm
               </AppText>
             </TouchableOpacity>

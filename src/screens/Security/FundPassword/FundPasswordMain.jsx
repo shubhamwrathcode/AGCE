@@ -86,7 +86,7 @@ const FundPasswordMain = () => {
             weight={MEDIUM}
             style={[styles.stepOneDescText, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
           >
-            For the security of your assets, withdrawals and P2P selling will be temporarily locked for <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.orangeTheme }}>24</AppText> hours after you {hasFundPassword ? "change" : "set"} your fund password.
+            For the security of your assets, withdrawals will be temporarily locked for <AppText type={FOURTEEN} weight={BOLD} style={{ color: colors.orangeTheme }}>24</AppText> hours after you {hasFundPassword ? "change" : "set"} your fund password.
           </AppText>
         </ScrollView>
 

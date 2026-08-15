@@ -273,7 +273,7 @@ const ChangeFundPassword = () => {
 
       {/* Bottom Confirm Button & Unable to Verify Link - Hidden when keyboard is open */}
       {!isKeyboardVisible && (
-        <View style={[styles.bottomContainer, { backgroundColor: isDark ? '#121214' : colors.white }]}>
+        <View style={[styles.bottomContainer, { backgroundColor: isDark ? themeColors.background : colors.white }]}>
           <TouchableOpacity
             style={[styles.confirmBtn, { backgroundColor: isDark ? '#FFFFFF' : '#2A2A2E' }]}
             activeOpacity={0.8}

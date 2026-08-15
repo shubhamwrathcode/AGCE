@@ -475,13 +475,16 @@ const ProfileGridItem = ({ title, iconSource, onPress, themeColors, isDark, item
       />
     </View>
     <AppText
-      numberOfLines={2}
+      numberOfLines={title.includes(" ") ? 2 : 1}
+      adjustsFontSizeToFit={true}
+      minimumFontScale={0.65}
       type={THIRTEEN}
       style={{
         marginTop: 8,
         textAlign: "center",
         color: themeColors.text,
         lineHeight: 16,
+        paddingHorizontal: 1,
       }}
     >
       {title}

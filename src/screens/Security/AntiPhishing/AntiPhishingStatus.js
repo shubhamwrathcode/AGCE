@@ -30,6 +30,7 @@ import AgceGoldCard from './AgceGoldCard';
 import { getAntiPhishingStatus, removeAntiPhishingCode, getPasskeyList } from '../../../actions/accountActions';
 import { showError, showSuccess } from '../../../helper/logger';
 import { Passkey } from 'react-native-passkey';
+import { colors } from '../../../theme/colors';
 
 const AntiPhishingStatus = ({ route }) => {
   const navigation = useNavigation();

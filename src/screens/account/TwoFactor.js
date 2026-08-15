@@ -803,11 +803,11 @@ const TwoFactor = () => {
               <AppText type={FOURTEEN} style={[styles.restrictText, { color: themeColors.secondaryText }]}>
                 {isFund ? (
                   <>
-                    For the security of your assets, withdrawals and P2P selling will be temporarily locked for <AppText weight={BOLD} style={{ color: themeColors.text }}>24 hours</AppText> after you {effectiveHasFundPassword ? 'change' : 'set'} your fund password.
+                    For the security of your assets, withdrawals will be temporarily locked for <AppText weight={BOLD} style={{ color: themeColors.text }}>24 hours</AppText> after you {effectiveHasFundPassword ? 'change' : 'set'} your fund password.
                   </>
                 ) : (
                   <>
-                    For the security of your account, withdrawals and P2P selling will be temporarily locked for <AppText weight={BOLD} style={{ color: themeColors.text }}>24 hours</AppText> after a password change.
+                    For the security of your account, withdrawals will be temporarily locked for <AppText weight={BOLD} style={{ color: themeColors.text }}>24 hours</AppText> after a password change.
                   </>
                 )}
               </AppText>

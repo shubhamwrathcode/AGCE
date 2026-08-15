@@ -203,10 +203,10 @@ const AddPhoneNumberScreen = () => {
         >
           {/* Warnings Box */}
           <View style={[styles.warningBox, { backgroundColor: isDark ? colors.inputBorder : '#F5F5F7' }]}>
-            <FastImage source={warningImg} style={{ width: 18, height: 18, marginTop: 2 }} resizeMode="contain" />
+            <FastImage source={warningImg} tintColor={isDark ? colors.white : colors.black} style={{ width: 18, height: 18, marginTop: 2 }} resizeMode="contain" />
             <View style={styles.warningList}>
               <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
-                1. To protect your account, withdrawals and P2P transactions will be restricted for 24 hours after adding your phone number.
+                1. To protect your account, withdrawals will be restricted for 24 hours after adding your phone number.
               </AppText>
               <AppText type={ELEVEN} style={[styles.warningPoint, { color: themeColors.secondaryText }]}>
                 2. Phone number additions on the primary account will also sync across linked subaccounts.
@@ -218,7 +218,7 @@ const AddPhoneNumberScreen = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: themeColors.text }]}>
             Phone Number
           </AppText>
-          <View style={[styles.phoneInputContainer, { backgroundColor: themeColors.input }]}>
+          <View style={[styles.phoneInputContainer, { backgroundColor: isDark ? 'transparent' : '#EDEDEE', borderColor: isDark ? themeColors.border : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
             <TouchableOpacity style={styles.countryPicker} activeOpacity={0.8}>
               <AppText style={{ fontSize: 18 }}>🇮🇳</AppText>
               <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.countryCode, { color: themeColors.text }]}>
@@ -233,7 +233,7 @@ const AddPhoneNumberScreen = () => {
               keyboardType="number-pad"
               value={newPhone}
               onChangeText={(val) => setNewPhone(val.replace(/\D/g, ''))}
-              cursorColor={colors.black}
+              cursorColor={isDark ? colors.white : colors.black}
             />
           </View>
 
@@ -241,7 +241,7 @@ const AddPhoneNumberScreen = () => {
           <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.fieldLabel, { color: themeColors.text }]}>
             SMS Verification Code
           </AppText>
-          <View style={[styles.inputContainer, { backgroundColor: themeColors.input, flexDirection: 'row', alignItems: 'center' }]}>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? 'transparent' : '#EDEDEE', borderColor: isDark ? themeColors.border : 'transparent', borderWidth: isDark ? 1 : 0, flexDirection: 'row', alignItems: 'center' }]}>
             <TextInput
               style={[styles.textInput, { color: themeColors.text, flex: 1 }]}
               placeholder="Enter the verification code"
@@ -249,7 +249,7 @@ const AddPhoneNumberScreen = () => {
               value={verificationCode}
               onChangeText={setVerificationCode}
               keyboardType="number-pad"
-              cursorColor={colors.black}
+              cursorColor={isDark ? colors.white : colors.black}
               maxLength={6}
             />
             <TouchableOpacity
@@ -276,12 +276,12 @@ const AddPhoneNumberScreen = () => {
         {/* Bottom anchored Confirm Button */}
         <View style={styles.bottomWrapper}>
           <TouchableOpacity
-            style={[styles.confirmButton, { backgroundColor: isDark ? '#2E2E32' : '#2A2A2E' }]}
+            style={[styles.confirmButton, { backgroundColor: isDark ? colors.white : '#2A2A2E' }]}
             activeOpacity={0.8}
             onPress={handleConfirm}
             disabled={isLoading}
           >
-            <AppText type={SIXTEEN} weight={BOLD} style={{ color: '#FFFFFF' }}>
+            <AppText type={SIXTEEN} weight={BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>
               {isLoading ? 'Processing...' : 'Confirm'}
             </AppText>
           </TouchableOpacity>
