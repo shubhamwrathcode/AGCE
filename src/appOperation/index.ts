@@ -55,7 +55,7 @@ export class AppOperation {
     // Ensure no double slashes between base_url and root_path or url
     const baseUrl = this.base_url.endsWith('/') ? this.base_url.slice(0, -1) : this.base_url;
 
-    if (url.startsWith('api/') || url.startsWith('spot/')) {
+    if (url.startsWith('api/') || url.startsWith('spot/') || url.startsWith('user/third-party-login') || url.startsWith('user/third-party-signup')) {
       uri = `${baseUrl}/${url}`;
     } else {
       const rootPath = this.root_path.startsWith('/') ? this.root_path : `/${this.root_path}`;
@@ -89,6 +89,18 @@ export class AppOperation {
       const prefix = token.startsWith('Bearer ') ? '' : 'Bearer ';
       headers['Authorization'] = `${prefix}${token}`;
     }
+
+    try {
+      const { Platform } = require('react-native');
+      const DeviceInfo = require('react-native-device-info');
+      headers['X-Device-Id'] = DeviceInfo.getUniqueIdSync();
+      headers['X-Platform'] = Platform.OS;
+      headers['X-App-Version'] = DeviceInfo.getVersion();
+      console.log("===> DEVICE ID in Headers:", headers['X-Device-Id']);
+    } catch (e) {
+      console.warn('Could not set device headers', e);
+    }
+
     if (extraHeaders && typeof extraHeaders === 'object') {
       Object.assign(headers, extraHeaders);
     }

@@ -127,7 +127,7 @@ const AddWithdrawalAddressVerification = ({
               Send exactly {saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset}.
             </AppText>
             <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, lineHeight: 18, marginTop: 5 }}>
-              The deposit must come from the address you are whitelisting. Send this micro-amount to your AGCE deposit address for {saveAddrWhitelistData?.proof_asset} ({saveAddrWhitelistData?.proof_chain}). Scan the QR code below or copy the address.
+              The deposit must come from the address you are whitelisting. Send this micro-amount to your AGCX deposit address for {saveAddrWhitelistData?.proof_asset} ({saveAddrWhitelistData?.proof_chain}). Scan the QR code below or copy the address.
             </AppText>
           </View>
 
@@ -184,7 +184,7 @@ const AddWithdrawalAddressVerification = ({
 
               <View style={{ width: "100%" }}>
                 <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8, textAlign: 'center' }}>
-                  YOUR AGCE DEPOSIT ADDRESS
+                  YOUR AGCX DEPOSIT ADDRESS
                 </AppText>
                 <View style={{
                   flexDirection: "row",

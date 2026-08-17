@@ -68,7 +68,7 @@ const ADDRESS_BOOK_TOP_EXCHANGES = [
 ];
 
 const ADDRESS_BOOK_EXCHANGE_OTHER = "__OTHER__";
-const ADDRESS_BOOK_DECLARATION_TEXT = "I declare that the information I have provided is true, accurate, and complete and that my transaction complies with AGCE Terms of Use.";
+const ADDRESS_BOOK_DECLARATION_TEXT = "I declare that the information I have provided is true, accurate, and complete and that my transaction complies with AGCX Terms of Use.";
 
 function coinSymbol(coin) {
   return String(
@@ -2493,7 +2493,7 @@ const WithdrawForm = () => {
                 weight={withdrawToTab === "agce_user" ? SEMI_BOLD : MEDIUM}
                 style={{ color: withdrawToTab === "agce_user" ? themeColors.text : themeColors.secondaryText }}
               >
-                AGCE User
+                AGCX User
               </AppText>
               {withdrawToTab === "agce_user" && <View style={{ height: 2, backgroundColor: themeColors.text, width: "100%", marginTop: 6, borderRadius: 1 }} />}
             </TouchableOpacity>
@@ -2711,9 +2711,9 @@ const WithdrawForm = () => {
 
               {agceRecipientTab === "agce" ? (
                 <View style={{}}>
-                  <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>AGCE User ID</AppText>
+                  <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>AGCX User ID</AppText>
                   <Input
-                    placeholder="Recipient's AGCE username or UID"
+                    placeholder="Recipient's AGCX username or UID"
                     value={agceRecipientId}
                     onChangeText={setAgceRecipientId}
                     onBlur={() => setAgceTouched(p => ({ ...p, email: false, phone: false }))}
@@ -2729,14 +2729,12 @@ const WithdrawForm = () => {
                     }}
                   />
                   <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
-                    Payee can find AGCE ID under Top-right Avatar → Dashboard.
+                    Payee can find AGCX ID under Top-right Avatar → Dashboard.
                   </AppText>
                 </View>
               ) : null}
 
-              {/* <AppText type={TEN} color={DISCLAIMTEXT} style={{ marginTop: 14, lineHeight: 16 }}>
-                AGCE User transfers are completed on the web app. On mobile, use the Address tab for on-chain withdrawal.
-              </AppText> */}
+
             </View>
           )}
 
@@ -2791,7 +2789,7 @@ const WithdrawForm = () => {
               </View>
               <View style={{ padding: 10, borderRadius: 12, bottom: 5 }}>
                 <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
-                  * Beware of scams! AGCE will never ask for personal information or private transfers via SMS or email.
+                  * Beware of scams! AGCX will never ask for personal information or private transfers via SMS or email.
                 </AppText>
               </View>
             </View>

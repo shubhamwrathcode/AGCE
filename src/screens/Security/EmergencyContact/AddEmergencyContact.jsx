@@ -343,7 +343,7 @@ const AddEmergencyContact = () => {
           {/* Golden Highlighted Helper Text */}
           <View style={styles.helpTextContainer}>
             <AppText type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
-              Your emergency contact may be notified if unusual account inactivity is detected. For a smoother verification process, it is recommended that your emergency contact is also an <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#D4AF37' }}>AGCE</AppText> user.
+              Your emergency contact may be notified if unusual account inactivity is detected. For a smoother verification process, it is recommended that your emergency contact is also an <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: '#D4AF37' }}>AGCX</AppText> user.
             </AppText>
           </View>
 

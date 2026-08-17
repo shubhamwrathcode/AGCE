@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
-import { clearPending2FA } from "../../slices/authSlice";
+import { clearPending2FA, updatePending2FA } from "../../slices/authSlice";
 import { sendLoginOtp, verifyUser, verifyPasskeyLogin } from "../../actions/authActions";
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN } from "../../navigation/routes";
@@ -57,7 +57,10 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     const baseMethods = pending2FA.availableMethods ?? [];
     const has = (t: number) => baseMethods.some((m: any) => m.type === t);
 
-    if (has(4) && !passkeyCancelled) return 4;
+    const has4 = has(4);
+    console.log('[AuthVerification] getFirstMethod:', { has4, passkeyCancelled, defaultMethod: pending2FA?.defaultMethod });
+    
+    if (has4 && !passkeyCancelled) return 4;
     if (has(2)) return 2;
 
     const signIdStr = String(pending2FA?.loginSignId || '').trim();
@@ -114,6 +117,10 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     console.log("[AuthVerification] Hook 1 triggered. pending2FA:", !!pending2FA);
     if (!pending2FA) return;
 
+    if (pending2FA.verifySubStep === 'methods') {
+      return; // Wait for user to select a method
+    }
+
     const firstMethod = getFirstMethod();
 
     setSelectedAuthMethod(firstMethod);
@@ -126,7 +133,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     } else {
       setResendTimer(0);
     }
-  }, [pending2FA]);
+  }, [pending2FA?.verifySubStep, pending2FA?.loginSignId, pending2FA?.availableMethods]);
 
   // Auto-send OTP when user switches between Email/Phone methods (no need to press Resend).
   useEffect(() => {
@@ -271,6 +278,9 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     winHeight * 0.6
   );
 
+  const isMethodsStep = pending2FA?.verifySubStep === "methods";
+  const completedMethods = pending2FA?.completedMethods || [];
+
   if (!pending2FA) return null;
 
   return (
@@ -293,22 +303,73 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
           <>
             <AppText weight={SEMI_BOLD} type={TWENTY_SIX} style={[styles.title, { color: themeColors.text }]}>
-              {selectedAuthMethod === 4 ? "Passkey Authentication"
-                : selectedAuthMethod === 2 ? "Authenticator Verification"
-                  : (pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId)))
-                    ? "Verify Your Phone"
-                    : "Verify Your Email"}
+              {isMethodsStep
+                ? "Verify your identity"
+                : selectedAuthMethod === 4 ? "Passkey Authentication"
+                  : selectedAuthMethod === 2 ? "Authenticator Verification"
+                    : (pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId)))
+                      ? "Verify Your Phone"
+                      : "Verify Your Email"}
             </AppText>
             <AppText type={TWELVE} style={[styles.description, { color: themeColors.secondaryText }]}>
-              {selectedAuthMethod === 4
-                ? "Authenticate using Face ID, Touch ID, or your device biometrics."
-                : selectedAuthMethod === 2
-                  ? "Enter the 6-digit code from your authenticator app."
-                  : `The verification code has been sent to your ${(pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId))) ? "phone" : "email"} ${getMaskedEmail()}, valid for 10 minutes.`}
+              {isMethodsStep
+                ? (pending2FA.verificationMode === "ALL_REQUIRED" ? "New device: verify every method below to finish sign-in." : "Choose any one method to verify your identity.")
+                : selectedAuthMethod === 4
+                  ? "Authenticate using Face ID, Touch ID, or your device biometrics."
+                  : selectedAuthMethod === 2
+                    ? "Enter the 6-digit code from your authenticator app."
+                    : `The verification code has been sent to your ${(pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId))) ? "phone" : "email"} ${getMaskedEmail()}, valid for 10 minutes.`}
             </AppText>
           </>
 
-          {selectedAuthMethod === 4 ? (
+          {isMethodsStep ? (
+            <View style={{ marginTop: 20 }}>
+              {methodsForOptions.map((method: any) => {
+                const isDone = completedMethods.includes(Number(method.type));
+                return (
+                  <TouchableOpacityView
+                    key={method.type}
+                    onPress={() => {
+                      if (isDone) return;
+                      setSelectedAuthMethod(method.type);
+                      setOtpCode("");
+                      dispatch(updatePending2FA({ verifySubStep: 'code' }));
+                    }}
+                    style={[sheetStyles.optionRow, { borderBottomColor: themeColors.border, opacity: isDone ? 0.6 : 1, paddingVertical: 16 }]}
+                  >
+                    <View style={{ flexDirection: "row", justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <View style={[sheetStyles.optionLeft, { flex: 1 }]}>
+                        {method.type === 2 ? (
+                          <FastImage source={KEY_ICON} style={{ width: 20, height: 20 }} tintColor={themeColors.text} resizeMode="contain" />
+                        ) : typeof getMethodIcon(method.type) === "string" && getMethodIcon(method.type) !== "" ? (
+                          <FastImage source={getMethodIcon(method.type) as any} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                        ) : (
+                          <FastImage source={getMethodIcon(method.type)} resizeMode="contain" style={{ width: 20, height: 20 }} tintColor={themeColors.text} />
+                        )}
+                        <View style={{ marginLeft: 15 }}>
+                          <AppText weight={SEMI_BOLD} type={FOURTEEN_CONST} style={{ color: themeColors.text }}>
+                            {method.label || (method.type === 1 ? "Email OTP" : method.type === 2 ? "Authenticator" : method.type === 3 ? "Mobile OTP" : "Passkey")}
+                          </AppText>
+                          <AppText type={THIRTEEN} style={{ marginTop: 4, color: themeColors.secondaryText }}>
+                            {method.maskedValue || method.description || (method.type === 1 ? "Receive verification codes via email" : method.type === 2 ? "Use Google Authenticator app" : method.type === 3 ? "Receive verification codes via SMS" : "Use Face ID, Touch ID, or Windows Hello")}
+                          </AppText>
+                        </View>
+                      </View>
+                      {isDone ? (
+                        <FastImage source={checkIc} style={{ width: 20, height: 20 }} tintColor={themeColors.text} resizeMode="contain" />
+                      ) : (
+                        <View style={{ borderWidth: 1, borderColor: colors.orangeTheme, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 }}>
+                          <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: colors.orangeTheme }}>
+                            Verify
+                          </AppText>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacityView>
+                );
+              })}
+            </View>
+          ) : selectedAuthMethod === 4 ? (
             <View style={styles.passkeyContainer}>
               <FastImage
                 source={passkey_login}
@@ -386,12 +447,20 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             </>
           )}
 
-          {hasAlternative ? (
-            <TouchableOpacityView onPress={() => optionsSheetRef.current?.open()} style={styles.switchRow}>
+          {hasAlternative && !isMethodsStep ? (
+            <TouchableOpacityView onPress={() => {
+              if (pending2FA.verificationMode === 'ALL_REQUIRED') {
+                dispatch(updatePending2FA({ verifySubStep: 'methods' }));
+              } else {
+                optionsSheetRef.current?.open();
+              }
+            }} style={styles.switchRow}>
               <AppText type={FOURTEEN_CONST} weight={SEMI_BOLD} style={[styles.underlineText, { color: themeColors.text }]}>
-                Switch verification method{' '}
+                {pending2FA.verificationMode === 'ALL_REQUIRED' ? 'Back to methods ' : 'Switch verification method '}
               </AppText>
-              <FastImage source={SHARE_NEW_ICON} style={{ width: 15, height: 15 }} tintColor={themeColors.text} resizeMode="contain" />
+              {pending2FA.verificationMode !== 'ALL_REQUIRED' && (
+                <FastImage source={SHARE_NEW_ICON} style={{ width: 15, height: 15 }} tintColor={themeColors.text} resizeMode="contain" />
+              )}
             </TouchableOpacityView>
           ) : null}
         </ScrollView>

@@ -825,6 +825,35 @@ export default (appOperation: AppOperation) => ({
     if (passkeyUserId) data.passkeyUserId = passkeyUserId;
     return appOperation.post('security/passkey/delete', data, CUSTOMER_TYPE);
   },
+  
+  // --- Device & Session Management ---
+  listDevices: () =>
+    appOperation.get('security/devices', undefined, undefined, CUSTOMER_TYPE),
+  listSessions: () =>
+    appOperation.get('security/sessions', undefined, undefined, CUSTOMER_TYPE),
+  trustDevice: (deviceId: string) =>
+    appOperation.post(`security/devices/${encodeURIComponent(deviceId)}/trust`, { device_id: deviceId }, CUSTOMER_TYPE),
+  untrustDevice: (deviceId: string) =>
+    appOperation.post(`security/devices/${encodeURIComponent(deviceId)}/untrust`, { device_id: deviceId }, CUSTOMER_TYPE),
+  removeDevice: (deviceId: string) =>
+    appOperation.post(`security/devices/${encodeURIComponent(deviceId)}/remove`, { device_id: deviceId }, CUSTOMER_TYPE),
+  bindDeviceIp: (deviceId: string) =>
+    appOperation.post(`security/devices/${encodeURIComponent(deviceId)}/bind-ip`, { device_id: deviceId }, CUSTOMER_TYPE),
+  unbindDeviceIp: (deviceId: string) =>
+    appOperation.post(`security/devices/${encodeURIComponent(deviceId)}/unbind-ip`, { device_id: deviceId }, CUSTOMER_TYPE),
+  blockDevice: (deviceId: string, body: any) =>
+    appOperation.post(`security/devices/${encodeURIComponent(deviceId)}/block`, body, CUSTOMER_TYPE),
+  unblockDevice: (deviceId: string) =>
+    appOperation.post(`security/devices/${encodeURIComponent(deviceId)}/unblock`, { device_id: deviceId }, CUSTOMER_TYPE),
+  bindSessionIp: (sessionId: string) =>
+    appOperation.post(`security/sessions/${encodeURIComponent(sessionId)}/bind-ip`, {}, CUSTOMER_TYPE),
+  unbindSessionIp: (sessionId: string) =>
+    appOperation.post(`security/sessions/${encodeURIComponent(sessionId)}/unbind-ip`, {}, CUSTOMER_TYPE),
+  revokeSession: (sessionId: string) =>
+    appOperation.post(`security/sessions/${encodeURIComponent(sessionId)}/revoke`, {}, CUSTOMER_TYPE),
+  revokeOtherSessions: () =>
+    appOperation.post('security/sessions/revoke-others', {}, CUSTOMER_TYPE),
+
   /** Same as web: POST security/mobile/add — base fields + optional identity (emailOtp | tofaCode | passkey…) */
   securityMobileAdd: (data: {
     mobileNumber: string;

@@ -289,7 +289,7 @@ const TwoFactor = () => {
   const emailId = userData?.emailId ?? userData?.email_id ?? '';
   const hasEmail = !!emailId;
   const hasMobile = !!profileMobile;
-  const hasGoogleAuth = current2fa === 2;
+  const hasGoogleAuth = current2fa === 2 || !!(userData?.totp || userData?.TOTP || userData?.google_authenticator || userData?.googleAuthenticator || userData?.isTotp || userData?.totp_enabled);
 
   const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
   const effectiveHasFundPassword =

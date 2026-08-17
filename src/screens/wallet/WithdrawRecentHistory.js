@@ -214,7 +214,7 @@ const WithdrawRecentHistory = ({
           onPress={() => onTabChange("agce")}
           style={[styles.tabPill, activeTab === "agce" && styles.tabPillActive]}
         >
-          <AppText weight={activeTab === "agce" ? SEMI_BOLD : MEDIUM} type={FOURTEEN} style={{ color: activeTab === "agce" ? themeColors.text : themeColors.secondaryText }}>AGCE user</AppText>
+          <AppText weight={activeTab === "agce" ? SEMI_BOLD : MEDIUM} type={FOURTEEN} style={{ color: activeTab === "agce" ? themeColors.text : themeColors.secondaryText }}>AGCX user</AppText>
         </TouchableOpacity>
       </View>
 

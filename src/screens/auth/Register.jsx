@@ -265,7 +265,7 @@ const Register = () => {
       console.log("Google tokens:", tokens);
 
       let data = {
-        Token: tokens?.idToken || account?.data?.idToken,
+        Token: tokens?.accessToken || tokens?.idToken || account?.data?.idToken,
         type: 'google',
         referral_code: referCode || '',
       };

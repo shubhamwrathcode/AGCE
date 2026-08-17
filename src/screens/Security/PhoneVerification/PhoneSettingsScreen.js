@@ -122,19 +122,21 @@ const PhoneSettingsScreen = () => {
             activeOpacity={0.7}
             onPress={async () => {
               const methods = [];
+              const hasEmail = !!(userData?.emailId || userData?.email);
+              const hasMobile = userHasPhone;
+              const hasGA = Number(userData?.['2fa']) === 2 || userData?.twoFaEnabled === true;
+
               if (hasPasskey && passkeySupported) {
                 methods.push('passkey');
               }
-              const hasGoogleAuth = Number(userData?.['2fa']) === 2 || userData?.twoFaEnabled === true;
-              if (hasGoogleAuth) {
-                methods.push('totp');
-              }
-              const hasEmail = !!(userData?.emailId || userData?.email);
               if (hasEmail) {
                 methods.push('email');
               }
-              if (userHasPhone) {
+              if (hasMobile) {
                 methods.push('mobile');
+              }
+              if (hasGA) {
+                methods.push('totp');
               }
               if (methods.length === 0) {
                 methods.push('email');

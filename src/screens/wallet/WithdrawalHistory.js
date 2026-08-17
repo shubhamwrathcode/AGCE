@@ -196,7 +196,7 @@ const WithdrawalHistory = () => {
             type={SIXTEEN}
             style={{ color: activeTab === "agce" ? themeColors.text : themeColors.secondaryText }}
           >
-            AGCE user
+            AGCX user
           </AppText>
           {activeTab === "agce" && <View style={[styles.activeIndicator, { backgroundColor: themeColors.text }]} />}
         </TouchableOpacity>

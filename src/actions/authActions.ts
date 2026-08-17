@@ -425,6 +425,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
         loginSignId: signId,
         availableMethods: methods,
         defaultMethod: defaultMethod,
+        verifySubStep: 'methods',
         data: d,
       }));
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -438,6 +439,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
         loginSignId: signId,
         availableMethods: methods,
         defaultMethod: defaultMethod,
+        verifySubStep: 'methods',
         data: d?.['2fa'] === 2 ? data : d,
       }));
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -500,6 +502,7 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
           loginSignId: signId,
           availableMethods: methods,
           defaultMethod: defaultMethod,
+          verifySubStep: 'methods',
           data: d,
         }));
         NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -689,6 +692,7 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
     }
     dispatch(setLoading(true));
     const optionsRes: any = await appOperation.guest.passkeyGetAuthOptions(signId);
+    console.log('[Passkey] optionsRes:', JSON.stringify(optionsRes));
     if (!optionsRes?.success || !optionsRes?.data) {
       if (!silent) showError(optionsRes?.message || 'Failed to get passkey options');
       return false;
@@ -698,6 +702,7 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
     const challengeForNative = maybeBase64ToBase64Url(rawChallenge);
     // Web parity: prefer server-provided rpId. Only fall back to configured RP ID if missing.
     const rpIdFromServer = String(opts.rpId || opts.rp?.id || '').trim();
+    console.log('[Passkey] rpIdFromServer:', rpIdFromServer, 'PASSKEY_RP_ID:', PASSKEY_RP_ID);
     if (isRpIdMismatchForAndroid(rpIdFromServer)) {
       console.warn('[Passkey][verifyPasskeyLogin] rpId mismatch - skipping native prompt', {
         server: rpIdFromServer,

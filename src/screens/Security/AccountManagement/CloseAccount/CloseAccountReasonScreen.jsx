@@ -102,7 +102,7 @@ const CloseAccountReasonScreen = () => {
   }, []);
 
   const userData = useAppSelector((state) => state.auth?.userData);
-  const userName = userData?.userName || 'AGCEUser';
+  const userName = userData?.userName || 'AGCXUser';
   const uid = userData?.id || 'UID:52444419';
 
   const handleBack = () => {
@@ -202,21 +202,21 @@ const CloseAccountReasonScreen = () => {
   const renderStep3 = () => (
     <View style={styles.scrollContent}>
       <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={[styles.titleCentered, { color: themeColors.text }]}>
-        AGCE Account Deregistration{'\n'}Terms and Conditions
+        AGCX Account Deregistration{'\n'}Terms and Conditions
       </AppText>
 
       <AppText type={TWELVE} weight={MEDIUM} style={[styles.termsText, { color: isDark ? '#8A8A93' : '#8E8E93' }]}>
-        ACCOUNT OPENED WITH AGCE, YOU MUST CAREFULLY READ THE TERMS AND CONDITIONS IN ITS ENTIRELY CONTEMPLATED HEREOF.{'\n\n'}
-        This AGCE Account Deregistration Terms and Conditions ("Terms") applies to all users who wishes to, requests or applies to deregister or cancel its account ("AGCE Account") opened or registered with or on the Sites of AGCE ("AGCE", "we", "our", "us", "ours"). By submitting an application or request for or proceeding with the deregistration and cancellation of your AGCE Account, you will be deemed to have fully read, understood and expressly agreed and consented to the Terms.{'\n\n'}
-        The Terms shall be supplemental to and constitute part of the AGCE User Agreement (available at https://www.agce.com/zh/user-agreement) ("User Agreement") and should be read in conjunction with such User Agreement. Therefore, unless otherwise stated in this Agreement, the capitalized terms used in this Agreement shall have the same meaning given to them under the User Agreement. Where a term is defined both in the Terms and the User Agreement, for the purposes of these Terms only, the definition in these Terms shall prevail.{'\n\n'}
+        ACCOUNT OPENED WITH AGCX, YOU MUST CAREFULLY READ THE TERMS AND CONDITIONS IN ITS ENTIRELY CONTEMPLATED HEREOF.{'\n\n'}
+        This AGCX Account Deregistration Terms and Conditions ("Terms") applies to all users who wishes to, requests or applies to deregister or cancel its account ("AGCX Account") opened or registered with or on the Sites of AGCX ("AGCX", "we", "our", "us", "ours"). By submitting an application or request for or proceeding with the deregistration and cancellation of your AGCX Account, you will be deemed to have fully read, understood and expressly agreed and consented to the Terms.{'\n\n'}
+        The Terms shall be supplemental to and constitute part of the AGCX User Agreement (available at https://www.AGCX.com/zh/user-agreement) ("User Agreement") and should be read in conjunction with such User Agreement. Therefore, unless otherwise stated in this Agreement, the capitalized terms used in this Agreement shall have the same meaning given to them under the User Agreement. Where a term is defined both in the Terms and the User Agreement, for the purposes of these Terms only, the definition in these Terms shall prevail.{'\n\n'}
       </AppText>
 
       <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 10 }}>
-        1 DEREGISTRATION OF YOUR AGCE ACCOUNT
+        1 DEREGISTRATION OF YOUR AGCX ACCOUNT
       </AppText>
       <AppText type={TWELVE} weight={MEDIUM} style={[styles.termsText, { color: isDark ? '#8A8A93' : '#8E8E93' }]}>
-        (a) You may request or apply to cancel and deregister your AGCE Account ("Account Deregistration") by submitting a request and following instructions on relevant pages in the "Security Centre" of your account.{'\n\n'}
-        (b) You must input your password of your AGCE Account and provide all other information or take other verification procedures such as Face ID required by us for security verification purposes before proceeding to the next step of deregistration.{'\n\n'}
+        (a) You may request or apply to cancel and deregister your AGCX Account ("Account Deregistration") by submitting a request and following instructions on relevant pages in the "Security Centre" of your account.{'\n\n'}
+        (b) You must input your password of your AGCX Account and provide all other information or take other verification procedures such as Face ID required by us for security verification purposes before proceeding to the next step of deregistration.{'\n\n'}
         (c) Before completing the deregistration process, you must ensure that all assets, open orders, and pending transactions in your account have been fully cleared.
       </AppText>
     </View>
@@ -259,7 +259,7 @@ const CloseAccountReasonScreen = () => {
           'You will not be able to recover this account.',
           'You will no longer be able to log in to this account or its subaccounts.',
           'The trading functions of this account and its subaccounts will be disabled.',
-          'Your AGCE Card will be closed and can no longer be used.',
+          'Your AGCX Card will be closed and can no longer be used.',
           'The authorized devices for this account will be removed automatically.',
           'All pending withdrawals, deposits, and transactions associated with this account will be permanently canceled.',
           'Rewards, bonuses, and promotional benefits linked to this account will expire immediately after account closure.'
@@ -278,7 +278,7 @@ const CloseAccountReasonScreen = () => {
           {agreed && <AppText type={TWELVE} style={{ color: isDark ? colors.black : colors.white, textAlign: 'center', }}>✓</AppText>}
         </View>
         <AppText type={TWELVE} weight={MEDIUM} style={[styles.checkboxText, { color: isDark ? '#8A8A93' : '#8E8E93' }]}>
-          I agree to relinquish all remaining assets in this account and confirm that I fully waive and release any claims. I will not hold AGCE responsible for any account closure or loss of balance.
+          I agree to relinquish all remaining assets in this account and confirm that I fully waive and release any claims. I will not hold AGCX responsible for any account closure or loss of balance.
         </AppText>
       </TouchableOpacity>
     </View>

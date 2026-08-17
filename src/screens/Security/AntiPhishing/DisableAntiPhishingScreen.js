@@ -268,7 +268,7 @@ const DisableAntiPhishingScreen = ({ route }) => {
               <AgceGoldCard code={maskCode(currentCode)} isDark={isDark} />
 
               <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
-                This code identifies official AGCE emails.
+                This code identifies official AGCX emails.
               </AppText>
 
               {/* Current Code */}

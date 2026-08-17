@@ -8,7 +8,6 @@ import { AppSafeAreaView, AppText, Button, ELEVEN, FIFTEEN, FOURTEEN, Input, MED
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
-import Toast from "react-native-simple-toast";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   googleLogin,
@@ -138,7 +137,7 @@ const Login = (): JSX.Element => {
       console.log("Google tokens:", tokens);
 
       let data = {
-        Token: tokens?.idToken || account?.data?.idToken,
+        Token: tokens?.accessToken || tokens?.idToken || account?.data?.idToken,
         type: 'google',
       };
 
@@ -316,9 +315,12 @@ const Login = (): JSX.Element => {
     const normalizedId = getNormalizedLoginId();
 
     // Web Parity: If Passkey is supported, attempt silent passkey login before showing password
+    console.log('[Login] onNext called, Passkey.isSupported:', Passkey.isSupported());
     if (Passkey.isSupported()) {
       setIsPasskeySignInInProgress(true);
+      console.log('[Login] Attempting verifyPasskeyLogin(silent=true)...');
       const passkeyResult = await dispatch(verifyPasskeyLogin(normalizedId, true));
+      console.log('[Login] verifyPasskeyLogin result:', passkeyResult);
       setIsPasskeySignInInProgress(false);
       if (passkeyResult) {
         // Successful passkey login, ensure flag cleared
@@ -326,6 +328,7 @@ const Login = (): JSX.Element => {
         return; // Login completed via passkey
       } else {
         // Passkey login failed or cancelled – remember cancellation
+        console.log('[Login] Setting passkeyCancelled to true');
         dispatch(setPasskeyCancelled(true));
       }
     }

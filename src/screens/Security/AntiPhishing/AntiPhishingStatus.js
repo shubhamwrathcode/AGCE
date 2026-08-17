@@ -122,9 +122,9 @@ const AntiPhishingStatus = ({ route }) => {
     if (hasPasskey && passkeySupported) {
       methods.push('passkey');
     }
-    if (hasGA) methods.push('totp');
     if (hasEmail) methods.push('email');
     if (hasMobile) methods.push('mobile');
+    if (hasGA) methods.push('totp');
     if (methods.length === 0) methods.push('email');
 
     navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
@@ -253,7 +253,7 @@ const AntiPhishingStatus = ({ route }) => {
                   </AppText>
                 ) : (
                   <AppText type={TWELVE} style={[styles.validText, { color: themeColors.secondaryText, marginTop: 10, marginBottom: 10 }]}>
-                    This code identifies official AGCE emails.
+                    This code identifies official AGCX emails.
                   </AppText>
                 )}
 
@@ -320,7 +320,7 @@ const AntiPhishingStatus = ({ route }) => {
                     weight={NORMAL}
                     style={[styles.description, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
                   >
-                    You can create your own anti-phishing code to appear in official AGCE emails and SMS messages. This feature helps you verify the authenticity of communications from AGCE.
+                    You can create your own anti-phishing code to appear in official AGCX emails and SMS messages. This feature helps you verify the authenticity of communications from AGCX.
                   </AppText>
                 </View>
               </View>

@@ -469,9 +469,9 @@ const DepositCoin = () => {
 
     const faqData = [
         {
-            title: "How do I deposit crypto on AGCE?",
+            title: "How do I deposit crypto on AGCX?",
             content:
-                "Select a coin and network, generate your Fireblocks deposit address, then send funds to that address from your external wallet. The network you select on AGCE must match the network you use to send—wrong network can result in loss of funds."
+                "Select a coin and network, generate your Fireblocks deposit address, then send funds to that address from your external wallet. The network you select on AGCX must match the network you use to send—wrong network can result in loss of funds."
         },
         {
             title: "Deposit crypto — step by step",
@@ -481,7 +481,7 @@ const DepositCoin = () => {
         {
             title: "My deposit hasn't arrived — what should I do?",
             content:
-                "• Check Tx — On a block explorer, confirm the transaction is successful.\n• Match network — The sending network must be the one you selected on AGCE.\n• Correct address — Re-check the full deposit address.\n• Wait — Congestion can delay confirmations."
+                "• Check Tx — On a block explorer, confirm the transaction is successful.\n• Match network — The sending network must be the one you selected on AGCX.\n• Correct address — Re-check the full deposit address.\n• Wait — Congestion can delay confirmations."
         }
     ];
 

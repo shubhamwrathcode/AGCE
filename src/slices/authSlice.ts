@@ -5,6 +5,12 @@ export type Pending2FA = {
   availableMethods: any[];
   defaultMethod: number;
   data: any;
+  challengeId?: string;
+  tempToken?: string;
+  verificationMode?: string;
+  completedMethods?: number[];
+  remainingMethods?: any[];
+  verifySubStep?: 'methods' | 'code';
 } | null;
 
 export const initialState = {
@@ -44,6 +50,11 @@ export const authSlice = createSlice({
     setPending2FA: (state, { payload }: { payload: Pending2FA }) => {
       state.pending2FA = payload;
     },
+    updatePending2FA: (state, { payload }: { payload: Partial<NonNullable<Pending2FA>> }) => {
+      if (state.pending2FA) {
+        state.pending2FA = { ...state.pending2FA, ...payload };
+      }
+    },
     clearPending2FA: (state) => {
       state.pending2FA = null;
     },
@@ -52,6 +63,6 @@ export const authSlice = createSlice({
     },
   },
 });
-export const { setLoading, setLoadingOtp, setUserData, setTheme, setAppVersion, setPending2FA, clearPending2FA, setPasskeyCancelled } = authSlice.actions;
+export const { setLoading, setLoadingOtp, setUserData, setTheme, setAppVersion, setPending2FA, updatePending2FA, clearPending2FA, setPasskeyCancelled } = authSlice.actions;
 // export const authSelector = state => state.auth;
 export const authReducer = authSlice.reducer;

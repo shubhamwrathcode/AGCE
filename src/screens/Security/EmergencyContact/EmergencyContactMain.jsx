@@ -240,7 +240,7 @@ const EmergencyContactMain = () => {
               weight={MEDIUM}
               style={[styles.mainSubtitle, { color: themeColors.secondaryText }]}
             >
-              At AGCE, the security of your digital assets remains our highest priority. The Emergency Contact feature is designed to help protect your account by allowing us to send email and SMS notifications to you and your trusted contacts if your account becomes inactive for an extended period. Your selected emergency contacts may also request account access support or initiate an inheritance claim process when necessary.
+              AGCX, the security of your digital assets remains our highest priority. The Emergency Contact feature is designed to help protect your account by allowing us to send email and SMS notifications to you and your trusted contacts if your account becomes inactive for an extended period. Your selected emergency contacts may also request account access support or initiate an inheritance claim process when necessary.
             </AppText>
           </ScrollView>
         ) : (

@@ -110,9 +110,9 @@ const CreateAntiPhishingScreen = ({ route }) => {
     const hasEmail = !!(userData?.emailId || userData?.email);
     const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
     const methods = [];
-    if (hasGA) methods.push('totp');
     if (hasEmail) methods.push('email');
     if (hasMobile) methods.push('mobile');
+    if (hasGA) methods.push('totp');
     if (methods.length === 0) methods.push('email');
 
     // Navigate to SecurityVerification — it will come back to this screen with OTP codes

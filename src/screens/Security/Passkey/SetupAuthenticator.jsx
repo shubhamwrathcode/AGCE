@@ -117,7 +117,7 @@ const SetupAuthenticator = ({ route }) => {
             </View>
             <View style={[styles.stepContent]}>
               <AppText type={THIRTEEN} weight={MEDIUM} style={[styles.stepText, { color: themeColors.text }]}>
-                Return to AGCE and enter the 6-digit verification code generated in your authenticator app.
+                Return to AGCX and enter the 6-digit verification code generated in your authenticator app.
               </AppText>
 
               <View style={[styles.inputContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>

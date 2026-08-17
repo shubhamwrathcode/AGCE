@@ -415,8 +415,8 @@ const WithdrawalSettingsScreen = () => {
               const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true;
               const hasEmail = !!(userData?.emailId || userData?.email);
               const methods = [];
-              if (hasGA) methods.push('totp');
               if (hasEmail) methods.push('email');
+              if (hasGA) methods.push('totp');
               if (methods.length === 0) methods.push('email');
 
               navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {
@@ -455,9 +455,9 @@ const WithdrawalSettingsScreen = () => {
               const hasEmail = !!(userData?.emailId || userData?.email);
               const hasMobile = !!(userData?.mobileNumber || userData?.mobile_number);
               const methods = [];
-              if (hasGA) methods.push('totp');
               if (hasEmail) methods.push('email');
               if (hasMobile) methods.push('mobile');
+              if (hasGA) methods.push('totp');
               if (methods.length === 0) methods.push('email');
 
               navigation.navigate(routes.PASSKEY_SECURITY_VERIFICATION_SCREEN, {

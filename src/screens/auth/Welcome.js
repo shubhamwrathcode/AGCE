@@ -312,7 +312,7 @@ const Welcome = () => {
       const tokens = await GoogleSignin.getTokens();
 
       let data = {
-        Token: tokens?.idToken || account?.data?.idToken,
+        Token: tokens?.accessToken || tokens?.idToken || account?.data?.idToken,
         type: 'google',
       };
 
