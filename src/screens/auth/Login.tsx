@@ -26,6 +26,7 @@ import { apple, googleIcon, passkey_login } from "../../helper/ImageAssets";
 import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/components";
 import NavigationService from "../../navigation/NavigationService";
 import { colors } from "../../theme/colors";
+import { appOperation } from "../../appOperation";
 
 const Login = (): JSX.Element => {
   const dispatch = useAppDispatch();
@@ -79,7 +80,7 @@ const Login = (): JSX.Element => {
     try {
       GoogleSignin.configure({
         webClientId:
-          "512474198099-lbg03gjaesa8n6vhf73c5t9f9j55t7tf.apps.googleusercontent.com",
+          "79105712683-trmuln9ls862v3amdlpn4uu2tam5n07d.apps.googleusercontent.com",
         offlineAccess: true,
         forceCodeForRefreshToken: true,
       });
@@ -313,6 +314,36 @@ const Login = (): JSX.Element => {
       }
     }
     const normalizedId = getNormalizedLoginId();
+    const identifierKind = index === 1 ? "phone" : normalizedId.includes("@") ? "email" : "username";
+
+    dispatch(setLoading(true));
+    try {
+      const loginCheck: any = await appOperation.guest.checkIdentifier({
+        identifier: normalizedId,
+        kind: identifierKind,
+        purpose: "login",
+        countryCode: index === 1 ? (countryCode?.[0] ? `+${countryCode[0]}` : "+91") : undefined,
+      });
+
+      if (loginCheck.success === false && loginCheck.code === "ACCOUNT_NOT_FOUND") {
+        setIdentifierError(true);
+        showError(loginCheck.message || "No account found. Please create an account to continue.");
+        dispatch(setLoading(false));
+        return;
+      }
+      if (loginCheck.success === false) {
+        setIdentifierError(true);
+        showError(loginCheck.message || "Could not verify account. Please try again.");
+        dispatch(setLoading(false));
+        return;
+      }
+    } catch (e: any) {
+      setIdentifierError(true);
+      showError(e?.message || "Could not verify account. Please try again.");
+      dispatch(setLoading(false));
+      return;
+    }
+    dispatch(setLoading(false));
 
     // Web Parity: If Passkey is supported, attempt silent passkey login before showing password
     console.log('[Login] onNext called, Passkey.isSupported:', Passkey.isSupported());

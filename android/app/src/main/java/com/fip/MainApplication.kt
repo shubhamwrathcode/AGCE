@@ -1,4 +1,4 @@
-package com.agce.exchange
+package com.agcx.exchange
 
 import android.app.Application
 import com.facebook.react.PackageList

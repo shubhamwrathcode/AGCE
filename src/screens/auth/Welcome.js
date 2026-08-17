@@ -135,7 +135,7 @@ const Welcome = () => {
     try {
       GoogleSignin.configure({
         webClientId:
-          "512474198099-lbg03gjaesa8n6vhf73c5t9f9j55t7tf.apps.googleusercontent.com",
+          "79105712683-trmuln9ls862v3amdlpn4uu2tam5n07d.apps.googleusercontent.com",
         offlineAccess: true,
         forceCodeForRefreshToken: true,
       });

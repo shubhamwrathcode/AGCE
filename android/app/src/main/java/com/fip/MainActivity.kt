@@ -1,4 +1,4 @@
-package com.agce.exchange
+package com.agcx.exchange
 
 import android.os.Bundle
 import androidx.core.view.WindowCompat
@@ -13,7 +13,7 @@ class MainActivity : ReactActivity() {
    * Returns the name of the main component registered from JavaScript. This is used to schedule
    * rendering of the component.
    */
-  override fun getMainComponentName(): String = "AGCE"
+  override fun getMainComponentName(): String = "AGCX"
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)

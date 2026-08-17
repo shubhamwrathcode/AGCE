@@ -23,6 +23,23 @@ export default (appOperation: AppOperation) => ({
     if (ref) params.referral_code = ref;
     return appOperation.post('user/check-signup-email', params, GUEST_TYPE);
   },
+  checkIdentifier: (data: { identifier: string; kind: string; purpose?: string; countryCode?: string; referralCode?: string }) => {
+    const purposeNorm = String(data.purpose || 'signup').trim().toLowerCase() === 'login' ? 'login' : 'signup';
+    const kindNorm = String(data.kind || '').trim().toLowerCase();
+    const params: Record<string, any> = { purpose: purposeNorm, kind: kindNorm };
+
+    if (kindNorm === 'phone') {
+      params.phone = String(data.identifier || '').replace(/\D/g, '').replace(/^0+/, '');
+      params.country_code = String(data.countryCode || '+91').trim();
+    } else {
+      params.email = String(data.identifier || '').trim();
+    }
+
+    const ref = String(data.referralCode || '').trim();
+    if (purposeNorm === 'signup' && ref) params.referral_code = ref;
+    
+    return appOperation.post('user/check-signup-email', params, GUEST_TYPE);
+  },
   login: (data: LoginProps) =>
     appOperation.post('user/login', data, GUEST_TYPE),
   google_login: (data: LoginProps) =>

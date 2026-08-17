@@ -83,9 +83,9 @@ android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
-    namespace "com.agce.exchange"
+    namespace "com.agcx.exchange"
     defaultConfig {
-        applicationId "com.agce.exchange"
+        applicationId "com.agcx.exchange"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
