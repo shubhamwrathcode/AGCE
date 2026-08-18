@@ -40,7 +40,7 @@ export default (appOperation: AppOperation) => ({
     appOperation.get(`user/launchpad/user_project_total_commits/${data}`, undefined, undefined, CUSTOMER_TYPE),
   banner_list: () =>
     appOperation.get('admin/banner_list', undefined, undefined, CUSTOMER_TYPE),
-  
+
   // --- Options Endpoints ---
   optionsWallet: () =>
     appOperation.get('options/wallet', undefined, undefined, CUSTOMER_TYPE),
@@ -220,22 +220,22 @@ export default (appOperation: AppOperation) => ({
   marginBorrowHistory: (opts?: { pairId?: string; from?: string; to?: string; page?: number; limit?: number }) => {
     const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 100) });
     if (opts?.pairId) p.append("pairId", opts.pairId);
-    if (opts?.from)   p.append("from", opts.from);
-    if (opts?.to)     p.append("to", opts.to);
+    if (opts?.from) p.append("from", opts.from);
+    if (opts?.to) p.append("to", opts.to);
     return appOperation.get(`margin/history/borrow?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
   },
   marginRepayHistory: (opts?: { pairId?: string; from?: string; to?: string; page?: number; limit?: number }) => {
     const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 100) });
     if (opts?.pairId) p.append("pairId", opts.pairId);
-    if (opts?.from)   p.append("from", opts.from);
-    if (opts?.to)     p.append("to", opts.to);
+    if (opts?.from) p.append("from", opts.from);
+    if (opts?.to) p.append("to", opts.to);
     return appOperation.get(`margin/history/repay?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
   },
   marginInterestHistory: (opts?: { pairId?: string; from?: string; to?: string; page?: number; limit?: number }) => {
     const p = new URLSearchParams({ page: String(opts?.page ?? 1), limit: String(opts?.limit ?? 100) });
     if (opts?.pairId) p.append("pairId", opts.pairId);
-    if (opts?.from)   p.append("from", opts.from);
-    if (opts?.to)     p.append("to", opts.to);
+    if (opts?.from) p.append("from", opts.from);
+    if (opts?.to) p.append("to", opts.to);
     return appOperation.get(`margin/history/interest?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
   },
   cross_transfer: (data: any) =>
@@ -706,8 +706,8 @@ export default (appOperation: AppOperation) => ({
   placeOptionOrder: (data: any, idempotencyKey?: string) =>
     idempotencyKey
       ? appOperation.post('options/order', data, CUSTOMER_TYPE, {
-          'Idempotency-Key': String(idempotencyKey),
-        })
+        'Idempotency-Key': String(idempotencyKey),
+      })
       : appOperation.post('options/order', data, CUSTOMER_TYPE),
   getExpiryDates: (data: any) =>
     appOperation.get(`options/contractDates?underlying=${data}`, undefined, undefined, CUSTOMER_TYPE),
@@ -825,7 +825,7 @@ export default (appOperation: AppOperation) => ({
     if (passkeyUserId) data.passkeyUserId = passkeyUserId;
     return appOperation.post('security/passkey/delete', data, CUSTOMER_TYPE);
   },
-  
+
   // --- Device & Session Management ---
   listDevices: () =>
     appOperation.get('security/devices', undefined, undefined, CUSTOMER_TYPE),
@@ -1134,4 +1134,12 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('security/update-two-login-2-step', data, CUSTOMER_TYPE),
   securitySendOtpForTwoLogin2Step: (security_methods: string) =>
     appOperation.post('security/send-otp-for-two-login-2-step', { security_methods }, CUSTOMER_TYPE),
+
+  // Customer Due Diligence (CDD) endpoints
+  cddGetSchema: () =>
+    appOperation.get('cdd/schema', undefined, undefined, CUSTOMER_TYPE),
+  cddGetProfile: () =>
+    appOperation.get('cdd/profile', undefined, undefined, CUSTOMER_TYPE),
+  cddSubmit: (data: any) =>
+    appOperation.put('cdd', data, CUSTOMER_TYPE),
 });

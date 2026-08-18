@@ -116,11 +116,19 @@ export const getUserProfile =
           dispatch(setLoading(true));
         }
         const response: any = await appOperation.customer.get_profile();
+        const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
+        const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
+
         if (response?.success) {
           dispatch(setUserData(response?.data));
           dispatch(setCurrency(response?.data?.currency_prefrence));
-          isNavigate ? NavigationService.goBack() : null;
-          isHome ? NavigationService.reset(NAVIGATION_BOTTOM_TAB_STACK) : null;
+
+          if (shouldForceCddOnboarding(response?.data, true)) {
+            NavigationService.reset(ONBOARDING_CDD_SCREEN);
+          } else {
+            isNavigate ? NavigationService.goBack() : null;
+            isHome ? NavigationService.reset(NAVIGATION_BOTTOM_TAB_STACK) : null;
+          }
         } else if (!response?.success || response?.code === 401) {
           NavigationService.reset(NAVIGATION_AUTH_STACK);
         }
@@ -176,7 +184,7 @@ export const editUserAvatar =
       } else {
         showError(response?.message || "Failed to update profile picture");
       }
-    } catch (e) {
+    } catch (e: any) {
 
       showError(e?.message);
 
@@ -199,7 +207,7 @@ export const editEmail =
       } else {
         showError(response?.message || "Failed to update");
       }
-    } catch (e) {
+    } catch (e: any) {
 
       showError(e?.message);
 
@@ -223,7 +231,7 @@ export const editPhone =
       } else {
         showError(response?.message || "Failed to update");
       }
-    } catch (e) {
+    } catch (e: any) {
 
       showError(e?.message);
 
@@ -247,7 +255,7 @@ export const editName =
       } else {
         showError(response?.message || "Failed to update");
       }
-    } catch (e) {
+    } catch (e: any) {
 
       showError(e?.message);
 
@@ -272,7 +280,7 @@ export const editNominee =
       } else {
         showError(response?.message || "Failed to update");
       }
-    } catch (e) {
+    } catch (e: any) {
 
       showError(e?.message);
 
@@ -294,7 +302,7 @@ export const editUserProfile =
       } else {
         showError(response?.message);
       }
-    } catch (e) {
+    } catch (e: any) {
 
       showError(e?.message);
 
@@ -823,7 +831,7 @@ export const updateBankAccount =
       } else {
         showError(response?.message);
       }
-    } catch (e) {
+    } catch (e: any) {
       logger(e);
       showError(e?.message);
     } finally {

@@ -59,7 +59,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
     const has4 = has(4);
     console.log('[AuthVerification] getFirstMethod:', { has4, passkeyCancelled, defaultMethod: pending2FA?.defaultMethod });
-    
+
     if (has4 && !passkeyCancelled) return 4;
     if (has(2)) return 2;
 
@@ -180,28 +180,29 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     }
   }, [selectedAuthMethod, pending2FA]);
 
-  const getVerifySignId = (): string => {
+  const getVerifySignId = (methodType?: number): string => {
     if (!pending2FA) return "";
     const { loginSignId: signId, availableMethods: methods } = pending2FA;
-    if (selectedAuthMethod === 3) {
+    const targetMethod = methodType !== undefined ? methodType : selectedAuthMethod;
+    if (targetMethod === 3) {
       const m = methods?.find((x: any) => x.type === 3);
       return m?.value ?? signId;
     }
-    if (selectedAuthMethod === 1) {
+    if (targetMethod === 1) {
       const m = methods?.find((x: any) => x.type === 1);
       return m?.value ?? signId;
     }
     return signId;
   };
 
-
-  const handleGetOtp = () => {
+  const handleGetOtp = (methodType?: number) => {
+    const targetMethod = methodType !== undefined ? methodType : selectedAuthMethod;
     const isPhone = pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId));
-    const sendTo = (selectedAuthMethod === 3 || isPhone) ? "mobile" : "email";
-    // console.log(`[AuthVerification] handleGetOtp called. method: ${selectedAuthMethod}, sendTo: ${sendTo}`);
+    const sendTo = (targetMethod === 3 || isPhone) ? "mobile" : "email";
+    
     setResendTimer(60);
     autoSubmitEnabled.current = true;
-    dispatch(sendLoginOtp(getVerifySignId(), sendTo, setResendTimer));
+    dispatch(sendLoginOtp(getVerifySignId(targetMethod), sendTo, setResendTimer));
   };
 
   const handlePasteOtp = async () => {
@@ -334,6 +335,9 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                       setSelectedAuthMethod(method.type);
                       setOtpCode("");
                       dispatch(updatePending2FA({ verifySubStep: 'code' }));
+                      if (method.type === 1 || method.type === 3) {
+                        handleGetOtp(method.type);
+                      }
                     }}
                     style={[sheetStyles.optionRow, { borderBottomColor: themeColors.border, opacity: isDone ? 0.6 : 1, paddingVertical: 16 }]}
                   >
@@ -409,7 +413,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                 >
                   {(selectedAuthMethod === 1 || selectedAuthMethod === 3) && (
                     <TouchableOpacityView
-                      onPress={resendTimer > 0 ? undefined : handleGetOtp}
+                      onPress={resendTimer > 0 ? undefined : () => handleGetOtp()}
                       disabled={resendTimer > 0}
                     >
                       <AppText

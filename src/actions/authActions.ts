@@ -603,7 +603,10 @@ export const verifyOtp = (
       if (tok) {
         await persistSignupSessionToken(tok);
       }
-      NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
+      const { markPostSignupCdd } = require('../utils/cddOnboarding');
+      const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
+      await markPostSignupCdd();
+      NavigationService.reset(ONBOARDING_CDD_SCREEN);
       dispatch(getUserProfile());
     }
   } catch (e: any) {
@@ -640,8 +643,24 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
       appOperation.setCustomerToken(response?.data?.token);
       await AsyncStorage.setItem(USER_TOKEN_KEY, response?.data?.token);
       socketService.reconnectWithToken(response?.data?.token ?? null);
-      NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
       dispatch(clearPending2FA());
+      const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
+      const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
+      
+      try {
+        const profileRes = await appOperation.customer.get_profile();
+        const userData = profileRes?.data;
+        if (userData) {
+          dispatch(setUserData(userData)); // from your slice
+        }
+        if (shouldForceCddOnboarding(userData, true)) {
+          NavigationService.reset(ONBOARDING_CDD_SCREEN);
+        } else {
+          NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
+        }
+      } catch (e) {
+        NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
+      }
       dispatch(getUserProfile());
     } else {
       showError(response?.message ?? 'Verification failed');
