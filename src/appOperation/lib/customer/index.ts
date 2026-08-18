@@ -853,6 +853,8 @@ export default (appOperation: AppOperation) => ({
     appOperation.post(`security/sessions/${encodeURIComponent(sessionId)}/revoke`, {}, CUSTOMER_TYPE),
   revokeOtherSessions: () =>
     appOperation.post('security/sessions/revoke-others', {}, CUSTOMER_TYPE),
+  revokeAllSessions: () =>
+    appOperation.post('security/sessions/revoke-all', {}, CUSTOMER_TYPE),
 
   /** Same as web: POST security/mobile/add — base fields + optional identity (emailOtp | tofaCode | passkey…) */
   securityMobileAdd: (data: {

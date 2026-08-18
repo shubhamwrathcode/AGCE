@@ -25,7 +25,8 @@ export default (appOperation: AppOperation) => ({
   },
   checkIdentifier: (data: { identifier: string; kind: string; purpose?: string; countryCode?: string; referralCode?: string }) => {
     const purposeNorm = String(data.purpose || 'signup').trim().toLowerCase() === 'login' ? 'login' : 'signup';
-    const kindNorm = String(data.kind || '').trim().toLowerCase();
+    // Spec: There is no username kind. Username on the email tab is sent as kind: "email".
+    const kindNorm = String(data.kind || '').trim().toLowerCase() === 'phone' ? 'phone' : 'email';
     const params: Record<string, any> = { purpose: purposeNorm, kind: kindNorm };
 
     if (kindNorm === 'phone') {
@@ -36,7 +37,10 @@ export default (appOperation: AppOperation) => ({
     }
 
     const ref = String(data.referralCode || '').trim();
-    if (purposeNorm === 'signup' && ref) params.referral_code = ref;
+    if (purposeNorm === 'signup' && ref) params.referralCode = ref;
+    
+    console.log("====== ACTUAL API PAYLOAD SENT TO SERVER ======");
+    console.log(JSON.stringify(params, null, 2));
     
     return appOperation.post('user/check-signup-email', params, GUEST_TYPE);
   },

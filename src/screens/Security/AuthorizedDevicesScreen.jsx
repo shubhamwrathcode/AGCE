@@ -87,7 +87,11 @@ const AuthorizedDevicesScreen = () => {
   const [currentSessionId, setCurrentSessionId] = useState('');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
-  
+
+  const otherSessionCount = sessions.filter(
+    (s) => !(s.is_current || String(s.session_id) === currentSessionId)
+  ).length;
+
   const actionSheetRef = useRef(null);
   const [selectedItem, setSelectedItem] = useState(null);
 
@@ -96,6 +100,9 @@ const AuthorizedDevicesScreen = () => {
   const borderCol = isDark ? '#2C2C2E' : '#E5E5EA';
   const labelCol = isDark ? '#8A8A93' : '#8E8E93';
   const valCol = themeColors.text;
+
+  const btnBorderColor = isDark ? colors.white : colors.black;
+  const btnTextColor = isDark ? colors.white : colors.black;
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -206,10 +213,21 @@ const AuthorizedDevicesScreen = () => {
     </View>
   );
 
-  const renderStatusBadge = (statusText, isHighlight) => {
+  const renderStatusBadge = (statusText, type = 'default') => {
+    let bgColor = isDark ? '#2C2C2E' : '#F2F2F7';
+    let textColor = valCol;
+
+    if (type === 'ok') {
+      bgColor = isDark ? 'rgba(240, 185, 11, 0.15)' : 'rgba(240, 185, 11, 0.2)';
+      textColor = isDark ? '#F0B90B' : '#CFA00A';
+    } else if (type === 'danger') {
+      bgColor = isDark ? 'rgba(246, 70, 93, 0.15)' : 'rgba(246, 70, 93, 0.1)';
+      textColor = themeColors.sellButton;
+    }
+
     return (
-      <View style={[styles.statusBadge, { backgroundColor: isHighlight ? (isDark ? 'rgba(240, 185, 11, 0.15)' : 'rgba(240, 185, 11, 0.2)') : (isDark ? '#2C2C2E' : '#F2F2F7') }]}>
-        <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: isHighlight ? (isDark ? '#F0B90B' : '#CFA00A') : valCol }}>
+      <View style={[styles.statusBadge, { backgroundColor: bgColor }]}>
+        <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: textColor }}>
           {statusText}
         </AppText>
       </View>
@@ -218,40 +236,31 @@ const AuthorizedDevicesScreen = () => {
 
   const renderActionSheet = () => {
     if (!selectedItem) return null;
-    
+
     const isDevice = activeTab === 'devices';
     const id = isDevice ? selectedItem.device_id : selectedItem.session_id;
-    const isCurrent = isDevice 
+    const isCurrent = isDevice
       ? (String(id) === currentDeviceId)
       : (selectedItem.is_current || String(id) === currentSessionId);
-    
+
     const isBusy = busyId === id;
 
     const renderBtn = (text, onPress, type = 'default', disabled = false) => {
       let bgColor = 'transparent';
-      let borderColor = isDark ? '#48484A' : '#D1D5DB';
-      let textColor = valCol;
-
-      if (type === 'danger') {
-        borderColor = themeColors.sellButton;
-        textColor = themeColors.sellButton;
-      } else if (type === 'primary') {
-        bgColor = isDark ? '#F0B90B' : '#CFA00A';
-        borderColor = 'transparent';
-        textColor = isDark ? '#1E2329' : colors.white;
-      }
+      let borderColor = type === 'danger' ? '#F6465D' : btnBorderColor;
+      let textColor = type === 'danger' ? '#F6465D' : btnTextColor;
 
       return (
-        <TouchableOpacity 
+        <TouchableOpacity
           key={text}
           style={[
-            styles.sheetActionBtn, 
-            { 
+            styles.sheetActionBtn,
+            {
               backgroundColor: bgColor,
               borderColor: borderColor,
               opacity: disabled ? 0.4 : 1
             }
-          ]} 
+          ]}
           onPress={onPress}
           disabled={disabled || isBusy}
         >
@@ -267,27 +276,27 @@ const AuthorizedDevicesScreen = () => {
     if (isDevice) {
       const trusted = String(selectedItem.status || "").toUpperCase() === "TRUSTED";
       const blocked = isBlockedStatus(selectedItem.status);
-      
+
       buttons = (
         <>
           {!blocked && trusted && renderBtn("Untrust", () => runAction(id, "Device trust removed", () => appOperation.customer.untrustDevice(id)))}
           {!blocked && !trusted && renderBtn("Trust", () => runAction(id, "Device trusted", () => appOperation.customer.trustDevice(id)), 'primary')}
-          
-          {selectedItem.ip_bound 
+
+          {/* selectedItem.ip_bound
             ? renderBtn("Unbind IP", () => runAction(id, "Device IP unbound", () => appOperation.customer.unbindDeviceIp(id)))
             : renderBtn("Bind IP", () => runAction(id, "Device bound to this IP", () => appOperation.customer.bindDeviceIp(id)), 'default', blocked)
-          }
+          */}
 
-          {blocked 
+          {blocked
             ? renderBtn("Unblock", () => runAction(id, "Device unblocked", () => appOperation.customer.unblockDevice(id)), 'primary')
             : !isCurrent && (
               <>
                 {renderBtn("Block 24h", () => runAction(id, "Device blocked for 24 hours", () => appOperation.customer.blockDevice(id, { duration_hours: 24 })))}
-                {renderBtn("Block", () => runAction(id, "Device blocked permanently", () => appOperation.customer.blockDevice(id, { permanent: true })), 'danger')}
+                {renderBtn("Block", () => runAction(id, "Device blocked", () => appOperation.customer.blockDevice(id, { permanent: true })), 'danger')}
               </>
             )
           }
-          
+
           {!isCurrent && renderBtn("Remove", () => runAction(id, "Device removed", () => appOperation.customer.removeDevice(id)), 'danger')}
         </>
       );
@@ -295,14 +304,14 @@ const AuthorizedDevicesScreen = () => {
       if (isCurrent) {
         buttons = (
           <>
-            {selectedItem.ip_bound 
+            {/* selectedItem.ip_bound
               ? renderBtn("Unbind IP", () => runAction(id, "Session IP unbound", () => appOperation.customer.unbindSessionIp(id)))
               : renderBtn("Bind IP", () => runAction(id, "Session bound to this IP", () => appOperation.customer.bindSessionIp(id)))
-            }
+            */}
           </>
         );
       } else {
-        buttons = renderBtn("End session", () => runAction(id, "Session revoked", () => appOperation.customer.revokeSession(id)), 'danger');
+        buttons = renderBtn("End session", () => runAction(id, "Session ended", () => appOperation.customer.revokeSession(id)), 'danger');
       }
     }
 
@@ -358,6 +367,19 @@ const AuthorizedDevicesScreen = () => {
       const ipAddress = item.last_ip || item.ip || item.ip_address || "—";
 
       const isCurrentStatus = !isDevice && isCurrent;
+      
+      let statusText = "";
+      let badgeType = "default";
+      if (isDevice) {
+        statusText = statusLabel(item.status);
+        const trusted = String(item.status || "").toUpperCase() === "TRUSTED";
+        const blocked = isBlockedStatus(item.status);
+        if (trusted) badgeType = 'ok';
+        else if (blocked) badgeType = 'danger';
+      } else {
+        statusText = isCurrentStatus ? "Current" : statusLabel(item.status || "ACTIVE");
+        if (isCurrentStatus) badgeType = 'ok';
+      }
 
       return (
         <View key={id || idx} style={[styles.logCard, { backgroundColor: cardBg, borderColor: borderCol }]}>
@@ -368,7 +390,7 @@ const AuthorizedDevicesScreen = () => {
               </AppText>
               {isDevice && (
                 <AppText type={TWELVE} style={{ color: labelCol, marginTop: 2, textAlign: 'right' }}>
-                  {item.os || 'Unknown'} · {item.browser || 'Unknown'}
+                  {[item.os, item.browser, item.platform].filter(Boolean).join(" · ") || id}
                 </AppText>
               )}
               {!isDevice && (
@@ -378,7 +400,7 @@ const AuthorizedDevicesScreen = () => {
               )}
             </View>
           ))}
-          {renderCardRow("Status", renderStatusBadge(isCurrentStatus ? "Current" : statusLabel(item.status), item.status?.toUpperCase() === 'TRUSTED' || isCurrentStatus))}
+          {renderCardRow("Status", renderStatusBadge(statusText, badgeType))}
           {renderCardRow("Last active", (
             <View style={{ alignItems: 'flex-end' }}>
               <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: valCol }}>{formatAbsoluteTime(lastActiveTs)}</AppText>
@@ -391,14 +413,14 @@ const AuthorizedDevicesScreen = () => {
           <View style={[styles.cardRow, { borderBottomWidth: 0, justifyContent: 'space-between', alignItems: 'center' }]}>
             <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: labelCol }}>Actions</AppText>
             <TouchableOpacity
-              style={[styles.manageBtn, { borderColor: isDark ? '#48484A' : borderCol, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
+              style={[styles.manageBtn, { borderColor: btnBorderColor, backgroundColor: 'transparent' }]}
               onPress={() => handleActionPress(item)}
               disabled={isBusy}
             >
               {isBusy ? (
-                <ActivityIndicator size="small" color={valCol} />
+                <ActivityIndicator size="small" color={btnTextColor} />
               ) : (
-                <AppText type={TWELVE} weight={MEDIUM} style={{ color: valCol }}>Manage</AppText>
+                <AppText type={TWELVE} weight={MEDIUM} style={{ color: btnTextColor }}>Manage</AppText>
               )}
             </TouchableOpacity>
           </View>
@@ -428,14 +450,14 @@ const AuthorizedDevicesScreen = () => {
                 Trust, block, or bind IP on recognized devices. Bound IP changes require sign-in again.
               </AppText>
               <TouchableOpacity
-                style={[styles.refreshBtn, { borderColor: borderCol }]}
+                style={[styles.refreshBtn, { borderColor: btnBorderColor, opacity: (loading || !!busyId) ? 0.4 : 1 }]}
                 onPress={loadAll}
-                disabled={loading}
+                disabled={loading || !!busyId}
               >
                 {loading && !busyId ? (
-                  <ActivityIndicator size="small" color={valCol} style={{ marginRight: 8 }} />
+                  <ActivityIndicator size="small" color={btnTextColor} style={{ marginRight: 8 }} />
                 ) : null}
-                <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: valCol }}>Refresh</AppText>
+                <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: btnTextColor }}>Refresh</AppText>
               </TouchableOpacity>
             </>
           ) : (
@@ -446,14 +468,14 @@ const AuthorizedDevicesScreen = () => {
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                 <TouchableOpacity
-                  style={[styles.refreshBtn, { borderColor: borderCol, marginBottom: 10 }]}
+                  style={[styles.refreshBtn, { borderColor: btnBorderColor, marginBottom: 10, opacity: (loading || !!busyId || otherSessionCount === 0) ? 0.4 : 1 }]}
                   onPress={() => runAction('revoke-others', "Other sessions ended", () => appOperation.customer.revokeOtherSessions())}
-                  disabled={loading}
+                  disabled={loading || !!busyId || otherSessionCount === 0}
                 >
-                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: valCol }}>Log out other sessions ({Math.max(0, sessions.length - 1)})</AppText>
+                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: btnTextColor }}>Log out other sessions{otherSessionCount > 0 ? ` (${otherSessionCount})` : ''}</AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.refreshBtn, { borderColor: themeColors.sellButton, marginBottom: 10 }]}
+                  style={[styles.refreshBtn, { borderColor: '#F6465D', marginBottom: 10, opacity: (loading || !!busyId) ? 0.4 : 1 }]}
                   onPress={() => {
                     runAction('revoke-all', "Logged out everywhere", async () => {
                       const res = await appOperation.customer.revokeAllSessions();
@@ -463,19 +485,19 @@ const AuthorizedDevicesScreen = () => {
                       return res;
                     });
                   }}
-                  disabled={loading}
+                  disabled={loading || !!busyId}
                 >
-                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.sellButton }}>Log out all</AppText>
+                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: '#F6465D' }}>Log out all</AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.refreshBtn, { borderColor: borderCol, marginBottom: 10 }]}
+                  style={[styles.refreshBtn, { borderColor: btnBorderColor, marginBottom: 10, opacity: (loading || !!busyId) ? 0.4 : 1 }]}
                   onPress={loadAll}
-                  disabled={loading}
+                  disabled={loading || !!busyId}
                 >
                   {loading && !busyId ? (
-                    <ActivityIndicator size="small" color={valCol} style={{ marginRight: 8 }} />
+                    <ActivityIndicator size="small" color={btnTextColor} style={{ marginRight: 8 }} />
                   ) : null}
-                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: valCol }}>Refresh</AppText>
+                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: btnTextColor }}>Refresh</AppText>
                 </TouchableOpacity>
               </View>
             </>
@@ -546,11 +568,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6, paddingHorizontal: 16, borderRadius: 6, borderWidth: 1,
   },
   sheetActionWrap: {
-    flexDirection: 'row', flexWrap: 'wrap', 
+    flexDirection: 'row', flexWrap: 'wrap',
     alignItems: 'flex-start'
   },
   sheetActionBtn: {
-    paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, 
+    paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1,
     marginRight: 10, marginBottom: 12,
   }
 });

@@ -69,25 +69,7 @@ const logRegisterPayload = (label, path, data) => {
 
 };
 
-const parseSignupEmailCheckResponse = (res) => {
-  if (res == null) return { ok: false, message: "" };
-  if (res.success === false) {
-    return { ok: false, message: res.message || res?.data?.message || "" };
-  }
-  const d = res.data != null && typeof res.data === "object" ? res.data : res;
-  if (typeof d === "object" && d) {
-    if (d.exists === true || d.emailExists === true || d.isRegistered === true || d.alreadyExists === true) {
-      return { ok: false, message: res.message || d.message || "" };
-    }
-    if (d.available === false || d.canRegister === false) {
-      return { ok: false, message: res.message || d.message || "" };
-    }
-    if (d.available === true || d.exists === false || d.canRegister === true) {
-      return { ok: true };
-    }
-  }
-  return { ok: true };
-};
+
 
 const isSkippablePrecheckError = (err) => {
   const code = Number(err?.code ?? err?.status ?? 0);
@@ -203,30 +185,48 @@ const Register = () => {
       return;
     }
 
-    if (index === 0) {
-      try {
-        setStep1Submitting(true);
-        const ref = String(referCode || "").trim();
-        console.log("[Register] Calling check_signup_email with:", { email: signUpId.trim(), referral_code: ref });
-        const emailRes = await appOperation.guest.check_signup_email(signUpId.trim(), ref);
-        console.log("[Register] check_signup_email raw response:", emailRes);
-        const emailCheck = parseSignupEmailCheckResponse(emailRes);
-        console.log("[Register] check_signup_email parsed check:", emailCheck);
-        if (!emailCheck.ok) {
-          showError(emailCheck.message || "Request failed");
-          return;
-        }
-      } catch (e) {
-        console.log("[Register] check_signup_email caught error object:", e);
-        if (isSkippablePrecheckError(e)) {
-          console.warn("[Register] check-signup-email unavailable, skipping pre-check", e?.code || e?.message);
-        } else {
-          showError(e?.message || e?.response?.data?.message || "Request failed");
-          return;
-        }
-      } finally {
+    try {
+      setStep1Submitting(true);
+      const ref = String(referCode || "").trim();
+      const payload = {
+        identifier: signUpId.trim(),
+        kind: index === 0 ? "email" : "phone",
+        purpose: "signup",
+        countryCode: index === 1 ? (countryCode[0] ? `+${countryCode[0]}` : "+91") : undefined,
+        referralCode: ref
+      };
+
+      console.log("====== REGISTER ON NEXT - checkIdentifier PAYLOAD ======");
+      console.log(JSON.stringify(payload, null, 2));
+
+      const signupCheck = await appOperation.guest.checkIdentifier(payload);
+
+      console.log("====== REGISTER ON NEXT - checkIdentifier RESPONSE ======");
+      console.log(JSON.stringify(signupCheck, null, 2));
+
+      // Spec: On signup, if referral.success === false, show referral.message and keep the referral field highlighted.
+      if (signupCheck?.referral?.success === false) {
+        showError(signupCheck?.referral?.message || "Invalid referral code");
         setStep1Submitting(false);
+        return;
       }
+
+      if (signupCheck?.success !== true) {
+        showError(signupCheck?.message || "Request failed");
+        setStep1Submitting(false);
+        return;
+      }
+    } catch (e) {
+      console.log("[Register] checkIdentifier caught error object:", e);
+      if (isSkippablePrecheckError(e)) {
+        console.warn("[Register] check-signup-email unavailable, skipping pre-check", e?.code || e?.message);
+      } else {
+        showError(e?.message || e?.data?.message || "Request failed");
+        setStep1Submitting(false);
+        return;
+      }
+    } finally {
+      setStep1Submitting(false);
     }
 
     NavigationService.navigate(SET_PASSWORD_SCREEN, {
@@ -499,7 +499,7 @@ const Register = () => {
               </TouchableOpacityView>
               <TouchableOpacityView
                 onPress={() =>
-                  Linking.openURL('https://arabglobal.ae/TermsofUse')
+                  Linking.openURL('https://arabglobal.ae/user_termsConditions')
                 }
               >
                 <AppText

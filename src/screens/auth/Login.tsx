@@ -257,7 +257,42 @@ const Login = (): JSX.Element => {
       return false;
     }
     return true;
+  }; const parseIdentifierCheckResponse = (res: any, purpose: string = "signup") => {
+    const isLogin = String(purpose || "signup").trim().toLowerCase() === "login";
+
+    if (res == null) {
+      return { ok: false, exists: null, code: null, message: "No response from server." };
+    }
+
+    const referral = res.referral;
+    if (
+      referral &&
+      typeof referral === "object" &&
+      referral.success === false
+    ) {
+      return {
+        ok: false,
+        exists: null,
+        code: referral.code || "INVALID_REFERRAL_CODE",
+        message: referral.message || "Referral code is invalid.",
+      };
+    }
+
+    if (res.success === true) {
+      return { ok: true, exists: isLogin, code: null, message: res.message || null };
+    }
+
+    return {
+      ok: false,
+      exists: isLogin ? false : true,
+      code: res.code || null,
+      message: res.message || (isLogin ? "User not found" : "Email already exists"),
+    };
   };
+
+
+
+
 
   const changeInput = (val: any) => {
     setSignUpId(val);
@@ -316,37 +351,70 @@ const Login = (): JSX.Element => {
     const normalizedId = getNormalizedLoginId();
     const identifierKind = index === 1 ? "phone" : normalizedId.includes("@") ? "email" : "username";
 
+    const payload = {
+      identifier: normalizedId,
+      kind: identifierKind,
+      purpose: "login",
+      countryCode: index === 1 ? (countryCode?.[0] ? `+${countryCode[0]}` : "+91") : undefined,
+    };
+
+    // console.log("====== LOGIN ON NEXT - checkIdentifier PAYLOAD ======");
+    // console.log(JSON.stringify(payload, null, 2));
+
     dispatch(setLoading(true));
     try {
-      const loginCheck: any = await appOperation.guest.checkIdentifier({
-        identifier: normalizedId,
-        kind: identifierKind,
-        purpose: "login",
-        countryCode: index === 1 ? (countryCode?.[0] ? `+${countryCode[0]}` : "+91") : undefined,
-      });
+      const loginCheck: any = await appOperation.guest.checkIdentifier(payload);
 
-      if (loginCheck.success === false && loginCheck.code === "ACCOUNT_NOT_FOUND") {
+      // console.log("====== LOGIN ON NEXT - checkIdentifier RESPONSE ======");
+      // console.log(JSON.stringify(loginCheck, null, 2));
+
+      const accountCheck = parseIdentifierCheckResponse(loginCheck, "login");
+      if (!accountCheck.ok) {
         setIdentifierError(true);
-        showError(loginCheck.message || "No account found. Please create an account to continue.");
+        showError(accountCheck.message || "User not found");
         dispatch(setLoading(false));
         return;
       }
-      if (loginCheck.success === false) {
+      if (!accountCheck.exists) {
         setIdentifierError(true);
-        showError(loginCheck.message || "Could not verify account. Please try again.");
+        showError(accountCheck.message || "User not found");
         dispatch(setLoading(false));
         return;
       }
+      setIdentifierError(false);
+
     } catch (e: any) {
+      // console.log("====== LOGIN ON NEXT - checkIdentifier ERROR ======");
+      console.log(e);
+
+      const errorObj = {
+        success: false,
+        code: e?.code || null,
+        message: e?.message || e?.data?.message || "Could not verify account. Please try again."
+      };
+
+      const accountCheck = parseIdentifierCheckResponse(errorObj, "login");
+      if (!accountCheck.ok) {
+        setIdentifierError(true);
+        showError(accountCheck.message || "User not found");
+        dispatch(setLoading(false));
+        return;
+      }
+      if (!accountCheck.exists) {
+        setIdentifierError(true);
+        showError(accountCheck.message || "User not found");
+        dispatch(setLoading(false));
+        return;
+      }
       setIdentifierError(true);
-      showError(e?.message || "Could not verify account. Please try again.");
+      showError(accountCheck.message);
       dispatch(setLoading(false));
       return;
     }
     dispatch(setLoading(false));
 
     // Web Parity: If Passkey is supported, attempt silent passkey login before showing password
-    console.log('[Login] onNext called, Passkey.isSupported:', Passkey.isSupported());
+    // console.log('[Login] onNext called, Passkey.isSupported:', Passkey.isSupported());
     if (Passkey.isSupported()) {
       setIsPasskeySignInInProgress(true);
       console.log('[Login] Attempting verifyPasskeyLogin(silent=true)...');
