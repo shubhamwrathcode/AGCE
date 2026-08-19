@@ -57,6 +57,8 @@ import { IMAGE_BASE_URL } from '../../helper/Constants';
 import { appOperation } from '../../appOperation';
 import { CUSTOMER_TYPE } from '../../appOperation/types';
 import SimpleToast from 'react-native-simple-toast';
+import NavigationService from '../../navigation/NavigationService';
+import { NAVIGATION_AUTH_STACK, KYC_STATUS_SCREEN } from '../../navigation/routes';
 import {
   futuresErrSelectPair,
   futuresErrInvalidSize,
@@ -1105,7 +1107,7 @@ const FuturesUI = () => {
             activeOpacity={0.7}
             onPress={() => {
               if (liveCoin) {
-                navigation.navigate('FutureChartScreen', { coin: liveCoin, tradeType: 'Future' });
+                NavigationService.navigate('FutureChartScreen', { coin: liveCoin, tradeType: 'Future' });
               }
             }}
           >
@@ -1896,7 +1898,7 @@ const FuturesUI = () => {
                     styles.actionBtn,
                     { backgroundColor: activeTab === 'Buy' ? colors.green : colors.red }
                   ]}
-                  onPress={() => navigation.navigate("Login")}
+                  onPress={() => NavigationService.reset(NAVIGATION_AUTH_STACK)}
                 >
                   <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
                     Login
@@ -1908,7 +1910,7 @@ const FuturesUI = () => {
                     styles.actionBtn,
                     { backgroundColor: activeTab === 'Buy' ? colors.green : colors.red }
                   ]}
-                  onPress={() => navigation.navigate("KYC_STATUS_SCREEN")}
+                  onPress={() => NavigationService.navigate(KYC_STATUS_SCREEN)}
                 >
                   <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
                     Submit Kyc

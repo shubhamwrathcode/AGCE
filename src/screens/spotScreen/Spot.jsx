@@ -111,6 +111,7 @@ import {
   MARGIN_TRANSFER_SCREEN,
   SELECT_COIN_SCREEN,
   MARGIN_BORROW_REPAY_SCREEN,
+  NAVIGATION_AUTH_STACK,
 } from "../../navigation/routes";
 import { cancelOrder, placeOrder, getCrossAccount, getCrossBorrowable } from "../../actions/homeActions";
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
@@ -4498,7 +4499,7 @@ const Spot = () => {
                         ]}
                         onPress={() => {
                           if (!userData) {
-                            NavigationService.navigate("Login");
+                            NavigationService.reset(NAVIGATION_AUTH_STACK);
                             return;
                           }
                           if (amount) {

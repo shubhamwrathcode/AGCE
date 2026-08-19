@@ -253,8 +253,16 @@ const Market = () => {
   }, [spotSubCategory, spotSubCategories]);
 
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [initialLoaded, setInitialLoaded] = useState(false);
+
+  useEffect(() => {
+    if (coinPairs && coinPairs.length > 0) {
+      setInitialLoaded(true);
+    }
+  }, [coinPairs]);
+
   const hasMarketData = (coinPairs?.length ?? 0) > 0;
-  const contentLoading = !hasMarketData;
+  const contentLoading = !initialLoaded;
 
   // Preferred coins only: BTC, ETH, BNB (3 cards)
   const featuredCoins = useMemo(() => {
@@ -303,7 +311,7 @@ const Market = () => {
             <Animated.View style={{ flex: 1, transform: [{ translateX: contentSlideX }], opacity: contentOpacity }}>
               {activeTab === "Favorites" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? (
+                  {!initialLoaded ? (
                     <TabListSkeleton rows={7} />
                   ) : favoriteArray?.length > 0 ? (
                     <MarketList
@@ -324,12 +332,12 @@ const Market = () => {
               )}
               {activeTab === "Spot" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
+                  {!initialLoaded ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
                 </View>
               )}
               {activeTab === "Cryptos" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
+                  {!initialLoaded ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
                 </View>
               )}
               {activeTab === "USD_M_FUTURES" && (
@@ -356,7 +364,7 @@ const Market = () => {
 
               {activeTab === "ALPHA" && (
                 <View style={styles.tabContent}>
-                  {!hasMarketData ? <TabListSkeleton rows={8} /> : <AlphaMarket coinPairs={coinPairs} search={search} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
+                  {!initialLoaded ? <TabListSkeleton rows={8} /> : <AlphaMarket coinPairs={coinPairs} search={search} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
                 </View>
               )}
             </Animated.View>

@@ -116,6 +116,7 @@ export const getUserProfile =
           dispatch(setLoading(true));
         }
         const response: any = await appOperation.customer.get_profile();
+        console.log('[DEBUG] getUserProfile response:', JSON.stringify(response?.data, null, 2));
         const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
         const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
 

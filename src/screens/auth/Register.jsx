@@ -264,10 +264,12 @@ const Register = () => {
       const tokens = await GoogleSignin.getTokens();
       console.log("Google tokens:", tokens);
 
+      const uniqueSuffix = Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
       let data = {
         Token: tokens?.accessToken || tokens?.idToken || account?.data?.idToken,
         type: 'google',
         referral_code: referCode || '',
+        userName: `user_${uniqueSuffix}`,
       };
 
       logRegisterPayload("Google signup", "user/third-party-signup", data);

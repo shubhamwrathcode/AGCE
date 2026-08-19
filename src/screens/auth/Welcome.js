@@ -536,13 +536,16 @@ const Welcome = () => {
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={{ flex: 1, paddingVertical: 6, backgroundColor: isDark ? colors.white : '#1A1A1A', borderRadius: 30, alignItems: 'center', justifyContent: 'center' }}
-                            onPress={() => NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, {
-                              screen: FUTURES_SCREEN,
-                              params: {
-                                screen: 'Futures',
-                                params: { coin: item }
-                              }
-                            })}
+                            onPress={() => {
+                              const fPair = futuresPairs?.find(p => p.base_currency === item.base_currency);
+                              NavigationService.navigate(NAVIGATION_BOTTOM_TAB_STACK, {
+                                screen: FUTURES_SCREEN,
+                                params: {
+                                  screen: 'Futures',
+                                  ...(fPair ? { params: { coin: fPair } } : {})
+                                }
+                              });
+                            }}
                             activeOpacity={0.8}
                           >
                             <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : '#FFFFFF' }}>Futures</AppText>

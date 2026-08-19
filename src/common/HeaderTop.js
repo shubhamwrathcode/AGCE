@@ -57,7 +57,7 @@ const HeaderTop = () => {
   };
 
   const finalAvatarUri = getFullAvatarUrl(serverAvatar || userData?.profilepicture);
-  console.log(finalAvatarUri, '===uri');
+  // console.log(finalAvatarUri, '===uri');
 
   return (
     <View style={[styles.headerBar,]}>

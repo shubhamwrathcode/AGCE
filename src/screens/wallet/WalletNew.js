@@ -977,7 +977,7 @@ const WalletNew = ({ route }) => {
                                     <AppText type={TWELVE} weight={SEMI_BOLD} style={{}} color={colors.buttonBg} onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}>
                                       Deposit Now{' '}
                                     </AppText>
-                                    <FastImage source={share_ic} style={{ width: 10, height: 10, bottom: 1 }} resizeMode="contain" tintColor={colors.black} />
+                                    <FastImage source={share_ic} style={{ width: 10, height: 10, bottom: 1 }} resizeMode="contain" tintColor={isDark ? colors.white : colors.black} />
                                   </View>
                                 </View>
                               )}

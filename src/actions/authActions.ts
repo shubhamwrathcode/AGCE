@@ -201,10 +201,10 @@ export const googleRegister =
       } else {
         showSuccess(response?.message);
         appOperation.setCustomerToken(response?.token);
+        await AsyncStorage.setItem(USER_TOKEN_KEY, response?.token);
+        socketService.reconnectWithToken(response?.token ?? null);
         handleClearCaptcha();
-        NavigationService.navigate(NAVIGATION_AUTH_STACK, {
-          screen: VERIFY_ACCOUNT_SCREEN,
-        });
+        await dispatch(getUserProfile(false, true));
       }
     } catch (e: any) {
       console.log('[third-party-signup] API error:', e?.message ?? e, e?.response ?? '');
@@ -289,8 +289,8 @@ function extractSignIdFromToken(token: string | undefined | null): string | null
     const base64Url = token.split('.')[1];
     if (!base64Url) return null;
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     const payload = JSON.parse(jsonPayload);
     return payload?.data?.signId ?? null;
@@ -483,36 +483,10 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
       showError(response.message);
     } else {
       const d = response?.data;
-      const no2Fa = d?.['2fa'] === 0;
-      const webShape = d?.requiresVerification === true;
-
-      if (no2Fa && !webShape) {
-        appOperation.setCustomerToken(d?.token);
-        await AsyncStorage.setItem(USER_TOKEN_KEY, d?.token);
-        socketService.reconnectWithToken(d?.token ?? null);
-        await dispatch(getUserProfile());
-        NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
-      } else if (webShape || (d?.['2fa'] && d?.['2fa'] !== 0)) {
-        dispatch(setUserData(d));
-        const signIdFromToken = extractSignIdFromToken(d?.tempToken ?? d?.token);
-        const signId = d?.signId ?? signIdFromToken ?? d?.emailId ?? d?.mobileNumber ?? '';
-        const methods = getNormalizedAvailableMethods(d);
-        const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, signId);
-        dispatch(setPending2FA({
-          loginSignId: signId,
-          availableMethods: methods,
-          defaultMethod: defaultMethod,
-          verifySubStep: 'methods',
-          data: d,
-        }));
-        NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
-      } else {
-        appOperation.setCustomerToken(d?.token);
-        await AsyncStorage.setItem(USER_TOKEN_KEY, d?.token);
-        socketService.reconnectWithToken(d?.token ?? null);
-        await dispatch(getUserProfile());
-        NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
-      }
+      appOperation.setCustomerToken(d?.token);
+      await AsyncStorage.setItem(USER_TOKEN_KEY, d?.token);
+      socketService.reconnectWithToken(d?.token ?? null);
+      await dispatch(getUserProfile(false, true));
     }
   } catch (e: any) {
     console.log('[DEBUG] googleLogin THREW ERROR:', e);
@@ -646,7 +620,7 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
       dispatch(clearPending2FA());
       const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
       const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
-      
+
       try {
         const profileRes = await appOperation.customer.get_profile();
         const userData = profileRes?.data;

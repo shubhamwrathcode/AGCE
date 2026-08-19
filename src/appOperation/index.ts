@@ -55,7 +55,7 @@ export class AppOperation {
     // Ensure no double slashes between base_url and root_path or url
     const baseUrl = this.base_url.endsWith('/') ? this.base_url.slice(0, -1) : this.base_url;
 
-    if (url.startsWith('api/') || url.startsWith('spot/') || url.startsWith('user/third-party-login') || url.startsWith('user/third-party-signup')) {
+    if (url.startsWith('api/') || url.startsWith('spot/')) {
       uri = `${baseUrl}/${url}`;
     } else {
       const rootPath = this.root_path.startsWith('/') ? this.root_path : `/${this.root_path}`;

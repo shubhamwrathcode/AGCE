@@ -31,9 +31,9 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
 
   const filteredCoinList = hideAssets
     ? walletRows.filter(
-        (item) =>
-          (item?.balance + item?.bonus + item?.locked_balance || 0) > 0.000001
-      )
+      (item) =>
+        (item?.balance + item?.bonus + item?.locked_balance || 0) > 0.000001
+    )
     : walletRows;
   // setFilteredCoinList(data);
 
@@ -65,7 +65,7 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
           />
           <AppText color={BLACK}>Hide 0 balances</AppText>
         </TouchableOpacity>
-        <View style={[styles.searchView, {borderColor:  theme === "Dark" ? "#FFFFFF33" : "#00000033"}]}>
+        <View style={[styles.searchView, { borderColor: theme === "Dark" ? "#FFFFFF33" : "#00000033" }]}>
           <FastImage
             source={searchIcon}
             tintColor={"#787878"}
@@ -78,7 +78,7 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
             placeholder="Search"
             onSubmitEditing={getData}
             placeholderTextColor={"#787878"}
-            style={{ fontSize: 10, alignItems: "center", height: 40, color: theme !== "Dark" ? "#000000" : "#FFFFFF"}}
+            style={{ fontSize: 10, alignItems: "center", height: 40, color: theme !== "Dark" ? "#000000" : "#FFFFFF" }}
           />
           {/* <AppText type={TEN} color={DISCLAIMTEXT}>
             Search
@@ -126,13 +126,13 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
                   // gap: 3,
                 }}
               >
-                <View style={{borderRadius: 50, overflow: "hidden"}}>
-                    <FastImage
-                      source={{ uri: BASE_URL + item?.icon_path }}
-                      style={{ width: 30, height: 30 }}
-                      resizeMode="cover"
-                    />
-                    </View>
+                <View style={{ borderRadius: 50, overflow: "hidden" }}>
+                  <FastImage
+                    source={{ uri: BASE_URL + item?.icon_path }}
+                    style={{ width: 30, height: 30 }}
+                    resizeMode="cover"
+                  />
+                </View>
                 <AppText
                   color={BLACK}
                   style={{ marginLeft: 5 }}
@@ -142,7 +142,7 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
                 </AppText>
               </View>
               <AppText color={theme !== "Dark" ? DISCLAIMTEXT : BLACK} style={{ width: "30%" }}>
-                {toFixedFour(item?.balance) }
+                {toFixedFour(item?.balance)}
               </AppText>
               <AppText color={theme !== "Dark" ? DISCLAIMTEXT : BLACK} style={{ width: "20%" }}>
                 {twoFixedTwo(item?.locked_balance)}
@@ -160,7 +160,7 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
         }}
         ListEmptyComponent={() => {
           return (
-            <View style={{alignItems: "center", marginTop: 100, gap: 10}}>
+            <View style={{ alignItems: "center", marginTop: 100, gap: 10 }}>
               <AppText weight={SEMI_BOLD} type={FOURTEEN}>No Balance</AppText>
               <AppText
                 type={TWELVE}
@@ -168,12 +168,12 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
                 color={YELLOW}
                 onPress={onSheetOpen}
               >
-                Deposit Now <FastImage source={externalLinkIcon} resizeMode="contain" style={{width: 10, height: 10}} tintColor={colors.buttonBg}/>
+                Deposit Now <FastImage source={externalLinkIcon} resizeMode="contain" style={{ width: 10, height: 10 }} tintColor={theme !== "Dark" ? colors.buttonBg : colors.white} />
               </AppText>
             </View>
           )
         }}
-        style={{height: "100%"}}
+        style={{ height: "100%" }}
       />
       {/* <RBSheet
         ref={depsoitSheet}

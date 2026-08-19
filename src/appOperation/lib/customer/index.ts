@@ -1139,7 +1139,7 @@ export default (appOperation: AppOperation) => ({
   cddGetSchema: () =>
     appOperation.get('user/cdd/schema', undefined, undefined, CUSTOMER_TYPE),
   cddGetProfile: () =>
-    appOperation.get('user/cdd/profile', undefined, undefined, CUSTOMER_TYPE),
+    appOperation.get('user/cdd', undefined, undefined, CUSTOMER_TYPE),
   cddSubmit: (data: any) =>
     appOperation.put('user/cdd', data, CUSTOMER_TYPE),
 });

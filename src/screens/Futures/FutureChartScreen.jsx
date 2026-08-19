@@ -906,6 +906,9 @@ const FutureChartScreen = () => {
     console.log("FutureChart URL ===>", chartUri);
   }, [chartUri]);
 
+  console.log(chartUri, '==charturi');
+
+
 
 
   const handleCurrencyChange = useCallback(
