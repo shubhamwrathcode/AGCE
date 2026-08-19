@@ -13,6 +13,78 @@ import { KYC_VERIFICATION_SCREEN, NAVIGATION_BOTTOM_TAB_STACK } from '../../navi
 import { clearPostSignupCdd, codesEqual, optionCodeKey } from '../../utils/cddOnboarding';
 import { useAppDispatch } from '../../store/hooks';
 import { logoutAction } from '../../actions/authActions';
+import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
+import Svg, { Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+
+const AnimatedBorderOption = ({ option, selected, activeColor, inactiveColor, onPress, themeColors, isDark }) => {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const progress = useSharedValue(selected ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withTiming(selected ? 1 : 0, { duration: 1000, easing: Easing.inOut(Easing.ease) });
+  }, [selected]);
+
+  const FIXED_TOTAL_LENGTH = 1000;
+
+  const animatedProps = useAnimatedProps(() => {
+    return {
+      strokeDashoffset: FIXED_TOTAL_LENGTH - (progress.value * FIXED_TOTAL_LENGTH),
+    };
+  });
+
+  const radioColor = selected ? activeColor : inactiveColor;
+  const radius = 12;
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={onPress}
+      onLayout={(e) => {
+        setSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
+      }}
+    >
+      <View style={[
+        styles.optionButton,
+        {
+          backgroundColor: 'transparent',
+          borderColor: inactiveColor, // Base static border
+        }
+      ]}>
+        <View style={[styles.radioOuter, { borderColor: radioColor }]}>
+          {selected && <View style={[styles.radioInner, { backgroundColor: activeColor }]} />}
+        </View>
+        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, flex: 1, marginLeft: 12 }}>
+          {option.label}
+        </AppText>
+      </View>
+
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Svg width={size.width || 0} height={size.height || 0}>
+          <Defs>
+            <LinearGradient id={`grad-${option.code}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={activeColor} stopOpacity="1" />
+              <Stop offset="100%" stopColor={activeColor} stopOpacity="0.5" />
+            </LinearGradient>
+          </Defs>
+          <AnimatedRect
+            x={1.5}
+            y={1.5}
+            width={Math.max(0, size.width - 3)}
+            height={Math.max(0, size.height - 3)}
+            rx={radius - 1}
+            stroke={`url(#grad-${option.code})`}
+            strokeWidth={1.5}
+            fill="none"
+            strokeDasharray={`${FIXED_TOTAL_LENGTH} ${FIXED_TOTAL_LENGTH}`}
+            animatedProps={animatedProps}
+          />
+        </Svg>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const FALLBACK_QUESTIONS = [
   {
@@ -289,25 +361,16 @@ const OnboardingCddScreen = () => {
     const radioColor = selected ? activeColor : (isDark ? '#48484A' : '#D1D5DB');
 
     return (
-      <TouchableOpacity
+      <AnimatedBorderOption
         key={String(opt.code)}
-        style={[
-          styles.optionButton,
-          {
-            backgroundColor: 'transparent',
-            borderColor: selected ? activeColor : (isDark ? '#2C2C2E' : '#E5E5EA'),
-          }
-        ]}
+        option={opt}
+        selected={selected}
+        activeColor={activeColor}
+        inactiveColor={isDark ? '#2C2C2E' : '#E5E5EA'}
         onPress={() => selectOption(opt.code)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.radioOuter, { borderColor: radioColor }]}>
-          {selected && <View style={[styles.radioInner, { backgroundColor: activeColor }]} />}
-        </View>
-        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, flex: 1, marginLeft: 12 }}>
-          {opt.label}
-        </AppText>
-      </TouchableOpacity>
+        themeColors={themeColors}
+        isDark={isDark}
+      />
     );
   };
 
