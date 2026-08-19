@@ -606,7 +606,7 @@ export const verifyOtp = (
       const { markPostSignupCdd } = require('../utils/cddOnboarding');
       const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
       await markPostSignupCdd();
-      NavigationService.reset(ONBOARDING_CDD_SCREEN);
+      NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
       dispatch(getUserProfile());
     }
   } catch (e: any) {
@@ -654,7 +654,7 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
           dispatch(setUserData(userData)); // from your slice
         }
         if (shouldForceCddOnboarding(userData, true)) {
-          NavigationService.reset(ONBOARDING_CDD_SCREEN);
+          NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
         } else {
           NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
         }

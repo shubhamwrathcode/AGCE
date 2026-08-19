@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, TextInput } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, TextInput, ScrollView } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+
+const KeyboardScrollView = Platform.OS === 'android' ? ScrollView : KeyboardAwareScrollView;
 import { AppSafeAreaView, AppText, Button, EIGHTEEN, FIFTEEN, FOURTEEN, MEDIUM, SEMI_BOLD, THIRTEEN, TWELVE } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
 import { colors } from '../../theme/colors';
@@ -241,21 +243,14 @@ const OnboardingCddScreen = () => {
     }
     setSubmitting(true);
     try {
-      const payload = {
-        employment: answers.employment,
-        employment_other: answers.employment === "other" ? String(answers.employment_other || "").trim() : undefined,
-        annual_income: answers.annual_income,
-        account_purpose: answers.account_purpose,
-        account_purpose_other:
-          answers.account_purpose === "other" ? String(answers.account_purpose_other || "").trim() : undefined,
-        crypto_experience: answers.crypto_experience,
-        is_pep: answers.is_pep,
-        expected_monthly_volume: answers.expected_monthly_volume,
-        source_of_funds: answers.source_of_funds,
-        source_of_funds_other:
-          answers.source_of_funds === "other" ? String(answers.source_of_funds_other || "").trim() : undefined,
-        submit: true,
-      };
+      const payload = { submit: true };
+      questions.forEach((q) => {
+        payload[q.id] = answers[q.id];
+        if (q.other_input && answers[q.id] === q.other_input.required_when) {
+          const otherVal = String(answers[q.other_input.field] || "").trim();
+          payload[q.other_input.field] = otherVal;
+        }
+      });
       console.log(payload, '====payload');
 
       const result = await appOperation.customer.cddSubmit(payload);
@@ -331,11 +326,11 @@ const OnboardingCddScreen = () => {
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <KeyboardAwareScrollView
+          <KeyboardScrollView
             style={{ flex: 1 }}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            enableOnAndroid={true}
+            enableOnAndroid={false}
             extraScrollHeight={20}
             keyboardShouldPersistTaps="handled"
           >
@@ -392,7 +387,7 @@ const OnboardingCddScreen = () => {
               </AppText>
             ) : null} */}
 
-          </KeyboardAwareScrollView>
+          </KeyboardScrollView>
 
           <View style={[styles.footer, { borderTopColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
             <View style={styles.actionRow}>

@@ -60,7 +60,7 @@ const AuthLoading = () => {
 
   const success = () => {
     setTimeout(() => {
-      dispatch(getUserProfile(false, true));
+      dispatch(getUserProfile(false, true, false, true));
     }, 3000);
   };
 

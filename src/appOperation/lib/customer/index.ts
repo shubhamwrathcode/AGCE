@@ -1137,9 +1137,9 @@ export default (appOperation: AppOperation) => ({
 
   // Customer Due Diligence (CDD) endpoints
   cddGetSchema: () =>
-    appOperation.get('cdd/schema', undefined, undefined, CUSTOMER_TYPE),
+    appOperation.get('user/cdd/schema', undefined, undefined, CUSTOMER_TYPE),
   cddGetProfile: () =>
-    appOperation.get('cdd/profile', undefined, undefined, CUSTOMER_TYPE),
+    appOperation.get('user/cdd/profile', undefined, undefined, CUSTOMER_TYPE),
   cddSubmit: (data: any) =>
-    appOperation.put('cdd', data, CUSTOMER_TYPE),
+    appOperation.put('user/cdd', data, CUSTOMER_TYPE),
 });

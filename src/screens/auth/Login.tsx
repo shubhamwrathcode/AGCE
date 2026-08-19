@@ -479,7 +479,7 @@ const Login = (): JSX.Element => {
                 placeholder={"Enter email or username"}
                 value={signUpId}
                 onChangeText={(text) => changeInput(text)}
-                keyboardType={"default"}
+                keyboardType={"email-address"}
                 autoCapitalize="none"
                 returnKeyType="next"
                 onfocus={() => {

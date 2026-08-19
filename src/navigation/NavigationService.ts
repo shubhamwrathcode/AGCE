@@ -48,6 +48,31 @@ function resetToMainApp(mainAppRouteName: string) {
   );
 }
 
+function resetToAuthCddScreen(cddRouteName: string) {
+  navigator.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'NAVIGATION_AUTH_LOADING_STACK',
+          state: {
+            index: 0,
+            routes: [
+              {
+                name: 'NAVIGATION_AUTH_STACK',
+                state: {
+                  index: 0,
+                  routes: [{ name: cddRouteName }],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+}
+
 function goBack() {
   navigator.dispatch(CommonActions.goBack());
   // navigator._navigation.goBack();
@@ -73,6 +98,7 @@ export default {
   pop,
   reset,
   resetToMainApp,
+  resetToAuthCddScreen,
   push,
   replace,
 };

@@ -109,7 +109,7 @@ export const registerVerifyToken =
 
 
 export const getUserProfile =
-  (isNavigate = false, isHome = false, skipGlobalLoading = false) =>
+  (isNavigate = false, isHome = false, skipGlobalLoading = false, isAppStartup = false) =>
     async (dispatch: AppDispatch) => {
       try {
         if (!skipGlobalLoading) {
@@ -124,7 +124,13 @@ export const getUserProfile =
           dispatch(setCurrency(response?.data?.currency_prefrence));
 
           if (shouldForceCddOnboarding(response?.data, true)) {
-            NavigationService.reset(ONBOARDING_CDD_SCREEN);
+            if (isAppStartup) {
+              // User killed app before finishing CDD -> Log them out
+              const { logoutAction } = require('./authActions');
+              dispatch(logoutAction());
+            } else {
+              NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
+            }
           } else {
             isNavigate ? NavigationService.goBack() : null;
             isHome ? NavigationService.reset(NAVIGATION_BOTTOM_TAB_STACK) : null;
