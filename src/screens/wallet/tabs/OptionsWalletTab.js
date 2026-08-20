@@ -11,7 +11,7 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import {
   AppText,
   DISCLAIMTEXT,
@@ -236,11 +236,12 @@ const OptionsWalletTab = ({ theme, themeColors }) => {
   const [selectedRowPopup, setSelectedRowPopup] = useState(null);
   const detailSheetRef = useRef(null);
 
+  const isFocused = useIsFocused();
   const {
     accountUpdate,
     userPositions,
     isUserPositionsLoading,
-  } = useOptionsWebSocket("", null, true);
+  } = useOptionsWebSocket("", null, isFocused);
 
   const fetchWallet = useCallback(async () => {
     setLoadingWallet(true);

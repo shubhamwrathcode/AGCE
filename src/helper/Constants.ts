@@ -8,8 +8,8 @@ export const SELECTED_LANGUAGE = 'SELECTED_LANGUAGE';
  * (`https://agcebackend.wrathcode.com`). Used by AppOperation for `v1/...` calls.
  */
 
-export const BASE_URL = 'https://backend.arabglobal.ae/';
-// export const BASE_URL = 'https://jw1ptnmg-9503.inc1.devtunnels.ms';
+// export const BASE_URL = 'https://backend.arabglobal.ae/';
+export const BASE_URL = 'https://jw1ptnmg-9503.inc1.devtunnels.ms/';
 
 
 

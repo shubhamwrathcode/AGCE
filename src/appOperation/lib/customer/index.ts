@@ -158,10 +158,10 @@ export default (appOperation: AppOperation) => ({
       CUSTOMER_TYPE,
     ),
   withdraw_currency: (data: any) =>
-    appOperation.post('wallet/withdrawal', data, CUSTOMER_TYPE),
+    appOperation.post('wallet/withdrawal-request', data, CUSTOMER_TYPE),
   /** Web `POST /api/v1/wallet/withdrawal` (`submitWithdrawal` in withdrawService.js). */
   withdraw_currency_v1: (data: any) =>
-    appOperation.post('api/v1/wallet/withdrawal', data, CUSTOMER_TYPE),
+    appOperation.post('api/v1/wallet/withdrawal-request', data, CUSTOMER_TYPE),
   withdraw_fiat_currency: (data: any) =>
     appOperation.post('wallet/withdrawal_fiat', data, CUSTOMER_TYPE),
   // --- Address Book ---

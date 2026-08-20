@@ -67,6 +67,8 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
     const underlying = underlyingKeyFromAsset(selectedAsset);
 
     useEffect(() => {
+        if (!enabled) return;
+        
         bumpOptionsWsStat("hookMount");
         logOptionsWs("hook mount", { underlying, isAuthenticated, hasToken: Boolean(authToken) });
 
@@ -238,7 +240,7 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
                 contractDetail: null,
             };
         };
-    }, [authToken, underlying, isAuthenticated]);
+    }, [authToken, underlying, isAuthenticated, enabled]);
 
     useEffect(() => {
         const socket = socketRef.current;

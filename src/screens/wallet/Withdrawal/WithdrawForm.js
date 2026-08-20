@@ -2291,12 +2291,12 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("email") && (
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Email verification code</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
-                  containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
-                  inputStyle={{ fontSize: 14, color: colors.black }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  inputStyle={{ fontSize: 14, color: themeColors.text }}
                   placeholder="Enter email code"
                   keyboardType="numeric"
                   value={emailVerifyCode}
@@ -2307,7 +2307,7 @@ const WithdrawForm = () => {
                   disabled={withdrawOtpSending.email || withdrawOtpResendSec.email > 0}
                   style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
                 >
-                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.email || withdrawOtpResendSec.email > 0) ? themeColors.secondaryText : colors.black }}>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.email || withdrawOtpResendSec.email > 0) ? themeColors.secondaryText : themeColors.text }}>
                     {withdrawOtpSending.email ? "Sending..." : withdrawOtpResendSec.email > 0 ? `Resend in ${withdrawOtpResendSec.email}s` : "Send code"}
                   </AppText>
                 </TouchableOpacity>
@@ -2318,12 +2318,12 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("mobile") && (
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Mobile verification code</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
-                  containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
-                  inputStyle={{ fontSize: 14, color: colors.black }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  inputStyle={{ fontSize: 14, color: themeColors.text }}
                   placeholder="Enter mobile code"
                   keyboardType="numeric"
                   value={mobileVerifyCode}
@@ -2334,7 +2334,7 @@ const WithdrawForm = () => {
                   disabled={withdrawOtpSending.mobile || withdrawOtpResendSec.mobile > 0}
                   style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
                 >
-                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.mobile || withdrawOtpResendSec.mobile > 0) ? themeColors.secondaryText : colors.black }}>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: (withdrawOtpSending.mobile || withdrawOtpResendSec.mobile > 0) ? themeColors.secondaryText : themeColors.text }}>
                     {withdrawOtpSending.mobile ? "Sending..." : withdrawOtpResendSec.mobile > 0 ? `Resend in ${withdrawOtpResendSec.mobile}s` : "Send code"}
                   </AppText>
                 </TouchableOpacity>
@@ -2345,12 +2345,12 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("google_authenticator") && (
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Authenticator app</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: themeColors.input, borderRadius: 12, paddingRight: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
-                  containerStyle={{ borderWidth: 0, backgroundColor: themeColors.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
-                  inputStyle={{ fontSize: 14, color: colors.black }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  inputStyle={{ fontSize: 14, color: themeColors.text }}
                   placeholder="Enter authenticator app code"
                   keyboardType="numeric"
                   value={authAppCode}
@@ -2364,7 +2364,7 @@ const WithdrawForm = () => {
                   }}
                   style={{ paddingHorizontal: 12, height: 48, justifyContent: "center", backgroundColor: "transparent" }}
                 >
-                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.black }}>Paste</AppText>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Paste</AppText>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2373,12 +2373,12 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("fund_password") && (
             <View style={{ marginBottom: 28 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Fund password</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6", borderRadius: 12, paddingRight: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, borderRadius: 12, paddingRight: 16 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
-                  containerStyle={{ borderWidth: 0, backgroundColor: colors.iconBgColor, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
-                  inputStyle={{ fontSize: 14, color: colors.black }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  inputStyle={{ fontSize: 14, color: themeColors.text }}
                   placeholder="Enter fund password"
                   secureTextEntry={!withdrawFundPasswordVisible}
                   value={withdrawFundPassword}
@@ -2409,8 +2409,8 @@ const WithdrawForm = () => {
                   (!getNonPasskeyEnabledMethods().includes("mobile") || (mobileVerifyCode || "").trim().length > 0) &&
                   (!getNonPasskeyEnabledMethods().includes("google_authenticator") || (authAppCode || "").trim().length > 0) &&
                   (!getNonPasskeyEnabledMethods().includes("fund_password") || (withdrawFundPassword || "").trim().length > 0)
-                  ? colors.black
-                  : isDark ? colors.iconBgColor : "rgba(0, 0, 0, 0.05)",
+                  ? (isDark ? colors.white : colors.black)
+                  : (isDark ? "#3A3A3C" : "#E5E7EB"),
               height: 50,
               borderRadius: 25,
               justifyContent: "center",
@@ -2428,8 +2428,8 @@ const WithdrawForm = () => {
                     (!getNonPasskeyEnabledMethods().includes("mobile") || (mobileVerifyCode || "").trim().length > 0) &&
                     (!getNonPasskeyEnabledMethods().includes("google_authenticator") || (authAppCode || "").trim().length > 0) &&
                     (!getNonPasskeyEnabledMethods().includes("fund_password") || (withdrawFundPassword || "").trim().length > 0)
-                    ? colors.white
-                    : isDark ? "#3A3F4B" : "#9CA3AF",
+                    ? (isDark ? colors.black : colors.white)
+                    : (isDark ? "#6B6B70" : "#9CA3AF"),
               }}
             >
               Confirm withdrawal
@@ -2513,12 +2513,11 @@ const WithdrawForm = () => {
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
-                  borderColor: isDark ? "#2A2E39" : "#E5E7EB",
+                  backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
                   opacity: activeWithdrawChains.length === 0 ? 0.6 : 1
                 }}
               >
-                <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: network ? (isDark ? colors.white : colors.placeholderColor) : (isDark ? colors.white : colors.placeholderColor) }}>
+                <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: network ? themeColors.text : themeColors.secondaryText }}>
                   {network ? String(network).toUpperCase() : "Select Network"}
                 </AppText>
                 <FastImage source={down_arrow} style={{ width: 10, height: 10 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
@@ -2533,8 +2532,7 @@ const WithdrawForm = () => {
                   paddingHorizontal: 20,
                   flexDirection: "row",
                   alignItems: "center",
-                  backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
-                  borderColor: isDark ? "#2A2E39" : "#E5E7EB",
+                  backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
                 }}
               >
                 <TextInput
@@ -2631,9 +2629,9 @@ const WithdrawForm = () => {
                     placeholderTextColor={themeColors.secondaryText}
                     containerStyle={{
                       height: 48,
-                      borderColor: isDark ? "#373C4B" : "#E5E7EB",
+                      borderWidth: 0,
                       borderRadius: 12,
-                      backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
+                      backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
                       paddingHorizontal: 4, // Input component internally has padding usually
                     }}
                     mainContainer={styles.emailFieldMain}
@@ -2643,7 +2641,7 @@ const WithdrawForm = () => {
                       style={[
                         styles.emailSuggestList,
                         {
-                          backgroundColor: themeColors.input,
+                          backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
                           borderColor: themeColors.border,
                         },
                       ]}
@@ -2675,8 +2673,7 @@ const WithdrawForm = () => {
                 <View style={[styles.wdAgcePhoneWrap, {}]}>
                   <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>Phone Number</AppText>
                   <View style={[styles.wdAgcePhoneRow, {
-                    borderColor: isDark ? "#373C4B" : "#E5E7EB",
-                    backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
+                    backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
                     borderRadius: 12,
                     height: 48,
                     paddingHorizontal: 12,
@@ -2723,9 +2720,9 @@ const WithdrawForm = () => {
                     placeholderTextColor={themeColors.secondaryText}
                     containerStyle={{
                       height: 48,
-                      borderColor: isDark ? "#373C4B" : "#E5E7EB",
+                      borderWidth: 0,
                       borderRadius: 12,
-                      backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6"
+                      backgroundColor: isDark ? '#2A2A2E' : lightTheme.input
                     }}
                   />
                   <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
@@ -2752,8 +2749,7 @@ const WithdrawForm = () => {
                 paddingHorizontal: 16,
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
-                borderColor: isDark ? "#2A2E39" : "#E5E7EB"
+                backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
               }}>
                 <TextInput
                   style={{ flex: 1, color: themeColors.text, fontSize: 14, fontWeight: "400", padding: 0 }}
@@ -2878,7 +2874,9 @@ const WithdrawForm = () => {
                 !!withdrawAmountInlineError ||
                 (withdrawToTab === "address" && !showWithdrawContentAfterValidatedAddress) ||
                 (withdrawToTab === "agce_user" && !isAgceFormValid)
-              ) ? (isDark ? colors.iconBgColor : "rgba(0, 0, 0, 0.05)") : colors.black,
+              )
+                ? (isDark ? "#3A3A3C" : "#E5E7EB")
+                : (isDark ? colors.white : colors.black),
               justifyContent: "center",
               alignItems: "center"
             }}
@@ -2892,7 +2890,9 @@ const WithdrawForm = () => {
                   !!withdrawAmountInlineError ||
                   (withdrawToTab === "address" && !showWithdrawContentAfterValidatedAddress) ||
                   (withdrawToTab === "agce_user" && !isAgceFormValid)
-                ) ? (isDark ? "#3A3F4B" : "#9CA3AF") : "white"
+                )
+                  ? (isDark ? "#6B6B70" : "#9CA3AF")
+                  : (isDark ? colors.black : colors.white)
               }}
             >
               Withdraw
@@ -3220,9 +3220,7 @@ const WithdrawForm = () => {
             <View style={{
               flexDirection: "row",
               alignItems: "center",
-              backgroundColor: isDark ? themeColors.card : "#FFF",
-              borderWidth: 1,
-              borderColor: isDark ? themeColors.border : "#E5E7EB",
+              backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
               borderRadius: 12,
               height: 52,
               paddingHorizontal: 16
