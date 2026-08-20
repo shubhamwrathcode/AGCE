@@ -9,7 +9,7 @@ import {
 } from '../helper/types';
 import { setAppVersion, setLoading, setLoadingOtp, setUserData, setPending2FA, clearPending2FA } from '../slices/authSlice';
 import { AppDispatch } from '../store/store';
-import { USER_TOKEN_KEY } from '../helper/Constants';
+import { USER_TOKEN_KEY, USER_REFRESH_TOKEN_KEY } from '../helper/Constants';
 import NavigationService from '../navigation/NavigationService';
 import {
   ACCOUNT_ACTIVATED_SCREEN,
@@ -29,24 +29,43 @@ import { socketService } from '../services/socket/SocketService';
 import { Platform } from 'react-native';
 
 /** Persist signup/login JWT so customer APIs + socket work after register / verify-otp. */
-async function persistSignupSessionToken(token: unknown) {
-  const t = typeof token === 'string' && token.trim() ? token.trim() : '';
+async function persistSignupSessionToken(tokenObj: any) {
+  let t = '';
+  let r = '';
+  if (typeof tokenObj === 'string') {
+    t = tokenObj.trim();
+  } else if (tokenObj && typeof tokenObj === 'object') {
+    t = (tokenObj.token || tokenObj.access_token || '').trim();
+    r = (tokenObj.refreshToken || tokenObj.refresh_token || '').trim();
+  }
+
   if (!t) return;
   appOperation.setCustomerToken(t);
   await AsyncStorage.setItem(USER_TOKEN_KEY, t);
+  if (r) {
+    appOperation.setCustomerRefreshToken?.(r);
+    await AsyncStorage.setItem(USER_REFRESH_TOKEN_KEY, r);
+  }
   socketService.reconnectWithToken(t);
 }
 
-function extractTokenFromAuthResponse(res: any): string | null {
+function extractTokenFromAuthResponse(res: any): any {
   if (!res || typeof res !== 'object') return null;
-  if (typeof res.token === 'string' && res.token.trim()) return res.token.trim();
+  let token = '';
+  let refreshToken = '';
+
+  if (typeof res.token === 'string' && res.token.trim()) token = res.token.trim();
+  if (typeof res.refresh_token === 'string' && res.refresh_token.trim()) refreshToken = res.refresh_token.trim();
+
   const d = res.data;
-  if (typeof d === 'string' && d.trim().length > 10) return d.trim();
+  if (typeof d === 'string' && d.trim().length > 10 && !token) token = d.trim();
   if (d && typeof d === 'object') {
-    if (typeof d.token === 'string' && d.token.trim()) return d.token.trim();
-    if (typeof d.access_token === 'string' && d.access_token.trim()) return d.access_token.trim();
+    if (!token && typeof d.token === 'string' && d.token.trim()) token = d.token.trim();
+    if (!token && typeof d.access_token === 'string' && d.access_token.trim()) token = d.access_token.trim();
+    if (!refreshToken && typeof d.refresh_token === 'string' && d.refresh_token.trim()) refreshToken = d.refresh_token.trim();
   }
-  return null;
+
+  return { token, refreshToken };
 }
 
 export const sendOtp =
@@ -410,9 +429,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
     const webShape = d?.requiresVerification === true;
 
     if (no2Fa && !webShape) {
-      appOperation.setCustomerToken(d?.token);
-      await AsyncStorage.setItem(USER_TOKEN_KEY, d?.token);
-      socketService.reconnectWithToken(d?.token ?? null);
+      await persistSignupSessionToken(d);
       await dispatch(getUserProfile());
       NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
     } else if (webShape) {
@@ -483,14 +500,12 @@ export const googleLogin = (data: any) => async (dispatch: AppDispatch) => {
       showError(response.message);
     } else {
       const d = response?.data;
-      appOperation.setCustomerToken(d?.token);
-      await AsyncStorage.setItem(USER_TOKEN_KEY, d?.token);
-      socketService.reconnectWithToken(d?.token ?? null);
+      await persistSignupSessionToken(d);
       await dispatch(getUserProfile(false, true));
     }
   } catch (e: any) {
     console.log('[DEBUG] googleLogin THREW ERROR:', e);
-    console.log('[DEBUG] googleLogin ERROR RESPONSE:', e?.response?.data || e?.response || e);
+    // console.log('[DEBUG] googleLogin ERROR RESPONSE:', e?.response?.data || e?.response || e);
     logger(e);
     const errMsg = e?.response?.data?.message ?? e?.message ?? '';
     showError(errMsg || 'Google login failed');
@@ -614,15 +629,13 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
     const response: any = await appOperation.guest.verify_fac_otp(payload as any);
     if (response.success) {
       showSuccess(response?.message ?? 'Login successful');
-      appOperation.setCustomerToken(response?.data?.token);
-      await AsyncStorage.setItem(USER_TOKEN_KEY, response?.data?.token);
-      socketService.reconnectWithToken(response?.data?.token ?? null);
+      await persistSignupSessionToken(response?.data);
       dispatch(clearPending2FA());
       const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
       const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
 
       try {
-        const profileRes = await appOperation.customer.get_profile();
+        const profileRes: any = await appOperation.customer.get_profile();
         const userData = profileRes?.data;
         if (userData) {
           dispatch(setUserData(userData)); // from your slice
@@ -781,9 +794,7 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
       return false;
     }
     showSuccess(completeRes?.message ?? 'Login successful');
-    appOperation.setCustomerToken(completeRes.data.token);
-    await AsyncStorage.setItem(USER_TOKEN_KEY, completeRes.data.token);
-    socketService.reconnectWithToken(completeRes.data.token ?? null);
+    await persistSignupSessionToken(completeRes.data);
     NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
     dispatch(clearPending2FA());
     dispatch(getUserProfile());
@@ -873,9 +884,7 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
       return false;
     }
     showSuccess(verifyRes?.message ?? 'Login successful');
-    appOperation.setCustomerToken(verifyRes.data.token);
-    await AsyncStorage.setItem(USER_TOKEN_KEY, verifyRes.data.token);
-    socketService.reconnectWithToken(verifyRes.data.token ?? null);
+    await persistSignupSessionToken(verifyRes.data);
     NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
     dispatch(clearPending2FA());
     dispatch(getUserProfile());
@@ -902,5 +911,8 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
 export const logoutAction = () => async () => {
   appOperation.setCustomerToken('');
   await AsyncStorage.removeItem(USER_TOKEN_KEY);
+  await AsyncStorage.removeItem(USER_REFRESH_TOKEN_KEY);
+  appOperation.setCustomerToken('');
+  if (appOperation.setCustomerRefreshToken) appOperation.setCustomerRefreshToken('');
   NavigationService.reset(NAVIGATION_AUTH_STACK);
 };

@@ -43,9 +43,6 @@ const AuthLoading = () => {
         : null;
     const current = String(CheckCurrent || '').trim();
 
-    console.log(`[Version Check] API Called: "admin/getApk"`);
-    console.log(`[Version Check] API Response (appVersion):`, appVersion);
-    console.log(`[Version Check] Server Version: "${serverVersion}", Local/APK Version: "${current}"`);
 
     if (serverVersion && current !== serverVersion) {
       setShowUpdateModal(true);

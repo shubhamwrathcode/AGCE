@@ -11,12 +11,12 @@ const FutureSocketContextProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       // If token exists, ensure we are connected with it
-      console.log("🔌 FutureSocket: Connecting with token...");
+      // console.log("🔌 FutureSocket: Connecting with token...");
       futureSocketService.disconnect(); // Disconnect existing (possibly unauth) connection
       futureSocketService.connect(undefined, token);
     } else {
       // If no token, maybe connect anonymously or just initial connect
-      console.log("🔌 FutureSocket: Connecting without token...");
+      // console.log("🔌 FutureSocket: Connecting without token...");
       futureSocketService.connect(undefined, undefined);
     }
 

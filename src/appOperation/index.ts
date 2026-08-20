@@ -16,11 +16,78 @@ export class AppOperation {
   guest;
   customer;
   customerToken: string | null | undefined;
+  customerRefreshToken: string | null | undefined;
+  refreshInFlight: Promise<string | null> | null = null;
+
   constructor() {
     this.base_url = BASE_URL;
     this.root_path = `v1/`;
     this.guest = guest(this);
     this.customer = customer(this);
+  }
+
+  setCustomerRefreshToken(token: string | null | undefined) {
+    this.customerRefreshToken = token;
+  }
+
+  async tryRefreshAccessToken(): Promise<string | null> {
+    if (this.refreshInFlight) return this.refreshInFlight;
+    const refresh = this.customerRefreshToken;
+    if (!refresh) return null;
+
+    this.refreshInFlight = (async () => {
+      try {
+        const baseUrl = this.base_url.endsWith('/') ? this.base_url.slice(0, -1) : this.base_url;
+        const rootPath = this.root_path.startsWith('/') ? this.root_path : `/${this.root_path}`;
+        const cleanRootPath = rootPath.endsWith('/') ? rootPath : `${rootPath}/`;
+        const url = `${baseUrl}${cleanRootPath}security/auth/refresh`;
+
+        console.log("🔄 [REFRESH TOKEN] API FETCHING ===", url);
+        console.log("🕒 [OLD TOKEN]:", String(this.customerToken).substring(0, 20) + "...");
+
+        const { Platform } = require('react-native');
+        const DeviceInfo = require('react-native-device-info');
+        const deviceId = DeviceInfo.getUniqueIdSync();
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-Id': deviceId,
+            'X-Platform': Platform.OS,
+          },
+          body: JSON.stringify({ refresh_token: refresh }),
+        });
+
+        const body = await res.json();
+        console.log("📥 [REFRESH TOKEN RESPONSE]:", body);
+        
+        if (!body.success) return null;
+
+        const d = body.data && typeof body.data === 'object' ? body.data : body;
+        const access = d.access_token || d.token;
+        const nextRefresh = d.refresh_token || refresh;
+
+        if (access) {
+          console.log("✅ [REFRESH TOKEN SUCCESS] New Token:", access.substring(0, 20) + "...");
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const { USER_TOKEN_KEY, USER_REFRESH_TOKEN_KEY } = require('../helper/Constants');
+          this.setCustomerToken(access);
+          this.setCustomerRefreshToken(nextRefresh);
+          await AsyncStorage.setItem(USER_TOKEN_KEY, access);
+          await AsyncStorage.setItem(USER_REFRESH_TOKEN_KEY, nextRefresh);
+          const { socketService } = require('../services/socket/SocketService');
+          socketService.reconnectWithToken(access);
+          return access;
+        }
+        return null;
+      } catch (e) {
+        return null;
+      } finally {
+        this.refreshInFlight = null;
+      }
+    })();
+    return this.refreshInFlight;
   }
 
   config(config: any) {
@@ -96,7 +163,6 @@ export class AppOperation {
       headers['X-Device-Id'] = DeviceInfo.getUniqueIdSync();
       headers['X-Platform'] = Platform.OS;
       headers['X-App-Version'] = DeviceInfo.getVersion();
-      console.log("===> DEVICE ID in Headers:", headers['X-Device-Id']);
     } catch (e) {
       console.warn('Could not set device headers', e);
     }
@@ -128,7 +194,6 @@ export class AppOperation {
         fetchInit.body = bodyData;
       }
 
-      console.log("=== API FETCHING ===", uri);
 
       fetch(uri, fetchInit)
         .then(response => {
@@ -186,8 +251,22 @@ export class AppOperation {
               // Suppress known fallback 404 warnings to keep console clean
               const isFallbackEndpoint = uri.includes('withdrawal-coins') || uri.includes('deposit-coins') || uri.includes('credential_options') || uri.includes('passkey-withdrawal-challenge');
               if (!(status === 404 && isFallbackEndpoint)) {
-                console.warn('[API] Error response:', status, JSON.stringify(errData));
+                // console.warn('[API] Error response:', status, JSON.stringify(errData));
               }
+
+              const isTokenExpired = status === 401 || errData.code === 'TOKEN_EXPIRED' || errData.message === 'Token is expired' || errData.message === 'Token is Expired';
+
+              if (isTokenExpired && !uri.includes('auth/refresh') && this.customerRefreshToken) {
+                return this.tryRefreshAccessToken().then(newToken => {
+                  if (newToken) {
+                    // Retry the request with the new token
+                    return this.send(url, method, params, data, type, extraHeaders).then(resolve).catch(reject);
+                  } else {
+                    reject(errData);
+                  }
+                });
+              }
+
               reject(errData);
             });
         })
