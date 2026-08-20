@@ -89,6 +89,8 @@ export const captchaIcon = require('../../assets/images/captchaIcon.png');
 export const googleIcon = require('../../assets/images/googleIcon.png');
 export const homeIcon = require('../../assets/images/homeIcon.png');
 export const marketIcon = require('../../assets/images/marketIcon.png');
+export const marketIconDark = require('../../assets/images/marketIconDark.png');
+
 export const spotIcon = require('../../assets/images/spotIcon.png');
 export const earningIcon = require('../../assets/images/earningIcon.png');
 export const newWalletIcon = require('../../assets/images/newWalletIcon.png');

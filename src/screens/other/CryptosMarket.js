@@ -58,10 +58,16 @@ const CryptosMarket = ({ coinPairs, search = "", subCategory = "All", hideStar =
 
   return (
     <View style={{ flex: 1, minHeight: 0, marginTop: 4, paddingBottom: 12 }}>
-      <MarketList filterData={rows} onPress={handleNavigate} hideStar={hideStar} favoriteArray={favoriteArray} onToggleFavorite={onToggleFavorite} />
+      <MarketList
+        filterData={rows}
+        onPress={handleNavigate}
+        hideStar={hideStar}
+        favoriteArray={favoriteArray}
+        onToggleFavorite={onToggleFavorite}
+        isCryptos={true}
+      />
     </View>
   );
 };
 
 export default CryptosMarket;
-

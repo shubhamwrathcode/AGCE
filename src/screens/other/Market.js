@@ -8,6 +8,7 @@ import SpotMarket from "./SpotMarket";
 import FuturesMarket from "./FuturesMarket";
 import CryptosMarket from "./CryptosMarket";
 import AlphaMarket from "./AlphaMarket";
+import OptionsMarket from "./OptionsMarket";
 import MarketList from "./MarketList";
 import MarketPlaceholder from "./MarketPlaceholder";
 import { useAppSelector } from "../../store/hooks";
@@ -122,7 +123,7 @@ const Market = () => {
   const TAB_KEYS = useMemo(
     () => ["Favorites", "Spot", "Cryptos", "USD_M_FUTURES",
       // "COIN_M_FUTURES",
-      "OPTIONS", "ALPHA"],
+      "OPTIONS", /* "ALPHA" */],
     []
   );
   const activeTabIndex = useMemo(() => Math.max(0, TAB_KEYS.indexOf(activeTab)), [TAB_KEYS, activeTab]);
@@ -170,10 +171,10 @@ const Market = () => {
   useEffect(() => {
     if (route?.params?.tab) {
       const t = route.params.tab;
-      if (["Favorites", "Spot", "Cryptos", "USD_M_FUTURES", /* "COIN_M_FUTURES", */ "OPTIONS", "ALPHA"].includes(t)) setActiveTab(t);
+      if (["Favorites", "Spot", "Cryptos", "USD_M_FUTURES", /* "COIN_M_FUTURES", */ "OPTIONS", /* "ALPHA" */].includes(t)) setActiveTab(t);
       else if (t === "Favourite") setActiveTab("Favorites");
       else if (t === "Futures") setActiveTab("USD_M_FUTURES");
-      else if (t === "Alpha") setActiveTab("ALPHA");
+      // else if (t === "Alpha") setActiveTab("ALPHA");
     }
   }, [route?.params?.tab]);
 
@@ -287,20 +288,19 @@ const Market = () => {
 
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
-      <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />}>
-        {/* Featured cards – Carousel (same as Home CoinSlider) */}
-        <MarketHeader
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          search={search}
-          onSearchChange={setSearch}
-          showSearch={showSearch}
-          showSubTabs={showSubTabs}
-          subTabItems={activeTab === "ALPHA" ? alphaSubTabs : undefined}
-          subCategories={activeTab === "ALPHA" ? [] : spotSubCategories}
-          activeSubCategory={activeTab === "ALPHA" ? alphaSubTab : spotSubCategory}
-          onSubCategoryChange={activeTab === "ALPHA" ? setAlphaSubTab : setSpotSubCategory}
-        />
+      <MarketHeader
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        search={search}
+        onSearchChange={setSearch}
+        showSearch={showSearch}
+        showSubTabs={showSubTabs}
+        subTabItems={activeTab === "ALPHA" ? alphaSubTabs : undefined}
+        subCategories={activeTab === "ALPHA" ? [] : spotSubCategories}
+        activeSubCategory={activeTab === "ALPHA" ? alphaSubTab : spotSubCategory}
+        onSubCategoryChange={activeTab === "ALPHA" ? setAlphaSubTab : setSpotSubCategory}
+      />
+      <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />} contentContainerStyle={{ flexGrow: 1 }}>
 
         {contentLoading ? (
           <MarketSkeleton />
@@ -358,15 +358,15 @@ const Market = () => {
 
               {activeTab === "OPTIONS" && (
                 <View style={styles.tabContent}>
-                  <MarketPlaceholder message="Options markets are not available yet." />
+                  <OptionsMarket search={search} />
                 </View>
               )}
 
-              {activeTab === "ALPHA" && (
+              {/* {activeTab === "ALPHA" && (
                 <View style={styles.tabContent}>
                   {!initialLoaded ? <TabListSkeleton rows={8} /> : <AlphaMarket coinPairs={coinPairs} search={search} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
                 </View>
-              )}
+              )} */}
             </Animated.View>
           </>
         )}

@@ -13,14 +13,13 @@ import {
 import { useAppSelector } from "../../store/hooks";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import { colors } from "../../theme/colors";
-import { useDispatch } from "react-redux";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { useTheme } from "../../hooks/useTheme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const ROW_HEIGHT_DEFAULT = 40;
 const ROW_HEIGHT_HOME_TAB = 60;
-const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, pairTypography, hideStar }) => {
+const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, pairTypography, hideStar, isCryptos }) => {
   const { colors: themeColors, isDark } = useTheme();
   const isHomeTab = pairTypography === "homeTab";
   const isFavorite = favoriteArray?.includes(item?._id);
@@ -136,7 +135,8 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
           )}
           <View style={styles.nameBlock}>
             <AppText numberOfLines={1} weight={SEMI_BOLD} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
-              {ticker}<AppText style={{ color: '#9CA3AF', fontSize: 12 }}> / {quote}</AppText>
+              {ticker}
+              {!isCryptos && <AppText style={{ color: '#9CA3AF', fontSize: 12 }}> / {quote}</AppText>}
             </AppText>
             <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
               {fullName}
@@ -178,7 +178,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
 
 MarketRow.displayName = "MarketRow";
 
-const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = true, pairTypography, hideStar = false, favoriteArray: propsFavoriteArray, onToggleFavorite }) => {
+const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = true, pairTypography, hideStar = false, isCryptos = false, favoriteArray: propsFavoriteArray, onToggleFavorite }) => {
   const { colors: themeColors, isDark } = useTheme();
   const rowHeight = pairTypography === "homeTab" ? ROW_HEIGHT_HOME_TAB : ROW_HEIGHT_DEFAULT;
   const favoriteArrayFromRedux = useAppSelector((state) => state.home.favoriteArray);
@@ -209,9 +209,10 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
         onToggleFavorite={handleAddFav}
         pairTypography={pairTypography}
         hideStar={hideStar}
+        isCryptos={isCryptos}
       />
     ),
-    [favoriteArray, handlePress, handleAddFav, pairTypography, hideStar]
+    [favoriteArray, handlePress, handleAddFav, pairTypography, hideStar, isCryptos]
   );
 
   const keyExtractor = useCallback((item, index) => item?._id || index.toString(), []);

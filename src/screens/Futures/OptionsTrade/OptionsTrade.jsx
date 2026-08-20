@@ -15,11 +15,15 @@ import OptionsPairList from '../../Options/OptionsPairList';
 import { colors } from '../../../theme/colors';
 import useOptionsWebSocket from './hooks/useOptionsWebSocket';
 
-const OptionsTrade = () => {
+const OptionsTrade = ({ route }) => {
   const { colors: themeColors, theme } = useTheme();
   const isFocused = useIsFocused();
 
-  const [selectedAsset, setSelectedAsset] = useState('BTC');
+  const initialAsset = route?.params?.symbol
+    ? String(route.params.symbol).replace(/USDT|USDC/i, "").toUpperCase()
+    : 'BTC';
+
+  const [selectedAsset, setSelectedAsset] = useState(initialAsset);
   const [searchTerm, setSearchTerm] = useState('');
 
   const { underlyings, expiries, chains, currentPrice, isMarketLoading, isContractsLoading } = useOptionsWebSocket(selectedAsset, null, isFocused);
@@ -32,12 +36,15 @@ const OptionsTrade = () => {
 
   const pairSheetRef = useRef(null);
 
-  // Default to first underlying if current selectedAsset is not in the list
+  // Default to first underlying if current selectedAsset is not in the list, unless a route param was provided
   useEffect(() => {
-    if (underlyings?.length > 0 && !underlyings.find(u => u.symbol === selectedAsset)) {
+    if (route?.params?.symbol) {
+      const base = String(route.params.symbol).replace(/USDT|USDC/i, "").toUpperCase();
+      setSelectedAsset(base);
+    } else if (underlyings?.length > 0 && !underlyings.find(u => u.symbol === selectedAsset)) {
       setSelectedAsset(underlyings[0].symbol);
     }
-  }, [underlyings, selectedAsset]);
+  }, [underlyings, selectedAsset, route?.params?.symbol]);
 
   // Ensure selectedExpiry is valid within the dynamic expiries list
   useEffect(() => {

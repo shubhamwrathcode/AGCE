@@ -24,6 +24,7 @@ import {
   futuresActiveIcon,
   homeIcon,
   marketIcon,
+  marketIconDark,
   tradeImg,
   wallet_ic,
 } from "../helper/ImageAssets";
@@ -179,7 +180,7 @@ const TabItem = ({ isFocused, routeName, onPress, onLongPress, icon, label, them
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      width: interpolate(progress.value, [0, 1], [45, 125]),
+      width: interpolate(progress.value, [0, 1], [45, 105]),
       backgroundColor: interpolateColor(
         progress.value,
         [0, 1],
@@ -191,7 +192,7 @@ const TabItem = ({ isFocused, routeName, onPress, onLongPress, icon, label, them
   const textStyle = useAnimatedStyle(() => {
     return {
       opacity: progress.value,
-      width: interpolate(progress.value, [0, 1], [0, 68]),
+      width: interpolate(progress.value, [0, 1], [0, 50]),
       marginLeft: interpolate(progress.value, [0, 1], [0, 8]),
     };
   });
@@ -809,7 +810,7 @@ function BottomNavigation() {
                   ]}
                 >
                   <FastImage
-                    source={marketIcon}
+                    source={isDark ? marketIconDark : marketIcon}
                     style={bottomTabStyles.tabIconMd}
                     resizeMode="contain"
                     tintColor={focused ? activeIcon : inactive}

@@ -274,7 +274,7 @@ const FuturesHistorySection = ({
             source={right_ic}
             style={{ width: 11, height: 11, marginLeft: 4, }}
             resizeMode="contain"
-            tintColor={colors.black}
+            tintColor={isDark ? colors.white : colors.black}
           />
         </View>
         <AppText type={TWELVE} style={{ color: themeColors.text, marginBottom: 12, fontFamily: fontFamilySemiBold }}>

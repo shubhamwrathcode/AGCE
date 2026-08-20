@@ -38,11 +38,20 @@ class OptionsSocketService {
     }
 
     if (this.socket && this.authKey !== nextAuthKey) {
-      this.forceDisconnect();
+      if (this.authKey && !nextAuthKey) {
+        if (__DEV__) {
+          console.log('[OptionsWS] acquire: keeping existing authenticated connection for unauthenticated request');
+        }
+        // Do not update this.authKey, just reuse the socket
+      } else {
+        this.forceDisconnect();
+        this.authKey = nextAuthKey;
+      }
+    } else if (!this.socket) {
+      this.authKey = nextAuthKey;
     }
-
-    this.authKey = nextAuthKey;
-    return this.connect(url, token);
+    
+    return this.connect(url, this.authKey || token);
   }
 
   /**

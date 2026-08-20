@@ -27,7 +27,7 @@ const TABS = [
   { key: "USD_M_FUTURES", label: "USDⓈ-M Futures" },
   // { key: "COIN_M_FUTURES", label: "COIN-M Futures" },
   { key: "OPTIONS", label: "Options" },
-  { key: "ALPHA", label: "Alpha" },
+  // { key: "ALPHA", label: "Alpha" },
 ];
 
 const formatSubCategoryLabel = (key) => {
