@@ -418,6 +418,7 @@ export const emergency_vector_light = require('../../assets/images/emergency_vec
 export const security_risk_vector_light = require('../../assets/images/security_risk_vector_light.png');
 export const stakingImgBlack = require('../../assets/images/stakingImgBlack.png');
 export const stakingBannerDark = require('../../assets/images/stakingBannerDark.png');
+export const agcxNewLogo = require('../../assets/images/agcxNewLogo.png');
 
 
 

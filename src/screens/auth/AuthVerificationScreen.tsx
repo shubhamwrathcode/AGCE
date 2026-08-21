@@ -57,9 +57,11 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     const baseMethods = pending2FA.availableMethods ?? [];
     const has = (t: number) => baseMethods.some((m: any) => m.type === t);
 
-    const has4 = has(4);
-    console.log('[AuthVerification] getFirstMethod:', { has4, passkeyCancelled, defaultMethod: pending2FA?.defaultMethod });
+    // Always honour the method the user explicitly chose (e.g. Email vs Authenticator).
+    const active = Number(pending2FA.activeMethod);
+    if (active && has(active)) return active;
 
+    const has4 = has(4);
     if (has4 && !passkeyCancelled) return 4;
     if (has(2)) return 2;
 
@@ -114,7 +116,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
 
 
   useEffect(() => {
-    console.log("[AuthVerification] Hook 1 triggered. pending2FA:", !!pending2FA);
     if (!pending2FA) return;
 
     if (pending2FA.verifySubStep === 'methods') {
@@ -126,6 +127,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     setSelectedAuthMethod(firstMethod);
     setOtpCode("");
     setOtpError(false);
+    // Keep in sync so Hook 2 does not re-send OTP after a methods-list tap.
     prevSelectedMethod.current = firstMethod;
     autoSubmitEnabled.current = true;
     if (firstMethod === 1 || firstMethod === 3) {
@@ -133,14 +135,12 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     } else {
       setResendTimer(0);
     }
-  }, [pending2FA?.verifySubStep, pending2FA?.loginSignId, pending2FA?.availableMethods]);
+  }, [pending2FA?.verifySubStep, pending2FA?.loginSignId, pending2FA?.availableMethods, pending2FA?.activeMethod]);
 
   // Auto-send OTP when user switches between Email/Phone methods (no need to press Resend).
   useEffect(() => {
-    console.log(`[AuthVerification] Hook 2 triggered. selectedAuthMethod: ${selectedAuthMethod}, prevSelectedMethod: ${prevSelectedMethod.current}`);
     if (!pending2FA) return;
     if (prevSelectedMethod.current === selectedAuthMethod) {
-      console.log("[AuthVerification] Hook 2 - Skip because method is unchanged");
       return;
     }
 
@@ -152,7 +152,6 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     autoSubmitEnabled.current = true;
 
     if (selectedAuthMethod === 1 || selectedAuthMethod === 3) {
-      console.log(`[AuthVerification] Hook 2 - Auto-sending OTP for switched method: ${selectedAuthMethod}`);
       prevSelectedMethod.current = selectedAuthMethod;
       handleGetOtp();
       return;
@@ -308,8 +307,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                 ? "Verify your identity"
                 : selectedAuthMethod === 4 ? "Passkey Authentication"
                   : selectedAuthMethod === 2 ? "Authenticator Verification"
-                    : (pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId)))
-                      ? "Verify Your Phone"
+                    : selectedAuthMethod === 3 ? "Verify Your Phone"
                       : "Verify Your Email"}
             </AppText>
             <AppText type={TWELVE} style={[styles.description, { color: themeColors.secondaryText }]}>
@@ -319,7 +317,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                   ? "Authenticate using Face ID, Touch ID, or your device biometrics."
                   : selectedAuthMethod === 2
                     ? "Enter the 6-digit code from your authenticator app."
-                    : `The verification code has been sent to your ${(pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId))) ? "phone" : "email"} ${getMaskedEmail()}, valid for 10 minutes.`}
+                    : `The verification code has been sent to your ${selectedAuthMethod === 3 ? "phone" : "email"} ${getMaskedEmail()}, valid for 10 minutes.`}
             </AppText>
           </>
 
@@ -332,11 +330,17 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                     key={method.type}
                     onPress={() => {
                       if (isDone) return;
-                      setSelectedAuthMethod(method.type);
+                      const next = Number(method.type);
+                      prevSelectedMethod.current = next;
+                      setSelectedAuthMethod(next);
                       setOtpCode("");
-                      dispatch(updatePending2FA({ verifySubStep: 'code' }));
-                      if (method.type === 1 || method.type === 3) {
-                        handleGetOtp(method.type);
+                      setOtpError(false);
+                      autoSubmitEnabled.current = true;
+                      dispatch(updatePending2FA({ verifySubStep: 'code', activeMethod: next }));
+                      if (next === 1 || next === 3) {
+                        handleGetOtp(next);
+                      } else {
+                        setResendTimer(0);
                       }
                     }}
                     style={[sheetStyles.optionRow, { borderBottomColor: themeColors.border, opacity: isDone ? 0.6 : 1, paddingVertical: 16 }]}
@@ -454,7 +458,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
           {hasAlternative && !isMethodsStep ? (
             <TouchableOpacityView onPress={() => {
               if (pending2FA.verificationMode === 'ALL_REQUIRED') {
-                dispatch(updatePending2FA({ verifySubStep: 'methods' }));
+                dispatch(updatePending2FA({ verifySubStep: 'methods', activeMethod: undefined }));
               } else {
                 optionsSheetRef.current?.open();
               }
@@ -496,11 +500,13 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
               <TouchableOpacityView
                 key={method?.type}
                 onPress={() => {
+                  const next = Number(method.type);
                   // If the user selects the already active method, just close the sheet
-                  if (method.type !== selectedAuthMethod) {
-                    setSelectedAuthMethod(method.type);
+                  if (next !== selectedAuthMethod) {
+                    setSelectedAuthMethod(next);
                     setOtpCode("");
                     setResendTimer(0);
+                    dispatch(updatePending2FA({ activeMethod: next }));
                   }
                   optionsSheetRef.current?.close();
                 }}

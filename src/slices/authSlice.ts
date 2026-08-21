@@ -11,6 +11,8 @@ export type Pending2FA = {
   completedMethods?: number[];
   remainingMethods?: any[];
   verifySubStep?: 'methods' | 'code';
+  /** Method the user explicitly tapped on the methods list / switch sheet */
+  activeMethod?: number;
 } | null;
 
 export const initialState = {

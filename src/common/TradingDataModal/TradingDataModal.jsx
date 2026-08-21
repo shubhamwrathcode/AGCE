@@ -4,11 +4,15 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  FlatList,
   Dimensions,
+  ActivityIndicator,
+  Modal,
+  Animated,
+  Easing,
+  Pressable,
 } from "react-native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Modal from "react-native-modal";
+import { FlashList } from "@shopify/flash-list";
+import React, { useCallback, useEffect, useMemo, useState, useRef, memo, forwardRef, useImperativeHandle } from "react";
 import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
 import FastImage from "react-native-fast-image";
@@ -20,6 +24,9 @@ import { addToFavorites } from "../../actions/homeActions";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SHEET_HEIGHT = Math.min(SCREEN_HEIGHT * 0.82, 640);
+const OPEN_MS = 280;
+const CLOSE_MS = 240;
+const GESTURE_LOCK_MS = 320;
 
 function compactVolume(value) {
   const n = Number(value);
@@ -61,13 +68,214 @@ function SortCaret({ columnKey, sortKey, sortDir, inactiveColor, activeColor }) 
   );
 }
 
-const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
+const rowAreEqual = (prev, next) => {
+  return (
+    prev.isFavorite === next.isFavorite &&
+    prev.item?.buy_price === next.item?.buy_price &&
+    prev.item?.change_percentage === next.item?.change_percentage &&
+    prev.item?.change === next.item?.change &&
+    prev.item?.volume === next.item?.volume &&
+    prev.item?._id === next.item?._id
+  );
+};
+
+const CoinRow = memo(({ item, isFavorite, onToggleFavorite, onChangePair, searchBarBg, rowBorderColor, textColor, subTextColor }) => {
+  const chg = getChangePct(item);
+  const chgNeg = chg < 0;
+  const iconUri = item?.icon_path ? IMAGE_BASE_URL + item.icon_path : null;
+  const fullName = item?.base_currency_fullname || item?.base_currency || "—";
+  const volStr = compactVolume(item?.volume);
+  const subtitle = `${fullName} | ${volStr}`;
+  const priceStr = item?.buy_price != null ? toFixedFive(item.buy_price) : "—";
+  const changeStr = `${chg >= 0 ? "+" : ""}${toFixedThree(chg)}%`;
+
+  return (
+    <TouchableOpacity
+      style={[styles.row, { borderBottomColor: rowBorderColor }]}
+      onPress={() => onChangePair(item)}
+      activeOpacity={0.65}
+    >
+      <View style={styles.rowLeft}>
+        <TouchableOpacity
+          onPress={(e) => {
+            e?.stopPropagation?.();
+            onToggleFavorite(item?._id);
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={styles.starWrap}
+        >
+          <FastImage
+            source={isFavorite ? starFillIcon : starIcon}
+            resizeMode="contain"
+            style={styles.starIcon}
+            tintColor={isFavorite ? colors.starColor : subTextColor}
+          />
+        </TouchableOpacity>
+        {iconUri ? (
+          <FastImage source={{ uri: iconUri }} resizeMode="cover" style={styles.coinIcon} />
+        ) : (
+          <View style={[styles.coinIcon, styles.coinIconPh, { backgroundColor: searchBarBg }]} />
+        )}
+        <View style={styles.pairBlock}>
+          <Text style={[styles.pairLine, { color: textColor }]} numberOfLines={1}>
+            {item?.base_currency}
+            <Text style={{ fontWeight: "400", color: subTextColor }}>/{item?.quote_currency}</Text>
+          </Text>
+          <Text style={[styles.subLine, { color: subTextColor }]} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.rowRight}>
+        <Text style={[styles.priceLine, { color: textColor }]} numberOfLines={1}>
+          {priceStr}
+        </Text>
+        <Text style={[styles.changeLine, { color: chgNeg ? colors.red : colors.green }]} numberOfLines={1}>
+          {changeStr}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}, rowAreEqual);
+
+const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDark, theme }, ref) => {
   const dispatch = useDispatch();
   const coinData = useAppSelector((state) => state.home.coinPairs);
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState("pair");
   const [sortDir, setSortDir] = useState(1);
+  const [mounted, setMounted] = useState(false);
+
+  const pendingCurrencyRef = useRef(null);
+  const setCurrencyRef = useRef(setCurrency);
+  const onCloseRef = useRef(onClose);
+  const visiblePropRef = useRef(visible);
+  setCurrencyRef.current = setCurrency;
+  onCloseRef.current = onClose;
+  visiblePropRef.current = visible;
+
+  const anim = useRef(new Animated.Value(0)).current;
+  const mountedRef = useRef(false);
+  const isOpenRef = useRef(false);
+  const isClosingRef = useRef(false);
+  const pendingOpenRef = useRef(false);
+  const ignoreBackdropUntilRef = useRef(0);
+  const ignoreOpenUntilRef = useRef(0);
+  const openFallbackRef = useRef(null);
+  const runOpenRef = useRef(() => {});
+  const runCloseRef = useRef(() => {});
+
+  const applyPendingAndNotify = useCallback(() => {
+    const pending = pendingCurrencyRef.current;
+    pendingCurrencyRef.current = null;
+    requestAnimationFrame(() => {
+      if (pending) setCurrencyRef.current?.(pending);
+      onCloseRef.current?.();
+    });
+  }, []);
+
+  const playOpenAnim = useCallback(() => {
+    if (!pendingOpenRef.current) return;
+    pendingOpenRef.current = false;
+    if (openFallbackRef.current) {
+      clearTimeout(openFallbackRef.current);
+      openFallbackRef.current = null;
+    }
+    isClosingRef.current = false;
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: OPEN_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) isOpenRef.current = true;
+    });
+  }, [anim]);
+
+  const runOpen = useCallback(() => {
+    const now = Date.now();
+    if (now < ignoreOpenUntilRef.current) {
+      if (visiblePropRef.current === true) onCloseRef.current?.();
+      return;
+    }
+    if (isClosingRef.current) return;
+    if (mountedRef.current || isOpenRef.current || pendingOpenRef.current) return;
+
+    ignoreBackdropUntilRef.current = now + GESTURE_LOCK_MS;
+    pendingOpenRef.current = true;
+    isOpenRef.current = false;
+    anim.stopAnimation();
+    anim.setValue(0);
+    setSearchQuery("");
+    mountedRef.current = true;
+    setMounted(true);
+    openFallbackRef.current = setTimeout(playOpenAnim, 32);
+  }, [anim, playOpenAnim]);
+
+  const runClose = useCallback(() => {
+    if (!mountedRef.current || isClosingRef.current) return;
+
+    ignoreOpenUntilRef.current = Date.now() + GESTURE_LOCK_MS;
+    pendingOpenRef.current = false;
+    isOpenRef.current = false;
+    isClosingRef.current = true;
+    if (openFallbackRef.current) {
+      clearTimeout(openFallbackRef.current);
+      openFallbackRef.current = null;
+    }
+    anim.stopAnimation();
+
+    Animated.timing(anim, {
+      toValue: 0,
+      duration: CLOSE_MS,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      isClosingRef.current = false;
+      if (!finished) return;
+      mountedRef.current = false;
+      setMounted(false);
+      applyPendingAndNotify();
+    });
+  }, [anim, applyPendingAndNotify]);
+
+  runOpenRef.current = runOpen;
+  runCloseRef.current = runClose;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      open: () => runOpenRef.current(),
+      close: () => runCloseRef.current(),
+    }),
+    []
+  );
+
+  useEffect(() => {
+    if (typeof visible !== "boolean") return;
+    if (visible) runOpenRef.current();
+    else runCloseRef.current();
+  }, [visible]);
+
+  useEffect(() => {
+    return () => {
+      if (openFallbackRef.current) clearTimeout(openFallbackRef.current);
+    };
+  }, []);
+
+  const requestClose = useCallback(() => {
+    runCloseRef.current();
+  }, []);
+
+  const requestCloseFromBackdrop = useCallback(() => {
+    if (Date.now() < ignoreBackdropUntilRef.current) return;
+    runCloseRef.current();
+  }, []);
+
+  const handleModalShow = useCallback(() => {
+    playOpenAnim();
+  }, [playOpenAnim]);
 
   const darkMode = typeof isDark === "boolean" ? isDark : theme === "Dark";
   const modalBg = darkMode ? "#0F141C" : "#FFFFFF";
@@ -76,14 +284,19 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
   const borderColor = darkMode ? "rgba(255,255,255,0.12)" : "#E8E8E8";
   const rowBorderColor = darkMode ? "rgba(255,255,255,0.08)" : "#EEEEEE";
   const searchBarBg = darkMode ? "rgba(255,255,255,0.06)" : "#F5F5F5";
-  const pasteBg = darkMode ? "rgba(255,255,255,0.10)" : "#EBEBEB";
   const closeCircleBg = darkMode ? "rgba(255,255,255,0.12)" : "#E8E8E8";
   const iconTint = darkMode ? colors.white : colors.black;
   const searchTint = darkMode ? "rgba(255,255,255,0.65)" : "#595757";
+  const backdropMax = darkMode ? 0.55 : 0.35;
 
-  useEffect(() => {
-    if (visible) setSearchQuery("");
-  }, [visible]);
+  const sheetTranslateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [SHEET_HEIGHT, 0],
+  });
+  const backdropOpacity = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, backdropMax],
+  });
 
   const cycleSort = useCallback(
     (key) => {
@@ -137,21 +350,13 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
 
   const handleChangePair = useCallback(
     (item) => {
-      setCurrency(item);
-      onClose();
+      pendingCurrencyRef.current = item;
+      requestClose();
     },
-    [setCurrency, onClose]
+    [requestClose]
   );
 
-  const handlePaste = useCallback(async () => {
-    try {
-      const Clipboard = require("@react-native-clipboard/clipboard").default;
-      const text = await Clipboard.getString();
-      if (text && typeof text === "string") setSearchQuery(text.trim());
-    } catch {
-      /* ignore */
-    }
-  }, []);
+
 
   const handleToggleFavorite = useCallback(
     (id) => {
@@ -243,61 +448,17 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
   const renderItem = useCallback(
     ({ item }) => {
       const isFavorite = favoriteArray?.includes(item?._id);
-      const chg = getChangePct(item);
-      const chgNeg = chg < 0;
-      const iconUri = item?.icon_path ? IMAGE_BASE_URL + item.icon_path : null;
-      const fullName = item?.base_currency_fullname || item?.base_currency || "—";
-      const volStr = compactVolume(item?.volume);
-      const subtitle = `${fullName} | ${volStr}`;
-      const priceStr = item?.buy_price != null ? toFixedFive(item.buy_price) : "—";
-      const changeStr = `${chg >= 0 ? "+" : ""}${toFixedThree(chg)}%`;
-
       return (
-        <TouchableOpacity
-          style={[styles.row, { borderBottomColor: rowBorderColor }]}
-          onPress={() => handleChangePair(item)}
-          activeOpacity={0.65}
-        >
-          <View style={styles.rowLeft}>
-            <TouchableOpacity
-              onPress={(e) => {
-                e?.stopPropagation?.();
-                handleToggleFavorite(item?._id);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={styles.starWrap}
-            >
-              <FastImage
-                source={isFavorite ? starFillIcon : starIcon}
-                resizeMode="contain"
-                style={styles.starIcon}
-                tintColor={isFavorite ? colors.starColor : subTextColor}
-              />
-            </TouchableOpacity>
-            {iconUri ? (
-              <FastImage source={{ uri: iconUri }} resizeMode="cover" style={styles.coinIcon} />
-            ) : (
-              <View style={[styles.coinIcon, styles.coinIconPh, { backgroundColor: searchBarBg }]} />
-            )}
-            <View style={styles.pairBlock}>
-              <Text style={[styles.pairLine, { color: textColor }]} numberOfLines={1}>
-                {item?.base_currency}
-                <Text style={{ fontWeight: "400", color: subTextColor }}>/{item?.quote_currency}</Text>
-              </Text>
-              <Text style={[styles.subLine, { color: subTextColor }]} numberOfLines={1}>
-                {subtitle}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.rowRight}>
-            <Text style={[styles.priceLine, { color: textColor }]} numberOfLines={1}>
-              {priceStr}
-            </Text>
-            <Text style={[styles.changeLine, { color: chgNeg ? colors.red : colors.green }]} numberOfLines={1}>
-              {changeStr}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <CoinRow
+          item={item}
+          isFavorite={isFavorite}
+          onToggleFavorite={handleToggleFavorite}
+          onChangePair={handleChangePair}
+          searchBarBg={searchBarBg}
+          rowBorderColor={rowBorderColor}
+          textColor={textColor}
+          subTextColor={subTextColor}
+        />
       );
     },
     [
@@ -313,86 +474,114 @@ const TradingDataModal = ({ visible, onClose, setCurrency, isDark, theme }) => {
 
   const keyExtractor = useCallback((item, index) => item?._id || String(index), []);
 
-  const listEmpty = useMemo(
-    () => (
+  const listEmpty = useMemo(() => {
+    // If no coin data has arrived from Redux yet, it's loading.
+    if (!coinData || (coinData.length === 0 && !searchQuery)) {
+      return (
+        <View style={styles.emptyWrap}>
+          <ActivityIndicator size="small" color={textColor} />
+          <Text style={[styles.emptyText, { color: subTextColor, marginTop: 12 }]}>Loading pairs...</Text>
+        </View>
+      );
+    }
+    // If data exists but search query doesn't match anything
+    return (
       <View style={styles.emptyWrap}>
         <Text style={[styles.emptyText, { color: subTextColor }]}>No pairs found</Text>
       </View>
-    ),
-    [subTextColor]
-  );
+    );
+  }, [coinData, searchQuery, subTextColor, textColor]);
 
   return (
     <Modal
-      isVisible={visible}
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
-      animationInTiming={280}
-      animationOutTiming={240}
-      backdropOpacity={darkMode ? 0.55 : 0.35}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
-      style={styles.modalRoot}
-      useNativeDriver
-      useNativeDriverForBackdrop
-      propagateSwipe
+      visible={mounted}
+      transparent
+      animationType="none"
       statusBarTranslucent
-      hideModalContentWhileAnimating={true}
+      hardwareAccelerated
+      presentationStyle="overFullScreen"
+      onRequestClose={requestClose}
+      onShow={handleModalShow}
     >
-      <View style={[styles.sheet, { height: SHEET_HEIGHT, backgroundColor: modalBg }]}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: textColor }]}>Select Coin</Text>
-          <TouchableOpacity
-            onPress={onClose}
-            style={[styles.closeCircle, { backgroundColor: closeCircleBg }]}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            activeOpacity={0.75}
-          >
-            <FastImage source={closeIcon} resizeMode="contain" style={styles.closeIcon} tintColor={iconTint} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={[styles.searchRow, { backgroundColor: searchBarBg, borderColor }]}>
-          <FastImage source={searchIcon} resizeMode="contain" style={styles.searchGlyph} tintColor={searchTint} />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search token"
-            placeholderTextColor={subTextColor}
-            style={[styles.searchInput, { color: textColor }]}
-            autoCorrect={false}
-            autoCapitalize="none"
-            clearButtonMode="while-editing"
+      <View style={styles.modalRoot} pointerEvents="box-none">
+        <Pressable style={StyleSheet.absoluteFill} onPress={requestCloseFromBackdrop}>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.backdrop, { opacity: backdropOpacity }]}
           />
+        </Pressable>
+        <Animated.View
+          style={[
+            styles.sheet,
+            {
+              height: SHEET_HEIGHT,
+              backgroundColor: modalBg,
+              transform: [{ translateY: sheetTranslateY }],
+            },
+          ]}
+          collapsable={false}
+          renderToHardwareTextureAndroid
+        >
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: textColor }]}>Select Coin</Text>
+            <TouchableOpacity
+              onPress={requestClose}
+              style={[styles.closeCircle, { backgroundColor: closeCircleBg }]}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.75}
+            >
+              <FastImage source={closeIcon} resizeMode="contain" style={styles.closeIcon} tintColor={iconTint} />
+            </TouchableOpacity>
+          </View>
 
-        </View>
+          <View style={[styles.searchRow, { backgroundColor: searchBarBg, borderColor }]}>
+            <FastImage source={searchIcon} resizeMode="contain" style={styles.searchGlyph} tintColor={searchTint} />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search token"
+              placeholderTextColor={subTextColor}
+              style={[styles.searchInput, { color: textColor }]}
+              autoCorrect={false}
+              autoCapitalize="none"
+              clearButtonMode="while-editing"
+            />
+          </View>
 
-        {renderHeader()}
+          {renderHeader()}
 
-        <FlatList
-          style={styles.listFlex}
-          data={filteredSorted}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={listEmpty}
-          initialNumToRender={14}
-          maxToRenderPerBatch={16}
-          windowSize={10}
-        />
+          <View style={styles.listFlex}>
+            <FlashList
+              data={filteredSorted}
+              keyExtractor={keyExtractor}
+              renderItem={renderItem}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={listEmpty}
+              estimatedItemSize={65}
+            />
+          </View>
+        </Animated.View>
       </View>
     </Modal>
   );
-};
+}), (prev, next) => (
+  prev.visible === next.visible &&
+  prev.isDark === next.isDark &&
+  prev.theme === next.theme
+));
 
 export default TradingDataModal;
 
 const styles = StyleSheet.create({
   modalRoot: {
-    margin: 0,
+    flex: 1,
     justifyContent: "flex-end",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
   },
   sheet: {
     borderTopLeftRadius: 22,

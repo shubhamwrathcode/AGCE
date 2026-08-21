@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Animated, Easing, Dimensions, Modal } from 'react-native';
 import { useAppSelector } from '../store/hooks';
-import { APP_LOGO } from '../helper/ImageAssets';
+import { agcxNewLogo, APP_LOGO } from '../helper/ImageAssets';
 import FastImage from 'react-native-fast-image';
 import { colors } from '../theme/colors';
+import { useTheme } from '../hooks/useTheme';
 
 interface SpinnerSecondProps {
   loading?: boolean;
@@ -16,6 +17,8 @@ const SpinnerSecond = ({ loading, localOnly = false }: SpinnerSecondProps) => {
   const isLoading = useAppSelector(state => state.auth.isLoading);
   const loadingFor = useAppSelector(state => state.auth.loadingFor);
   const scaleValue = useRef(new Animated.Value(1)).current;
+  const { colors: themeColors, isDark } = useTheme();
+
 
   // Ensure it shows even for OTP if needed, or based on overall isLoading
   const shouldShow = localOnly ? !!loading : (isLoading || !!loading);
@@ -52,7 +55,7 @@ const SpinnerSecond = ({ loading, localOnly = false }: SpinnerSecondProps) => {
       <View style={styles.container}>
         <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
           <FastImage
-            source={APP_LOGO}
+            source={isDark? agcxNewLogo: APP_LOGO}
             style={styles.logo}
             resizeMode="contain"
 

@@ -3571,20 +3571,23 @@ const Spot = () => {
           <View style={{ marginTop: 8 }}>
             <TouchableOpacity
               activeOpacity={0.8}
-              style={styles.execTradesBtn}
+              style={[styles.execTradesBtn,{
+                borderWidth: 1,
+                borderColor:isDark? 'transparent': lightTheme.inputBorder,
+              }]}
               onPress={() => setShowExecutedTrades((p) => ({ ...p, [orderId]: !p?.[orderId] }))}
             >
               <View style={styles.execTradesBtnRow}>
                 <FastImage
                   source={downIcon}
-                  tintColor={colors.lightGrey}
+                  tintColor={isDark? colors.white: colors.lightGrey}
                   style={[
                     styles.orderHistoryChevron,
                     { transform: [{ rotate: showTrades ? "180deg" : "0deg" }] },
                   ]}
                   resizeMode="contain"
                 />
-                <AppText style={[styles.execTradesBtnText, { color: textColor }]}> Executed trades</AppText>
+                <AppText style={[styles.execTradesBtnText, { color: textColor }]}> {' '}Executed trades</AppText>
               </View>
             </TouchableOpacity>
 
@@ -5900,8 +5903,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     paddingVertical: 4,
     paddingHorizontal: 5,
-    borderWidth: 1,
-    borderColor: lightTheme.inputBorder,
+   
     borderRadius: 5,
 
   },

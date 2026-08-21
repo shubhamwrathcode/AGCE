@@ -92,12 +92,20 @@ const SpotHeader = ({
   setActiveHeaderTab,
   currencyData,
 }) => {
-  const [pairSheetVisible, setPairSheetVisible] = useState(false);
+  const pairSheetRef = useRef(null);
+  const openLockRef = useRef(false);
   const { colors: themeColors, theme, isDark: isDarkFromHook } = useTheme();
   const darkMode =
     typeof isDarkProp === "boolean" ? isDarkProp : isDarkFromHook;
 
-  const openPairSheet = () => setPairSheetVisible(true);
+  const openPairSheet = () => {
+    if (openLockRef.current) return;
+    openLockRef.current = true;
+    pairSheetRef.current?.open();
+    setTimeout(() => {
+      openLockRef.current = false;
+    }, 400);
+  };
 
   const iconTint = darkMode ? themeColors.text : "#222";
   const titleColor = darkMode ? themeColors.text : "#222";
@@ -267,8 +275,8 @@ const SpotHeader = ({
       </View>
 
       <TradingDataModal
-        visible={pairSheetVisible}
-        onClose={() => setPairSheetVisible(false)}
+        ref={pairSheetRef}
+        onClose={() => {}}
         setCurrency={setCurrency}
         isDark={darkMode}
         theme={theme}
