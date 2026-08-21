@@ -312,7 +312,7 @@ const Home = () => {
         {(kycVerified === 0 || kycVerified === 3) && (
           <View
             style={{
-              backgroundColor: isDark ? '#3A3A3C' : themeColors.input,
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : themeColors.input,
               marginHorizontal: 12,
               height: 188,
               padding: 10,

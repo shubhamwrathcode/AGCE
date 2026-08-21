@@ -7,7 +7,7 @@ import {
   RegistrationProps,
   SendOtpRegistrationProps,
 } from '../helper/types';
-import { setAppVersion, setLoading, setLoadingOtp, setUserData, setPending2FA, clearPending2FA } from '../slices/authSlice';
+import { setAppVersion, setLoading, setLoadingOtp, setUserData, setPending2FA, updatePending2FA, clearPending2FA } from '../slices/authSlice';
 import { AppDispatch } from '../store/store';
 import { USER_TOKEN_KEY, USER_REFRESH_TOKEN_KEY } from '../helper/Constants';
 import NavigationService from '../navigation/NavigationService';
@@ -155,7 +155,7 @@ export const register =
       } else {
         const tok = extractTokenFromAuthResponse(response);
         if (__DEV__) {
-          console.log('[register_email] extracted token (preview):', tok ? `${tok.slice(0, 12)}…` : '(none)');
+          console.log('[register_email] extracted token (preview):', tok?.token ? `${tok.token.slice(0, 12)}…` : '(none)');
         }
         await persistSignupSessionToken(tok ?? response?.token);
         NavigationService.navigate(NAVIGATION_AUTH_STACK, {
@@ -188,7 +188,7 @@ export const registerWithPhone =
         showSuccess(response?.message);
         const tok = extractTokenFromAuthResponse(response);
         if (__DEV__) {
-          console.log('[register_phone] extracted token (preview):', tok ? `${tok.slice(0, 12)}…` : '(none)');
+          console.log('[register_phone] extracted token (preview):', tok?.token ? `${tok.token.slice(0, 12)}…` : '(none)');
         }
         await persistSignupSessionToken(tok ?? response?.token);
         handleClearCaptcha();
@@ -326,6 +326,31 @@ function loginFailMessage(response: any): string {
  * Post-login 2FA screen: do not use passkey (type 4) on the client. Prefer email / SMS when the
  * identifier matches, then any other non-passkey method the backend lists.
  */
+/** Coerce API method type to 1|2|3|4 so aliases and string names like 'email', 'totp', 'mobile', 'passkey' are normalized. */
+export function normalizeAuthMethodType(raw: any): number {
+  const n = Number(raw);
+  if (n === 1 || n === 2 || n === 3 || n === 4) return n;
+  const s = String(raw ?? '')
+    .trim()
+    .toLowerCase();
+  if (s === 'email' || s === 'mail') return 1;
+  if (s === 'google' || s === 'authenticator' || s === 'app' || s === 'ga' || s === 'totp') return 2;
+  if (s === 'mobile' || s === 'phone' || s === 'sms') return 3;
+  if (s === 'passkey' || s === 'webauthn') return 4;
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+export function remainingMethodTypes(remaining: any): number[] {
+  if (!Array.isArray(remaining)) return [];
+  return remaining
+    .map((m) => {
+      if (m == null) return null;
+      if (typeof m === 'number' || typeof m === 'string') return normalizeAuthMethodType(m);
+      return normalizeAuthMethodType(m.type ?? m.verificationType ?? m.methodType);
+    })
+    .filter((t): t is number => t === 1 || t === 2 || t === 3 || t === 4);
+}
+
 /**
  * Normalize available methods from response data and inject Passkey (type 4)
  * if it's enabled on the account and supported by the device.
@@ -335,7 +360,7 @@ const getNormalizedAvailableMethods = (d: any) => {
 
   // Normalize method types to numbers
   methods = methods.map((m: any) => {
-    const type = Number(m?.type ?? m?.verificationType ?? m?.methodType);
+    const type = normalizeAuthMethodType(m?.type ?? m?.verificationType ?? m?.methodType ?? m);
     return {
       ...m,
       type,
@@ -438,15 +463,20 @@ export const login = (data: LoginProps & { token?: string }) => async (
       const signIdFromToken = extractSignIdFromToken(d?.tempToken ?? d?.token);
       const signId = d?.signId ?? signIdFromToken ?? data?.email_or_phone;
       const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, signId);
-      const isMulti = methods.length > 1;
+      const mode = String(d?.verification_mode || (methods.length > 1 ? 'ALL_REQUIRED' : ''));
+      const comp = remainingMethodTypes(d?.completed_methods);
+      const rem = remainingMethodTypes(d?.remaining_methods);
       dispatch(setPending2FA({
         loginSignId: signId,
         availableMethods: methods,
         defaultMethod: defaultMethod,
-        verificationMode: isMulti ? 'ALL_REQUIRED' : 'ANY_ONE',
-        completedMethods: [],
-        verifySubStep: isMulti ? 'methods' : 'code',
-        activeMethod: isMulti ? undefined : defaultMethod,
+        verificationMode: mode,
+        completedMethods: comp,
+        remainingMethods: rem.length > 0 ? rem : (mode === 'ALL_REQUIRED' ? methods.map((m: any) => Number(m.type)) : []),
+        challengeId: d?.challenge_id || d?.challengeId,
+        tempToken: d?.tempToken,
+        verifySubStep: 'methods',
+        activeMethod: undefined,
         data: d,
       }));
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -456,15 +486,20 @@ export const login = (data: LoginProps & { token?: string }) => async (
       const signIdFromToken = extractSignIdFromToken(d?.tempToken ?? d?.token);
       const signId = d?.signId ?? signIdFromToken ?? data?.email_or_phone;
       const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.['2fa'], signId);
-      const isMulti = methods.length > 1;
+      const mode = String(d?.verification_mode || (methods.length > 1 ? 'ALL_REQUIRED' : ''));
+      const comp = remainingMethodTypes(d?.completed_methods);
+      const rem = remainingMethodTypes(d?.remaining_methods);
       dispatch(setPending2FA({
         loginSignId: signId,
         availableMethods: methods,
         defaultMethod: defaultMethod,
-        verificationMode: isMulti ? 'ALL_REQUIRED' : 'ANY_ONE',
-        completedMethods: [],
-        verifySubStep: isMulti ? 'methods' : 'code',
-        activeMethod: isMulti ? undefined : defaultMethod,
+        verificationMode: mode,
+        completedMethods: comp,
+        remainingMethods: rem.length > 0 ? rem : (mode === 'ALL_REQUIRED' ? methods.map((m: any) => Number(m.type)) : []),
+        challengeId: d?.challenge_id || d?.challengeId,
+        tempToken: d?.tempToken,
+        verifySubStep: 'methods',
+        activeMethod: undefined,
         data: d?.['2fa'] === 2 ? data : d,
       }));
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -595,7 +630,7 @@ export const verifyOtp = (
       setOtp('');
       const tok = extractTokenFromAuthResponse(response);
       if (__DEV__) {
-        console.log('[verify-registration-otp] extracted token (preview):', tok ? `${tok.slice(0, 12)}…` : '(unchanged — using token from register)');
+        console.log('[verify-registration-otp] extracted token (preview):', tok?.token ? `${tok.token.slice(0, 12)}…` : '(unchanged — using token from register)');
       }
       if (tok) {
         await persistSignupSessionToken(tok);
@@ -626,30 +661,47 @@ export const verifyOtp = (
 export const verifyUser = (data: { email_or_phone: string; otp: string; type: number }) => async (dispatch: AppDispatch, getState: () => any) => {
   try {
     dispatch(setLoadingOtp(true));
-    const payload = {
+    const state = getState();
+    const pending2FA = state?.auth?.pending2FA;
+
+    const payload: any = {
       email_or_phone: data.email_or_phone,
       type: data.type,
-      otp: data.type === 2 ? data.otp : parseInt(data.otp, 10),
+      otp: data.type === 2 ? String(data.otp) : parseInt(data.otp, 10),
       resend: false,
     };
-    console.log(payload, "payloadotp");
+    if (pending2FA?.challengeId) payload.challenge_id = pending2FA.challengeId;
+    if (pending2FA?.tempToken) payload.tempToken = pending2FA.tempToken;
+
+    console.log('[verify-otp] payload:', payload);
 
     const response: any = await appOperation.guest.verify_fac_otp(payload as any);
-    if (response.success) {
-      const state = getState();
-      const pending2FA = state?.auth?.pending2FA;
-      const availableMethods = pending2FA?.availableMethods || [];
-      const prevCompleted = pending2FA?.completedMethods || [];
-      const currentCompleted = Array.from(new Set([...prevCompleted, data.type]));
-      const remaining = availableMethods.filter((m: any) => !currentCompleted.includes(Number(m.type)));
+    console.log('[verify-otp] response:', response);
 
-      if (pending2FA?.verificationMode === 'ALL_REQUIRED' && remaining.length > 0) {
-        showSuccess(response?.message ?? 'Verification step completed');
+    if (response?.success) {
+      if (response?.data?.verification_complete === false) {
+        const remaining = remainingMethodTypes(response.data.remaining_methods);
+        const comp = remainingMethodTypes(response.data.completed_methods);
+        const prevComp = Array.isArray(pending2FA?.completedMethods) ? pending2FA.completedMethods : [];
+        const completed = comp.length > 0 ? comp : Array.from(new Set([...prevComp, data.type]));
+
+        showSuccess(
+          response?.data?.message ||
+          response?.message ||
+          (remaining.length
+            ? `Method verified. ${remaining.length} method(s) remaining.`
+            : 'Method verified. Continue with remaining security methods.')
+        );
+
         dispatch(updatePending2FA({
-          completedMethods: currentCompleted,
+          completedMethods: completed,
+          remainingMethods: remaining,
+          challengeId: response.data.challenge_id || pending2FA?.challengeId,
+          tempToken: response.data.tempToken || pending2FA?.tempToken,
+          verificationMode: response.data.verification_mode || pending2FA?.verificationMode,
           verifySubStep: 'methods',
           activeMethod: undefined,
-          data: response?.data ?? pending2FA?.data,
+          data: response.data,
         }));
         return response;
       }

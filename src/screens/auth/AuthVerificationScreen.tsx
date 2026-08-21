@@ -122,6 +122,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     if (!pending2FA) return;
 
     if (pending2FA.verifySubStep === 'methods') {
+      Keyboard.dismiss();
       setOtpCode("");
       setOtpError(false);
       return; // Wait for user to select a method
@@ -142,9 +143,10 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     }
   }, [pending2FA?.verifySubStep, pending2FA?.loginSignId, pending2FA?.availableMethods, pending2FA?.activeMethod, pending2FA?.completedMethods]);
 
-  // Auto-send OTP when user switches between Email/Phone methods (no need to press Resend).
+  // Auto-send OTP when user switches between Email/Phone methods on code step.
   useEffect(() => {
     if (!pending2FA) return;
+    if (pending2FA.verifySubStep === 'methods') return;
     if (prevSelectedMethod.current === selectedAuthMethod) {
       return;
     }
@@ -242,6 +244,11 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
         autoSubmitEnabled.current = false;
         return false;
       }
+      if (res && res.success === true) {
+        setOtpError(false);
+        setOtpCode("");
+        autoSubmitEnabled.current = true;
+      }
       return true;
     } finally {
       isVerifyingRef.current = false;
@@ -311,15 +318,15 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
               {isMethodsStep
                 ? "Verify your identity"
                 : selectedAuthMethod === 4 ? "Passkey Authentication"
-                  : selectedAuthMethod === 2 ? "Authenticator Verification"
+                  : selectedAuthMethod === 2 ? "Verify with authenticator"
                     : selectedAuthMethod === 3 ? "Verify Your Phone"
                       : "Verify Your Email"}
             </AppText>
             <AppText type={TWELVE} style={[styles.description, { color: themeColors.secondaryText }]}>
               {isMethodsStep
-                ? (pending2FA.verificationMode === "ALL_REQUIRED" ? "Please verify each of the security methods below to finish sign-in." : "Choose any one method to verify your identity.")
+                ? (pending2FA.verificationMode === "ALL_REQUIRED" ? "New device: verify every method below to finish sign-in." : "Choose any one method to verify your identity.")
                 : selectedAuthMethod === 4
-                  ? "Authenticate using Face ID, Touch ID, or your device biometrics."
+                  ? "Click the button below to authenticate with your passkey."
                   : selectedAuthMethod === 2
                     ? "Enter the 6-digit code from your authenticator app."
                     : `The verification code has been sent to your ${selectedAuthMethod === 3 ? "phone" : "email"} ${getMaskedEmail()}, valid for 10 minutes.`}
@@ -327,12 +334,13 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
           </>
 
           {isMethodsStep ? (
-            <View style={{ marginTop: 20 }}>
+            <View style={{ marginTop: 24, gap: 14 }}>
               {methodsForOptions.map((method: any) => {
                 const isDone = completedMethods.includes(Number(method.type));
                 return (
                   <TouchableOpacityView
                     key={method.type}
+                    activeOpacity={isDone ? 1 : 0.7}
                     onPress={() => {
                       if (isDone) return;
                       const next = Number(method.type);
@@ -348,41 +356,78 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                         setResendTimer(0);
                       }
                     }}
-                    style={[sheetStyles.optionRow, { borderBottomColor: themeColors.border, opacity: isDone ? 0.6 : 1, paddingVertical: 16 }]}
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: isDone ? "#00C087" : (isDark ? "#262A35" : "#E5E7EB"),
+                      backgroundColor: isDone ? (isDark ? "rgba(0, 192, 135, 0.04)" : "#F0FDF4") : "transparent",
+                      borderRadius: 14,
+                      paddingHorizontal: 16,
+                      paddingVertical: 16,
+                    }}
                   >
-                    <View style={{ flexDirection: "row", justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                      <View style={[sheetStyles.optionLeft, { flex: 1 }]}>
+                    <View style={{ flexDirection: "row", alignItems: "center", flex: 1, marginRight: 12 }}>
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 10,
+                          backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "#F3F4F6",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
                         {method.type === 2 ? (
-                          <FastImage source={KEY_ICON} style={{ width: 20, height: 20 }} tintColor={themeColors.text} resizeMode="contain" />
+                          <FastImage source={KEY_ICON} style={{ width: 22, height: 22 }} tintColor={colors.orangeTheme} resizeMode="contain" />
                         ) : typeof getMethodIcon(method.type) === "string" && getMethodIcon(method.type) !== "" ? (
-                          <FastImage source={getMethodIcon(method.type) as any} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                          <FastImage source={getMethodIcon(method.type) as any} style={{ width: 22, height: 22 }} resizeMode="contain" />
                         ) : (
-                          <FastImage source={getMethodIcon(method.type)} resizeMode="contain" style={{ width: 20, height: 20 }} tintColor={themeColors.text} />
+                          <FastImage source={getMethodIcon(method.type)} resizeMode="contain" style={{ width: 22, height: 22 }} tintColor={colors.orangeTheme} />
                         )}
-                        <View style={{ marginLeft: 15 }}>
-                          <AppText weight={SEMI_BOLD} type={FOURTEEN_CONST} style={{ color: themeColors.text }}>
-                            {method.label || (method.type === 1 ? "Email OTP" : method.type === 2 ? "Authenticator" : method.type === 3 ? "Mobile OTP" : "Passkey")}
-                          </AppText>
-                          <AppText type={THIRTEEN} style={{ marginTop: 4, color: themeColors.secondaryText }}>
-                            {method.maskedValue || method.description || (method.type === 1 ? "Receive verification codes via email" : method.type === 2 ? "Use Google Authenticator app" : method.type === 3 ? "Receive verification codes via SMS" : "Use Face ID, Touch ID, or Windows Hello")}
-                          </AppText>
-                        </View>
                       </View>
-                      {isDone ? (
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: colors.buyBtnGreen }}>
-                            Verified
-                          </AppText>
-                          <FastImage source={checkIc} style={{ width: 18, height: 18 }} tintColor={colors.buyBtnGreen} resizeMode="contain" />
-                        </View>
-                      ) : (
-                        <View style={{ borderWidth: 1, borderColor: colors.orangeTheme, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 }}>
-                          <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: colors.orangeTheme }}>
-                            Verify
-                          </AppText>
-                        </View>
-                      )}
+                      <View style={{ marginLeft: 14, flex: 1 }}>
+                        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+                          {method.label || (method.type === 1 ? "Email OTP" : method.type === 2 ? "Google Authenticator" : method.type === 3 ? "Mobile OTP" : "Passkey")}
+                        </AppText>
+                        <AppText type={THIRTEEN} style={{ marginTop: 4, color: themeColors.secondaryText }} numberOfLines={1}>
+                          {method.maskedValue || method.description || (method.type === 1 ? (getMaskedEmail() || "Receive verification codes via email") : method.type === 2 ? "Use your authenticator app" : method.type === 3 ? "Receive verification codes via SMS" : "Use Face ID, Touch ID, or Windows Hello")}
+                        </AppText>
+                      </View>
                     </View>
+
+                    {isDone ? (
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: isDark ? "rgba(0, 192, 135, 0.15)" : "#DCFCE7",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <FastImage source={checkIc} style={{ width: 16, height: 16 }} tintColor="#00C087" resizeMode="contain" />
+                      </View>
+                    ) : (
+                      <View
+                        style={{
+                          borderWidth: 1,
+                          borderColor: colors.orangeTheme,
+                          borderRadius: 20,
+                          paddingHorizontal: 16,
+                          paddingVertical: 7,
+                          minWidth: 70,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <AppText type={FOURTEEN_CONST} weight={MEDIUM} style={{ color: colors.orangeTheme }}>
+                          Verify
+                        </AppText>
+                      </View>
+                    )}
                   </TouchableOpacityView>
                 );
               })}
@@ -408,6 +453,62 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             </View>
           ) : (
             <>
+              {methodsForOptions.length > 1 && !isMethodsStep ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ flexDirection: "row", gap: 8, marginTop: 4, marginBottom: 20 }}
+                >
+                  {methodsForOptions.map((m: any) => {
+                    const t = Number(m.type);
+                    const isDone = completedMethods.includes(t);
+                    const isActive = t === selectedAuthMethod;
+                    const label = m.label || (t === 1 ? "Email" : t === 2 ? "Authenticator" : t === 3 ? "Phone" : "Passkey");
+                    return (
+                      <TouchableOpacityView
+                        key={t}
+                        disabled={isDone && pending2FA?.verificationMode === "ALL_REQUIRED"}
+                        onPress={() => {
+                          if (isDone && pending2FA?.verificationMode === "ALL_REQUIRED") return;
+                          if (t !== selectedAuthMethod) {
+                            setSelectedAuthMethod(t);
+                            setOtpCode("");
+                            setOtpError(false);
+                            prevSelectedMethod.current = t;
+                            dispatch(updatePending2FA({ activeMethod: t }));
+                            if (t === 1 || t === 3) {
+                              handleGetOtp(t);
+                            } else {
+                              setResendTimer(0);
+                            }
+                          }
+                        }}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                          borderWidth: 1,
+                          borderColor: isActive ? colors.orangeTheme : isDone ? colors.buyBtnGreen : (isDark ? "rgba(255,255,255,0.15)" : "#E5E7EB"),
+                          backgroundColor: isActive ? (isDark ? "rgba(243, 147, 44, 0.15)" : "#FFF7ED") : "transparent",
+                        }}
+                      >
+                        <AppText
+                          type={THIRTEEN}
+                          weight={isActive ? SEMI_BOLD : MEDIUM}
+                          style={{
+                            color: isDone ? colors.buyBtnGreen : isActive ? colors.orangeTheme : themeColors.secondaryText,
+                          }}
+                        >
+                          {label} {isDone ? "✓" : isActive ? "(now)" : ""}
+                        </AppText>
+                      </TouchableOpacityView>
+                    );
+                  })}
+                </ScrollView>
+              ) : null}
+
               <OtpInput6Digit
                 ref={otpInputRef}
                 value={otpCode}
@@ -465,20 +566,16 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             </>
           )}
 
-          {hasAlternative && !isMethodsStep ? (
-            <TouchableOpacityView onPress={() => {
-              if (pending2FA.verificationMode === 'ALL_REQUIRED') {
+          {!isMethodsStep ? (
+            <TouchableOpacityView
+              onPress={() => {
                 dispatch(updatePending2FA({ verifySubStep: 'methods', activeMethod: undefined }));
-              } else {
-                optionsSheetRef.current?.open();
-              }
-            }} style={styles.switchRow}>
+              }}
+              style={styles.switchRow}
+            >
               <AppText type={FOURTEEN_CONST} weight={SEMI_BOLD} style={[styles.underlineText, { color: themeColors.text }]}>
-                {pending2FA.verificationMode === 'ALL_REQUIRED' ? 'Back to methods ' : 'Switch verification method '}
+                ← Back to methods
               </AppText>
-              {pending2FA.verificationMode !== 'ALL_REQUIRED' && (
-                <FastImage source={SHARE_NEW_ICON} style={{ width: 15, height: 15 }} tintColor={themeColors.text} resizeMode="contain" />
-              )}
             </TouchableOpacityView>
           ) : null}
         </ScrollView>

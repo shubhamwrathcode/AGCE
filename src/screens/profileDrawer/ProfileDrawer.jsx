@@ -660,107 +660,107 @@ const ProfileDrawer = () => {
             </TouchableOpacity>
           </View>
         </View>
-
-        <LinearGradient
-          colors={isDark ? ["#23242a", "#1a1b21"] : ["#FFFFFF", "#FFFFFF"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            padding: 5,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: isDark ? "#2A2A2E" : "#E8E8E8",
-          }}
-        >
-          <View
+        <TouchableOpacity onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}>
+          <LinearGradient
+            colors={isDark ? ["#23242a", "#1a1b21"] : ["#FFFFFF", "#FFFFFF"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              overflow: "hidden",
+              flexDirection: "row",
+              alignItems: "center",
+              padding: 5,
+              borderRadius: 16,
               borderWidth: 1,
-              borderColor: colors.disclaimDarText,
-              bottom: 10
+              borderColor: isDark ? "#2A2A2E" : "#E8E8E8",
             }}
           >
-            {finalAvatarUri ? (
-              <FastImage
-                source={{ uri: finalAvatarUri }}
-                style={{ width: 56, height: 56, borderRadius: 28 }}
-              />
-            ) : (
-              <LinearGradient
-                colors={KYC_AVATAR_GRADIENT}
-                locations={KYC_AVATAR_GRADIENT_LOCATIONS}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  width: 56,
-                  height: 56,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 18 }}>
-                  {getInitials(userData, serverNickname)}
-                </AppText>
-              </LinearGradient>
-            )}
-          </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Animated.View style={{ opacity: emailTextOpacity, transform: [{ translateY: emailTextTranslateY }] }}>
-              <AppText style={{ color: themeColors.text, fontSize: 18, }} weight={SEMI_BOLD} numberOfLines={1}>
-                {displayAccountLine}
-              </AppText>
-            </Animated.View>
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 6 }}>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
-                UID: {userData?.uuid || "—"}
-              </AppText>
-              {userData?.uuid ? (
-                <TouchableOpacity onPress={() => copyText(userData.uuid)} hitSlop={8}>
-                  <FastImage source={copyIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.secondaryText} />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-              <View style={[styles.profileBadge, { backgroundColor: isDark ? "#2F3138" : "#F3F4F6" }]}>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
-                  VIP {vipLevel}
-                </AppText>
-              </View>
-              <View
-                style={[
-                  styles.profileBadge,
-                  {
-                    backgroundColor: kycBadge.bg,
-                  },
-                ]}
-              >
-                <Text
+            <View
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: colors.disclaimDarText,
+                bottom: 10
+              }}
+            >
+              {finalAvatarUri ? (
+                <FastImage
+                  source={{ uri: finalAvatarUri }}
+                  style={{ width: 56, height: 56, borderRadius: 28 }}
+                />
+              ) : (
+                <LinearGradient
+                  colors={KYC_AVATAR_GRADIENT}
+                  locations={KYC_AVATAR_GRADIENT_LOCATIONS}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={{
-                    fontSize: 14,
-                    fontFamily: fontFamilySemiBold,
-                    color: kycBadge.fg,
+                    width: 56,
+                    height: 56,
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  {kycBadge.label}
-                </Text>
+                  <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 18 }}>
+                    {getInitials(userData, serverNickname)}
+                  </AppText>
+                </LinearGradient>
+              )}
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Animated.View style={{ opacity: emailTextOpacity, transform: [{ translateY: emailTextTranslateY }] }}>
+                <AppText style={{ color: themeColors.text, fontSize: 18, }} weight={SEMI_BOLD} numberOfLines={1}>
+                  {displayAccountLine}
+                </AppText>
+              </Animated.View>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 6 }}>
+                <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                  UID: {userData?.uuid || "—"}
+                </AppText>
+                {userData?.uuid ? (
+                  <TouchableOpacity onPress={() => copyText(userData.uuid)} hitSlop={8}>
+                    <FastImage source={copyIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.secondaryText} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                <View style={[styles.profileBadge, { backgroundColor: isDark ? "#2F3138" : "#F3F4F6" }]}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>
+                    VIP {vipLevel}
+                  </AppText>
+                </View>
+                <View
+                  style={[
+                    styles.profileBadge,
+                    {
+                      backgroundColor: kycBadge.bg,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontFamily: fontFamilySemiBold,
+                      color: kycBadge.fg,
+                    }}
+                  >
+                    {kycBadge.label}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
-          <TouchableOpacity
-            onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={{ flexShrink: 0, justifyContent: "center", paddingLeft: 8 }}
-          >
-            <FastImage source={right_ic} style={{ width: 18, height: 18, right: 15 }} tintColor={themeColors.text} resizeMode="contain" />
-          </TouchableOpacity>
-        </LinearGradient>
+            <TouchableOpacity
+              disabled
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{ flexShrink: 0, justifyContent: "center", paddingLeft: 8 }}
+            >
+              <FastImage source={right_ic} style={{ width: 18, height: 18, right: 15 }} tintColor={themeColors.text} resizeMode="contain" />
+            </TouchableOpacity>
+          </LinearGradient>
 
-
+></TouchableOpacity>
 
         <TouchableOpacity
           activeOpacity={0.9}
@@ -899,7 +899,7 @@ const ProfileDrawer = () => {
         </View>
       </Modal>
 
-    </View>
+    </View >
   );
 };
 

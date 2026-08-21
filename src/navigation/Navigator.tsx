@@ -222,6 +222,49 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
     setLocalIndex(state.index);
   }, [state.index]);
 
+  const currentIndexRef = React.useRef(state.index);
+  currentIndexRef.current = state.index;
+
+  const panResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          // Detect horizontal swipe on the bottom tab bar (ignore vertical drags and normal taps)
+          return (
+            Math.abs(gestureState.dx) > 15 &&
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5
+          );
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          const { dx, vx } = gestureState;
+          const currentIdx = currentIndexRef.current;
+          const totalRoutes = state.routes.length;
+
+          // Swiped Left -> go to Next tab
+          if (dx < -25 || (dx < -10 && vx < -0.2)) {
+            if (currentIdx < totalRoutes - 1) {
+              const nextRoute = state.routes[currentIdx + 1];
+              if (nextRoute) {
+                setLocalIndex(currentIdx + 1);
+                navigation.navigate(nextRoute.name);
+              }
+            }
+          }
+          // Swiped Right -> go to Previous tab
+          else if (dx > 25 || (dx > 10 && vx > 0.2)) {
+            if (currentIdx > 0) {
+              const prevRoute = state.routes[currentIdx - 1];
+              if (prevRoute) {
+                setLocalIndex(currentIdx - 1);
+                navigation.navigate(prevRoute.name);
+              }
+            }
+          }
+        },
+      }),
+    [state.routes, navigation]
+  );
+
   React.useEffect(() => {
     const showSubscription = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
@@ -244,15 +287,11 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
   const borderCol = isDark ? themeColors.border : "#E5E7EB";
 
   return (
-    <View style={[customTabBarStyles.container, { backgroundColor: bg, borderTopColor: borderCol }]}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={customTabBarStyles.scrollContent}
-        bounces={true}
-        alwaysBounceHorizontal={true}
-        keyboardShouldPersistTaps="handled"
-      >
+    <View
+      style={[customTabBarStyles.container, { backgroundColor: bg, borderTopColor: borderCol }]}
+      {...panResponder.panHandlers}
+    >
+      <View style={customTabBarStyles.scrollContent}>
         {state.routes.map((route: any, index: number) => {
           const isFocused = localIndex === index;
 
@@ -311,7 +350,7 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
             />
           );
         })}
-      </ScrollView>
+      </View>
     </View>
   );
 };

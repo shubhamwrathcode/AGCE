@@ -22,6 +22,7 @@ import { SPOT_ORDER_HISTORY_DETAIL, MARGIN_BORROW_REPAY_SCREEN } from "../../nav
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, FIFTEEN, FOURTEEN, THIRTEEN, TWELVE } from "../../shared";
 import { colors } from "../../theme/colors";
+import { useTheme } from "../../hooks/useTheme";
 import {
   NO_NOTIFICATION_ICON,
   NO_NOTIFICATION_ICON_LIGHT,
@@ -209,7 +210,10 @@ const CustomDraggableSlider = ({ value, onValueChange, themeColors, isDark }) =>
   );
 };
 
-const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullScreen = false, initialTab = "size", marginMode = "Isolated" }) => {
+const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp, isDark: isDarkProp, isFullScreen = false, initialTab = "size", marginMode = "Isolated" }) => {
+  const { colors: themeColorsHook, isDark: isDarkHook } = useTheme();
+  const themeColors = themeColorsProp || themeColorsHook;
+  const isDark = typeof isDarkProp === "boolean" ? isDarkProp : isDarkHook;
   const [activeTab, setActiveTab] = useState(initialTab);
   const [subTab, setSubTab] = useState("borrow"); // used in Asset History tab
   const [tabData, setTabData] = useState({});
@@ -264,7 +268,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
   const pairSymbol = `${baseSymbol}${quoteSymbol}`.toUpperCase();
   const pairId = currencyData?._id || "";
 
-  const borderThemeColor = themeColors.themeBorderColor || "rgba(0,0,0,0.06)";
+  const borderThemeColor = themeColors.themeBorderColor || themeColors.border || "rgba(0,0,0,0.06)";
   const textThemeColor = themeColors.text || colors.black;
   const secondaryTextThemeColor = themeColors.secondaryText || colors.placeholderColor;
 
@@ -1088,7 +1092,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       {/* Primary Tab Bar */}
       <View style={[styles.tabsContainer, {}]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 10 }}>
@@ -1113,7 +1117,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 <View
                   style={[
                     styles.activeIndicator,
-                    { backgroundColor: isActive ? isDark ? colors.white : colors.black : "transparent" },
+                    { backgroundColor: isActive ? (isDark ? colors.white : (colors.buttonBg || colors.black)) : "transparent" },
                   ]}
                 />
               </TouchableOpacity>
@@ -1133,7 +1137,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                 style={[
                   styles.subTabButton,
                   {
-                    backgroundColor: isSubActive ? (isDark ? "rgba(255,255,255,0.08)" : "#EAEAEA") : "transparent",
+                    backgroundColor: isSubActive ? (isDark ? "rgba(255,255,255,0.08)" : (themeColors.input || "#EAEAEA")) : "transparent",
                   },
                 ]}
                 activeOpacity={0.85}
@@ -1167,7 +1171,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 4,
-                  backgroundColor: openOrderTypeFilter === label ? (isDark ? "#333" : "#EAEAEA") : "transparent",
+                  backgroundColor: openOrderTypeFilter === label ? (isDark ? (themeColors.input || "#333") : (themeColors.input || "#EAEAEA")) : "transparent",
                 }}
                 onPress={() => setOpenOrderTypeFilter(label)}
               >
@@ -1216,7 +1220,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 4,
-                  backgroundColor: orderHistoryTypeFilter === label ? (isDark ? "#333" : "#EAEAEA") : "transparent",
+                  backgroundColor: orderHistoryTypeFilter === label ? (isDark ? (themeColors.input || "#333") : (themeColors.input || "#EAEAEA")) : "transparent",
                 }}
                 onPress={() => setOrderHistoryTypeFilter(label)}
               >
@@ -1268,8 +1272,11 @@ const MarginHistorySection = ({ currencyData = {}, themeColors, isDark, isFullSc
         </View>
 
         {(loading || actionLoading) && !closePositionModal && (
-          <View style={[StyleSheet.absoluteFill, { justifyContent: 'flex-start', paddingTop: 60, alignItems: 'center', backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)', zIndex: 10 }]}>
-            <ActivityIndicator size="small" color={colors.black} />
+          <View style={[StyleSheet.absoluteFill, {
+            justifyContent: 'flex-start', paddingTop: 60, alignItems: 'center',
+            zIndex: 10
+          }]}>
+            <ActivityIndicator size="small" color={isDark ? colors.white : colors.black} />
           </View>
         )}
 

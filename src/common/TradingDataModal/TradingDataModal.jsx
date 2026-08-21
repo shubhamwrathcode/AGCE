@@ -159,12 +159,10 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
   const mountedRef = useRef(false);
   const isOpenRef = useRef(false);
   const isClosingRef = useRef(false);
-  const pendingOpenRef = useRef(false);
   const ignoreBackdropUntilRef = useRef(0);
   const ignoreOpenUntilRef = useRef(0);
-  const openFallbackRef = useRef(null);
-  const runOpenRef = useRef(() => {});
-  const runCloseRef = useRef(() => {});
+  const runOpenRef = useRef(() => { });
+  const runCloseRef = useRef(() => { });
 
   const applyPendingAndNotify = useCallback(() => {
     const pending = pendingCurrencyRef.current;
@@ -176,12 +174,6 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
   }, []);
 
   const playOpenAnim = useCallback(() => {
-    if (!pendingOpenRef.current) return;
-    pendingOpenRef.current = false;
-    if (openFallbackRef.current) {
-      clearTimeout(openFallbackRef.current);
-      openFallbackRef.current = null;
-    }
     isClosingRef.current = false;
     Animated.timing(anim, {
       toValue: 1,
@@ -200,30 +192,25 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
       return;
     }
     if (isClosingRef.current) return;
-    if (mountedRef.current || isOpenRef.current || pendingOpenRef.current) return;
+    if (mountedRef.current || isOpenRef.current) return;
 
     ignoreBackdropUntilRef.current = now + GESTURE_LOCK_MS;
-    pendingOpenRef.current = true;
     isOpenRef.current = false;
+    isClosingRef.current = false;
     anim.stopAnimation();
     anim.setValue(0);
     setSearchQuery("");
     mountedRef.current = true;
     setMounted(true);
-    openFallbackRef.current = setTimeout(playOpenAnim, 32);
+    playOpenAnim();
   }, [anim, playOpenAnim]);
 
   const runClose = useCallback(() => {
     if (!mountedRef.current || isClosingRef.current) return;
 
     ignoreOpenUntilRef.current = Date.now() + GESTURE_LOCK_MS;
-    pendingOpenRef.current = false;
     isOpenRef.current = false;
     isClosingRef.current = true;
-    if (openFallbackRef.current) {
-      clearTimeout(openFallbackRef.current);
-      openFallbackRef.current = null;
-    }
     anim.stopAnimation();
 
     Animated.timing(anim, {
@@ -258,12 +245,6 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
     else runCloseRef.current();
   }, [visible]);
 
-  useEffect(() => {
-    return () => {
-      if (openFallbackRef.current) clearTimeout(openFallbackRef.current);
-    };
-  }, []);
-
   const requestClose = useCallback(() => {
     runCloseRef.current();
   }, []);
@@ -272,10 +253,6 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
     if (Date.now() < ignoreBackdropUntilRef.current) return;
     runCloseRef.current();
   }, []);
-
-  const handleModalShow = useCallback(() => {
-    playOpenAnim();
-  }, [playOpenAnim]);
 
   const darkMode = typeof isDark === "boolean" ? isDark : theme === "Dark";
   const modalBg = darkMode ? "#0F141C" : "#FFFFFF";
@@ -498,10 +475,7 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
       transparent
       animationType="none"
       statusBarTranslucent
-      hardwareAccelerated
-      presentationStyle="overFullScreen"
       onRequestClose={requestClose}
-      onShow={handleModalShow}
     >
       <View style={styles.modalRoot} pointerEvents="box-none">
         <Pressable style={StyleSheet.absoluteFill} onPress={requestCloseFromBackdrop}>
