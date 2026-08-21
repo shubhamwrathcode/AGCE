@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useAppSelector } from '../../../../store/hooks';
 import { appOperation } from '../../../../appOperation';
 import optionsSocketService from '../../../../services/socket/OptionsSocketService';
@@ -64,13 +64,18 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
     const [recentTrades, setRecentTrades] = useState([]);
     const [contractDetailReady, setContractDetailReady] = useState(false);
 
+    const contractsBatchTimerRef = useRef(null);
+    const pendingContractsPayloadRef = useRef(null);
+
     const underlying = underlyingKeyFromAsset(selectedAsset);
+    const underlyingRef = useRef(underlying);
+    underlyingRef.current = underlying;
 
     useEffect(() => {
-        if (!enabled) return;
-        
+        if (!enabled) return undefined;
+
         bumpOptionsWsStat("hookMount");
-        logOptionsWs("hook mount", { underlying, isAuthenticated, hasToken: Boolean(authToken) });
+        logOptionsWs("hook mount", { underlying: underlyingRef.current, isAuthenticated, hasToken: Boolean(authToken) });
 
         const socket = optionsSocketService.acquire(undefined, authToken);
         socketRef.current = socket;
@@ -78,12 +83,11 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         const resubscribeAll = () => {
             if (!enabledRef.current) return;
             bumpOptionsWsStat("resubscribeAll");
-            logOptionsWs("resubscribeAll", { underlying, isAuthenticated });
             optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
-            if (underlying) {
+            if (underlyingRef.current) {
                 optionsSocketService.emit("subscribe", {
                     channel: OPTIONS_CHANNELS.CONTRACTS,
-                    underlying: underlying,
+                    underlying: underlyingRef.current,
                     expiry: "ALL",
                 });
             }
@@ -128,7 +132,15 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
             if (!enabledRef.current) return;
             if (data && typeof data === "object") {
                 bumpOptionsWsEvent("contracts_update");
-                setContractsPayload(data);
+                pendingContractsPayloadRef.current = data;
+                if (!contractsBatchTimerRef.current) {
+                    contractsBatchTimerRef.current = setTimeout(() => {
+                        contractsBatchTimerRef.current = null;
+                        if (pendingContractsPayloadRef.current && enabledRef.current) {
+                            setContractsPayload(pendingContractsPayloadRef.current);
+                        }
+                    }, 60);
+                }
             }
         };
 
@@ -175,8 +187,8 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
             }
         };
 
-        optionsSocketService.on("connect", onConnect);
-        optionsSocketService.on("disconnect", onDisconnect);
+        optionsSocketService.onConnect(onConnect);
+        optionsSocketService.onDisconnect(onDisconnect);
         optionsSocketService.on("market_overview", onMarketOverview);
         optionsSocketService.on("contracts_update", onContractsUpdate);
         optionsSocketService.on("account_update", onAccountUpdate);
@@ -185,16 +197,38 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         optionsSocketService.on("orderbook_update", onOrderbookUpdate);
         optionsSocketService.on("recent_trades_update", onRecentTradesUpdate);
 
-        if (socket.connected) {
+        if (optionsSocketService.getIsConnected()) {
             onConnect();
         }
 
         return () => {
             bumpOptionsWsStat("hookUnmount");
-            logOptionsWs("hook unmount", { underlying, consumerCount: optionsSocketService.getConsumerCount?.() });
+            logOptionsWs("hook unmount", { consumerCount: optionsSocketService.getConsumerCount?.() });
 
-            optionsSocketService.off("connect", onConnect);
-            optionsSocketService.off("disconnect", onDisconnect);
+            // 1. Unsubscribe
+            optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
+            if (underlyingRef.current) {
+                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.CONTRACTS, underlying: underlyingRef.current, expiry: "ALL" });
+            }
+            if (subscribedRef.current.account) {
+                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.ACCOUNT });
+            }
+            if (subscribedRef.current.userOrders) {
+                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.USER_ORDERS });
+            }
+            if (subscribedRef.current.userPositions) {
+                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.USER_POSITIONS });
+            }
+            subscribedRef.current = {
+                account: false,
+                userOrders: false,
+                userPositions: false,
+                contractDetail: null,
+            };
+
+            // 2. Remove listeners
+            optionsSocketService.offConnect(onConnect);
+            optionsSocketService.offDisconnect(onDisconnect);
             optionsSocketService.off("market_overview", onMarketOverview);
             optionsSocketService.off("contracts_update", onContractsUpdate);
             optionsSocketService.off("account_update", onAccountUpdate);
@@ -203,136 +237,55 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
             optionsSocketService.off("orderbook_update", onOrderbookUpdate);
             optionsSocketService.off("recent_trades_update", onRecentTradesUpdate);
 
-            const tornDown = optionsSocketService.release();
-            if (!tornDown) {
-                subscribedRef.current = {
-                    account: false,
-                    userOrders: false,
-                    userPositions: false,
-                    contractDetail: subscribedRef.current.contractDetail,
-                };
-                return;
+            // 3. Clear batch timer
+            if (contractsBatchTimerRef.current) {
+                clearTimeout(contractsBatchTimerRef.current);
+                contractsBatchTimerRef.current = null;
             }
 
-            optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
-            if (underlying) {
-                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.CONTRACTS, underlying, expiry: "ALL" });
-            }
-            if (subscribedRef.current.account) {
-                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.ACCOUNT });
-            }
-            if (subscribedRef.current.userOrders) {
-                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.USER_ORDERS });
-            }
-            if (subscribedRef.current.userPositions) {
-                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.USER_POSITIONS });
-            }
-            if (subscribedRef.current.contractDetail) {
-                optionsSocketService.emit("unsubscribe", {
-                    channel: OPTIONS_CHANNELS.CONTRACT_DETAIL,
-                    symbol: subscribedRef.current.contractDetail,
-                });
-            }
-            subscribedRef.current = {
-                account: false,
-                userOrders: false,
-                userPositions: false,
-                contractDetail: null,
-            };
+            // 4. Release consumer
+            optionsSocketService.release();
         };
-    }, [authToken, underlying, isAuthenticated, enabled]);
+    }, [authToken, isAuthenticated, enabled]);
 
+    // Handle underlying change while connected
+    const prevUnderlyingRef = useRef(underlying);
     useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket?.connected) return undefined;
+        if (!enabled || !underlying) return;
 
-        if (!enabled) {
-            optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
-            if (underlying) {
-                optionsSocketService.emit("unsubscribe", {
-                    channel: OPTIONS_CHANNELS.CONTRACTS,
-                    underlying,
-                    expiry: "ALL",
-                });
-            }
-            if (subscribedRef.current.account) {
-                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.ACCOUNT });
-            }
-            if (subscribedRef.current.userOrders) {
-                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.USER_ORDERS });
-            }
-            if (subscribedRef.current.userPositions) {
-                optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.USER_POSITIONS });
-            }
-            if (subscribedRef.current.contractDetail) {
-                optionsSocketService.emit("unsubscribe", {
-                    channel: OPTIONS_CHANNELS.CONTRACT_DETAIL,
-                    symbol: subscribedRef.current.contractDetail,
-                });
-            }
-            return undefined;
+        if (prevUnderlyingRef.current && prevUnderlyingRef.current !== underlying) {
+            optionsSocketService.emit("unsubscribe", {
+                channel: OPTIONS_CHANNELS.CONTRACTS,
+                underlying: prevUnderlyingRef.current,
+                expiry: "ALL",
+            });
         }
+        prevUnderlyingRef.current = underlying;
 
-        optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
-        if (underlying) {
+        if (optionsSocketService.getIsConnected()) {
             optionsSocketService.emit("subscribe", {
                 channel: OPTIONS_CHANNELS.CONTRACTS,
                 underlying,
                 expiry: "ALL",
             });
         }
-        if (isAuthenticated) {
-            optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.ACCOUNT });
-            optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.USER_ORDERS });
-            optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.USER_POSITIONS });
-        }
-        if (subscribedRef.current.contractDetail) {
-            optionsSocketService.emit("subscribe", {
-                channel: OPTIONS_CHANNELS.CONTRACT_DETAIL,
-                symbol: subscribedRef.current.contractDetail,
-            });
-        }
+    }, [enabled, underlying, isConnected]);
 
-        return undefined;
-    }, [enabled, underlying, isConnected, isAuthenticated]);
-
+    // Handle contract detail subscription
     useEffect(() => {
-        if (!enabled || !isConnected || !selectedSymbol) {
-            return undefined;
-        }
+        if (!enabled || !selectedSymbol) return undefined;
 
-        bumpOptionsWsStat("contractEffectMount");
-        logOptionsWs("contract_detail effect mount", { selectedSymbol, isConnected });
-
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        const prevSymbol = subscribedRef.current.contractDetail;
-        if (prevSymbol && prevSymbol !== selectedSymbol) {
-            optionsSocketService.emit("unsubscribe", {
-                channel: OPTIONS_CHANNELS.CONTRACT_DETAIL,
-                symbol: prevSymbol,
-            });
-            setOrderbookUpdate(null);
-            setRecentTrades([]);
-            setContractDetailReady(false);
-        }
-
-        subscribedRef.current.contractDetail = selectedSymbol;
         contractDetailSymbolRef.current = selectedSymbol;
+        subscribedRef.current.contractDetail = selectedSymbol;
         setContractDetailReady(false);
-        bumpOptionsWsStat("subscribeEmit");
-        logOptionsWs("subscribe contract_detail", { symbol: selectedSymbol });
+
         optionsSocketService.emit("subscribe", {
             channel: OPTIONS_CHANNELS.CONTRACT_DETAIL,
             symbol: selectedSymbol,
         });
 
         return () => {
-            bumpOptionsWsStat("contractEffectUnmount");
-            logOptionsWs("contract_detail effect unmount", { selectedSymbol });
             if (subscribedRef.current.contractDetail === selectedSymbol) {
-                bumpOptionsWsStat("unsubscribeEmit");
                 optionsSocketService.emit("unsubscribe", {
                     channel: OPTIONS_CHANNELS.CONTRACT_DETAIL,
                     symbol: selectedSymbol,
@@ -341,7 +294,7 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
                 contractDetailSymbolRef.current = null;
             }
         };
-    }, [enabled, isConnected, selectedSymbol]);
+    }, [enabled, selectedSymbol]);
 
     const refreshLiveTradeChannels = useCallback(() => {
         const socket = socketRef.current;
@@ -366,11 +319,11 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         }
     }, [isAuthenticated]);
 
-    const underlyings = underlyingsFromMarketOverview(marketOverview);
-    const expiryDatesList = marketOverview?.expiry_dates?.[underlying] || [];
-
-    const spotPrice = marketOverview?.index_prices?.[underlying] || 0;
-    const allChains = buildChainsFromContracts(contractsPayload?.contracts || [], spotPrice);
+    const underlyings = useMemo(() => underlyingsFromMarketOverview(marketOverview), [marketOverview]);
+    const expiryDatesList = useMemo(() => marketOverview?.expiry_dates?.[underlying] || [], [marketOverview?.expiry_dates, underlying]);
+    const spotPrice = useMemo(() => marketOverview?.index_prices?.[underlying] || 0, [marketOverview?.index_prices, underlying]);
+    const allChains = useMemo(() => buildChainsFromContracts(contractsPayload?.contracts || [], spotPrice), [contractsPayload?.contracts, spotPrice]);
+    const expiries = useMemo(() => ['ALL', ...expiryDatesList], [expiryDatesList]);
 
     const normalizeOrderbookLevels = (levels) => {
         if (!Array.isArray(levels)) return [];
@@ -385,20 +338,23 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
         });
     };
 
-    const orderbook = orderbookUpdate && matchesContractDetailSymbol(orderbookUpdate.symbol, selectedSymbol)
-        ? {
-            symbol: orderbookUpdate.symbol,
-            bids: normalizeOrderbookLevels(orderbookUpdate.bids),
-            asks: normalizeOrderbookLevels(orderbookUpdate.asks),
-            timestamp: orderbookUpdate.timestamp,
+    const orderbook = useMemo(() => {
+        if (orderbookUpdate && matchesContractDetailSymbol(orderbookUpdate.symbol, selectedSymbol)) {
+            return {
+                symbol: orderbookUpdate.symbol,
+                bids: normalizeOrderbookLevels(orderbookUpdate.bids),
+                asks: normalizeOrderbookLevels(orderbookUpdate.asks),
+                timestamp: orderbookUpdate.timestamp,
+            };
         }
-        : null;
+        return null;
+    }, [orderbookUpdate, selectedSymbol]);
 
     return {
         isConnected,
         marketOverview,
         underlyings,
-        expiries: ['ALL', ...expiryDatesList],
+        expiries,
         chains: allChains,
         currentPrice: spotPrice,
         accountUpdate,

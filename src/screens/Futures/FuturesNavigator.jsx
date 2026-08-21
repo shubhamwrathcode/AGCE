@@ -52,7 +52,7 @@ const CustomTabBar = ({ state, descriptors, navigation, position, themeColors, i
             });
 
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate({ name: route.name, merge: true });
+              navigation.navigate(route.name);
             }
           };
 
@@ -98,7 +98,6 @@ const FuturesNavigator = () => {
         screenOptions={{
           swipeEnabled: false,
           lazy: false,
-          freezeOnBlur: true,
           animationEnabled: false,
           sceneContainerStyle: { backgroundColor: themeColors.background },
         }}

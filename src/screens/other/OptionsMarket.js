@@ -190,10 +190,10 @@ const OptionsMarket = ({ search, isActive = true }) => {
       const allList = Array.from(globalCachedContracts.values());
       const filtered = currentFilter
         ? allList.filter((c) => {
-            const sym = String(c?.symbol || "").toUpperCase();
-            const und = String(c?.underlying || "").toUpperCase();
-            return sym.startsWith(currentFilter) || und.startsWith(currentFilter);
-          })
+          const sym = String(c?.symbol || "").toUpperCase();
+          const und = String(c?.underlying || "").toUpperCase();
+          return sym.startsWith(currentFilter) || und.startsWith(currentFilter);
+        })
         : allList;
 
       // Flush first batch immediately so UI appears in <200ms
@@ -210,10 +210,10 @@ const OptionsMarket = ({ search, isActive = true }) => {
           setContracts(
             curF
               ? curList.filter((c) => {
-                  const sym = String(c?.symbol || "").toUpperCase();
-                  const und = String(c?.underlying || "").toUpperCase();
-                  return sym.startsWith(curF) || und.startsWith(curF);
-                })
+                const sym = String(c?.symbol || "").toUpperCase();
+                const und = String(c?.underlying || "").toUpperCase();
+                return sym.startsWith(curF) || und.startsWith(curF);
+              })
               : curList
           );
           setIsLoading(false);
@@ -305,7 +305,7 @@ const OptionsMarket = ({ search, isActive = true }) => {
       optionsSocketService.off("connect", onConnect);
       optionsSocketService.off("market_overview", onMarketOverview);
       optionsSocketService.off("contracts_update", handleContractsData);
-      
+
       // Unsubscribe all active channels
       optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
       const asset = selectedAssetRef.current;
@@ -342,10 +342,10 @@ const OptionsMarket = ({ search, isActive = true }) => {
     const allList = Array.from(globalCachedContracts.values());
     const filtered = curF
       ? allList.filter((c) => {
-          const sym = String(c?.symbol || "").toUpperCase();
-          const und = String(c?.underlying || "").toUpperCase();
-          return sym.startsWith(curF) || und.startsWith(curF);
-        })
+        const sym = String(c?.symbol || "").toUpperCase();
+        const und = String(c?.underlying || "").toUpperCase();
+        return sym.startsWith(curF) || und.startsWith(curF);
+      })
       : allList;
 
     setContracts(filtered);
@@ -449,9 +449,6 @@ const OptionsMarket = ({ search, isActive = true }) => {
       ) : (
         <View style={styles.empty}>
           <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} resizeMode="contain" style={{ width: 100, height: 100 }} />
-          <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
-            No options data at the moment.
-          </AppText>
         </View>
       )}
 

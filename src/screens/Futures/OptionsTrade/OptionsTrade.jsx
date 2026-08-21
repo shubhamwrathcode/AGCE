@@ -1,18 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../../hooks/useTheme';
 import RBSheet from 'react-native-raw-bottom-sheet';
 
 import OptionsHeader from './OptionsHeader';
-import OptionsExpiries from './OptionsExpiries';
 import OptionsChainTable from './OptionsChainTable';
 import OptionsSettingsSheet from './OptionsSettingsSheet';
 import OptionsEasyMode from './OptionsEasyMode';
 import OptionsStrategies from './OptionsStrategies';
 import OptionsMoreSheet from './OptionsMoreSheet';
 import OptionsPairList from '../../Options/OptionsPairList';
-import { colors } from '../../../theme/colors';
 import useOptionsWebSocket from './hooks/useOptionsWebSocket';
 
 const OptionsTrade = ({ route }) => {
@@ -48,15 +46,20 @@ const OptionsTrade = ({ route }) => {
 
   // Ensure selectedExpiry is valid within the dynamic expiries list
   useEffect(() => {
-    if (expiries?.length > 0 && !expiries.includes(selectedExpiry)) {
+    if (expiries?.length > 0 && selectedExpiry !== 'ALL' && !expiries.includes(selectedExpiry)) {
       setSelectedExpiry('ALL');
     }
   }, [expiries, selectedExpiry]);
 
-  const filteredPairs = underlyings?.filter(pair =>
-    pair.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pair.underlying.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredPairs = useMemo(() => {
+    if (!underlyings || !Array.isArray(underlyings)) return [];
+    if (!searchTerm) return underlyings;
+    const s = searchTerm.toLowerCase();
+    return underlyings.filter(pair =>
+      pair?.symbol?.toLowerCase()?.includes(s) ||
+      pair?.underlying?.toLowerCase()?.includes(s)
+    );
+  }, [underlyings, searchTerm]);
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
