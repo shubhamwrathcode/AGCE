@@ -243,7 +243,7 @@ const FuturesUI = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
-  const routeCoin = route.params?.coin;
+  const routeCoin = route.params?.coin || route.params?.pair || route.params?.coinDetail;
   const futuresPairs = useSelector((state) => state.home.futuresPairs);
   const userData = useSelector((state) => state.auth.userData);
 
@@ -395,14 +395,23 @@ const FuturesUI = () => {
   const lastRouteCoinId = useRef(null);
 
   useEffect(() => {
-    if (routeCoin && routeCoin._id !== lastRouteCoinId.current) {
-      lastRouteCoinId.current = routeCoin._id;
-      setSelectedCoin(routeCoin);
-      if (subscribeToFutures && routeCoin.symbol) {
-        subscribeToFutures({ symbol: routeCoin.symbol });
+    const activeCoin = route.params?.coin || route.params?.pair || route.params?.coinDetail;
+    if (activeCoin) {
+      const activeId = activeCoin._id || activeCoin.symbol || activeCoin.short_name || activeCoin.base_asset;
+      if (activeId && activeId !== lastRouteCoinId.current) {
+        lastRouteCoinId.current = activeId;
+        dispatch(setFuturesData(null));
+        setSelectedCoin(activeCoin);
+        const p = activeCoin.buy_price ?? activeCoin.last_price ?? activeCoin.mark_price;
+        if (p) {
+          setPrice(String(formatPriceByTick(parseFloat(p), activeCoin)));
+        }
+        if (subscribeToFutures && activeCoin.symbol) {
+          subscribeToFutures({ symbol: activeCoin.symbol });
+        }
       }
     }
-  }, [routeCoin, subscribeToFutures]);
+  }, [route.params?.coin, route.params?.pair, route.params?.coinDetail, subscribeToFutures, dispatch]);
 
   const fetchFuturesPositions = React.useCallback(async () => {
     if (!selectedCoin?.symbol) return;

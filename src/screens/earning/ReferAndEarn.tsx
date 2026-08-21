@@ -420,6 +420,7 @@ const ReferAndEarn = () => {
         ref={faqSheetRef}
         height={500}
         openDuration={250}
+        {...({ customModalProps: { statusBarTranslucent: true, navigationBarTranslucent: true } } as any)}
         customStyles={{
           container: {
             backgroundColor: isDark ? colors.newThemeColor : colors.white,

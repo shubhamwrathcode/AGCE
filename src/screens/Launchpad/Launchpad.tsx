@@ -62,14 +62,20 @@ const normalizeLaunchpad = (item: any) => {
   const participants = (item?.totalParticipants ?? 0).toLocaleString();
   const subPrice = `1 ${tokenSymbol} = ${tokenPrice} ${acceptedCurrency}`;
 
-  const logoPath = item?.logo || item?.baseCurrency?.icon_path || '';
-  console.log(`${item?.quoteCurrency?.icon_path}`, '===logo path ');
-
+  const logoPath =
+    item?.logo ||
+    item?.icon_path ||
+    item?.iconPath ||
+    item?.icon_url ||
+    item?.baseCurrency?.icon_path ||
+    item?.baseCurrency?.icon_url ||
+    item?.baseCurrency?.icon ||
+    '';
 
   return {
     id: item?._id,
     logo: tokenSymbol,
-    iconPath: `${logoPath}`,
+    iconPath: logoPath,
     name: tokenSymbol,
     status: mapLaunchpadStatus(item?.status),
     subscriptionPrice: [subPrice],
@@ -79,7 +85,7 @@ const normalizeLaunchpad = (item: any) => {
       {
         name: acceptedCurrency,
         coinIcon: acceptedCurrency,
-        iconPath: item?.quoteCurrency?.icon_path || '',
+        iconPath: item?.quoteCurrency?.icon_path || item?.quoteCurrency?.icon_url || item?.quoteCurrency || '',
         allocation: (item?.totalSupply ?? 0).toLocaleString(),
         allocationCoin: tokenSymbol,
         commitment: (item?.totalRaised ?? 0).toLocaleString(),
@@ -130,14 +136,32 @@ const Launchpad = () => {
 
   const currentProjects = projects.filter(p => p.status === activeTab);
 
-  const getIconForCoin = (symbol: string, path: string) => {
+  const getIconForCoin = (symbol: string, path: any) => {
+    const sym = String(symbol || '').toUpperCase();
+    const base = String(IMAGE_BASE_URL || 'https://backend.arabglobal.ae/').replace(/\/+$/, '');
+
     if (path) {
-      const t = String(path).trim();
-      if (/^https?:\/\//i.test(t) || t.startsWith('data:')) return { uri: t };
-      const base = IMAGE_BASE_URL.replace(/\/$/, '');
-      return { uri: t.startsWith('/') ? `${base}${t}` : `${base}/${t}` };
+      if (typeof path === 'object' && path !== null) {
+        const raw = path.icon_url || path.icon_path || path.icon || path.logo;
+        if (raw) {
+          const str = String(raw).trim();
+          if (/^https?:\/\//i.test(str) || str.startsWith('data:')) return { uri: str };
+          if (str.startsWith('//')) return { uri: `https:${str}` };
+          const rel = str.replace(/^\/+/, '');
+          if (rel) return { uri: `${base}/${rel}` };
+        }
+      } else {
+        const t = String(path).trim();
+        if (t && t !== 'undefined' && t !== 'null' && t !== '[object Object]') {
+          if (/^https?:\/\//i.test(t) || t.startsWith('data:')) return { uri: t };
+          if (t.startsWith('//')) return { uri: `https:${t}` };
+          const rel = t.replace(/^\/+/, '');
+          if (rel) return { uri: `${base}/${rel}` };
+        }
+      }
     }
-    if (symbol === 'BTC') return bitcoinIcon;
+    if (sym === 'BTC') return bitcoinIcon;
+    if (sym === 'USDT') return usdtIcon;
     return usdtIcon;
   };
 
@@ -392,7 +416,7 @@ const getStyles = (themeColors: any, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
   },
   aboutBtn: {
-    backgroundColor: isDark ? themeColors.border : '#F0F0F0',
+    backgroundColor: isDark ? colors.themeElevationColor : '#F0F0F0',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,

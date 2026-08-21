@@ -1,14 +1,13 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { View, StyleSheet, TouchableOpacity, ScrollView, FlatList, ActivityIndicator } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Animated } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { AppText, ELEVEN, SEMI_BOLD, TWELVE } from "../../shared";
 import { colors } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
-import { OPTIONS_SCREEN, FUTURES_SCREEN } from "../../navigation/routes";
-import { toFixedFive, toFixedThree } from "../../helper/utility";
+import { FUTURES_SCREEN } from "../../navigation/routes";
 import FastImage from "react-native-fast-image";
-import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, DOWN_ARROW, downIcon, starIcon, starFillIcon, favUnCheck } from "../../helper/ImageAssets";
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, downIcon, starIcon, starFillIcon } from "../../helper/ImageAssets";
 import { useTheme } from "../../hooks/useTheme";
-import useOptionsWebSocket, { OPTIONS_CHANNELS } from "../Futures/OptionsTrade/hooks/useOptionsWebSocket";
 import { useIsFocused } from "@react-navigation/native";
 import RBSheet from "react-native-raw-bottom-sheet";
 import optionsSocketService from "../../services/socket/OptionsSocketService";
@@ -16,23 +15,66 @@ import { useDispatch } from "react-redux";
 import { useAppSelector } from "../../store/hooks";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { addToFavorites } from "../../actions/homeActions";
+import { underlyingsFromMarketOverview } from "../Futures/OptionsTrade/helpers/optionsDataHelpers";
 
-const OptionContractItem = React.memo(({ item, index, themeColors, isDark, onPress, iconUri, isFavorite, onToggleFavorite }) => {
-  const getDecimalsFromTickSize = (tickSize) => {
-    const tickSizeNum = Number(tickSize);
-    if (!tickSizeNum || tickSizeNum <= 0 || Number.isNaN(tickSizeNum)) return 2;
-    if (tickSizeNum < 1) return Math.max(0, Math.ceil(-Math.log10(tickSizeNum)));
-    return 0;
-  };
+const OPTIONS_CHANNELS = {
+  MARKET_OVERVIEW: "options:market_overview",
+  CONTRACTS: "options:contracts",
+};
 
+// Global in-memory cache for instant 0ms retrieval on revisit / tab switch
+let globalCachedUnderlyings = [
+  { symbol: "BTC", underlying: "BTCUSDT" },
+  { symbol: "ETH", underlying: "ETHUSDT" },
+  { symbol: "SOL", underlying: "SOLUSDT" },
+  { symbol: "BNB", underlying: "BNBUSDT" },
+];
+let globalCachedContracts = new Map();
+
+// Lightweight Shimmer Skeleton Cell
+const SkeletonItem = ({ isDark, themeColors }) => {
+  const anim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 0.8, duration: 600, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim]);
+
+  const bg = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+
+  return (
+    <View style={[styles.row, { borderBottomColor: themeColors.border }]}>
+      <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}>
+        <Animated.View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: bg, opacity: anim }} />
+        <View style={{ gap: 6 }}>
+          <Animated.View style={{ width: 90, height: 12, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+          <Animated.View style={{ width: 50, height: 10, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+        </View>
+      </View>
+      <View style={{ alignItems: "flex-end", gap: 6 }}>
+        <Animated.View style={{ width: 60, height: 12, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+        <Animated.View style={{ width: 45, height: 10, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+      </View>
+    </View>
+  );
+};
+
+const OptionContractItem = React.memo(({ item, themeColors, isDark, onPress, iconUri, isFavorite, onToggleFavorite }) => {
   const rawPrice = item?.buy_price ?? item?.mark_price ?? item?.last_price;
   const parsedPrice = rawPrice != null && !isNaN(Number(rawPrice)) ? Number(rawPrice) : null;
-  const priceText = parsedPrice != null ? parsedPrice.toFixed(getDecimalsFromTickSize(item?.tick_size)) : "—";
+  const tickSizeNum = Number(item?.tick_size);
+  const decimals = (!tickSizeNum || tickSizeNum <= 0 || Number.isNaN(tickSizeNum)) ? 2 : (tickSizeNum < 1 ? Math.max(0, Math.ceil(-Math.log10(tickSizeNum))) : 0);
+  const priceText = parsedPrice != null ? parsedPrice.toFixed(decimals) : "—";
 
   const typeStr = String(item?.option_type || item?.type || "").toUpperCase();
   const isCall = typeStr === "C" || typeStr === "CALL";
   const strike = item?.strike || 0;
-  const expiry = item?.expiry || "";
 
   return (
     <TouchableOpacity
@@ -56,7 +98,7 @@ const OptionContractItem = React.memo(({ item, index, themeColors, isDark, onPre
             resizeMode="contain"
           />
           <View style={styles.nameBlock}>
-            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 2 }} numberOfLines={1} adjustsFontSizeToFit={true} minimumFontScale={0.8}>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 2 }} numberOfLines={1}>
               {item?.symbol}
             </AppText>
             <AppText type={ELEVEN} style={{ color: themeColors.secondaryText }} numberOfLines={1}>
@@ -79,99 +121,138 @@ const OptionContractItem = React.memo(({ item, index, themeColors, isDark, onPre
   );
 });
 
-const OptionsMarket = ({ search }) => {
+const OptionsMarket = ({ search, isActive = true }) => {
   const { colors: themeColors, isDark } = useTheme();
   const isFocused = useIsFocused();
+  const isScreenActive = isActive && isFocused;
   const rbSheetRef = useRef(null);
 
-  // Use state to track selected underlying asset. Default empty means "All".
   const [selectedAsset, setSelectedAsset] = useState("");
-  const [allContractsByUnderlying, setAllContractsByUnderlying] = useState({});
-  const [hasReceivedAllContracts, setHasReceivedAllContracts] = useState(false);
+  const [underlyings, setUnderlyings] = useState(() => globalCachedUnderlyings);
+  const [contracts, setContracts] = useState(() => Array.from(globalCachedContracts.values()));
+  const [isLoading, setIsLoading] = useState(() => globalCachedContracts.size === 0);
 
   const coinPairs = useAppSelector((state) => state.home.coinPairs) || [];
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray) || [];
   const dispatch = useDispatch();
 
-  const getCoinIcon = useCallback((underlying) => {
-    const base = String(underlying || "").replace(/USDT|USDC/i, "").toUpperCase();
-    const pair = coinPairs.find(p => {
-      const sym = String(p?.base_currency || p?.currency?.short_name || p?.short_name || "").replace(/[\/|-]/g, "").toUpperCase();
-      return sym.startsWith(base);
-    });
-    const iconPath = pair?.currency?.icon || pair?.icon || pair?.icon_path;
-    if (iconPath) {
-      if (iconPath.startsWith('http')) return iconPath;
-      return IMAGE_BASE_URL + (iconPath.startsWith('/') ? iconPath.substring(1) : iconPath);
-    }
-    return null;
-  }, [coinPairs]);
-
-  const {
-    underlyings,
-    chains: singleChains,
-    isMarketLoading,
-    isContractsLoading,
-    isConnected,
-  } = useOptionsWebSocket(selectedAsset, null, isFocused);
-
-  useEffect(() => {
-    console.log("OptionsMarket: underlyings length:", underlyings?.length, "isConnected:", isConnected, "isFocused:", isFocused);
-  }, [underlyings, isConnected, isFocused]);
-
-  // Manual fetch for "All" contracts since useOptionsWebSocket only subscribes to one
-  useEffect(() => {
-    if (selectedAsset !== "") {
-      setAllContractsByUnderlying({}); // Clear when not "All"
-      setHasReceivedAllContracts(true);
-      return;
-    }
-
-    // We don't acquire the socket here to avoid authChanged conflicts with useOptionsWebSocket
-    // useOptionsWebSocket already acquired it.
-
-    // Timeout fallback in case there are no contracts at all
-    const fallbackTimer = setTimeout(() => setHasReceivedAllContracts(true), 1000);
-
-    const onContractsUpdate = (data) => {
-      if (!data || typeof data !== "object") return;
-      const key = String(data.underlying || "").toUpperCase();
-      if (!key) return;
-      setAllContractsByUnderlying((prev) => ({ ...prev, [key]: data }));
-      setHasReceivedAllContracts(true);
-    };
-
-    optionsSocketService.on("contracts_update", onContractsUpdate);
-
-    if (isConnected) {
-      underlyings.forEach((u) => {
-        if (u && u.underlying) {
-          console.log("OptionsMarket: EMIT subscribe ->", {
-            channel: OPTIONS_CHANNELS.CONTRACTS,
-            underlying: u.underlying,
-            expiry: "ALL",
-          });
-          optionsSocketService.emit("subscribe", {
-            channel: OPTIONS_CHANNELS.CONTRACTS,
-            underlying: u.underlying,
-            expiry: "ALL",
-          });
+  // Fast O(1) hashmap for coin icons
+  const coinIconMap = useMemo(() => {
+    const map = {};
+    if (Array.isArray(coinPairs)) {
+      const baseHost = String(IMAGE_BASE_URL || "").replace(/\/+$/, "");
+      coinPairs.forEach((p) => {
+        const sym = String(p?.base_currency || p?.currency?.short_name || p?.short_name || "").replace(/[\/|-]/g, "").toUpperCase();
+        const iconPath = p?.currency?.icon || p?.icon || p?.icon_path;
+        if (iconPath && sym) {
+          const uri = iconPath.startsWith("http") ? iconPath : `${baseHost}/${iconPath.replace(/^\/+/, "")}`;
+          map[sym] = uri;
         }
       });
     }
+    return map;
+  }, [coinPairs]);
 
-    return () => {
-      clearTimeout(fallbackTimer);
-      optionsSocketService.off("contracts_update", onContractsUpdate);
-      if (isConnected) {
-        underlyings.forEach((u) => {
-          if (u && u.underlying) {
-            console.log("OptionsMarket: EMIT unsubscribe ->", {
-              channel: OPTIONS_CHANNELS.CONTRACTS,
-              underlying: u.underlying,
-              expiry: "ALL",
-            });
-            optionsSocketService.emit("unsubscribe", {
+  const getCoinIcon = useCallback((underlyingOrSymbol) => {
+    if (!underlyingOrSymbol) return null;
+    const raw = String(underlyingOrSymbol).replace(/USDT|USDC/i, "").toUpperCase();
+    const base = raw.split(/[-_]/)[0];
+    return coinIconMap[base] || coinIconMap[raw] || null;
+  }, [coinIconMap]);
+
+  const batchTimerRef = useRef(null);
+  const selectedAssetRef = useRef(selectedAsset);
+  selectedAssetRef.current = selectedAsset;
+  const initialRenderRef = useRef(globalCachedContracts.size === 0);
+
+  // Progressive streaming handler: Updates cache and pushes to state without delay
+  const handleContractsData = useCallback((data) => {
+    if (!data || typeof data !== "object") return;
+    let list = [];
+    if (Array.isArray(data)) {
+      list = data;
+    } else if (Array.isArray(data?.contracts)) {
+      list = data.contracts;
+    } else if (Array.isArray(data?.data?.contracts)) {
+      list = data.data.contracts;
+    } else if (Array.isArray(data?.data)) {
+      list = data.data;
+    }
+
+    if (list.length > 0) {
+      list.forEach((contract) => {
+        if (contract && contract.symbol) {
+          globalCachedContracts.set(contract.symbol, contract);
+        }
+      });
+
+      const currentFilter = selectedAssetRef.current ? String(selectedAssetRef.current).toUpperCase() : "";
+      const allList = Array.from(globalCachedContracts.values());
+      const filtered = currentFilter
+        ? allList.filter((c) => {
+            const sym = String(c?.symbol || "").toUpperCase();
+            const und = String(c?.underlying || "").toUpperCase();
+            return sym.startsWith(currentFilter) || und.startsWith(currentFilter);
+          })
+        : allList;
+
+      // Flush first batch immediately so UI appears in <200ms
+      if (initialRenderRef.current) {
+        initialRenderRef.current = false;
+        setContracts(filtered);
+        setIsLoading(false);
+      } else if (!batchTimerRef.current) {
+        // Subsequent streaming updates batched smoothly at 60ms
+        batchTimerRef.current = setTimeout(() => {
+          batchTimerRef.current = null;
+          const curF = selectedAssetRef.current ? String(selectedAssetRef.current).toUpperCase() : "";
+          const curList = Array.from(globalCachedContracts.values());
+          setContracts(
+            curF
+              ? curList.filter((c) => {
+                  const sym = String(c?.symbol || "").toUpperCase();
+                  const und = String(c?.underlying || "").toUpperCase();
+                  return sym.startsWith(curF) || und.startsWith(curF);
+                })
+              : curList
+          );
+          setIsLoading(false);
+        }, 60);
+      }
+    }
+  }, []);
+
+  // Socket Connection & Subscription Lifecycle
+  useEffect(() => {
+    if (!isScreenActive) {
+      if (batchTimerRef.current) {
+        clearTimeout(batchTimerRef.current);
+        batchTimerRef.current = null;
+      }
+      optionsSocketService.disconnect();
+      return;
+    }
+
+    const socket = optionsSocketService.acquire();
+
+    const onConnect = () => {
+      // 1. Subscribe to market overview
+      optionsSocketService.emit("subscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
+
+      // 2. Pre-subscribe immediately to active/default underlyings in parallel (NO WAITING)
+      const asset = selectedAssetRef.current;
+      if (asset) {
+        const uKey = asset.endsWith("USDT") || asset.endsWith("USDC") ? asset : `${asset}USDT`;
+        optionsSocketService.emit("subscribe", {
+          channel: OPTIONS_CHANNELS.CONTRACTS,
+          underlying: uKey,
+          expiry: "ALL",
+        });
+      } else {
+        // Subscribe to initial/cached underlyings immediately
+        globalCachedUnderlyings.forEach((u) => {
+          if (u?.underlying) {
+            optionsSocketService.emit("subscribe", {
               channel: OPTIONS_CHANNELS.CONTRACTS,
               underlying: u.underlying,
               expiry: "ALL",
@@ -180,7 +261,107 @@ const OptionsMarket = ({ search }) => {
         });
       }
     };
-  }, [selectedAsset, underlyings, isConnected]);
+
+    const onMarketOverview = (overviewData) => {
+      if (!overviewData || typeof overviewData !== "object") return;
+      const uList = underlyingsFromMarketOverview(overviewData);
+      if (Array.isArray(uList) && uList.length > 0) {
+        globalCachedUnderlyings = uList;
+        setUnderlyings(uList);
+
+        // If "All" is active, subscribe to any additional newly discovered underlyings
+        if (!selectedAssetRef.current) {
+          uList.forEach((u) => {
+            if (u?.underlying) {
+              optionsSocketService.emit("subscribe", {
+                channel: OPTIONS_CHANNELS.CONTRACTS,
+                underlying: u.underlying,
+                expiry: "ALL",
+              });
+            }
+          });
+        }
+      }
+    };
+
+    optionsSocketService.on("connect", onConnect);
+    optionsSocketService.on("market_overview", onMarketOverview);
+    optionsSocketService.on("contracts_update", handleContractsData);
+
+    if (socket.connected) {
+      onConnect();
+    }
+
+    const fallbackTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+
+    return () => {
+      clearTimeout(fallbackTimer);
+      if (batchTimerRef.current) {
+        clearTimeout(batchTimerRef.current);
+        batchTimerRef.current = null;
+      }
+      optionsSocketService.off("connect", onConnect);
+      optionsSocketService.off("market_overview", onMarketOverview);
+      optionsSocketService.off("contracts_update", handleContractsData);
+      
+      // Unsubscribe all active channels
+      optionsSocketService.emit("unsubscribe", { channel: OPTIONS_CHANNELS.MARKET_OVERVIEW });
+      const asset = selectedAssetRef.current;
+      if (asset) {
+        const uKey = asset.endsWith("USDT") || asset.endsWith("USDC") ? asset : `${asset}USDT`;
+        optionsSocketService.emit("unsubscribe", {
+          channel: OPTIONS_CHANNELS.CONTRACTS,
+          underlying: uKey,
+          expiry: "ALL",
+        });
+      } else {
+        globalCachedUnderlyings.forEach((u) => {
+          if (u?.underlying) {
+            optionsSocketService.emit("unsubscribe", {
+              channel: OPTIONS_CHANNELS.CONTRACTS,
+              underlying: u.underlying,
+              expiry: "ALL",
+            });
+          }
+        });
+      }
+      optionsSocketService.disconnect();
+    };
+  }, [isScreenActive, handleContractsData]);
+
+  // Instant filter switching (0ms latency, zero screen wipeout)
+  const handleSelectAsset = useCallback((assetKey) => {
+    setSelectedAsset(assetKey);
+    selectedAssetRef.current = assetKey;
+    rbSheetRef.current?.close();
+
+    // Instant filter from memory map
+    const curF = assetKey ? String(assetKey).toUpperCase() : "";
+    const allList = Array.from(globalCachedContracts.values());
+    const filtered = curF
+      ? allList.filter((c) => {
+          const sym = String(c?.symbol || "").toUpperCase();
+          const und = String(c?.underlying || "").toUpperCase();
+          return sym.startsWith(curF) || und.startsWith(curF);
+        })
+      : allList;
+
+    setContracts(filtered);
+
+    // Subscribe to new asset stream in background
+    if (isScreenActive) {
+      if (assetKey) {
+        const uKey = assetKey.endsWith("USDT") || assetKey.endsWith("USDC") ? assetKey : `${assetKey}USDT`;
+        optionsSocketService.emit("subscribe", {
+          channel: OPTIONS_CHANNELS.CONTRACTS,
+          underlying: uKey,
+          expiry: "ALL",
+        });
+      }
+    }
+  }, [isScreenActive]);
 
   const assetOptions = useMemo(() => {
     const opts = [{ key: "", label: "All", iconUri: null }];
@@ -194,53 +375,13 @@ const OptionsMarket = ({ search }) => {
     return opts;
   }, [underlyings, getCoinIcon]);
 
-  const allContracts = useMemo(() => {
-    let list = [];
-    if (selectedAsset !== "") {
-      if (singleChains && Array.isArray(singleChains)) {
-        singleChains.forEach((chain) => {
-          if (chain.calls) list = list.concat(chain.calls);
-          if (chain.puts) list = list.concat(chain.puts);
-        });
-      }
-    } else {
-      if (underlyings && underlyings.length > 0) {
-        underlyings.forEach((u) => {
-          const key = String(u.underlying || "").toUpperCase();
-          const data = allContractsByUnderlying[key];
-          if (data) {
-            let extracted = [];
-            if (Array.isArray(data)) extracted = data;
-            else if (Array.isArray(data?.contracts)) extracted = data.contracts;
-            else if (Array.isArray(data?.data?.contracts)) extracted = data.data.contracts;
-            else if (Array.isArray(data?.data)) extracted = data.data;
-            list = list.concat(extracted);
-          }
-        });
-      } else {
-        Object.values(allContractsByUnderlying).forEach((data) => {
-          let extracted = [];
-          if (Array.isArray(data)) extracted = data;
-          else if (Array.isArray(data?.contracts)) extracted = data.contracts;
-          else if (Array.isArray(data?.data?.contracts)) extracted = data.data.contracts;
-          else if (Array.isArray(data?.data)) extracted = data.data;
-          list = list.concat(extracted);
-        });
-      }
-    }
-    return list;
-  }, [selectedAsset, singleChains, allContractsByUnderlying, underlyings]);
-
   const filterOptionsData = useMemo(() => {
-    let data = [...allContracts];
-    if (search) {
-      const s = search.toLowerCase();
-      data = data.filter((item) =>
-        item?.symbol?.toLowerCase()?.includes(s) || item?.underlying?.toLowerCase()?.includes(s)
-      );
-    }
-    return data;
-  }, [allContracts, search]);
+    if (!search) return contracts;
+    const s = search.toLowerCase();
+    return contracts.filter((item) =>
+      item?.symbol?.toLowerCase()?.includes(s) || item?.underlying?.toLowerCase()?.includes(s)
+    );
+  }, [contracts, search]);
 
   const handleNavigate = useCallback((item) => {
     if (item?.symbol) {
@@ -248,7 +389,7 @@ const OptionsMarket = ({ search }) => {
       if (baseAsset?.includes('_')) {
         baseAsset = baseAsset.split('_')[0];
       }
-      
+
       NavigationService.navigate(FUTURES_SCREEN, {
         screen: "Options",
         params: { symbol: baseAsset, pair: item }
@@ -262,10 +403,9 @@ const OptionsMarket = ({ search }) => {
     }
   }, [dispatch]);
 
-  const renderItem = useCallback(({ item, index }) => (
+  const renderItem = useCallback(({ item }) => (
     <OptionContractItem
       item={item}
-      index={index}
       themeColors={themeColors}
       isDark={isDark}
       onPress={handleNavigate}
@@ -291,19 +431,20 @@ const OptionsMarket = ({ search }) => {
         </TouchableOpacity>
       </View>
 
-      {isMarketLoading || (selectedAsset !== "" && isContractsLoading) || (selectedAsset === "" && !hasReceivedAllContracts) ? (
-        <View style={styles.empty}>
-          <ActivityIndicator size="large" color={themeColors.text} />
+      {isLoading && filterOptionsData.length === 0 ? (
+        <View style={styles.list}>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((k) => (
+            <SkeletonItem key={k} isDark={isDark} themeColors={themeColors} />
+          ))}
         </View>
       ) : filterOptionsData?.length > 0 ? (
-        <FlatList
+        <FlashList
           data={filterOptionsData}
-          keyExtractor={(item, index) => item?.symbol || String(index)}
+          keyExtractor={(item, index) => item?.symbol || item?._id || String(index)}
           renderItem={renderItem}
+          estimatedItemSize={58}
           contentContainerStyle={styles.list}
-          initialNumToRender={15}
-          maxToRenderPerBatch={15}
-          windowSize={5}
+          showsVerticalScrollIndicator={false}
         />
       ) : (
         <View style={styles.empty}>
@@ -329,16 +470,14 @@ const OptionsMarket = ({ search }) => {
       >
         <View style={styles.sheetContainer}>
           <AppText weight={SEMI_BOLD} style={[styles.sheetTitle, { color: themeColors.text }]}>Select Asset</AppText>
-          <FlatList
+          <FlashList
             data={assetOptions}
             keyExtractor={(item) => item.key || "ALL"}
+            estimatedItemSize={48}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.sheetItem}
-                onPress={() => {
-                  setSelectedAsset(item.key);
-                  rbSheetRef.current?.close();
-                }}
+                onPress={() => handleSelectAsset(item.key)}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   {item.iconUri ? (
@@ -394,26 +533,6 @@ const styles = StyleSheet.create({
   volText: { marginTop: 1 },
   priceCol: { flex: 0.7, minWidth: 60, alignItems: "flex-end", justifyContent: "center" },
   priceText: { textAlign: "right" },
-  chgPill: {
-    minWidth: 64,
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-  chgPillRed: { backgroundColor: colors.red },
-  chgPillGreen: { backgroundColor: colors.green },
-  chgPillText: { color: colors.white },
-  perpBadge: {
-    marginLeft: 2,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   empty: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 40 },
   sheetContainer: {
     flex: 1,

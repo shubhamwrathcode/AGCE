@@ -76,11 +76,11 @@ const SearchInput = ({
   const { colors: themeColors, isDark } = useTheme();
 
   return (
-    <View style={[styles.mainViewStyle, containerStyle]}>
+    <View style={[styles.mainViewStyle, containerStyle,{backgroundColor:isDark? colors.newThemeColor: colors.white}]}>
       <View style={[styles.container, {
         marginLeft: 10,
         marginTop: 20,
-        backgroundColor: colors.iconBgColor,
+        backgroundColor:isDark? colors.themeElevationColor: colors.white,
         borderColor: themeColors.border,
         ...searchContainStyle,
       }]}>
@@ -120,7 +120,7 @@ const SearchInput = ({
             setFocus(false);
             NavigationService.goBack();
           }}>
-          <AppText type={FIFTEEN} color={YELLOW} weight={MEDIUM}>
+          <AppText type={FIFTEEN} color={isDark? colors.white:colors.black} weight={MEDIUM}>
             Cancel
           </AppText>
         </TouchableOpacityView>
@@ -172,6 +172,6 @@ const styles = StyleSheet.create({
     padding: 5,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white
+    
   },
 });

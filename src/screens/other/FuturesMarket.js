@@ -8,7 +8,8 @@ import { FUTURES_SCREEN } from "../../navigation/routes";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import FastImage from "react-native-fast-image";
 import { Coin, tetherIcon, bitcoinIcon, bnbIcon, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from "../../helper/ImageAssets";
-import { BASE_URL } from "../../helper/Constants";
+import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import { useTheme } from "../../hooks/useTheme";
 
 const QUOTE_OPTIONS = [
@@ -35,31 +36,38 @@ const FuturesMarket = ({ search }) => {
     let data = Array.isArray(futuresPairData) ? [...futuresPairData] : [];
     if (search) {
       const s = search.toLowerCase();
-      data = data.filter(
-        (item) =>
-          item?.short_name?.toLowerCase()?.includes(s) || item?.name?.toLowerCase()?.includes(s)
-      );
+      data = data.filter((item) => {
+        const base = (item?.short_name || item?.base_asset || item?.symbol || '').toLowerCase();
+        const name = (item?.name || item?.pair_name || '').toLowerCase();
+        return base.includes(s) || name.includes(s);
+      });
     }
     if (quoteCurrency !== "All") {
-      data = data.filter((item) => item?.margin_asset?.toUpperCase() === quoteCurrency);
+      data = data.filter((item) => {
+        const q = (item?.margin_asset || item?.quote_asset || item?.quote_currency || "USDT").toUpperCase();
+        return q === quoteCurrency;
+      });
     }
     if (filterType === "Gainers") {
       data = data
-        .filter((item) => Number(item?.change_percentage) > 0)
-        .sort((a, b) => Number(b?.change_percentage) - Number(a?.change_percentage));
+        .filter((item) => Number(item?.change_percentage ?? item?.price_change_percent_24h ?? item?.change ?? 0) > 0)
+        .sort((a, b) => Number(b?.change_percentage ?? b?.price_change_percent_24h ?? b?.change ?? 0) - Number(a?.change_percentage ?? a?.price_change_percent_24h ?? a?.change ?? 0));
     } else if (filterType === "Losers") {
       data = data
-        .filter((item) => Number(item?.change_percentage) < 0)
-        .sort((a, b) => Number(a?.change_percentage) - Number(b?.change_percentage));
+        .filter((item) => Number(item?.change_percentage ?? item?.price_change_percent_24h ?? item?.change ?? 0) < 0)
+        .sort((a, b) => Number(a?.change_percentage ?? a?.price_change_percent_24h ?? a?.change ?? 0) - Number(b?.change_percentage ?? b?.price_change_percent_24h ?? b?.change ?? 0));
     } else if (filterType === "Trending") {
-      data = data.sort((a, b) => Number(b?.volume) - Number(a?.volume));
+      data = data.sort((a, b) => Number(b?.volume ?? b?.volume_24h ?? 0) - Number(a?.volume ?? a?.volume_24h ?? 0));
     }
     return data;
   }, [futuresPairData, search, quoteCurrency, filterType]);
 
   const handleNavigate = (item) => {
-    if (item?.short_name) {
-      NavigationService.navigate(FUTURES_SCREEN, { pair: item });
+    if (item) {
+      NavigationService.navigate(FUTURES_SCREEN, {
+        screen: "Futures",
+        params: { coin: item, pair: item, coinDetail: item }
+      });
     }
   };
 
@@ -70,7 +78,7 @@ const FuturesMarket = ({ search }) => {
   return (
     <View style={styles.container}>
       {/* Row 1: Filter Type */}
-      <ScrollView
+      {/* <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[styles.filterScroll, styles.filterScrollType]}
@@ -81,8 +89,8 @@ const FuturesMarket = ({ search }) => {
             key={key}
             onPress={() => setFilterType(key)}
             style={[
-              styles.chip, 
-              { 
+              styles.chip,
+              {
                 backgroundColor: chipBg(filterType === key),
                 borderColor: chipBorder(filterType === key),
                 borderWidth: 1
@@ -95,10 +103,10 @@ const FuturesMarket = ({ search }) => {
             </AppText>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </ScrollView> */}
 
       {/* Row 2: Quote Currency */}
-      <ScrollView
+      {/* <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[styles.filterScroll, styles.filterScrollType]}
@@ -131,7 +139,7 @@ const FuturesMarket = ({ search }) => {
             </AppText>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </ScrollView> */}
 
       {filterFuturesData?.length > 0 ? (
         <FuturesList data={filterFuturesData} onPress={handleNavigate} />
@@ -148,16 +156,24 @@ const FuturesMarket = ({ search }) => {
 };
 
 export const FuturesList = ({ data, onPress }) => {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   return (
     <View style={styles.list}>
       {data.map((item, index) => {
-        const isPositive = Number(item?.change_percentage) >= 0;
-        const iconSource = item?.icon_path ? { uri: BASE_URL + item.icon_path } : Coin;
+        const baseAsset = item?.short_name || item?.base_asset || (item?.symbol ? item.symbol.split('USDT')[0].split('_')[0].split('/')[0].replace('-PERP', '') : 'BTC');
+        const marginAsset = item?.margin_asset || item?.quote_asset || item?.quote_currency || 'USDT';
+        const price = Number(item?.last_price ?? item?.price ?? item?.mark_price ?? item?.buy_price ?? item?.close ?? item?.c ?? 0);
+        const changePercent = Number(item?.change_percentage ?? item?.price_change_percent_24h ?? item?.price_change_24h ?? item?.change ?? item?.P ?? 0);
+        const isPositive = changePercent >= 0;
+        const vol = Number(item?.volume ?? item?.volume_24h ?? item?.quote_volume ?? item?.v ?? item?.q ?? 0);
+
+        const iconUri = buildCoinImageUri(item) || (item?.icon_path ? `${String(IMAGE_BASE_URL || '').replace(/\/+$/, '')}/${String(item.icon_path).replace(/^\/+/, '')}` : null);
+        const iconSource = iconUri ? { uri: iconUri } : Coin;
+
         return (
           <TouchableOpacity
-            key={item?._id || index}
-            style={[styles.row, { borderBottomColor: themeColors.border }]}
+            key={item?._id || item?.symbol || index}
+            style={[styles.row, { borderBottomColor: isDark ? themeColors.border : '#EDEDEE' }]}
             onPress={() => onPress(item)}
             activeOpacity={0.7}
           >
@@ -173,25 +189,25 @@ export const FuturesList = ({ data, onPress }) => {
                 <View style={styles.nameBlock}>
                   <View style={styles.symbolRow}>
                     <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }} numberOfLines={1}>
-                      {item?.short_name}/{item?.margin_asset}
+                      {baseAsset}/{marginAsset}
                     </AppText>
-                    <View style={[styles.perpBadge, { backgroundColor: themeColors.card }]}>
+                    <View style={[styles.perpBadge, { backgroundColor: isDark ? themeColors.card : '#F0F0F0' }]}>
                       <AppText type={ELEVEN} style={{ color: themeColors.secondaryText }}>Perp</AppText>
                     </View>
                   </View>
                   <AppText type={ELEVEN} style={[styles.volText, { color: themeColors.secondaryText }]} numberOfLines={1}>
-                    Vol {toFixedThree(item?.volume)}
+                    Vol {toFixedThree(vol)}
                   </AppText>
                 </View>
               </View>
             </View>
             <View style={styles.priceCol}>
               <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.priceText, { color: themeColors.text }]}>
-                {toFixedFive(item?.buy_price)}
+                {toFixedFive(price)}
               </AppText>
               <View style={[styles.chgPill, isPositive ? styles.chgPillGreen : styles.chgPillRed]}>
                 <AppText type={ELEVEN} weight={SEMI_BOLD} style={styles.chgPillText}>
-                  {isPositive ? "+" : ""}{toFixedThree(item?.change_percentage)}%
+                  {isPositive ? "+" : ""}{toFixedThree(changePercent)}%
                 </AppText>
               </View>
             </View>

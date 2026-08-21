@@ -132,41 +132,6 @@ const Market = () => {
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  const contentSlideX = useRef(new Animated.Value(0)).current;
-  const contentOpacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const prev = prevTabIndexRef.current;
-    const next = activeTabIndex;
-    const dir = next > prev ? 1 : -1;
-    prevTabIndexRef.current = next;
-
-    contentSlideX.setValue(dir * 24);
-    contentOpacity.setValue(0.6);
-    Animated.parallel([
-      Animated.timing(contentSlideX, { toValue: 0, duration: 180, useNativeDriver: true }),
-      Animated.timing(contentOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
-    ]).start();
-  }, [activeTabIndex, contentOpacity, contentSlideX]);
-
-  const onRefresh = useCallback(() => {
-    console.log("Pull to refresh triggered! Fetching latest market data...");
-    setRefreshing(true);
-    if (isLoggedIn) {
-      dispatch(getFavoriteArray());
-    }
-    if (subscribeToMarket) {
-      if (unsubscribeFromMarket) unsubscribeFromMarket();
-      subscribeToMarket();
-    }
-    if (activeTab === "USD_M_FUTURES" && futureSocketService.getIsConnected()) {
-      futureSocketService.emit("message", { message: "futures", userId: userData?._id ?? "" });
-    }
-    setTimeout(() => {
-      setRefreshing(false);
-      console.log("Refresh Complete.");
-    }, 1000);
-  }, [isLoggedIn, dispatch, subscribeToMarket, unsubscribeFromMarket, activeTab, userData?._id]);
 
   useEffect(() => {
     if (route?.params?.tab) {
@@ -300,15 +265,12 @@ const Market = () => {
         activeSubCategory={activeTab === "ALPHA" ? alphaSubTab : spotSubCategory}
         onSubCategoryChange={activeTab === "ALPHA" ? setAlphaSubTab : setSpotSubCategory}
       />
-      <KeyBoardAware refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />} contentContainerStyle={{ flexGrow: 1 }}>
-
+      <View style={{ flex: 1 }}>
         {contentLoading ? (
           <MarketSkeleton />
         ) : (
           <>
-
-
-            <Animated.View style={{ flex: 1, transform: [{ translateX: contentSlideX }], opacity: contentOpacity }}>
+            <View style={{ flex: 1 }}>
               {activeTab === "Favorites" && (
                 <View style={styles.tabContent}>
                   {!initialLoaded ? (
@@ -358,7 +320,7 @@ const Market = () => {
 
               {activeTab === "OPTIONS" && (
                 <View style={styles.tabContent}>
-                  <OptionsMarket search={search} />
+                  <OptionsMarket search={search} isActive={activeTab === "OPTIONS" && isFocused} />
                 </View>
               )}
 
@@ -367,10 +329,10 @@ const Market = () => {
                   {!initialLoaded ? <TabListSkeleton rows={8} /> : <AlphaMarket coinPairs={coinPairs} search={search} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
                 </View>
               )} */}
-            </Animated.View>
+            </View>
           </>
         )}
-      </KeyBoardAware>
+      </View>
     </AppSafeAreaView>
   );
 };

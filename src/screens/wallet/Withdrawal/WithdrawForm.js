@@ -21,6 +21,7 @@ import { useDispatch } from "react-redux";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import moment from "moment";
 import KeyBoardAware from "../../../common/KeyboardAware";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import NavigationService from "../../../navigation/NavigationService";
 import AddWithdrawalAddressBasics from "../components/WithdrawAddress/AddWithdrawalAddressBasics";
 import AddWithdrawalAddressVerification from "../components/WithdrawAddress/AddWithdrawalAddressVerification";
@@ -2024,38 +2025,44 @@ const WithdrawForm = () => {
         draggableIcon: { backgroundColor: colors.textGray },
       }}
     >
-      <View style={styles.agceCountrySheetInner}>
-        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 16 }}>
+        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 14 }}>
           Select country
         </AppText>
-        <ScrollView style={styles.agceCountrySheetScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
           {AGCE_PHONE_COUNTRIES.map((c, idx) => {
             const selected = agcePhoneCountry.code === c.code;
             return (
               <TouchableOpacity
                 key={c.code}
-                style={[
-                  styles.agceCountrySheetRow,
-                  {
-                    borderBottomWidth: idx < AGCE_PHONE_COUNTRIES.length - 1 ? StyleSheet.hairlineWidth : 0,
-                    borderBottomColor: isDark ? themeColors.border : "#00000018",
-                  },
-                ]}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingVertical: 13,
+                  paddingHorizontal: 4,
+                  borderBottomWidth: idx < AGCE_PHONE_COUNTRIES.length - 1 ? StyleSheet.hairlineWidth : 0,
+                  borderBottomColor: isDark ? themeColors.border : "#00000018",
+                }}
                 onPress={() => {
                   setAgcePhoneCountry(c);
                   agceCountrySheetRef.current?.close();
                 }}
                 activeOpacity={0.75}
               >
-                <AppText type={FOURTEEN}>{c.flag}</AppText>
-                <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ marginLeft: 10, color: themeColors.text, minWidth: 44 }}>
-                  {c.code}
-                </AppText>
-                <AppText type={TWELVE} color={themeColors.secondaryText} style={{ marginLeft: 8, flex: 1 }}>
-                  {c.label}
-                </AppText>
+                <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                  <AppText style={{ fontSize: 18, marginRight: 12, lineHeight: 22 }}>{c.flag}</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, width: 50 }}>
+                    {c.code}
+                  </AppText>
+                  <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, flex: 1, marginLeft: 6 }}>
+                    {c.label}
+                  </AppText>
+                </View>
                 {selected ? (
-                  <FastImage source={checkIc} style={{ width: 12, height: 12, right: 5 }} resizeMode="contain" />
+                  <FastImage source={checkIc} style={{ width: 14, height: 14, }}
+                    tintColor={isDark ? "#FFFFFF" : "#000000"}
+                    resizeMode="contain" />
                 ) : null}
               </TouchableOpacity>
             );
@@ -2080,36 +2087,42 @@ const WithdrawForm = () => {
         draggableIcon: { backgroundColor: colors.textGray },
       }}
     >
-      <View style={styles.agceCountrySheetInner}>
-        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 12 }}>
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 16 }}>
+        <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 14 }}>
           Select country
         </AppText>
-        <ScrollView style={styles.agceCountrySheetScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
           {countriesList.map((c, idx) => {
             const countryName = c.label.split("(")[0].trim();
             const selected = saveAddrBenCountry === countryName;
             return (
               <TouchableOpacity
                 key={idx}
-                style={[
-                  styles.agceCountrySheetRow,
-                  {
-                    borderBottomWidth: idx < countriesList.length - 1 ? StyleSheet.hairlineWidth : 0,
-                    borderBottomColor: isDark ? themeColors.border : "#00000018",
-                  },
-                ]}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingVertical: 13,
+                  paddingHorizontal: 4,
+                  borderBottomWidth: idx < countriesList.length - 1 ? StyleSheet.hairlineWidth : 0,
+                  borderBottomColor: isDark ? themeColors.border : "#00000018",
+                }}
                 onPress={() => {
                   setSaveAddrBenCountry(countryName);
                   saveAddrCountrySheetRef.current?.close();
                 }}
                 activeOpacity={0.75}
               >
-                <AppText type={FOURTEEN}>{c.flag}</AppText>
-                <AppText type={TWELVE} color={themeColors.text} style={{ marginLeft: 12, flex: 1 }}>
-                  {countryName}
-                </AppText>
+                <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                  <AppText style={{ fontSize: 18, marginRight: 12, lineHeight: 22 }}>{c.flag}</AppText>
+                  <AppText type={FOURTEEN} style={{ color: themeColors.text, flex: 1 }}>
+                    {countryName}
+                  </AppText>
+                </View>
                 {selected ? (
-                  <FastImage source={checkIc} style={{ width: 12, height: 12, right: 5 }} resizeMode="contain" />
+                  <FastImage source={checkIc} style={{ width: 14, height: 14, }}
+                    tintColor={isDark ? "#FFFFFF" : "#000000"}
+                    resizeMode="contain" />
                 ) : null}
               </TouchableOpacity>
             );
@@ -2936,7 +2949,7 @@ const WithdrawForm = () => {
         ref={addressDeleteSheetRef}
         closeOnDragDown
         closeOnPressMask
-        height={300}
+        height={330}
         customStyles={{
           container: {
             backgroundColor: themeColors.background,
@@ -3402,16 +3415,29 @@ const WithdrawForm = () => {
           <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 18 }}>
             In line with compliance and travel rule obligations, we need you to register and verify this destination once before we can send funds. Complete the address certification flow a single time; approved addresses are stored in your address book and will not require repeat verification for future withdrawals to the same destination.
           </AppText>
-          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+          <View style={{ flexDirection: "row", gap: 12, marginTop: 16, width: "100%" }}>
             <Button
               children="Cancel"
-              containerStyle={{ marginRight: 12, backgroundColor: "transparent", borderWidth: 1, borderColor: themeColors.border, width: 100, height: 40 }}
-              titleStyle={{ color: themeColors.text }}
+              containerStyle={{
+                flex: 1,
+                flexBasis: 0,
+                backgroundColor: isDark ? themeColors.border : "#EDEDEE",
+                borderRadius: 100,
+                height: 44
+              }}
+              titleStyle={{ color: themeColors.text, fontWeight: "600", fontSize: 14 }}
               onPress={() => verifyReminderSheetRef.current?.close()}
             />
             <Button
               children="Verify Now"
-              containerStyle={{ width: 120, height: 40 }}
+              containerStyle={{
+                flex: 1,
+                flexBasis: 0,
+                backgroundColor: isDark ? "#FFFFFF" : "#111827",
+                borderRadius: 100,
+                height: 44
+              }}
+              titleStyle={{ color: isDark ? "#000000" : "#FFFFFF", fontWeight: "600", fontSize: 14 }}
               onPress={() => {
                 verifyReminderSheetRef.current?.close();
                 setTimeout(() => {
@@ -3434,11 +3460,20 @@ const WithdrawForm = () => {
         closeOnDragDown={false}
         closeOnPressBack={false}
         closeOnPressMask={false}
+        keyboardAvoidingViewEnabled={Platform.OS === "ios"}
         onClose={resetAddAddressForm} // Clear form on close
-        height={Dimensions.get("window").height * 0.85}
+        height={
+          (saveAddrStep === "owner" || saveAddrStep === "wallet_type" || saveAddrStep === "proof_select" || saveAddrStep === "otp")
+            ? 400
+            : (saveAddrStep === "verify_method")
+              ? 460
+              : (saveAddrStep === "exchange")
+                ? 560
+                : Math.round(Dimensions.get("window").height * 0.88)
+        }
         customStyles={{
           container: {
-            backgroundColor: "transparent",
+            backgroundColor: themeColors.background,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
           },
@@ -3446,144 +3481,206 @@ const WithdrawForm = () => {
           draggableIcon: { display: "none" }
         }}
       >
-        <View style={{ flex: 1, justifyContent: "flex-end" }}>
-          <View style={{
-            backgroundColor: themeColors.background,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            paddingHorizontal: 24,
-            paddingTop: 10,
-            paddingBottom: 24,
-            height: (saveAddrStep === "owner" || saveAddrStep === "wallet_type" || saveAddrStep === "proof_select" || saveAddrStep === "otp")
-              ? 380
-              : (saveAddrStep === "verify_method")
-                ? 420
-                : (saveAddrStep === "exchange")
-                  ? 520
-                  : Dimensions.get("window").height * 0.85
-          }}>
-            <View style={{ flexDirection: "row", marginBottom: 20, paddingTop: 10 }}>
-              <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: 'center' }}>
-                {saveAddrStep === "form"
-                  ? "Add withdrawal address"
-                  : (saveAddrStep === "verify_method")
-                    ? "Verify your identity"
-                    : (saveAddrStep === "otp")
-                      ? (selectedSaveAddrVerifyMethod === "email" ? "Verify your email" : selectedSaveAddrVerifyMethod === "mobile" ? "Verify your phone" : "Verify your identity")
-                      : (saveAddrStep === "satoshi" || saveAddrStep === "metamask")
-                        ? "Verify withdrawal address"
-                        : "Address confirmation"}
-              </AppText>
+        <View style={{
+          flex: 1,
+          paddingHorizontal: 24,
+          paddingTop: 10,
+          paddingBottom: Platform.OS === "ios" ? 24 : 16
+        }}>
+          <View style={{ flexDirection: "row", marginBottom: 16, paddingTop: 6, justifyContent: "center" }}>
+            <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "center" }}>
+              {saveAddrStep === "form"
+                ? "Add withdrawal address"
+                : (saveAddrStep === "verify_method")
+                  ? "Verify your identity"
+                  : (saveAddrStep === "otp")
+                    ? (selectedSaveAddrVerifyMethod === "email" ? "Verify your email" : selectedSaveAddrVerifyMethod === "mobile" ? "Verify your phone" : "Verify your identity")
+                    : (saveAddrStep === "satoshi" || saveAddrStep === "metamask")
+                      ? "Verify withdrawal address"
+                      : "Address confirmation"}
+            </AppText>
+          </View>
+
+          <KeyboardAwareScrollView
+            enableOnAndroid={true}
+            enableAutomaticScroll={true}
+            extraScrollHeight={Platform.OS === "ios" ? 40 : 120}
+            extraHeight={Platform.OS === "ios" ? 40 : 120}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
+            style={{ flex: 1 }}
+          >
+            <AddWithdrawalAddressBasics
+              saveAddrCountrySheetRef={saveAddrCountrySheetRef}
+              isDark={isDark}
+              themeColors={themeColors}
+              userData={userData}
+              saveAddrStep={saveAddrStep}
+              saveAddrLabel={saveAddrLabel}
+              setSaveAddrLabel={setSaveAddrLabel}
+              saveAddrCoin={saveAddrCoin}
+              setSaveAddrCoin={setSaveAddrCoin}
+              withdrawCoins={withdrawCoinsList}
+              saveAddrCoinOpen={saveAddrCoinOpen}
+              setSaveAddrCoinOpen={setSaveAddrCoinOpen}
+              saveAddrAddress={saveAddrAddress}
+              setSaveAddrAddress={setSaveAddrAddress}
+              saveAddrAddressTouched={saveAddrAddressTouched}
+              setSaveAddrAddressTouched={setSaveAddrAddressTouched}
+              saveAddrAddressValidating={saveAddrAddressValidating}
+              saveAddrAddressValidError={saveAddrAddressValidError}
+              saveAddrAddressInlineError={saveAddrAddressInlineError}
+              validateSaveAddrAddressApiRef={validateSaveAddrAddressApiRef}
+              saveAddrNetwork={saveAddrNetwork}
+              setSaveAddrNetwork={setSaveAddrNetwork}
+              saveAddrNetworkOpen={saveAddrNetworkOpen}
+              setSaveAddrNetworkOpen={setSaveAddrNetworkOpen}
+              CHAIN_FULL_NAMES={CHAIN_FULL_NAMES}
+              saveAddrMemo={saveAddrMemo}
+              setSaveAddrMemo={setSaveAddrMemo}
+              saveAddrProofMethod={saveAddrProofMethod}
+              setSaveAddrProofMethod={setSaveAddrProofMethod}
+              saveAddrBenFullName={saveAddrBenFullName}
+              setSaveAddrBenFullName={setSaveAddrBenFullName}
+              saveAddrBenPan={saveAddrBenPan}
+              setSaveAddrBenPan={setSaveAddrBenPan}
+              saveAddrBenCountry={saveAddrBenCountry}
+              setSaveAddrBenCountry={setSaveAddrBenCountry}
+              saveAddrBenPin={saveAddrBenPin}
+              setSaveAddrBenPin={setSaveAddrBenPin}
+              saveAddrBenAddress={saveAddrBenAddress}
+              setSaveAddrBenAddress={setSaveAddrBenAddress}
+              saveAddrVerifyOptions={saveAddrVerifyOptions}
+              selectedSaveAddrVerifyMethod={selectedSaveAddrVerifyMethod}
+              setSelectedSaveAddrVerifyMethod={setSelectedSaveAddrVerifyMethod}
+              getWithdrawNetworksOrStaticFallback={getWithdrawNetworksOrStaticFallback}
+              saveAddrOwnership={saveAddrOwnership}
+              setSaveAddrOwnership={setSaveAddrOwnership}
+              saveAddrWalletType={saveAddrWalletType}
+              setSaveAddrWalletType={setSaveAddrWalletType}
+              saveAddrExchange={saveAddrExchange}
+              setSaveAddrExchange={setSaveAddrExchange}
+              saveAddrExchangeSearch={saveAddrExchangeSearch}
+              setSaveAddrExchangeSearch={setSaveAddrExchangeSearch}
+              saveAddrExchangeOpen={saveAddrExchangeOpen}
+              setSaveAddrExchangeOpen={setSaveAddrExchangeOpen}
+              ADDRESS_BOOK_TOP_EXCHANGES={ADDRESS_BOOK_TOP_EXCHANGES}
+              ADDRESS_BOOK_EXCHANGE_OTHER={ADDRESS_BOOK_EXCHANGE_OTHER}
+              saveAddrExchangeManual={saveAddrExchangeManual}
+              setSaveAddrExchangeManual={setSaveAddrExchangeManual}
+              saveAddrDeclarationAccepted={saveAddrDeclarationAccepted}
+              setSaveAddrDeclarationAccepted={setSaveAddrDeclarationAccepted}
+              ADDRESS_BOOK_DECLARATION_TEXT={ADDRESS_BOOK_DECLARATION_TEXT}
+              upIcon={upIcon}
+              downIcon={downIcon}
+              checkIc={checkIc}
+              SECURITY_SHEIELD={SECURITY_SHEIELD}
+              EMAIL_VERIFY={EMAIL_VERIFY}
+              PHONE_VERIFY={PHONE_VERIFY}
+              GOOGLE_VERIFY={GOOGLE_VERIFY}
+              PASSKEY_VERIFY={PASSKEY_VERIFY}
+            />
+
+            <AddWithdrawalAddressVerification
+              isDark={isDark}
+              themeColors={themeColors}
+              saveAddrStep={saveAddrStep}
+              selectedSaveAddrVerifyMethod={selectedSaveAddrVerifyMethod}
+              saveAddrOtp={saveAddrOtp}
+              setSaveAddrOtp={setSaveAddrOtp}
+              saveAddrWhitelistData={saveAddrWhitelistData}
+              userData={userData}
+              saveAddrOtpTimer={saveAddrOtpTimer}
+              saveAddrResendActive={saveAddrResendActive}
+              handleResendSaveAddrOtp={handleResendSaveAddrOtp}
+              saveAddrSatoshiPolling={saveAddrSatoshiPolling}
+              satoshiWhitelistAwaitingProof={satoshiWhitelistAwaitingProof}
+              setSatoshiDepositLoading={setSatoshiDepositLoading}
+              setSaveAddrStep={setSaveAddrStep}
+              satoshiDepositLoading={satoshiDepositLoading}
+              satoshiDepositError={satoshiDepositError}
+              handleSatoshiWhitelistSent={handleSatoshiWhitelistSent}
+              SECURITY_SHEIELD={SECURITY_SHEIELD}
+              LOCKED={LOCKED}
+              bitcoinIcon={bitcoinIcon}
+            />
+          </KeyboardAwareScrollView>
+
+          {saveAddrStep === "satoshi" || saveAddrStep === "metamask" ? (
+            <View style={{ marginTop: 16, paddingBottom: 10, alignItems: "center" }}>
+              <Button
+                children={
+                  saveAddrBusy
+                    ? "..."
+                    : saveAddrStep === "metamask"
+                      ? "Sign with MetaMask"
+                      : saveAddrSatoshiPolling
+                        ? "Checking..."
+                        : satoshiWhitelistAwaitingProof
+                          ? "Check again"
+                          : "I've sent the payment"
+                }
+                disabled={saveAddrBusy}
+                containerStyle={{
+                  width: "100%",
+                  backgroundColor: isDark ? "#FFFFFF" : "#111827",
+                  borderRadius: 100,
+                  height: 44,
+                  opacity: saveAddrBusy ? 0.6 : 1
+                }}
+                titleStyle={{ color: isDark ? "#000000" : "#FFFFFF", fontWeight: "600" }}
+                onPress={() => {
+                  if (saveAddrStep === "satoshi") {
+                    handleSatoshiWhitelistSent();
+                  } else if (saveAddrStep === "metamask") {
+                    const dappUrl = "arabglobalexchange.com/wallet/withdraw";
+                    const metamaskDeepLink = `https://metamask.app.link/dapp/${dappUrl}`;
+
+                    Linking.canOpenURL(metamaskDeepLink).then(supported => {
+                      if (supported) {
+                        Linking.openURL(metamaskDeepLink);
+                      } else {
+                        // Redirect to store if not installed
+                        const storeUrl = Platform.OS === 'ios'
+                          ? 'https://apps.apple.com/app/metamask/id1438144202'
+                          : 'https://play.google.com/store/apps/details?id=io.metamask';
+                        Linking.openURL(storeUrl);
+                      }
+                    }).catch(() => {
+                      showError("Could not open MetaMask. Please ensure it is installed.");
+                    });
+                  }
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  if (satoshiResumeMode) {
+                    setSatoshiResumeMode(false);
+                    saveAddressSheetRef.current?.close();
+                  } else {
+                    setSaveAddrStep("otp");
+                  }
+                }}
+                style={{ marginTop: 14, paddingVertical: 6 }}
+              >
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#FFFFFF" : "#000000" }}>
+                  Back
+                </AppText>
+              </TouchableOpacity>
             </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
-              <AddWithdrawalAddressBasics
-                saveAddrCountrySheetRef={saveAddrCountrySheetRef}
-                isDark={isDark}
-                themeColors={themeColors}
-                userData={userData}
-                saveAddrStep={saveAddrStep}
-                saveAddrLabel={saveAddrLabel}
-                setSaveAddrLabel={setSaveAddrLabel}
-                saveAddrCoin={saveAddrCoin}
-                setSaveAddrCoin={setSaveAddrCoin}
-                withdrawCoins={withdrawCoinsList}
-                saveAddrCoinOpen={saveAddrCoinOpen}
-                setSaveAddrCoinOpen={setSaveAddrCoinOpen}
-                saveAddrAddress={saveAddrAddress}
-                setSaveAddrAddress={setSaveAddrAddress}
-                saveAddrAddressTouched={saveAddrAddressTouched}
-                setSaveAddrAddressTouched={setSaveAddrAddressTouched}
-                saveAddrAddressValidating={saveAddrAddressValidating}
-                saveAddrAddressValidError={saveAddrAddressValidError}
-                saveAddrAddressInlineError={saveAddrAddressInlineError}
-                validateSaveAddrAddressApiRef={validateSaveAddrAddressApiRef}
-                saveAddrNetwork={saveAddrNetwork}
-                setSaveAddrNetwork={setSaveAddrNetwork}
-                saveAddrNetworkOpen={saveAddrNetworkOpen}
-                setSaveAddrNetworkOpen={setSaveAddrNetworkOpen}
-                CHAIN_FULL_NAMES={CHAIN_FULL_NAMES}
-                saveAddrMemo={saveAddrMemo}
-                setSaveAddrMemo={setSaveAddrMemo}
-                saveAddrProofMethod={saveAddrProofMethod}
-                setSaveAddrProofMethod={setSaveAddrProofMethod}
-                saveAddrBenFullName={saveAddrBenFullName}
-                setSaveAddrBenFullName={setSaveAddrBenFullName}
-                saveAddrBenPan={saveAddrBenPan}
-                setSaveAddrBenPan={setSaveAddrBenPan}
-                saveAddrBenCountry={saveAddrBenCountry}
-                setSaveAddrBenCountry={setSaveAddrBenCountry}
-                saveAddrBenPin={saveAddrBenPin}
-                setSaveAddrBenPin={setSaveAddrBenPin}
-                saveAddrBenAddress={saveAddrBenAddress}
-                setSaveAddrBenAddress={setSaveAddrBenAddress}
-                saveAddrVerifyOptions={saveAddrVerifyOptions}
-                selectedSaveAddrVerifyMethod={selectedSaveAddrVerifyMethod}
-                setSelectedSaveAddrVerifyMethod={setSelectedSaveAddrVerifyMethod}
-                getWithdrawNetworksOrStaticFallback={getWithdrawNetworksOrStaticFallback}
-                saveAddrOwnership={saveAddrOwnership}
-                setSaveAddrOwnership={setSaveAddrOwnership}
-                saveAddrWalletType={saveAddrWalletType}
-                setSaveAddrWalletType={setSaveAddrWalletType}
-                saveAddrExchange={saveAddrExchange}
-                setSaveAddrExchange={setSaveAddrExchange}
-                saveAddrExchangeSearch={saveAddrExchangeSearch}
-                setSaveAddrExchangeSearch={setSaveAddrExchangeSearch}
-                saveAddrExchangeOpen={saveAddrExchangeOpen}
-                setSaveAddrExchangeOpen={setSaveAddrExchangeOpen}
-                ADDRESS_BOOK_TOP_EXCHANGES={ADDRESS_BOOK_TOP_EXCHANGES}
-                ADDRESS_BOOK_EXCHANGE_OTHER={ADDRESS_BOOK_EXCHANGE_OTHER}
-                saveAddrExchangeManual={saveAddrExchangeManual}
-                setSaveAddrExchangeManual={setSaveAddrExchangeManual}
-                saveAddrDeclarationAccepted={saveAddrDeclarationAccepted}
-                setSaveAddrDeclarationAccepted={setSaveAddrDeclarationAccepted}
-                ADDRESS_BOOK_DECLARATION_TEXT={ADDRESS_BOOK_DECLARATION_TEXT}
-                upIcon={upIcon}
-                downIcon={downIcon}
-                checkIc={checkIc}
-                SECURITY_SHEIELD={SECURITY_SHEIELD}
-                EMAIL_VERIFY={EMAIL_VERIFY}
-                PHONE_VERIFY={PHONE_VERIFY}
-                GOOGLE_VERIFY={GOOGLE_VERIFY}
-                PASSKEY_VERIFY={PASSKEY_VERIFY}
-              />
-
-              <AddWithdrawalAddressVerification
-                isDark={isDark}
-                themeColors={themeColors}
-                saveAddrStep={saveAddrStep}
-                selectedSaveAddrVerifyMethod={selectedSaveAddrVerifyMethod}
-                saveAddrOtp={saveAddrOtp}
-                setSaveAddrOtp={setSaveAddrOtp}
-                saveAddrWhitelistData={saveAddrWhitelistData}
-                userData={userData}
-                saveAddrOtpTimer={saveAddrOtpTimer}
-                saveAddrResendActive={saveAddrResendActive}
-                handleResendSaveAddrOtp={handleResendSaveAddrOtp}
-                saveAddrSatoshiPolling={saveAddrSatoshiPolling}
-                satoshiWhitelistAwaitingProof={satoshiWhitelistAwaitingProof}
-                setSatoshiDepositLoading={setSatoshiDepositLoading}
-                setSaveAddrStep={setSaveAddrStep}
-                satoshiDepositLoading={satoshiDepositLoading}
-                satoshiDepositError={satoshiDepositError}
-                handleSatoshiWhitelistSent={handleSatoshiWhitelistSent}
-                SECURITY_SHEIELD={SECURITY_SHEIELD}
-                LOCKED={LOCKED}
-                bitcoinIcon={bitcoinIcon}
-              />
-            </ScrollView>
-
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20, paddingBottom: 10 }}>
+          ) : (
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 20, paddingBottom: 10, width: "100%" }}>
               <Button
                 children={saveAddrStep === "form" ? "Cancel" : "Back"}
                 containerStyle={{
                   flex: 1,
-                  marginRight: 10,
-                  backgroundColor: isDark ? themeColors.border : "#E5E7EB",
+                  flexBasis: 0,
+                  backgroundColor: isDark ? themeColors.border : "#EDEDEE",
                   borderRadius: 100,
                   height: 44
                 }}
-                titleStyle={{ color: isDark ? "#FFF" : "#374151", fontWeight: "600", fontSize: 13 }}
+                titleStyle={{ color: themeColors.text, fontWeight: "600", fontSize: 14 }}
                 onPress={() => {
                   if (saveAddrStep === "form") {
                     saveAddressSheetRef.current?.close();
@@ -3606,13 +3703,6 @@ const WithdrawForm = () => {
                     }
                   } else if (saveAddrStep === "otp") {
                     setSaveAddrStep("verify_method");
-                  } else if (saveAddrStep === "satoshi" || saveAddrStep === "metamask") {
-                    if (satoshiResumeMode) {
-                      setSatoshiResumeMode(false);
-                      saveAddressSheetRef.current?.close();
-                    } else {
-                      setSaveAddrStep("otp");
-                    }
                   }
                 }}
               />
@@ -3640,12 +3730,14 @@ const WithdrawForm = () => {
                 let buttonText = "Next";
                 if (saveAddrStep === "verify_method" || saveAddrStep === "proof_select" || saveAddrStep === "other_identity") buttonText = "Continue";
                 else if (saveAddrStep === "otp") buttonText = "Verify";
-                else if (saveAddrStep === "satoshi") {
-                  if (saveAddrSatoshiPolling) buttonText = "Checking...";
-                  else if (satoshiWhitelistAwaitingProof) buttonText = "Check again";
-                  else buttonText = "I've sent the payment";
-                }
-                else if (saveAddrStep === "metamask") buttonText = "Sign with MetaMask";
+
+                const nextBtnBg = isDark
+                  ? "#FFFFFF"
+                  : (isNextDisabled ? "#E5E7EB" : "#111827");
+
+                const nextBtnTextColor = isDark
+                  ? "#000000"
+                  : (isNextDisabled ? "#9CA3AF" : "#FFFFFF");
 
                 return (
                   <Button
@@ -3653,18 +3745,14 @@ const WithdrawForm = () => {
                     disabled={isNextDisabled}
                     containerStyle={{
                       flex: 1,
-                      marginLeft: 10,
-                      backgroundColor: isNextDisabled ? (isDark ? "#222" : "#ccc") : "#111827",
+                      flexBasis: 0,
+                      backgroundColor: nextBtnBg,
                       borderRadius: 100,
                       height: 44,
-                      opacity: isNextDisabled ? 0.6 : 1
+                      opacity: isNextDisabled ? (isDark ? 0.35 : 0.6) : 1
                     }}
-                    titleStyle={{ color: isNextDisabled ? (isDark ? "#555" : "#666") : "#FFF", fontWeight: "600" }}
+                    titleStyle={{ color: nextBtnTextColor, fontWeight: "600", fontSize: 14 }}
                     onPress={async () => {
-                      if (saveAddrStep === "satoshi") {
-                        handleSatoshiWhitelistSent();
-                        return;
-                      }
                       if (saveAddrStep === "form") {
                         setSaveAddrStep("owner");
                         return;
@@ -3990,7 +4078,7 @@ const WithdrawForm = () => {
                 );
               })()}
             </View>
-          </View>
+          )}
         </View>
       </RBSheet>
 

@@ -96,10 +96,20 @@ const AddWithdrawalAddressBasics = ({
         <View>
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Label</AppText>
-            <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
+            <View style={{
+              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              borderRadius: 9,
+              paddingHorizontal: 16,
+              height: 48,
+              justifyContent: "center",
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? themeColors.border : "transparent"
+            }}>
               <TextInput
                 placeholder="4-20 characters"
-                placeholderTextColor={themeColors.secondaryText}
+                placeholderTextColor="#84888C"
+                selectionColor={themeColors.text + "40"}
+                cursorColor={themeColors.text}
                 style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
                 value={saveAddrLabel}
                 onChangeText={setSaveAddrLabel}
@@ -115,8 +125,15 @@ const AddWithdrawalAddressBasics = ({
                 setSaveAddrCoinOpen(!saveAddrCoinOpen);
               }}
               style={{
-                backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16,
-                height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF"
+                backgroundColor: isDark ? "transparent" : "#EDEDEE",
+                borderRadius: 9,
+                paddingHorizontal: 16,
+                height: 48,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderWidth: isDark ? 1 : 0,
+                borderColor: isDark ? themeColors.border : "transparent"
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -130,7 +147,7 @@ const AddWithdrawalAddressBasics = ({
                     />
                   ) : null;
                 })()}
-                <AppText type={FOURTEEN} style={{ color: saveAddrCoin ? themeColors.text : themeColors.secondaryText }}>
+                <AppText type={FOURTEEN} style={{ color: saveAddrCoin ? themeColors.text : "#84888C" }}>
                   {saveAddrCoin ? saveAddrCoin : "Select Coin"}
                 </AppText>
               </View>
@@ -143,16 +160,27 @@ const AddWithdrawalAddressBasics = ({
             </TouchableOpacity>
             {saveAddrCoinOpen && (
               <View style={{
-                marginTop: 8, backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8,
-                overflow: "hidden", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF", maxHeight: 180, minHeight: 100
+                marginTop: 8,
+                backgroundColor: isDark ? themeColors.background : "#EDEDEE",
+                borderRadius: 9,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: isDark ? themeColors.border : "#E5E7EB",
+                maxHeight: 180,
+                minHeight: 100
               }}>
                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
                   {withdrawCoins.map((item) => (
                     <TouchableOpacity
                       key={item.short_name}
                       style={{
-                        paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1,
-                        borderBottomColor: isDark ? themeColors.border : "#EEE", flexDirection: "row", justifyContent: "space-between", alignItems: "center"
+                        paddingVertical: 12,
+                        paddingHorizontal: 16,
+                        borderBottomWidth: 1,
+                        borderBottomColor: isDark ? themeColors.border : "#DDD",
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center"
                       }}
                       onPress={() => {
                         setSaveAddrCoin(item.short_name);
@@ -170,7 +198,7 @@ const AddWithdrawalAddressBasics = ({
                         <AppText type={FOURTEEN} style={{ color: themeColors.text }}>{item.short_name}</AppText>
                       </View>
                       {saveAddrCoin === item.short_name && (
-                        <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor="black" />
+                        <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor={isDark ? themeColors.text : "black"} />
                       )}
                     </TouchableOpacity>
                   ))}
@@ -186,9 +214,19 @@ const AddWithdrawalAddressBasics = ({
                 setSaveAddrCoinOpen(false);
                 setSaveAddrNetworkOpen(!saveAddrNetworkOpen);
               }}
-              style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}
+              style={{
+                backgroundColor: isDark ? "transparent" : "#EDEDEE",
+                borderRadius: 9,
+                paddingHorizontal: 16,
+                height: 48,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderWidth: isDark ? 1 : 0,
+                borderColor: isDark ? themeColors.border : "transparent"
+              }}
             >
-              <AppText type={FOURTEEN} style={{ color: saveAddrNetwork ? themeColors.text : themeColors.secondaryText }}>
+              <AppText type={FOURTEEN} style={{ color: saveAddrNetwork ? themeColors.text : "#84888C" }}>
                 {saveAddrNetworkDisplay || "Select Network"}
               </AppText>
               <FastImage
@@ -199,7 +237,15 @@ const AddWithdrawalAddressBasics = ({
               />
             </TouchableOpacity>
             {saveAddrNetworkOpen && (
-              <View style={{ marginTop: 8, backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 12, overflow: "hidden", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF", maxHeight: 240 }}>
+              <View style={{
+                marginTop: 8,
+                backgroundColor: isDark ? themeColors.background : "#EDEDEE",
+                borderRadius: 12,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: isDark ? themeColors.border : "#E5E7EB",
+                maxHeight: 240
+              }}>
                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
                   {(() => {
                     const coin = withdrawCoins.find(c => c.short_name === saveAddrCoin);
@@ -213,14 +259,14 @@ const AddWithdrawalAddressBasics = ({
                         <TouchableOpacity
                           key={net.code}
                           style={{
-                            paddingVertical: 5,
+                            paddingVertical: 8,
                             paddingHorizontal: 16,
                             borderBottomWidth: 1,
-                            borderBottomColor: isDark ? themeColors.border : "#EEE",
+                            borderBottomColor: isDark ? themeColors.border : "#DDD",
                             flexDirection: "row",
                             justifyContent: "space-between",
                             alignItems: "center",
-                            backgroundColor: isSelected ? lightTheme.input : "transparent"
+                            backgroundColor: isSelected ? (isDark ? "rgba(255,255,255,0.08)" : "#DFDFE2") : "transparent"
                           }}
                           onPress={() => {
                             setSaveAddrNetwork(net.code);
@@ -240,7 +286,7 @@ const AddWithdrawalAddressBasics = ({
                           </View>
                           {isSelected && (
                             <View style={{ justifyContent: "center", alignItems: "center" }}>
-                              <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor="black" />
+                              <FastImage source={checkIc} style={{ width: 12, height: 12 }} tintColor={isDark ? themeColors.text : "black"} />
                             </View>
                           )}
                         </TouchableOpacity>
@@ -255,12 +301,19 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Address</AppText>
             <View style={{
-              backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16,
-              height: 48, justifyContent: "center", borderWidth: (saveAddrAddressInlineError || saveAddrAddressValidError) ? 1 : (isDark ? 0 : 1), borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? "#EF4444" : (isDark ? "transparent" : "#E8EAEF")
+              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              borderRadius: 9,
+              paddingHorizontal: 16,
+              height: 48,
+              justifyContent: "center",
+              borderWidth: (saveAddrAddressInlineError || saveAddrAddressValidError) ? 1 : (isDark ? 1 : 0),
+              borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? colors.red : (isDark ? themeColors.border : "transparent")
             }}>
               <TextInput
                 placeholder="Enter wallet address"
-                placeholderTextColor={themeColors.secondaryText}
+                placeholderTextColor="#84888C"
+                selectionColor={themeColors.text + "40"}
+                cursorColor={themeColors.text}
                 style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
                 value={saveAddrAddress}
                 onChangeText={(value) => {
@@ -286,10 +339,20 @@ const AddWithdrawalAddressBasics = ({
 
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Memo (Optional)</AppText>
-            <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
+            <View style={{
+              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              borderRadius: 9,
+              paddingHorizontal: 16,
+              height: 48,
+              justifyContent: "center",
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? themeColors.border : "transparent"
+            }}>
               <TextInput
                 placeholder="e.g. XRP destination tag"
-                placeholderTextColor={themeColors.secondaryText}
+                placeholderTextColor="#84888C"
+                selectionColor={themeColors.text + "40"}
+                cursorColor={themeColors.text}
                 style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
                 value={saveAddrMemo}
                 onChangeText={setSaveAddrMemo}
@@ -297,414 +360,443 @@ const AddWithdrawalAddressBasics = ({
             </View>
           </View>
         </View>
-      )
-      }
+      )}
 
-      {
-        saveAddrStep === "owner" && (
-          <View>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 16, lineHeight: 20 }}>
-              Please provide the details of the address owner (the person you are transacting with). These details will be used to comply with regulatory requirements when transacting with this address.
-            </AppText>
+      {saveAddrStep === "owner" && (
+        <View>
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 16, lineHeight: 20 }}>
+            Please provide the details of the address owner (the person you are transacting with). These details will be used to comply with regulatory requirements when transacting with this address.
+          </AppText>
 
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
-              Who does this address belong to?
-            </AppText>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
+            Who does this address belong to?
+          </AppText>
 
-            {[
-              { id: "SELF", label: "Myself" },
-              { id: "OTHER", label: "Someone else" }
-            ].map((o) => {
-              const isSelected = saveAddrOwnership === o.id;
-              return (
-                <TouchableOpacity
-                  key={o.id}
-                  onPress={() => setSaveAddrOwnership(o.id)}
-                  style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}
-                >
-                  <View style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 10,
-                    borderWidth: isSelected ? 2 : 1,
-                    borderColor: isSelected ? colors.primary : themeColors.secondaryText,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    marginRight: 12
-                  }}>
-                    {isSelected && <View style={{ width: 10, height: 10, borderRadius: 10, backgroundColor: colors.black }} />}
-                  </View>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>{o.label}</AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )
-      }
-
-      {
-        saveAddrStep === "other_identity" && (
-          <View>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
-              Identify the recipient for this withdrawal address when it belongs to someone else.
-            </AppText>
-
-            <View style={{ marginBottom: 20 }}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full legal name</AppText>
-              <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
-                <TextInput
-                  placeholder="Enter full legal name"
-                  placeholderTextColor={themeColors.secondaryText}
-                  style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
-                  value={saveAddrBenFullName}
-                  onChangeText={setSaveAddrBenFullName}
-                />
-              </View>
-            </View>
-
-            <View style={{ marginBottom: 20 }}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PAN or National ID</AppText>
-              <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
-                <TextInput
-                  placeholder="Enter PAN or National ID"
-                  placeholderTextColor={themeColors.secondaryText}
-                  style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
-                  value={saveAddrBenPan}
-                  onChangeText={setSaveAddrBenPan}
-                />
-              </View>
-            </View>
-
-            <View style={{ marginBottom: 20 }}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Country of residence</AppText>
+          {[
+            { id: "SELF", label: "Myself" },
+            { id: "OTHER", label: "Someone else" }
+          ].map((o) => {
+            const isSelected = saveAddrOwnership === o.id;
+            return (
               <TouchableOpacity
-                onPress={() => saveAddrCountrySheetRef.current?.open()}
-                style={{
-                  backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8",
-                  borderRadius: 8,
-                  paddingHorizontal: 16,
-                  height: 48,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  borderWidth: isDark ? 0 : 1,
-                  borderColor: isDark ? "transparent" : "#E8EAEF"
-                }}
+                key={o.id}
+                onPress={() => setSaveAddrOwnership(o.id)}
+                style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}
               >
-                <AppText type={FOURTEEN} style={{ color: saveAddrBenCountry ? themeColors.text : themeColors.secondaryText }}>
-                  {saveAddrBenCountry || "Select country"}
-                </AppText>
+                <View style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  borderWidth: isSelected ? 2 : 1,
+                  borderColor: isSelected ? (isDark ? "#FFF" : colors.black) : themeColors.secondaryText,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginRight: 12
+                }}>
+                  {isSelected && <View style={{ width: 10, height: 10, borderRadius: 10, backgroundColor: isDark ? "#FFF" : colors.black }} />}
+                </View>
+                <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>{o.label}</AppText>
               </TouchableOpacity>
-            </View>
+            );
+          })}
+        </View>
+      )}
 
-            <View style={{ marginBottom: 20 }}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PIN / Postal code</AppText>
-              <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, height: 48, justifyContent: "center", borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
-                <TextInput
-                  placeholder="Enter PIN or Postal code"
-                  placeholderTextColor={themeColors.secondaryText}
-                  style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
-                  value={saveAddrBenPin}
-                  onChangeText={setSaveAddrBenPin}
-                />
-              </View>
-            </View>
+      {saveAddrStep === "other_identity" && (
+        <View>
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
+            Identify the recipient for this withdrawal address when it belongs to someone else.
+          </AppText>
 
-            <View style={{ marginBottom: 20 }}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full residential address</AppText>
-              <View style={{ backgroundColor: isDark ? "#2A2A2E" : "#F5F6F8", borderRadius: 8, paddingHorizontal: 16, minHeight: 80, paddingTop: 12, borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E8EAEF" }}>
-                <TextInput
-                  placeholder="Enter address"
-                  placeholderTextColor={themeColors.secondaryText}
-                  style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
-                  value={saveAddrBenAddress}
-                  onChangeText={setSaveAddrBenAddress}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
+          <View style={{ marginBottom: 20 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full legal name</AppText>
+            <View style={{
+              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              borderRadius: 9,
+              paddingHorizontal: 16,
+              height: 48,
+              justifyContent: "center",
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? themeColors.border : "transparent"
+            }}>
+              <TextInput
+                placeholder="Enter full legal name"
+                placeholderTextColor="#84888C"
+                selectionColor={themeColors.text + "40"}
+                cursorColor={themeColors.text}
+                style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
+                value={saveAddrBenFullName}
+                onChangeText={setSaveAddrBenFullName}
+              />
             </View>
           </View>
-        )
-      }
 
-      {
-        saveAddrStep === "wallet_type" && (
-          <View>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
-              Choose whether this withdrawal address is controlled in your own wallet or by an exchange / virtual asset service provider.
-            </AppText>
-
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
-              Address type
-            </AppText>
-
-            {[
-              { id: "SELF_HOSTED", label: "The address owner's self-hosted wallet" },
-              { id: "EXCHANGE", label: "A wallet hosted by a Virtual Asset Service Provider / Exchange" }
-            ].map((w) => {
-              const isSelected = saveAddrWalletType === w.id;
-              return (
-                <TouchableOpacity
-                  key={w.id}
-                  onPress={() => setSaveAddrWalletType(w.id)}
-                  style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}
-                >
-                  <View style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 11,
-                    borderWidth: isSelected ? 2 : 1,
-                    borderColor: isSelected ? colors.primary : themeColors.secondaryText,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    marginRight: 12
-                  }}>
-                    {isSelected && <View style={{ width: 10, height: 10, borderRadius: 10, backgroundColor: colors.black }} />}
-                  </View>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>{w.label}</AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )
-      }
-
-      {
-        saveAddrStep === "proof_select" && (
-          <View>
-            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
-              Verification method for your self-hosted wallet (same address entered above).
-            </AppText>
-
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
-              Verification method
-            </AppText>
-
-            {[
-              { id: "satoshi", label: "Satoshi test" },
-              { id: "metamask", label: "MetaMask signature" }
-            ].map((p) => {
-              const isSelected = saveAddrProofMethod === p.id;
-              return (
-                <TouchableOpacity
-                  key={p.id}
-                  onPress={() => setSaveAddrProofMethod(p.id)}
-                  style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}
-                >
-                  <View style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 10,
-                    borderWidth: isSelected ? 2 : 1,
-                    borderColor: isSelected ? colors.primary : themeColors.secondaryText,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    marginRight: 12
-                  }}>
-                    {isSelected && <View style={{ width: 10, height: 10, borderRadius: 10, backgroundColor: colors.black }} />}
-                  </View>
-                  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>{p.label}</AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )
-      }
-      {
-        saveAddrStep === "exchange" && (
-          <View style={{ gap: 10 }}>
-            <View style={{ gap: 0 }}>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Select the exchange hosting this address, or choose Other to enter the institution name manually.</AppText>
+          <View style={{ marginBottom: 20 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PAN or National ID</AppText>
+            <View style={{
+              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              borderRadius: 9,
+              paddingHorizontal: 16,
+              height: 48,
+              justifyContent: "center",
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? themeColors.border : "transparent"
+            }}>
+              <TextInput
+                placeholder="Enter PAN or National ID"
+                placeholderTextColor="#84888C"
+                selectionColor={themeColors.text + "40"}
+                cursorColor={themeColors.text}
+                style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
+                value={saveAddrBenPan}
+                onChangeText={setSaveAddrBenPan}
+              />
             </View>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, top: 10, left: 3 }}>Exchange name</AppText>
+          </View>
+
+          <View style={{ marginBottom: 20 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Country of residence</AppText>
             <TouchableOpacity
-              onPress={() => setSaveAddrExchangeOpen(!saveAddrExchangeOpen)}
+              onPress={() => saveAddrCountrySheetRef.current?.open()}
               style={{
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: isDark ? themeColors.border : "#E5E7EB",
-                backgroundColor: 'transparent',
+                backgroundColor: isDark ? "transparent" : "#EDEDEE",
+                borderRadius: 9,
                 paddingHorizontal: 16,
+                height: 48,
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginTop: 5,
-                minHeight: 40
+                borderWidth: isDark ? 1 : 0,
+                borderColor: isDark ? themeColors.border : "transparent"
               }}
             >
-              <AppText type={FOURTEEN} style={{ color: saveAddrExchange ? themeColors.text : themeColors.secondaryText }}>
-                {saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? "Other" : (ADDRESS_BOOK_TOP_EXCHANGES.find(e => e.value === saveAddrExchange)?.label || "Select Exchange")}
+              <AppText type={FOURTEEN} style={{ color: saveAddrBenCountry ? themeColors.text : "#84888C" }}>
+                {saveAddrBenCountry || "Select country"}
               </AppText>
-              <FastImage source={saveAddrExchangeOpen ? upIcon : downIcon} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
-            </TouchableOpacity>
-
-            {saveAddrExchangeOpen && (
-              <View style={{
-                backgroundColor: 'transparent',
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: isDark ? themeColors.border : "#E5E7EB",
-                marginTop: -5,
-                overflow: "hidden",
-                zIndex: 10
-              }}>
-                <ScrollView style={{ maxHeight: 250 }} showsVerticalScrollIndicator={false} nestedScrollEnabled>
-                  {[...ADDRESS_BOOK_TOP_EXCHANGES, { value: ADDRESS_BOOK_EXCHANGE_OTHER, label: "Other" }].map((e) => (
-                    <TouchableOpacity
-                      key={e.value}
-                      onPress={() => {
-                        setSaveAddrExchange(e.value);
-                        setSaveAddrExchangeOpen(false);
-                      }}
-                      style={{
-                        padding: 16,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        borderBottomWidth: 1,
-                        borderBottomColor: lightTheme.input
-                      }}
-                    >
-                      <AppText type={THIRTEEN} style={{ color: colors.black }}>{e.label}</AppText>
-                      {saveAddrExchange === e.value && <FastImage source={checkIc} style={{ width: 14, height: 14 }} tintColor="black" />}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER && (
-              <View style={{ gap: 8 }}>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, top: 3 }}>Enter name manually</AppText>
-                <Input
-                  placeholder="Exchange or VASP name"
-                  value={saveAddrExchangeManual}
-                  onChangeText={setSaveAddrExchangeManual}
-                  autoCapitalize="words"
-                  containerStyle={{
-                    borderColor: lightTheme.input,
-                    backgroundColor: 'transparent',
-                    borderWidth: 1
-                  }}
-                  inputStyle={{ backgroundColor: 'transparent', fontSize: 13 }}
-                />
-              </View>
-            )}
-
-            <TouchableOpacity
-              onPress={() => setSaveAddrDeclarationAccepted(!saveAddrDeclarationAccepted)}
-              activeOpacity={0.8}
-              style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginTop: 12 }}
-            >
-              <View style={{
-                width: 18,
-                height: 18,
-                borderRadius: 4,
-                borderWidth: 1.5,
-                backgroundColor: saveAddrDeclarationAccepted ? "black" : "transparent",
-                justifyContent: "center",
-                alignItems: "center",
-                marginTop: 2
-              }}>
-                {saveAddrDeclarationAccepted && <FastImage source={checkIc} style={{ width: 11, height: 11 }} tintColor="white" />}
-              </View>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText, flex: 1, lineHeight: 18 }}>
-                {ADDRESS_BOOK_DECLARATION_TEXT}
-              </AppText>
+              <FastImage
+                source={downIcon}
+                style={{ width: 12, height: 12 }}
+                tintColor={themeColors.secondaryText}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           </View>
-        )
-      }
 
-      {
-        saveAddrStep === "verify_method" && (
-          <View style={{ alignItems: "center", bottom: 20 }}>
-
-            <View style={{ width: "100%", alignItems: "flex-start" }}>
-              <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 0 }}>
-                {/* Confirm it's you */}
-              </AppText>
-              <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
-                Select one option, then tap Continue. The next step is your code or passkey prompt—no second method picker.
-              </AppText>
+          <View style={{ marginBottom: 20 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PIN / Postal code</AppText>
+            <View style={{
+              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              borderRadius: 9,
+              paddingHorizontal: 16,
+              height: 48,
+              justifyContent: "center",
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? themeColors.border : "transparent"
+            }}>
+              <TextInput
+                placeholder="Enter PIN or Postal code"
+                placeholderTextColor="#84888C"
+                selectionColor={themeColors.text + "40"}
+                cursorColor={themeColors.text}
+                style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
+                value={saveAddrBenPin}
+                onChangeText={setSaveAddrBenPin}
+              />
             </View>
+          </View>
 
-            {(() => {
-              const methods = saveAddrVerifyOptions || [];
+          <View style={{ marginBottom: 20 }}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full residential address</AppText>
+            <View style={{
+              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              borderRadius: 9,
+              paddingHorizontal: 16,
+              minHeight: 80,
+              paddingTop: 12,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? themeColors.border : "transparent"
+            }}>
+              <TextInput
+                placeholder="Enter address"
+                placeholderTextColor="#84888C"
+                selectionColor={themeColors.text + "40"}
+                cursorColor={themeColors.text}
+                style={{ color: themeColors.text, fontSize: 14, padding: 0 }}
+                value={saveAddrBenAddress}
+                onChangeText={setSaveAddrBenAddress}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+        </View>
+      )}
 
-              return methods.map((method) => {
-                // Force isSelected if there's only one method
-                const isSelected = methods.length === 1 ? true : (selectedSaveAddrVerifyMethod === method);
-                let icon = EMAIL;
-                let title = "Email";
-                let sub = "";
+      {saveAddrStep === "wallet_type" && (
+        <View>
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
+            Choose whether this withdrawal address is controlled in your own wallet or by an exchange / virtual asset service provider.
+          </AppText>
 
-                if (method === "email") {
-                  const email = userData?.emailId || "";
-                  const [local, domain] = email.split("@");
-                  sub = email ? `${local.slice(0, 2)}***@${domain}` : "";
-                } else if (method === "mobile") {
-                  icon = PHONE;
-                  title = "Phone Number";
-                  const phone = userData?.mobileNumber || "";
-                  sub = phone ? `${phone.slice(0, 2)}*****${phone.slice(-2)}` : "";
-                } else if (method === "google_authenticator") {
-                  icon = KEY_ICON;
-                  title = "Authenticator App";
-                } else if (method === "passkey") {
-                  icon = FINGERPRINT;
-                  title = "Passkeys";
-                }
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
+            Address type
+          </AppText>
 
-                return (
+          {[
+            { id: "SELF_HOSTED", label: "The address owner's self-hosted wallet" },
+            { id: "EXCHANGE", label: "A wallet hosted by a Virtual Asset Service Provider / Exchange" }
+          ].map((w) => {
+            const isSelected = saveAddrWalletType === w.id;
+            return (
+              <TouchableOpacity
+                key={w.id}
+                onPress={() => setSaveAddrWalletType(w.id)}
+                style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}
+              >
+                <View style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 11,
+                  borderWidth: isSelected ? 2 : 1,
+                  borderColor: isSelected ? (isDark ? "#FFF" : colors.black) : themeColors.secondaryText,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginRight: 12
+                }}>
+                  {isSelected && <View style={{ width: 10, height: 10, borderRadius: 10, backgroundColor: isDark ? "#FFF" : colors.black }} />}
+                </View>
+                <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>{w.label}</AppText>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      {saveAddrStep === "proof_select" && (
+        <View>
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
+            Verification method for your self-hosted wallet (same address entered above).
+          </AppText>
+
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 16 }}>
+            Verification method
+          </AppText>
+
+          {[
+            { id: "satoshi", label: "Satoshi test" },
+            { id: "metamask", label: "MetaMask signature" }
+          ].map((p) => {
+            const isSelected = saveAddrProofMethod === p.id;
+            return (
+              <TouchableOpacity
+                key={p.id}
+                onPress={() => setSaveAddrProofMethod(p.id)}
+                style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}
+              >
+                <View style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  borderWidth: isSelected ? 2 : 1,
+                  borderColor: isSelected ? (isDark ? "#FFF" : colors.black) : themeColors.secondaryText,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginRight: 12
+                }}>
+                  {isSelected && <View style={{ width: 10, height: 10, borderRadius: 10, backgroundColor: isDark ? "#FFF" : colors.black }} />}
+                </View>
+                <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>{p.label}</AppText>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+      {saveAddrStep === "exchange" && (
+        <View style={{ gap: 10 }}>
+          <View style={{ gap: 0 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Select the exchange hosting this address, or choose Other to enter the institution name manually.</AppText>
+          </View>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, top: 10, left: 3 }}>Exchange name</AppText>
+          <TouchableOpacity
+            onPress={() => setSaveAddrExchangeOpen(!saveAddrExchangeOpen)}
+            style={{
+              borderRadius: 9,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? themeColors.border : "transparent",
+              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              paddingHorizontal: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginTop: 5,
+              height: 48
+            }}
+          >
+            <AppText type={FOURTEEN} style={{ color: saveAddrExchange ? themeColors.text : "#84888C" }}>
+              {saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER ? "Other" : (ADDRESS_BOOK_TOP_EXCHANGES.find(e => e.value === saveAddrExchange)?.label || "Select Exchange")}
+            </AppText>
+            <FastImage source={saveAddrExchangeOpen ? upIcon : downIcon} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+          </TouchableOpacity>
+
+          {saveAddrExchangeOpen && (
+            <View style={{
+              backgroundColor: isDark ? themeColors.background : "#EDEDEE",
+              borderRadius: 9,
+              borderWidth: 1,
+              borderColor: isDark ? themeColors.border : "#E5E7EB",
+              marginTop: 4,
+              overflow: "hidden",
+              zIndex: 10
+            }}>
+              <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+                {[...ADDRESS_BOOK_TOP_EXCHANGES, { value: ADDRESS_BOOK_EXCHANGE_OTHER, label: "Other" }].map((e) => (
                   <TouchableOpacity
-                    key={method}
-                    onPress={() => setSelectedSaveAddrVerifyMethod(method)}
-                    disabled={methods.length === 1}
+                    key={e.value}
+                    onPress={() => {
+                      setSaveAddrExchange(e.value);
+                      setSaveAddrExchangeOpen(false);
+                    }}
                     style={{
+                      padding: 14,
+                      paddingHorizontal: 16,
                       flexDirection: "row",
                       alignItems: "center",
-                      padding: 16,
-                      width: "100%",
-                      marginBottom: 12,
-                      backgroundColor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
-                      borderRadius: 12,
-                      opacity: methods.length === 1 ? 0.8 : 1 // Subtle hint that it's fixed
+                      justifyContent: "space-between",
+                      borderBottomWidth: 1,
+                      borderBottomColor: isDark ? themeColors.border : "#DDD"
                     }}
                   >
-                    <View style={{ width: 32, height: 32, justifyContent: "center", alignItems: "center", marginRight: 16 }}>
-                      <FastImage
-                        source={icon}
-                        style={{ width: 24, height: 24 }}
-                        resizeMode="contain"
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>{title}</AppText>
-                      {!!sub && <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 4 }}>{sub}</AppText>}
-                    </View>
-                    <View style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 4,
-                      borderWidth: 1.5,
-                      borderColor: isSelected ? colors.primary : themeColors.border,
-                      backgroundColor: isSelected ? colors.primary : "transparent",
-                      justifyContent: "center",
-                      alignItems: "center"
-                    }}>
-                      {isSelected && <FastImage source={checkIc} style={{ width: 10, height: 10 }} tintColor="black" />}
-                    </View>
+                    <AppText type={THIRTEEN} style={{ color: themeColors.text }}>{e.label}</AppText>
+                    {saveAddrExchange === e.value && <FastImage source={checkIc} style={{ width: 14, height: 14 }} tintColor={isDark ? themeColors.text : "black"} />}
                   </TouchableOpacity>
-                );
-              });
-            })()}
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {saveAddrExchange === ADDRESS_BOOK_EXCHANGE_OTHER && (
+            <View style={{ gap: 8, marginTop: 6 }}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, top: 3 }}>Enter name manually</AppText>
+              <Input
+                placeholder="Exchange or VASP name"
+                value={saveAddrExchangeManual}
+                onChangeText={setSaveAddrExchangeManual}
+                autoCapitalize="words"
+                mainContainer={{ marginBottom: 0 }}
+                inputStyle={{ fontSize: 14 }}
+              />
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={() => setSaveAddrDeclarationAccepted(!saveAddrDeclarationAccepted)}
+            activeOpacity={0.8}
+            style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginTop: 12 }}
+          >
+            <View style={{
+              width: 18,
+              height: 18,
+              borderRadius: 4,
+              borderWidth: 1.5,
+              borderColor: isDark ? (saveAddrDeclarationAccepted ? "#FFF" : themeColors.border) : (saveAddrDeclarationAccepted ? "#000" : "#D1D5DB"),
+              backgroundColor: saveAddrDeclarationAccepted ? (isDark ? "#FFF" : "#000") : "transparent",
+              justifyContent: "center",
+              alignItems: "center",
+              marginTop: 2
+            }}>
+              {saveAddrDeclarationAccepted && <FastImage source={checkIc} style={{ width: 11, height: 11 }} tintColor={isDark ? "#000" : "#FFF"} />}
+            </View>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, flex: 1, lineHeight: 18 }}>
+              {ADDRESS_BOOK_DECLARATION_TEXT}
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {saveAddrStep === "verify_method" && (
+        <View style={{ alignItems: "center", bottom: 20 }}>
+          <View style={{ width: "100%", alignItems: "flex-start" }}>
+            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
+              Select one option, then tap Continue. The next step is your code or passkey prompt—no second method picker.
+            </AppText>
           </View>
-        )
-      }
-    </View >
+
+          {(() => {
+            const methods = saveAddrVerifyOptions || [];
+
+            return methods.map((method) => {
+              const isSelected = methods.length === 1 ? true : (selectedSaveAddrVerifyMethod === method);
+              let icon = EMAIL;
+              let title = "Email";
+              let sub = "";
+
+              if (method === "email") {
+                const email = userData?.emailId || "";
+                const [local, domain] = email.split("@");
+                sub = email ? `${local.slice(0, 2)}***@${domain}` : "";
+              } else if (method === "mobile") {
+                icon = PHONE;
+                title = "Phone Number";
+                const phone = userData?.mobileNumber || "";
+                sub = phone ? `${phone.slice(0, 2)}*****${phone.slice(-2)}` : "";
+              } else if (method === "google_authenticator") {
+                icon = KEY_ICON;
+                title = "Authenticator App";
+              } else if (method === "passkey") {
+                icon = FINGERPRINT;
+                title = "Passkeys";
+              }
+
+              return (
+                <TouchableOpacity
+                  key={method}
+                  onPress={() => setSelectedSaveAddrVerifyMethod(method)}
+                  disabled={methods.length === 1}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    padding: 16,
+                    width: "100%",
+                    marginBottom: 12,
+                    backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#EDEDEE",
+                    borderRadius: 12,
+                    borderWidth: isDark ? 1 : 0,
+                    borderColor: isDark ? (isSelected ? themeColors.text : themeColors.border) : "transparent",
+                    opacity: methods.length === 1 ? 0.8 : 1
+                  }}
+                >
+                  <View style={{ width: 32, height: 32, justifyContent: "center", alignItems: "center", marginRight: 16 }}>
+                    <FastImage
+                      source={icon}
+                      style={{ width: 24, height: 24 }}
+                      tintColor={isDark ? colors.white : undefined}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>{title}</AppText>
+                    {!!sub && <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 4 }}>{sub}</AppText>}
+                  </View>
+                  <View style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 4,
+                    borderWidth: 1.5,
+                    borderColor: isSelected ? (isDark ? "#FFF" : colors.black) : themeColors.secondaryText,
+                    backgroundColor: isSelected ? (isDark ? "#FFF" : colors.black) : "transparent",
+                    justifyContent: "center",
+                    alignItems: "center"
+                  }}>
+                    {isSelected && <FastImage source={checkIc} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            });
+          })()}
+        </View>
+      )}
+    </View>
   );
 };
 

@@ -78,12 +78,12 @@ const AddWithdrawalAddressVerification = ({
                   style={{
                     width: 48,
                     height: 56,
-                    borderRadius: 12,
-                    backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F5F6F8",
+                    borderRadius: 10,
+                    backgroundColor: isDark ? "transparent" : "#EDEDEE",
                     justifyContent: "center",
                     alignItems: "center",
                     borderWidth: 1,
-                    borderColor: isFocused ? (isDark ? "#FFF" : "#000") : (isDark ? "rgba(255,255,255,0.1)" : "#E8EAEF"),
+                    borderColor: isFocused ? (isDark ? "#FFF" : "#000") : (isDark ? themeColors.border : "transparent"),
                   }}
                 >
                   <AppText type={TWENTY} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
@@ -111,7 +111,7 @@ const AddWithdrawalAddressVerification = ({
 
             <TouchableOpacity onPress={handlePaste} style={{ flexDirection: "row", alignItems: "center" }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginRight: 6 }}>Paste</AppText>
-              <FastImage source={pasteImg} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <FastImage source={pasteImg} style={{ width: 16, height: 16 }} tintColor={isDark ? colors.white : undefined} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         </View>
@@ -123,7 +123,7 @@ const AddWithdrawalAddressVerification = ({
             <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 0 }}>
               To verify you own this address, please send exactly:
             </AppText>
-            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.black, }}>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
               Send exactly {saveAddrWhitelistData?.proof_amount} {saveAddrWhitelistData?.proof_asset}.
             </AppText>
             <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, lineHeight: 18, marginTop: 5 }}>
@@ -158,7 +158,8 @@ const AddWithdrawalAddressVerification = ({
               borderRadius: 16,
               padding: 20,
               alignItems: "center",
-              borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#F3F4F6",
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? themeColors.border : "transparent",
               marginBottom: 20,
               width: "100%"
             }}>
@@ -182,19 +183,20 @@ const AddWithdrawalAddressVerification = ({
               </View>
               <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.orangeTheme }}>Scan to Deposit</AppText>
 
-              <View style={{ width: "100%" }}>
+              <View style={{ width: "100%", marginTop: 8 }}>
                 <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.secondaryText, marginBottom: 8, textAlign: 'center' }}>
                   YOUR AGCX DEPOSIT ADDRESS
                 </AppText>
                 <View style={{
                   flexDirection: "row",
-                  backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
-                  borderRadius: 12,
+                  backgroundColor: isDark ? "transparent" : "#EDEDEE",
+                  borderRadius: 9,
                   padding: 6,
                   alignItems: "center",
-                  borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E5E7EB"
+                  borderWidth: isDark ? 1 : 0,
+                  borderColor: isDark ? themeColors.border : "transparent"
                 }}>
-                  <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
+                  <AppText type={TWELVE} style={{ color: themeColors.text, flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
                     {saveAddrWhitelistData?.deposit_address || saveAddrWhitelistData?.address || "—"}
                   </AppText>
                   <TouchableOpacity
@@ -203,12 +205,12 @@ const AddWithdrawalAddressVerification = ({
                       backgroundColor: 'transparent',
                       paddingHorizontal: 10,
                       paddingVertical: 8,
-                      borderRadius: 10,
-                      borderColor: lightTheme.input,
+                      borderRadius: 8,
+                      borderColor: isDark ? themeColors.border : "#CCC",
                       borderWidth: 1
                     }}
                   >
-                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.black }}>Copy</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Copy</AppText>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -220,13 +222,14 @@ const AddWithdrawalAddressVerification = ({
                   </AppText>
                   <View style={{
                     flexDirection: "row",
-                    backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
-                    borderRadius: 12,
+                    backgroundColor: isDark ? "transparent" : "#EDEDEE",
+                    borderRadius: 9,
                     padding: 6,
                     alignItems: "center",
-                    borderWidth: isDark ? 0 : 1, borderColor: isDark ? "transparent" : "#E5E7EB"
+                    borderWidth: isDark ? 1 : 0,
+                    borderColor: isDark ? themeColors.border : "transparent"
                   }}>
-                    <AppText type={TWELVE} style={{ color: isDark ? "#FFF" : "#000", flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
+                    <AppText type={TWELVE} style={{ color: themeColors.text, flex: 1, paddingHorizontal: 10 }} numberOfLines={1}>
                       {saveAddrWhitelistData.memo}
                     </AppText>
                     <TouchableOpacity
@@ -238,12 +241,12 @@ const AddWithdrawalAddressVerification = ({
                         backgroundColor: 'transparent',
                         paddingHorizontal: 10,
                         paddingVertical: 8,
-                        borderRadius: 10,
-                        borderColor: lightTheme.input,
+                        borderRadius: 8,
+                        borderColor: isDark ? themeColors.border : "#CCC",
                         borderWidth: 1
                       }}
                     >
-                      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.black }}>Copy</AppText>
+                      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Copy</AppText>
                     </TouchableOpacity>
                   </View>
                 </View>

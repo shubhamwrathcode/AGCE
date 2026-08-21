@@ -177,13 +177,21 @@ class OptionsSocketService {
 
     if (this.socket) {
       this.socket.removeAllListeners();
-      this.socket.disconnect();
+      try {
+        this.socket.disconnect();
+        (this.socket as any).close?.();
+      } catch (e) {
+        // ignore
+      }
       this.socket = null;
     }
 
     this.isConnected = false;
     this.reconnectAttempts = 0;
+    this.consumerCount = 0;
     this.eventListeners = {};
+    this.connectionCallbacks = [];
+    this.disconnectionCallbacks = [];
     this.authKey = null;
   }
 

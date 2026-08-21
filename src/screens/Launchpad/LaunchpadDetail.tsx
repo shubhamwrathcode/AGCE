@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Linking, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Linking, TextInput, Platform, Alert, Keyboard } from 'react-native';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import FastImage from 'react-native-fast-image';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { AppSafeAreaView, AppText, SEMI_BOLD } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
 import { back_ic, usdtIcon, bitcoinIcon, checkIcon, checkIc, } from '../../helper/ImageAssets';
@@ -11,6 +12,7 @@ import { colors } from '../../theme/colors';
 import { fontFamilyMedium, fontFamilySemiBold, } from '../../theme/typography';
 import { IMAGE_BASE_URL } from '../../helper/Constants';
 import { appOperation } from '../../appOperation';
+import { buildCoinImageUri } from '../../helper/coinIconUrl';
 
 const { width } = Dimensions.get('window');
 
@@ -31,14 +33,46 @@ const formatPhaseTime = (value: any) => {
   return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-const getIconForCoin = (symbol: string, path: string) => {
+const getIconForCoin = (symbol: string, path: any) => {
+  const sym = String(symbol || '').toUpperCase();
+  const base = String(IMAGE_BASE_URL || 'https://backend.arabglobal.ae/').replace(/\/+$/, '');
+
   if (path) {
-    const t = String(path).trim();
-    if (/^https?:\/\//i.test(t) || t.startsWith('data:')) return { uri: t };
-    const base = IMAGE_BASE_URL.replace(/\/$/, '');
-    return { uri: t.startsWith('/') ? `${base}${t}` : `${base}/${t}` };
+    if (typeof path === 'object' && path !== null) {
+      const raw = path.icon_url || path.icon_path || path.icon || path.logo;
+      if (raw) {
+        const str = String(raw).trim();
+        if (/^https?:\/\//i.test(str) || str.startsWith('data:')) return { uri: str };
+        if (str.startsWith('//')) return { uri: `https:${str}` };
+        const rel = str.replace(/^\/+/, '');
+        if (rel) {
+          const fullUrl = `${base}/${rel}`;
+          console.log('[LaunchpadDetail resolved image url from object]:', fullUrl);
+          return { uri: fullUrl };
+        }
+      }
+    } else {
+      const t = String(path).trim();
+      if (t && t !== 'undefined' && t !== 'null' && t !== '[object Object]') {
+        if (/^https?:\/\//i.test(t) || t.startsWith('data:')) {
+          console.log('[LaunchpadDetail direct URL]:', t);
+          return { uri: t };
+        }
+        if (t.startsWith('//')) {
+          return { uri: `https:${t}` };
+        }
+        const rel = t.replace(/^\/+/, '');
+        if (rel) {
+          const fullUrl = `${base}/${rel}`;
+          console.log('[LaunchpadDetail resolved full image URL]:', fullUrl);
+          return { uri: fullUrl };
+        }
+      }
+    }
   }
-  if (symbol === 'BTC') return bitcoinIcon;
+
+  if (sym === 'BTC') return bitcoinIcon;
+  if (sym === 'USDT') return usdtIcon;
   return usdtIcon;
 };
 
@@ -56,8 +90,29 @@ const LaunchpadDetail = ({ route }: any) => {
   const [balance, setBalance] = useState(0);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [tradeSubmitting, setTradeSubmitting] = useState(false);
+  const [logoLoadError, setLogoLoadError] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const tradeSheetRef = useRef<any>(null);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates?.height || 0);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     fetchDetail();
@@ -68,6 +123,7 @@ const LaunchpadDetail = ({ route }: any) => {
     setLoading(true);
     try {
       const res: any = await appOperation.customer.Launchpad_Project_Detail(projectId);
+      console.log('[LaunchpadDetail API Response]', JSON.stringify(res?.data, null, 2));
       if (res?.success && res?.data) {
         setDetail(res.data);
       } else {
@@ -243,7 +299,15 @@ const LaunchpadDetail = ({ route }: any) => {
     }
   };
 
-  const logoPath = detail?.logo || detail?.baseCurrency?.icon_path || '';
+  const logoPath =
+    detail?.logo ||
+    detail?.icon_path ||
+    detail?.iconPath ||
+    detail?.icon_url ||
+    detail?.baseCurrency?.icon_path ||
+    detail?.baseCurrency?.icon_url ||
+    detail?.baseCurrency?.icon ||
+    '';
   const statusStr = mapLaunchpadStatus(detail?.status);
 
   const totalSupply = (detail?.totalSupply ?? 0).toLocaleString();
@@ -254,9 +318,16 @@ const LaunchpadDetail = ({ route }: any) => {
   const minBuy = (detail?.minBuy ?? 0).toLocaleString();
   const maxBuy = (detail?.maxBuy ?? 0).toLocaleString();
   const totalRaised = (detail?.totalRaised ?? 0).toLocaleString();
+  console.log('[LaunchpadDetail Render Data]', {
+    tokenSymbol,
+    logoPath,
+    detailLogo: detail?.logo,
+    baseCurrency: detail?.baseCurrency,
+    resolvedIconSource: getIconForCoin(tokenSymbol, logoPath),
+  });
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: '#fff' }}>
+    <AppSafeAreaView style={{ backgroundColor: isDark ? colors.newThemeColor : colors.white }}>
       {/* Header Area */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => NavigationService.goBack()} style={{ padding: 8 }}>
@@ -268,7 +339,12 @@ const LaunchpadDetail = ({ route }: any) => {
         {/* Title Section */}
         <View style={styles.titleSection}>
           <View style={styles.titleRow}>
-            <FastImage source={getIconForCoin(tokenSymbol, logoPath)} style={styles.projectLogo} resizeMode="contain" />
+            <FastImage
+              source={logoLoadError ? (String(tokenSymbol).toUpperCase() === 'BTC' ? bitcoinIcon : usdtIcon) : getIconForCoin(tokenSymbol, logoPath)}
+              style={styles.projectLogo}
+              resizeMode="contain"
+              onError={() => setLogoLoadError(true)}
+            />
             <AppText style={[styles.titleText, { color: themeColors.text }]}>{tokenSymbol}</AppText>
             <View style={[styles.statusBadge, { backgroundColor: '#F0F0F0' }]}>
               <AppText style={styles.statusBadgeText}>{statusStr}</AppText>
@@ -345,7 +421,7 @@ const LaunchpadDetail = ({ route }: any) => {
         {/* Launchpad Details Card */}
         <View style={styles.sectionContainer}>
           <AppText style={[styles.sectionTitle, { color: themeColors.text }]}>Launchpad Details</AppText>
-          <View style={[styles.cardContainer, { backgroundColor: isDark ? themeColors.card : '#F9F9F9', borderColor: isDark ? themeColors.border : '#EAEAEA' }]}>
+          <View style={[styles.cardContainer, { backgroundColor: isDark ? 'transparent' : '#F9F9F9', borderColor: isDark ? themeColors.border : '#EAEAEA' }]}>
 
             <View style={[styles.detailRow, { borderBottomColor: isDark ? themeColors.border : '#EAEAEA' }]}>
               <AppText style={styles.detailLabel}>Total Supply</AppText>
@@ -393,9 +469,9 @@ const LaunchpadDetail = ({ route }: any) => {
         {/* Project Details Tabs */}
         <View style={styles.sectionContainer}>
           <AppText style={[styles.sectionTitle, { color: themeColors.text }]}>Project Details</AppText>
-          <View style={[styles.cardContainer, { backgroundColor: isDark ? themeColors.card : '#F9F9F9', borderColor: isDark ? themeColors.border : '#EAEAEA', paddingHorizontal: 0 }]}>
+          <View style={[styles.cardContainer, { backgroundColor: isDark ? 'transparent' : '#F9F9F9', borderColor: isDark ? themeColors.border : '#EAEAEA', paddingHorizontal: 0 }]}>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.tabsScroll, { borderBottomColor: isDark ? themeColors.border : '#EAEAEA' }]}>
               {TABS.map((tab) => (
                 <TouchableOpacity
                   key={tab}
@@ -414,9 +490,9 @@ const LaunchpadDetail = ({ route }: any) => {
 
         {/* Commit USDT Card (In-flow) */}
         <View style={styles.sectionContainer}>
-          <View style={[styles.cardContainer, { backgroundColor: isDark ? themeColors.card : colors.white, borderColor: isDark ? themeColors.border : '#EAEAEA', paddingVertical: 16 }]}>
+          <View style={[styles.cardContainer, { backgroundColor: isDark ? 'transparent' : colors.white, borderColor: isDark ? themeColors.border : '#EAEAEA', paddingVertical: 16 }]}>
             <View style={styles.bottomHeaderRow}>
-              <FastImage source={getIconForCoin(acceptedCurrency, detail?.quoteCurrency?.icon_path || '')} style={styles.bottomIcon} resizeMode="contain" />
+              <FastImage source={getIconForCoin(acceptedCurrency, detail?.quoteCurrency?.icon_path || detail?.quoteCurrency?.icon_url || detail?.quoteCurrency || '')} style={styles.bottomIcon} resizeMode="contain" />
               <AppText style={[styles.bottomTitle, { color: themeColors.text }]}>Commit {acceptedCurrency}</AppText>
             </View>
 
@@ -463,28 +539,30 @@ const LaunchpadDetail = ({ route }: any) => {
       {/* Trade Modal using RBSheet */}
       <RBSheet
         ref={tradeSheetRef}
-        height={320}
+        height={360}
         openDuration={250}
+        keyboardAvoidingViewEnabled={false}
+        {...({ customModalProps: { statusBarTranslucent: true, navigationBarTranslucent: true } } as any)}
         customStyles={{
           wrapper: {
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
           },
           container: {
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            backgroundColor: isDark ? themeColors.card : colors.white,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            borderBottomLeftRadius: keyboardHeight > 0 ? 24 : 0,
+            borderBottomRightRadius: keyboardHeight > 0 ? 24 : 0,
+            backgroundColor: themeColors.background,
             paddingHorizontal: 20,
             paddingTop: 20,
-            paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+            paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+            marginBottom: keyboardHeight,
             elevation: 10,
             zIndex: 9999,
           },
         }}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
-        >
+        <View style={{ flex: 1 }}>
           <View style={styles.modalHeader}>
             <AppText style={[styles.modalTitle, { color: themeColors.text }]}>Trade {tokenSymbol}</AppText>
             <TouchableOpacity onPress={() => tradeSheetRef.current?.close()} style={styles.closeBtn}>
@@ -494,18 +572,18 @@ const LaunchpadDetail = ({ route }: any) => {
 
           <View style={styles.modalBody}>
             <View style={styles.balanceRow}>
-              <AppText style={styles.inputLabel}>Available Balance</AppText>
+              <AppText style={[styles.inputLabel, { color: themeColors.secondaryText }]}>Available Balance</AppText>
               <AppText style={[styles.inputLabel, { color: themeColors.text, fontFamily: fontFamilySemiBold }]}>
                 {balanceLoading ? 'Loading...' : `${formatNum(balance)} ${acceptedCurrency}`}
               </AppText>
             </View>
 
-            <AppText style={[styles.inputLabel, { marginTop: 16 }]}>Amount ({acceptedCurrency})</AppText>
-            <View style={[styles.inputContainer, { borderColor: isDark ? themeColors.border : '#EAEAEA', backgroundColor: isDark ? themeColors.background : colors.white }]}>
+            <AppText style={[styles.inputLabel, { color: themeColors.secondaryText, marginTop: 16 }]}>Amount ({acceptedCurrency})</AppText>
+            <View style={[styles.inputContainer, { borderColor: isDark ? themeColors.border : 'transparent', backgroundColor: isDark ? 'transparent' : '#EDEDEE' }]}>
               <TextInput
                 style={[styles.textInput, { color: themeColors.text }]}
                 placeholder={`Enter amount in ${acceptedCurrency}`}
-                placeholderTextColor="#888"
+                placeholderTextColor="#84888C"
                 keyboardType="decimal-pad"
                 value={tradeAmount}
                 onChangeText={setTradeAmount}
@@ -515,8 +593,8 @@ const LaunchpadDetail = ({ route }: any) => {
               <AppText style={styles.errorText}>{amountError}</AppText>
             ) : null}
 
-            <View style={[styles.balanceRow, { marginTop: 20, marginBottom: 30 }]}>
-              <AppText style={styles.inputLabel}>You will receive</AppText>
+            <View style={[styles.balanceRow, { marginTop: 20, marginBottom: 28 }]}>
+              <AppText style={[styles.inputLabel, { color: themeColors.secondaryText }]}>You will receive</AppText>
               <AppText style={[styles.inputLabel, { color: themeColors.text, fontFamily: fontFamilySemiBold }]}>
                 {formatNum(estimatedTokens)} {tokenSymbol}
               </AppText>
@@ -525,19 +603,22 @@ const LaunchpadDetail = ({ route }: any) => {
             <TouchableOpacity
               style={[
                 styles.submitTradeBtn,
-                { backgroundColor: (!tradeAmount || !!amountError || tradeSubmitting) ? '#666' : colors.buyBtnGreen }
+                {
+                  backgroundColor: isDark ? '#FFFFFF' : '#000000',
+                  opacity: (!tradeAmount || !!amountError || tradeSubmitting) ? (isDark ? 0.35 : 0.4) : 1,
+                }
               ]}
               disabled={!tradeAmount || !!amountError || tradeSubmitting}
               onPress={handleConfirmBuy}
             >
               {tradeSubmitting ? (
-                <ActivityIndicator color={colors.white} />
+                <ActivityIndicator color={isDark ? '#000000' : '#FFFFFF'} />
               ) : (
-                <AppText style={styles.submitTradeBtnText}>Trade</AppText>
+                <AppText style={[styles.submitTradeBtnText, { color: isDark ? '#000000' : '#FFFFFF' }]}>Trade</AppText>
               )}
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </RBSheet>
 
     </AppSafeAreaView>

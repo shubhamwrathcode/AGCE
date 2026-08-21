@@ -25,9 +25,7 @@ const TABS = [
   { key: "Spot", label: "Spot" },
   { key: "Cryptos", label: "Cryptos" },
   { key: "USD_M_FUTURES", label: "USDⓈ-M Futures" },
-  // { key: "COIN_M_FUTURES", label: "COIN-M Futures" },
   { key: "OPTIONS", label: "Options" },
-  // { key: "ALPHA", label: "Alpha" },
 ];
 
 const formatSubCategoryLabel = (key) => {
@@ -139,7 +137,9 @@ const MarketHeader = ({
         showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         contentContainerStyle={styles.tabsScroll}
-        style={styles.tabsRow}
+        style={[styles.tabsRow, {
+          borderBottomColor: 'transparent',
+        }]}
       >
         <View style={styles.tabsInner}>
           <Animated.View
@@ -165,7 +165,8 @@ const MarketHeader = ({
                 }}
                 style={{ right: 5 }}
               >
-                <TouchableOpacity onPress={() => setActiveTab(key)} style={[styles.tab, isActive && styles.tabActive]} activeOpacity={0.8}>
+                <TouchableOpacity onPress={() => setActiveTab(key)} style={[styles.tab,
+                isActive && styles.tabActive]} activeOpacity={0.8}>
                   <AppText
                     type={SIXTEEN}
                     weight={SEMI_BOLD}
@@ -207,12 +208,12 @@ const MarketHeader = ({
                     style={[
                       styles.subTabChip,
                       {
-                        backgroundColor: isActive ? isDark ? colors.orangeTheme : '#F4F4F4' : "transparent",
+                        // backgroundColor: isActive ? isDark ? colors.orangeTheme : '#F4F4F4' : "transparent",
                         borderColor: "transparent",
                       },
                     ]}
                   >
-                    <AppText weight={MEDIUM} type={TWELVE} style={[styles.subTabText, { color: isActive ? themeColors.text : '#84888C' }]}>
+                    <AppText weight={MEDIUM} type={TWELVE} style={[styles.subTabText, { color: isActive ? colors.orangeTheme : '#84888C' }]}>
                       {it.label}
                     </AppText>
                   </TouchableOpacity>
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
   tabsRow: {
     maxHeight: 44,
     borderBottomWidth: 0.7,
-    borderBottomColor: lightTheme.input,
+
   },
   tabsScroll: {
     flexDirection: "row",
