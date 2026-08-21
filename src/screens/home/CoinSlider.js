@@ -8,7 +8,7 @@ import { IMAGE_BASE_URL } from '../../helper/Constants';
 import MiniSparkline from '../../shared/components/MiniSparkline';
 import { AppText, BOLD, ELEVEN, FOURTEEN, NINE, SEMI_BOLD, TEN, TWELVE } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
-import { colors } from '../../theme/colors';
+import { colors, darkTheme } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -121,7 +121,7 @@ const CoinSlider = () => {
 
     return (
       <View style={{ marginHorizontal: GAP / 2, }}>
-        <View style={[styles.card, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7', width: ITEM_WIDTH }]}>
+        <View style={[styles.card, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7', width: ITEM_WIDTH }]}>
           <View style={styles.topRow}>
             <FastImage
               source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}

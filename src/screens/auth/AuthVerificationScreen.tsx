@@ -55,7 +55,10 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const getFirstMethod = () => {
     if (!pending2FA) return 1;
     const baseMethods = pending2FA.availableMethods ?? [];
-    const has = (t: number) => baseMethods.some((m: any) => m.type === t);
+    const completed = pending2FA.completedMethods ?? [];
+    const uncompletedMethods = baseMethods.filter((m: any) => !completed.includes(Number(m.type)));
+    const methodsToSearch = uncompletedMethods.length > 0 ? uncompletedMethods : baseMethods;
+    const has = (t: number) => methodsToSearch.some((m: any) => m.type === t);
 
     // Always honour the method the user explicitly chose (e.g. Email vs Authenticator).
     const active = Number(pending2FA.activeMethod);
@@ -68,9 +71,9 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     const signIdStr = String(pending2FA?.loginSignId || '').trim();
     if (signIdStr) {
       if (signIdStr.includes('@')) {
-        return 1;
+        if (has(1)) return 1;
       } else if (/^[\+\d\s\-\(\)]+$/.test(signIdStr)) {
-        return 3;
+        if (has(3)) return 3;
       }
     }
 
@@ -80,7 +83,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     if (has(1)) return 1;
     if (has(3)) return 3;
 
-    return baseMethods[0]?.type ?? 1;
+    return methodsToSearch[0]?.type ?? 1;
   };
 
   const initialMethod = getFirstMethod();
@@ -119,6 +122,8 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     if (!pending2FA) return;
 
     if (pending2FA.verifySubStep === 'methods') {
+      setOtpCode("");
+      setOtpError(false);
       return; // Wait for user to select a method
     }
 
@@ -135,7 +140,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     } else {
       setResendTimer(0);
     }
-  }, [pending2FA?.verifySubStep, pending2FA?.loginSignId, pending2FA?.availableMethods, pending2FA?.activeMethod]);
+  }, [pending2FA?.verifySubStep, pending2FA?.loginSignId, pending2FA?.availableMethods, pending2FA?.activeMethod, pending2FA?.completedMethods]);
 
   // Auto-send OTP when user switches between Email/Phone methods (no need to press Resend).
   useEffect(() => {
@@ -198,7 +203,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     const targetMethod = methodType !== undefined ? methodType : selectedAuthMethod;
     const isPhone = pending2FA?.loginSignId && !String(pending2FA.loginSignId).includes('@') && /^[\+\d\s\-\(\)]+$/.test(String(pending2FA.loginSignId));
     const sendTo = (targetMethod === 3 || isPhone) ? "mobile" : "email";
-    
+
     setResendTimer(60);
     autoSubmitEnabled.current = true;
     dispatch(sendLoginOtp(getVerifySignId(targetMethod), sendTo, setResendTimer));
@@ -312,7 +317,7 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             </AppText>
             <AppText type={TWELVE} style={[styles.description, { color: themeColors.secondaryText }]}>
               {isMethodsStep
-                ? (pending2FA.verificationMode === "ALL_REQUIRED" ? "New device: verify every method below to finish sign-in." : "Choose any one method to verify your identity.")
+                ? (pending2FA.verificationMode === "ALL_REQUIRED" ? "Please verify each of the security methods below to finish sign-in." : "Choose any one method to verify your identity.")
                 : selectedAuthMethod === 4
                   ? "Authenticate using Face ID, Touch ID, or your device biometrics."
                   : selectedAuthMethod === 2
@@ -364,7 +369,12 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                         </View>
                       </View>
                       {isDone ? (
-                        <FastImage source={checkIc} style={{ width: 20, height: 20 }} tintColor={themeColors.text} resizeMode="contain" />
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: colors.buyBtnGreen }}>
+                            Verified
+                          </AppText>
+                          <FastImage source={checkIc} style={{ width: 18, height: 18 }} tintColor={colors.buyBtnGreen} resizeMode="contain" />
+                        </View>
                       ) : (
                         <View style={{ borderWidth: 1, borderColor: colors.orangeTheme, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 }}>
                           <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: colors.orangeTheme }}>
@@ -496,49 +506,59 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
             </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false} style={sheetStyles.scroll}>
-            {methodsForOptions?.map((method: any) => (
-              <TouchableOpacityView
-                key={method?.type}
-                onPress={() => {
-                  const next = Number(method.type);
-                  // If the user selects the already active method, just close the sheet
-                  if (next !== selectedAuthMethod) {
-                    setSelectedAuthMethod(next);
-                    setOtpCode("");
-                    setResendTimer(0);
-                    dispatch(updatePending2FA({ activeMethod: next }));
-                  }
-                  optionsSheetRef.current?.close();
-                }}
-                style={[sheetStyles.optionRow, { borderBottomColor: themeColors.border }]}
-              >
-                <View style={{ flexDirection: "row", justifyContent: 'space-between', alignItems: 'center', }}>
-                  <View style={[sheetStyles.optionLeft, { flex: 1 }]}>
-                    {method.type === 2 ? (
-                      <FastImage source={KEY_ICON} style={{ width: 20, height: 20 }}
-                        tintColor={themeColors.text}
-                        resizeMode="contain" />
-                    ) : typeof getMethodIcon(method.type) === "string" && getMethodIcon(method.type) !== "" ? (
-                      <FastImage source={getMethodIcon(method.type) as any} style={{ width: 20, height: 20 }} resizeMode="contain" />
-                    ) : (
-                      <FastImage source={getMethodIcon(method.type)} resizeMode="contain" style={{ width: 20, height: 20 }} tintColor={themeColors.text} />
-                    )}
-                    <View style={{ marginLeft: 10 }}>
-                      <AppText weight={SEMI_BOLD} type={FOURTEEN_CONST} style={{ color: themeColors.text }}>
-                        {method.label || (method.type === 1 ? "Email OTP" : method.type === 2 ? "Authenticator" : method.type === 3 ? "Mobile OTP" : "Passkey")}
-                      </AppText>
-                      <AppText type={THIRTEEN} style={{ marginTop: 2, color: themeColors.secondaryText }}>
-                        {method.description || (method.type === 1 ? "Receive verification codes via email" : method.type === 2 ? "Use Google Authenticator app" : method.type === 3 ? "Receive verification codes via SMS" : "Use Face ID, Touch ID, or Windows Hello")}
-                      </AppText>
+            {methodsForOptions?.map((method: any) => {
+              const isDone = completedMethods.includes(Number(method?.type));
+              return (
+                <TouchableOpacityView
+                  key={method?.type}
+                  onPress={() => {
+                    if (isDone) return;
+                    const next = Number(method.type);
+                    // If the user selects the already active method, just close the sheet
+                    if (next !== selectedAuthMethod) {
+                      setSelectedAuthMethod(next);
+                      setOtpCode("");
+                      setResendTimer(0);
+                      dispatch(updatePending2FA({ activeMethod: next }));
+                    }
+                    optionsSheetRef.current?.close();
+                  }}
+                  style={[sheetStyles.optionRow, { borderBottomColor: themeColors.border, opacity: isDone ? 0.6 : 1 }]}
+                >
+                  <View style={{ flexDirection: "row", justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={[sheetStyles.optionLeft, { flex: 1 }]}>
+                      {method.type === 2 ? (
+                        <FastImage source={KEY_ICON} style={{ width: 20, height: 20 }}
+                          tintColor={themeColors.text}
+                          resizeMode="contain" />
+                      ) : typeof getMethodIcon(method.type) === "string" && getMethodIcon(method.type) !== "" ? (
+                        <FastImage source={getMethodIcon(method.type) as any} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                      ) : (
+                        <FastImage source={getMethodIcon(method.type)} resizeMode="contain" style={{ width: 20, height: 20 }} tintColor={themeColors.text} />
+                      )}
+                      <View style={{ marginLeft: 10 }}>
+                        <AppText weight={SEMI_BOLD} type={FOURTEEN_CONST} style={{ color: themeColors.text }}>
+                          {method.label || (method.type === 1 ? "Email OTP" : method.type === 2 ? "Authenticator" : method.type === 3 ? "Mobile OTP" : "Passkey")}
+                        </AppText>
+                        <AppText type={THIRTEEN} style={{ marginTop: 2, color: themeColors.secondaryText }}>
+                          {method.description || (method.type === 1 ? "Receive verification codes via email" : method.type === 2 ? "Use Google Authenticator app" : method.type === 3 ? "Receive verification codes via SMS" : "Use Face ID, Touch ID, or Windows Hello")}
+                        </AppText>
+                      </View>
                     </View>
+                    {isDone ? (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, right: 10 }}>
+                        <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.buyBtnGreen }}>
+                          Verified
+                        </AppText>
+                        <FastImage source={checkIc} style={{ width: 14, height: 14 }} tintColor={colors.buyBtnGreen} resizeMode="contain" />
+                      </View>
+                    ) : method.type === selectedAuthMethod ? (
+                      <FastImage source={checkIc} style={{ width: 16, height: 16, right: 10 }} tintColor={themeColors.text} resizeMode="contain" />
+                    ) : null}
                   </View>
-                  {method.type === selectedAuthMethod && (
-                    <FastImage source={checkIc} style={{ width: 16, height: 16, right: 10 }} tintColor={themeColors.text} resizeMode="contain" />
-                  )}
-                </View>
-
-              </TouchableOpacityView>
-            ))}
+                </TouchableOpacityView>
+              );
+            })}
 
           </ScrollView>
         </View>

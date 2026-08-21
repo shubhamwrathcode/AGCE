@@ -120,7 +120,7 @@ const HomeSlider = () => {
       const totalColor = current === total ? isDark ? colors.white : "#000" : "#9CA3AF";
 
       return (
-        <View style={[styles.slideOuter, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
+        <View style={[styles.slideOuter, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7' }]}>
           <TouchableOpacity
             style={styles.slideInner}
             onPress={item?.onPress}
@@ -144,7 +144,7 @@ const HomeSlider = () => {
               </AppText>
             </View>
 
-            <View style={[styles.counterBadge, { backgroundColor: isDark ? darkTheme.cardBgColor : '#E5E7EB' }]}>
+            <View style={[styles.counterBadge, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#E5E7EB' }]}>
               <Text numberOfLines={1}>
                 <Text style={[styles.counterCurrent, {
                   color: isDark ? colors.white : "#000",

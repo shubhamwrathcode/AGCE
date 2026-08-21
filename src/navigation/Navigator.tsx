@@ -100,7 +100,7 @@ import {
   TEN,
   TWELVE,
 } from "../shared";
-import { Platform, StyleSheet, TouchableOpacity, View, Keyboard } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, Keyboard, PanResponder, ScrollView } from "react-native";
 import Animated, { useSharedValue, withTiming, useAnimatedStyle, Easing as REasing, interpolateColor, interpolate } from 'react-native-reanimated';
 import Toast from "react-native-simple-toast";
 import { useAppSelector } from "../store/hooks";
@@ -245,64 +245,73 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
 
   return (
     <View style={[customTabBarStyles.container, { backgroundColor: bg, borderTopColor: borderCol }]}>
-      {state.routes.map((route: any, index: number) => {
-        const isFocused = localIndex === index;
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={customTabBarStyles.scrollContent}
+        bounces={true}
+        alwaysBounceHorizontal={true}
+        keyboardShouldPersistTaps="handled"
+      >
+        {state.routes.map((route: any, index: number) => {
+          const isFocused = localIndex === index;
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: "tabPress",
-            target: route.key,
-            canPreventDefault: true,
-          });
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
 
-          if (state.index !== index && !event.defaultPrevented) {
-            setLocalIndex(index);
-            setTimeout(() => {
-              navigation.navigate(route.name);
-            }, 50);
-          }
-        };
+            if (state.index !== index && !event.defaultPrevented) {
+              setLocalIndex(index);
+              setTimeout(() => {
+                navigation.navigate(route.name);
+              }, 50);
+            }
+          };
 
-        const onLongPress = () => {
-          navigation.emit({
-            type: "tabLongPress",
-            target: route.key,
-          });
-        };
+          const onLongPress = () => {
+            navigation.emit({
+              type: "tabLongPress",
+              target: route.key,
+            });
+          };
 
-        const iconByRoute: any = {
-          [routes.HOME_SCREEN]: homeIcon,
-          [routes.MARKET_SCREEN]: marketIcon,
-          [routes.TRADE_SCREEN]: tradeImg,
-          [routes.FUTURES_SCREEN]: futuresActiveIcon,
-          [routes.WALLET_SCREEN]: wallet_ic,
-        };
+          const iconByRoute: any = {
+            [routes.HOME_SCREEN]: homeIcon,
+            [routes.MARKET_SCREEN]: marketIcon,
+            [routes.TRADE_SCREEN]: tradeImg,
+            [routes.FUTURES_SCREEN]: futuresActiveIcon,
+            [routes.WALLET_SCREEN]: wallet_ic,
+          };
 
-        const labelByRoute: any = {
-          [routes.HOME_SCREEN]: "Home",
-          [routes.MARKET_SCREEN]: "Market",
-          [routes.TRADE_SCREEN]: "Trade",
-          [routes.FUTURES_SCREEN]: "Future",
-          [routes.WALLET_SCREEN]: "Wallet",
-        };
+          const labelByRoute: any = {
+            [routes.HOME_SCREEN]: "Home",
+            [routes.MARKET_SCREEN]: "Market",
+            [routes.TRADE_SCREEN]: "Trade",
+            [routes.FUTURES_SCREEN]: "Future",
+            [routes.WALLET_SCREEN]: "Wallet",
+          };
 
-        const icon = iconByRoute[route.name];
-        const label = labelByRoute[route.name] ?? route.name;
+          const icon = iconByRoute[route.name];
+          const label = labelByRoute[route.name] ?? route.name;
 
-        return (
-          <TabItem
-            key={route.key}
-            isFocused={isFocused}
-            routeName={route.name}
-            onPress={onPress}
-            onLongPress={onLongPress}
-            icon={icon}
-            label={label}
-            themeColors={themeColors}
-            isDark={isDark}
-          />
-        );
-      })}
+          return (
+            <TabItem
+              key={route.key}
+              isFocused={isFocused}
+              routeName={route.name}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              icon={icon}
+              label={label}
+              themeColors={themeColors}
+              isDark={isDark}
+            />
+          );
+        })}
+      </ScrollView>
     </View>
   );
 };
@@ -767,6 +776,9 @@ function BottomNavigation() {
         tabBarPosition="bottom"
         sceneContainerStyle={{ backgroundColor: "#FFFFFF" }}
         tabBar={renderTabBar}
+        screenOptions={{
+          swipeEnabled: false,
+        }}
       >
         <Tab.Screen
           name={routes.HOME_SCREEN}
@@ -960,18 +972,23 @@ const customTabBarStyles = StyleSheet.create({
     height: Platform.OS === "ios" ? 78 : 66,
     backgroundColor: "transparent",
     overflow: "hidden",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#E5E7EB",
+    paddingBottom: Platform.OS === "ios" ? 12 : 5,
+  },
+  scrollContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E5E7EB",
-    paddingHorizontal: 10,
-    paddingBottom: Platform.OS === "ios" ? 12 : 5,
+    minWidth: "100%",
+    paddingHorizontal: 8,
+    height: "100%",
   },
   touchable: {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
+    paddingHorizontal: 4,
   },
   pill: {
     flexDirection: 'row',

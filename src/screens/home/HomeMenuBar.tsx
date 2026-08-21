@@ -24,7 +24,7 @@ import NavigationService from "../../navigation/NavigationService";
 import { ACCOUNT_SCREEN, EARNING_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { checkValue } from "../../helper/utility";
-import { colors } from "../../theme/colors";
+import { colors, darkTheme } from "../../theme/colors";
 
 const showComingSoonToast = () =>
   Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
@@ -64,7 +64,7 @@ const MenuItem = React.memo(({ item, index }: any) => {
           style={[
             item?.id === "6" ? styles.iconWrapMore : styles.iconWrap,
             {
-              backgroundColor: isDark ? themeColors.input : colors.iconBgColor,
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.iconBgColor,
               borderRadius: 20,
             },
           ]}

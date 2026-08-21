@@ -235,7 +235,7 @@ const Home = () => {
             style={[
               styles.homeSearchBar,
               {
-                backgroundColor: themeColors.input,
+                backgroundColor: isDark ? darkTheme.darkThemeInputColor : themeColors.input,
                 borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
                 borderColor: themeColors.border,
               },
@@ -298,7 +298,7 @@ const Home = () => {
             <TouchableOpacity
               onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
               style={{
-                backgroundColor: isDark ? darkTheme.cardBgColor : '#303236',
+                backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#303236',
                 paddingHorizontal: 20,
                 paddingVertical: 8,
                 borderRadius: 20,

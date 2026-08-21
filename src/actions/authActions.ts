@@ -438,11 +438,15 @@ export const login = (data: LoginProps & { token?: string }) => async (
       const signIdFromToken = extractSignIdFromToken(d?.tempToken ?? d?.token);
       const signId = d?.signId ?? signIdFromToken ?? data?.email_or_phone;
       const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.defaultMethod, signId);
+      const isMulti = methods.length > 1;
       dispatch(setPending2FA({
         loginSignId: signId,
         availableMethods: methods,
         defaultMethod: defaultMethod,
-        verifySubStep: 'methods',
+        verificationMode: isMulti ? 'ALL_REQUIRED' : 'ANY_ONE',
+        completedMethods: [],
+        verifySubStep: isMulti ? 'methods' : 'code',
+        activeMethod: isMulti ? undefined : defaultMethod,
         data: d,
       }));
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -452,11 +456,15 @@ export const login = (data: LoginProps & { token?: string }) => async (
       const signIdFromToken = extractSignIdFromToken(d?.tempToken ?? d?.token);
       const signId = d?.signId ?? signIdFromToken ?? data?.email_or_phone;
       const defaultMethod = resolveLogin2FADefaultMethod(methods, d?.['2fa'], signId);
+      const isMulti = methods.length > 1;
       dispatch(setPending2FA({
         loginSignId: signId,
         availableMethods: methods,
         defaultMethod: defaultMethod,
-        verifySubStep: 'methods',
+        verificationMode: isMulti ? 'ALL_REQUIRED' : 'ANY_ONE',
+        completedMethods: [],
+        verifySubStep: isMulti ? 'methods' : 'code',
+        activeMethod: isMulti ? undefined : defaultMethod,
         data: d?.['2fa'] === 2 ? data : d,
       }));
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -615,7 +623,7 @@ export const verifyOtp = (
 };
 
 
-export const verifyUser = (data: { email_or_phone: string; otp: string; type: number }) => async (dispatch: AppDispatch) => {
+export const verifyUser = (data: { email_or_phone: string; otp: string; type: number }) => async (dispatch: AppDispatch, getState: () => any) => {
   try {
     dispatch(setLoadingOtp(true));
     const payload = {
@@ -628,8 +636,26 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
 
     const response: any = await appOperation.guest.verify_fac_otp(payload as any);
     if (response.success) {
+      const state = getState();
+      const pending2FA = state?.auth?.pending2FA;
+      const availableMethods = pending2FA?.availableMethods || [];
+      const prevCompleted = pending2FA?.completedMethods || [];
+      const currentCompleted = Array.from(new Set([...prevCompleted, data.type]));
+      const remaining = availableMethods.filter((m: any) => !currentCompleted.includes(Number(m.type)));
+
+      if (pending2FA?.verificationMode === 'ALL_REQUIRED' && remaining.length > 0) {
+        showSuccess(response?.message ?? 'Verification step completed');
+        dispatch(updatePending2FA({
+          completedMethods: currentCompleted,
+          verifySubStep: 'methods',
+          activeMethod: undefined,
+          data: response?.data ?? pending2FA?.data,
+        }));
+        return response;
+      }
+
       showSuccess(response?.message ?? 'Login successful');
-      await persistSignupSessionToken(response?.data);
+      await persistSignupSessionToken(response?.data ?? pending2FA?.data);
       dispatch(clearPending2FA());
       const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
       const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
@@ -793,6 +819,24 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
       if (!silent) showError(completeRes?.message || 'Login failed');
       return false;
     }
+    const state = getState();
+    const pending2FA = state?.auth?.pending2FA;
+    const availableMethods = pending2FA?.availableMethods || [];
+    const prevCompleted = pending2FA?.completedMethods || [];
+    const currentCompleted = Array.from(new Set([...prevCompleted, 4]));
+    const remaining = availableMethods.filter((m: any) => !currentCompleted.includes(Number(m.type)));
+
+    if (pending2FA?.verificationMode === 'ALL_REQUIRED' && remaining.length > 0) {
+      showSuccess(completeRes?.message ?? 'Passkey verified');
+      dispatch(updatePending2FA({
+        completedMethods: currentCompleted,
+        verifySubStep: 'methods',
+        activeMethod: undefined,
+        data: completeRes?.data ?? pending2FA?.data,
+      }));
+      return true;
+    }
+
     showSuccess(completeRes?.message ?? 'Login successful');
     await persistSignupSessionToken(completeRes.data);
     NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);

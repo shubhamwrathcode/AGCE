@@ -65,7 +65,7 @@ import {
   spotOpenOrderMarketLabel,
   tradeHistoryBaseAsset,
 } from "../../helper/utility";
-import { colors, lightTheme } from "../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import { fontFamily, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -1018,7 +1018,7 @@ const OrderBookSection = memo(({
           style={[
             sty.spotObAggTrigger,
             {
-              backgroundColor: isDark ? '#2A2A2E' : themeColors.input,
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : themeColors.input,
               borderColor: themeColors.themeBorderColor,
               borderRadius: 5
             },
@@ -1039,7 +1039,7 @@ const OrderBookSection = memo(({
           style={[
             sty.spotObViewCycleBtn,
             {
-              backgroundColor: isDark ? '#2A2A2E' : themeColors.input,
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : themeColors.input,
               borderColor: themeColors.themeBorderColor,
             },
           ]}
@@ -3458,6 +3458,25 @@ const Spot = () => {
       normalizePairSymbol(quote_currency);
 
 
+    const parseNum = (val) => {
+      if (val && val.$numberDecimal != null) return parseFloat(val.$numberDecimal);
+      return parseFloat(val);
+    };
+
+    const price = parseNum(inv?.price) || 0;
+    const qty = parseNum(inv?.quantity) || 0;
+    const filled = parseNum(inv?.filled_quantity ?? inv?.filled) || 0;
+    const avgPrice = parseNum(inv?.avg_execution_price ?? inv?.avgPrice ?? inv?.average_price) || price;
+    const value = parseNum(inv?.executed_value ?? inv?.executedValue) || (avgPrice * filled);
+    const feeVal = parseNum(inv?.total_fee ?? inv?.fee) || 0;
+    const quoteCurrency =
+      inv?.pay_currency ||
+      inv?.quote_currency ||
+      inv?.quote_currency_short_name ||
+      inv?.quote_asset ||
+      (typeof currencyPair === "string" && currencyPair.includes("/") ? currencyPair.split("/")[1]?.trim() : "") ||
+      "";
+
     const fillPercent = (() => {
       const fp = inv?.fill_percent;
       if (fp == null || String(fp).trim() === "") return "—";
@@ -3520,10 +3539,10 @@ const Spot = () => {
 
           <AppText style={{ marginBottom: 8 }} type={THIRTEEN} weight={BOLD}>
             <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: getSideColor(inv?.side) }}>
-              {String(inv?.side || "").toUpperCase()} · {String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}
+              {String(inv?.side || "").toUpperCase()}<AppText weight={MEDIUM} type={THIRTEEN} style={{ color: isDark ? "#8E8E93" : "#666666" }}> · </AppText> <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: colors.white }}>{String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}</AppText>
             </AppText>
             <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: isDark ? "#8E8E93" : "#666666" }}> · </AppText>
-            <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: statusLabel === "Cancelled" ? "#ff4b5c" : "#10c95dff" }}>
+            <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: colors.white }}>
               {statusLabel.toUpperCase()}
             </AppText>
           </AppText>
@@ -3544,10 +3563,10 @@ const Spot = () => {
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
                 </View>
-                <View style={styles.kvRow}>
+                {/* <View style={styles.kvRow}>
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.side || "---").toUpperCase()}</AppText>
-                </View>
+                </View> */}
                 <View style={styles.kvRow}>
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
                   <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText>
@@ -3558,10 +3577,24 @@ const Spot = () => {
                     {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
                   </AppText>
                 </View>
-                {/* <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Status</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: statusColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{statusLabel.toUpperCase()}</AppText>
-                </View> */}
+                <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    {toFixedEight(qty)}
+                  </AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    {`${toFixedEight(feeVal)} ${quoteCurrency}`.trim()}
+                  </AppText>
+                </View>
+                <View style={styles.kvRow}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Value</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                    {toFixedEight(value)}
+                  </AppText>
+                </View>
               </View>
             );
           })()}
@@ -3571,16 +3604,16 @@ const Spot = () => {
           <View style={{ marginTop: 8 }}>
             <TouchableOpacity
               activeOpacity={0.8}
-              style={[styles.execTradesBtn,{
+              style={[styles.execTradesBtn, {
                 borderWidth: 1,
-                borderColor:isDark? 'transparent': lightTheme.inputBorder,
+                borderColor: isDark ? 'transparent' : lightTheme.inputBorder,
               }]}
               onPress={() => setShowExecutedTrades((p) => ({ ...p, [orderId]: !p?.[orderId] }))}
             >
               <View style={styles.execTradesBtnRow}>
                 <FastImage
                   source={downIcon}
-                  tintColor={isDark? colors.white: colors.lightGrey}
+                  tintColor={isDark ? colors.white : colors.lightGrey}
                   style={[
                     styles.orderHistoryChevron,
                     { transform: [{ rotate: showTrades ? "180deg" : "0deg" }] },
@@ -3781,7 +3814,7 @@ const Spot = () => {
                     style={[
                       styles.dropdown,
                       {
-                        backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
+                        backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
                         flex: 1,
                         borderRadius: 10,
                         borderWidth: 0,
@@ -3821,7 +3854,7 @@ const Spot = () => {
                     style={[
                       styles.spotOrderFieldCard,
                       {
-                        backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
+                        backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7',
                         borderWidth: 0,
                       },
                     ]}
@@ -3830,6 +3863,7 @@ const Spot = () => {
                       <Animated.View
                         pointerEvents="none"
                         style={{
+                          // backgroundColor: "red",
                           position: "absolute",
                           left: 0,
                           right: 0,
@@ -3953,7 +3987,7 @@ const Spot = () => {
                       style={[
                         styles.spotOrderFieldCard,
                         {
-                          backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
+                          backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
                           borderWidth: 0,
                         },
                       ]}
@@ -4033,7 +4067,7 @@ const Spot = () => {
                     style={[
                       styles.spotOrderFieldCard,
                       {
-                        backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
+                        backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7',
                         borderWidth: 0,
                       },
                     ]}
@@ -4157,7 +4191,7 @@ const Spot = () => {
                       style={[
                         styles.spotOrderFieldCard,
                         {
-                          backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
+                          backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
                           borderWidth: 0,
                         },
                       ]}
@@ -4307,7 +4341,7 @@ const Spot = () => {
                         style={[
                           styles.spotOrderFieldCard,
                           {
-                            backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7',
+                            backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
                             borderWidth: 0,
                           },
                         ]}
@@ -4600,7 +4634,6 @@ const Spot = () => {
                   </View>
                 )}
 
-                {/* Bottom tabs: ek hi panel — Order History / Trade History data web jaisi APIs se (`me/orders/history`, `me/trades`). */}
                 {(historyOnly || orderBookReady) && (
                   <View style={styles.ordersTabContentWrapper}>
                     <Animated.View style={{ transform: [{ translateX: ordersTabsAnimX }] }}>
@@ -5903,7 +5936,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     paddingVertical: 4,
     paddingHorizontal: 5,
-   
+
     borderRadius: 5,
 
   },
