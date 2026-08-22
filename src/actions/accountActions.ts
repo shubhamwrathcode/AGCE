@@ -33,6 +33,7 @@ import { Alert, NativeModules, Platform } from 'react-native';
 import { getReferralList } from './homeActions';
 import { Passkey } from 'react-native-passkey';
 import { CHART_WEB_BASE_URL, PASSKEY_RP_ID } from '../helper/Constants';
+import { getMobilePasskeyDeviceInfo, mergePasskeyListWithLocalDeviceInfo, saveLocalPasskeyDeviceInfo } from '../helper/passkeyDeviceInfo';
 
 const toBase64URL = (str: string) =>
   str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -1474,6 +1475,25 @@ export const getWithdrawalPasskeyCredential = (silent: boolean = false) => async
 export const getPasskeyList = () => async (_dispatch: AppDispatch) => {
   try {
     const response: any = await appOperation.customer.passkeyGetList();
+    console.log('[Passkey][List] GET security/passkeys raw response:', JSON.stringify(response, null, 2));
+    if (response?.success) {
+      const list = Array.isArray(response?.data?.passkeys)
+        ? response.data.passkeys
+        : Array.isArray(response?.data)
+          ? response.data
+          : [];
+      const merged = await mergePasskeyListWithLocalDeviceInfo(list);
+      console.log('[Passkey][List] merged deviceInfo:', merged.map((pk: any) => ({
+        id: pk._id || pk.id,
+        name: pk.name,
+        deviceInfo: pk.deviceInfo,
+      })));
+      if (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+        response.data.passkeys = merged;
+      } else {
+        response.data = { passkeys: merged, count: merged.length };
+      }
+    }
     return response;
   } catch (e: any) {
     logger(e);
@@ -1559,13 +1579,26 @@ export const getPasskeyRegistrationOptions = () => async (dispatch: AppDispatch)
 export const verifyPasskeyRegistration = (credential: object, name: string) => async (dispatch: AppDispatch) => {
   try {
     dispatch(setLoading(true));
-    console.warn('[Passkey] Calling API verify...');
-    const response: any = await appOperation.customer.passkeyVerifyRegistration(credential, name);
-    console.warn('[Passkey] API response:', JSON.stringify(response, null, 2));
+    console.log('[Passkey] calling API verify...');
+    const deviceInfo = getMobilePasskeyDeviceInfo();
+    console.log('[Passkey] register payload summary:', { passkeyName: name, deviceInfo });
+    const response: any = await appOperation.customer.passkeyVerifyRegistration(credential, name, deviceInfo);
+    console.log('[Passkey] API response:', JSON.stringify(response, null, 2));
     if (response?.success) {
+      const savedPasskeyId = response?.data?.id || response?.data?._id;
+      if (savedPasskeyId) {
+        await saveLocalPasskeyDeviceInfo(String(savedPasskeyId), deviceInfo);
+      } else {
+        console.log('[Passkey] no passkey id in register response — local deviceInfo cache skipped');
+      }
+      console.log('[Passkey] registration success — backend saved:', response?.data);
       dispatch(getUserProfile());
       showSuccess(response?.message || 'Passkey added successfully!');
-      return true;
+      return {
+        success: true,
+        passkeyId: savedPasskeyId ? String(savedPasskeyId) : null,
+        deviceInfo,
+      };
     } else {
       const msg =
         response?.message ||
@@ -1574,7 +1607,7 @@ export const verifyPasskeyRegistration = (credential: object, name: string) => a
         'Failed to register passkey';
       console.warn('[Passkey] FAILED - backend said:', msg);
       showError(typeof msg === 'string' ? msg : 'Failed to register passkey');
-      return false;
+      return { success: false, passkeyId: null, deviceInfo: null };
     }
   } catch (e: any) {
     console.warn('[Passkey] CATCH error:', e?.message, e?.code, e);
@@ -1585,7 +1618,7 @@ export const verifyPasskeyRegistration = (credential: object, name: string) => a
       (e?.data?.message) ||
       'Something went wrong';
     showError(errMsg);
-    return false;
+    return { success: false, passkeyId: null, deviceInfo: null };
   } finally {
     dispatch(setLoading(false));
   }

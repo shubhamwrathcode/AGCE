@@ -13,6 +13,18 @@ import { Passkey } from 'react-native-passkey';
 import { getPasskeyList, getPasskeyRegistrationOptions, verifyPasskeyRegistration, verifySecurityPasskey, deletePasskey, getUserProfile, deleteAccount } from '../../../actions/accountActions';
 import { showError, showSuccess } from '../../../helper/logger';
 import { useFocusEffect } from '@react-navigation/native';
+import {
+  extractPasskeyIdFromVerifyResult,
+  findNewestPasskeyId,
+  formatPasskeyDeviceLabel,
+  getLocalPasskeyDeviceInfoMap,
+  getMobilePasskeyDeviceInfo,
+  isVerifyPasskeyRegistrationSuccess,
+  mergePasskeyListWithLocalDeviceInfo,
+  repairUncachedWeakPasskeys,
+  resolvePasskeyDeviceInfo,
+  saveLocalPasskeyDeviceInfo,
+} from '../../../helper/passkeyDeviceInfo';
 
 const EnablePasskey = ({ route, navigation }) => {
   const dispatch = useAppDispatch();
@@ -27,6 +39,14 @@ const EnablePasskey = ({ route, navigation }) => {
   const [selectedPasskey, setSelectedPasskey] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [localDeviceMap, setLocalDeviceMap] = useState({});
+
+  const refreshLocalDeviceMap = useCallback(async () => {
+    const map = await getLocalPasskeyDeviceInfoMap();
+    setLocalDeviceMap(map);
+    console.log('[Passkey][LocalCache] loaded map:', map);
+    return map;
+  }, []);
 
   // Check support on mount
   const [passkeySupported, setPasskeySupported] = useState(true);
@@ -44,20 +64,33 @@ const EnablePasskey = ({ route, navigation }) => {
     try {
       setLoadingPasskeys(true);
       const res = await dispatch(getPasskeyList());
+      console.log('[Passkey][List] API response:', JSON.stringify(res, null, 2));
       if (res?.success) {
-        setPasskeys(res.data?.passkeys || []);
+        const list = res.data?.passkeys || [];
+        await repairUncachedWeakPasskeys(list);
+        const merged = await mergePasskeyListWithLocalDeviceInfo(list);
+        console.log('[Passkey][List] deviceInfo per passkey (after local merge):', merged.map((pk) => ({
+          id: pk._id || pk.id,
+          name: pk.name,
+          deviceInfo: pk.deviceInfo,
+          createdAt: pk.createdAt,
+        })));
+        setPasskeys(merged);
+        await refreshLocalDeviceMap();
       }
     } catch (err) {
+      console.log('[Passkey][List] fetch error:', err);
     } finally {
       setLoadingPasskeys(false);
     }
-  }, [dispatch]);
+  }, [dispatch, refreshLocalDeviceMap]);
 
   useFocusEffect(
     useCallback(() => {
       dispatch(getUserProfile(false, false, true));
+      refreshLocalDeviceMap();
       fetchPasskeys();
-    }, [dispatch, fetchPasskeys])
+    }, [dispatch, fetchPasskeys, refreshLocalDeviceMap])
   );
 
   const routeParams = route?.params;
@@ -202,11 +235,41 @@ const EnablePasskey = ({ route, navigation }) => {
           const emailId = userData?.emailId || userData?.email_id || '';
           const projectName = 'Arab Global Exchange';
           const defaultName = emailId ? `${projectName} - ${emailId.split('@')[0]}` : `${projectName} Passkey`;
+          const deviceInfo = getMobilePasskeyDeviceInfo();
+          console.log('[Passkey][EnablePasskey] register verify starting', { defaultName, deviceInfo });
 
-          const verified = await dispatch(verifyPasskeyRegistration(passkeyResponse, defaultName));
-          if (verified) {
+          const verifyResult = await dispatch(verifyPasskeyRegistration(passkeyResponse, defaultName));
+          console.log('[Passkey][EnablePasskey] verify result:', verifyResult);
+
+          if (isVerifyPasskeyRegistrationSuccess(verifyResult)) {
+            let passkeyId = extractPasskeyIdFromVerifyResult(verifyResult);
+
+            if (!passkeyId) {
+              const listRes = await dispatch(getPasskeyList());
+              const list = listRes?.data?.passkeys || [];
+              passkeyId = findNewestPasskeyId(list);
+              console.log('[Passkey][EnablePasskey] passkeyId resolved from newest list item:', passkeyId);
+            }
+
+            if (passkeyId) {
+              await saveLocalPasskeyDeviceInfo(String(passkeyId), deviceInfo);
+              setLocalDeviceMap((prev) => ({
+                ...prev,
+                [String(passkeyId)]: deviceInfo,
+              }));
+              setPasskeys((prev) =>
+                prev.map((pk) => {
+                  const id = String(pk._id || pk.id || '');
+                  return id === String(passkeyId) ? { ...pk, deviceInfo } : pk;
+                }),
+              );
+              console.log('[Passkey][EnablePasskey] local deviceInfo saved + UI patched', passkeyId, deviceInfo);
+            } else {
+              console.log('[Passkey][EnablePasskey] could not resolve passkeyId — list refresh only');
+            }
+
             await dispatch(getUserProfile());
-            fetchPasskeys();
+            await fetchPasskeys();
           }
         }
       } catch (error) {
@@ -361,7 +424,7 @@ const EnablePasskey = ({ route, navigation }) => {
                         {pk.name || 'Passkey'}
                       </AppText>
                       <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 4 }}>
-                        {pk.deviceInfo?.browser || 'Unknown'} • {pk.deviceInfo?.os || 'Unknown'}
+                        {formatPasskeyDeviceLabel(resolvePasskeyDeviceInfo(pk, localDeviceMap))}
                       </AppText>
                       <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
                         Added: {pk.createdAt ? new Date(pk.createdAt).toLocaleDateString() : '—'}
@@ -503,7 +566,7 @@ const EnablePasskey = ({ route, navigation }) => {
                     });
                   }}
                 >
-                  <FastImage source={method.icon} style={styles.optionIcon} resizeMode="contain" />
+                  <FastImage source={method.icon} style={styles.optionIcon} tintColor={isDark? colors.white:undefined} resizeMode="contain" />
                   <AppText type={SIXTEEN} weight={MEDIUM} style={[styles.optionText, { color: themeColors.text }]}>{method.label}</AppText>
                   <FastImage source={right_ic} style={styles.rightArrow} tintColor="#C1C1C1" resizeMode="contain" />
                 </TouchableOpacity>

@@ -17,6 +17,8 @@ import {
   WithdrawCurrencyProps,
   WithdrawInrProps,
 } from '../../../helper/types';
+import { getMobilePasskeyUserAgent } from '../../../helper/passkeyDeviceInfo';
+import { Platform } from 'react-native';
 
 export default (appOperation: AppOperation) => ({
   qbs_historyy: () =>
@@ -809,9 +811,43 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/passkey/register/options - returns WebAuthn registration options */
   passkeyGetRegistrationOptions: () =>
     appOperation.post('security/passkey/register/options', {}, CUSTOMER_TYPE),
-  /** Same as web: POST security/passkey/register/verify - body { credential, name } */
-  passkeyVerifyRegistration: (credential: object, name: string) =>
-    appOperation.post('security/passkey/register/verify', { credential, name }, CUSTOMER_TYPE),
+  /** Same as web: POST security/passkey/register/verify - body { credential, name, deviceInfo? } */
+  passkeyVerifyRegistration: (
+    credential: object,
+    name: string,
+    deviceInfo?: { browser: string; os: string },
+  ) => {
+    const body: Record<string, unknown> = {
+      credential,
+      name,
+      clientType: 'mobile',
+      platform: Platform.OS,
+    };
+    if (deviceInfo) {
+      body.deviceInfo = deviceInfo;
+      body.browser = deviceInfo.browser;
+      body.os = deviceInfo.os;
+    }
+    const userAgent = getMobilePasskeyUserAgent();
+
+    console.log('[Passkey][API] POST security/passkey/register/verify', {
+      name,
+      deviceInfo: body.deviceInfo,
+      browser: body.browser,
+      os: body.os,
+      clientType: body.clientType,
+      platform: body.platform,
+      userAgent,
+      credentialKeys: credential && typeof credential === 'object' ? Object.keys(credential as object) : [],
+    });
+
+    return appOperation.post(
+      'security/passkey/register/verify',
+      body,
+      CUSTOMER_TYPE,
+      { 'User-Agent': userAgent },
+    );
+  },
   /** Same as web: POST security/passkey/auth/options - for change email/mobile, disable 2FA, etc. */
   passkeyGetAuthOptions: (signId: string) =>
     appOperation.post('security/passkey/auth/options', { signId }, CUSTOMER_TYPE),

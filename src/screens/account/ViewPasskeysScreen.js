@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
@@ -18,20 +18,31 @@ import { back_ic, FINGERPRINT } from '../../helper/ImageAssets';
 import { getPasskeyList } from '../../actions/accountActions';
 import { ADD_PASSKEY_SCREEN } from '../../navigation/routes';
 import { useTheme } from "../../hooks/useTheme";
+import { formatPasskeyDeviceLabel, getLocalPasskeyDeviceInfoMap, mergePasskeyListWithLocalDeviceInfo, resolvePasskeyDeviceInfo } from '../../helper/passkeyDeviceInfo';
 
 const ViewPasskeysScreen = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
   const [passkeys, setPasskeys] = useState([]);
+  const [localDeviceMap, setLocalDeviceMap] = useState({});
   const isLoading = useAppSelector((state) => state.auth.isLoading);
 
-  useEffect(() => {
-    (async () => {
-      const res = await dispatch(getPasskeyList());
-      if (res?.data?.passkeys) setPasskeys(res.data.passkeys);
-    })();
+  const loadPasskeys = useCallback(async () => {
+    const [res, localMap] = await Promise.all([
+      dispatch(getPasskeyList()),
+      getLocalPasskeyDeviceInfoMap(),
+    ]);
+    setLocalDeviceMap(localMap);
+    if (res?.data?.passkeys) {
+      const merged = await mergePasskeyListWithLocalDeviceInfo(res.data.passkeys);
+      setPasskeys(merged);
+    }
   }, [dispatch]);
+
+  useEffect(() => {
+    loadPasskeys();
+  }, [loadPasskeys]);
 
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background }}>
@@ -60,7 +71,7 @@ const ViewPasskeysScreen = () => {
                 <View style={styles.passkeyItemContent}>
                   <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>{passkey.name || 'Passkey'}</AppText>
                   <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
-                    {passkey.deviceInfo?.browser || 'Unknown'} • {passkey.deviceInfo?.os || 'Unknown'}
+                    {formatPasskeyDeviceLabel(resolvePasskeyDeviceInfo(passkey, localDeviceMap))}
                   </AppText>
                   {(passkey.createdAt || passkey.lastUsedAt) && (
                     <AppText type={TEN} style={{ color: themeColors.secondaryText, marginTop: 6 }}>

@@ -84,15 +84,15 @@ const DownloadAuthenticator = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.white }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor:themeColors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => NavigationService.goBack()}>
-          <FastImage source={back_ic} tintColor={colors.black} style={{ width: 18, height: 18 }} resizeMode='contain' />
+          <FastImage source={back_ic} tintColor={isDark? colors.white: colors.black} style={{ width: 18, height: 18 }} resizeMode='contain' />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.iconBtn}>
-          <FastImage source={INFO} tintColor={colors.black} style={{ width: 18, height: 18 }} resizeMode='contain' />
-        </TouchableOpacity>
+        {/* <TouchableOpacity style={styles.iconBtn}>
+          <FastImage source={INFO} tintColor={isDark? colors.white: colors.black} style={{ width: 18, height: 18 }} resizeMode='contain' />
+        </TouchableOpacity> */}
       </View>
 
       <View style={styles.content}>
