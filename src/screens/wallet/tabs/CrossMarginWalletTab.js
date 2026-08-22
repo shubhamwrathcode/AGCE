@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { View, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator, Animated, Dimensions } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
+import { View, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator, Dimensions } from "react-native";
 import FastImage from "react-native-fast-image";
 import Svg, { Path, Circle, Text as SvgText } from "react-native-svg";
 import { AppText, BOLD, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
-import { colors } from "../../../theme/colors";
+import { colors, darkTheme } from "../../../theme/colors";
 import { appOperation } from "../../../appOperation";
 import { CUSTOMER_TYPE } from "../../../appOperation/types";
 import { searchIcon, checkIc, NO_NOTIFICATION_ICON, moreOption, bitcoin_ic } from "../../../helper/ImageAssets";
@@ -12,6 +11,7 @@ import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_BORROW_REPAY_SCREEN, MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
 import CrossMarginDetailSheet from "../sheets/CrossMarginDetailSheet";
 import { useFocusEffect } from "@react-navigation/native";
+import WalletShimmerCell from "../WalletShimmerCell";
 
 import Toast from "react-native-simple-toast";
 
@@ -29,7 +29,7 @@ function fmtPrice(val) {
   return str === "0" ? "0.00" : str;
 }
 
-function MarginLevelGauge({ level, mmr = 1.1, warningRate = 1.15 }) {
+function MarginLevelGauge({ level, mmr = 1.1, warningRate = 1.15, isDark = false }) {
   const isNum = Number.isFinite(level) && level !== null;
   const MIN = 1.0, MAX = 3.0;
   const pct = isNum ? Math.min(1, Math.max(0, (level - MIN) / (MAX - MIN))) : 0;
@@ -56,7 +56,7 @@ function MarginLevelGauge({ level, mmr = 1.1, warningRate = 1.15 }) {
   return (
     <View style={{ alignItems: "center", justifyContent: "center", width: 112, height: 80 }}>
       <Svg width={112} height={80} viewBox="0 0 112 80">
-        <Path d={describeArc(startAngle, startAngle + sweep)} fill="none" stroke="#e5e7eb" strokeWidth={strokeW} strokeLinecap="round" />
+        <Path d={describeArc(startAngle, startAngle + sweep)} fill="none" stroke={isDark ? "#3A3A3C" : "#e5e7eb"} strokeWidth={strokeW} strokeLinecap="round" />
         {isNum && pct > 0 && (
           <Path d={describeArc(startAngle, endAngle)} fill="none" stroke={color} strokeWidth={strokeW} strokeLinecap="round" />
         )}
@@ -71,109 +71,67 @@ function MarginLevelGauge({ level, mmr = 1.1, warningRate = 1.15 }) {
   );
 }
 
-const SHIMMER_STRIP = 160;
-function ShimmerCell({ width: w, height, borderRadius = 6, style, isDark }) {
-  const shimmerX = useRef(new Animated.Value(-SHIMMER_STRIP)).current;
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    const run = () => {
-      if (!mounted.current) return;
-      shimmerX.setValue(-SHIMMER_STRIP);
-      Animated.timing(shimmerX, {
-        toValue: Math.max(w, 1) + SHIMMER_STRIP,
-        duration: 1100,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (mounted.current && finished) run();
-      });
-    };
-    const t = setTimeout(run, 50);
-    return () => {
-      mounted.current = false;
-      clearTimeout(t);
-      shimmerX.stopAnimation();
-    };
-  }, [shimmerX, w]);
-
-  const boneColor = isDark ? "#2A2A2A" : "#E1E9EE";
-  const shimmerColors = isDark
-    ? ["transparent", "rgba(255,255,255,0.08)", "transparent"]
-    : ["transparent", "rgba(255,255,255,0.6)", "transparent"];
-
-  return (
-    <View style={[{ width: w, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
-      <Animated.View
-        pointerEvents="none"
-        style={{ position: "absolute", top: 0, bottom: 0, width: SHIMMER_STRIP, transform: [{ translateX: shimmerX }] }}
-      >
-        <LinearGradient colors={shimmerColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, width: SHIMMER_STRIP }} />
-      </Animated.View>
-    </View>
-  );
-}
-
 function CrossMarginSkeleton({ theme }) {
   const isDark = theme === "Dark";
   const screenWidth = Dimensions.get("window").width;
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <ShimmerCell isDark={isDark} width={180} height={22} borderRadius={4} />
+        <WalletShimmerCell width={180} height={22} borderRadius={4} />
       </View>
-      <View style={[styles.summaryCard, { padding: 20, backgroundColor: isDark ? "#1C1C1E" : colors.white }]}>
+      <View style={[styles.summaryCard, { padding: 20, backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View>
-            <ShimmerCell isDark={isDark} width={100} height={16} borderRadius={4} style={{ marginBottom: 8 }} />
-            <ShimmerCell isDark={isDark} width={140} height={32} borderRadius={8} style={{ marginBottom: 6 }} />
-            <ShimmerCell isDark={isDark} width={80} height={14} borderRadius={4} />
+            <WalletShimmerCell width={100} height={16} borderRadius={4} style={{ marginBottom: 8 }} />
+            <WalletShimmerCell width={140} height={32} borderRadius={8} style={{ marginBottom: 6 }} />
+            <WalletShimmerCell width={80} height={14} borderRadius={4} />
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <ShimmerCell isDark={isDark} width={60} height={20} borderRadius={10} style={{ marginBottom: 8 }} />
-            <ShimmerCell isDark={isDark} width={80} height={20} borderRadius={10} />
+            <WalletShimmerCell width={60} height={20} borderRadius={10} style={{ marginBottom: 8 }} />
+            <WalletShimmerCell width={80} height={20} borderRadius={10} />
           </View>
         </View>
         <View style={[styles.equityGrid, { marginTop: 20 }]}>
           <View style={{ flex: 1, gap: 6 }}>
-            <ShimmerCell isDark={isDark} width={80} height={14} borderRadius={4} />
-            <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
-            <ShimmerCell isDark={isDark} width={120} height={12} borderRadius={4} />
+            <WalletShimmerCell width={80} height={14} borderRadius={4} />
+            <WalletShimmerCell width={100} height={20} borderRadius={4} />
+            <WalletShimmerCell width={120} height={12} borderRadius={4} />
           </View>
           <View style={{ flex: 1, alignItems: "flex-end", gap: 6 }}>
-            <ShimmerCell isDark={isDark} width={120} height={14} borderRadius={4} />
-            <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
-            <ShimmerCell isDark={isDark} width={100} height={12} borderRadius={4} />
+            <WalletShimmerCell width={120} height={14} borderRadius={4} />
+            <WalletShimmerCell width={100} height={20} borderRadius={4} />
+            <WalletShimmerCell width={100} height={12} borderRadius={4} />
           </View>
         </View>
         <View style={{ flexDirection: "row", gap: 10, marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: isDark ? "#2C2C2E" : "#E5E7EB" }}>
-          <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
-          <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
-          <ShimmerCell isDark={isDark} width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+          <WalletShimmerCell width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+          <WalletShimmerCell width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
+          <WalletShimmerCell width={(screenWidth - 100) / 3} height={36} borderRadius={18} />
         </View>
       </View>
 
       <View style={{ flexDirection: "row", gap: 20, marginTop: 20 }}>
-        <ShimmerCell isDark={isDark} width={60} height={20} borderRadius={4} />
-        <ShimmerCell isDark={isDark} width={80} height={20} borderRadius={4} />
+        <WalletShimmerCell width={60} height={20} borderRadius={4} />
+        <WalletShimmerCell width={80} height={20} borderRadius={4} />
       </View>
 
       <View style={[styles.filtersRow, { marginTop: 20 }]}>
-        <ShimmerCell isDark={isDark} width={screenWidth - 40} height={42} borderRadius={12} />
+        <WalletShimmerCell width={screenWidth - 40} height={42} borderRadius={12} />
       </View>
 
       <View style={{ marginTop: 20, gap: 16 }}>
         {[1, 2, 3, 4].map(i => (
           <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-              <ShimmerCell isDark={isDark} width={28} height={28} borderRadius={14} />
+              <WalletShimmerCell width={28} height={28} borderRadius={14} />
               <View style={{ gap: 6 }}>
-                <ShimmerCell isDark={isDark} width={60} height={16} borderRadius={4} />
-                <ShimmerCell isDark={isDark} width={40} height={12} borderRadius={4} />
+                <WalletShimmerCell width={60} height={16} borderRadius={4} />
+                <WalletShimmerCell width={40} height={12} borderRadius={4} />
               </View>
             </View>
             <View style={{ alignItems: "flex-end", gap: 6 }}>
-              <ShimmerCell isDark={isDark} width={80} height={16} borderRadius={4} />
-              <ShimmerCell isDark={isDark} width={60} height={12} borderRadius={4} />
+              <WalletShimmerCell width={80} height={16} borderRadius={4} />
+              <WalletShimmerCell width={60} height={12} borderRadius={4} />
             </View>
           </View>
         ))}
@@ -183,6 +141,10 @@ function CrossMarginSkeleton({ theme }) {
 }
 
 const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
+  const isDark = theme === "Dark";
+  const mutedColor = themeColors.secondaryText;
+  const sectionLabelColor = isDark ? colors.white : DISCLAIMTEXT;
+
   const [account, setAccount] = useState(null);
   const [debts, setDebts] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -303,19 +265,19 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <AppText weight={SEMI_BOLD} type={EIGHTEEN}>Cross Margin Account</AppText>
+        <AppText weight={SEMI_BOLD} type={EIGHTEEN} color={themeColors.text}>Cross Margin Account</AppText>
       </View>
 
       {/* Summary Card */}
       <View style={[styles.summaryCard, { backgroundColor: theme === 'Dark' ? themeColors.background : colors.white }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
-            <AppText type={SIXTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} weight={SEMI_BOLD}>Total Balance</AppText>
+            <AppText type={SIXTEEN} color={sectionLabelColor} weight={SEMI_BOLD}>Total Balance</AppText>
             <View style={styles.summaryValueRow}>
-              <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>{totalBalanceUsdt != null ? fmt(totalBalanceUsdt, 8) : "—"} </AppText>
-              <AppText type={FIFTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ top: 5 }}>USDT</AppText>
+              <AppText type={TWENTY_SIX} weight={SEMI_BOLD} color={themeColors.text}>{totalBalanceUsdt != null ? fmt(totalBalanceUsdt, 8) : "—"} </AppText>
+              <AppText type={FIFTEEN} color={sectionLabelColor} style={{ top: 5 }}>USDT</AppText>
             </View>
-            {totalBalanceUsdt != null && <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>≈ ${fmtPrice(totalBalanceUsdt)}</AppText>}
+            {totalBalanceUsdt != null && <AppText type={FOURTEEN} color={sectionLabelColor}>≈ ${fmtPrice(totalBalanceUsdt)}</AppText>}
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme, marginBottom: 5 }}>Cross {risk?.max_leverage ?? account?.max_leverage ?? "—"}x</AppText>
@@ -336,19 +298,19 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
 
         <View style={styles.equityGrid}>
           <View style={{ flex: 1 }}>
-            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Margin Level</AppText>
+            <AppText type={TWELVE} color={sectionLabelColor}>Margin Level</AppText>
             <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: marginLevel != null && marginLevel < 1.1 ? colors.red : marginLevel != null && marginLevel < 1.3 ? "#f59e0b" : themeColors.text }}>
               {marginLevel != null ? fmt(marginLevel, 4) : "—"}
             </AppText>
-            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ marginTop: 2 }}>
+            <AppText type={TWELVE} color={sectionLabelColor} style={{ marginTop: 2 }}>
               Call at {fmtPrice(marginCallLevel)} · Liq. at {fmtPrice(liquidationLevel)}
             </AppText>
           </View>
           <View style={{ flex: 1, alignItems: "flex-end" }}>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Account Equity (USDT)</AppText>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD}>{accountEquityUsd != null ? fmt(accountEquityUsd, 4) : "—"}</AppText>
+            <AppText type={TWELVE} color={sectionLabelColor}>Account Equity (USDT)</AppText>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} color={themeColors.text}>{accountEquityUsd != null ? fmt(accountEquityUsd, 4) : "—"}</AppText>
             {accountEquityUsd != null && (
-              <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 2 }}>
+              <AppText type={TWELVE} color={sectionLabelColor} style={{ marginTop: 2 }}>
                 ≈ ${fmtPrice(accountEquityUsd)}
               </AppText>
             )}
@@ -356,19 +318,19 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
         </View>
         <View style={[styles.equityGrid, { marginTop: 10 }]}>
           <View style={{ flex: 1 }}>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Total Debt (USDT)</AppText>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD}>{displayTotalDebt > 0 ? fmt(displayTotalDebt, 4) : "—"}</AppText>
+            <AppText type={TWELVE} color={sectionLabelColor}>Total Debt (USDT)</AppText>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} color={themeColors.text}>{displayTotalDebt > 0 ? fmt(displayTotalDebt, 4) : "—"}</AppText>
             {displayTotalDebt > 0 && (
-              <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 2 }}>
+              <AppText type={TWELVE} color={sectionLabelColor} style={{ marginTop: 2 }}>
                 ≈ ${fmtPrice(displayTotalDebt)}
               </AppText>
             )}
           </View>
           <View style={{ flex: 1, alignItems: "flex-end" }}>
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Remaining Borrowable (USDT)</AppText>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD}>{remainingBorrow != null ? fmt(remainingBorrow, 4) : "—"}</AppText>
+            <AppText type={TWELVE} color={sectionLabelColor}>Remaining Borrowable (USDT)</AppText>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} color={themeColors.text}>{remainingBorrow != null ? fmt(remainingBorrow, 4) : "—"}</AppText>
             {remainingBorrow != null && (
-              <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 2 }}>
+              <AppText type={TWELVE} color={sectionLabelColor} style={{ marginTop: 2 }}>
                 ≈ ${fmtPrice(remainingBorrow)}
               </AppText>
             )}
@@ -377,18 +339,19 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
 
         {/* Gauge Row */}
         <View style={{ marginTop: 20, borderTopWidth: 1, borderTopColor: themeColors.border, paddingTop: 14 }}>
-          <AppText type={FOURTEEN} weight={BOLD} style={{ marginBottom: 10 }}>Margin Level</AppText>
+          <AppText type={FOURTEEN} weight={BOLD} color={themeColors.text} style={{ marginBottom: 10 }}>Margin Level</AppText>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
             <MarginLevelGauge
               level={marginLevel}
               mmr={liquidationLevel}
               warningRate={marginCallLevel}
+              isDark={isDark}
             />
             <View>
               <AppText type={SIXTEEN} weight={BOLD} style={{ color: marginLevel != null && marginLevel < 1.1 ? colors.red : marginLevel != null && marginLevel < 1.3 ? "#f59e0b" : themeColors.text }}>
                 {marginLevel != null ? fmt(marginLevel, 4) : "—"}
               </AppText>
-              <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 2 }}>
+              <AppText type={TWELVE} color={sectionLabelColor} style={{ marginTop: 2 }}>
                 Call at {fmtPrice(marginCallLevel)} · Liq. at {fmtPrice(liquidationLevel)}
               </AppText>
             </View>
@@ -398,7 +361,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
         {/* PnL Row */}
         <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: themeColors.border, paddingTop: 14 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <AppText type={FOURTEEN} weight={BOLD}>PnL</AppText>
+            <AppText type={FOURTEEN} weight={BOLD} color={themeColors.text}>PnL</AppText>
             <View style={{ flexDirection: "row", gap: 4 }}>
               {["24h", "7d", "30d", "all"].map((p) => {
                 const isActive = pnlPeriod === p;
@@ -406,9 +369,20 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
                   <TouchableOpacity
                     key={p}
                     onPress={() => setPnlPeriod(p)}
-                    style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: isActive ? (theme === "Dark" ? colors.white : colors.black) : colors.iconBgColor }}
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 4,
+                      backgroundColor: isActive
+                        ? (isDark ? colors.white : colors.black)
+                        : (isDark ? themeColors.themeElevationColor : colors.iconBgColor),
+                    }}
                   >
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: isActive ? (theme === "Dark" ? colors.black : colors.white) : colors.black }}>
+                    <AppText
+                      type={TWELVE}
+                      weight={SEMI_BOLD}
+                      style={{ color: isActive ? (isDark ? colors.black : colors.white) : themeColors.text }}
+                    >
                       {p === "all" ? "All" : p}
                     </AppText>
                   </TouchableOpacity>
@@ -424,13 +398,13 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
                 { label: "Unrealized PnL", value: pnlUnrealized },
                 { label: "Realized PnL", value: pnlRealized },
                 { label: "Interest Paid", value: pnlInterest, invert: true },
-              ].map(({ label, value, invert }, idx) => {
+              ].map(({ label, value, invert }) => {
                 const n = value ?? 0;
                 const isPos = invert ? n <= 0 : n >= 0;
-                const color = n === 0 ? DISCLAIMTEXT : isPos ? colors.green : colors.red;
+                const color = n === 0 ? mutedColor : isPos ? colors.green : colors.red;
                 return (
                   <View key={label} style={{ width: "50%" }}>
-                    <AppText type={TWELVE} color={DISCLAIMTEXT}>{label}</AppText>
+                    <AppText type={TWELVE} color={mutedColor}>{label}</AppText>
                     <AppText type={FOURTEEN} weight={BOLD} style={{ color, marginTop: 2 }}>
                       {n >= 0 ? "+" : ""}{fmt(n, 4)} USDT
                     </AppText>
@@ -439,14 +413,14 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
               })}
               {pnlClosedCount != null && (
                 <View style={{ width: "100%", marginTop: 4 }}>
-                  <AppText type={TWELVE} color={DISCLAIMTEXT}>
+                  <AppText type={TWELVE} color={mutedColor}>
                     {pnlClosedCount} position{pnlClosedCount !== 1 ? "s" : ""} closed in this period
                   </AppText>
                 </View>
               )}
             </View>
           ) : (
-            <AppText type={TWELVE} color={DISCLAIMTEXT}>Loading PnL…</AppText>
+            <AppText type={TWELVE} color={mutedColor}>Loading PnL…</AppText>
           )}
         </View>
 
@@ -455,14 +429,14 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
           <TouchableOpacity
             style={{ flex: 1.5, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }}
             onPress={() => {
-              const firstDebt = Object.values(marginAssets).find(a => parseFloat(a.borrowed) > 0);
-              const firstAsset = Object.values(marginAssets).find(a => parseFloat(a.free) > 0);
+              const firstDebt = assets.find((a) => parseFloat(a.borrowed) > 0);
+              const firstAsset = assets.find((a) => parseFloat(a.balance) > 0);
               const targetAsset = firstDebt || firstAsset;
               if (targetAsset) {
                 NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, {
                   marginMode: "Cross",
                   coin: targetAsset.asset,
-                  activeTab: firstDebt ? "Repay" : "Borrow"
+                  activeTab: firstDebt ? "Repay" : "Borrow",
                 });
               } else {
                 Toast.showWithGravity("No assets available.", Toast.SHORT, Toast.BOTTOM);
@@ -484,20 +458,21 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
       <View style={styles.tabsRow}>
         <View style={{ flexDirection: "row", gap: 18, alignItems: "flex-end" }}>
           <TouchableOpacity onPress={() => { setActiveTab("funds"); setSearch(""); setHideSmall(false); setDebtOnly(false); }} style={{ alignItems: "center" }}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={activeTab === "funds" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}>Funds</AppText>
-            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "funds" ? colors.buttonBg : "transparent" }]} />
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={activeTab === "funds" ? themeColors.text : mutedColor}>Funds</AppText>
+            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "funds" ?isDark?  colors.white:colors.black : "transparent",
+             }]} />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => { setActiveTab("positions"); setSearch(""); setHideSmall(false); setDebtOnly(false); }} style={{ alignItems: "center" }}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={activeTab === "positions" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}>Positions</AppText>
-            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "positions" ? colors.buttonBg : "transparent" }]} />
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={activeTab === "positions" ? themeColors.text : mutedColor}>Positions</AppText>
+            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "positions" ? isDark?  colors.white:colors.black : "transparent" }]} />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Filters */}
       <View style={styles.filtersRow}>
-        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? '#2A2A2E' : '#F7F7F7' }]}>
+        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? darkTheme.darkThemeInputColor : '#F7F7F7' }]}>
           <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
           <TextInput
             value={search}
@@ -516,7 +491,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
           <View style={styles.checkbox}>
             {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
           </View>
-          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>{activeTab === "funds" ? "Hide small balances" : "Hide low positions"}</AppText>
+          <AppText type={TWELVE} color={sectionLabelColor}>{activeTab === "funds" ? "Hide small balances" : "Hide low positions"}</AppText>
         </TouchableOpacity>
 
         {activeTab === "funds" && (
@@ -524,7 +499,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
             <View style={styles.checkbox}>
               {debtOnly ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
             </View>
-            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Only show debts</AppText>
+            <AppText type={TWELVE} color={sectionLabelColor}>Only show debts</AppText>
           </TouchableOpacity>
         )}
       </View>
@@ -546,7 +521,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
               <View style={[styles.row, { borderBottomColor: themeColors.border }, isLast && { borderBottomWidth: 0 }]}>
                 <View style={styles.rowLeft}>
                   <View>
-                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.asset}</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>{item.asset}</AppText>
                     {debt?.interest_accrued && parseFloat(debt.interest_accrued) > 0 && (
                       <AppText type={TWELVE} color={colors.red} style={{ marginTop: 2 }}>+{fmt(debt.interest_accrued)} interest</AppText>
                     )}
@@ -555,8 +530,8 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
 
                 <View style={styles.rowRight}>
                   <View style={{ alignItems: "flex-end", marginRight: 10 }}>
-                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>{fmt(totalBal)}</AppText>
-                    <AppText type={TWELVE} color={hasBorrow ? colors.red : DISCLAIMTEXT}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>{fmt(totalBal)}</AppText>
+                    <AppText type={TWELVE} color={hasBorrow ? colors.red : mutedColor}>
                       {hasBorrow ? `Borrow: ${fmt(item.borrowed)}` : `Avail: ${fmt(item.balance)}`}
                     </AppText>
                   </View>
@@ -576,7 +551,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <FastImage source={NO_NOTIFICATION_ICON} style={styles.emptyIcon} resizeMode="contain" />
-              <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Funds Found</AppText>
+              <AppText type={TWELVE} weight={SEMI_BOLD} color={mutedColor}>No Funds Found</AppText>
             </View>
           )}
           ListFooterComponent={() => <View style={{ height: 120 }} />}
@@ -605,12 +580,12 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
                 <View style={styles.rowLeft}>
                   <View style={{ gap: 4 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.asset}</AppText>
+                      <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>{item.asset}</AppText>
                       <View style={[styles.sideBadge, { borderColor: sideColor }]}>
                         <AppText type={TWELVE} color={sideColorText} weight={SEMI_BOLD}>{isLong ? "L" : "S"}</AppText>
                       </View>
                     </View>
-                    <AppText type={TWELVE}>Mark: {fmt(item.mark_price, 2)}</AppText>
+                    <AppText type={TWELVE} color={mutedColor}>Mark: {fmt(item.mark_price, 2)}</AppText>
                     <AppText type={TWELVE} color={pnlColorText}>
                       {pnl >= 0 ? "+" : ""}{fmt(pnl, 4)} ({roe >= 0 ? "+" : ""}{fmtPrice(roe)}%)
                     </AppText>
@@ -639,7 +614,7 @@ const CrossMarginWalletTab = ({ theme, themeColors, buildCoinIconUri }) => {
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <FastImage source={NO_NOTIFICATION_ICON} style={styles.emptyIcon} resizeMode="contain" />
-              <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Positions Found</AppText>
+              <AppText type={TWELVE} weight={SEMI_BOLD} color={mutedColor}>No Positions Found</AppText>
             </View>
           )}
           ListFooterComponent={() => <View style={{ height: 120 }} />}

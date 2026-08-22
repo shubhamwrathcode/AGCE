@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   FlatList,
@@ -18,7 +18,7 @@ import {
   FOURTEEN,
   FIFTEEN,
 } from "../../shared";
-import { colors } from "../../theme/colors";
+import { colors, darkTheme } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import FastImage from "react-native-fast-image";
 import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, right_ic } from "../../helper/ImageAssets";
@@ -54,17 +54,18 @@ function formatPair(raw) {
   return str;
 }
 
-const TradeKvRow = React.memo(({ label, value, color, textColor, isDark }) => (
+const TradeKvRow = React.memo(({ label, value, color, textColor, secColor }) => (
   <View style={styles.tradeKvRow}>
-    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.tradeKvK, { color: isDark ? "#8E8E93" : "#666666" }]}>{label}</AppText>
+    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.tradeKvK, { color: secColor }]}>{label}</AppText>
     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.tradeKvV, { color: color ?? textColor }]} numberOfLines={3}>
       {value}
     </AppText>
   </View>
 ));
 
-const HistoryCard = React.memo(({ item, tabType, themeColors, isDark }) => {
-  const textColor = themeColors.text ?? "#000000";
+const HistoryCard = React.memo(({ item, tabType, themeColors }) => {
+  const textColor = themeColors.text;
+  const secColor = themeColors.secondaryText;
 
   // Try to parse the time
   const timeRaw = item?.created_at || item?.time || item?.updated_at;
@@ -88,43 +89,44 @@ const HistoryCard = React.memo(({ item, tabType, themeColors, isDark }) => {
             </AppText>
             {/* <FastImage source={right_ic} style={{ width: 12, height: 12, marginLeft: 4 }} resizeMode="contain" tintColor={isDark ? "#8E8E93" : "#666666"} /> */}
           </View>
-          <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", marginTop: 4 }}>{headerDateTime}</AppText>
+          <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: secColor, marginTop: 4 }}>{headerDateTime}</AppText>
         </View>
-        <AppText style={{ color: themeColors.green ?? "#00c087", fontWeight: "600" }}>{status}</AppText>
+        <AppText style={{ color: themeColors.green ?? colors.green, fontWeight: "600" }}>{status}</AppText>
       </View>
 
       <View style={styles.detailsContainer}>
-        <TradeKvRow label="Coin" value={coin} textColor={textColor} isDark={isDark} />
+        <TradeKvRow label="Coin" value={coin} textColor={textColor} secColor={secColor} />
 
         {tabType === "interest" ? (
           <>
-            <TradeKvRow label="Loan Amount" value={safeToFixed8(item?.loan_amount || item?.debt_outstanding)} textColor={textColor} isDark={isDark} />
-            <TradeKvRow label="Amount Charged" value={safeToFixed8(item?.amount_charged || item?.amount || item?.interest_amount)} textColor={textColor} isDark={isDark} />
+            <TradeKvRow label="Loan Amount" value={safeToFixed8(item?.loan_amount || item?.debt_outstanding)} textColor={textColor} secColor={secColor} />
+            <TradeKvRow label="Amount Charged" value={safeToFixed8(item?.amount_charged || item?.amount || item?.interest_amount)} textColor={textColor} secColor={secColor} />
             <TradeKvRow
               label="Hourly Rate"
               value={item?.interest_rate_daily != null ? `${((item.interest_rate_daily / 24) * 100).toFixed(7)}%` : "—"}
               textColor={textColor}
-              isDark={isDark}
+              secColor={secColor}
             />
             <TradeKvRow
               label="APR"
               value={item?.interest_rate_daily != null ? `${(item.interest_rate_daily * 100).toFixed(4)}%` : "—"}
               textColor={textColor}
-              isDark={isDark}
+              secColor={secColor}
             />
           </>
         ) : (
-          <TradeKvRow label="Amount" value={safeToFixed8(Math.abs(parseFloat(item?.amount) || 0))} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="Amount" value={safeToFixed8(Math.abs(parseFloat(item?.amount) || 0))} textColor={textColor} secColor={secColor} />
         )}
       </View>
-      <View style={[styles.divider, { backgroundColor: colors.iconBgColor }]} />
+      <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
     </View>
   );
 });
 
 const MarginBorrowRepayHistory = ({ route }) => {
-  const { isDark, themeColors } = useTheme();
-  const memoizedTheme = useMemo(() => themeColors || {}, [themeColors, isDark]);
+  const { isDark, colors: themeColors } = useTheme();
+  const memoizedTheme = themeColors;
+  const inputBgColor = isDark ? darkTheme.darkThemeInputColor : "#F7F7F9";
   const isFocused = useIsFocused();
 
   // Route params could specify if it's cross margin or isolated
@@ -226,25 +228,25 @@ const MarginBorrowRepayHistory = ({ route }) => {
   }, []);
 
   const renderItem = useCallback(({ item }) => (
-    <HistoryCard item={item} tabType={activeTab} themeColors={memoizedTheme} isDark={isDark} />
-  ), [activeTab, memoizedTheme, isDark]);
+    <HistoryCard item={item} tabType={activeTab} themeColors={memoizedTheme} />
+  ), [activeTab, memoizedTheme]);
 
   return (
-    <AppSafeAreaView style={[styles.container, { backgroundColor: memoizedTheme.background ?? "#FFFFFF" }]}>
+    <AppSafeAreaView style={[styles.container, { backgroundColor: memoizedTheme.background }]}>
       <Toolbar isSecond title={isCross ? "Cross Margin History" : "Isolated Margin History"} style={{ width: '75%', backgroundColor: "transparent" }} />
 
-      <View style={[styles.tabBar, { borderBottomColor: memoizedTheme?.themeBorderColor ?? "#EEEEEE" }]}>
+      <View style={[styles.tabBar, { borderBottomColor: memoizedTheme.themeBorderColor }]}>
         <TouchableOpacity onPress={() => { if (activeTab === "date") { setStartDate(moment().subtract(1, "months")); setEndDate(moment()); } setActiveTab("borrow"); }} style={styles.tab}>
-          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "borrow" ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93") }]}>Borrow</AppText>
-          {activeTab === "borrow" && <View style={styles.activeTabIndicator} />}
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "borrow" ? memoizedTheme.text : memoizedTheme.secondaryText }]}>Borrow</AppText>
+          {activeTab === "borrow" && <View style={[styles.activeTabIndicator, { backgroundColor: memoizedTheme.button }]} />}
         </TouchableOpacity>
         <TouchableOpacity onPress={() => { if (activeTab === "date") { setStartDate(moment().subtract(1, "months")); setEndDate(moment()); } setActiveTab("repay"); }} style={styles.tab}>
-          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "repay" ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93") }]}>Repay</AppText>
-          {activeTab === "repay" && <View style={styles.activeTabIndicator} />}
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "repay" ? memoizedTheme.text : memoizedTheme.secondaryText }]}>Repay</AppText>
+          {activeTab === "repay" && <View style={[styles.activeTabIndicator, { backgroundColor: memoizedTheme.button }]} />}
         </TouchableOpacity>
         <TouchableOpacity onPress={() => { if (activeTab === "date") { setStartDate(moment().subtract(1, "months")); setEndDate(moment()); } setActiveTab("interest"); }} style={styles.tab}>
-          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "interest" ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93") }]}>Interest</AppText>
-          {activeTab === "interest" && <View style={styles.activeTabIndicator} />}
+          <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "interest" ? memoizedTheme.text : memoizedTheme.secondaryText }]}>Interest</AppText>
+          {activeTab === "interest" && <View style={[styles.activeTabIndicator, { backgroundColor: memoizedTheme.button }]} />}
         </TouchableOpacity>
         {/* <TouchableOpacity onPress={() => setActiveTab("date")} style={styles.tab}>
           <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: activeTab === "date" ? (memoizedTheme?.text ?? "#000000") : (memoizedTheme?.secondaryText ?? "#8E8E93") }]}>Date</AppText>
@@ -254,14 +256,14 @@ const MarginBorrowRepayHistory = ({ route }) => {
 
       {activeTab === "date" && (
         <View style={styles.dateFilterContainer}>
-          <TouchableOpacity onPress={() => setDatePickerTarget("start")} style={[styles.dateFilterBtn, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9" }]}>
-            <AppText weight={MEDIUM} style={{ color: memoizedTheme?.text }}>
+          <TouchableOpacity onPress={() => setDatePickerTarget("start")} style={[styles.dateFilterBtn, { backgroundColor: inputBgColor }]}>
+            <AppText weight={MEDIUM} style={{ color: memoizedTheme.text }}>
               {startDate ? startDate.format("YYYY-MM-DD") : "From Date"}
             </AppText>
           </TouchableOpacity>
-          <AppText style={{ color: memoizedTheme?.secondaryText, marginHorizontal: 8 }}>—</AppText>
-          <TouchableOpacity onPress={() => setDatePickerTarget("end")} style={[styles.dateFilterBtn, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9" }]}>
-            <AppText weight={MEDIUM} style={{ color: memoizedTheme?.text }}>
+          <AppText style={{ color: memoizedTheme.secondaryText, marginHorizontal: 8 }}>—</AppText>
+          <TouchableOpacity onPress={() => setDatePickerTarget("end")} style={[styles.dateFilterBtn, { backgroundColor: inputBgColor }]}>
+            <AppText weight={MEDIUM} style={{ color: memoizedTheme.text }}>
               {endDate ? endDate.format("YYYY-MM-DD") : "To Date"}
             </AppText>
           </TouchableOpacity>
@@ -284,7 +286,7 @@ const MarginBorrowRepayHistory = ({ route }) => {
             ListEmptyComponent={
               <View style={styles.noDataRow}>
                 <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} style={{ width: 80, height: 80 }} resizeMode="contain" />
-                <AppText style={{ marginTop: 10, color: memoizedTheme?.secondaryText }}>No data found</AppText>
+                <AppText style={{ marginTop: 10, color: memoizedTheme.secondaryText }}>No data found</AppText>
               </View>
             }
           />
@@ -306,9 +308,10 @@ const MarginBorrowRepayHistory = ({ route }) => {
         }}
         onCancel={() => setDatePickerTarget(null)}
         maximumDate={new Date()}
-        buttonTextColorIOS={memoizedTheme?.text ?? "#000000"}
-        accentColor={memoizedTheme?.text ?? "#000000"}
+        buttonTextColorIOS={memoizedTheme.text}
+        accentColor={memoizedTheme.button}
         isDarkModeEnabled={isDark}
+        themeVariant={isDark ? "dark" : "light"}
       />
     </AppSafeAreaView>
   );
@@ -335,7 +338,6 @@ const styles = StyleSheet.create({
   activeTabIndicator: {
     height: 3,
     width: 24,
-    backgroundColor: colors.buttonBg,
     borderRadius: 2,
     position: "absolute",
     bottom: -1,

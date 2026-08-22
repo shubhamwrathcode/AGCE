@@ -229,8 +229,7 @@ const OptionsMarket = ({ search, isActive = true }) => {
         clearTimeout(batchTimerRef.current);
         batchTimerRef.current = null;
       }
-      optionsSocketService.disconnect();
-      return;
+      return undefined;
     }
 
     const socket = optionsSocketService.acquire();
@@ -327,7 +326,7 @@ const OptionsMarket = ({ search, isActive = true }) => {
           }
         });
       }
-      optionsSocketService.disconnect();
+      optionsSocketService.release();
     };
   }, [isScreenActive, handleContractsData]);
 

@@ -6,7 +6,7 @@ import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
 import * as routes from '../../../navigation/routes';
 import FastImage from 'react-native-fast-image';
-import { back_ic, easyVerificaton, enablepasskey, headPhoneIcon, highsecurity, INFO, multidevice, googleAuthenticator, PHONE, right_ic, securityrisk, FINGERPRINT, menuIcon, REMOVE, binIcon, passkey_login, security_risk_vector } from '../../../helper/ImageAssets';
+import { back_ic, easyVerificaton, enablepasskey, headPhoneIcon, highsecurity, INFO, multidevice, googleAuthenticator, PHONE, right_ic, securityrisk, FINGERPRINT, menuIcon, REMOVE, binIcon, passkey_login, security_risk_vector, security_risk_vector_light } from '../../../helper/ImageAssets';
 import { colors } from '../../../theme/colors';
 import { useAppSelector, useAppDispatch } from '../../../store/hooks';
 import { Passkey } from 'react-native-passkey';
@@ -524,7 +524,7 @@ const EnablePasskey = ({ route, navigation }) => {
           <TouchableOpacity activeOpacity={1} style={[styles.bottomSheet, { backgroundColor: isDark ? '#1E1E22' : '#FFFFFF' }]}>
             <View style={styles.handleBar} />
 
-            <FastImage source={security_risk_vector} style={styles.modalIllustration} resizeMode="contain" />
+            <FastImage source={isDark? security_risk_vector_light: security_risk_vector} style={styles.modalIllustration} resizeMode="contain" />
 
             <AppText type={TWENTY} weight={BOLD} style={[styles.modalTitle, { color: themeColors.text }]}>
               Remove Passkey?

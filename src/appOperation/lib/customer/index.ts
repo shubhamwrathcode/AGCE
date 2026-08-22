@@ -818,6 +818,12 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: POST security/passkey/auth/verify - returns { success, data: { userId } } */
   passkeyVerifyAuth: (signId: string, credential: object) =>
     appOperation.post('security/passkey/auth/verify', { signId, credential }, CUSTOMER_TYPE),
+  /** Same as web: POST security/passkey/step-up/options — authenticated security flows (delete passkey, etc.) */
+  passkeyGetStepUpOptions: () =>
+    appOperation.post('security/passkey/step-up/options', {}, CUSTOMER_TYPE),
+  /** Same as web: POST security/passkey/step-up/verify */
+  passkeyVerifyStepUp: (credential: object) =>
+    appOperation.post('security/passkey/step-up/verify', { credential }, CUSTOMER_TYPE),
   /** Same as web: POST security/passkey/delete - body { passkeyId, verifyMethod, code, passkeyUserId } */
   passkeyDelete: (passkeyId: string, verifyMethod: string, code: string | null, passkeyUserId: string | null) => {
     const data: any = { passkeyId, verifyMethod };

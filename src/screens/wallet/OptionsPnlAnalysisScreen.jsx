@@ -109,7 +109,7 @@ const OptionsPnlAnalysisScreen = () => {
 
   const pageBg = themeColors.background;
   const cardBorder = themeColors.border;
-  const cardBg = themeColors.themeElevationColor;
+  const cardBg = isDark ? "transparent" : themeColors.themeElevationColor;
   const cardSurfaceStyle = {
     backgroundColor: cardBg,
     borderWidth: StyleSheet.hairlineWidth,
@@ -123,7 +123,9 @@ const OptionsPnlAnalysisScreen = () => {
     ...cardSurfaceStyle,
     borderRadius: 12,
   };
-  const chipBg = pageBg;
+  const chipBg = isDark ? themeColors.background : colors.iconBgColor;
+  const periodActiveBg = isDark ? themeColors.button : colors.buttonBg;
+  const tabLineColor = isDark ? colors.white : colors.black;
 
   const openDatePicker = (which) => {
     setPickerDraft(parseDateInput(which === "from" ? dateFrom : dateTo));
@@ -196,7 +198,7 @@ const OptionsPnlAnalysisScreen = () => {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {error ? (
-          <View style={styles.errorBox}>
+          <View style={[styles.errorBox, { backgroundColor: isDark ? "rgba(237,78,78,0.15)" : "#FEE2E2" }]}>
             <AppText type={TWELVE} style={{ color: colors.red }}>{error}</AppText>
           </View>
         ) : null}
@@ -215,15 +217,14 @@ const OptionsPnlAnalysisScreen = () => {
                   key={p}
                   style={[
                     styles.periodBtn,
-                    { backgroundColor: period === p ? colors.buttonBg : chipBg },
+                    { backgroundColor: period === p ? periodActiveBg : chipBg },
                   ]}
                   onPress={() => applyPeriod(p)}
                 >
                   <AppText
                     type={TWELVE}
                     weight={SEMI_BOLD}
-                    color={period === p ? undefined : DISCLAIMTEXT}
-                    style={period === p ? { color: "#FFFFFF" } : undefined}
+                    style={{ color: period === p ? colors.white : themeColors.secondaryText }}
                   >
                     {p.toUpperCase()}
                   </AppText>
@@ -231,11 +232,11 @@ const OptionsPnlAnalysisScreen = () => {
               ))}
             </View>
             <View style={styles.dateRow}>
-              <TouchableOpacity onPress={() => openDatePicker("from")} style={[styles.dateCell, { backgroundColor: chipBg }]}>
+              <TouchableOpacity onPress={() => openDatePicker("from")} style={[styles.dateCell, { backgroundColor: chipBg, borderWidth: StyleSheet.hairlineWidth, borderColor: cardBorder }]}>
                 <AppText type={TWELVE} style={{ color: themeColors.text }}>{dateFrom || "—"}</AppText>
               </TouchableOpacity>
-              <AppText type={TWELVE} color={DISCLAIMTEXT}> → </AppText>
-              <TouchableOpacity onPress={() => openDatePicker("to")} style={[styles.dateCell, { backgroundColor: chipBg }]}>
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}> → </AppText>
+              <TouchableOpacity onPress={() => openDatePicker("to")} style={[styles.dateCell, { backgroundColor: chipBg, borderWidth: StyleSheet.hairlineWidth, borderColor: cardBorder }]}>
                 <AppText type={TWELVE} style={{ color: themeColors.text }}>{dateTo || "—"}</AppText>
               </TouchableOpacity>
             </View>
@@ -284,21 +285,26 @@ const OptionsPnlAnalysisScreen = () => {
           <View style={styles.viewTabs}>
             {["overview", "details"].map((tab) => (
               <TouchableOpacity key={tab} onPress={() => setViewTab(tab)} style={styles.viewTabBtn}>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} color={viewTab === tab ? themeColors.text : DISCLAIMTEXT}>
+                <AppText
+                  type={FOURTEEN}
+                  weight={SEMI_BOLD}
+                  style={{ color: viewTab === tab ? themeColors.text : themeColors.secondaryText }}
+                >
                   {tab === "overview" ? "Overview" : "Details"}
                 </AppText>
-                {viewTab === tab ? <View style={[styles.tabLine, { backgroundColor: colors.buttonBg }]} /> : null}
+                {viewTab === tab ? <View style={[styles.tabLine, { backgroundColor: tabLineColor }]} /> : null}
               </TouchableOpacity>
             ))}
           </View>
 
           {viewTab === "overview" && !loading && (
             <View>
-              <OptionsDailyPnlChart data={chart?.daily_account_pnl} themeColors={themeColors} />
+              <OptionsDailyPnlChart data={chart?.daily_account_pnl} themeColors={themeColors} isDark={isDark} />
               <OptionsCumulativePnlChart
                 usdtData={chart?.cumulative_pnl_usdt}
                 pctData={chart?.cumulative_pnl_pct}
                 themeColors={themeColors}
+                isDark={isDark}
               />
             </View>
           )}
@@ -330,15 +336,23 @@ const OptionsPnlAnalysisScreen = () => {
                 <View style={styles.pagination}>
                   <TouchableOpacity
                     disabled={detailsPage <= 1}
-                    style={[styles.pageBtn, { backgroundColor: chipBg }, detailsPage <= 1 && styles.pageBtnDisabled]}
+                    style={[
+                      styles.pageBtn,
+                      { backgroundColor: chipBg, borderWidth: StyleSheet.hairlineWidth, borderColor: cardBorder },
+                      detailsPage <= 1 && styles.pageBtnDisabled,
+                    ]}
                     onPress={() => setDetailsPage((p) => Math.max(1, p - 1))}
                   >
                     <AppText type={FOURTEEN} style={{ color: themeColors.text }}>‹</AppText>
                   </TouchableOpacity>
-                  <AppText type={TWELVE} color={DISCLAIMTEXT}>Page {detailsPage} / {detailsPages}</AppText>
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Page {detailsPage} / {detailsPages}</AppText>
                   <TouchableOpacity
                     disabled={detailsPage >= detailsPages}
-                    style={[styles.pageBtn, { backgroundColor: chipBg }, detailsPage >= detailsPages && styles.pageBtnDisabled]}
+                    style={[
+                      styles.pageBtn,
+                      { backgroundColor: chipBg, borderWidth: StyleSheet.hairlineWidth, borderColor: cardBorder },
+                      detailsPage >= detailsPages && styles.pageBtnDisabled,
+                    ]}
                     onPress={() => setDetailsPage((p) => p + 1)}
                   >
                     <AppText type={FOURTEEN} style={{ color: themeColors.text }}>›</AppText>
@@ -393,7 +407,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 10,
     borderRadius: 8,
-    backgroundColor: "#FEE2E2",
   },
   cardsRow: {
     flexDirection: "row",

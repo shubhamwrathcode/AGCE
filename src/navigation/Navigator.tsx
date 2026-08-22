@@ -813,7 +813,7 @@ function BottomNavigation() {
         initialRouteName={routes.HOME_SCREEN}
         backBehavior={"history"}
         tabBarPosition="bottom"
-        sceneContainerStyle={{ backgroundColor: "#FFFFFF" }}
+        sceneContainerStyle={{ backgroundColor: "#FFFFFF", overflow: "hidden" }}
         tabBar={renderTabBar}
         screenOptions={{
           swipeEnabled: false,

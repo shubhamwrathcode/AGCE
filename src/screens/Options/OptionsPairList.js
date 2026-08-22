@@ -1,17 +1,74 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState, memo } from "react";
 import {
   FlatList,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppText, ELEVEN, FOURTEEN, SEMI_BOLD, MEDIUM } from "../../shared";
 import { colors } from "../../theme/colors";
-import { closeIcon, NO_NOTIFICATION_ICON, searchIcon } from "../../helper/ImageAssets";
-import { IMAGE_BASE_URL } from '../../helper/Constants';
-import { useTheme } from '../../hooks/useTheme';
+import { toFixedFive } from "../../helper/utility";
+import { useTheme } from "../../hooks/useTheme";
+import { searchIcon, closeIcon } from "../../helper/ImageAssets";
+
+const TABS = ["USDT", "USDC"];
+
+const OptionsAssetRow = memo(({
+  item,
+  isSelected,
+  onSelect,
+  rowBorderColor,
+  searchBarBg,
+  textColor,
+  subTextColor,
+}) => {
+  const price = item?.price;
+  const priceStr = price != null && Number(price) > 0 ? toFixedFive(price) : "—";
+  const base = item?.base_currency || item?.symbol || "—";
+  const quote = item?.quote_currency || "";
+  const subtitle = quote ? `${base} Options` : "Options";
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.65}
+      onPress={() => onSelect(item)}
+      style={[
+        styles.row,
+        { borderBottomColor: rowBorderColor },
+        isSelected && styles.rowSelected,
+      ]}
+    >
+      <View style={styles.rowLeft}>
+        {item?.iconPath ? (
+          <FastImage source={{ uri: item.iconPath }} resizeMode="cover" style={styles.coinIcon} />
+        ) : (
+          <View style={[styles.coinIcon, { backgroundColor: searchBarBg }]} />
+        )}
+        <View style={styles.pairBlock}>
+          <Text style={[styles.pairLine, { color: textColor }]} numberOfLines={1}>
+            {base}
+            {quote ? (
+              <Text style={{ fontWeight: "400", color: subTextColor }}>/{quote}</Text>
+            ) : null}
+          </Text>
+          <Text style={[styles.subLine, { color: subTextColor }]} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.rowRight}>
+        <Text style={[styles.priceLine, { color: textColor }]} numberOfLines={1}>
+          {priceStr}
+        </Text>
+        <Text style={[styles.changeLine, { color: subTextColor }]} numberOfLines={1}>
+          {priceStr !== "—" ? `$${priceStr}` : "—"}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 const OptionsPairList = ({
   pairs = [],
@@ -19,170 +76,116 @@ const OptionsPairList = ({
   onSelectPair,
   searchTerm = "",
   onSearchChange,
-  theme = "Dark",
   onClose,
 }) => {
-  const { colors: themeColors, isDark } = useTheme();
+  const { theme, isDark, colors: themeColors } = useTheme();
   const [activeTab, setActiveTab] = useState("USDT");
 
+  const darkMode = typeof isDark === "boolean" ? isDark : theme === "Dark";
+  const modalBg = darkMode ? "#0F141C" : "#FFFFFF";
+  const textColor = darkMode ? "#FFFFFF" : "#000000";
+  const subTextColor = darkMode ? "rgba(255,255,255,0.55)" : "#9D9D9D";
+  const borderColor = darkMode ? "rgba(255,255,255,0.12)" : "#E8E8E8";
+  const rowBorderColor = darkMode ? "rgba(255,255,255,0.08)" : "#EEEEEE";
+  const searchBarBg = darkMode ? "rgba(255,255,255,0.06)" : "#F5F5F5";
+  const closeCircleBg = darkMode ? "rgba(255,255,255,0.12)" : "#E8E8E8";
+  const iconTint = darkMode ? colors.white : colors.black;
+  const searchTint = darkMode ? "rgba(255,255,255,0.65)" : "#595757";
+
   const handleSelect = (pair) => {
-    if (typeof onSelectPair === "function") {
-      onSelectPair(pair);
-    }
+    if (typeof onSelectPair === "function") onSelectPair(pair);
   };
 
-  const formatNumber = (data, decimal = 2) => {
-    const num = typeof data === "string" ? Number(data) : data;
-    if (typeof num === "number" && !isNaN(num)) {
-      return num.toLocaleString('en-US', { minimumFractionDigits: decimal, maximumFractionDigits: decimal });
-    }
-    return "0.00";
-  };
-
-  const filteredByTab = pairs.filter(p => p?.quote_currency?.toUpperCase() === activeTab);
+  const filteredData = useMemo(() => {
+    return pairs.filter((p) => (p?.quote_currency || "").toUpperCase() === activeTab);
+  }, [pairs, activeTab]);
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: themeColors.background },
-      ]}
-    >
-      {/* Header */}
+    <View style={[styles.container, { backgroundColor: modalBg }]}>
       <View style={styles.header}>
-        <AppText
-          type={FOURTEEN}
-          weight={SEMI_BOLD}
-          style={[styles.title, { color: themeColors.text, fontSize: 18 }]}
+        <Text style={[styles.title, { color: textColor }]}>Select Coin</Text>
+        <TouchableOpacity
+          onPress={() => onClose?.()}
+          style={[styles.closeCircle, { backgroundColor: closeCircleBg }]}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          activeOpacity={0.75}
         >
-          Select Asset
-        </AppText>
-
+          <FastImage source={closeIcon} resizeMode="contain" style={styles.closeIcon} tintColor={iconTint} />
+        </TouchableOpacity>
       </View>
 
-      <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
-
-      {/* Search Bar */}
-      <View
-        style={[
-          styles.searchWrapper,
-          { backgroundColor: isDark ? colors.themeElevationColor : '#fff', borderWidth: 0 },
-        ]}
-      >
-        <FastImage source={searchIcon} style={{ width: 16, height: 16, marginRight: 8 }} tintColor={themeColors.secondaryText} resizeMode="contain" />
+      <View style={[styles.searchRow, { backgroundColor: searchBarBg, borderColor }]}>
+        <FastImage source={searchIcon} resizeMode="contain" style={styles.searchGlyph} tintColor={searchTint} />
         <TextInput
           value={searchTerm}
           onChangeText={onSearchChange}
-          placeholder="Search"
-          placeholderTextColor={themeColors.secondaryText}
-          cursorColor={isDark ? colors.white : colors.black}
-          style={[
-            styles.searchInput,
-            { color: themeColors.text },
-          ]}
+          placeholder="Search token"
+          placeholderTextColor={subTextColor}
+          style={[styles.searchInput, { color: textColor }]}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
         />
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabsContainer}>
-        {["USDT", "USDC"].map((tab) => (
-          <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={styles.tabItem}>
-            <AppText
-              style={{
-                fontFamily: SEMI_BOLD,
-                fontSize: 15,
-                color: activeTab === tab ? themeColors.text : themeColors.secondaryText
-              }}
-            >
-              {tab}
-            </AppText>
-            {activeTab === tab && <View style={[styles.activeIndicator,
-            { backgroundColor: themeColors.text }]} />}
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.columnsHeader}>
-        <AppText style={[styles.columnText, { flex: 1, textAlign: 'left', color: themeColors.secondaryText }]}>Pair</AppText>
-        <AppText style={[styles.columnText, { flex: 1.5, textAlign: 'right', color: themeColors.secondaryText }]}>Price</AppText>
-        <AppText style={[styles.columnText, { flex: 1, textAlign: 'right', color: themeColors.secondaryText }]}>Change</AppText>
-      </View>
-
-      <FlatList
-        data={filteredByTab}
-        keyExtractor={(item) =>
-          item?._id ?? `${item?.base_currency}-${item?.quote_currency}`
-        }
-        keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 70, height: 70 }} resizeMode='contain' />
-          </View>
-        }
-        renderItem={({ item }) => {
-          const isSelected =
-            selectedPair?.base_currency === item?.base_currency &&
-            selectedPair?.quote_currency === item?.quote_currency;
-
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab;
           return (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => handleSelect(item)}
-              style={[
-                styles.row,
-                {
-                  backgroundColor: isSelected
-                    ? (isDark ? "#2A2A2E" : "#F7F7F7")
-                    : "transparent",
-                },
-              ]}
-            >
-              {/* Pair Info */}
-              <View style={[styles.cell, { flex: 1, flexDirection: 'row', alignItems: 'center' }]}>
-                {item?.iconPath ? (
-                  <FastImage source={{ uri: item.iconPath }} style={styles.coinIcon} resizeMode="contain" />
-                ) : (
-                  <View style={[styles.coinIcon, { backgroundColor: '#E0E0E0', borderRadius: 12 }]} />
-                )}
-                <View style={{ marginLeft: 8 }}>
-                  <AppText
-                    weight={SEMI_BOLD}
-                    style={{ color: themeColors.text, fontSize: 15 }}
-                  >
-                    {item?.base_currency}/{item?.quote_currency}
-                  </AppText>
-                  <AppText
-                    weight={MEDIUM}
-                    style={{ color: themeColors.secondaryText, fontSize: 13, marginTop: 2 }}
-                  >
-                    {item?.base_currency}
-                  </AppText>
-                </View>
-              </View>
-
-              {/* Price Info */}
-              <View style={[styles.cell, { flex: 1.5, alignItems: 'flex-end', justifyContent: 'center' }]}>
-                <AppText
-                  weight={SEMI_BOLD}
-                  style={{ color: themeColors.text, fontSize: 14 }}
-                >
-                  {formatNumber(item?.price)}
-                </AppText>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginTop: 2 }}>
-                  ${formatNumber(item?.price)}
-                </AppText>
-              </View>
-
-              {/* Change Info */}
-              <View style={[styles.cell, { flex: 1, alignItems: 'flex-end', justifyContent: 'center' }]}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>
-                  —
-                </AppText>
-              </View>
+            <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={styles.tabBtn} activeOpacity={0.7}>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isActive ? textColor : subTextColor, fontWeight: isActive ? "700" : "500" },
+                ]}
+              >
+                {tab}
+              </Text>
+              {isActive ? (
+                <View style={[styles.tabIndicator, { backgroundColor: themeColors.yellow || "#F3BB2B" }]} />
+              ) : null}
             </TouchableOpacity>
           );
-        }}
-      />
+        })}
+      </View>
+
+      <View style={[styles.tableHeaderWrap, { borderBottomColor: rowBorderColor }]}>
+        <View style={styles.tableHeaderLeft}>
+          <Text style={[styles.headerLabel, { color: subTextColor }]}>Pair</Text>
+        </View>
+        <View style={styles.tableHeaderRight}>
+          <Text style={[styles.headerLabel, { color: subTextColor }]}>Price</Text>
+          <Text style={[styles.headerLabel, { color: subTextColor, marginLeft: 6 }]}>/</Text>
+          <Text style={[styles.headerLabel, { color: subTextColor, marginLeft: 6 }]}>Index</Text>
+        </View>
+      </View>
+
+      <View style={styles.listFlex}>
+        <FlatList
+          data={filteredData}
+          style={styles.listFlex}
+          showsVerticalScrollIndicator={false}
+          keyExtractor={(item) => item?.symbol ?? `${item?.base_currency}-${item?.quote_currency}`}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Text style={[styles.emptyText, { color: subTextColor }]}>No assets found</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <OptionsAssetRow
+              item={item}
+              isSelected={selectedPair?.symbol === item?.symbol}
+              onSelect={handleSelect}
+              rowBorderColor={rowBorderColor}
+              searchBarBg={searchBarBg}
+              textColor={textColor}
+              subTextColor={subTextColor}
+            />
+          )}
+        />
+      </View>
     </View>
   );
 };
@@ -190,86 +193,155 @@ const OptionsPairList = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 10,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+    marginTop: 2,
   },
   title: {
-    textAlign: "left",
+    fontSize: 17,
+    fontWeight: "700",
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-    width: '100%',
-    marginBottom: 16,
+  closeCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#EAEAEA',
+  closeIcon: {
+    width: 15,
+    height: 15,
   },
-  searchInput: {
-    fontSize: 15,
-    flex: 1,
-    padding: 0,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 20,
-  },
-  tabItem: {
-    paddingBottom: 6,
-    position: 'relative',
-    alignItems: 'center',
-  },
-  activeIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    width: 20,
-    height: 3,
-    borderRadius: 1.5,
-  },
-  columnsHeader: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingLeft: 10,
+    paddingRight: 5,
+    paddingVertical: 4,
     marginBottom: 10,
   },
-  columnText: {
-    fontSize: 12,
-    color: '#9D9D9D',
+  searchGlyph: {
+    width: 14,
+    height: 14,
+    marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    minHeight: 34,
+  },
+  tabsContainer: {
+    flexDirection: "row",
+    marginBottom: 10,
+    gap: 14,
+  },
+  tabBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 6,
+  },
+  tabLabel: {
+    fontSize: 13,
+  },
+  tabIndicator: {
+    position: "absolute",
+    bottom: 0,
+    width: 18,
+    height: 3,
+    borderRadius: 2,
+  },
+  tableHeaderWrap: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: 8,
+    marginBottom: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  tableHeaderLeft: {
+    flex: 1,
+  },
+  tableHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    flex: 1,
+  },
+  headerLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  listFlex: {
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: 24,
+    flexGrow: 1,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 9,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  cell: {
-    justifyContent: 'center',
+  rowSelected: {
+    opacity: 0.92,
+  },
+  rowLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
+    paddingRight: 8,
   },
   coinIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 8,
   },
-  emptyState: {
-    paddingVertical: 24,
+  pairBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  pairLine: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  subLine: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  rowRight: {
+    alignItems: "flex-end",
+    maxWidth: "38%",
+  },
+  priceLine: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  changeLine: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  emptyWrap: {
+    paddingVertical: 40,
     alignItems: "center",
-    justifyContent: "center",
+  },
+  emptyText: {
+    fontSize: 13,
   },
 });
 

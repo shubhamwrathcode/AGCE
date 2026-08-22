@@ -17,7 +17,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { useRoute, useNavigation } from "@react-navigation/native";
 
 import { AppText, SEMI_BOLD, Button, MEDIUM } from "../../shared";
-import { colors, lightTheme } from "../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import {
   back_ic,
@@ -141,6 +141,7 @@ const WALLET_ICONS = {
 
 const MarginTransfer = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const inputBgColor = isDark ? darkTheme.darkThemeInputColor : "#F2F2F7";
   const route = useRoute();
   const navigation = useNavigation();
 
@@ -371,7 +372,7 @@ const MarginTransfer = () => {
 
   const renderWalletCard = (type, labelText, onPress) => {
     return (
-      <View style={[styles.directionCard, { backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7" }]}>
+      <View style={[styles.directionCard, { backgroundColor: inputBgColor }]}>
         <AppText style={styles.directionLabel}>{labelText}</AppText>
         <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.selectRow}>
           <AppText weight={SEMI_BOLD} style={[styles.directionValue, { color: themeColors.text }]}>
@@ -425,7 +426,7 @@ const MarginTransfer = () => {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => rbSheetMarginPairs.current?.open()}
-                    style={[styles.inputContainer, { backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7", marginBottom: 16 }]}
+                    style={[styles.inputContainer, { backgroundColor: inputBgColor, marginBottom: 16 }]}
                   >
                     {selectedMarginPair?.icon_path && (
                       <FastImage
@@ -464,7 +465,7 @@ const MarginTransfer = () => {
                                   paddingHorizontal: 12,
                                   paddingVertical: 12,
                                   borderColor: isSelected ? "#D1AA67" : themeColors.themeBorderColor,
-                                  backgroundColor: isSelected ? (isDark ? "#2A241C" : "#FCF2E1") : (isDark ? "#2A2A2E" : colors.white),
+                                  backgroundColor: isSelected ? (isDark ? "#2A241C" : "#FCF2E1") : (isDark ? darkTheme.darkThemeInputColor : colors.white),
                                 }
                               ]}
                             >
@@ -507,7 +508,7 @@ const MarginTransfer = () => {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => rbSheetCoins.current?.open()}
-                    style={[styles.inputContainer, { backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7", marginBottom: 16 }]}
+                    style={[styles.inputContainer, { backgroundColor: inputBgColor, marginBottom: 16 }]}
                   >
                     {selectedCurrency ? (
                       <FastImage
@@ -526,7 +527,7 @@ const MarginTransfer = () => {
 
               {/* Amount Input Section */}
               <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Amount</AppText>
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7" }]}>
+              <View style={[styles.inputContainer, { backgroundColor: inputBgColor }]}>
                 <TextInput
                   placeholder="0.00"
                   placeholderTextColor={isDark ? "#5A5A5C" : "#C7C7CC"}
@@ -600,7 +601,7 @@ const MarginTransfer = () => {
                   styles.accountCard,
                   {
                     borderColor: isDark ? themeColors.border : lightTheme.input,
-                    backgroundColor: isDark ? "transparent" : colors.white,
+                    backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "space-between"
@@ -650,7 +651,7 @@ const MarginTransfer = () => {
 
           onChangeText={setCoinSearch}
           style={{
-            backgroundColor: isDark ? "#2A2A2E" : "#F2F2F7", color: themeColors.text,
+            backgroundColor: inputBgColor, color: themeColors.text,
             borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 16,
             fontFamily: fontFamilyMedium
           }}

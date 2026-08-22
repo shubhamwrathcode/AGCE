@@ -58,7 +58,7 @@ import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
 import { setBuyOrders, setRecentTrades, setSellOrders, setSpotSelectedPair } from "../../slices/homeSlice";
 import { getUserSpotWallet } from "../../actions/walletActions";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
-import RBSheet from "react-native-raw-bottom-sheet";
+import AnimatedBottomSheet from "../../common/AnimatedBottomSheet/AnimatedBottomSheet";
 import FuturePairList from "./FuturePairList";
 import { colors, lightTheme } from "../../theme/colors";
 import * as routes from "../../navigation/routes";
@@ -977,7 +977,7 @@ const FutureChartScreen = () => {
       }
     };
   }, [webViewReady]);
-
+console.log(themeColors.background,'====bgcolor')
   const showSkeleton = !chartRevealed;
   const bg = themeColors.background ?? "transparent";
   const liveChangePct = liveMarketStats?.changePct ?? pairChange;
@@ -2057,38 +2057,15 @@ const FutureChartScreen = () => {
         </View>
       </View>
 
-      <RBSheet
-        ref={pairSheetRef}
-        keyboardAvoidingViewEnabled={false}
-        customModalProps={{ statusBarTranslucent: true }}
-        closeOnDragDown={true}
-        closeOnPressMask={true}
-        height={Dimensions.get("window").height * 0.7}
-        animationType="slide"
-        customStyles={{
-          container: {
-            backgroundColor: themeColors.themeElevationColor || themeColors.background,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-          },
-          wrapper: {
-            backgroundColor: "#0006",
-          },
-          draggableIcon: {
-            backgroundColor: themeColors.themeBorderColor || "#ccc",
-            width: 40,
-          },
-        }}
-      >
+      <AnimatedBottomSheet ref={pairSheetRef} isDark={isDark} theme={theme}>
         <FuturePairList
           pairs={pairData}
-          selectedPair={mergedPair}
           onSelectPair={handleCurrencyChange}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onClose={() => pairSheetRef.current?.close()}
         />
-      </RBSheet>
+      </AnimatedBottomSheet>
     </View>
   );
 };

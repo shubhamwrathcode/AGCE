@@ -7,6 +7,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import RBSheet from 'react-native-raw-bottom-sheet';
+import AnimatedBottomSheet from '../../common/AnimatedBottomSheet/AnimatedBottomSheet';
 import FuturePairList from './FuturePairList';
 import { useFuturesSocket } from './useFuturesSocket';
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, TWELVE, FOURTEEN, SIXTEEN, TEN, THIRTEEN, Button } from '../../shared';
@@ -239,7 +240,7 @@ const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
 const FuturesUI = () => {
   const themeObj = useTheme();
   const dispatch = useDispatch();
-  const { colors: themeColors, isDark } = themeObj;
+  const { colors: themeColors, isDark, theme } = themeObj;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
@@ -316,6 +317,42 @@ const FuturesUI = () => {
   const [futuresPositions, setFuturesPositions] = useState([]);
   const [loadingPositions, setLoadingPositions] = useState(false);
 
+  const historyFetchGenRef = React.useRef({
+    positions: 0,
+    positionHistory: 0,
+    openOrders: 0,
+    orderHistory: 0,
+    transactionHistory: 0,
+  });
+
+  const setHistoryTabLoading = React.useCallback((tabId) => {
+    switch (tabId) {
+      case 'Positions':
+        setLoadingPositions(true);
+        break;
+      case 'Position History':
+        setLoadingPositionHistory(true);
+        break;
+      case 'Open Orders':
+        setLoadingOpenOrders(true);
+        break;
+      case 'Order History':
+        setLoadingOrderHistory(true);
+        break;
+      case 'Transaction History':
+        setLoadingTransactionHistory(true);
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const handleHistoryTabChange = React.useCallback((tabId) => {
+    if (tabId === activeHistoryTab) return;
+    setHistoryTabLoading(tabId);
+    setActiveHistoryTab(tabId);
+  }, [activeHistoryTab, setHistoryTabLoading]);
+
   const tpAnim = useRef(new Animated.Value(0)).current;
   const slAnim = useRef(new Animated.Value(0)).current;
   const [isTpFocused, setIsTpFocused] = useState(false);
@@ -375,6 +412,7 @@ const FuturesUI = () => {
   }, [isAmountFocused, amount]);
 
   const pairSheetRef = useRef(null);
+  const pairOpenLockRef = useRef(false);
 
   const {
     futuresData,
@@ -414,85 +452,120 @@ const FuturesUI = () => {
   }, [route.params?.coin, route.params?.pair, route.params?.coinDetail, subscribeToFutures, dispatch]);
 
   const fetchFuturesPositions = React.useCallback(async () => {
-    if (!selectedCoin?.symbol) return;
+    if (!selectedCoin?.symbol) {
+      setLoadingPositions(false);
+      return;
+    }
+    const gen = ++historyFetchGenRef.current.positions;
+    setLoadingPositions(true);
     try {
-      setLoadingPositions(true);
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOpenPositions(params);
+      if (gen !== historyFetchGenRef.current.positions) return;
       if (result?.success) {
         setFuturesPositions(result.data?.positions ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.positions) return;
       console.warn("fetchFuturesPositions err:", e);
     } finally {
-      setLoadingPositions(false);
+      if (gen === historyFetchGenRef.current.positions) {
+        setLoadingPositions(false);
+      }
     }
   }, [selectedCoin?.symbol]);
 
   const fetchFuturesPositionHistory = React.useCallback(async () => {
     if (!selectedCoin?.symbol) {
+      setLoadingPositionHistory(false);
       return;
     }
+    const gen = ++historyFetchGenRef.current.positionHistory;
+    setLoadingPositionHistory(true);
     try {
-      setLoadingPositionHistory(true);
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresPositionHistory(params);
+      if (gen !== historyFetchGenRef.current.positionHistory) return;
       if (result?.success) {
         setFuturesPositionHistory(result.data?.positions ?? []);
       } else {
         console.log("[PositionHistory] API failed or success=false", result);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.positionHistory) return;
       console.warn("[PositionHistory] fetchFuturesPositionHistory err:", e);
     } finally {
-      setLoadingPositionHistory(false);
+      if (gen === historyFetchGenRef.current.positionHistory) {
+        setLoadingPositionHistory(false);
+      }
     }
   }, [selectedCoin?.symbol]);
 
   const fetchFuturesOpenOrders = React.useCallback(async () => {
-    if (!selectedCoin?.symbol) return;
+    if (!selectedCoin?.symbol) {
+      setLoadingOpenOrders(false);
+      return;
+    }
+    const gen = ++historyFetchGenRef.current.openOrders;
+    setLoadingOpenOrders(true);
     try {
-      setLoadingOpenOrders(true);
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOpenOrders(params);
+      if (gen !== historyFetchGenRef.current.openOrders) return;
       if (result?.success) {
         setFuturesOpenOrders(result.data?.orders ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.openOrders) return;
       console.warn("fetchFuturesOpenOrders err:", e);
     } finally {
-      setLoadingOpenOrders(false);
+      if (gen === historyFetchGenRef.current.openOrders) {
+        setLoadingOpenOrders(false);
+      }
     }
   }, [selectedCoin?.symbol]);
 
   const fetchFuturesOrderHistory = React.useCallback(async () => {
-    if (!selectedCoin?.symbol) return;
+    if (!selectedCoin?.symbol) {
+      setLoadingOrderHistory(false);
+      return;
+    }
+    const gen = ++historyFetchGenRef.current.orderHistory;
+    setLoadingOrderHistory(true);
     try {
-      setLoadingOrderHistory(true);
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOrderHistory(params);
+      if (gen !== historyFetchGenRef.current.orderHistory) return;
       if (result?.success) {
         setFuturesOrderHistory(result.data?.orders ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.orderHistory) return;
       console.warn("fetchFuturesOrderHistory err:", e);
     } finally {
-      setLoadingOrderHistory(false);
+      if (gen === historyFetchGenRef.current.orderHistory) {
+        setLoadingOrderHistory(false);
+      }
     }
   }, [selectedCoin?.symbol]);
 
   const fetchFuturesTransactionHistory = React.useCallback(async () => {
+    const gen = ++historyFetchGenRef.current.transactionHistory;
+    setLoadingTransactionHistory(true);
     try {
-      setLoadingTransactionHistory(true);
       const params = { page: 1, limit: 50 };
       const result = await appOperation.customer.futuresWalletHistory(params);
+      if (gen !== historyFetchGenRef.current.transactionHistory) return;
       if (result?.success) {
         setFuturesTransactionHistory(result.data?.transactions ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.transactionHistory) return;
       console.warn("fetchFuturesTransactionHistory err:", e);
     } finally {
-      setLoadingTransactionHistory(false);
+      if (gen === historyFetchGenRef.current.transactionHistory) {
+        setLoadingTransactionHistory(false);
+      }
     }
   }, []);
 
@@ -1064,11 +1137,21 @@ const FuturesUI = () => {
 
   useEffect(() => {
     if (isFocused) {
-      subscribeToMarket?.();
+      subscribeToMarket?.("futures");
     } else {
-      unsubscribeFromMarket?.();
+      unsubscribeFromMarket?.("futures");
     }
   }, [isFocused, subscribeToMarket, unsubscribeFromMarket]);
+
+  const openPairSheet = React.useCallback(() => {
+    if (!liveCoin) return;
+    if (pairOpenLockRef.current) return;
+    pairOpenLockRef.current = true;
+    pairSheetRef.current?.open();
+    setTimeout(() => {
+      pairOpenLockRef.current = false;
+    }, 400);
+  }, [liveCoin]);
 
   const handleSelectCoin = (pair) => {
     dispatch(setFuturesData(null));
@@ -1083,36 +1166,45 @@ const FuturesUI = () => {
   };
 
 
-  const Header = () => (
+  const renderHeader = React.useCallback(() => (
     <View style={{ paddingTop: 10, paddingBottom: 10, paddingHorizontal: 16, backgroundColor: themeColors.background }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <View>
-          <TouchableOpacity style={styles.pairRow} onPress={() => pairSheetRef.current?.open()} disabled={!liveCoin}>
-            {liveCoin ? (
-              <>
+        <TouchableOpacity
+          style={styles.pairTouchTarget}
+          onPress={openPairSheet}
+          activeOpacity={0.75}
+          disabled={!liveCoin}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Select trading pair"
+        >
+          {liveCoin ? (
+            <>
+              <View style={styles.pairRow}>
                 <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ fontSize: 20 }}>
                   {`${liveCoin.short_name || liveCoin.base_asset}/${liveCoin.margin_asset}`}
                 </AppText>
-                <FastImage source={downIcon} style={styles.smallIcon} resizeMode='contain' tintColor={themeColors.text} />
-              </>
-            ) : (
+                <FastImage source={downIcon} style={styles.smallIcon} resizeMode="contain" tintColor={themeColors.text} />
+              </View>
+              <View style={styles.changeBadge}>
+                <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.white }}>
+                  {`${liveCoin.change_percentage >= 0 ? '+' : ''}${liveCoin.change_percentage || 0}%`}
+                </AppText>
+              </View>
+            </>
+          ) : (
+            <>
               <ShimmerBox width={150} height={24} borderRadius={4} />
-            )}
-          </TouchableOpacity>
-          <View style={liveCoin ? styles.changeBadge : { marginTop: 4 }}>
-            {liveCoin ? (
-              <AppText type={TWELVE} weight={MEDIUM} style={{ color: colors.white }}>
-                {`${liveCoin.change_percentage >= 0 ? '+' : ''}${liveCoin.change_percentage || 0}%`}
-              </AppText>
-            ) : (
-              <ShimmerBox width={60} height={18} borderRadius={4} />
-            )}
-          </View>
-        </View>
+              <View style={{ marginTop: 4 }}>
+                <ShimmerBox width={60} height={18} borderRadius={4} />
+              </View>
+            </>
+          )}
+        </TouchableOpacity>
 
         <View style={[styles.headerIcons, { flexDirection: 'row', gap: 4 }]}>
           <TouchableOpacity
-            style={{ padding: 6 }}
+            style={styles.headerIconBtn}
             activeOpacity={0.7}
             onPress={() => {
               if (liveCoin) {
@@ -1128,7 +1220,7 @@ const FuturesUI = () => {
             />
           </TouchableOpacity>
           <TouchableOpacity
-            style={{ padding: 6, marginLeft: 2 }}
+            style={styles.headerIconBtn}
             activeOpacity={0.7}
             onPress={() => {
               if (liveCoin) {
@@ -1146,7 +1238,7 @@ const FuturesUI = () => {
         </View>
       </View>
     </View>
-  );
+  ), [activeHistoryTab, liveCoin, navigation, openPairSheet, themeColors.text]);
 
   const obAsks = React.useMemo(() => {
     const allAsks = futuresData?.sell_order || [];
@@ -2010,7 +2102,7 @@ const FuturesUI = () => {
           <TouchableOpacity
             key={t.id}
             activeOpacity={0.8}
-            onPress={() => setActiveHistoryTab(t.id)}
+            onPress={() => handleHistoryTabChange(t.id)}
             style={{ alignItems: "center", minHeight: 28, justifyContent: "center", paddingHorizontal: 2 }}
           >
             <AppText
@@ -2076,7 +2168,7 @@ const FuturesUI = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <Header />
+      {renderHeader()}
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.mainContent}>
           {renderOrderBook()}
@@ -2085,39 +2177,6 @@ const FuturesUI = () => {
         <View style={styles.divider} />
         {renderBottomTabs()}
         {renderHistoryContent()}
-
-        <RBSheet
-          ref={pairSheetRef}
-          keyboardAvoidingViewEnabled={false}
-          customModalProps={{ statusBarTranslucent: true }}
-          closeOnDragDown={true}
-          closeOnPressMask={true}
-          height={Dimensions.get("window").height * 0.7}
-          animationType="slide"
-          customStyles={{
-            container: {
-              backgroundColor: themeColors.background,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-            },
-            wrapper: {
-              backgroundColor: "#0006",
-            },
-            draggableIcon: {
-              backgroundColor: themeColors.themeBorderColor || "#ccc",
-              width: 40,
-            },
-          }}
-        >
-          <FuturePairList
-            pairs={pairData}
-            selectedPair={selectedCoin}
-            onSelectPair={handleSelectCoin}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onClose={() => pairSheetRef.current?.close()}
-          />
-        </RBSheet>
 
         {/* Margin Mode Sheet */}
         <RBSheet
@@ -2657,6 +2716,16 @@ const FuturesUI = () => {
         </RBSheet>
 
       </ScrollView>
+
+      <AnimatedBottomSheet ref={pairSheetRef} isDark={isDark} theme={theme}>
+        <FuturePairList
+          pairs={pairData}
+          onSelectPair={handleSelectCoin}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onClose={() => pairSheetRef.current?.close()}
+        />
+      </AnimatedBottomSheet>
     </View >
   );
 };
@@ -2677,7 +2746,20 @@ const styles = StyleSheet.create({
   pairRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+  },
+  pairTouchTarget: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    paddingVertical: 4,
+    paddingRight: 12,
+    justifyContent: 'center',
+  },
+  headerIconBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
   },
   smallIcon: {
     width: 12,
@@ -2690,6 +2772,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
     alignSelf: 'flex-start',
+    marginTop: 4,
   },
   headerIcons: {
     flexDirection: 'row',

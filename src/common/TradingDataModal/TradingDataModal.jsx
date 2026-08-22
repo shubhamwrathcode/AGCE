@@ -24,8 +24,8 @@ import { addToFavorites } from "../../actions/homeActions";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SHEET_HEIGHT = Math.min(SCREEN_HEIGHT * 0.82, 640);
-const OPEN_MS = 280;
-const CLOSE_MS = 240;
+const OPEN_MS = 230;
+const CLOSE_MS = 210;
 const GESTURE_LOCK_MS = 320;
 
 function compactVolume(value) {
@@ -155,7 +155,8 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
   onCloseRef.current = onClose;
   visiblePropRef.current = visible;
 
-  const anim = useRef(new Animated.Value(0)).current;
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
   const mountedRef = useRef(false);
   const isOpenRef = useRef(false);
   const isClosingRef = useRef(false);
@@ -165,6 +166,9 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
   const openFallbackRef = useRef(null);
   const runOpenRef = useRef(() => { });
   const runCloseRef = useRef(() => { });
+
+  const darkMode = typeof isDark === "boolean" ? isDark : theme === "Dark";
+  const backdropMax = darkMode ? 0.55 : 0.35;
 
   const applyPendingAndNotify = useCallback(() => {
     const pending = pendingCurrencyRef.current;
@@ -183,7 +187,7 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
       openFallbackRef.current = null;
     }
     isClosingRef.current = false;
-    Animated.timing(anim, {
+    Animated.timing(sheetAnim, {
       toValue: 1,
       duration: OPEN_MS,
       easing: Easing.out(Easing.cubic),
@@ -191,7 +195,7 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
     }).start(({ finished }) => {
       if (finished) isOpenRef.current = true;
     });
-  }, [anim]);
+  }, [sheetAnim]);
 
   const runOpen = useCallback(() => {
     const now = Date.now();
@@ -205,13 +209,15 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
     ignoreBackdropUntilRef.current = now + GESTURE_LOCK_MS;
     pendingOpenRef.current = true;
     isOpenRef.current = false;
-    anim.stopAnimation();
-    anim.setValue(0);
+    sheetAnim.stopAnimation();
+    backdropAnim.stopAnimation();
+    sheetAnim.setValue(0);
+    backdropAnim.setValue(backdropMax);
     setSearchQuery("");
     mountedRef.current = true;
     setMounted(true);
-    openFallbackRef.current = setTimeout(playOpenAnim, 32);
-  }, [anim, playOpenAnim]);
+    openFallbackRef.current = setTimeout(playOpenAnim, 48);
+  }, [backdropAnim, backdropMax, playOpenAnim, sheetAnim]);
 
   const runClose = useCallback(() => {
     if (!mountedRef.current || isClosingRef.current) return;
@@ -224,21 +230,30 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
       clearTimeout(openFallbackRef.current);
       openFallbackRef.current = null;
     }
-    anim.stopAnimation();
+    sheetAnim.stopAnimation();
+    backdropAnim.stopAnimation();
 
-    Animated.timing(anim, {
-      toValue: 0,
-      duration: CLOSE_MS,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
+    Animated.parallel([
+      Animated.timing(sheetAnim, {
+        toValue: 0,
+        duration: CLOSE_MS,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropAnim, {
+        toValue: 0,
+        duration: CLOSE_MS,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
       isClosingRef.current = false;
       if (!finished) return;
       mountedRef.current = false;
       setMounted(false);
       applyPendingAndNotify();
     });
-  }, [anim, applyPendingAndNotify]);
+  }, [applyPendingAndNotify, backdropAnim, sheetAnim]);
 
   runOpenRef.current = runOpen;
   runCloseRef.current = runClose;
@@ -277,7 +292,6 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
     playOpenAnim();
   }, [playOpenAnim]);
 
-  const darkMode = typeof isDark === "boolean" ? isDark : theme === "Dark";
   const modalBg = darkMode ? "#0F141C" : "#FFFFFF";
   const textColor = darkMode ? "#FFFFFF" : "#000000";
   const subTextColor = darkMode ? "rgba(255,255,255,0.55)" : "#9D9D9D";
@@ -287,13 +301,12 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
   const closeCircleBg = darkMode ? "rgba(255,255,255,0.12)" : "#E8E8E8";
   const iconTint = darkMode ? colors.white : colors.black;
   const searchTint = darkMode ? "rgba(255,255,255,0.65)" : "#595757";
-  const backdropMax = darkMode ? 0.55 : 0.35;
 
-  const sheetTranslateY = anim.interpolate({
+  const sheetTranslateY = sheetAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [SHEET_HEIGHT, 0],
   });
-  const backdropOpacity = anim.interpolate({
+  const backdropOpacity = backdropAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, backdropMax],
   });
@@ -498,8 +511,6 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
       transparent
       animationType="none"
       statusBarTranslucent
-      hardwareAccelerated
-      presentationStyle="overFullScreen"
       onRequestClose={requestClose}
       onShow={handleModalShow}
     >
@@ -520,7 +531,6 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
             },
           ]}
           collapsable={false}
-          renderToHardwareTextureAndroid
         >
           <View style={styles.header}>
             <Text style={[styles.title, { color: textColor }]}>Select Coin</Text>
@@ -578,6 +588,7 @@ const styles = StyleSheet.create({
   modalRoot: {
     flex: 1,
     justifyContent: "flex-end",
+    overflow: "hidden",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

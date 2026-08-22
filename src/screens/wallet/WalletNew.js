@@ -36,7 +36,7 @@ import {
   share_ic,
 } from "../../helper/ImageAssets";
 import FastImage from "react-native-fast-image";
-import { colors } from "../../theme/colors";
+import { colors, darkTheme } from "../../theme/colors";
 import WalletList from "./WalletList";
 import NavigationService from "../../navigation/NavigationService";
 import { useDispatch } from "react-redux";
@@ -63,7 +63,7 @@ import { toFixedFive } from "../../helper/utility";
 import {
   ACCOUNT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN,
   WALLET_SCREEN, SELECT_COIN_SCREEN,
-  MARGIN_TRANSFER_SCREEN, OPTIONS_PNL_ANALYSIS_SCREEN,
+  MARGIN_TRANSFER_SCREEN, OPTIONS_PNL_ANALYSIS_SCREEN, EARNING_SCREEN,
 } from "../../navigation/routes";
 import WalletSkeleton from "./WalletSkeleton";
 import RBSheet from "react-native-raw-bottom-sheet";
@@ -893,7 +893,7 @@ const WalletNew = ({ route }) => {
                           </View>
 
                           {shouldShowCryptoSearch ? (
-                            <View style={[styles.aoCryptoSearchRow, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
+                            <View style={[styles.aoCryptoSearchRow, { backgroundColor: isDark ?darkTheme.darkThemeInputColor : '#F7F7F7' }]}>
                               <FastImage
                                 source={searchIcon}
                                 resizeMode="contain"
@@ -1286,7 +1286,7 @@ const WalletNew = ({ route }) => {
                         setFailedIconMap={setFailedIconMap}
                         userWalletRows={userEarningWallet}
                         actions={[
-                          { key: "earning", label: "Earning", onPress: () => NavigationService.navigate(ACCOUNT_SCREEN) },
+                          { key: "earning", label: "Earning", onPress: () => NavigationService.navigate(EARNING_SCREEN) },
                           {
                             key: "transfer",
                             label: "Transfer",
@@ -1475,7 +1475,7 @@ const WalletNew = ({ route }) => {
         onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
         onP2PTrade={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
         onSwap={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
-        onEarning={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
+        onEarning={() => NavigationService.navigate(EARNING_SCREEN)}
         onFutures={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
       />
 

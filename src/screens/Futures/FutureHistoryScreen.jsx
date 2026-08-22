@@ -22,19 +22,55 @@ const FutureHistoryScreen = () => {
   const [activeHistoryTab, setActiveHistoryTab] = useState(initialTab);
 
   const [futuresPositions, setFuturesPositions] = useState([]);
-  const [loadingPositions, setLoadingPositions] = useState(false);
+  const [loadingPositions, setLoadingPositions] = useState(initialTab === 'Positions');
 
   const [futuresPositionHistory, setFuturesPositionHistory] = useState([]);
-  const [loadingPositionHistory, setLoadingPositionHistory] = useState(false);
+  const [loadingPositionHistory, setLoadingPositionHistory] = useState(initialTab === 'Position History');
 
   const [futuresOpenOrders, setFuturesOpenOrders] = useState([]);
-  const [loadingOpenOrders, setLoadingOpenOrders] = useState(false);
+  const [loadingOpenOrders, setLoadingOpenOrders] = useState(initialTab === 'Open Orders');
 
   const [futuresOrderHistory, setFuturesOrderHistory] = useState([]);
-  const [loadingOrderHistory, setLoadingOrderHistory] = useState(false);
+  const [loadingOrderHistory, setLoadingOrderHistory] = useState(initialTab === 'Order History');
 
   const [futuresTransactionHistory, setFuturesTransactionHistory] = useState([]);
-  const [loadingTransactionHistory, setLoadingTransactionHistory] = useState(false);
+  const [loadingTransactionHistory, setLoadingTransactionHistory] = useState(initialTab === 'Transaction History');
+
+  const historyFetchGenRef = React.useRef({
+    positions: 0,
+    positionHistory: 0,
+    openOrders: 0,
+    orderHistory: 0,
+    transactionHistory: 0,
+  });
+
+  const setHistoryTabLoading = useCallback((tabId) => {
+    switch (tabId) {
+      case 'Positions':
+        setLoadingPositions(true);
+        break;
+      case 'Position History':
+        setLoadingPositionHistory(true);
+        break;
+      case 'Open Orders':
+        setLoadingOpenOrders(true);
+        break;
+      case 'Order History':
+        setLoadingOrderHistory(true);
+        break;
+      case 'Transaction History':
+        setLoadingTransactionHistory(true);
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const handleHistoryTabChange = useCallback((tabId) => {
+    if (tabId === activeHistoryTab) return;
+    setHistoryTabLoading(tabId);
+    setActiveHistoryTab(tabId);
+  }, [activeHistoryTab, setHistoryTabLoading]);
 
   // We can fetch price for mark price calculation if needed, or pass it
   const futuresPrice = route.params?.futuresPrice || null;
@@ -49,79 +85,116 @@ const FutureHistoryScreen = () => {
   ], [futuresPositions, futuresOpenOrders]);
 
   const fetchFuturesPositions = useCallback(async () => {
-    if (!selectedCoin?.symbol) return;
+    if (!selectedCoin?.symbol) {
+      setLoadingPositions(false);
+      return;
+    }
+    const gen = ++historyFetchGenRef.current.positions;
+    setLoadingPositions(true);
     try {
-      setLoadingPositions(true);
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
       const result = await appOperation.customer.futuresOpenPositions(params);
+      if (gen !== historyFetchGenRef.current.positions) return;
       if (result?.success) {
         setFuturesPositions(result.data?.positions ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.positions) return;
     } finally {
-      setLoadingPositions(false);
+      if (gen === historyFetchGenRef.current.positions) {
+        setLoadingPositions(false);
+      }
     }
   }, [selectedCoin?.symbol]);
 
   const fetchFuturesPositionHistory = useCallback(async () => {
-    if (!selectedCoin?.symbol) return;
+    if (!selectedCoin?.symbol) {
+      setLoadingPositionHistory(false);
+      return;
+    }
+    const gen = ++historyFetchGenRef.current.positionHistory;
+    setLoadingPositionHistory(true);
     try {
-      setLoadingPositionHistory(true);
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
       const result = await appOperation.customer.futuresPositionHistory(params);
+      if (gen !== historyFetchGenRef.current.positionHistory) return;
       if (result?.success) {
         setFuturesPositionHistory(result.data?.positions ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.positionHistory) return;
     } finally {
-      setLoadingPositionHistory(false);
+      if (gen === historyFetchGenRef.current.positionHistory) {
+        setLoadingPositionHistory(false);
+      }
     }
   }, [selectedCoin?.symbol]);
 
   const fetchFuturesOpenOrders = useCallback(async () => {
-    if (!selectedCoin?.symbol) return;
+    if (!selectedCoin?.symbol) {
+      setLoadingOpenOrders(false);
+      return;
+    }
+    const gen = ++historyFetchGenRef.current.openOrders;
+    setLoadingOpenOrders(true);
     try {
-      setLoadingOpenOrders(true);
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
       const result = await appOperation.customer.futuresOpenOrders(params);
+      if (gen !== historyFetchGenRef.current.openOrders) return;
       if (result?.success) {
         setFuturesOpenOrders(result.data?.orders ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.openOrders) return;
       console.warn("fetchFuturesOpenOrders err:", e);
     } finally {
-      setLoadingOpenOrders(false);
+      if (gen === historyFetchGenRef.current.openOrders) {
+        setLoadingOpenOrders(false);
+      }
     }
   }, [selectedCoin?.symbol]);
 
   const fetchFuturesOrderHistory = useCallback(async () => {
-    if (!selectedCoin?.symbol) return;
+    if (!selectedCoin?.symbol) {
+      setLoadingOrderHistory(false);
+      return;
+    }
+    const gen = ++historyFetchGenRef.current.orderHistory;
+    setLoadingOrderHistory(true);
     try {
-      setLoadingOrderHistory(true);
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOrderHistory(params);
+      if (gen !== historyFetchGenRef.current.orderHistory) return;
       if (result?.success) {
         setFuturesOrderHistory(result.data?.orders ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.orderHistory) return;
       console.warn("fetchFuturesOrderHistory err:", e);
     } finally {
-      setLoadingOrderHistory(false);
+      if (gen === historyFetchGenRef.current.orderHistory) {
+        setLoadingOrderHistory(false);
+      }
     }
   }, [selectedCoin?.symbol]);
 
   const fetchFuturesTransactionHistory = useCallback(async () => {
+    const gen = ++historyFetchGenRef.current.transactionHistory;
+    setLoadingTransactionHistory(true);
     try {
-      setLoadingTransactionHistory(true);
       const params = { page: 1, limit: 50 };
       const result = await appOperation.customer.futuresWalletHistory(params);
+      if (gen !== historyFetchGenRef.current.transactionHistory) return;
       if (result?.success) {
         setFuturesTransactionHistory(result.data?.transactions ?? []);
       }
     } catch (e) {
+      if (gen !== historyFetchGenRef.current.transactionHistory) return;
       console.warn("fetchFuturesTransactionHistory err:", e);
     } finally {
-      setLoadingTransactionHistory(false);
+      if (gen === historyFetchGenRef.current.transactionHistory) {
+        setLoadingTransactionHistory(false);
+      }
     }
   }, []);
 
@@ -156,7 +229,7 @@ const FutureHistoryScreen = () => {
           <TouchableOpacity
             key={t.id}
             activeOpacity={0.8}
-            onPress={() => setActiveHistoryTab(t.id)}
+            onPress={() => handleHistoryTabChange(t.id)}
             style={{ alignItems: "center", minHeight: 28, justifyContent: "center", paddingHorizontal: 2 }}
           >
             <AppText

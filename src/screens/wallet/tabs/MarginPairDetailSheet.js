@@ -4,14 +4,46 @@ import { appOperation } from "../../../appOperation";
 import { CUSTOMER_TYPE } from "../../../appOperation/types";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
-import { AppText, BOLD, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, SIXTEEN, TWENTY_SIX } from "../../../shared";
+import { AppText, BOLD, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
 import { colors } from "../../../theme/colors";
 import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_BORROW_REPAY_SCREEN, MARGIN_TRANSFER_SCREEN, TRADE_SCREEN } from "../../../navigation/routes";
 import { close_ic } from "../../../helper/ImageAssets";
 
+const DetailRow = ({ label, valBase, valQuote, base, quote, themeColors }) => (
+  <View style={styles.row}>
+    <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>{label}</AppText>
+    <View style={{ alignItems: "flex-end" }}>
+      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{valBase} {base}</AppText>
+      <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>{valQuote} {quote}</AppText>
+    </View>
+  </View>
+);
+
+const ActionBtn = ({ label, onPress, theme, themeColors }) => (
+  <TouchableOpacity
+    style={[
+      styles.actionBtn,
+      { backgroundColor: theme === "Dark" ? themeColors.themeElevationColor : colors.iconBgColor },
+    ]}
+    onPress={onPress}
+  >
+    <AppText
+      type={TWELVE}
+      weight={SEMI_BOLD}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.85}
+      style={{ color: themeColors.text, textAlign: "center" }}
+    >
+      {label}
+    </AppText>
+  </TouchableOpacity>
+);
+
 const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, buildCoinIconUri }, ref) => {
   const [liveData, setLiveData] = useState(null);
+  const isDark = theme === "Dark";
 
   useEffect(() => {
     if (selectedPair?.pair_id) {
@@ -39,14 +71,16 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
       openDuration={250}
       customStyles={{
         container: {
-          backgroundColor: theme === "Dark" ? colors.black : colors.white,
+          backgroundColor: themeColors.background,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
         },
+        wrapper: { backgroundColor: "#0006" },
+        draggableIcon: { backgroundColor: isDark ? "#444" : "#CCC", width: 40 },
       }}
     >
       {selectedPair && (
-        <View style={{ flex: 1, paddingBottom: 10 }}>
+        <View style={{ flex: 1, paddingBottom: 10, backgroundColor: themeColors.background }}>
           <View style={[styles.header, { borderBottomWidth: 1, borderBottomColor: themeColors.border }]}>
             <View style={styles.titleRow}>
               <FastImage
@@ -55,8 +89,8 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
                 resizeMode="cover"
               />
               <View>
-                <AppText type={SIXTEEN} weight={BOLD}>{selectedPair.pair}</AppText>
-                <AppText type={FOURTEEN} color={DISCLAIMTEXT}>{selectedPair.base} / {selectedPair.quote}</AppText>
+                <AppText type={SIXTEEN} weight={BOLD} style={{ color: themeColors.text }}>{selectedPair.pair}</AppText>
+                <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>{selectedPair.base} / {selectedPair.quote}</AppText>
               </View>
             </View>
             <TouchableOpacity onPress={() => ref.current?.close()} style={styles.closeBtn}>
@@ -66,57 +100,74 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
 
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             <View style={styles.hero}>
-              <AppText type={TWENTY_SIX} weight={BOLD}>{selectedPair.netBase} {selectedPair.base}</AppText>
-              <AppText type={FOURTEEN} color={DISCLAIMTEXT}>{selectedPair.netQuote} {selectedPair.quote}</AppText>
+              <AppText type={TWENTY_SIX} weight={BOLD} style={{ color: themeColors.text }}>{selectedPair.netBase} {selectedPair.base}</AppText>
+              <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>{selectedPair.netQuote} {selectedPair.quote}</AppText>
             </View>
 
             <View style={styles.content}>
-              <DetailRow label="Available" valBase={selectedPair.availableBase} valQuote={selectedPair.availableQuote} base={selectedPair.base} quote={selectedPair.quote} />
-              <DetailRow label="Borrowable" valBase={borrowableBase} valQuote={borrowableQuote} base={selectedPair.base} quote={selectedPair.quote} />
-              <DetailRow label="Loan Cap" valBase={selectedPair.loanCapBase} valQuote={selectedPair.loanCapQuote} base={selectedPair.base} quote={selectedPair.quote} />
-              <DetailRow label="Borrowed" valBase={selectedPair.borrowedBase} valQuote={selectedPair.borrowedQuote} base={selectedPair.base} quote={selectedPair.quote} />
-              <DetailRow label="Frozen" valBase={selectedPair.frozenBase} valQuote={selectedPair.frozenQuote} base={selectedPair.base} quote={selectedPair.quote} />
+              <DetailRow label="Available" valBase={selectedPair.availableBase} valQuote={selectedPair.availableQuote} base={selectedPair.base} quote={selectedPair.quote} themeColors={themeColors} />
+              <DetailRow label="Borrowable" valBase={borrowableBase} valQuote={borrowableQuote} base={selectedPair.base} quote={selectedPair.quote} themeColors={themeColors} />
+              <DetailRow label="Loan Cap" valBase={selectedPair.loanCapBase} valQuote={selectedPair.loanCapQuote} base={selectedPair.base} quote={selectedPair.quote} themeColors={themeColors} />
+              <DetailRow label="Borrowed" valBase={selectedPair.borrowedBase} valQuote={selectedPair.borrowedQuote} base={selectedPair.base} quote={selectedPair.quote} themeColors={themeColors} />
+              <DetailRow label="Frozen" valBase={selectedPair.frozenBase} valQuote={selectedPair.frozenQuote} base={selectedPair.base} quote={selectedPair.quote} themeColors={themeColors} />
 
               <View style={styles.row}>
-                <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Est. Liq. Price</AppText>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD}>{selectedPair.liqPrice || "—"}</AppText>
+                <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>Est. Liq. Price</AppText>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{selectedPair.liqPrice || "—"}</AppText>
               </View>
 
               {selectedPair.mmr ? (
                 <View style={styles.row}>
-                  <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Margin Level</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD}>{selectedPair.marginLevel}</AppText>
+                  <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>Margin Level</AppText>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{selectedPair.marginLevel}</AppText>
                 </View>
               ) : null}
             </View>
           </ScrollView>
 
           <View style={styles.actions}>
-            <ActionBtn label="Borrow / Repay" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, { activeTab: "Borrow", pairId: selectedPair.pair_id, pair: selectedPair.name, coin: selectedPair.base }); }} />
-            <ActionBtn label="Transfer" onPress={() => { ref.current?.close(); NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "margin", coin: selectedPair?.base }); }} />
-            <ActionBtn label="Trade" onPress={() => { ref.current?.close(); NavigationService.navigate(TRADE_SCREEN, { trade_pair: selectedPair.pairRaw }); }} />
+            <ActionBtn
+              label="Borrow / Repay"
+              theme={theme}
+              themeColors={themeColors}
+              onPress={() => {
+                ref.current?.close();
+                NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, {
+                  activeTab: "Borrow",
+                  pairId: selectedPair.pair_id,
+                  pair: selectedPair.name,
+                  coin: selectedPair.base,
+                });
+              }}
+            />
+            <ActionBtn
+              label="Transfer"
+              theme={theme}
+              themeColors={themeColors}
+              onPress={() => {
+                ref.current?.close();
+                NavigationService.navigate(MARGIN_TRANSFER_SCREEN, {
+                  fromWalletType: "spot",
+                  toWalletType: "margin",
+                  coin: selectedPair?.base,
+                });
+              }}
+            />
+            <ActionBtn
+              label="Trade"
+              theme={theme}
+              themeColors={themeColors}
+              onPress={() => {
+                ref.current?.close();
+                NavigationService.navigate(TRADE_SCREEN, { trade_pair: selectedPair.pairRaw });
+              }}
+            />
           </View>
         </View>
       )}
     </RBSheet>
   );
 });
-
-const DetailRow = ({ label, valBase, valQuote, base, quote }) => (
-  <View style={styles.row}>
-    <AppText type={FOURTEEN} color={DISCLAIMTEXT}>{label}</AppText>
-    <View style={{ alignItems: "flex-end" }}>
-      <AppText type={FOURTEEN} weight={SEMI_BOLD}>{valBase} {base}</AppText>
-      <AppText type={FOURTEEN} color={DISCLAIMTEXT}>{valQuote} {quote}</AppText>
-    </View>
-  </View>
-);
-
-const ActionBtn = ({ label, onPress }) => (
-  <TouchableOpacity style={styles.actionBtn} onPress={onPress}>
-    <AppText type={FOURTEEN} weight={SEMI_BOLD}>{label}</AppText>
-  </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
   header: {
@@ -167,10 +218,10 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     height: 44,
-    backgroundColor: "#F5F6F7", // Generic grey
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 6,
   },
 });
 

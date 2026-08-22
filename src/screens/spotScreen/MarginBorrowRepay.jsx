@@ -22,7 +22,7 @@ import {
   BOLD
 } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
-import { colors } from "../../theme/colors";
+import { colors, darkTheme } from "../../theme/colors";
 import {
   back_ic,
   historyIcon,
@@ -64,7 +64,7 @@ function ShimmerCell({ width: w, height, borderRadius = 6, style, isDark }) {
     };
   }, [shimmerX, w]);
 
-  const boneColor = isDark ? "#2A2A2A" : "#E1E9EE";
+  const boneColor = isDark ? darkTheme.darkThemeInputColor : "#E1E9EE";
   const shimmerColors = isDark
     ? ["transparent", "rgba(255,255,255,0.08)", "transparent"]
     : ["transparent", "rgba(255,255,255,0.6)", "transparent"];
@@ -128,6 +128,8 @@ function BorrowRepaySkeleton({ isDark }) {
 
 const MarginBorrowRepay = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const inputBgColor = isDark ? darkTheme.darkThemeInputColor : "#F7F7F9";
+  const chipBgColor = isDark ? darkTheme.darkThemeInputColor : colors.white;
   const route = useRoute();
 
   const marginMode = route?.params?.marginMode || "Isolated";
@@ -414,7 +416,7 @@ const MarginBorrowRepay = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? "#171a20" : colors.white }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       {/* Header */}
       <View style={[styles.header]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 18 }}>
@@ -481,7 +483,7 @@ const MarginBorrowRepay = () => {
             <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text, marginBottom: 8 }}>Cross Margin Asset</AppText>
             <TouchableOpacity
               onPress={() => { setSearchQuery(""); assetSheetRef.current?.open(); }}
-              style={[styles.inputContainer, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9", marginBottom: 16, justifyContent: "space-between" }]}
+              style={[styles.inputContainer, { backgroundColor: inputBgColor, marginBottom: 16, justifyContent: "space-between" }]}
             >
               <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 15 }}>{selectedAsset}</AppText>
               <AppText weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, transform: [{ rotate: '90deg' }] }}>›</AppText>
@@ -493,7 +495,7 @@ const MarginBorrowRepay = () => {
             <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text, marginBottom: 8 }}>Isolated Margin Pair</AppText>
             <TouchableOpacity
               onPress={() => pairSheetRef.current?.open()}
-              style={[styles.inputContainer, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9", marginBottom: 16, justifyContent: "space-between" }]}
+              style={[styles.inputContainer, { backgroundColor: inputBgColor, marginBottom: 16, justifyContent: "space-between" }]}
             >
               <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 15 }}>{selectedPairStr}</AppText>
               <AppText weight={SEMI_BOLD} style={{ color: themeColors.secondaryText, transform: [{ rotate: '90deg' }] }}>›</AppText>
@@ -543,8 +545,8 @@ const MarginBorrowRepay = () => {
                         paddingHorizontal: 10,
                         borderRadius: 12,
                         borderWidth: 1.5,
-                        borderColor: isSelected ? "#D9B37E" : (isDark ? "#2C2C2E" : "#F3F4F6"),
-                        backgroundColor: isSelected ? (isDark ? "#2A2218" : "#FDF6ED") : (isDark ? "#1C1C1E" : "#FFFFFF"),
+                        borderColor: isSelected ? "#D9B37E" : themeColors.themeBorderColor,
+                        backgroundColor: isSelected ? (isDark ? "#2A241C" : "#FDF6ED") : chipBgColor,
                         shadowColor: "#000",
                         shadowOffset: { width: 0, height: 1 },
                         shadowOpacity: 0.05,
@@ -588,7 +590,7 @@ const MarginBorrowRepay = () => {
         {!isBorrow && !hasLoan && (
           <View style={{
             flexDirection: "row",
-            backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9",
+            backgroundColor: inputBgColor,
             padding: 16,
             borderRadius: 8,
             marginTop: 12,
@@ -623,7 +625,7 @@ const MarginBorrowRepay = () => {
                         {parseFloat(interestAccrued || 0).toFixed(8).replace(/\.?0+$/, "")} {selectedAsset}
                       </AppText>
                     </View>
-                    <View style={[styles.detailRow, { borderTopWidth: 1, borderTopColor: "rgba(128,128,128,0.15)", paddingTop: 10, marginTop: 4 }]}>
+                    <View style={[styles.detailRow, { borderTopWidth: 1, borderTopColor: themeColors.border, paddingTop: 10, marginTop: 4 }]}>
                       <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Total Owed</AppText>
                       <AppText weight={SEMI_BOLD} style={{ fontSize: 14, color: themeColors.text }}>
                         {parseFloat(outstandingTotal || 0).toFixed(8).replace(/\.?0+$/, "")} {selectedAsset}
@@ -676,7 +678,7 @@ const MarginBorrowRepay = () => {
                 {crossBorrowableData?.binding && (
                   <View style={styles.detailRow}>
                     <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>Limited by</AppText>
-                    <AppText style={{ fontSize: 14, color: "#8E949E" }}>
+                    <AppText style={{ fontSize: 14, color: themeColors.secondaryText }}>
                       {crossBorrowableData.binding === "equity" ? "Your margin capacity"
                         : crossBorrowableData.binding === "pool" ? "Lending pool liquidity"
                         : crossBorrowableData.binding === "user_cap" ? "Per-user limit"
@@ -695,10 +697,10 @@ const MarginBorrowRepay = () => {
                 </AppText>
 
                 {/* Input */}
-                <View style={[styles.inputContainer, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9", marginBottom: 8 }]}>
+                <View style={[styles.inputContainer, { backgroundColor: inputBgColor, marginBottom: 8 }]}>
                   <TextInput
                     placeholder={`Enter amount to ${isBorrow ? "borrow" : "repay"}`}
-                    placeholderTextColor="#8E8E93"
+                    placeholderTextColor={themeColors.secondaryText}
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="numeric"
@@ -710,7 +712,7 @@ const MarginBorrowRepay = () => {
                     <TouchableOpacity onPress={() => {
                       const maxBorrowAmt = parseFloat(finalBorrowable || 0).toFixed(8).replace(/\.?0+$/, "");
                       setAmount(String(isBorrow ? maxBorrowAmt : maxRepay));
-                    }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ backgroundColor: isDark ? "#3A3A3C" : "#EEEEEE", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
+                    }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ backgroundColor: isDark ? themeColors.themeElevationColor : "#EEEEEE", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
                       <AppText style={{ color: themeColors.text, fontSize: 12 }}>Max</AppText>
                     </TouchableOpacity>
                   </View>
@@ -834,7 +836,7 @@ const MarginBorrowRepay = () => {
               activeOpacity={0.8}
               onPress={handleConfirm}
               disabled={busy}
-              style={[styles.actionBtn, { backgroundColor: isDark ? "#1C1C1E" : "#11141D", marginBottom: 16, flexDirection: "row", gap: 8 }]}
+              style={[styles.actionBtn, { backgroundColor: isDark ? themeColors.button : "#11141D", marginBottom: 16, flexDirection: "row", gap: 8 }]}
             >
               {busy && <ActivityIndicator color={colors.white} size="small" />}
               <AppText weight={SEMI_BOLD} style={{ color: colors.white, fontSize: 16 }}>
@@ -853,20 +855,21 @@ const MarginBorrowRepay = () => {
         openDuration={250}
         customStyles={{
           container: {
-            backgroundColor: isDark ? colors.black : colors.white,
+            backgroundColor: themeColors.background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
           },
+          draggableIcon: { backgroundColor: isDark ? "#374151" : "#E5E7EB", width: 40 },
         }}
       >
-        <View style={{ flex: 1, padding: 16 }}>
+        <View style={{ flex: 1, padding: 16, backgroundColor: themeColors.background }}>
           <AppText weight={SEMI_BOLD} style={{ fontSize: 18, marginBottom: 16, color: themeColors.text }}>Select Pair</AppText>
           <TextInput
             placeholder="Search pair..."
-            placeholderTextColor="#8E8E93"
+            placeholderTextColor={themeColors.secondaryText}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={[styles.inputContainer, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9", color: themeColors.text, marginBottom: 16 }]}
+            style={[styles.inputContainer, { backgroundColor: inputBgColor, color: themeColors.text, marginBottom: 16 }]}
           />
           <ScrollView showsVerticalScrollIndicator={false}>
             {filteredPairs.map((p) => {
@@ -878,7 +881,7 @@ const MarginBorrowRepay = () => {
               return (
                 <TouchableOpacity
                   key={pStr}
-                  style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: isDark ? "#2C2C2E" : "#F7F7F9" }}
+                  style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: themeColors.border }}
                   onPress={() => {
                     setSelectedPairStr(pStr);
                     setSelectedAsset(p.base_currency);
@@ -906,35 +909,36 @@ const MarginBorrowRepay = () => {
         openDuration={250}
         customStyles={{
           container: {
-            backgroundColor: isDark ? colors.black : colors.white,
+            backgroundColor: themeColors.background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
           },
+          draggableIcon: { backgroundColor: isDark ? "#374151" : "#E5E7EB", width: 40 },
         }}
       >
-        <View style={{ flex: 1, padding: 16 }}>
+        <View style={{ flex: 1, padding: 16, backgroundColor: themeColors.background }}>
           <AppText weight={SEMI_BOLD} style={{ fontSize: 18, marginBottom: 16, color: themeColors.text }}>Select Asset</AppText>
           <TextInput
             placeholder="Search asset..."
-            placeholderTextColor="#8E8E93"
+            placeholderTextColor={themeColors.secondaryText}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={[styles.inputContainer, { backgroundColor: isDark ? "#2C2C2E" : "#F7F7F9", color: themeColors.text, marginBottom: 16 }]}
+            style={[styles.inputContainer, { backgroundColor: inputBgColor, color: themeColors.text, marginBottom: 16 }]}
           />
           <ScrollView showsVerticalScrollIndicator={false}>
             {filteredCrossAssets.map((a) => (
               <TouchableOpacity
                 key={a.currency}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: isDark ? "#2C2C2E" : "#F7F7F9" }}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: themeColors.border }}
                 onPress={() => {
                   setSelectedAsset(a.currency);
                   setAmount("");
                   assetSheetRef.current?.close();
                 }}
               >
-                <AppText weight={MEDIUM} style={{ fontSize: 16, color: selectedAsset === a.currency ? colors.buttonBg : themeColors.text }}>{a.currency}</AppText>
+                <AppText weight={MEDIUM} style={{ fontSize: 16, color: themeColors.text }}>{a.currency}</AppText>
                 {selectedAsset === a.currency && (
-                  <FastImage source={checkIc} style={{ width: 14, height: 14 }} tintColor={colors.buttonBg} />
+                  <FastImage source={checkIc} style={{ width: 14, height: 14 }} tintColor={isDark ? colors.white : themeColors.button} />
                 )}
               </TouchableOpacity>
             ))}

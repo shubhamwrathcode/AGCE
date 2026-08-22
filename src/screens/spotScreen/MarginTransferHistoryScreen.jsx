@@ -20,7 +20,7 @@ import {
   TWELVE,
 } from "../../shared";
 import { useTheme } from "../../hooks/useTheme";
-import { colors } from "../../theme/colors";
+import { colors, darkTheme } from "../../theme/colors";
 import { back_ic, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, filterIcon, REMOVE, calendarIcon } from "../../helper/ImageAssets";
 import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
@@ -143,16 +143,16 @@ const TradeKvRow = React.memo(({ label, value, color, secColor }) => {
 });
 
 const HistoryCard = React.memo(({ item, themeColors, isDark }) => {
-  const textColor = themeColors.text ?? "#000000";
-  const secColor = isDark ? "#8E8E93" : "#888888";
+  const textColor = themeColors.text;
+  const secColor = themeColors.secondaryText;
 
   const isTo = item.direction?.startsWith("To");
   const directionColor = item.direction && item.direction !== "—"
-    ? (isTo ? (themeColors.green ?? "#00C076") : (themeColors.red ?? "#E86161"))
+    ? (isTo ? (themeColors.green ?? colors.green) : (themeColors.red ?? colors.red))
     : textColor;
 
   return (
-    <View style={[styles.historyCard, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "transparent" }]}>
+    <View style={[styles.historyCard, { backgroundColor: "transparent" }]}>
       {/* Pair Header */}
       <View style={styles.headerRow}>
         <AppText weight={BOLD} style={{ fontSize: 15, color: textColor }}>
@@ -169,7 +169,7 @@ const HistoryCard = React.memo(({ item, themeColors, isDark }) => {
         <TradeKvRow label="From" value={item.from} color={secColor} secColor={secColor} />
         <TradeKvRow label="To" value={item.to} color={secColor} secColor={secColor} />
       </View>
-      <View style={[styles.divider, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(112, 59, 59, 0.05)" }]} />
+      <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
     </View>
   );
 });
@@ -180,6 +180,11 @@ const MarginTransferHistoryScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const { colors: themeColors, isDark } = useTheme();
+  const inputBgColor = isDark ? darkTheme.darkThemeInputColor : "#F2F2F7";
+  const dropdownTriggerStyle = {
+    backgroundColor: inputBgColor,
+    borderColor: themeColors.themeBorderColor,
+  };
 
   // Applied Filters
   const [accountType, setAccountType] = useState("Isolated Margin");
@@ -195,6 +200,7 @@ const MarginTransferHistoryScreen = () => {
   const [tempContract, setTempContract] = useState(contract);
   const [tempStartDate, setTempStartDate] = useState(startDate);
   const [tempEndDate, setTempEndDate] = useState(endDate);
+  const [openDropdown, setOpenDropdown] = useState(null);
 
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [datePickerTarget, setDatePickerTarget] = useState("start");
@@ -292,6 +298,7 @@ const MarginTransferHistoryScreen = () => {
   }, [hasMore, loadingMore, loading, page, fetchData]);
 
   const openFilterSheet = () => {
+    setOpenDropdown(null);
     setTempAccountType(accountType);
     setTempDirection(direction);
     setTempContract(contract);
@@ -301,6 +308,7 @@ const MarginTransferHistoryScreen = () => {
   };
 
   const closeFilterSheet = () => {
+    setOpenDropdown(null);
     filterSheetRef.current?.close();
   };
 
@@ -352,17 +360,6 @@ const MarginTransferHistoryScreen = () => {
     return <TradeHistorySkeleton />;
   };
 
-  const inputStyle = {
-    backgroundColor: themeColors.card,
-    borderColor: themeColors.border,
-    borderWidth: 1,
-    height: 48,
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background ?? "#FFFFFF" }]}>
       {/* Header */}
@@ -398,13 +395,17 @@ const MarginTransferHistoryScreen = () => {
         ref={filterSheetRef}
         height={650}
         openDuration={250}
+        closeOnDragDown
+        closeOnPressMask
+        customModalProps={{ statusBarTranslucent: true }}
         customStyles={{
           container: {
-            backgroundColor: isDark ? "#121212" : colors.white,
+            backgroundColor: themeColors.background,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             paddingTop: 16,
           },
+          draggableIcon: { backgroundColor: isDark ? "#374151" : "#E5E7EB", width: 40 },
         }}
       >
         <View style={styles.sheetHeader}>
@@ -412,31 +413,52 @@ const MarginTransferHistoryScreen = () => {
 
         </View>
 
-        <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 250 }}>
           {/* Account */}
-          <View style={styles.filterSection}>
+          <View style={[styles.filterSection, { zIndex: 4000 }]}>
             <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Account</AppText>
-            <CustomDropdown data={ACCOUNT_OPTIONS} selected={tempAccountType} onSelect={setTempAccountType} />
+            <CustomDropdown
+              data={ACCOUNT_OPTIONS}
+              selected={tempAccountType}
+              onSelect={setTempAccountType}
+              triggerStyle={dropdownTriggerStyle}
+              isOpen={openDropdown === "account"}
+              onToggle={(val) => setOpenDropdown(val ? "account" : null)}
+            />
           </View>
 
           {/* Direction */}
-          <View style={styles.filterSection}>
+          <View style={[styles.filterSection, { zIndex: 3000 }]}>
             <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Direction</AppText>
-            <CustomDropdown data={DIRECTION_OPTIONS} selected={tempDirection} onSelect={setTempDirection} />
+            <CustomDropdown
+              data={DIRECTION_OPTIONS}
+              selected={tempDirection}
+              onSelect={setTempDirection}
+              triggerStyle={dropdownTriggerStyle}
+              isOpen={openDropdown === "direction"}
+              onToggle={(val) => setOpenDropdown(val ? "direction" : null)}
+            />
           </View>
 
           {/* Contract */}
-          <View style={styles.filterSection}>
+          <View style={[styles.filterSection, { zIndex: 2000 }]}>
             <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Contract</AppText>
-            <CustomDropdown data={contractOptions} selected={tempContract} onSelect={setTempContract} />
+            <CustomDropdown
+              data={contractOptions}
+              selected={tempContract}
+              onSelect={setTempContract}
+              triggerStyle={dropdownTriggerStyle}
+              isOpen={openDropdown === "contract"}
+              onToggle={(val) => setOpenDropdown(val ? "contract" : null)}
+            />
           </View>
 
           {/* Date */}
-          <View style={styles.filterSection}>
+          <View style={[styles.filterSection, { zIndex: 1000 }]}>
             <AppText style={[styles.filterLabel, { color: themeColors.secondaryText }]}>Date</AppText>
             <View style={styles.dateRow}>
               <TouchableOpacity
-                style={[styles.dateInput, { borderColor: themeColors.border }]}
+                style={[styles.dateInput, { borderColor: themeColors.themeBorderColor, backgroundColor: inputBgColor }]}
                 onPress={() => { setDatePickerTarget("start"); setDatePickerVisible(true); }}
               >
                 <AppText style={{ color: tempStartDate ? themeColors.text : themeColors.secondaryText, fontSize: 13 }}>
@@ -445,7 +467,7 @@ const MarginTransferHistoryScreen = () => {
               </TouchableOpacity>
               <AppText style={{ color: themeColors.secondaryText, marginHorizontal: 8 }}>→</AppText>
               <TouchableOpacity
-                style={[styles.dateInput, { borderColor: themeColors.border }]}
+                style={[styles.dateInput, { borderColor: themeColors.themeBorderColor, backgroundColor: inputBgColor }]}
                 onPress={() => { setDatePickerTarget("end"); setDatePickerVisible(true); }}
               >
                 <AppText style={{ color: tempEndDate ? themeColors.text : themeColors.secondaryText, fontSize: 13 }}>
@@ -462,8 +484,8 @@ const MarginTransferHistoryScreen = () => {
           </View>
         </ScrollView>
 
-        <View style={[styles.sheetFooter, { borderTopColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }]}>
-          <TouchableOpacity style={[styles.footerBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }]} onPress={handleResetFilters}>
+        <View style={[styles.sheetFooter, { borderTopColor: themeColors.border }]}>
+          <TouchableOpacity style={[styles.footerBtn, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : "rgba(0,0,0,0.05)" }]} onPress={handleResetFilters}>
             <AppText weight={SEMI_BOLD} style={{ color: themeColors.text }}>Reset</AppText>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.footerBtn, { backgroundColor: themeColors.button }]} onPress={handleApplyFilters}>

@@ -50,41 +50,6 @@ const SpotMarket = ({ coinPairs, search = "", subCategory = "All", hideStar = tr
 
   return (
     <View style={styles.container}>
-      {/* Quote Currency */}
-      {/* <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.filterScroll, styles.filterScrollType]}
-        style={styles.filterRow}
-      >
-        {QUOTE_OPTIONS.map((opt) => (
-          <TouchableOpacity
-            key={opt.key}
-            onPress={() => setSpotQuoteCurrency(opt.key)}
-            style={[
-              styles.chip, 
-              styles.chipWithIcon, 
-              { 
-                backgroundColor: chipBg(spotQuoteCurrency === opt.key),
-                borderColor: chipBorder(spotQuoteCurrency === opt.key),
-                borderWidth: 1
-              }
-            ]}
-            activeOpacity={0.8}
-          >
-            {opt.key !== "All" && (
-              <FastImage
-                source={opt.icon}
-                resizeMode="contain"
-                style={styles.chipIcon}
-              />
-            )}
-            <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: chipTextColor(spotQuoteCurrency === opt.key) }}>
-              {opt.label}
-            </AppText>
-          </TouchableOpacity>
-        ))}
-      </ScrollView> */}
 
       <MarketList filterData={filterData} onPress={handleNavigate} hideStar={hideStar} favoriteArray={favoriteArray} onToggleFavorite={onToggleFavorite} />
     </View>

@@ -31,6 +31,7 @@ import React, {
 } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SpotHeader from "../../shared/components/spotHeader/SpotHeader";
+import TradingDataModal from "../../common/TradingDataModal/TradingDataModal";
 import FastImage from "react-native-fast-image";
 import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
 import MarginBottomSection from "./MarginBottomSection";
@@ -90,12 +91,15 @@ import PercentQuickSelect from "../../shared/components/PercentQuickSelect";
 import ReactNativeModal from "react-native-modal";
 import { getPastOrders } from "../../actions/homeActions";
 import { getTradeHistory } from "../../actions/walletActions";
+import HistorySectionLoader from "../../common/HistorySectionLoader/HistorySectionLoader";
 import {
   setBuyOrders,
   setPastOrders,
   setRecentTrades,
   setSellOrders,
   setSpotSelectedPair,
+  setOpenOrders,
+  setCoinData,
 } from "../../slices/homeSlice";
 import { clearTradeHistory } from "../../slices/walletSlice";
 import { setLoading } from "../../slices/authSlice";
@@ -181,6 +185,14 @@ function spotDropdownLabelFromSideFilter(filterVal) {
   return "All Sides";
 }
 
+function spotMeOpenOrdersItemsFromResponse(response) {
+  const d = response?.data;
+  if (Array.isArray(d?.items)) return d.items;
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(d)) return d;
+  return [];
+}
+
 function matchesOpenOrderKind(item, kind) {
   if (kind === "all") return true;
   const t = String(item?.type || item?.order_type || "").toUpperCase();
@@ -223,6 +235,27 @@ function spotPastOrderMatchesScreenPair(order, baseSym, quoteSym) {
     if (prefix === b) return true;
   }
   return false;
+}
+
+/** Collect every stable id for an order row (API vs socket may populate different fields). */
+function spotOrderHistoryIds(item) {
+  return [item?._id, item?.id, item?.order_id, item?.client_order_id]
+    .filter((v) => v != null && String(v).trim() !== "")
+    .map((v) => String(v).trim());
+}
+
+/** Dedupe order history — same order may appear with different id fields after socket + REST merge. */
+function dedupeSpotOrderHistoryRows(rows) {
+  const seen = new Set();
+  const out = [];
+  for (const r of rows || []) {
+    const ids = spotOrderHistoryIds(r);
+    if (!ids.length) continue;
+    if (ids.some((id) => seen.has(id))) continue;
+    ids.forEach((id) => seen.add(id));
+    out.push(r);
+  }
+  return out;
 }
 
 export const Data = [
@@ -1261,6 +1294,7 @@ const Spot = () => {
   // DEV helper: render only History tabs + lists (skip heavy orderbook/form)
   const historyOnly = __DEV__ && route?.params?.historyOnly === true;
 
+  const pairSheetRef = useRef(null);
   const rbSheetNumber = useRef();
   const rbSheetlimit = useRef();
   const rbSheetAddFunds = useRef();
@@ -1608,27 +1642,13 @@ const Spot = () => {
   /** `activeTab` + `mountedOrdersTab` stay in sync — single panel only (web-style API lists; no duplicate slide UI). */
   const [activeTab, setActiveTab] = useState(1);
   const [mountedOrdersTab, setMountedOrdersTab] = useState(1);
+  const [loadingSpotOpenOrders, setLoadingSpotOpenOrders] = useState(false);
+  const [loadingSpotOrderHistory, setLoadingSpotOrderHistory] = useState(false);
+  const [loadingSpotTradeHistory, setLoadingSpotTradeHistory] = useState(false);
+  const spotHistoryFetchGenRef = useRef({ openOrders: 0, orderHistory: 0, tradeHistory: 0 });
   activeTabRef.current = activeTab;
 
-  // Swipe animation for bottom tabs content (1 ↔ 2 ↔ 3)
-  const ordersTabsPrevRef = useRef(activeTab);
-  const ordersTabsAnimX = useRef(new Animated.Value(0)).current;
-  const animateOrdersTabsSwitch = useCallback(
-    (nextTabId) => {
-      const prev = ordersTabsPrevRef.current;
-      ordersTabsPrevRef.current = nextTabId;
-      const dir = nextTabId > prev ? 1 : -1;
-      ordersTabsAnimX.setValue(dir * (Width * 0.25));
-      Animated.timing(ordersTabsAnimX, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-    },
-    [ordersTabsAnimX],
-  );
-
-  /** Bottom tabs row: scroll so left tabs align left, right tab aligns right (narrow screens). */
+  // Bottom tabs row: scroll so left tabs align left, right tab aligns right (narrow screens).
   const ordersBottomTabScrollRef = useRef(null);
   const ordersBottomTabBarWidthRef = useRef(0);
   const ordersBottomTabItemLayoutRef = useRef({});
@@ -1667,12 +1687,14 @@ const Spot = () => {
       if (tabId < 1 || tabId > 3) return;
       if (activeTab === tabId) return;
       setExpandedRowIndex(null);
-      animateOrdersTabsSwitch(tabId);
+      if (tabId === 1) setLoadingSpotOpenOrders(true);
+      else if (tabId === 2) setLoadingSpotOrderHistory(true);
+      else if (tabId === 3) setLoadingSpotTradeHistory(true);
       activeTabRef.current = tabId;
       setActiveTab(tabId);
       setMountedOrdersTab(tabId);
     },
-    [activeTab, animateOrdersTabsSwitch],
+    [activeTab],
   );
 
   const [tab, setTab] = useState("Buy");
@@ -2087,6 +2109,102 @@ const Spot = () => {
    * while keeping the polling intervals gated to the mounted panel only.
    */
   const spotHistoryPrefetchRef = useRef({ pair: undefined, ts: 0 });
+
+  const fetchSpotOpenOrdersTab = useCallback(async () => {
+    if (!userData) {
+      setLoadingSpotOpenOrders(false);
+      return;
+    }
+    const gen = ++spotHistoryFetchGenRef.current.openOrders;
+    setLoadingSpotOpenOrders(true);
+    try {
+      const response = await appOperation.customer.spot_me_orders_open({
+        page: 1,
+        page_size: 50,
+      });
+      if (gen !== spotHistoryFetchGenRef.current.openOrders) return;
+      const items = spotMeOpenOrdersItemsFromResponse(response);
+      if (response?.success) {
+        dispatch(setOpenOrders(items));
+        dispatch(setCoinData({ open_orders: items }));
+      }
+    } catch (e) {
+      if (gen !== spotHistoryFetchGenRef.current.openOrders) return;
+      console.warn("fetchSpotOpenOrdersTab err:", e);
+    } finally {
+      if (gen === spotHistoryFetchGenRef.current.openOrders) {
+        setLoadingSpotOpenOrders(false);
+      }
+    }
+  }, [userData, dispatch]);
+
+  const fetchSpotOrderHistoryTab = useCallback(async () => {
+    if (!base_currency || !quote_currency || !userData) {
+      setLoadingSpotOrderHistory(false);
+      return;
+    }
+    const gen = ++spotHistoryFetchGenRef.current.orderHistory;
+    setLoadingSpotOrderHistory(true);
+    try {
+      const pair = `${base_currency}${quote_currency}`.toUpperCase();
+      await dispatch(getPastOrders({ page: 1, page_size: 50, pair }, { useGlobalLoader: false }));
+    } finally {
+      if (gen === spotHistoryFetchGenRef.current.orderHistory) {
+        setLoadingSpotOrderHistory(false);
+      }
+    }
+  }, [base_currency, quote_currency, userData, dispatch]);
+
+  const fetchSpotTradeHistoryTab = useCallback(async () => {
+    if (!base_currency || !quote_currency || !userData) {
+      setLoadingSpotTradeHistory(false);
+      return;
+    }
+    const gen = ++spotHistoryFetchGenRef.current.tradeHistory;
+    setLoadingSpotTradeHistory(true);
+    try {
+      const pair = `${base_currency}${quote_currency}`.toUpperCase();
+      await dispatch(
+        getTradeHistory(0, 50, pair, {
+          useGlobalLoader: false,
+          clearBeforeFetch: false,
+        }),
+      );
+    } finally {
+      if (gen === spotHistoryFetchGenRef.current.tradeHistory) {
+        setLoadingSpotTradeHistory(false);
+      }
+    }
+  }, [base_currency, quote_currency, userData, dispatch]);
+
+  const spotHistoryActiveLoading = useMemo(() => {
+    if (mountedOrdersTab === 1) return loadingSpotOpenOrders;
+    if (mountedOrdersTab === 2) return loadingSpotOrderHistory;
+    if (mountedOrdersTab === 3) return loadingSpotTradeHistory;
+    return false;
+  }, [mountedOrdersTab, loadingSpotOpenOrders, loadingSpotOrderHistory, loadingSpotTradeHistory]);
+
+  const [spotHistoryPersistLoader, setSpotHistoryPersistLoader] = useState(false);
+
+  useEffect(() => {
+    if (spotHistoryActiveLoading) {
+      setSpotHistoryPersistLoader(true);
+      return undefined;
+    }
+
+    let frame2;
+    const frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => setSpotHistoryPersistLoader(false));
+    });
+
+    return () => {
+      cancelAnimationFrame(frame1);
+      if (frame2) cancelAnimationFrame(frame2);
+    };
+  }, [spotHistoryActiveLoading, mountedOrdersTab]);
+
+  const showSpotHistoryLoader = spotHistoryActiveLoading || spotHistoryPersistLoader;
+
   useEffect(() => {
     if (!base_currency || !quote_currency || !userData) return;
     if (!isSpotFocused) return;
@@ -2112,30 +2230,24 @@ const Spot = () => {
   useEffect(() => {
     if (!base_currency || !quote_currency || !userData) return undefined;
     if (!isSpotFocused) return undefined;
+    if (mountedOrdersTab !== 1) return undefined;
+    fetchSpotOpenOrdersTab();
+  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused, fetchSpotOpenOrdersTab]);
+
+  useEffect(() => {
+    if (!base_currency || !quote_currency || !userData) return undefined;
+    if (!isSpotFocused) return undefined;
     if (mountedOrdersTab !== 2) return undefined;
-    const pair = `${base_currency}${quote_currency}`.toUpperCase();
-    const tick = () => {
-      const tt = headerTab === "Margin" ? (marginMode === "Cross" ? "cross" : "margin") : undefined;
-      dispatch(getPastOrders({ page: 1, page_size: 50, pair, tradeType: tt }, { useGlobalLoader: false }));
-    };
-    tick();
-  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused, headerTab, marginMode]);
+    fetchSpotOrderHistoryTab();
+  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused, fetchSpotOrderHistoryTab]);
 
   // Same for Trade History (3): poll only when that panel is actually mounted (not merely tab highlight mid-animation).
   useEffect(() => {
     if (!base_currency || !quote_currency || !userData) return undefined;
     if (!isSpotFocused) return undefined;
     if (mountedOrdersTab !== 3) return undefined;
-    const pair = `${base_currency}${quote_currency}`.toUpperCase();
-    const tick = () =>
-      dispatch(
-        getTradeHistory(0, 50, pair, {
-          useGlobalLoader: false,
-          clearBeforeFetch: false,
-        }),
-      );
-    tick();
-  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused]);
+    fetchSpotTradeHistoryTab();
+  }, [base_currency, quote_currency, userData, dispatch, mountedOrdersTab, isSpotFocused, fetchSpotTradeHistoryTab]);
 
   // Trade History list: mirror REST-only payload from getTradeHistory (no socket merge).
   const walletTradeHistory = useSelector((state) => state.wallet.tradeHistory);
@@ -3116,17 +3228,7 @@ const Spot = () => {
       };
     }).filter(Boolean);
 
-    // Dedupe by ID
-    const seen = new Set();
-    const out = [];
-    for (const r of items) {
-      const k = String(r._id);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      out.push(r);
-    }
-
-    return out.sort((a, b) => {
+    return dedupeSpotOrderHistoryRows(items).sort((a, b) => {
       const dateA = new Date(a?.created_at || a?.createdAt || a?.updated_at || a?.updatedAt || 0).getTime();
       const dateB = new Date(b?.created_at || b?.createdAt || b?.updated_at || b?.updatedAt || 0).getTime();
       return dateB - dateA;
@@ -3196,6 +3298,20 @@ const Spot = () => {
           {tradeHistoryPreviewSlice.map((item, index) => {
             const mLabel = tradeHistoryMarketLabel(item, baseHint, quoteHint);
             const baseSym = tradeHistoryBaseAsset(item, baseHint, quoteHint);
+            const quoteSym =
+              item?.pay_currency ||
+              item?.quote_currency ||
+              quoteHint ||
+              (mLabel.includes("/") ? mLabel.split("/")[1]?.trim() : "");
+            const feeAsset = item?.fee_asset || quoteSym;
+            const parseTradeNum = (val) => {
+              if (val && val.$numberDecimal != null) return parseFloat(val.$numberDecimal);
+              return parseFloat(val);
+            };
+            const priceNum = parseTradeNum(item?.price) || 0;
+            const qtyNum = parseTradeNum(item?.quantity) || 0;
+            const feeVal = parseTradeNum(item?.total_fee ?? item?.fee) || 0;
+            const totalVal = parseTradeNum(item?.quote_quantity) || priceNum * qtyNum;
             const side = String(item?.side || "").toUpperCase();
             const role = item?.is_maker === true ? "Maker" : item?.is_maker === false ? "Taker" : "—";
             const sideColor = side === "BUY" ? themeColors.green : themeColors.red;
@@ -3231,38 +3347,38 @@ const Spot = () => {
                   {dateStr} {timeStr}
                 </AppText>
                 <AppText style={{ color: sideColor, marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
-                  {side} · {role}
+                  {side} <AppText style={{ color:isDark? colors.white: colors.black , marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>· {role}</AppText>
                 </AppText>
 
                 <View style={{ gap: 5 }}>
-                  <View style={styles.kvRow}>
+                  {/* <View style={styles.kvRow}>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {dateStr}
                     </AppText>
-                  </View>
-                  <View style={styles.kvRow}>
+                  </View> */}
+                  {/* <View style={styles.kvRow}>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {timeStr}
                     </AppText>
-                  </View>
-                  <View style={styles.kvRow}>
+                  </View> */}
+                  {/* <View style={styles.kvRow}>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Pair</AppText>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {mLabel}
                     </AppText>
-                  </View>
-                  <View style={styles.kvRow}>
+                  </View> */}
+                  {/* <View style={styles.kvRow}>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: sideColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{side}</AppText>
-                  </View>
-                  <View style={styles.kvRow}>
+                  </View> */}
+                  {/* <View style={styles.kvRow}>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Role</AppText>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
                       {role}
                     </AppText>
-                  </View>
+                  </View> */}
                   <View style={styles.kvRow}>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
                     <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
@@ -3275,6 +3391,18 @@ const Spot = () => {
                       {safeToFixed8(item?.quantity, "—")}{baseSym ? ` ${baseSym}` : ""}
                     </AppText>
                   </View>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                      {`${safeToFixed8(feeVal)}${feeAsset ? ` ${feeAsset}` : ""}`.trim()}
+                    </AppText>
+                  </View>
+                  <View style={styles.kvRow}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                      {safeToFixed8(totalVal)}
+                    </AppText>
+                  </View>
                 </View>
               </TouchableOpacity>
             );
@@ -3285,7 +3413,7 @@ const Spot = () => {
             style={styles.viewAllButton}
             onPress={() => NavigationService.navigate("Trade_History", { activeTab: 1 })}
           >
-            <AppText style={[styles.viewAllText, { color: colors.buttonBg }]}>View More</AppText>
+            <AppText style={[styles.viewAllText, { color: isDark? colors.white: colors.buttonBg }]}>View More</AppText>
           </TouchableOpacity>
         )}
       </>
@@ -3476,17 +3604,8 @@ const Spot = () => {
       inv?.quote_asset ||
       (typeof currencyPair === "string" && currencyPair.includes("/") ? currencyPair.split("/")[1]?.trim() : "") ||
       "";
-
-    const fillPercent = (() => {
-      const fp = inv?.fill_percent;
-      if (fp == null || String(fp).trim() === "") return "—";
-      const s = String(fp).trim();
-      return s.endsWith("%") ? s : `${s}%`;
-    })();
-
-    const execValue = Number(inv?.executed_value ?? inv?.executedValue ?? inv?.quote ?? 0);
-    const fee = inv?.total_fee ?? inv?.fee;
-    const tds = inv?.total_tds ?? inv?.tds;
+    const feeAsset = inv?.fee_asset || quoteCurrency;
+    const totalVal = value;
 
     const statusRaw = getOrderStatusRaw(inv);
     const statusLabel = getOrderStatusLabel(inv);
@@ -3547,57 +3666,32 @@ const Spot = () => {
             </AppText>
           </AppText>
 
-          {(() => {
-            const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
-            return (
-              <View style={{ gap: 5 }}>
-                <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Date</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("DD/MM/YYYY") : "---"}</AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Time</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{d ? moment(d).format("HH:mm:ss") : "---"}</AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
-                </View>
-                {/* <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Side</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: getSideColor(inv?.side), textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.side || "---").toUpperCase()}</AppText>
-                </View> */}
-                <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{String(inv?.order_type || inv?.type || inv?.orderType || "Market").toUpperCase()}</AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                    {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(inv?.price || 0)}
-                  </AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                    {toFixedEight(qty)}
-                  </AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                    {`${toFixedEight(feeVal)} ${quoteCurrency}`.trim()}
-                  </AppText>
-                </View>
-                <View style={styles.kvRow}>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Value</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                    {toFixedEight(value)}
-                  </AppText>
-                </View>
-              </View>
-            );
-          })()}
+          <View style={{ gap: 5 }}>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : safeToFixed8(inv?.price, "—")}
+              </AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                {safeToFixed8(qty, "—")}{baseSym ? ` ${baseSym}` : ""}
+              </AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                {`${safeToFixed8(feeVal)}${feeAsset ? ` ${feeAsset}` : ""}`.trim()}
+              </AppText>
+            </View>
+            <View style={styles.kvRow}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total</AppText>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
+                {safeToFixed8(totalVal)}
+              </AppText>
+            </View>
+          </View>
         </View>
 
         {hasExecutedTrades && (
@@ -3691,6 +3785,7 @@ const Spot = () => {
           activeHeaderTab={headerTab}
           setActiveHeaderTab={setHeaderTab}
           currencyData={currencyData}
+          pairSheetRef={pairSheetRef}
         />
 
         {headerTab === "Convert" ? (
@@ -4636,7 +4731,10 @@ const Spot = () => {
 
                 {(historyOnly || orderBookReady) && (
                   <View style={styles.ordersTabContentWrapper}>
-                    <Animated.View style={{ transform: [{ translateX: ordersTabsAnimX }] }}>
+                    {showSpotHistoryLoader ? (
+                      <HistorySectionLoader color={themeColors.text} />
+                    ) : (
+                      <>
                       {mountedOrdersTab === 1 ? (
                         <View style={styles.ordersTabPanel}>
                           <View style={{ marginBottom: 4, paddingHorizontal: 2 }}>
@@ -4813,7 +4911,8 @@ const Spot = () => {
                           </>
                         </View>
                       ) : null}
-                    </Animated.View>
+                      </>
+                    )}
                   </View>
                 )}
               </>
@@ -5052,6 +5151,14 @@ const Spot = () => {
           </View>
         </ReactNativeModal>
       </ScrollView>
+
+      <TradingDataModal
+        ref={pairSheetRef}
+        onClose={() => {}}
+        setCurrency={handleCurrencyChange}
+        isDark={isDark}
+        theme={theme}
+      />
     </View>
   );
 };

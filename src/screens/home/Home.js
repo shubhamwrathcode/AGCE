@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import {
   AppSafeAreaView,
   AppText,
@@ -33,6 +33,7 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  AppState,
 } from "react-native";
 import HomeSlider from "./HomeSlider";
 import HomeSliderSkeleton from "./HomeSliderSkeleton";
@@ -146,31 +147,46 @@ const Home = () => {
   }, [portfolioPreferredCurrency, portfolioUsdtEstimate]);
 
   const socketContextVars = useContext(SocketContext) || {};
-  const { subscribeToMarket, unsubscribeFromMarket } = socketContextVars;
+  const { subscribeToMarket, unsubscribeFromMarket, socketHandlersReady } = socketContextVars;
+  const isFocused = useIsFocused();
 
-  // Subscribe to market as soon as Home mounts so data can start flowing immediately
-  useEffect(() => {
-    if (subscribeToMarket) subscribeToMarket();
+  const requestMarketData = useCallback(() => {
+    if (subscribeToMarket) subscribeToMarket("home", true);
   }, [subscribeToMarket]);
+
+  useEffect(() => {
+    if (!socketHandlersReady || !isFocused) return undefined;
+    requestMarketData();
+    const timers = [50, 300, 800, 2000].map((ms) =>
+      setTimeout(() => requestMarketData(), ms)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [socketHandlersReady, requestMarketData, isFocused]);
 
   useFocusEffect(
     useCallback(() => {
       dispatch(setLoading(false));
-      if (subscribeToMarket) subscribeToMarket();
+      requestMarketData();
+      const sliderTimer = setTimeout(() => setSliderReady(true), 300);
       return () => {
-        if (unsubscribeFromMarket) unsubscribeFromMarket();
+        clearTimeout(sliderTimer);
+        if (unsubscribeFromMarket) unsubscribeFromMarket("home");
       };
-    }, [dispatch, subscribeToMarket, unsubscribeFromMarket])
+    }, [dispatch, requestMarketData, unsubscribeFromMarket])
   );
 
-  const hasMarketData = (coinPairs?.length ?? 0) > 0;
-  const [sliderReady, setSliderReady] = useState(false);
-  const showCoinSkeleton = !hasMarketData;
-
   useEffect(() => {
-    const t = setTimeout(() => setSliderReady(true), 500);
-    return () => clearTimeout(t);
-  }, []);
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active" && isFocused) {
+        requestMarketData();
+      }
+    });
+    return () => subscription.remove();
+  }, [requestMarketData, isFocused]);
+
+  const [sliderReady, setSliderReady] = useState(false);
+  const hasMarketData = (coinPairs?.length ?? 0) > 0;
+  const showCoinSkeleton = !hasMarketData;
 
   const fetchHomeData = useCallback(() => {
     dispatch(getCoinList());
@@ -197,12 +213,13 @@ const Home = () => {
   const onRefresh = useCallback(() => {
     console.log("Pull to refresh triggered! Fetching latest home data...");
     setRefreshing(true);
+    requestMarketData();
     fetchHomeData();
     setTimeout(() => {
       setRefreshing(false);
       console.log("Refresh Complete.");
     }, 1000);
-  }, [fetchHomeData]);
+  }, [fetchHomeData, requestMarketData]);
 
   // useEffect(() => {
   //   console.log(CheckCurrent,userData?.version, "version");

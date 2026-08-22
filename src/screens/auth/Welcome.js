@@ -149,14 +149,14 @@ const Welcome = () => {
   }, []);
 
   useEffect(() => {
-    if (subscribeToMarket) subscribeToMarket();
+    if (subscribeToMarket) subscribeToMarket("welcome");
   }, [subscribeToMarket]);
 
   useFocusEffect(
     useCallback(() => {
-      if (subscribeToMarket) subscribeToMarket();
+      if (subscribeToMarket) subscribeToMarket("welcome");
       return () => {
-        if (unsubscribeFromMarket) unsubscribeFromMarket();
+        if (unsubscribeFromMarket) unsubscribeFromMarket("welcome");
       };
     }, [subscribeToMarket, unsubscribeFromMarket])
   );

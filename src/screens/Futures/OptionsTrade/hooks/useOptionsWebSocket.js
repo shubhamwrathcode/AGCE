@@ -79,6 +79,13 @@ export default function useOptionsWebSocket(selectedAsset = "", selectedSymbol =
 
         const socket = optionsSocketService.acquire(undefined, authToken);
         socketRef.current = socket;
+        if (socket && !optionsSocketService.getIsConnected() && !socket.connected) {
+            try {
+                socket.connect();
+            } catch (_) {
+                // ignore reconnect errors; acquire may create a fresh socket on next focus
+            }
+        }
 
         const resubscribeAll = () => {
             if (!enabledRef.current) return;

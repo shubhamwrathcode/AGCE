@@ -224,7 +224,11 @@ export default function SupportIssueList() {
               <AppText
                 weight={SEMI_BOLD}
                 type={THIRTEEN}
-                style={{ color: selected ? themeColors.buttonText : themeColors.text }}
+                numberOfLines={1}
+                style={{
+                  color: selected ? themeColors.buttonText : themeColors.text,
+                  textAlign: "center",
+                }}
               >
                 {tab.label}
               </AppText>
@@ -289,14 +293,17 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 8,
   },
   filterChip: {
-    paddingHorizontal: 12,
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 8,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   ticketCard: {
     borderRadius: 16,

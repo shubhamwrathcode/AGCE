@@ -26,10 +26,11 @@ import { USER_TOKEN_KEY } from "./helper/Constants";
 export const SocketContext = createContext(null);
 
 // Web-style flow: market:subscribe → market:update, exchange:subscribe → exchange:update (no polling)
+// Market subscription uses per-screen "interest" keys so blur/unsubscribe optimisations on one
+// screen (Market, Spot, Futures…) do not cancel another screen's subscription (e.g. Home).
 
 export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
-  const isInitializedRef = useRef(false);
   const futuresDataRef = useRef(null);
   const [futuresPrice, setFuturesPrice] = useState(null);
   const [exchangeData, setExchangeData] = useState(null);
@@ -41,17 +42,44 @@ export const SocketProvider = ({ children }) => {
   const currentExchangeSubscription = useRef(null);
   const isMarketSubscribed = useRef(false);
   const currentFuturesSubscription = useRef(null);
+  const resubscribePendingRef = useRef(() => {});
+  const marketInterestRef = useRef(new Set());
 
-  const subscribeToMarket = useCallback(() => {
+  const subscribeToMarket = useCallback((sourceOrForce = "default", forceArg = false) => {
+    let source = "default";
+    let force = false;
+    if (sourceOrForce === true) {
+      force = true;
+    } else if (typeof sourceOrForce === "string") {
+      source = sourceOrForce;
+      force = Boolean(forceArg);
+    }
+
+    const hadInterest = marketInterestRef.current.size > 0;
+    marketInterestRef.current.add(source);
     pendingSubscriptions.current.market = true;
-    if (isMarketSubscribed.current) return;
-    if (socketService.getSocket()?.connected) {
+
+    if (force) {
+      isMarketSubscribed.current = false;
+    }
+
+    const shouldEmit =
+      force ||
+      !isMarketSubscribed.current ||
+      (!hadInterest && marketInterestRef.current.size > 0);
+
+    if (shouldEmit && socketService.getSocket()?.connected) {
       isMarketSubscribed.current = true;
       socketService.emit("market:subscribe");
     }
   }, []);
 
-  const unsubscribeFromMarket = useCallback(() => {
+  const unsubscribeFromMarket = useCallback((sourceOrForce = "default") => {
+    const source = sourceOrForce === true ? "default" : String(sourceOrForce || "default");
+    marketInterestRef.current.delete(source);
+    if (marketInterestRef.current.size > 0) {
+      return;
+    }
     pendingSubscriptions.current.market = false;
     if (!isMarketSubscribed.current) return;
     isMarketSubscribed.current = false;
@@ -122,6 +150,33 @@ export const SocketProvider = ({ children }) => {
     }
   }, []);
 
+  const resubscribePending = useCallback(() => {
+    const socket = socketService.getSocket();
+    if (!socket?.connected) return;
+
+    if (pendingSubscriptions.current.market) {
+      isMarketSubscribed.current = true;
+      socketService.emit("market:subscribe");
+    }
+    if (pendingSubscriptions.current.exchange) {
+      const exchangePayload = pendingSubscriptions.current.exchange;
+      currentExchangeSubscription.current = null;
+      subscribeToExchange(
+        exchangePayload.base_currency_id,
+        exchangePayload.quote_currency_id,
+        exchangePayload
+      );
+    }
+    if (pendingSubscriptions.current.futures != null) {
+      currentFuturesSubscription.current = null;
+      subscribeToFutures(pendingSubscriptions.current.futures);
+    }
+  }, [subscribeToExchange, subscribeToFutures]);
+
+  resubscribePendingRef.current = resubscribePending;
+
+  const [socketHandlersReady, setSocketHandlersReady] = useState(false);
+
   const setFuturesHistoryTab = useCallback((tab, skip = 0, limit = 50) => {
     if (socketService.getSocket()?.connected) {
       console.log("Futures set history tab");
@@ -137,9 +192,6 @@ export const SocketProvider = ({ children }) => {
   const handlersRef = useRef(null);
 
   useEffect(() => {
-    if (isInitializedRef.current) return;
-    isInitializedRef.current = true;
-
     let cancelled = false;
     let marketThrottleTimer = null;
     let exchangeThrottleTimer = null;
@@ -156,16 +208,13 @@ export const SocketProvider = ({ children }) => {
         dispatch(setSocket(socketService.getSocket()));
         dispatch(setRandom(Math.random()));
         dispatch(setLoading(false));
-        if (pendingSubscriptions.current.market) {
-          isMarketSubscribed.current = true;
-          socketService.emit("market:subscribe");
-        }
-        if (pendingSubscriptions.current.exchange) {
-          socketService.emit("exchange:subscribe", pendingSubscriptions.current.exchange);
-        }
-        if (pendingSubscriptions.current.futures) {
-          socketService.emit("futures:subscribe", pendingSubscriptions.current.futures);
-        }
+        resubscribePendingRef.current();
+      };
+
+      const handleDisconnect = () => {
+        isMarketSubscribed.current = false;
+        currentExchangeSubscription.current = null;
+        currentFuturesSubscription.current = null;
       };
 
       let lastMarketFlush = 0;
@@ -197,7 +246,8 @@ export const SocketProvider = ({ children }) => {
       };
 
       const handleMarketUpdate = (data) => {
-        if (!isMarketSubscribed.current) return;
+        if (!pendingSubscriptions.current.market) return;
+        isMarketSubscribed.current = true;
         pendingMarketData = data;
         const now = Date.now();
         const elapsed = now - lastMarketFlush;
@@ -276,8 +326,15 @@ export const SocketProvider = ({ children }) => {
         }
       };
 
-      handlersRef.current = { handleConnect, handleMarketUpdate, handleExchangeUpdate, handleFuturesUpdate };
+      handlersRef.current = {
+        handleConnect,
+        handleDisconnect,
+        handleMarketUpdate,
+        handleExchangeUpdate,
+        handleFuturesUpdate,
+      };
       socketService.onConnect(handleConnect);
+      socketService.onDisconnect(handleDisconnect);
       socketService.on("market:update", handleMarketUpdate);
       socketService.on("exchange:update", handleExchangeUpdate);
       socketService.on("message", handleExchangeUpdate);
@@ -286,13 +343,22 @@ export const SocketProvider = ({ children }) => {
         if (data) setFuturesPrice(data);
       });
 
-      // subscribeToMarket(); removed to prevent auto-subscribe, Market data should only be subscribed on Market screen
+      if (socketService.getIsConnected()) {
+        handleConnect();
+      } else if (socket && !socket.connected) {
+        socket.connect();
+      }
+
+      if (!cancelled) {
+        setSocketHandlersReady(true);
+      }
     };
 
     setup();
 
     return () => {
       cancelled = true;
+      setSocketHandlersReady(false);
       if (marketThrottleTimer) {
         clearTimeout(marketThrottleTimer);
         marketThrottleTimer = null;
@@ -308,13 +374,14 @@ export const SocketProvider = ({ children }) => {
       const h = handlersRef.current;
       if (h) {
         socketService.offConnect(h.handleConnect);
+        socketService.offDisconnect(h.handleDisconnect);
         socketService.off("market:update", h.handleMarketUpdate);
         socketService.off("exchange:update", h.handleExchangeUpdate);
         socketService.off("futures:update", h.handleFuturesUpdate);
         handlersRef.current = null;
       }
     };
-  }, [dispatch, subscribeToMarket]);
+  }, [dispatch]);
 
   // Reconnect when app returns to foreground (do not create new socket or duplicate listeners)
   const appStateRef = useRef(AppState.currentState);
@@ -328,10 +395,14 @@ export const SocketProvider = ({ children }) => {
       const socket = socketService.getSocket();
       if (socket && !socket.connected) {
         socket.connect();
+        return;
       }
+      // Socket may look connected after long background but market subscription is stale.
+      isMarketSubscribed.current = false;
+      resubscribePending();
     });
     return () => subscription.remove();
-  }, []);
+  }, [resubscribePending]);
 
   const contextValue = useMemo(
     () => ({
@@ -339,6 +410,7 @@ export const SocketProvider = ({ children }) => {
       exchangeData,
       futuresData: futuresDataRef.current,
       futuresPrice,
+      socketHandlersReady,
       subscribeToMarket,
       unsubscribeFromMarket,
       subscribeToExchange,
@@ -347,7 +419,7 @@ export const SocketProvider = ({ children }) => {
       unsubscribeFromFutures,
       setFuturesHistoryTab,
     }),
-    [exchangeData, futuresDataRef.current, futuresPrice, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange, subscribeToFutures, unsubscribeFromFutures, setFuturesHistoryTab]
+    [exchangeData, futuresDataRef.current, futuresPrice, socketHandlersReady, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange, subscribeToFutures, unsubscribeFromFutures, setFuturesHistoryTab]
   );
 
   return (

@@ -125,8 +125,17 @@ function ChartWrap({ chartW, children }) {
   );
 }
 
-export function OptionsDailyPnlChart({ data = [], title = "Daily Account PNL", themeColors }) {
-  const gridColor = themeColors?.border || CHART_COLORS.grid;
+function chartPalette(isDark, themeColors) {
+  return {
+    grid: themeColors?.border || CHART_COLORS.grid,
+    axis: isDark ? (themeColors?.secondaryText || "#787878") : CHART_COLORS.axis,
+    zero: isDark ? (themeColors?.border || "#3b4659") : CHART_COLORS.zero,
+  };
+}
+
+export function OptionsDailyPnlChart({ data = [], title = "Daily Account PNL", themeColors, isDark = false }) {
+  const palette = chartPalette(isDark, themeColors);
+  const gridColor = palette.grid;
   const pad = { t: 18, r: 14, b: 38, l: 48 };
 
   const series = useMemo(
@@ -170,7 +179,7 @@ export function OptionsDailyPnlChart({ data = [], title = "Daily Account PNL", t
   if (!series.length) {
     return (
       <View style={{ marginTop: 12 }}>
-        <AppText type={FOURTEEN} weight={SEMI_BOLD}>{title}</AppText>
+        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors?.text }}>{title}</AppText>
         <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 20, textAlign: "center" }}>No chart data</AppText>
       </View>
     );
@@ -178,20 +187,20 @@ export function OptionsDailyPnlChart({ data = [], title = "Daily Account PNL", t
 
   return (
     <View style={{ marginTop: 12 }}>
-      <AppText type={FOURTEEN} weight={SEMI_BOLD}>{title}</AppText>
+      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors?.text }}>{title}</AppText>
       <ChartWrap chartW={chartW}>
         {yTicks.map((tick) => {
           const y = pad.t + ((maxY - tick) / (maxY - minY || 1)) * innerH;
           return (
             <React.Fragment key={`y-${tick}`}>
               <Line x1={pad.l} y1={y} x2={chartW - pad.r} y2={y} stroke={gridColor} strokeWidth={1} />
-              <SvgText x={pad.l - 8} y={y + 5} fontSize={AXIS_FONT_SIZE} fill={CHART_COLORS.axis} textAnchor="end">
+              <SvgText x={pad.l - 8} y={y + 5} fontSize={AXIS_FONT_SIZE} fill={palette.axis} textAnchor="end">
                 {fmtAxis(tick)}
               </SvgText>
             </React.Fragment>
           );
         })}
-        <Line x1={pad.l} y1={zeroY} x2={chartW - pad.r} y2={zeroY} stroke={CHART_COLORS.zero} strokeWidth={1} />
+        <Line x1={pad.l} y1={zeroY} x2={chartW - pad.r} y2={zeroY} stroke={palette.zero} strokeWidth={1} />
         {bars.map((b) => (
           <Rect
             key={b.date}
@@ -209,7 +218,7 @@ export function OptionsDailyPnlChart({ data = [], title = "Daily Account PNL", t
               x={b.cx}
               y={xLabelY.get(i) ?? CHART_H - 10}
               fontSize={AXIS_FONT_SIZE}
-              fill={CHART_COLORS.axis}
+              fill={palette.axis}
               textAnchor="middle"
             >
               {fmtDateLabel(b.date)}
@@ -221,8 +230,9 @@ export function OptionsDailyPnlChart({ data = [], title = "Daily Account PNL", t
   );
 }
 
-export function OptionsCumulativePnlChart({ usdtData = [], pctData = [], title = "Cumulative PNL %", themeColors }) {
-  const gridColor = themeColors?.border || CHART_COLORS.grid;
+export function OptionsCumulativePnlChart({ usdtData = [], pctData = [], title = "Cumulative PNL %", themeColors, isDark = false }) {
+  const palette = chartPalette(isDark, themeColors);
+  const gridColor = palette.grid;
   const pad = { t: 18, r: 52, b: 38, l: 48 };
 
   const usdt = useMemo(
@@ -302,7 +312,7 @@ export function OptionsCumulativePnlChart({ usdtData = [], pctData = [], title =
   if (!dates.length) {
     return (
       <View style={{ marginTop: 12 }}>
-        <AppText type={FOURTEEN} weight={SEMI_BOLD}>{title}</AppText>
+        <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors?.text }}>{title}</AppText>
         <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 20, textAlign: "center" }}>No chart data</AppText>
       </View>
     );
@@ -310,14 +320,14 @@ export function OptionsCumulativePnlChart({ usdtData = [], pctData = [], title =
 
   return (
     <View style={{ marginTop: 12 }}>
-      <AppText type={FOURTEEN} weight={SEMI_BOLD}>{title}</AppText>
+      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors?.text }}>{title}</AppText>
       <ChartWrap chartW={chartW}>
         {chart.yTicks.map((tick) => {
           const y = pad.t + ((chart.maxY - tick) / (chart.maxY - chart.minY || 1)) * innerH;
           return (
             <React.Fragment key={`y-${tick}`}>
               <Line x1={pad.l} y1={y} x2={chartW - pad.r} y2={y} stroke={gridColor} strokeWidth={1} />
-              <SvgText x={pad.l - 8} y={y + 5} fontSize={AXIS_FONT_SIZE} fill={CHART_COLORS.axis} textAnchor="end">
+              <SvgText x={pad.l - 8} y={y + 5} fontSize={AXIS_FONT_SIZE} fill={palette.axis} textAnchor="end">
                 {fmtAxis(tick)}
               </SvgText>
             </React.Fragment>
@@ -326,7 +336,7 @@ export function OptionsCumulativePnlChart({ usdtData = [], pctData = [], title =
         {chart.pctTicks.map((tick) => {
           const y = pad.t + ((chart.maxP - tick) / (chart.maxP - chart.minP || 1)) * innerH;
           return (
-            <SvgText key={`p-${tick}`} x={chartW - 8} y={y + 5} fontSize={AXIS_FONT_SIZE} fill={CHART_COLORS.axis} textAnchor="end">
+            <SvgText key={`p-${tick}`} x={chartW - 8} y={y + 5} fontSize={AXIS_FONT_SIZE} fill={palette.axis} textAnchor="end">
               {fmtAxis(tick, "%")}
             </SvgText>
           );
@@ -346,7 +356,15 @@ export function OptionsCumulativePnlChart({ usdtData = [], pctData = [], title =
           <Polyline points={chart.line} fill="none" stroke={CHART_COLORS.line} strokeWidth={2} />
         ) : null}
         {chart.pctLinePts.map((pt) => (
-          <Circle key={pt.date} cx={pt.x} cy={pt.y} r={3.5} fill={CHART_COLORS.line} stroke="#FFFFFF" strokeWidth={1} />
+          <Circle
+            key={pt.date}
+            cx={pt.x}
+            cy={pt.y}
+            r={3.5}
+            fill={CHART_COLORS.line}
+            stroke={isDark ? (themeColors?.background || "#171a20") : "#FFFFFF"}
+            strokeWidth={1}
+          />
         ))}
         {chart.bars.map((b, i) =>
           shouldShowXLabel(i, chart.bars.length) ? (
@@ -355,7 +373,7 @@ export function OptionsCumulativePnlChart({ usdtData = [], pctData = [], title =
               x={b.cx}
               y={xLabelY.get(i) ?? CHART_H - 10}
               fontSize={AXIS_FONT_SIZE}
-              fill={CHART_COLORS.axis}
+              fill={palette.axis}
               textAnchor="middle"
             >
               {fmtDateLabel(b.date)}

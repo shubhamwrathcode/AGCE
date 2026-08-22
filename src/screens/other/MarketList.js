@@ -19,6 +19,22 @@ import { useTheme } from "../../hooks/useTheme";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const ROW_HEIGHT_DEFAULT = 40;
 const ROW_HEIGHT_HOME_TAB = 60;
+
+const PairLabel = React.memo(({ ticker, quote, textColor }) => (
+  <AppText
+    numberOfLines={1}
+    adjustsFontSizeToFit
+    minimumFontScale={0.72}
+    style={styles.pairLabelWrap}
+  >
+    <AppText weight={SEMI_BOLD} style={[styles.pairLabelBase, { color: textColor }]}>
+      {ticker}
+    </AppText>
+    <AppText weight={SEMI_BOLD} style={styles.pairLabelQuote}>{` / ${quote}`}</AppText>
+  </AppText>
+));
+PairLabel.displayName = "PairLabel";
+
 const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, pairTypography, hideStar, isCryptos }) => {
   const { colors: themeColors, isDark } = useTheme();
   const isHomeTab = pairTypography === "homeTab";
@@ -34,8 +50,11 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
   const priceStr = item?.buy_price != null ? toFixedFive(item.buy_price) : "0";
   const subPrice = item?.sell_price ?? item?.usd_price ?? item?.usdt_price ?? 0;
   const subPriceStr = subPrice != null ? `$${String(subPrice)}` : "—";
-  const ticker = String(item?.base_currency || "").toUpperCase() || "—";
-  const quote = String(item?.quote_currency || "").trim().toUpperCase() || "USDT";
+  const ticker = String(item?.base_currency || item?.base_currency_short_name || "").toUpperCase() || "—";
+  const quote =
+    String(item?.quote_currency || item?.quote_currency_short_name || item?.pay_currency || "")
+      .trim()
+      .toUpperCase() || "USDT";
   const pairLabel = ticker && ticker !== "—" ? `${ticker}/${quote}` : "—";
   const fullName = item?.base_currency_fullname || item?.base_currency_name || item?.base_currency || ticker;
   const iconUri = item?.icon_path ? IMAGE_BASE_URL + item.icon_path : null;
@@ -74,9 +93,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
               )}
             </View>
             <View style={styles.nameBlock}>
-              <AppText numberOfLines={1} weight={SEMI_BOLD} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
-                {ticker}<AppText style={{ color: '#9CA3AF', fontSize: 12 }}> / {quote}</AppText>
-              </AppText>
+              <PairLabel ticker={ticker} quote={quote} textColor={themeColors.text} />
               <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
                 {fullName}
               </AppText>
@@ -85,10 +102,16 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
         </View>
 
         <View style={styles.priceCol}>
-          <AppText numberOfLines={1} weight={SEMI_BOLD} type={TWELVE} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
+          <AppText
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+            weight={SEMI_BOLD}
+            style={[styles.lastPrice, { color: themeColors.text }]}
+          >
             {String(last)}
           </AppText>
-          <AppText numberOfLines={1} weight={MEDIUM} type={TEN} style={[styles.coinListPriceSub, { color: '#9CA3AF' }]}>
+          <AppText numberOfLines={1} weight={MEDIUM} style={[styles.inrPrice, { color: '#9CA3AF' }]}>
             ${String(sub)}
           </AppText>
         </View>
@@ -134,10 +157,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
             <View style={[styles.coinIcon, styles.coinIconPlaceholder, { backgroundColor: themeColors.card }]} />
           )}
           <View style={styles.nameBlock}>
-            <AppText numberOfLines={1} weight={SEMI_BOLD} type={FOURTEEN} ellipsizeMode="tail" style={[styles.coinListPair, { color: themeColors.text }]}>
-              {ticker}
-              {!isCryptos && <AppText style={{ color: '#9CA3AF', fontSize: 12 }}> / {quote}</AppText>}
-            </AppText>
+            <PairLabel ticker={ticker} quote={quote} textColor={themeColors.text} />
             <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
               {fullName}
             </AppText>
@@ -146,10 +166,16 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
       </View>
 
       <View style={styles.priceCol}>
-        <AppText numberOfLines={1} weight={SEMI_BOLD} type={TWELVE} style={[styles.lastPrice, { color: themeColors.text }]}>
+        <AppText
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+          weight={SEMI_BOLD}
+          style={[styles.lastPrice, { color: themeColors.text }]}
+        >
           {priceStr}
         </AppText>
-        <AppText numberOfLines={1} weight={MEDIUM} style={[styles.inrPrice, { color: themeColors.secondaryText, }]}>
+        <AppText numberOfLines={1} weight={MEDIUM} style={[styles.inrPrice, { color: themeColors.secondaryText }]}>
           {subPriceStr}
         </AppText>
       </View>
@@ -483,7 +509,18 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   coinListPair: {
-    fontSize: 16,
+    fontSize: 14,
+  },
+  pairLabelWrap: {
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  pairLabelBase: {
+    fontSize: 14,
+  },
+  pairLabelQuote: {
+    color: "#9CA3AF",
+    fontSize: 12,
   },
   coinListSub: {
     marginTop: 0,
@@ -529,9 +566,9 @@ const styles = StyleSheet.create({
     height: 16,
   },
   coinIcon: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     overflow: "hidden",
   },
   coinIconPlaceholder: {
@@ -540,7 +577,7 @@ const styles = StyleSheet.create({
   nameBlock: {
     flex: 1,
     minWidth: 0,
-    left: 5
+    marginLeft: 4,
   },
   symbolText: {
     fontSize: 13,
@@ -558,13 +595,13 @@ const styles = StyleSheet.create({
   },
   lastPrice: {
     textAlign: "right",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
   inrPrice: {
     marginTop: 1,
     textAlign: "right",
-    fontSize: 12,
+    fontSize: 11,
   },
   chgPill: {
     minWidth: 50,

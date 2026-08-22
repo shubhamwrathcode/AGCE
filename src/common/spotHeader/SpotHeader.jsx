@@ -9,7 +9,6 @@ import React, { useState, useEffect, useRef } from "react";
 import FastImage from "react-native-fast-image";
 import LinearGradient from "react-native-linear-gradient";
 import { back_ic, candle, downIcon, history_line, modes, moreImg } from "../../helper/ImageAssets";
-import TradingDataModal from "../TradingDataModal/TradingDataModal";
 import { AppText, SEMI_BOLD } from "../AppText";
 import { toFixedThree } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
@@ -91,8 +90,8 @@ const SpotHeader = ({
   activeHeaderTab = "Spot",
   setActiveHeaderTab,
   currencyData,
+  pairSheetRef,
 }) => {
-  const pairSheetRef = useRef(null);
   const openLockRef = useRef(false);
   const { colors: themeColors, theme, isDark: isDarkFromHook } = useTheme();
   const darkMode =
@@ -273,14 +272,6 @@ const SpotHeader = ({
           </View>
         )}
       </View>
-
-      <TradingDataModal
-        ref={pairSheetRef}
-        onClose={() => {}}
-        setCurrency={setCurrency}
-        isDark={darkMode}
-        theme={theme}
-      />
     </>
   );
 };

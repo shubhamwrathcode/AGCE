@@ -176,26 +176,26 @@ const OrderCard = React.memo(({
             </View>
             <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", marginTop: 4 }}>{headerDateTime}</AppText>
             <AppText style={{ color: sideColor, marginTop: 4 }} weight={BOLD} type={FOURTEEN}>
-              {side} · {typeUpper}
+              {side} <AppText style={{ color: isDark? colors.white: colors.black, marginTop: 4 }} weight={BOLD} type={FOURTEEN}>· {typeUpper}</AppText>
             </AppText>
           </View>
         </View>
 
         <View style={styles.detailsContainer}>
-          <TradeKvRow label="Date" value={dateStr} textColor={textColor} isDark={isDark} />
-          <TradeKvRow label="Time" value={timeStr} textColor={textColor} isDark={isDark} />
+          {/* <TradeKvRow label="Date" value={dateStr} textColor={textColor} isDark={isDark} /> */}
+          {/* <TradeKvRow label="Time" value={timeStr} textColor={textColor} isDark={isDark} /> */}
           <TradeKvRow label="Market" value={currencyPair} textColor={textColor} isDark={isDark} />
-          <TradeKvRow label="Side" value={side} color={sideColor} textColor={textColor} isDark={isDark} />
+          {/* <TradeKvRow label="Side" value={side} color={sideColor} textColor={textColor} isDark={isDark} /> */}
           <TradeKvRow label="Type" value={typeUpper} textColor={textColor} isDark={isDark} />
           <TradeKvRow label="Price" value={priceDisplay} textColor={textColor} isDark={isDark} />
-          <TradeKvRow label="Status" value={statusDetails.label.toUpperCase()} color={statusDetails.color} textColor={textColor} isDark={isDark} />
+          <TradeKvRow label="Status" value={statusDetails.label.toUpperCase()} color={isDark? colors.white: colors.black} textColor={textColor} isDark={isDark} />
         </View>
 
         {hasExecutedTrades && (
           <View style={{ marginTop: 8 }}>
             <TouchableOpacity
               activeOpacity={0.8}
-              style={[styles.execTradesBtnSpot, { borderColor: colors.secondBorder }]}
+              style={[styles.execTradesBtnSpot, { borderColor: isDark? 'transparent' : colors.secondBorder }]}
               onPress={() => onToggleExpand(item)}
             >
               <View style={styles.execTradesBtnRowSpot}>
@@ -273,14 +273,14 @@ const TradeCard = React.memo(({ item, spotSelectedPair, themeColors, getSideColo
         <FastImage source={right_ic} style={{ width: 11, height: 11, marginLeft: 4 }} resizeMode="contain" tintColor={isDark ? "#8E8E93" : "#666666"} />
       </View>
       <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", marginTop: 4, marginBottom: 4 }}>{dateStr} {timeStr}</AppText>
-      <AppText style={{ color: sideColor, marginBottom: 10 }} weight={BOLD} type={FOURTEEN}>{side} · {role}</AppText>
+      <AppText style={{ color: sideColor, marginBottom: 10 }} weight={BOLD} type={FOURTEEN}>{side}  <AppText style={{ color: isDark? colors.white:colors.black, marginBottom: 10 }} weight={BOLD} type={FOURTEEN} >· {role}</AppText> </AppText>
 
       <View style={styles.detailsContainer}>
-        <TradeKvRow label="Date" value={dateStr} textColor={textColor} isDark={isDark} />
-        <TradeKvRow label="Time" value={timeStr} textColor={textColor} isDark={isDark} />
+        {/* <TradeKvRow label="Date" value={dateStr} textColor={textColor} isDark={isDark} /> */}
+        {/* <TradeKvRow label="Time" value={timeStr} textColor={textColor} isDark={isDark} /> */}
         <TradeKvRow label="Pair" value={mLabel} textColor={textColor} isDark={isDark} />
-        <TradeKvRow label="Side" value={side} color={sideColor} textColor={textColor} isDark={isDark} />
-        <TradeKvRow label="Role" value={role} textColor={textColor} isDark={isDark} />
+        {/* <TradeKvRow label="Side" value={side} color={sideColor} textColor={textColor} isDark={isDark} /> */}
+        {/* <TradeKvRow label="Role" value={role} textColor={textColor} isDark={isDark} /> */}
         <TradeKvRow label="Price" value={safeToFixed8(item?.price, "—")} textColor={textColor} isDark={isDark} />
         <TradeKvRow label="Quantity" value={`${safeToFixed8(item?.quantity, "—")}${baseSym ? ` ${baseSym}` : ""}`} textColor={textColor} isDark={isDark} />
       </View>

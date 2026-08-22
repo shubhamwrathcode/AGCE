@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator, Animated, Dimensions } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
+import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, ActivityIndicator, Dimensions } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import FastImage from "react-native-fast-image";
 import { AppText, BOLD, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
-import { colors } from "../../../theme/colors";
+import { colors, darkTheme } from "../../../theme/colors";
 import { appOperation } from "../../../appOperation";
 import { CUSTOMER_TYPE } from "../../../appOperation/types";
 import { searchIcon, checkIc, NO_NOTIFICATION_ICON, moreOption, bitcoin_ic } from "../../../helper/ImageAssets";
 import MarginPairDetailSheet from "./MarginPairDetailSheet";
 import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
+import WalletShimmerCell from "../WalletShimmerCell";
 
 function fmt(val, decimals = 8) {
   const n = parseFloat(val);
@@ -75,49 +75,8 @@ function buildPairRows(balanceRows, accounts) {
   });
 }
 
-const SHIMMER_STRIP = 160;
-function ShimmerCell({ width: w, height, borderRadius = 6, style, isDark }) {
-  const shimmerX = useRef(new Animated.Value(-SHIMMER_STRIP)).current;
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    const run = () => {
-      if (!mounted.current) return;
-      shimmerX.setValue(-SHIMMER_STRIP);
-      Animated.timing(shimmerX, {
-        toValue: Math.max(w, 1) + SHIMMER_STRIP,
-        duration: 1100,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (mounted.current && finished) run();
-      });
-    };
-    const t = setTimeout(run, 50);
-    return () => {
-      mounted.current = false;
-      clearTimeout(t);
-      shimmerX.stopAnimation();
-    };
-  }, [shimmerX, w]);
-
-  const boneColor = isDark ? "#2A2A2A" : "#E1E9EE";
-  const shimmerColors = isDark
-    ? ["transparent", "rgba(255,255,255,0.08)", "transparent"]
-    : ["transparent", "rgba(255,255,255,0.6)", "transparent"];
-
-  return (
-    <View style={[{ width: w, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
-      <Animated.View
-        pointerEvents="none"
-        style={{ position: "absolute", top: 0, bottom: 0, width: SHIMMER_STRIP, transform: [{ translateX: shimmerX }] }}
-      >
-        <LinearGradient colors={shimmerColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, width: SHIMMER_STRIP }} />
-      </Animated.View>
-    </View>
-  );
-}
-
 const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }) => {
+  const isDark = theme === "Dark";
   const [pairs, setPairs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -193,7 +152,7 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
             style={[styles.transferBtn, { backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }]}
             onPress={() => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "margin" })}
           >
-            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: theme === 'Dark' ? colors.white : colors.black }}>Transfer</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Transfer</AppText>
           </TouchableOpacity>
         </View>
 
@@ -224,14 +183,14 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
 
       {/* Filters */}
       <View style={styles.filtersRow}>
-        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? '#2A2A2E' : '#F7F7F7' }]}>
+        <View style={[styles.searchBox, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7' }]}>
           <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Search"
             placeholderTextColor={themeColors.secondaryText}
-            cursorColor={theme === 'Dark' ? colors.white : colors.black}
+            cursorColor={isDark ? colors.white : colors.black}
             style={[styles.searchInput, { color: themeColors.text }]}
             returnKeyType="search"
           />
@@ -241,15 +200,15 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
       <View style={styles.checkboxesRow}>
         <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setLiabilitiesOnly((v) => !v)}>
           <View style={styles.checkbox}>
-            {liabilitiesOnly ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
+            {liabilitiesOnly ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={isDark ? colors.white : colors.buttonBg} /> : null}
           </View>
-          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Liabilities only</AppText>
+          <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Liabilities only</AppText>
         </TouchableOpacity>
         <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setHideSmall((v) => !v)}>
           <View style={styles.checkbox}>
-            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
+            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={isDark ? colors.white : colors.buttonBg} /> : null}
           </View>
-          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Hide small assets</AppText>
+          <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Hide small assets</AppText>
         </TouchableOpacity>
       </View>
 
@@ -270,7 +229,7 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
                 style={styles.coinIcon}
               />
               <View>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.pair}</AppText>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{item.pair}</AppText>
                 {item.status === "NOT_OPENED" ? (
                   <View style={{ backgroundColor: theme === "Dark" ? "rgba(142,148,158,0.2)" : "rgba(142,148,158,0.1)", borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2, alignSelf: "flex-start", marginTop: 4 }}>
                     <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ fontSize: 10, lineHeight: 12 }}>Not opened</AppText>
@@ -289,11 +248,11 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
 
             <View style={styles.rowRight}>
               <View style={{ alignItems: "flex-end", marginRight: 10 }}>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.availableBase}</AppText>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.availableQuote}</AppText>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{item.availableBase}</AppText>
+                <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{item.availableQuote}</AppText>
               </View>
               <TouchableOpacity onPress={() => { setSelectedPair(item); sheetRef.current?.open(); }} style={styles.moreBtn}>
-                <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={theme === 'Dark' ? colors.white : colors.black} />
+                <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={themeColors.text} />
               </TouchableOpacity>
             </View>
           </View>
@@ -306,15 +265,15 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary, buildCoinIconUri }
                 {[1, 2, 3, 4, 5].map(i => (
                   <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                     <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                      <ShimmerCell isDark={theme === "Dark"} width={28} height={28} borderRadius={14} />
+                      <WalletShimmerCell width={28} height={28} borderRadius={14} />
                       <View style={{ gap: 6 }}>
-                        <ShimmerCell isDark={theme === "Dark"} width={60} height={16} borderRadius={4} />
-                        <ShimmerCell isDark={theme === "Dark"} width={40} height={12} borderRadius={4} />
+                        <WalletShimmerCell width={60} height={16} borderRadius={4} />
+                        <WalletShimmerCell width={40} height={12} borderRadius={4} />
                       </View>
                     </View>
                     <View style={{ alignItems: "flex-end", gap: 6 }}>
-                      <ShimmerCell isDark={theme === "Dark"} width={80} height={16} borderRadius={4} />
-                      <ShimmerCell isDark={theme === "Dark"} width={60} height={12} borderRadius={4} />
+                      <WalletShimmerCell width={80} height={16} borderRadius={4} />
+                      <WalletShimmerCell width={60} height={12} borderRadius={4} />
                     </View>
                   </View>
                 ))}

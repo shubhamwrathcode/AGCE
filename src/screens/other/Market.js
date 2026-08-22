@@ -150,9 +150,9 @@ const Market = () => {
   // Subscribe to market data only when Market screen is focused
   useEffect(() => {
     if (isFocused) {
-      if (subscribeToMarket) subscribeToMarket();
+      if (subscribeToMarket) subscribeToMarket("market");
     } else {
-      if (unsubscribeFromMarket) unsubscribeFromMarket();
+      if (unsubscribeFromMarket) unsubscribeFromMarket("market");
     }
   }, [isFocused, subscribeToMarket, unsubscribeFromMarket]);
 
@@ -266,7 +266,11 @@ const Market = () => {
         onSubCategoryChange={activeTab === "ALPHA" ? setAlphaSubTab : setSpotSubCategory}
       />
       <View style={{ flex: 1 }}>
-        {contentLoading ? (
+        {activeTab === "OPTIONS" ? (
+          <View style={styles.tabContent}>
+            <OptionsMarket search={search} isActive={isFocused} />
+          </View>
+        ) : contentLoading ? (
           <MarketSkeleton />
         ) : (
           <>
@@ -317,12 +321,6 @@ const Market = () => {
                   <MarketPlaceholder message="COIN-M futures markets are not available yet." />
                 </View>
               )} */}
-
-              {activeTab === "OPTIONS" && (
-                <View style={styles.tabContent}>
-                  <OptionsMarket search={search} isActive={activeTab === "OPTIONS" && isFocused} />
-                </View>
-              )}
 
               {/* {activeTab === "ALPHA" && (
                 <View style={styles.tabContent}>

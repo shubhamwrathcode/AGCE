@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { startTransition } from 'react';
 import { View, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import { AppText } from '../../../common';
@@ -46,7 +46,7 @@ const OptionsExpiries = ({ expiries = [], selectedExpiry, setSelectedExpiry, isL
                       : (isDark ? '#2C2D31' : '#F2F3F5')
                   }
                 ]}
-                onPress={() => setSelectedExpiry(date)}
+                onPress={() => startTransition(() => setSelectedExpiry(date))}
               >
                 <AppText
                   style={{

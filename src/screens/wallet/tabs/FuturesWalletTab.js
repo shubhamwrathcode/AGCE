@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { View, TouchableOpacity, FlatList, TextInput, StyleSheet, Animated, Dimensions } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
+import { View, TouchableOpacity, FlatList, TextInput, StyleSheet, Dimensions } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppText, BOLD, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
-import { colors } from "../../../theme/colors";
+import { AppText, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
+import { colors, darkTheme } from "../../../theme/colors";
 import { appOperation } from "../../../appOperation";
 import { CUSTOMER_TYPE } from "../../../appOperation/types";
 import { searchIcon, checkIc, NO_NOTIFICATION_ICON, moreOption } from "../../../helper/ImageAssets";
@@ -11,6 +10,7 @@ import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_TRANSFER_SCREEN, FUTURES_SCREEN } from "../../../navigation/routes";
 import { useFocusEffect } from "@react-navigation/native";
 import RBSheet from "react-native-raw-bottom-sheet";
+import WalletShimmerCell from "../WalletShimmerCell";
 
 function parseBal(v) {
   const n = parseFloat(v);
@@ -31,102 +31,60 @@ function accountTotal(acc) {
   return parseBal(acc?.available_balance) + accountInUse(acc);
 }
 
-const SHIMMER_STRIP = 160;
-function ShimmerCell({ width: w, height, borderRadius = 6, style, isDark }) {
-  const shimmerX = useRef(new Animated.Value(-SHIMMER_STRIP)).current;
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    const run = () => {
-      if (!mounted.current) return;
-      shimmerX.setValue(-SHIMMER_STRIP);
-      Animated.timing(shimmerX, {
-        toValue: Math.max(w, 1) + SHIMMER_STRIP,
-        duration: 1100,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (mounted.current && finished) run();
-      });
-    };
-    const t = setTimeout(run, 50);
-    return () => {
-      mounted.current = false;
-      clearTimeout(t);
-      shimmerX.stopAnimation();
-    };
-  }, [shimmerX, w]);
-
-  const boneColor = isDark ? "#2A2A2A" : "#E1E9EE";
-  const shimmerColors = isDark
-    ? ["transparent", "rgba(255,255,255,0.08)", "transparent"]
-    : ["transparent", "rgba(255,255,255,0.6)", "transparent"];
-
-  return (
-    <View style={[{ width: w, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
-      <Animated.View
-        pointerEvents="none"
-        style={{ position: "absolute", top: 0, bottom: 0, width: SHIMMER_STRIP, transform: [{ translateX: shimmerX }] }}
-      >
-        <LinearGradient colors={shimmerColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, width: SHIMMER_STRIP }} />
-      </Animated.View>
-    </View>
-  );
-}
-
 function FuturesSkeleton({ theme }) {
   const isDark = theme === "Dark";
   const screenWidth = Dimensions.get("window").width;
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <ShimmerCell isDark={isDark} width={180} height={22} borderRadius={4} />
+        <WalletShimmerCell width={180} height={22} borderRadius={4} />
       </View>
-      <View style={[styles.summaryCard, { padding: 20, backgroundColor: isDark ? "#1C1C1E" : colors.white }]}>
+      <View style={[styles.summaryCard, { padding: 20, backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View>
-            <ShimmerCell isDark={isDark} width={100} height={16} borderRadius={4} style={{ marginBottom: 8 }} />
-            <ShimmerCell isDark={isDark} width={140} height={32} borderRadius={8} style={{ marginBottom: 6 }} />
-            <ShimmerCell isDark={isDark} width={80} height={14} borderRadius={4} />
+            <WalletShimmerCell width={100} height={16} borderRadius={4} style={{ marginBottom: 8 }} />
+            <WalletShimmerCell width={140} height={32} borderRadius={8} style={{ marginBottom: 6 }} />
+            <WalletShimmerCell width={80} height={14} borderRadius={4} />
           </View>
         </View>
         <View style={[styles.equityGrid, { marginTop: 20 }]}>
           <View style={{ flex: 1, gap: 6 }}>
-            <ShimmerCell isDark={isDark} width={80} height={14} borderRadius={4} />
-            <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
+            <WalletShimmerCell width={80} height={14} borderRadius={4} />
+            <WalletShimmerCell width={100} height={20} borderRadius={4} />
           </View>
           <View style={{ flex: 1, alignItems: "flex-end", gap: 6 }}>
-            <ShimmerCell isDark={isDark} width={120} height={14} borderRadius={4} />
-            <ShimmerCell isDark={isDark} width={100} height={20} borderRadius={4} />
+            <WalletShimmerCell width={120} height={14} borderRadius={4} />
+            <WalletShimmerCell width={100} height={20} borderRadius={4} />
           </View>
         </View>
         <View style={{ flexDirection: "row", gap: 10, marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: isDark ? "#2C2C2E" : "#E5E7EB" }}>
-          <ShimmerCell isDark={isDark} width={(screenWidth - 50) / 2} height={36} borderRadius={18} />
-          <ShimmerCell isDark={isDark} width={(screenWidth - 50) / 2} height={36} borderRadius={18} />
+          <WalletShimmerCell width={(screenWidth - 50) / 2} height={36} borderRadius={18} />
+          <WalletShimmerCell width={(screenWidth - 50) / 2} height={36} borderRadius={18} />
         </View>
       </View>
 
       <View style={{ flexDirection: "row", gap: 20, marginTop: 20 }}>
-        <ShimmerCell isDark={isDark} width={60} height={20} borderRadius={4} />
-        <ShimmerCell isDark={isDark} width={80} height={20} borderRadius={4} />
+        <WalletShimmerCell width={60} height={20} borderRadius={4} />
+        <WalletShimmerCell width={80} height={20} borderRadius={4} />
       </View>
 
       <View style={[styles.filtersRow, { marginTop: 20 }]}>
-        <ShimmerCell isDark={isDark} width={screenWidth - 40} height={42} borderRadius={12} />
+        <WalletShimmerCell width={screenWidth - 40} height={42} borderRadius={12} />
       </View>
 
       <View style={{ marginTop: 20, gap: 16 }}>
         {[1, 2, 3, 4].map(i => (
           <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-              <ShimmerCell isDark={isDark} width={28} height={28} borderRadius={14} />
+              <WalletShimmerCell width={28} height={28} borderRadius={14} />
               <View style={{ gap: 6 }}>
-                <ShimmerCell isDark={isDark} width={60} height={16} borderRadius={4} />
-                <ShimmerCell isDark={isDark} width={40} height={12} borderRadius={4} />
+                <WalletShimmerCell width={60} height={16} borderRadius={4} />
+                <WalletShimmerCell width={40} height={12} borderRadius={4} />
               </View>
             </View>
             <View style={{ alignItems: "flex-end", gap: 6 }}>
-              <ShimmerCell isDark={isDark} width={80} height={16} borderRadius={4} />
-              <ShimmerCell isDark={isDark} width={60} height={12} borderRadius={4} />
+              <WalletShimmerCell width={80} height={16} borderRadius={4} />
+              <WalletShimmerCell width={60} height={12} borderRadius={4} />
             </View>
           </View>
         ))}
@@ -135,6 +93,13 @@ function FuturesSkeleton({ theme }) {
   );
 }
 
+const SheetDetailRow = ({ label, value, valueColor, themeColors }) => (
+  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+    <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>{label}</AppText>
+    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: valueColor || themeColors.text }}>{value}</AppText>
+  </View>
+);
+
 const FuturesDetailSheetContent = ({ rowPopup, themeColors, theme, onTrade, onTransfer }) => {
   if (!rowPopup) return null;
   const isPos = rowPopup.type === "position";
@@ -142,109 +107,86 @@ const FuturesDetailSheetContent = ({ rowPopup, themeColors, theme, onTrade, onTr
 
   if (isPos) {
     const item = rowPopup.data;
-    const isLong = item.side === "LONG";
-    const sideColor = isLong ? colors.green : colors.red;
     const pnl = parseFloat(item.unrealized_pnl || 0);
     const pnlColorText = pnl >= 0 ? colors.green : colors.red;
+    const realizedPnl = parseFloat(item.realized_pnl || 0);
 
     return (
-      <View style={{ paddingHorizontal: 20 }}>
+      <View style={{ paddingHorizontal: 20, paddingBottom: 24, backgroundColor: themeColors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 }}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD}>{item.symbol?.charAt(0) || "F"}</AppText>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{item.symbol?.charAt(0) || "F"}</AppText>
           </View>
           <View>
-            <AppText type={EIGHTEEN} weight={SEMI_BOLD}>{item.symbol}</AppText>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>{item.side} · {item.leverage}x</AppText>
+            <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{item.symbol}</AppText>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>{item.side} · {item.leverage}x</AppText>
           </View>
         </View>
 
-        <View style={{ marginTop: 24, }}>
-          <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>{fmt(item.quantity)}</AppText>
+        <View style={{ marginTop: 24 }}>
+          <AppText type={TWENTY_SIX} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{fmt(item.quantity)}</AppText>
           <AppText type={FOURTEEN} style={{ color: pnlColorText, marginTop: 4 }}>
             {pnl >= 0 ? "+" : ""}{fmt(pnl, 2)} USDT PnL
           </AppText>
         </View>
 
         <View style={{ marginTop: 20, gap: 16 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Entry Price</AppText>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD}>{fmt(item.average_entry_price, 2)}</AppText>
-          </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Liq. Price</AppText>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD}>{fmt(item.liquidation_price, 2)}</AppText>
-          </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Margin</AppText>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD}>{fmt(item.initial_margin, 2)} USDT</AppText>
-          </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Realized PnL</AppText>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: parseFloat(item.realized_pnl || 0) >= 0 ? colors.green : colors.red }}>
-              {parseFloat(item.realized_pnl || 0) >= 0 ? "+" : ""}{fmt(item.realized_pnl, 2)} USDT
-            </AppText>
-          </View>
+          <SheetDetailRow label="Entry Price" value={fmt(item.average_entry_price, 2)} themeColors={themeColors} />
+          <SheetDetailRow label="Liq. Price" value={fmt(item.liquidation_price, 2)} themeColors={themeColors} />
+          <SheetDetailRow label="Margin" value={`${fmt(item.initial_margin, 2)} USDT`} themeColors={themeColors} />
+          <SheetDetailRow
+            label="Realized PnL"
+            value={`${realizedPnl >= 0 ? "+" : ""}${fmt(item.realized_pnl, 2)} USDT`}
+            valueColor={realizedPnl >= 0 ? colors.green : colors.red}
+            themeColors={themeColors}
+          />
         </View>
 
         <View style={{ flexDirection: "row", gap: 12, marginTop: 30 }}>
-          <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB" }]} onPress={onTrade}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Trade</AppText>
+          <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]} onPress={onTrade}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Trade</AppText>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB" }]} onPress={() => onTransfer("USDT")}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Transfer</AppText>
+          <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]} onPress={() => onTransfer("USDT")}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Transfer</AppText>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
-  // Asset
   const acc = rowPopup.data;
+  const statusColor = acc.account_status === "ACTIVE" ? colors.green : themeColors.text;
+
   return (
-    <View style={{ paddingHorizontal: 20 }}>
+    <View style={{ paddingHorizontal: 20, paddingBottom: 24, backgroundColor: themeColors.background }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
-          <AppText type={SIXTEEN} weight={SEMI_BOLD}>{acc.margin_asset?.charAt(0) || "F"}</AppText>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
+          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{acc.margin_asset?.charAt(0) || "F"}</AppText>
         </View>
         <View>
-          <AppText type={EIGHTEEN} weight={SEMI_BOLD}>{acc.margin_asset || "—"}</AppText>
-          <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Futures Margin</AppText>
+          <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{acc.margin_asset || "—"}</AppText>
+          <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>Futures Margin</AppText>
         </View>
       </View>
 
-      <View style={{ marginTop: 24, }}>
-        <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>{fmt(accountTotal(acc))}</AppText>
-        <AppText type={FOURTEEN} color={DISCLAIMTEXT} style={{ marginTop: 4 }}>{acc.margin_asset || "USDT"} Total Balance</AppText>
+      <View style={{ marginTop: 24 }}>
+        <AppText type={TWENTY_SIX} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{fmt(accountTotal(acc))}</AppText>
+        <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, marginTop: 4 }}>{acc.margin_asset || "USDT"} Total Balance</AppText>
       </View>
 
       <View style={{ marginTop: 20, gap: 16 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Available</AppText>
-          <AppText type={FOURTEEN} weight={SEMI_BOLD}>{fmt(acc.available_balance)}</AppText>
-        </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Isolated Reserved</AppText>
-          <AppText type={FOURTEEN} weight={SEMI_BOLD}>{fmt(acc.isolated_reserved)}</AppText>
-        </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <AppText type={FOURTEEN} color={DISCLAIMTEXT}>In Order</AppText>
-          <AppText type={FOURTEEN} weight={SEMI_BOLD}>{fmt(acc.locked_balance)}</AppText>
-        </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <AppText type={FOURTEEN} color={DISCLAIMTEXT}>Status</AppText>
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: acc.account_status === "ACTIVE" ? colors.green : themeColors.text }}>
-            {acc.account_status || "—"}
-          </AppText>
-        </View>
+        <SheetDetailRow label="Available" value={fmt(acc.available_balance)} themeColors={themeColors} />
+        <SheetDetailRow label="Isolated Reserved" value={fmt(acc.isolated_reserved)} themeColors={themeColors} />
+        <SheetDetailRow label="In Order" value={fmt(acc.locked_balance)} themeColors={themeColors} />
+        <SheetDetailRow label="Status" value={acc.account_status || "—"} valueColor={statusColor} themeColors={themeColors} />
       </View>
 
       <View style={{ flexDirection: "row", gap: 12, marginTop: 30 }}>
-        <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB" }]} onPress={onTrade}>
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Trade</AppText>
+        <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]} onPress={onTrade}>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Trade</AppText>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB" }]} onPress={() => onTransfer(acc.margin_asset || "USDT")}>
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Transfer</AppText>
+        <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]} onPress={() => onTransfer(acc.margin_asset || "USDT")}>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Transfer</AppText>
         </TouchableOpacity>
       </View>
     </View>
@@ -338,24 +280,24 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <AppText weight={SEMI_BOLD} type={EIGHTEEN}>Futures Wallet</AppText>
+        <AppText weight={SEMI_BOLD} type={EIGHTEEN} style={{ color: themeColors.text }}>Futures Wallet</AppText>
       </View>
 
       {/* Summary Card */}
-      <View style={[styles.summaryCard, { backgroundColor: theme === 'Dark' ? themeColors.background : colors.white }]}>
+      <View style={[styles.summaryCard, { backgroundColor: isDark ? "transparent" : colors.white, borderWidth: isDark ? StyleSheet.hairlineWidth : 0, borderColor: themeColors.border }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
-            <AppText type={SIXTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} weight={SEMI_BOLD}>Total Assets</AppText>
+            <AppText type={SIXTEEN} style={{ color: themeColors.secondaryText }} weight={SEMI_BOLD}>Total Assets</AppText>
             <View style={styles.summaryValueRow}>
-              <AppText type={TWENTY_SIX} weight={SEMI_BOLD}>{fmt(totalWalletBalance, 2)} </AppText>
-              <AppText type={FIFTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT} style={{ top: 5 }}>USDT</AppText>
+              <AppText type={TWENTY_SIX} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{fmt(totalWalletBalance, 2)} </AppText>
+              <AppText type={FIFTEEN} style={{ color: themeColors.secondaryText, top: 5 }}>USDT</AppText>
             </View>
-            <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>≈ ${fmt(totalWalletBalance, 2)} USD</AppText>
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>≈ ${fmt(totalWalletBalance, 2)} USD</AppText>
           </View>
         </View>
 
         <View style={{ marginTop: 15 }}>
-          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Unrealized PNL</AppText>
+          <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Unrealized PNL</AppText>
           <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: totalUnrealizedPnl >= 0 ? colors.green : colors.red }}>
             {totalUnrealizedPnl >= 0 ? "+" : ""}{totalUnrealizedPnl.toFixed(2)} USDT
           </AppText>
@@ -363,28 +305,28 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
 
         <View style={[styles.equityGrid, { marginTop: 15 }]}>
           <View style={{ flex: 1 }}>
-            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>Available Balance</AppText>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD}>{fmt(totalAvailable, 2)} USDT</AppText>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Available Balance</AppText>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{fmt(totalAvailable, 2)} USDT</AppText>
           </View>
           <View style={{ flex: 1, alignItems: "flex-end" }}>
-            <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>In Use</AppText>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD}>{fmt(totalLocked + totalIsolatedReserved, 2)} USDT</AppText>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>In Use</AppText>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{fmt(totalLocked + totalIsolatedReserved, 2)} USDT</AppText>
           </View>
         </View>
 
         {/* Action Buttons Row */}
         <View style={{ flexDirection: "row", gap: 10, marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: themeColors.border }}>
           <TouchableOpacity
-            style={{ flex: 1.5, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }}
+            style={{ flex: 1.5, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }}
             onPress={() => NavigationService.navigate(FUTURES_SCREEN)}
           >
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Trade</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Trade</AppText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: theme === 'Dark' ? themeColors.themeElevationColor : colors.iconBgColor }}
+            style={{ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }}
             onPress={() => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "futures", coin: "USDT" })}
           >
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Transfer</AppText>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Transfer</AppText>
           </TouchableOpacity>
         </View>
       </View>
@@ -393,27 +335,27 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
       <View style={styles.tabsRow}>
         <View style={{ flexDirection: "row", gap: 18, alignItems: "flex-end" }}>
           <TouchableOpacity onPress={() => { setActiveTab("assets"); setSearch(""); setHideSmall(false); }} style={{ alignItems: "center" }}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={activeTab === "assets" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}>Assets</AppText>
-            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "assets" ? colors.buttonBg : "transparent" }]} />
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: activeTab === "assets" ? themeColors.text : themeColors.secondaryText }}>Assets</AppText>
+            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "assets" ? (isDark ? colors.white : colors.black) : "transparent" }]} />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => { setActiveTab("positions"); setSearch(""); setHideSmall(false); }} style={{ alignItems: "center" }}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={activeTab === "positions" ? (theme === "Dark" ? colors.white : colors.black) : DISCLAIMTEXT}>Positions</AppText>
-            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "positions" ? colors.buttonBg : "transparent" }]} />
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: activeTab === "positions" ? themeColors.text : themeColors.secondaryText }}>Positions</AppText>
+            <View style={[styles.tabUnderline, { backgroundColor: activeTab === "positions" ? (isDark ? colors.white : colors.black) : "transparent" }]} />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Filters */}
       <View style={styles.filtersRow}>
-        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? '#2A2A2E' : '#F7F7F7' }]}>
+        <View style={[styles.searchBox, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7' }]}>
           <FastImage source={searchIcon} style={styles.searchIcon} resizeMode="contain" tintColor={themeColors.secondaryText} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder={activeTab === "assets" ? "Search asset" : "Search contract"}
             placeholderTextColor={themeColors.secondaryText}
-            cursorColor={theme === 'Dark' ? colors.white : colors.black}
+            cursorColor={isDark ? colors.white : colors.black}
             style={[styles.searchInput, { color: themeColors.text }]}
             returnKeyType="search"
           />
@@ -423,9 +365,9 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
       <View style={styles.checkboxesRow}>
         <TouchableOpacity style={styles.checkboxWrapper} onPress={() => setHideSmall((v) => !v)}>
           <View style={styles.checkbox}>
-            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={theme === 'Dark' ? colors.white : colors.buttonBg} /> : null}
+            {hideSmall ? <FastImage source={checkIc} style={styles.checkIcon} tintColor={isDark ? colors.white : colors.buttonBg} /> : null}
           </View>
-          <AppText type={TWELVE} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>{activeTab === "assets" ? "Hide small balances" : "Hide small positions"}</AppText>
+          <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>{activeTab === "assets" ? "Hide small balances" : "Hide small positions"}</AppText>
         </TouchableOpacity>
       </View>
 
@@ -443,15 +385,15 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
               <View style={[styles.row, { borderBottomColor: themeColors.border }, isLast && { borderBottomWidth: 0 }]}>
                 <View style={styles.rowLeft}>
                   <View>
-                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.margin_asset || "—"}</AppText>
-                    <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 2 }}>Futures Margin</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{item.margin_asset || "—"}</AppText>
+                    <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 2 }}>Futures Margin</AppText>
                   </View>
                 </View>
 
                 <View style={styles.rowRight}>
                   <View style={{ alignItems: "flex-end", marginRight: 10 }}>
-                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>{fmt(accountTotal(item))}</AppText>
-                    <AppText type={TWELVE} color={DISCLAIMTEXT}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{fmt(accountTotal(item))}</AppText>
+                    <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
                       Avail: {fmt(item.available_balance)}
                     </AppText>
                   </View>
@@ -462,7 +404,7 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
                     }}
                     style={styles.moreBtn}
                   >
-                    <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={theme === 'Dark' ? colors.white : colors.black} />
+                    <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={themeColors.text} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -471,7 +413,7 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <FastImage source={NO_NOTIFICATION_ICON} style={styles.emptyIcon} resizeMode="contain" />
-              <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Assets Found</AppText>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>No Assets Found</AppText>
             </View>
           )}
           ListFooterComponent={() => <View style={{ height: 120 }} />}
@@ -496,18 +438,18 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
                 <View style={styles.rowLeft}>
                   <View style={{ gap: 4 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <AppText type={FOURTEEN} weight={SEMI_BOLD}>{item.symbol}</AppText>
+                      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{item.symbol}</AppText>
                       <View style={[styles.sideBadge, { borderColor: sideColor }]}>
                         <AppText type={TWELVE} color={sideColorText} weight={SEMI_BOLD}>{item.leverage}x {item.side}</AppText>
                       </View>
                     </View>
-                    <AppText type={TWELVE}>Mark: {fmt(item.mark_price, 2)}</AppText>
+                    <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Mark: {fmt(item.mark_price, 2)}</AppText>
                   </View>
                 </View>
 
                 <View style={styles.rowRight}>
                   <View style={{ alignItems: "flex-end", marginRight: 15 }}>
-                    <AppText type={FOURTEEN} weight={SEMI_BOLD}>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
                       {fmt(item.quantity)}
                     </AppText>
                     <AppText type={TWELVE} color={pnlColorText}>
@@ -521,7 +463,7 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
                     }}
                     style={styles.moreBtn}
                   >
-                    <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={theme === "Dark" ? colors.white : colors.black} />
+                    <FastImage source={moreOption} style={styles.moreIcon} resizeMode="contain" tintColor={themeColors.text} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -530,7 +472,7 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <FastImage source={NO_NOTIFICATION_ICON} style={styles.emptyIcon} resizeMode="contain" />
-              <AppText type={TWELVE} weight={SEMI_BOLD} color={DISCLAIMTEXT}>No Positions Found</AppText>
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>No Positions Found</AppText>
             </View>
           )}
           ListFooterComponent={() => <View style={{ height: 120 }} />}

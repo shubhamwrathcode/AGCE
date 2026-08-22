@@ -21,6 +21,7 @@ import NavigationService from "../../navigation/NavigationService";
 import { SPOT_ORDER_HISTORY_DETAIL, MARGIN_BORROW_REPAY_SCREEN } from "../../navigation/routes";
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, FIFTEEN, FOURTEEN, THIRTEEN, TWELVE } from "../../shared";
+import HistorySectionLoader from "../../common/HistorySectionLoader/HistorySectionLoader";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import {
@@ -62,6 +63,20 @@ const AH_SUB_TABS = [
 const parseNum = (val) => {
   if (val && val.$numberDecimal != null) return parseFloat(val.$numberDecimal);
   return parseFloat(val);
+};
+
+const normalizeApiList = (res) => {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (res?.success === false) return [];
+  const d = res?.data ?? res?.result ?? res;
+  if (Array.isArray(d)) return d;
+  if (d && typeof d === "object") {
+    for (const key of ["items", "orders", "data", "positions", "transactions", "debts", "history", "list", "records"]) {
+      if (Array.isArray(d[key])) return d[key];
+    }
+  }
+  return [];
 };
 
 const toFixedEight = (val) => {
@@ -219,6 +234,13 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
   const [tabData, setTabData] = useState({});
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const fetchGenRef = useRef(0);
+  const tabDataRef = useRef({});
+  const fetchTabDetailsRef = useRef(null);
+
+  useEffect(() => {
+    tabDataRef.current = tabData;
+  }, [tabData]);
 
   // Close Position Modal states
   const [closePositionModal, setClosePositionModal] = useState(false);
@@ -252,10 +274,6 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
     }).start();
   }, [activeTabIndex, pagerX, slideWidth]);
 
-  const setDataList = useCallback((newList) => {
-    setTabData(prev => ({ ...prev, [activeTab]: newList }));
-  }, [activeTab]);
-
   const [openOrderTypeFilter, setOpenOrderTypeFilter] = useState("All");
   const [openOrderSideFilter, setOpenOrderSideFilter] = useState("All Sides");
 
@@ -273,86 +291,70 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
   const secondaryTextThemeColor = themeColors.secondaryText || colors.placeholderColor;
 
   const fetchTabDetails = useCallback(async (isSilent = false) => {
-    if (!pairSymbol) return;
-    if (!isSilent) setLoading(true);
+    if (!pairSymbol) {
+      setLoading(false);
+      return;
+    }
+
+    const tabAtFetch = activeTab;
+    const subAtFetch = subTab;
+    const isCross = marginMode === "Cross";
+    let requestGen = fetchGenRef.current;
+
+    if (!isSilent) {
+      requestGen = ++fetchGenRef.current;
+      const hasCache = (tabDataRef.current[tabAtFetch]?.length ?? 0) > 0;
+      if (!hasCache) setLoading(true);
+    }
+
+    const commitList = (list) => {
+      if (requestGen !== fetchGenRef.current) return;
+      setTabData((prev) => ({ ...prev, [tabAtFetch]: list }));
+    };
+
     try {
       let res;
-      const isCross = marginMode === "Cross";
 
-      if (activeTab === "size") {
+      if (tabAtFetch === "size") {
         if (isCross) {
           res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
         } else {
           res = await appOperation.get(`margin/position/${pairSymbol}`, undefined, undefined, CUSTOMER_TYPE);
         }
         if (res?.success) {
-          const list = isCross
-            ? (Array.isArray(res.data?.positions) ? res.data.positions : Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [])
-            : (res.data ? [res.data] : []);
-          setDataList(list);
+          commitList(isCross ? normalizeApiList(res) : (res.data ? [res.data] : []));
         } else {
-          setDataList([]);
+          commitList([]);
         }
-      } else if (activeTab === "positionHistory") {
-        // cross margin might not have positionHistory or it's named something else. Let's assume it doesn't or it uses margin/position history
+      } else if (tabAtFetch === "positionHistory") {
         if (isCross) {
           res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
-          if (res?.success) {
-            const positions = Array.isArray(res.data?.positions) ? res.data.positions : Array.isArray(res.data) ? res.data : [];
-            setDataList(positions.map(p => ({ ...p, status: "OPEN" })));
-          } else {
-            setDataList([]);
-          }
+          commitList(res?.success ? normalizeApiList(res).map(p => ({ ...p, status: "OPEN" })) : []);
         } else {
           res = await appOperation.get(`margin/position/${pairSymbol}/history`, { page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
-          if (res?.success) {
-            const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
-            setDataList(list);
-          } else {
-            setDataList([]);
-          }
+          commitList(res?.success ? normalizeApiList(res) : []);
         }
-      } else if (activeTab === "positions") { // Open Orders
+      } else if (tabAtFetch === "positions") {
         const endpoint = isCross ? `cross/orders/open` : `margin/orders/open`;
-        const params = { page: 1, limit: 100 };
-        params.pair = pairSymbol;
-        res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
-        if (res?.success) {
-          const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
-          setDataList(list);
+        res = await appOperation.get(endpoint, { page: 1, limit: 100, pair: pairSymbol }, undefined, CUSTOMER_TYPE);
+        commitList(res?.success ? normalizeApiList(res) : []);
+      } else if (tabAtFetch === "orderHistory") {
+        if (isCross) {
+          res = await appOperation.customer.crossOrderHistory({ pair: pairSymbol, page: 1, limit: 50 });
         } else {
-          setDataList([]);
+          res = await appOperation.customer.margin_order_history({ pair: pairSymbol, page: 1, limit: 50 });
         }
-      } else if (activeTab === "orderHistory") {
-        const endpoint = isCross ? `cross/orders/history` : `margin/orders/history`;
-        const params = { page: 1, limit: 50 };
-        params.pair = pairSymbol;
-        res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
-        if (res?.success) {
-          const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
-          setDataList(list);
-        } else {
-          setDataList([]);
-        }
-      } else if (activeTab === "tradeHistory") {
+        commitList(normalizeApiList(res));
+      } else if (tabAtFetch === "tradeHistory") {
         const endpoint = isCross ? `cross/trades` : `margin/trades`;
-        const params = { page: 1, limit: 50 };
-        params.pair = pairSymbol;
-        res = await appOperation.get(endpoint, params, undefined, CUSTOMER_TYPE);
-        if (res?.success) {
-          const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
-          setDataList(list);
-        } else {
-          setDataList([]);
-        }
-      } else if (activeTab === "loanManagement") {
+        res = await appOperation.get(endpoint, { page: 1, limit: 50, pair: pairSymbol }, undefined, CUSTOMER_TYPE);
+        commitList(res?.success ? normalizeApiList(res) : []);
+      } else if (tabAtFetch === "loanManagement") {
         const endpoint = isCross ? `cross/debts` : `margin/loans`;
         res = await appOperation.get(endpoint, undefined, undefined, CUSTOMER_TYPE);
         if (res?.success) {
-          let list = [];
           if (isCross) {
-            const debts = Array.isArray(res.data?.debts) ? res.data.debts : Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [];
-            list = debts.map(d => ({
+            commitList(normalizeApiList(res).map(d => ({
               ...d,
               loan_id: d.currency_id || d.loan_id,
               coin: d.asset || d.coin,
@@ -361,32 +363,47 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
               hourly_rate_pct: d.interest_rate_daily != null ? ((d.interest_rate_daily / 24) * 100).toFixed(6) : null,
               apr_pct: d.interest_rate_daily != null ? (d.interest_rate_daily * 100).toFixed(4) : null,
               currency_id: d.currency_id
-            }));
+            })));
           } else {
-            list = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [];
+            commitList(normalizeApiList(res));
           }
-          setDataList(list);
         } else {
-          setDataList([]);
+          commitList([]);
         }
-      } else if (activeTab === "assetHistory") {
-        const endpoint = isCross ? `cross/history/${subTab}` : `margin/history/${subTab}`;
+      } else if (tabAtFetch === "assetHistory") {
+        const endpoint = isCross ? `cross/history/${subAtFetch}` : `margin/history/${subAtFetch}`;
         const query = { page: 1, limit: 50 };
         if (!isCross && pairId) query.pairId = pairId;
         res = await appOperation.get(endpoint, query, undefined, CUSTOMER_TYPE);
-        if (res?.success) {
-          const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : []);
-          setDataList(list);
-        } else {
-          setDataList([]);
-        }
+        commitList(res?.success ? normalizeApiList(res) : []);
       }
     } catch (e) {
       console.warn("[MarginHistory] Fetch details error:", e);
-      setDataList([]);
+      if (requestGen === fetchGenRef.current) {
+        commitList([]);
+      }
     } finally {
-      if (!isSilent) setLoading(false);
+      if (!isSilent) {
+        setLoading(false);
+      }
     }
+  }, [activeTab, subTab, pairSymbol, pairId, marginMode]);
+
+  fetchTabDetailsRef.current = fetchTabDetails;
+
+  useEffect(() => {
+    if (!loading) return undefined;
+    const safetyTimer = setTimeout(() => setLoading(false), 32000);
+    return () => clearTimeout(safetyTimer);
+  }, [loading, activeTab]);
+
+  useEffect(() => {
+    if (!pairSymbol) {
+      setLoading(false);
+      return;
+    }
+    const hasCache = (tabDataRef.current[activeTab]?.length ?? 0) > 0;
+    fetchTabDetailsRef.current?.(hasCache);
   }, [activeTab, subTab, pairSymbol, pairId, marginMode]);
 
   const getFilteredDataList = (tabId) => {
@@ -433,12 +450,11 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
 
   useFocusEffect(
     useCallback(() => {
-      fetchTabDetails();
       const intervalId = setInterval(() => {
-        fetchTabDetails(true);
-      }, 3000);
+        fetchTabDetailsRef.current?.(true);
+      }, 5000);
       return () => clearInterval(intervalId);
-    }, [fetchTabDetails])
+    }, [])
   );
 
   // Cancel order handler (Open Orders tab)
@@ -1104,7 +1120,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                 style={styles.tabButton}
                 activeOpacity={0.8}
                 onPress={() => {
-                  setTabData(prev => ({ ...prev, [tab.id]: [] }));
+                  if (tab.id === activeTab) return;
                   setActiveTab(tab.id);
                 }}
               >
@@ -1142,8 +1158,10 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                 ]}
                 activeOpacity={0.85}
                 onPress={() => {
+                  if (st.id === subTab) return;
+                  setTabData((prev) => ({ ...prev, assetHistory: [] }));
+                  setLoading(true);
                   setSubTab(st.id);
-                  setDataList([]);
                 }}
               >
                 <AppText
@@ -1233,6 +1251,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
 
       {/* Content panel */}
       <View style={[{ overflow: 'hidden', minHeight: 150 }, isFullScreen && { flex: 1 }]}>
+        {loading ? (
+          <HistorySectionLoader color={textThemeColor} />
+        ) : (
         <View style={[{ width: "100%" }, isFullScreen && { flex: 1 }]}>
           {currentTabs.map((tab, idx) => {
             if (tab.id !== activeTab) return null;
@@ -1241,7 +1262,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
             return (
               <View key={tab.id} style={[{ width: slideWidth }, isFullScreen && { flex: 1 }]}>
                 {dataToRender.length === 0 ? (
-                  (loading && tab.id === activeTab) ? null : renderNoData()
+                  renderNoData()
                 ) : (
                   <>
                     <FlatList
@@ -1270,13 +1291,16 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
             );
           })}
         </View>
+        )}
 
-        {(loading || actionLoading) && !closePositionModal && (
+        {(actionLoading && !closePositionModal) && (
           <View style={[StyleSheet.absoluteFill, {
-            justifyContent: 'flex-start', paddingTop: 60, alignItems: 'center',
-            zIndex: 10
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 10,
+            backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.6)',
           }]}>
-            <ActivityIndicator size="small" color={isDark ? colors.white : colors.black} />
+            <ActivityIndicator size="large" color={isDark ? colors.white : colors.black} />
           </View>
         )}
 
@@ -1732,7 +1756,7 @@ const OrderHistoryCard = React.memo(({ item, index, baseSymbol, quoteSymbol, bor
               paddingVertical: 4,
               paddingHorizontal: 5,
               borderWidth: 1,
-              borderColor: isDark ? "#333" : "#EAEAEA",
+              borderColor: isDark ? 'transparent' : "#EAEAEA",
               borderRadius: 5,
             }}
             onPress={() => setIsExpanded(prev => !prev)}

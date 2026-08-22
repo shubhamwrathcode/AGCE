@@ -3,7 +3,7 @@ import { View, TouchableOpacity, ActivityIndicator, TextInput, Platform, ScrollV
 import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import { AppText, BOLD, FOURTEEN, MEDIUM, SEMI_BOLD, TWELVE, SIXTEEN } from '../../../common';
-import { colors } from '../../../theme/colors';
+import { colors, darkTheme } from '../../../theme/colors';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../../theme/typography';
 import { decNum } from '../../../helper/futuresUtils';
 
@@ -167,7 +167,7 @@ const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeC
         <View style={{ marginBottom: 20 }}>
           <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Price</AppText>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <View style={{ flex: 1, backgroundColor: isDark ? "#2A2A2A" : "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, justifyContent: 'center' }}>
+            <View style={{ flex: 1, backgroundColor: isDark ?darkTheme.darkThemeInputColor : "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, justifyContent: 'center' }}>
               {closePositionType === "MARKET" ? (
                 <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>Market Price</AppText>
               ) : (
@@ -183,7 +183,7 @@ const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeC
             </View>
             <TouchableOpacity
               onPress={() => setClosePositionType(closePositionType === "MARKET" ? "LIMIT" : "MARKET")}
-              style={{ backgroundColor: isDark ? "#2A2A2A" : "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, width: 100, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}
+              style={{ backgroundColor: isDark ? darkTheme.darkThemeInputColor: "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, width: 100, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}
             >
               <AppText style={{ color: themeColors.text, fontSize: 14 }}>
                 {closePositionType === "MARKET" ? "Market" : "Limit"}
@@ -196,7 +196,7 @@ const FuturesClosePositionModal = ({ visible, onClose, onConfirm, isDark, themeC
         {/* Amount Section */}
         <View style={{ marginBottom: 16 }}>
           <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Amount</AppText>
-          <View style={{ backgroundColor: isDark ? "#2A2A2A" : "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#F4F4F4", borderRadius: 8, paddingHorizontal: 12, height: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <TextInput
               style={{ color: themeColors.text, fontSize: 14, padding: 0, flex: 1 }}
               placeholder="0"

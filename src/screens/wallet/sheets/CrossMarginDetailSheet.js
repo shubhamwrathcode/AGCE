@@ -71,18 +71,21 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
         openDuration={250}
         customStyles={{
           container: {
-            backgroundColor: theme === "Dark" ? colors.black : colors.white,
+            backgroundColor: themeColors.background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
+          },
+          wrapper: {
+            backgroundColor: "#0006",
           },
         }}
       >
         {d ? (
-          <View style={{ flex: 1, paddingBottom: 10 }}>
+          <View style={{ flex: 1, paddingBottom: 10, backgroundColor: themeColors.background }}>
             <View style={[styles.header, { borderBottomWidth: 1, borderBottomColor: themeColors.border }]}>
               <View style={styles.titleRow}>
                 <View>
-                  <AppText type={SIXTEEN} weight={BOLD}>{d.asset}</AppText>
+                  <AppText type={SIXTEEN} weight={BOLD} style={{ color: themeColors.text }}>{d.asset}</AppText>
                   {!isFund && (
                     <View style={[styles.sideBadge, { borderColor: sideColor, alignSelf: "flex-start" }]}>
                       <AppText type={TWELVE} color={sideColorText} weight={SEMI_BOLD}>{isLong ? "LONG" : "SHORT"}</AppText>
@@ -111,7 +114,7 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
                         <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: pnlColor }}>
                           {pnl >= 0 ? "+" : ""}{fmt(pnl, 4)} USDT
                         </AppText>
-                        <AppText type={FOURTEEN} color={pnlColor}>
+                        <AppText type={FOURTEEN} style={{ color: pnlColor }}>
                           ({roe >= 0 ? "+" : ""}{fmtPrice(roe)}%)
                         </AppText>
                       </View>
@@ -123,26 +126,26 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
               <View style={styles.content}>
                 {isFund ? (
                   <>
-                    <DetailRow label="Total Balance" val={fmt(totalBal)} asset={d.asset} />
-                    <DetailRow label="Available" val={fmt(d.balance)} asset={d.asset} />
-                    <DetailRow label="Locked" val={parseFloat(d.locked) > 0 ? fmt(d.locked) : "—"} asset={d.asset} />
-                    <DetailRow label="Borrowed" val={hasBorrow ? fmt(d.borrowed) : "—"} asset={d.asset} valColor={hasBorrow ? colors.red : undefined} />
-                    <DetailRow label="Accrued Interest" val={debtRow?.interest_accrued && parseFloat(debtRow.interest_accrued) > 0 ? fmt(debtRow.interest_accrued) : "—"} asset={d.asset} valColor={debtRow?.interest_accrued && parseFloat(debtRow.interest_accrued) > 0 ? colors.red : undefined} />
-                    <DetailRow label="Net" val={fmt(d.net)} asset={d.asset} valColor={netBadgeColor} />
+                    <DetailRow label="Total Balance" val={fmt(totalBal)} asset={d.asset} themeColors={themeColors} />
+                    <DetailRow label="Available" val={fmt(d.balance)} asset={d.asset} themeColors={themeColors} />
+                    <DetailRow label="Locked" val={parseFloat(d.locked) > 0 ? fmt(d.locked) : "—"} asset={d.asset} themeColors={themeColors} />
+                    <DetailRow label="Borrowed" val={hasBorrow ? fmt(d.borrowed) : "—"} asset={d.asset} valColor={hasBorrow ? colors.red : undefined} themeColors={themeColors} />
+                    <DetailRow label="Accrued Interest" val={debtRow?.interest_accrued && parseFloat(debtRow.interest_accrued) > 0 ? fmt(debtRow.interest_accrued) : "—"} asset={d.asset} valColor={debtRow?.interest_accrued && parseFloat(debtRow.interest_accrued) > 0 ? colors.red : undefined} themeColors={themeColors} />
+                    <DetailRow label="Net" val={fmt(d.net)} asset={d.asset} valColor={netBadgeColor} themeColors={themeColors} />
                   </>
                 ) : (
                   <>
-                    <DetailRow label="Size" val={fmt(d.net_quantity)} asset={d.asset} valColor={sideColor} />
-                    <DetailRow label="Position Value" val={fmt(Math.abs(parseFloat(d.value_usdt || 0)), 4)} asset="USDT" />
-                    <DetailRow label="Entry Price" val={(d.entry_price == null || parseFloat(d.entry_price) === 0) ? "—" : fmtPrice(d.entry_price)} asset="USDT" />
-                    <DetailRow label="Mark Price" val={d.mark_price != null ? fmtPrice(d.mark_price) : "—"} asset="USDT" />
-                    <DetailRow label="Unrealized PnL" val={`${pnl >= 0 ? "+" : ""}${fmt(pnl, 4)}`} asset="USDT" valColor={pnlColor} />
-                    <DetailRow label="ROE" val={`${roe >= 0 ? "+" : ""}${fmtPrice(roe)}`} asset="%" valColor={pnlColor} />
-                    <DetailRow label="Realized PnL" val={fmt(d.realized_pnl, 4)} asset="USDT" />
+                    <DetailRow label="Size" val={fmt(d.net_quantity)} asset={d.asset} valColor={sideColor} themeColors={themeColors} />
+                    <DetailRow label="Position Value" val={fmt(Math.abs(parseFloat(d.value_usdt || 0)), 4)} asset="USDT" themeColors={themeColors} />
+                    <DetailRow label="Entry Price" val={(d.entry_price == null || parseFloat(d.entry_price) === 0) ? "—" : fmtPrice(d.entry_price)} asset="USDT" themeColors={themeColors} />
+                    <DetailRow label="Mark Price" val={d.mark_price != null ? fmtPrice(d.mark_price) : "—"} asset="USDT" themeColors={themeColors} />
+                    <DetailRow label="Unrealized PnL" val={`${pnl >= 0 ? "+" : ""}${fmt(pnl, 4)}`} asset="USDT" valColor={pnlColor} themeColors={themeColors} />
+                    <DetailRow label="ROE" val={`${roe >= 0 ? "+" : ""}${fmtPrice(roe)}`} asset="%" valColor={pnlColor} themeColors={themeColors} />
+                    <DetailRow label="Realized PnL" val={fmt(d.realized_pnl, 4)} asset="USDT" themeColors={themeColors} />
                     {d.liquidation_price != null && (
-                      <DetailRow label="Liquidation Price" val={fmtPrice(d.liquidation_price)} asset="USDT" valColor="#f59e0b" />
+                      <DetailRow label="Liquidation Price" val={fmtPrice(d.liquidation_price)} asset="USDT" valColor="#f59e0b" themeColors={themeColors} />
                     )}
-                    <DetailRow label="Free Balance" val={fmt(freeBalance)} asset={d.asset} />
+                    <DetailRow label="Free Balance" val={fmt(freeBalance)} asset={d.asset} themeColors={themeColors} />
                   </>
                 )}
               </View>
@@ -152,6 +155,8 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
               {!isFund && (
                 <ActionBtn
                   label="Close Position"
+                  theme={theme}
+                  themeColors={themeColors}
                   color={colors.red}
                   disabled={!d.position_id}
                   onPress={() => {
@@ -161,6 +166,8 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
               )}
               <ActionBtn
                 label="Transfer"
+                theme={theme}
+                themeColors={themeColors}
                 onPress={() => {
                   ref.current?.close();
                   NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "cross_margin", coin: d?.asset });
@@ -168,6 +175,8 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
               />
               <ActionBtn
                 label="Borrow / Repay"
+                theme={theme}
+                themeColors={themeColors}
                 onPress={() => {
                   ref.current?.close();
                   NavigationService.navigate(MARGIN_BORROW_REPAY_SCREEN, {
@@ -189,24 +198,32 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
   );
 });
 
-const DetailRow = ({ label, val, asset, valColor }) => (
+const DetailRow = ({ label, val, asset, valColor, themeColors }) => (
   <View style={styles.row}>
-    <AppText type={FOURTEEN} color={DISCLAIMTEXT}>{label}</AppText>
+    <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>{label}</AppText>
     <View style={{ alignItems: "flex-end" }}>
-      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={valColor ? { color: valColor } : {}}>
+      <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: valColor || themeColors.text }}>
         {val === "—" ? "—" : asset === "%" ? `${val}%` : `${val} ${asset}`}
       </AppText>
     </View>
   </View>
 );
 
-const ActionBtn = ({ label, onPress, disabled, color }) => (
+const ActionBtn = ({ label, onPress, disabled, color, theme, themeColors }) => (
   <TouchableOpacity
-    style={[styles.actionBtn, { opacity: disabled ? 0.5 : 1 }]}
+    style={[
+      styles.actionBtn,
+      {
+        opacity: disabled ? 0.5 : 1,
+        backgroundColor: theme === "Dark" ? themeColors.themeElevationColor : colors.iconBgColor,
+      },
+    ]}
     onPress={onPress}
     disabled={disabled}
   >
-    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={color ? { color } : {}}>{label}</AppText>
+    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: color || themeColors.text }}>
+      {label}
+    </AppText>
   </TouchableOpacity>
 );
 
@@ -260,7 +277,6 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     height: 44,
-    backgroundColor: "#F5F6F7",
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",

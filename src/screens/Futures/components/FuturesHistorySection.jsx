@@ -9,6 +9,7 @@ import { colors } from '../../../theme/colors';
 import { decNum, computePosition, computeClosedPosition } from '../../../helper/futuresUtils';
 import { right_ic, NO_NOTIFICATION_ICON, filterIcon } from '../../../helper/ImageAssets';
 import { AppText, FOURTEEN, TEN, THIRTEEN, TWELVE } from '../../../common';
+import HistorySectionLoader, { LOADER_MIN_HEIGHT } from '../../../common/HistorySectionLoader/HistorySectionLoader';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import FuturesCancelModal from './FuturesCancelModal';
 import FuturesClosePositionModal from './FuturesClosePositionModal';
@@ -127,10 +128,38 @@ const FuturesHistorySection = ({
   };
 
   const EmptyState = () => (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40, minHeight: 300 }}>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40, minHeight: LOADER_MIN_HEIGHT }}>
       <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 80, height: 80, marginBottom: 12, opacity: 0.8 }} />
     </View>
   );
+
+  const activeLoading = React.useMemo(() => {
+    switch (activeHistoryTab) {
+      case 'Positions':
+        return loadingPositions;
+      case 'Position History':
+        return loadingPositionHistory;
+      case 'Open Orders':
+        return loadingOpenOrders;
+      case 'Order History':
+        return loadingOrderHistory;
+      case 'Transaction History':
+        return loadingTransactionHistory;
+      default:
+        return false;
+    }
+  }, [
+    activeHistoryTab,
+    loadingPositions,
+    loadingPositionHistory,
+    loadingOpenOrders,
+    loadingOrderHistory,
+    loadingTransactionHistory,
+  ]);
+
+  if (activeLoading) {
+    return <HistorySectionLoader color={themeColors.text} />;
+  }
 
   const renderFuturesPositionItem = ({ item: pos, isLast }) => {
     const { qty, entry, mark, pnl, margin, roe, marginRatio } = computePosition(pos, futuresPrice?.mark_price, selectedCoin);
@@ -669,13 +698,6 @@ const FuturesHistorySection = ({
   };
 
   if (activeHistoryTab === 'Positions') {
-    if (loadingPositions && futuresPositions.length === 0) {
-      return (
-        <View style={{ paddingVertical: 20, alignItems: "center" }}>
-          <AppText type={FOURTEEN} color={themeColors.secondaryText} style={{ fontFamily: fontFamilyMedium }}>Loading positions...</AppText>
-        </View>
-      );
-    }
     if (futuresPositions.length === 0) {
       return <EmptyState />;
     }
@@ -709,13 +731,6 @@ const FuturesHistorySection = ({
   }
 
   if (activeHistoryTab === 'Position History') {
-    if (loadingPositionHistory && futuresPositionHistory.length === 0) {
-      return (
-        <View style={{ paddingVertical: 20, alignItems: "center" }}>
-          <AppText type={FOURTEEN} color={themeColors.secondaryText} style={{ fontFamily: fontFamilyMedium }}>Loading history...</AppText>
-        </View>
-      );
-    }
     if (futuresPositionHistory.length === 0) {
       return <EmptyState />;
     }
@@ -756,11 +771,7 @@ const FuturesHistorySection = ({
     return (
       <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
 
-        {loadingOpenOrders && filteredOrders.length === 0 ? (
-          <View style={{ paddingVertical: 20, alignItems: "center" }}>
-            <AppText type={FOURTEEN} color={themeColors.secondaryText} style={{ fontFamily: fontFamilyMedium }}>Loading open orders...</AppText>
-          </View>
-        ) : filteredOrders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <EmptyState />
         ) : (
           <>
@@ -808,11 +819,7 @@ const FuturesHistorySection = ({
     return (
       <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
 
-        {loadingOrderHistory && filteredOrders.length === 0 ? (
-          <View style={{ paddingVertical: 20, alignItems: "center" }}>
-            <AppText type={FOURTEEN} color={themeColors.secondaryText} style={{ fontFamily: fontFamilyMedium }}>Loading order history...</AppText>
-          </View>
-        ) : filteredOrders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <EmptyState />
         ) : (
           <>
@@ -880,11 +887,7 @@ const FuturesHistorySection = ({
           </TouchableOpacity>
         </View>
 
-        {loadingTransactionHistory && filteredTx.length === 0 ? (
-          <View style={{ paddingVertical: 20, alignItems: "center" }}>
-            <AppText type={FOURTEEN} color={themeColors.secondaryText} style={{ fontFamily: fontFamilyMedium }}>Loading transaction history...</AppText>
-          </View>
-        ) : filteredTx.length === 0 ? (
+        {filteredTx.length === 0 ? (
           <EmptyState />
         ) : (
           <>

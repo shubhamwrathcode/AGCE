@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { FlatList, TextInput, TouchableOpacity, View } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from "../../../shared";
-import { colors } from "../../../theme/colors";
+import { colors, darkTheme } from "../../../theme/colors";
 import { bitcoin_ic, checkIc, moreOption, searchIcon, NO_NOTIFICATION_ICON } from "../../../helper/ImageAssets";
 import WalletTabQuickActions from "../WalletTabQuickActions";
 
@@ -112,7 +112,7 @@ const SpotWalletTab = ({
       />
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14 }}>
-        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? '#2A2A2E' : '#F7F7F7' }]}>
+        <View style={[styles.searchBox, { backgroundColor: theme === 'Dark' ? darkTheme.darkThemeInputColor: '#F7F7F7' }]}>
           <FastImage source={searchIcon} style={{ width: 14, height: 14 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
           <TextInput
             value={spotSearch}

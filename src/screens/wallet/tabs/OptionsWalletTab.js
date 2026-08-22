@@ -5,10 +5,8 @@ import {
   FlatList,
   TextInput,
   StyleSheet,
-  Animated,
   Dimensions,
 } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { useFocusEffect, useIsFocused } from "@react-navigation/native";
@@ -23,7 +21,7 @@ import {
   TWELVE,
   TWENTY_SIX,
 } from "../../../shared";
-import { colors } from "../../../theme/colors";
+import { colors, darkTheme } from "../../../theme/colors";
 import { appOperation } from "../../../appOperation";
 import { IMAGE_BASE_URL } from "../../../helper/Constants";
 import {
@@ -37,6 +35,7 @@ import {
 import NavigationService from "../../../navigation/NavigationService";
 import { FUTURES_SCREEN, MARGIN_TRANSFER_SCREEN, OPTIONS_PNL_ANALYSIS_SCREEN } from "../../../navigation/routes";
 import useOptionsWebSocket from "../../Futures/OptionsTrade/hooks/useOptionsWebSocket";
+import WalletShimmerCell from "../WalletShimmerCell";
 import {
   decNum,
   normalizeOptionsPnlAnalysisData,
@@ -64,63 +63,20 @@ function pnlColor(val) {
   return colors.green;
 }
 
-const SHIMMER_STRIP = 160;
-function ShimmerCell({ width: w, height, borderRadius = 6, style, isDark }) {
-  const shimmerX = useRef(new Animated.Value(-SHIMMER_STRIP)).current;
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    const run = () => {
-      if (!mounted.current) return;
-      shimmerX.setValue(-SHIMMER_STRIP);
-      Animated.timing(shimmerX, {
-        toValue: Math.max(w, 1) + SHIMMER_STRIP,
-        duration: 1100,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (mounted.current && finished) run();
-      });
-    };
-    const t = setTimeout(run, 50);
-    return () => {
-      mounted.current = false;
-      clearTimeout(t);
-      shimmerX.stopAnimation();
-    };
-  }, [shimmerX, w]);
-
-  const boneColor = isDark ? "#2A2A2A" : "#E1E9EE";
-  const shimmerColors = isDark
-    ? ["transparent", "rgba(255,255,255,0.08)", "transparent"]
-    : ["transparent", "rgba(255,255,255,0.6)", "transparent"];
-
-  return (
-    <View style={[{ width: w, height, borderRadius, overflow: "hidden", backgroundColor: boneColor }, style]}>
-      <Animated.View
-        pointerEvents="none"
-        style={{ position: "absolute", top: 0, bottom: 0, width: SHIMMER_STRIP, transform: [{ translateX: shimmerX }] }}
-      >
-        <LinearGradient colors={shimmerColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, width: SHIMMER_STRIP }} />
-      </Animated.View>
-    </View>
-  );
-}
-
 function OptionsSkeleton({ theme }) {
-  const isDark = theme === "Dark";
   const screenWidth = Dimensions.get("window").width;
   return (
     <View style={styles.container}>
-      <ShimmerCell isDark={isDark} width={180} height={22} borderRadius={4} />
+      <WalletShimmerCell width={180} height={22} borderRadius={4} />
       <View style={{ marginTop: 12, gap: 10 }}>
-        <ShimmerCell isDark={isDark} width={120} height={16} borderRadius={4} />
-        <ShimmerCell isDark={isDark} width={160} height={32} borderRadius={8} />
-        <ShimmerCell isDark={isDark} width={100} height={14} borderRadius={4} />
+        <WalletShimmerCell width={120} height={16} borderRadius={4} />
+        <WalletShimmerCell width={160} height={32} borderRadius={8} />
+        <WalletShimmerCell width={100} height={14} borderRadius={4} />
       </View>
       <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
-        <ShimmerCell isDark={isDark} width={(screenWidth - 60) / 3} height={36} borderRadius={18} />
-        <ShimmerCell isDark={isDark} width={(screenWidth - 60) / 3} height={36} borderRadius={18} />
-        <ShimmerCell isDark={isDark} width={(screenWidth - 60) / 3} height={36} borderRadius={18} />
+        <WalletShimmerCell width={(screenWidth - 60) / 3} height={36} borderRadius={18} />
+        <WalletShimmerCell width={(screenWidth - 60) / 3} height={36} borderRadius={18} />
+        <WalletShimmerCell width={(screenWidth - 60) / 3} height={36} borderRadius={18} />
       </View>
     </View>
   );
@@ -137,8 +93,8 @@ const OptionsDetailSheetContent = ({ rowPopup, themeColors, theme, onTrade, onTr
     return (
       <View style={{ paddingHorizontal: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 }}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
-            <AppText type={SIXTEEN} weight={SEMI_BOLD}>{item.symbol?.charAt(0) || "O"}</AppText>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{item.symbol?.charAt(0) || "O"}</AppText>
           </View>
           <View>
             <AppText type={EIGHTEEN} weight={SEMI_BOLD}>{item.symbol}</AppText>
@@ -165,8 +121,8 @@ const OptionsDetailSheetContent = ({ rowPopup, themeColors, theme, onTrade, onTr
         </View>
 
         <View style={{ flexDirection: "row", gap: 12, marginTop: 30 }}>
-          <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB" }]} onPress={onTrade}>
-            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Trade</AppText>
+          <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]} onPress={onTrade}>
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Trade</AppText>
           </TouchableOpacity>
         </View>
       </View>
@@ -184,8 +140,8 @@ const OptionsDetailSheetContent = ({ rowPopup, themeColors, theme, onTrade, onTr
   return (
     <View style={{ paddingHorizontal: 20 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
-          <AppText type={SIXTEEN} weight={SEMI_BOLD}>{wallet?.asset?.charAt(0) || "U"}</AppText>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
+          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{wallet?.asset?.charAt(0) || "U"}</AppText>
         </View>
         <View>
           <AppText type={EIGHTEEN} weight={SEMI_BOLD}>{wallet?.asset || "USDT"}</AppText>
@@ -211,10 +167,10 @@ const OptionsDetailSheetContent = ({ rowPopup, themeColors, theme, onTrade, onTr
 
       <View style={{ flexDirection: "row", marginTop: 30 }}>
         <TouchableOpacity
-          style={[styles.sheetBtn, { backgroundColor: isDark ? "#2C2C2E" : "#E5E7EB" }]}
+          style={[styles.sheetBtn, { backgroundColor: isDark ? themeColors.themeElevationColor : colors.iconBgColor }]}
           onPress={onTransfer}
         >
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} color={themeColors.text}>Transfer</AppText>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Transfer</AppText>
         </TouchableOpacity>
       </View>
     </View>
