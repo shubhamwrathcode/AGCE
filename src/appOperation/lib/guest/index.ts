@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import {AppOperation} from '../..';
 import {
   ForgotPasswordProps,
@@ -74,8 +75,32 @@ export default (appOperation: AppOperation) => ({
   passkeyGetAuthOptions: (signId: string) =>
     appOperation.post('security/passkey/auth/options', { signId }, GUEST_TYPE),
   /** Passkey login: verify assertion (same as web passkeyVerifyAuth) */
-  passkeyVerifyAuth: (signId: string, credential: object) =>
-    appOperation.post('security/passkey/auth/verify', { signId, credential }, GUEST_TYPE),
+  passkeyVerifyAuth: (
+    signId: string,
+    credential: object,
+    meta?: { clientType?: string; platform?: string; userAgent?: string },
+  ) => {
+    const body: Record<string, unknown> = {
+      signId,
+      credential,
+      clientType: meta?.clientType || 'mobile',
+      platform: meta?.platform || Platform.OS,
+    };
+    const headers: Record<string, string> = {};
+    if (meta?.userAgent) headers['User-Agent'] = meta.userAgent;
+    console.warn('[Passkey][HTTP][REQUEST] security/passkey/auth/verify', {
+      signId,
+      clientType: body.clientType,
+      platform: body.platform,
+      credentialKeys: credential && typeof credential === 'object' ? Object.keys(credential as object) : [],
+    });
+    try {
+      console.warn('[Passkey][HTTP][REQUEST][body]', JSON.stringify(body, null, 2));
+    } catch {
+      // ignore stringify errors
+    }
+    return appOperation.post('security/passkey/auth/verify', body, GUEST_TYPE, headers);
+  },
   /** Passkey login: complete and get token (same as web completePasskeyLogin) */
   completePasskeyLogin: (signId: string, verificationData: object) =>
     appOperation.post('security/passkey/login/complete', { signId, ...verificationData }, GUEST_TYPE),

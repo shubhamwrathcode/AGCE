@@ -358,15 +358,13 @@ const Login = (): JSX.Element => {
       countryCode: index === 1 ? (countryCode?.[0] ? `+${countryCode[0]}` : "+91") : undefined,
     };
 
-    // console.log("====== LOGIN ON NEXT - checkIdentifier PAYLOAD ======");
-    // console.log(JSON.stringify(payload, null, 2));
+    console.log("[Login][onNext] checkIdentifier payload:", JSON.stringify(payload));
 
     dispatch(setLoading(true));
     try {
       const loginCheck: any = await appOperation.guest.checkIdentifier(payload);
 
-      // console.log("====== LOGIN ON NEXT - checkIdentifier RESPONSE ======");
-      // console.log(JSON.stringify(loginCheck, null, 2));
+      console.log("[Login][onNext] checkIdentifier response:", JSON.stringify(loginCheck));
 
       const accountCheck = parseIdentifierCheckResponse(loginCheck, "login");
       if (!accountCheck.ok) {
@@ -414,24 +412,24 @@ const Login = (): JSX.Element => {
     dispatch(setLoading(false));
 
     // Web Parity: If Passkey is supported, attempt silent passkey login before showing password
-    // console.log('[Login] onNext called, Passkey.isSupported:', Passkey.isSupported());
+    console.log("[Login][onNext] Passkey.isSupported:", Passkey.isSupported());
     if (Passkey.isSupported()) {
       setIsPasskeySignInInProgress(true);
-      console.log('[Login] Attempting verifyPasskeyLogin(silent=true)...');
+      console.log("[Login][onNext] Attempting verifyPasskeyLogin(silent=true) for:", normalizedId);
       const passkeyResult = await dispatch(verifyPasskeyLogin(normalizedId, true));
-      console.log('[Login] verifyPasskeyLogin result:', passkeyResult);
       setIsPasskeySignInInProgress(false);
       if (passkeyResult) {
-        // Successful passkey login, ensure flag cleared
+        console.log("[Login][onNext] PASSKEY SUCCESS - user logged in, stopping flow");
         dispatch(setPasskeyCancelled(false));
-        return; // Login completed via passkey
-      } else {
-        // Passkey login failed or cancelled – remember cancellation
-        console.log('[Login] Setting passkeyCancelled to true');
-        dispatch(setPasskeyCancelled(true));
+        return;
       }
+      console.log("[Login][onNext] PASSKEY FAILED/CANCELLED - showing password field");
+      dispatch(setPasskeyCancelled(true));
+    } else {
+      console.log("[Login][onNext] Passkey not supported - showing password field directly");
     }
 
+    console.log("[Login][onNext] setShowPassField(true)");
     setShowPassField(true);
   };
 

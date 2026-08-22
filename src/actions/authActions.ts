@@ -25,6 +25,14 @@ import {
 import { getUserProfile } from './accountActions';
 import { Passkey } from 'react-native-passkey';
 import { PASSKEY_RP_ID } from '../helper/Constants';
+import {
+  buildPasskeyAssertionRequest,
+  extractOriginFromCredential,
+  isPasskeyOriginMismatchError,
+  logPasskeyAssertionDebug,
+  normalizePasskeyAssertionCredential,
+} from '../helper/passkeyAssertion';
+import { getMobilePasskeyUserAgent } from '../helper/passkeyDeviceInfo';
 import { socketService } from '../services/socket/SocketService';
 import { Platform } from 'react-native';
 
@@ -768,24 +776,26 @@ const isRpIdMismatchForAndroid = (rpIdFromServer: string) => {
 };
 
 /** Passkey login using device biometrics (fingerprint/face). Same flow as web: get options → authenticate → verify → complete. */
-export const verifyPasskeyLogin = (signId: string, silent = false) => async (dispatch: AppDispatch) => {
+export const verifyPasskeyLogin = (signId: string, silent = false) => async (dispatch: AppDispatch, getState: () => any) => {
+  const logPrefix = `[Passkey][verifyPasskeyLogin][${signId}]`;
   try {
+    console.log(`${logPrefix} START silent=${silent}`);
     if (!Passkey.isSupported()) {
+      console.warn(`${logPrefix} FAIL - Passkey not supported on device`);
       if (!silent) showError('Passkeys are not supported on this device');
       return false;
     }
     dispatch(setLoading(true));
+    console.log(`${logPrefix} Step 1/4 - fetching auth options...`);
     const optionsRes: any = await appOperation.guest.passkeyGetAuthOptions(signId);
-    console.log('[Passkey] optionsRes:', JSON.stringify(optionsRes));
+    console.log(`${logPrefix} Step 1/4 - optionsRes:`, JSON.stringify(optionsRes));
     if (!optionsRes?.success || !optionsRes?.data) {
+      console.warn(`${logPrefix} FAIL at Step 1/4 - could not get auth options`, optionsRes?.message);
       if (!silent) showError(optionsRes?.message || 'Failed to get passkey options');
       return false;
     }
     const opts = optionsRes.data;
-    const rawChallenge = typeof opts.challenge === 'string' ? opts.challenge : '';
-    const challengeForNative = maybeBase64ToBase64Url(rawChallenge);
-    // Web parity: prefer server-provided rpId. Only fall back to configured RP ID if missing.
-    const rpIdFromServer = String(opts.rpId || opts.rp?.id || '').trim();
+    const { request, rpIdFromServer, rawChallenge } = buildPasskeyAssertionRequest(opts);
     console.log('[Passkey] rpIdFromServer:', rpIdFromServer, 'PASSKEY_RP_ID:', PASSKEY_RP_ID);
     if (isRpIdMismatchForAndroid(rpIdFromServer)) {
       console.warn('[Passkey][verifyPasskeyLogin] rpId mismatch - skipping native prompt', {
@@ -794,27 +804,6 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
       });
       if (!silent) showError('Passkey is not configured for this app. Please sign in with password.');
       return false;
-    }
-    const rpId =
-      rpIdFromServer ||
-      (PASSKEY_RP_ID && PASSKEY_RP_ID.trim() ? PASSKEY_RP_ID.trim() : '') ||
-      '';
-    const request: any = {
-      challenge: challengeForNative || rawChallenge || opts.challenge,
-      rpId: rpId || 'localhost',
-      timeout: opts.timeout,
-      userVerification: opts.userVerification || 'required',
-    };
-    if (opts.allowCredentials?.length) {
-      request.allowCredentials = opts.allowCredentials.map((c: any) => {
-        const idToPass = c.id;
-        console.log('[Passkey][verifyPasskeyLogin] Mapping allowCredential:', { originalId: c.id, idToPass, transports: c.transports });
-        return {
-          type: c.type || 'public-key',
-          id: idToPass,
-          transports: c.transports || ['internal', 'hybrid'],
-        };
-      });
     }
     console.log('[Passkey][verifyPasskeyLogin] options', {
       signId,
@@ -826,17 +815,21 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
           ? `${request.challenge.slice(0, 6)}…${request.challenge.slice(-6)}`
           : null,
     });
-    console.log('[Passkey][verifyPasskeyLogin] calling Passkey.get', {
+    console.log(`${logPrefix} Step 2/4 - calling Passkey.get`, {
       rpId: request.rpId,
       userVerification: request.userVerification,
       allowCredentials: request.allowCredentials?.length ?? 0,
     });
+    // Hide global loading modal — it can block the native passkey UI on Android.
+    dispatch(setLoading(false));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     let credential: any;
     try {
       credential = await Passkey.get(request);
     } catch (e: any) {
       const msg = String(e?.message ?? e?.error ?? '');
-      console.error('[Passkey][verifyPasskeyLogin] Passkey.get threw', {
+      console.error(`${logPrefix} FAIL at Step 2/4 - Passkey.get threw`, {
         name: e?.name,
         code: e?.code,
         message: e?.message,
@@ -853,21 +846,71 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
       return false;
     }
     if (!credential) {
+      console.warn(`${logPrefix} FAIL at Step 2/4 - user cancelled or no credential returned`);
       if (!silent) showError('Authentication was cancelled');
       return false;
     }
-    console.log('[Passkey][verifyPasskeyLogin] credential acquired', {
+    console.log(`${logPrefix} Step 2/4 - credential acquired`, {
       type: (credential as any)?.type,
       id: (credential as any)?.id,
     });
-    const verifyRes: any = await appOperation.guest.passkeyVerifyAuth(signId, credential);
+    logPasskeyAssertionDebug('verifyPasskeyLogin', credential, rawChallenge);
+
+    const normalizedCredential = normalizePasskeyAssertionCredential(credential);
+    const verifyPayload = {
+      signId,
+      credential: normalizedCredential,
+      clientType: 'mobile',
+      platform: Platform.OS,
+    };
+    console.warn(`${logPrefix} Step 3/4 - auth/verify payload summary`, {
+      signId,
+      credentialId: normalizedCredential?.id,
+      origin: extractOriginFromCredential(normalizedCredential) || '(unknown)',
+      hasSignature: !!normalizedCredential?.response?.signature,
+      clientType: verifyPayload.clientType,
+      platform: verifyPayload.platform,
+    });
+
+    dispatch(setLoading(true));
+    let verifyRes: any;
+    try {
+      verifyRes = await appOperation.guest.passkeyVerifyAuth(signId, normalizedCredential, {
+        clientType: 'mobile',
+        platform: Platform.OS,
+        userAgent: getMobilePasskeyUserAgent(),
+      });
+    } catch (verifyErr: any) {
+      console.error(`${logPrefix} Step 3/4 - auth/verify REJECTED`, JSON.stringify(verifyErr));
+      if (isPasskeyOriginMismatchError(verifyErr)) {
+        console.error(`${logPrefix} ORIGIN MISMATCH - app signing cert may not match backend whitelist`);
+      }
+      if (!silent) {
+        showError(
+          verifyErr?.error ||
+            verifyErr?.message ||
+            'Passkey verification failed. Try password login or re-add passkey on this device.',
+        );
+      }
+      return false;
+    }
+    console.log(`${logPrefix} Step 3/4 - verifyRes:`, JSON.stringify(verifyRes));
     if (!verifyRes?.success) {
-      console.warn('[Passkey][verifyPasskeyLogin] verify failed', verifyRes);
+      console.warn(`${logPrefix} FAIL at Step 3/4 - backend verify failed`, verifyRes);
       if (!silent) showError(verifyRes?.message || 'Passkey verification failed');
       return false;
     }
+    console.log(`${logPrefix} Step 4/4 - completing login...`);
     const completeRes: any = await appOperation.guest.completePasskeyLogin(signId, verifyRes.data || {});
-    if (!completeRes?.success || !completeRes?.data?.token) {
+    const sessionToken = extractTokenFromAuthResponse(completeRes);
+    console.log(`${logPrefix} Step 4/4 - completeRes:`, {
+      success: completeRes?.success,
+      message: completeRes?.message,
+      hasToken: !!sessionToken?.token,
+      tokenPreview: sessionToken?.token ? `${sessionToken.token.slice(0, 12)}…` : null,
+    });
+    if (!completeRes?.success || !sessionToken?.token) {
+      console.warn(`${logPrefix} FAIL at Step 4/4 - login complete failed`, completeRes);
       if (!silent) showError(completeRes?.message || 'Login failed');
       return false;
     }
@@ -879,6 +922,10 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
     const remaining = availableMethods.filter((m: any) => !currentCompleted.includes(Number(m.type)));
 
     if (pending2FA?.verificationMode === 'ALL_REQUIRED' && remaining.length > 0) {
+      console.log(`${logPrefix} SUCCESS - passkey verified, 2FA still required`, {
+        remainingMethods: remaining.length,
+        completedMethods: currentCompleted,
+      });
       showSuccess(completeRes?.message ?? 'Passkey verified');
       dispatch(updatePending2FA({
         completedMethods: currentCompleted,
@@ -889,18 +936,27 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
       return true;
     }
 
+    console.log(`${logPrefix} SUCCESS - logging in and navigating to main app`);
     showSuccess(completeRes?.message ?? 'Login successful');
-    await persistSignupSessionToken(completeRes.data);
+    await persistSignupSessionToken(sessionToken);
     NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
     dispatch(clearPending2FA());
     dispatch(getUserProfile());
     return true;
   } catch (e: any) {
+    console.error(`${logPrefix} UNEXPECTED ERROR`, {
+      name: e?.name,
+      code: e?.code,
+      message: e?.message,
+      stack: e?.stack,
+    });
     logger(e);
     const msg = String(e?.message ?? e?.error ?? '');
     if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
+      console.warn(`${logPrefix} FAIL - user cancelled passkey prompt`);
       if (!silent) showError('Authentication was cancelled. Try again or use another method.');
     } else {
+      console.warn(`${logPrefix} FAIL - passkey authentication error`);
       if (!silent) showError(e?.message || 'Passkey authentication failed');
     }
     if (e?.code == 403) {

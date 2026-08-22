@@ -366,7 +366,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "appmodules::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-appmodules-RelWithDebInfo-99b59b9a37a77c50ea39.json",
+					"jsonFile" : "target-appmodules-RelWithDebInfo-fe5a0df405bd4237076e.json",
 					"name" : "appmodules",
 					"projectIndex" : 0
 				},
@@ -464,7 +464,7 @@
 				{
 					"directoryIndex" : 5,
 					"id" : "react_codegen_rnpicker::@e8bb2e9e833f47d0d516",
-					"jsonFile" : "target-react_codegen_rnpicker-RelWithDebInfo-f45e78b9c812ee4c3626.json",
+					"jsonFile" : "target-react_codegen_rnpicker-RelWithDebInfo-85b4cae55b48bb7bcc88.json",
 					"name" : "react_codegen_rnpicker",
 					"projectIndex" : 0
 				},
@@ -478,21 +478,21 @@
 				{
 					"directoryIndex" : 15,
 					"id" : "react_codegen_rnscreens::@25bcbd507e98d3a854ad",
-					"jsonFile" : "target-react_codegen_rnscreens-RelWithDebInfo-c20bf2de568c2fe30f18.json",
+					"jsonFile" : "target-react_codegen_rnscreens-RelWithDebInfo-546e83c31d8b647c6ffc.json",
 					"name" : "react_codegen_rnscreens",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 16,
 					"id" : "react_codegen_rnsvg::@4f40eb209d0c0b4a3b65",
-					"jsonFile" : "target-react_codegen_rnsvg-RelWithDebInfo-e6fb951ab2bf20afb151.json",
+					"jsonFile" : "target-react_codegen_rnsvg-RelWithDebInfo-1c23cfc2b5f525e92fa5.json",
 					"name" : "react_codegen_rnsvg",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 14,
 					"id" : "react_codegen_safeareacontext::@7984cd80db47aa7b952a",
-					"jsonFile" : "target-react_codegen_safeareacontext-RelWithDebInfo-658343b8ee934dc77f5d.json",
+					"jsonFile" : "target-react_codegen_safeareacontext-RelWithDebInfo-8947f63da193170ab8b3.json",
 					"name" : "react_codegen_safeareacontext",
 					"projectIndex" : 0
 				}
@@ -502,7 +502,7 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86",
+		"build" : "/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/arm64-v8a",
 		"source" : "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native/ReactAndroid/cmake-utils/default-app-setup"
 	},
 	"version" : 

@@ -403,6 +403,50 @@
 	[
 		{
 			"backtrace" : 4,
+			"id" : "react_codegen_RNPermissionsSpec::@7ad697819b753921c957"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_Passkey::@a374f04898e95cb6f80e"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_rnreanimated::@8afabad14bfffa3f8b9a"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_safeareacontext::@7984cd80db47aa7b952a"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_rnscreens::@25bcbd507e98d3a854ad"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_rnsvg::@4f40eb209d0c0b4a3b65"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_RNVectorIconsSpec::@479809fae146501fd34d"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_RNCWebViewSpec::@eb48929f9f7453740a6c"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_rngesturehandler_codegen::@39f233abcd2c728bc6ec"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_RNCImageCropPickerSpec::@702b02f8d2524609d414"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "react_codegen_pagerview::@7032a8921530ec438d60"
+		},
+		{
+			"backtrace" : 4,
 			"id" : "react_codegen_AsyncStorageSpec::@15af80695a6281ecf900"
 		},
 		{
@@ -428,50 +472,6 @@
 		{
 			"backtrace" : 4,
 			"id" : "react_codegen_RNEdgeToEdge::@668218a48b60eb28aa9e"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_rngesturehandler_codegen::@39f233abcd2c728bc6ec"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_RNCImageCropPickerSpec::@702b02f8d2524609d414"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_pagerview::@7032a8921530ec438d60"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_Passkey::@a374f04898e95cb6f80e"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_RNPermissionsSpec::@7ad697819b753921c957"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_rnreanimated::@8afabad14bfffa3f8b9a"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_safeareacontext::@7984cd80db47aa7b952a"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_rnscreens::@25bcbd507e98d3a854ad"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_rnsvg::@4f40eb209d0c0b4a3b65"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_RNVectorIconsSpec::@479809fae146501fd34d"
-		},
-		{
-			"backtrace" : 4,
-			"id" : "react_codegen_RNCWebViewSpec::@eb48929f9f7453740a6c"
 		}
 	],
 	"id" : "appmodules::@6890427a1f51a3e7e1df",

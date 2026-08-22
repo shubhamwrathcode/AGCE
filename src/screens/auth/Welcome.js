@@ -588,7 +588,7 @@ const Welcome = () => {
                           <WebView
                             key={`${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}`}
                             source={{ uri: `${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}` }}
-                            style={{ width: "100%", height: 330, marginTop: -30, backgroundColor: "transparent" }}
+                            style={{ width: "100%", height: 330,  backgroundColor: "transparent" }}
                             containerStyle={{ backgroundColor: "transparent" }}
                             opaque={false}
                             androidLayerType="hardware"
