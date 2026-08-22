@@ -1221,7 +1221,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                 marginLeft: 2,
               }}
             >
-              <FastImage source={Refresh} style={{ width: 12, height: 12 }} resizeMode="contain" />
+              <FastImage source={Refresh} style={{ width: 12, height: 12 }} tintColor={isDark? colors.white: colors.black}  resizeMode="contain" />
               <AppText weight={MEDIUM} style={{ fontSize: 12, color: secondaryTextThemeColor }}>Reset</AppText>
             </TouchableOpacity>
           </View>

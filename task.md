@@ -1,36 +1,74 @@
-# Today's Tasks & Accomplishments
+# Today's Tasks & Accomplishments — Aug 22, 2026
 
 ## ✅ Completed Tasks
 
-### 1. Options Market & Market Screen Performance Optimization
-- [x] Fixed severe lag when opening and leaving **Option Market** (`OptionsMarket.js`).
-- [x] Migrated Options contract list to `@shopify/flash-list` with `estimatedItemSize={58}` and $O(1)$ coin icon resolution.
-- [x] Replaced `<KeyBoardAware>` in `Market.js` with `<View style={{ flex: 1 }}>` to enable proper virtualization.
-- [x] Implemented in-memory caching (`globalCachedContracts` & `globalCachedUnderlyings`) for 0ms instant display on tab revisit.
-- [x] Added 60ms batch throttle buffer for real-time WebSocket contracts update to protect the JS thread.
-- [x] Removed jerky horizontal slide and opacity flicker animation during tab switching in `Market.js`.
+### 1. TradingDataModal & Spot Pair Sheet
+- [x] Fixed side-panel flicker during `TradingDataModal` open from `Spot.jsx` (screen sliding in from right for milliseconds).
+- [x] Restored smooth open/close animation after flicker fix (modal was opening too slow).
+- [x] Created reusable `AnimatedBottomSheet.jsx` component for consistent sheet behavior.
 
-### 2. Options Socket Architecture & Zero-Leak Teardown
-- [x] Fixed socket lifecycle in `OptionsSocketService.ts` to fully close the socket engine on `release()` when `consumerCount === 0`.
-- [x] Added safe unsubscription for all channels on tab blur or screen unmount.
-- [x] Fixed `resubscribeAll` in `useOptionsWebSocket.js` to ensure `options:contracts` is reliably subscribed upon connection.
-- [x] Prevented socket teardown and reconnect storms on asset/underlying switch.
+### 2. Futures Trade Pair Sheet UI Unification
+- [x] Unified `FuturesTrade.jsx` pair sheet UI and spacing to match `TradingDataModal`.
+- [x] Fixed pair sheet not opening after refactor.
+- [x] Fixed inconsistent tap/press on pair selector button (sometimes required hard press).
+- [x] Fixed flicker on FuturesTrade sheet open — now smooth like Spot.
 
-### 3. Futures Market Navigation & Data Flow
-- [x] Fixed `FuturesMarket.js` navigation parameter so selecting a specific pair correctly opens and displays that coin's data on `FUTURES_SCREEN`.
+### 3. Options Trade Improvements
+- [x] Changed default option expiry from **All** to first available date in `OptionsTrade.jsx`.
+- [x] Unified select asset sheet UI with Futures/Spot pattern.
 
-### 4. Options Trade & Options Chain Table Optimization
-- [x] Fixed continuous infinite skeleton shimmer in `OptionsChainTable.jsx` until market data is received.
-- [x] Resolved React Native `Animated` vs `react-native-reanimated` import conflict in `OptionsChainTable.jsx`.
-- [x] Extracted and memoized table rows (`CallDataRow`, `CenterStrikeRow`, `PutDataRow`) using `React.memo` to eliminate re-render lag.
-- [x] Eliminated repetitive layout timeouts and scroll worklet bridge overhead.
+### 4. History Section Loading UX (Futures, Spot & Margin)
+- [x] Created `HistorySectionLoader.jsx` shared component.
+- [x] Replaced "Loading positions..." text with centered Loader in `FuturesHistorySection.jsx`.
+- [x] Fixed loader flicker on tab switch in Futures history section.
+- [x] Applied same loading pattern to Spot.jsx history section.
+- [x] Applied same loading pattern to Margin history section (`MarginHistorySection.jsx`).
+- [x] Fixed Spot history section flicker (now smooth like Futures).
+- [x] Fixed Margin Order History infinite loader and slow/empty data response handling.
 
-### 5. Futures Navigator Blank Screen & Switch Lag
-- [x] Fixed blank screen issue in `FuturesNavigator.jsx` by removing `freezeOnBlur: true` and setting `lazy: false`.
-- [x] Simplified tab navigation handler in `CustomTabBar`.
+### 5. Home Screen Skeleton Bug
+- [x] Fixed infinite skeleton on app reload for home slider data in `Home.js`.
+- [x] Fixed content below home slider not appearing on reload (only worked after navigating away or killing app).
 
-### 6. Build & Release Verification
-- [x] Successfully verified Android release build (`./gradlew assembleRelease` - Build Successful).
+### 6. Cross Margin Wallet Tab
+- [x] Fixed dark theme text colors in `CrossMarginWalletTab.js`.
+- [x] Fixed app crash on Borrow/Repay press (`marginAssets does not exist` error).
+
+### 7. Wallet Tabs & Shimmer Optimization
+- [x] Created `WalletShimmerCell.js` for reusable wallet shimmer cells.
+- [x] Refactored `WalletSkeleton.js` for cleaner loading states.
+- [x] Improved `CrossMarginWalletTab`, `FuturesWalletTab`, `MarginWalletTab`, `OptionsWalletTab`.
+- [x] Updated `CrossMarginDetailSheet` and `MarginPairDetailSheet`.
+
+### 8. Passkey Authentication & Device Info
+- [x] Created `passkeyDeviceInfo.ts` — resolves "unknown unknown" device name on mobile passkey registration.
+- [x] Created `passkeyAssertion.ts` — normalizes WebAuthn assertion credentials for backend verify.
+- [x] Fixed passkey remove challenge mismatch error (`400 Authentication failed`).
+- [x] Fixed `EnablePasskey.jsx` to show correct Android/iOS device name instead of Chrome/Linux.
+- [x] Improved discoverable passkey login flow in `authActions.ts`.
+- [x] Added debug console logs in `Login.tsx` for passkey verify flow (checkIdentifier → verify → login/fallback).
+- [x] Fixed Login screen passkey verify UX — password field on fail, auto-login on success.
+- [x] Updated `ViewPasskeysScreen.js` and `DownloadAuthenticator.jsx`.
+- [x] Increased WebView height on `Welcome.js`.
+
+### 9. Support Issue List
+- [x] Fixed tab widths in `SupportIssueList.js` to be uniform (based on "Pending" text width).
+
+### 10. Spot Screen & Margin Screens
+- [x] `Spot.jsx` optimizations and history loader integration.
+- [x] Improved `MarginBorrowRepay.jsx`, `MarginTransfer.jsx`, `MarginTransferHistoryScreen.jsx`.
+- [x] Refactored `MarginHistorySection.jsx` for better loading and data handling.
+
+### 11. Market & Pair Lists
+- [x] Refactored `FuturePairList.js` and `OptionsPairList.js`.
+- [x] Improved `MarketList.js` and `Market.js`.
+- [x] Removed redundant `SpotMarket.js`.
+
+### 12. Socket & Other Fixes
+- [x] Improved `SocketProvider.js` lifecycle and connection handling.
+- [x] Updated `FutureChartScreen.jsx`, `FutureHistoryScreen.jsx`.
+- [x] Further optimized `OptionsChainTable.jsx`.
+- [x] Updated `OptionsPnlCharts.jsx`, `OptionsPnlAnalysisScreen.jsx`.
+- [x] Updated `TradeHistory.js`.
 
 ---
-
