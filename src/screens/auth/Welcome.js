@@ -584,11 +584,11 @@ const Welcome = () => {
                         </View>
 
                         {/* Chart WebView */}
-                        <View style={{ height: 250, width: "100%", backgroundColor: palette.card, borderRadius: 8, overflow: 'hidden' }}>
+                        <View style={{ height: 330, width: "100%", backgroundColor: palette.card, borderRadius: 8, overflow: 'hidden' }}>
                           <WebView
                             key={`${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}`}
                             source={{ uri: `${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}` }}
-                            style={{ width: "100%", height: 280, marginTop: -30, backgroundColor: "transparent" }}
+                            style={{ width: "100%", height: 330, marginTop: -30, backgroundColor: "transparent" }}
                             containerStyle={{ backgroundColor: "transparent" }}
                             opaque={false}
                             androidLayerType="hardware"
