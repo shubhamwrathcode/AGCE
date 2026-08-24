@@ -60,11 +60,11 @@ const CoinDetailSheet = ({
       case "spot":
       default:
         return [
-          {
-            key: "convert",
-            label: "Convert",
-            onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM),
-          },
+          // {
+          //   key: "convert",
+          //   label: "Convert",
+          //   onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM),
+          // },
           { key: "trade", label: "Trade", onPress: () => onTrade?.(selectedCoin) },
           { key: "transfer", label: "Transfer", onPress: () => onTransfer?.(selectedCoin) },
         ];

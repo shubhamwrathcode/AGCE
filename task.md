@@ -67,8 +67,15 @@
 ### 12. Socket & Other Fixes
 - [x] Improved `SocketProvider.js` lifecycle and connection handling.
 - [x] Updated `FutureChartScreen.jsx`, `FutureHistoryScreen.jsx`.
-- [x] Further optimized `OptionsChainTable.jsx`.
 - [x] Updated `OptionsPnlCharts.jsx`, `OptionsPnlAnalysisScreen.jsx`.
 - [x] Updated `TradeHistory.js`.
+
+### 13. Options Chain Table — Horizontal Scroll & Performance
+- [x] Restored horizontal scroll on **Calls & Puts data rows** in `OptionsChainTable.jsx` (previously only headers scrolled after FlashList refactor).
+- [x] Added `HorizontalScrollPane` component using Reanimated shared values + `translateX` — zero re-renders during scroll.
+- [x] Fixed slow/laggy horizontal scroll caused by `setState` on every pan frame (`callsScrollX` / `putsScrollX` removed from React state).
+- [x] Fixed **`runOnJS does not exist`** runtime error — replaced `Gesture.Pan()` worklets with `PanResponder` (no `runOnJS` needed).
+- [x] Optimized data-area pan: shared values update live during drag; header scroll refs sync on release for smooth feel.
+- [x] Fixed last option chain row getting cut off — added `ListFooterComponent`, improved `estimatedItemSize` and `drawDistance`.
 
 ---

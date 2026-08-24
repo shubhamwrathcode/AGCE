@@ -64,7 +64,9 @@ import {
   ACCOUNT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN,
   WALLET_SCREEN, SELECT_COIN_SCREEN,
   MARGIN_TRANSFER_SCREEN, OPTIONS_PNL_ANALYSIS_SCREEN, EARNING_SCREEN,
+  TRADE_SCREEN,
 } from "../../navigation/routes";
+import { setSpotSelectedPair, setBuyOrders, setSellOrders } from "../../slices/homeSlice";
 import WalletSkeleton from "./WalletSkeleton";
 import RBSheet from "react-native-raw-bottom-sheet";
 import DepositSheet from "../../shared/components/DepositSheet";
@@ -160,6 +162,9 @@ const WalletNew = ({ route }) => {
   const userFuturesWallet = useAppSelector((state) => {
     return state.wallet.userFuturesWallet;
   });
+  const coinData = useAppSelector((state) => {
+    return state.home.coinData;
+  });
 
   const topRoutes = useMemo(
     () => [
@@ -224,7 +229,6 @@ const WalletNew = ({ route }) => {
   const [selectedCoinSheetWalletType, setSelectedCoinSheetWalletType] = useState("spot");
   const [selectedAccountForSheet, setSelectedAccountForSheet] = useState(null);
   const accountDetailSheet = useRef(null);
-  const [accountSheetHeight, setAccountSheetHeight] = useState(340);
   const [marginSummary, setMarginSummary] = useState(null);
   const [crossMarginSummary, setCrossMarginSummary] = useState(null);
   const [globalPortfolio, setGlobalPortfolio] = useState(null);
@@ -599,6 +603,45 @@ const WalletNew = ({ route }) => {
   const handleWSheetOpen = () => {
     withdrawSheet.current?.open();
   };
+
+  const handleTradeCoin = useCallback((coin) => {
+    const symbol = String(coin?.short_name || coin?.currency || coin?.asset || "").toUpperCase().trim();
+    const allPairs = Array.isArray(coinData) ? coinData : [];
+
+    let matchingPair = allPairs.find(
+      (p) => String(p?.base_currency || "").toUpperCase() === symbol
+    );
+
+    if (!matchingPair) {
+      matchingPair = allPairs.find(
+        (p) => String(p?.short_name || "").toUpperCase() === symbol
+      );
+    }
+
+    if (!matchingPair) {
+      matchingPair = allPairs.find(
+        (p) => String(p?.pair || p?.symbol || "").toUpperCase().startsWith(symbol)
+      );
+    }
+
+    if (!matchingPair) {
+      matchingPair = allPairs.find(
+        (p) => String(p?.quote_currency || "").toUpperCase() === symbol
+      );
+    }
+
+    const targetPair = matchingPair || {
+      base_currency: symbol,
+      quote_currency: "USDT",
+      short_name: `${symbol}/USDT`,
+      pair: `${symbol}USDT`,
+    };
+
+    dispatch(setSpotSelectedPair(targetPair));
+    dispatch(setBuyOrders([]));
+    dispatch(setSellOrders([]));
+    NavigationService.navigate(TRADE_SCREEN, { coinDetail: targetPair });
+  }, [coinData, dispatch]);
 
   const noGlobalLoader = useMemo(() => ({ useGlobalLoader: false }), []);
   const [refreshing, setRefreshing] = useState(false);
@@ -1469,7 +1512,7 @@ const WalletNew = ({ route }) => {
         approxUsdLine={approxUsdLine}
         usdApproxFromPrice={usdApproxFromPrice}
         spotUsdPriceLabel={spotUsdPriceLabel}
-        onTrade={(coin) => NavigationService.navigate(WALLET_SCREEN, { coin })}
+        onTrade={handleTradeCoin}
         onTransfer={(coin) => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { coin: coin?.short_name || coin?.currency || coin?.asset })}
         onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
         onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
@@ -1486,8 +1529,6 @@ const WalletNew = ({ route }) => {
         selectedAccount={selectedAccountForSheet}
         showBalance={showBalance}
         safeRound={safeRound}
-        accountSheetHeight={accountSheetHeight}
-        setAccountSheetHeight={setAccountSheetHeight}
         onTransfer={(acc) => {
           const from = acc?.key === "main" ? "main" : acc?.key;
           const to = acc?.key === "main" ? "spot" : "main";

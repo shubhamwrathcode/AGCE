@@ -13,8 +13,6 @@ const AccountDetailSheet = ({
   showBalance,
   safeRound,
   onTransfer,
-  accountSheetHeight,
-  setAccountSheetHeight,
 }) => {
   return (
     <RBSheet
@@ -23,16 +21,16 @@ const AccountDetailSheet = ({
       customModalProps={{ statusBarTranslucent: true }}
       closeOnDragDown={true}
       closeOnPressMask={true}
-      height={accountSheetHeight}
+      height={360}
       animationType="fade"
       customStyles={{
         container: {
           backgroundColor: themeColors.background,
-          height: accountSheetHeight,
+          height: 360,
           borderTopRightRadius: 26,
           borderTopLeftRadius: 26,
-          paddingHorizontal: 14,
-          paddingTop: 10,
+          paddingHorizontal: 16,
+          paddingTop: 12,
         },
         wrapper: {
           backgroundColor: "#0006",
@@ -46,11 +44,7 @@ const AccountDetailSheet = ({
         <View style={{ flex: 1 }}>
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 10 }}
-            onContentSizeChange={(_, h) => {
-              const next = Math.max(270, Math.min(500, Math.ceil(h + 44)));
-              if (next !== accountSheetHeight) setAccountSheetHeight(next);
-            }}
+            contentContainerStyle={{ paddingBottom: 16 }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>

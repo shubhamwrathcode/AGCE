@@ -1,16 +1,14 @@
 import React, { useRef, useEffect, useMemo, useState, useCallback, useDeferredValue } from 'react';
-import { Animated as RNAnimated, View, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, PanResponder } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import FastImage from 'react-native-fast-image';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
   useAnimatedRef,
-  useAnimatedStyle,
   scrollTo,
 } from 'react-native-reanimated';
-import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, checkIc, checkIcon, downIcon } from '../../../helper/ImageAssets';
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, checkIc, downIcon } from '../../../helper/ImageAssets';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
 import { fontFamilyMedium, SEMI_BOLD } from '../../../theme/typography';
@@ -40,35 +38,9 @@ const PUTS_HEADERS = [
   { title: 'Last', w: 60, align: 'center' },
 ];
 
-
-
 const ROW_HEIGHT = 56;
 const HEADER_ROW_HEIGHT = 35;
-const LIST_FOOTER_HEIGHT = ROW_HEIGHT + 16;
-
-const HorizontalScrollPane = React.memo(function HorizontalScrollPane({ width, scrollXShared, children }) {
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: -scrollXShared.value }],
-  }));
-
-  return (
-    <View style={{ flex: 1, overflow: 'hidden' }}>
-      <Animated.View style={[{ width }, animatedStyle]}>
-        {children}
-      </Animated.View>
-    </View>
-  );
-});
-
-function flashRowHeight(el) {
-  if (el?.type === 'header') return HEADER_ROW_HEIGHT;
-  return ROW_HEIGHT + (el?.isRowAboveLine || el?.isRowBelowLine ? 8 : 0);
-}
-
-function flashRowKey(el, index) {
-  if (el?.type === 'header') return `hdr-${el.date}-${index}`;
-  return `row-${el.chainIdx}-${el.row?.strike ?? index}-${index}`;
-}
+const LIST_FOOTER_HEIGHT = ROW_HEIGHT + 24;
 
 function withCommas(n, precision) {
   const parts = Number(n).toFixed(precision).split(".");
@@ -108,16 +80,15 @@ const SKELETON_ROWS = 10;
 const SKELETON_CELL_W = 42;
 const SKELETON_CELL_H = 14;
 
-const ShimmerCell = React.memo(function ShimmerCell({ width = SKELETON_CELL_W, height = SKELETON_CELL_H, borderRadius = 4, opacity, boneColor, style }) {
+const ShimmerCell = React.memo(function ShimmerCell({ width = SKELETON_CELL_W, height = SKELETON_CELL_H, borderRadius = 4, boneColor, style }) {
   return (
-    <RNAnimated.View
+    <View
       style={[
         {
           width,
           height,
           borderRadius,
           backgroundColor: boneColor,
-          opacity,
         },
         style,
       ]}
@@ -130,34 +101,10 @@ const OptionsChainSkeleton = React.memo(function OptionsChainSkeleton({ isDark, 
   const headerBg = isDark ? '#1C1D21' : '#F9F9F9';
   const boneColor = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)';
 
-  const anim = useRef(new RNAnimated.Value(0.3)).current;
-
-  useEffect(() => {
-    const loopAnim = RNAnimated.loop(
-      RNAnimated.sequence([
-        RNAnimated.timing(anim, {
-          toValue: 0.85,
-          duration: 750,
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(anim, {
-          toValue: 0.3,
-          duration: 750,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loopAnim.start();
-
-    return () => {
-      loopAnim.stop();
-    };
-  }, [anim]);
-
   const renderSideCells = (prefix) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 }}>
       {Array.from({ length: 4 }).map((_, idx) => (
-        <ShimmerCell key={`${prefix}-${idx}`} width={SKELETON_CELL_W} opacity={anim} boneColor={boneColor} />
+        <ShimmerCell key={`${prefix}-${idx}`} width={SKELETON_CELL_W} boneColor={boneColor} />
       ))}
     </View>
   );
@@ -166,13 +113,13 @@ const OptionsChainSkeleton = React.memo(function OptionsChainSkeleton({ isDark, 
     <View style={{ flex: 1, paddingTop: 4 }}>
       <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, backgroundColor: headerBg, borderBottomWidth: 1, borderColor }]}>
         <View style={{ flex: 1, justifyContent: 'center', paddingLeft: 12 }}>
-          <ShimmerCell width={50} height={12} opacity={anim} boneColor={boneColor} />
+          <ShimmerCell width={50} height={12} boneColor={boneColor} />
         </View>
         <View style={{ width: 80, alignItems: 'center', justifyContent: 'center' }}>
-          <ShimmerCell width={68} height={12} opacity={anim} boneColor={boneColor} />
+          <ShimmerCell width={68} height={12} boneColor={boneColor} />
         </View>
         <View style={{ flex: 1, alignItems: 'flex-end', paddingRight: 12 }}>
-          <ShimmerCell width={45} height={12} opacity={anim} boneColor={boneColor} />
+          <ShimmerCell width={45} height={12} boneColor={boneColor} />
         </View>
       </View>
 
@@ -190,7 +137,7 @@ const OptionsChainSkeleton = React.memo(function OptionsChainSkeleton({ isDark, 
         >
           <View style={{ flex: 1 }}>{renderSideCells(`call-${i}`)}</View>
           <View style={{ width: 80, alignItems: 'center', justifyContent: 'center', backgroundColor: headerBg }}>
-            <ShimmerCell width={54} height={SKELETON_CELL_H} opacity={anim} boneColor={boneColor} />
+            <ShimmerCell width={54} height={SKELETON_CELL_H} boneColor={boneColor} />
           </View>
           <View style={{ flex: 1 }}>{renderSideCells(`put-${i}`)}</View>
         </View>
@@ -202,8 +149,6 @@ const OptionsChainSkeleton = React.memo(function OptionsChainSkeleton({ isDark, 
 const CallDataRow = React.memo(function CallDataRow({
   row,
   currentPrice,
-  isRowAboveLine,
-  isRowBelowLine,
   cols,
   activeCallsWidth,
   themeColors,
@@ -214,10 +159,6 @@ const CallDataRow = React.memo(function CallDataRow({
   const strikePriceNum = row.strike;
   const isCallITM = strikePriceNum < currentPrice;
   const callBg = (isCallITM && !isDark) ? 'rgba(2, 192, 118, 0.05)' : 'transparent';
-  const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
-  const paddingBottom = isRowAboveLine ? 8 : 0;
-  const paddingTop = isRowBelowLine ? 8 : 0;
-  const borderBottomWidth = isRowAboveLine ? 0 : 1;
 
   const cRaw = row.callRaw || {};
   const cLeg = row.call || {};
@@ -226,7 +167,7 @@ const CallDataRow = React.memo(function CallDataRow({
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => navigation.navigate('OptionsInstrumentTrade', { item: cRaw, currentPrice, selectedAsset, isCall: true })}
-      style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: activeCallsWidth, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}
+      style={[styles.dataCellRow, { height: ROW_HEIGHT, borderBottomWidth: 1, width: activeCallsWidth, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: callBg }]}
     >
       {cols.last && (
         <View style={{ width: 60, alignItems: 'center', paddingHorizontal: 6 }}>
@@ -268,17 +209,10 @@ const CallDataRow = React.memo(function CallDataRow({
 
 const CenterStrikeRow = React.memo(function CenterStrikeRow({
   row,
-  isRowAboveLine,
-  isRowBelowLine,
   themeColors,
 }) {
-  const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
-  const paddingBottom = isRowAboveLine ? 8 : 0;
-  const paddingTop = isRowBelowLine ? 8 : 0;
-  const borderBottomWidth = isRowAboveLine ? 0 : 1;
-
   return (
-    <View style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, justifyContent: 'center', borderBottomColor: themeColors.themeBorderColor || '#F0F0F0' }]}>
+    <View style={[styles.dataCellRow, { height: ROW_HEIGHT, borderBottomWidth: 1, justifyContent: 'center', borderBottomColor: themeColors.themeBorderColor || '#F0F0F0' }]}>
       <View>
         <AppText style={{ fontFamily: fontFamilyMedium, color: themeColors.text, fontSize: 12, textAlign: 'center' }}>{withCommas(row.strike, 0)}</AppText>
         <AppText style={{ color: themeColors.secondaryText, fontSize: 9, fontFamily: fontFamilyMedium, textAlign: 'center', marginTop: 2 }}>{formatPct(row.diffPct)}</AppText>
@@ -290,8 +224,6 @@ const CenterStrikeRow = React.memo(function CenterStrikeRow({
 const PutDataRow = React.memo(function PutDataRow({
   row,
   currentPrice,
-  isRowAboveLine,
-  isRowBelowLine,
   cols,
   activePutsWidth,
   themeColors,
@@ -302,10 +234,6 @@ const PutDataRow = React.memo(function PutDataRow({
   const strikePriceNum = row.strike;
   const isPutITM = strikePriceNum > currentPrice;
   const putBg = (isPutITM && !isDark) ? 'rgba(2, 192, 118, 0.05)' : 'transparent';
-  const rowHeight = ROW_HEIGHT + (isRowAboveLine || isRowBelowLine ? 8 : 0);
-  const paddingBottom = isRowAboveLine ? 8 : 0;
-  const paddingTop = isRowBelowLine ? 8 : 0;
-  const borderBottomWidth = isRowAboveLine ? 0 : 1;
 
   const pRaw = row.putRaw || {};
   const pLeg = row.put || {};
@@ -314,7 +242,7 @@ const PutDataRow = React.memo(function PutDataRow({
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => navigation.navigate('OptionsInstrumentTrade', { item: pRaw, currentPrice, selectedAsset, isCall: false })}
-      style={[styles.dataCellRow, { height: rowHeight, paddingTop, paddingBottom, borderBottomWidth, width: activePutsWidth, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}
+      style={[styles.dataCellRow, { height: ROW_HEIGHT, borderBottomWidth: 1, width: activePutsWidth, borderBottomColor: themeColors.themeBorderColor || '#F0F0F0', backgroundColor: putBg }]}
     >
       <View style={{ width: 70, height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
         <AppText style={{ color: colors.green, fontSize: 12, fontFamily: fontFamilyMedium }}>{formatPrice(pLeg.bidIv, 0)}</AppText>
@@ -360,17 +288,6 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
   const isFocused = useIsFocused();
   const isChainLoading = isMarketLoading || isContractsLoading;
   const deferredSelectedExpiry = useDeferredValue(selectedExpiry);
-
-  const chainFlashRef = useRef(null);
-  const dataAreaRef = useRef(null);
-  const callsScrollXShared = useSharedValue(0);
-  const putsScrollXShared = useSharedValue(0);
-  const paneWidthShared = useSharedValue(0);
-  const putsMaxScrollShared = useSharedValue(0);
-  const dataAreaLayoutRef = useRef({ x: 0, width: 0 });
-  const panStartCallsXRef = useRef(0);
-  const panStartPutsXRef = useRef(0);
-  const panActiveSideRef = useRef(null);
 
   const [cols, setCols] = useState({
     last: true,
@@ -430,9 +347,16 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
     [activePutsHeaders],
   );
 
-  const leftScrollRef = useAnimatedRef();
-  const rightScrollRef = useAnimatedRef();
-  const activeScroll = useSharedValue(0); // 0 = none, 1 = left, 2 = right
+  const headerLeftScrollRef = useAnimatedRef();
+  const headerRightScrollRef = useAnimatedRef();
+  const dataLeftScrollRef = useAnimatedRef();
+  const dataRightScrollRef = useAnimatedRef();
+  const mainVerticalScrollRef = useRef(null);
+
+  const activeSource = useSharedValue(0); // 0: none, 1: headerLeft, 2: headerRight, 3: dataLeft, 4: dataRight
+  const putsMaxScrollShared = useSharedValue(0);
+  const callsMaxScrollShared = useSharedValue(0);
+
   const [callsPaneWidth, setCallsPaneWidth] = useState(0);
   const callsPaneWidthRef = useRef(0);
 
@@ -442,46 +366,9 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
   );
 
   useEffect(() => {
-    paneWidthShared.value = callsPaneWidth;
     putsMaxScrollShared.value = Math.max(0, ACTIVE_PUTS_WIDTH - callsPaneWidth);
-  }, [callsPaneWidth, ACTIVE_PUTS_WIDTH, paneWidthShared, putsMaxScrollShared]);
-
-  const updateHorizontalScrollShared = useCallback((callsX) => {
-    const paneW = callsPaneWidthRef.current || 0;
-    const maxCalls = Math.max(0, ACTIVE_CALLS_WIDTH - paneW);
-    const x = Math.max(0, Math.min(maxCalls, Number(callsX) || 0));
-    const putsMax = Math.max(0, ACTIVE_PUTS_WIDTH - paneW);
-    callsScrollXShared.value = x;
-    putsScrollXShared.value = Math.max(0, putsMax - x);
-    return x;
-  }, [ACTIVE_CALLS_WIDTH, ACTIVE_PUTS_WIDTH, callsScrollXShared, putsScrollXShared]);
-
-  const syncHorizontalScrollRefs = useCallback((callsX) => {
-    const paneW = callsPaneWidthRef.current || 0;
-    const maxCalls = Math.max(0, ACTIVE_CALLS_WIDTH - paneW);
-    const x = Math.max(0, Math.min(maxCalls, Number(callsX) || 0));
-    const putsMax = Math.max(0, ACTIVE_PUTS_WIDTH - paneW);
-    const putsX = Math.max(0, putsMax - x);
-    const leftRef = leftScrollRef.current;
-    const rightRef = rightScrollRef.current;
-
-    if (leftRef?.scrollTo) {
-      leftRef.scrollTo({ x, y: 0, animated: false });
-    } else {
-      scrollTo(leftScrollRef, x, 0, false);
-    }
-
-    if (rightRef?.scrollTo) {
-      rightRef.scrollTo({ x: putsX, y: 0, animated: false });
-    } else {
-      scrollTo(rightScrollRef, putsX, 0, false);
-    }
-  }, [ACTIVE_CALLS_WIDTH, ACTIVE_PUTS_WIDTH, leftScrollRef, rightScrollRef]);
-
-  const setHorizontalScrollFromCalls = useCallback((callsX) => {
-    const x = updateHorizontalScrollShared(callsX);
-    syncHorizontalScrollRefs(x);
-  }, [updateHorizontalScrollShared, syncHorizontalScrollRefs]);
+    callsMaxScrollShared.value = Math.max(0, ACTIVE_CALLS_WIDTH - callsPaneWidth);
+  }, [callsPaneWidth, ACTIVE_CALLS_WIDTH, ACTIVE_PUTS_WIDTH, putsMaxScrollShared, callsMaxScrollShared]);
 
   const alignCallsToStrike = useCallback(() => {
     const paneW = callsPaneWidthRef.current;
@@ -489,8 +376,13 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
     if (paneW <= 0 || contentW <= 0) return;
 
     const x = Math.max(0, contentW - paneW);
-    setHorizontalScrollFromCalls(x);
-  }, [ACTIVE_CALLS_WIDTH, setHorizontalScrollFromCalls]);
+    activeSource.value = 0;
+
+    headerLeftScrollRef.current?.scrollTo?.({ x, y: 0, animated: false });
+    dataLeftScrollRef.current?.scrollTo?.({ x, y: 0, animated: false });
+    headerRightScrollRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
+    dataRightScrollRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
+  }, [ACTIVE_CALLS_WIDTH, headerLeftScrollRef, dataLeftScrollRef, headerRightScrollRef, dataRightScrollRef, activeSource]);
 
   const handleCallsPaneLayout = useCallback((width) => {
     if (width <= 0 || width === callsPaneWidthRef.current) return;
@@ -502,83 +394,92 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
     const paneW = callsPaneWidthRef.current;
     if (paneW <= 0 || contentWidth <= 0) return;
 
-    const x = Math.max(0, contentWidth - paneW);
-    setHorizontalScrollFromCalls(x);
-  }, [setHorizontalScrollFromCalls]);
+    alignCallsToStrike();
+  }, [alignCallsToStrike]);
 
-  const handleLeftScroll = useAnimatedScrollHandler({
+  const handleHeaderLeftScroll = useAnimatedScrollHandler({
+    onBeginDrag: () => {
+      activeSource.value = 1;
+    },
     onScroll: (e) => {
-      if (activeScroll.value !== 1) return;
+      if (activeSource.value !== 1) return;
       const x = e.contentOffset.x;
       const putsMax = putsMaxScrollShared.value;
-      callsScrollXShared.value = x;
-      putsScrollXShared.value = Math.max(0, putsMax - x);
-      scrollTo(rightScrollRef, Math.max(0, putsMax - x), 0, false);
+      const putsX = Math.max(0, putsMax - x);
+      scrollTo(dataLeftScrollRef, x, 0, false);
+      scrollTo(headerRightScrollRef, putsX, 0, false);
+      scrollTo(dataRightScrollRef, putsX, 0, false);
+    },
+    onMomentumEnd: () => {
+      activeSource.value = 0;
+    },
+    onEndDrag: () => {
+      activeSource.value = 0;
     },
   });
 
-  const handleRightScroll = useAnimatedScrollHandler({
+  const handleHeaderRightScroll = useAnimatedScrollHandler({
+    onBeginDrag: () => {
+      activeSource.value = 2;
+    },
     onScroll: (e) => {
-      if (activeScroll.value !== 2) return;
-      const max = e.contentSize.width - e.layoutMeasurement.width;
-      if (max <= 0) return;
-      const callsX = max - e.contentOffset.x;
-      callsScrollXShared.value = callsX;
-      putsScrollXShared.value = e.contentOffset.x;
-      scrollTo(leftScrollRef, callsX, 0, false);
+      if (activeSource.value !== 2) return;
+      const putsX = e.contentOffset.x;
+      const putsMax = putsMaxScrollShared.value;
+      const callsX = Math.max(0, putsMax - putsX);
+      scrollTo(dataRightScrollRef, putsX, 0, false);
+      scrollTo(headerLeftScrollRef, callsX, 0, false);
+      scrollTo(dataLeftScrollRef, callsX, 0, false);
+    },
+    onMomentumEnd: () => {
+      activeSource.value = 0;
+    },
+    onEndDrag: () => {
+      activeSource.value = 0;
     },
   });
 
-  const dataPanResponder = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gestureState) => (
-      Math.abs(gestureState.dx) > 8
-      && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2
-    ),
-    onPanResponderGrant: (evt) => {
-      const layout = dataAreaLayoutRef.current;
-      const touchX = evt.nativeEvent.pageX - layout.x;
-      const centerLeft = (layout.width - 80) / 2;
-      const centerRight = centerLeft + 80;
+  const handleDataLeftScroll = useAnimatedScrollHandler({
+    onBeginDrag: () => {
+      activeSource.value = 3;
+    },
+    onScroll: (e) => {
+      if (activeSource.value !== 3) return;
+      const x = e.contentOffset.x;
+      const putsMax = putsMaxScrollShared.value;
+      const putsX = Math.max(0, putsMax - x);
+      scrollTo(headerLeftScrollRef, x, 0, false);
+      scrollTo(headerRightScrollRef, putsX, 0, false);
+      scrollTo(dataRightScrollRef, putsX, 0, false);
+    },
+    onMomentumEnd: () => {
+      activeSource.value = 0;
+    },
+    onEndDrag: () => {
+      activeSource.value = 0;
+    },
+  });
 
-      if (touchX < centerLeft) {
-        panActiveSideRef.current = 'left';
-        activeScroll.value = 1;
-        panStartCallsXRef.current = callsScrollXShared.value;
-      } else if (touchX > centerRight) {
-        panActiveSideRef.current = 'right';
-        activeScroll.value = 2;
-        panStartPutsXRef.current = putsScrollXShared.value;
-      } else {
-        panActiveSideRef.current = null;
-      }
+  const handleDataRightScroll = useAnimatedScrollHandler({
+    onBeginDrag: () => {
+      activeSource.value = 4;
     },
-    onPanResponderMove: (_, gestureState) => {
-      const side = panActiveSideRef.current;
-      if (!side) return;
-
-      const paneW = callsPaneWidthRef.current || 0;
-      if (side === 'left') {
-        const maxCalls = Math.max(0, ACTIVE_CALLS_WIDTH - paneW);
-        const nextX = Math.max(0, Math.min(maxCalls, panStartCallsXRef.current - gestureState.dx));
-        updateHorizontalScrollShared(nextX);
-        return;
-      }
-
-      const putsMax = Math.max(0, ACTIVE_PUTS_WIDTH - paneW);
-      const nextPutsX = Math.max(0, Math.min(putsMax, panStartPutsXRef.current - gestureState.dx));
-      updateHorizontalScrollShared(Math.max(0, putsMax - nextPutsX));
+    onScroll: (e) => {
+      if (activeSource.value !== 4) return;
+      const putsX = e.contentOffset.x;
+      const putsMax = putsMaxScrollShared.value;
+      const callsX = Math.max(0, putsMax - putsX);
+      scrollTo(headerRightScrollRef, putsX, 0, false);
+      scrollTo(headerLeftScrollRef, callsX, 0, false);
+      scrollTo(dataLeftScrollRef, callsX, 0, false);
     },
-    onPanResponderRelease: () => {
-      syncHorizontalScrollRefs(callsScrollXShared.value);
-      panActiveSideRef.current = null;
-      activeScroll.value = 0;
+    onMomentumEnd: () => {
+      activeSource.value = 0;
     },
-    onPanResponderTerminate: () => {
-      syncHorizontalScrollRefs(callsScrollXShared.value);
-      panActiveSideRef.current = null;
-      activeScroll.value = 0;
+    onEndDrag: () => {
+      activeSource.value = 0;
     },
-  }), [ACTIVE_CALLS_WIDTH, ACTIVE_PUTS_WIDTH, activeScroll, callsScrollXShared, updateHorizontalScrollShared, syncHorizontalScrollRefs]);
+  });
 
   const { chainsToRender, elementsToRender } = useMemo(() => {
     const filteredChains = applyChainFilters(chains, {
@@ -614,134 +515,17 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
       flattenedElements.push({ type: 'header', chainIdx, date: chain.date });
 
       chain.data.forEach((row, idx) => {
-        const isRowAboveLine = idx === activeLineIdx - 1;
         const isRowBelowLine = idx === activeLineIdx;
-        flattenedElements.push({ type: 'row', chainIdx, row, idx, isRowAboveLine, isRowBelowLine });
+        flattenedElements.push({ type: 'row', chainIdx, row, idx, isRowBelowLine });
       });
     });
 
     return { chainsToRender: selectedChains, elementsToRender: flattenedElements };
   }, [chains, deferredSelectedExpiry, currentPrice, oddSize, debouncedFilters]);
 
-  const overrideFlashItemLayout = useCallback((layout, item) => {
-    layout.size = flashRowHeight(item);
-  }, []);
-
-  const renderCombinedFlashRow = useCallback(({ item: el }) => {
-    if (el.type === 'header') {
-      return (
-        <View style={{ flexDirection: 'row' }}>
-          <HorizontalScrollPane width={ACTIVE_CALLS_WIDTH} scrollXShared={callsScrollXShared}>
-            <View
-              style={{
-                height: HEADER_ROW_HEIGHT,
-                width: ACTIVE_CALLS_WIDTH,
-                justifyContent: 'center',
-                paddingLeft: 16,
-                backgroundColor: isDark ? '#1C1D21' : '#F9F9F9',
-                borderBottomWidth: 1,
-                borderTopWidth: 1,
-                borderColor: themeColors.themeBorderColor || '#F0F0F0',
-              }}
-            >
-              <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>Calls</AppText>
-            </View>
-          </HorizontalScrollPane>
-          <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }}>
-            <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center' }]}>
-              <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{el.date}</AppText>
-            </View>
-          </View>
-          <HorizontalScrollPane width={ACTIVE_PUTS_WIDTH} scrollXShared={putsScrollXShared}>
-            <View
-              style={{
-                height: HEADER_ROW_HEIGHT,
-                width: ACTIVE_PUTS_WIDTH,
-                justifyContent: 'center',
-                paddingLeft: 16,
-                backgroundColor: isDark ? '#1C1D21' : '#F9F9F9',
-                borderBottomWidth: 1,
-                borderTopWidth: 1,
-                borderColor: themeColors.themeBorderColor || '#F0F0F0',
-              }}
-            >
-              <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>Puts</AppText>
-            </View>
-          </HorizontalScrollPane>
-        </View>
-      );
-    }
-
-    return (
-      <View style={{ flexDirection: 'row', position: 'relative' }}>
-        {el.isRowBelowLine && currentPrice > 0 ? (
-          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, alignItems: 'center', zIndex: 20, elevation: 20 }}>
-            <View style={{ position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: isDark ? '#FFF' : '#222', top: -0.75 }} />
-            <View style={{ backgroundColor: isDark ? '#FFF' : '#000', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, top: -13 }}>
-              <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 12, fontFamily: fontFamilyMedium }}>
-                {formatVal(currentPrice, 2)}
-              </AppText>
-            </View>
-          </View>
-        ) : null}
-        <HorizontalScrollPane width={ACTIVE_CALLS_WIDTH} scrollXShared={callsScrollXShared}>
-          <CallDataRow
-            row={el.row}
-            currentPrice={currentPrice}
-            isRowAboveLine={el.isRowAboveLine}
-            isRowBelowLine={el.isRowBelowLine}
-            cols={cols}
-            activeCallsWidth={ACTIVE_CALLS_WIDTH}
-            themeColors={themeColors}
-            isDark={isDark}
-            selectedAsset={selectedAsset}
-            navigation={navigation}
-          />
-        </HorizontalScrollPane>
-        <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }}>
-          <CenterStrikeRow
-            row={el.row}
-            isRowAboveLine={el.isRowAboveLine}
-            isRowBelowLine={el.isRowBelowLine}
-            themeColors={themeColors}
-          />
-        </View>
-        <HorizontalScrollPane width={ACTIVE_PUTS_WIDTH} scrollXShared={putsScrollXShared}>
-          <PutDataRow
-            row={el.row}
-            currentPrice={currentPrice}
-            isRowAboveLine={el.isRowAboveLine}
-            isRowBelowLine={el.isRowBelowLine}
-            cols={cols}
-            activePutsWidth={ACTIVE_PUTS_WIDTH}
-            themeColors={themeColors}
-            isDark={isDark}
-            selectedAsset={selectedAsset}
-            navigation={navigation}
-          />
-        </HorizontalScrollPane>
-      </View>
-    );
-  }, [
-    ACTIVE_CALLS_WIDTH,
-    ACTIVE_PUTS_WIDTH,
-    callsScrollXShared,
-    putsScrollXShared,
-    cols,
-    currentPrice,
-    isDark,
-    navigation,
-    selectedAsset,
-    themeColors,
-  ]);
-
-  const renderListFooter = useCallback(() => (
-    <View style={{ height: LIST_FOOTER_HEIGHT }} />
-  ), []);
-
   useEffect(() => {
-    chainFlashRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [deferredSelectedExpiry, elementsToRender.length]);
+    mainVerticalScrollRef.current?.scrollTo?.({ y: 0, animated: false });
+  }, [deferredSelectedExpiry]);
 
   useEffect(() => {
     if (!isFocused || isChainLoading || chainsToRender.length === 0 || callsPaneWidth <= 0) return undefined;
@@ -839,20 +623,19 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row' }}>
+          {/* Top Pinned Table Header */}
+          <View style={{ flexDirection: 'row', zIndex: 10, elevation: 10 }}>
+            {/* Left: Calls Header ScrollView */}
             <View style={{ flex: 1 }}>
               <Animated.ScrollView
-                ref={leftScrollRef}
+                ref={headerLeftScrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentOffset={callsPaneWidth > 0 ? { x: callsScrollOffset, y: 0 } : undefined}
                 onLayout={(e) => handleCallsPaneLayout(e.nativeEvent.layout.width)}
                 onContentSizeChange={(w) => handleCallsContentSizeChange(w)}
-                onScroll={handleLeftScroll}
+                onScroll={handleHeaderLeftScroll}
                 scrollEventThrottle={16}
-                onTouchStart={() => { activeScroll.value = 1; }}
-                onScrollEndDrag={() => { activeScroll.value = 0; }}
-                onMomentumScrollEnd={() => { activeScroll.value = 0; }}
               >
                 <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: ACTIVE_CALLS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
                   {activeCallsHeaders.map((h, i) => (
@@ -869,7 +652,8 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
               </Animated.ScrollView>
             </View>
 
-            <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9', zIndex: 10, elevation: 10 }}>
+            {/* Center: Strike Header */}
+            <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }}>
               <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center' }]}>
                 <TouchableOpacity onPress={() => setShowColMenu(!showColMenu)} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 11, textAlign: 'center', marginRight: 4 }}>Strike Price</AppText>
@@ -914,16 +698,14 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
               </View>
             </View>
 
+            {/* Right: Puts Header ScrollView */}
             <View style={{ flex: 1 }}>
               <Animated.ScrollView
-                ref={rightScrollRef}
+                ref={headerRightScrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                onScroll={handleRightScroll}
+                onScroll={handleHeaderRightScroll}
                 scrollEventThrottle={16}
-                onTouchStart={() => { activeScroll.value = 2; }}
-                onScrollEndDrag={() => { activeScroll.value = 0; }}
-                onMomentumScrollEnd={() => { activeScroll.value = 0; }}
               >
                 <View style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, width: ACTIVE_PUTS_WIDTH, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }]}>
                   {activePutsHeaders.map((h, i) => (
@@ -941,30 +723,136 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
             </View>
           </View>
 
-          <View
-            ref={dataAreaRef}
+          {/* Unified Vertical Scroll Data Area */}
+          <ScrollView
+            ref={mainVerticalScrollRef}
             style={{ flex: 1 }}
-            onLayout={() => {
-              dataAreaRef.current?.measureInWindow((x, _y, width) => {
-                dataAreaLayoutRef.current = { x, width };
-              });
-            }}
-            {...dataPanResponder.panHandlers}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: LIST_FOOTER_HEIGHT }}
           >
-            <FlashList
-                ref={chainFlashRef}
-                data={elementsToRender}
-                renderItem={renderCombinedFlashRow}
-                keyExtractor={flashRowKey}
-                estimatedItemSize={ROW_HEIGHT + 8}
-                overrideItemLayout={overrideFlashItemLayout}
-                extraData={[cols, currentPrice, isDark]}
-                showsVerticalScrollIndicator={false}
-                ListFooterComponent={renderListFooter}
-                contentContainerStyle={{ paddingBottom: 8 }}
-                drawDistance={ROW_HEIGHT * 10}
-              />
-          </View>
+            <View style={{ flexDirection: 'row' }}>
+              {/* Left Column: Calls Data ScrollView */}
+              <View style={{ flex: 1 }}>
+                <Animated.ScrollView
+                  ref={dataLeftScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentOffset={callsPaneWidth > 0 ? { x: callsScrollOffset, y: 0 } : undefined}
+                  onScroll={handleDataLeftScroll}
+                  scrollEventThrottle={16}
+                  nestedScrollEnabled={true}
+                >
+                  <View style={{ width: ACTIVE_CALLS_WIDTH }}>
+                    {elementsToRender.map((el, index) => (
+                      el.type === 'header' ? (
+                        <View
+                          key={`call-hdr-${el.date}-${index}`}
+                          style={{
+                            height: HEADER_ROW_HEIGHT,
+                            width: ACTIVE_CALLS_WIDTH,
+                            justifyContent: 'center',
+                            paddingLeft: 16,
+                            backgroundColor: isDark ? '#1C1D21' : '#F9F9F9',
+                            borderBottomWidth: 1,
+                            borderTopWidth: 1,
+                            borderColor: themeColors.themeBorderColor || '#F0F0F0',
+                          }}
+                        >
+                          <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>Calls</AppText>
+                        </View>
+                      ) : (
+                        <CallDataRow
+                          key={`call-${el.chainIdx}-${el.row?.strike ?? index}-${index}`}
+                          row={el.row}
+                          currentPrice={currentPrice}
+                          cols={cols}
+                          activeCallsWidth={ACTIVE_CALLS_WIDTH}
+                          themeColors={themeColors}
+                          isDark={isDark}
+                          selectedAsset={selectedAsset}
+                          navigation={navigation}
+                        />
+                      )
+                    ))}
+                  </View>
+                </Animated.ScrollView>
+              </View>
+
+              {/* Center Column: Strike Data */}
+              <View style={{ width: 80, backgroundColor: isDark ? '#1C1D21' : '#F9F9F9' }}>
+                {elementsToRender.map((el, index) => (
+                  el.type === 'header' ? (
+                    <View key={`strk-hdr-${el.date}-${index}`} style={[styles.headerColsRow, { height: HEADER_ROW_HEIGHT, justifyContent: 'center' }]}>
+                      <AppText style={{ color: themeColors.text, fontSize: 12, fontFamily: fontFamilyMedium }}>{el.date}</AppText>
+                    </View>
+                  ) : (
+                    <View key={`strk-${el.chainIdx}-${el.row?.strike ?? index}-${index}`} style={{ position: 'relative' }}>
+                      {el.isRowBelowLine && currentPrice > 0 ? (
+                        <View pointerEvents="none" style={styles.currentPriceIndicator}>
+                          <View style={[styles.currentPriceLine, { backgroundColor: isDark ? '#FFF' : '#222' }]} />
+                          <View style={[styles.currentPriceBadge, { backgroundColor: isDark ? '#FFF' : '#000' }]}>
+                            <AppText numberOfLines={1} style={{ color: isDark ? '#000' : '#FFF', fontSize: 11, fontFamily: fontFamilyMedium }}>
+                              {formatVal(currentPrice, 2)}
+                            </AppText>
+                          </View>
+                        </View>
+                      ) : null}
+                      <CenterStrikeRow
+                        row={el.row}
+                        themeColors={themeColors}
+                      />
+                    </View>
+                  )
+                ))}
+              </View>
+
+              {/* Right Column: Puts Data ScrollView */}
+              <View style={{ flex: 1 }}>
+                <Animated.ScrollView
+                  ref={dataRightScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={handleDataRightScroll}
+                  scrollEventThrottle={16}
+                  nestedScrollEnabled={true}
+                >
+                  <View style={{ width: ACTIVE_PUTS_WIDTH }}>
+                    {elementsToRender.map((el, index) => (
+                      el.type === 'header' ? (
+                        <View
+                          key={`put-hdr-${el.date}-${index}`}
+                          style={{
+                            height: HEADER_ROW_HEIGHT,
+                            width: ACTIVE_PUTS_WIDTH,
+                            justifyContent: 'center',
+                            paddingLeft: 16,
+                            backgroundColor: isDark ? '#1C1D21' : '#F9F9F9',
+                            borderBottomWidth: 1,
+                            borderTopWidth: 1,
+                            borderColor: themeColors.themeBorderColor || '#F0F0F0',
+                          }}
+                        >
+                          <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>Puts</AppText>
+                        </View>
+                      ) : (
+                        <PutDataRow
+                          key={`put-${el.chainIdx}-${el.row?.strike ?? index}-${index}`}
+                          row={el.row}
+                          currentPrice={currentPrice}
+                          cols={cols}
+                          activePutsWidth={ACTIVE_PUTS_WIDTH}
+                          themeColors={themeColors}
+                          isDark={isDark}
+                          selectedAsset={selectedAsset}
+                          navigation={navigation}
+                        />
+                      )
+                    ))}
+                  </View>
+                </Animated.ScrollView>
+              </View>
+            </View>
+          </ScrollView>
         </View>
       )}
     </View>
@@ -997,7 +885,6 @@ const styles = StyleSheet.create({
   dataCellRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
   },
   subHeaderStaticRow: {
     flexDirection: 'row',
@@ -1016,18 +903,26 @@ const styles = StyleSheet.create({
   },
   currentPriceIndicator: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    zIndex: 10,
+    left: -2000,
+    right: -2000,
+    top: -1,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 20,
+    elevation: 20,
+  },
+  currentPriceLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1.5,
+    top: 11,
   },
   currentPriceBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 4,
-    zIndex: 11,
+    zIndex: 21,
   },
   modalOverlay: {
     flex: 1,
@@ -1053,4 +948,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   }
 });
-

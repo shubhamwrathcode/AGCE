@@ -284,7 +284,10 @@ const FuturesWalletTab = ({ theme, themeColors }) => {
       </View>
 
       {/* Summary Card */}
-      <View style={[styles.summaryCard, { backgroundColor: isDark ? "transparent" : colors.white, borderWidth: isDark ? StyleSheet.hairlineWidth : 0, borderColor: themeColors.border }]}>
+      <View style={[styles.summaryCard, {
+        backgroundColor: isDark ? "transparent" : colors.white,
+        borderWidth: 0, borderColor: themeColors.border
+      }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
             <AppText type={SIXTEEN} style={{ color: themeColors.secondaryText }} weight={SEMI_BOLD}>Total Assets</AppText>

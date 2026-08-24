@@ -11,7 +11,7 @@ import { searchIcon } from "../../helper/ImageAssets";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { AppText, FOURTEEN, MEDIUM, SEMI_BOLD, SIXTEEN, THIRTEEN, TWELVE } from "../../shared";
 import FastImage from "react-native-fast-image";
-import { colors, lightTheme } from "../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import { SEARCH_SCREEN } from "../../navigation/routes";
 import { useTheme } from "../../hooks/useTheme";
@@ -100,7 +100,7 @@ const MarketHeader = ({
     <View style={[styles.wrapper, { backgroundColor: themeColors.background }]}>
       {/* Search bar - full width, reference style */}
       {showSearch && (
-        <View style={[styles.searchBar, { backgroundColor: isDark ? themeColors.input : '#F4F4F4', borderColor: 'transparent', borderWidth: 0.8 }]}>
+        <View style={[styles.searchBar, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F4F4F4', borderColor: 'transparent', borderWidth: 0.8 }]}>
           <FastImage
             source={searchIcon}
             resizeMode="contain"
