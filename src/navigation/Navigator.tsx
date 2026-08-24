@@ -1,5 +1,4 @@
-/* eslint-disable react/no-unstable-nested-components */
-import { createStackNavigator } from "@react-navigation/stack";
+import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import "react-native-gesture-handler";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
@@ -357,23 +356,22 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
 
 const options: any = {
   headerShown: false,
-  cardStyle: { backgroundColor: colors.newThemeColor },
-  contentStyle: { backgroundColor: colors.newThemeColor },
 };
-
-const TabIcon = React.memo(({ focused, icon, color }: any) => (
-  <FastImage
-    source={icon}
-    style={commonStyles.tabIcon}
-    tintColor={focused ? color : colors.black}
-    resizeMode="contain"
-  />
-));
 
 const MyAuthLoadingStack = () => {
   const p2p = useAppSelector((state) => state.home.p2p);
+  const { colors: themeColors } = useTheme();
+  const screenOptions = React.useMemo(() => ({
+    headerShown: false,
+    detachPreviousScreen: false,
+    animationEnabled: true,
+    cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+    cardStyle: { backgroundColor: themeColors.background },
+    contentStyle: { backgroundColor: themeColors.background },
+  }), [themeColors]);
+
   return (
-    <Stack.Navigator screenOptions={options}>
+    <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen
         name={routes.NAVIGATION_AUTH_LOADING_SCREEN}
         component={AuthLoading}
@@ -618,12 +616,11 @@ const MyAuthLoadingStack = () => {
         component={DepositWallet}
       />
       <Stack.Screen name={routes.DEPOSIT_COIN_SCREEN} component={DepositCoin} />
-      <Stack.Screen name={routes.SELECT_COIN_SCREEN} component={SelectCoin} options={options} />
-      <Stack.Screen name={routes.WITHDRAW_FORM_SCREEN} component={WithdrawForm} options={options} />
+      <Stack.Screen name={routes.SELECT_COIN_SCREEN} component={SelectCoin} />
+      <Stack.Screen name={routes.WITHDRAW_FORM_SCREEN} component={WithdrawForm} />
       <Stack.Screen
         name={routes.WALLET_WITHDRAW_SCREEN}
         component={SelectCoin}
-        options={options}
       />
       <Stack.Screen name={routes.Dashboard_Inner} component={DashboardInner} />
 
@@ -762,8 +759,19 @@ const MyAuthLoadingStack = () => {
     </Stack.Navigator>
   );
 };
-const AuthStack = () => (
-  <Stack.Navigator screenOptions={options}>
+const AuthStack = () => {
+  const { colors: themeColors } = useTheme();
+  const screenOptions = React.useMemo(() => ({
+    headerShown: false,
+    detachPreviousScreen: false,
+    animationEnabled: true,
+    cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+    cardStyle: { backgroundColor: themeColors.background },
+    contentStyle: { backgroundColor: themeColors.background },
+  }), [themeColors]);
+
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
     <Stack.Screen name={routes.WELCOME_SCREEN} component={Welcome} />
     <Stack.Screen name={routes.LOGIN_SCREEN} component={Login} />
     <Stack.Screen
@@ -794,7 +802,8 @@ const AuthStack = () => (
       component={ResetPassword}
     />
   </Stack.Navigator>
-);
+  );
+};
 
 
 
@@ -1038,30 +1047,42 @@ const customTabBarStyles = StyleSheet.create({
   },
 });
 
-const RootStackScreen = () => (
-  <Stack.Navigator
-    screenOptions={options}
-  >
-    <Stack.Screen
-      name={routes.NAVIGATION_AUTH_LOADING_STACK}
-      component={MyAuthLoadingStack}
-    />
-  </Stack.Navigator>
-);
+const RootStackScreen = () => {
+  const { colors: themeColors } = useTheme();
+  const screenOptions = React.useMemo(() => ({
+    headerShown: false,
+    detachPreviousScreen: false,
+    animationEnabled: true,
+    cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+    cardStyle: { backgroundColor: themeColors.background },
+    contentStyle: { backgroundColor: themeColors.background },
+  }), [themeColors]);
 
-const appTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.newThemeColor,
-    card: colors.newThemeColor,
-  },
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen
+        name={routes.NAVIGATION_AUTH_LOADING_STACK}
+        component={MyAuthLoadingStack}
+      />
+    </Stack.Navigator>
+  );
 };
 
 const Navigator = () => {
+  const { colors: themeColors } = useTheme();
+
+  const navTheme = React.useMemo(() => ({
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: themeColors.background,
+      card: themeColors.background,
+    },
+  }), [themeColors]);
+
   return (
     <NavigationContainer
-      theme={appTheme}
+      theme={navTheme}
       ref={(navigationRef) => {
         NavigationService.setTopLevelNavigator(navigationRef);
       }}

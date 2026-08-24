@@ -253,8 +253,14 @@ const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, on
             children={isInProgress ? "Continue Verification" : "Update Information"}
             onPress={isInProgress ? onVerifyPress : onResubmitPress}
             loading={isLoading}
-            containerStyle={styles.primaryActionBtn}
-            titleStyle={styles.primaryActionBtnText}
+            containerStyle={[
+              styles.primaryActionBtn,
+              isDark && { backgroundColor: colors.white }
+            ]}
+            titleStyle={[
+              styles.primaryActionBtnText,
+              isDark && { color: colors.black }
+            ]}
           />
         )}
         <TouchableOpacity
@@ -348,8 +354,14 @@ const KycRejected = ({ onVerifyPress, isKyb }) => {
           children="Try Again"
           onPress={onVerifyPress}
           loading={isLoading}
-          containerStyle={styles.primaryActionBtn}
-          titleStyle={styles.primaryActionBtnText}
+          containerStyle={[
+            styles.primaryActionBtn,
+            isDark && { backgroundColor: colors.white }
+          ]}
+          titleStyle={[
+            styles.primaryActionBtnText,
+            isDark && { color: colors.black }
+          ]}
         />
         <TouchableOpacity
           onPress={() => NavigationService.navigate(CREATE_TICKET_SCREEN)}
@@ -467,8 +479,14 @@ const KycDue = ({ onVerifyPress, isKyb }) => {
           children={isKyb ? "Verify KYB" : "Verify Now"}
           onPress={onVerifyPress}
           loading={isLoading}
-          containerStyle={styles.primaryActionBtn}
-          titleStyle={styles.primaryActionBtnText}
+          containerStyle={[
+            styles.primaryActionBtn,
+            isDark && { backgroundColor: colors.white }
+          ]}
+          titleStyle={[
+            styles.primaryActionBtnText,
+            isDark && { color: colors.black }
+          ]}
         />
       </View>
     </View>

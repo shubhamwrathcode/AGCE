@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   Dimensions,
+  useWindowDimensions,
   TouchableOpacity,
   StatusBar,
   Platform,
@@ -59,7 +60,7 @@ import NavigationService from "../../navigation/NavigationService";
 import { colors as themePalette } from "../../theme/colors";
 
 const { width: Width, height: Height } = Dimensions.get("window");
-const CHART_BLOCK_HEIGHT = Math.round(Height * 0.45);
+const CHART_BLOCK_HEIGHT = Math.round(Height * 0.48);
 // Render full order book list on this screen (web-like).
 // (Binance shows many rows; we avoid slicing here.)
 const ORDER_BOOK_ROWS = 12;
@@ -79,6 +80,24 @@ const CHART_BOTTOM_TAB_ICON = {
 
 const DEFAULT_ORDER_BOOK_AGG_OPTIONS = [0.1, 0.5, 1, 10, 100];
 const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
+
+const INJECTED_CHART_JS = `
+  (function() {
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      document.getElementsByTagName('head')[0].appendChild(meta);
+    }
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden';
+  })();
+  true;
+`;
 
 /** Same idea as web `TradePage/index.js`: steps = tick × 1, 10, 100, … */
 function getOrderBookAggOptionsForPair(tickSize) {
@@ -431,6 +450,10 @@ const SpotChartScreen = () => {
   const route = useRoute();
   const tradeType = route.params?.tradeType || "Spot";
   const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const chartHeight = useMemo(() => {
+    return Math.round(Math.min(Math.max(windowHeight * 0.48, 400), 470));
+  }, [windowHeight]);
   const tabScrollBottomPadding =
     TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
   const { subscribeToExchange, unsubscribeFromExchange } = useContext(SocketContext) || {};
@@ -645,7 +668,7 @@ const SpotChartScreen = () => {
             </View>
           </View>
 
-          <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+          <View style={{ marginTop: 12 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
               <AppText type={ELEVEN} style={{ color: colors.placeholderColor }}>{pairQuote} Balance</AppText>
               <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
@@ -660,7 +683,7 @@ const SpotChartScreen = () => {
             </View>
           </View>
 
-          <View style={[styles.assetsActionRow, { paddingHorizontal: 16 }]}>
+          <View style={[styles.assetsActionRow, {}]}>
             <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}>
               <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Deposit</AppText>
             </TouchableOpacity>
@@ -672,7 +695,7 @@ const SpotChartScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 24, padding: 12, borderRadius: 8, backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}>
+          <View style={{ marginHorizontal: 0, marginTop: 16, marginBottom: 24, padding: 15, borderRadius: 8, backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", marginBottom: 12 }}>
               <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{pairBase}/{pairQuote}</AppText>
               <View style={{ backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
@@ -1004,7 +1027,7 @@ const SpotChartScreen = () => {
     },
     [dispatch]
   );
-
+  console.log(chartUri, '====chart urp ')
   // Cleaned up legacy effect as its logic is now merged into the unified subscription hook above.
 
   const [webViewReady, setWebViewReady] = useState(false);
@@ -1550,22 +1573,24 @@ const SpotChartScreen = () => {
           </View>
 
 
-          <View style={{ width: Width, overflow: "hidden" }}>
+          <View style={{ width: windowWidth, overflow: "hidden" }}>
             <Animated.View
               style={{
                 flexDirection: "row",
-                width: Width * 2,
+                width: windowWidth * 2,
                 transform: [{ translateX: topTabX }],
               }}
             >
-              <View style={{ width: Width }}>
-                <View style={[styles.chartWrap, { backgroundColor: colors.white, height: CHART_BLOCK_HEIGHT }]}>
+              <View style={{ width: windowWidth }}>
+                <View style={[styles.chartWrap, { width: windowWidth, height: chartHeight, backgroundColor: themeColors.background }]}>
                   <View
                     style={[
                       styles.chartWebWrap,
                       {
-                        height: CHART_BLOCK_HEIGHT,
+                        width: windowWidth,
+                        height: chartHeight,
                         opacity: showSkeleton ? 0 : 1,
+                        backgroundColor: themeColors.background,
                       },
                     ]}
                     pointerEvents={showSkeleton ? "none" : "auto"}
@@ -1574,7 +1599,8 @@ const SpotChartScreen = () => {
                       <WebView
                         key={chartUri}
                         source={{ uri: chartUri }}
-                        style={{ width: Width, height: CHART_BLOCK_HEIGHT + 30, marginTop: -30, backgroundColor: colors.iconBgColor }}
+                        injectedJavaScript={INJECTED_CHART_JS}
+                        style={{ width: windowWidth, height: chartHeight + 25, backgroundColor: themeColors.background }}
                         containerStyle={{ backgroundColor: "transparent" }}
                         opaque={false}
                         androidLayerType="hardware"
@@ -1599,7 +1625,7 @@ const SpotChartScreen = () => {
                   </View>
                   {showSkeleton ? (
                     <View style={styles.chartSkeletonOverlay} pointerEvents="none">
-                      <ChartSkeleton height={CHART_BLOCK_HEIGHT} width={Width} />
+                      <ChartSkeleton height={chartHeight} width={windowWidth} />
                     </View>
                   ) : null}
                 </View>
@@ -1629,7 +1655,7 @@ const SpotChartScreen = () => {
                         onPress={() => handleTabChange(tab)}
                         style={[
                           styles.obTab,
-                          { paddingHorizontal: 6, paddingVertical: 12, backgroundColor: "transparent" }
+                          { paddingHorizontal: 6, paddingVertical: 8, backgroundColor: "transparent" }
                         ]}
                       >
                         <AppText

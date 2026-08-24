@@ -34,7 +34,7 @@ import { getWithdrawalPasskeyCredential } from "../../../actions/accountActions"
 import { SpinnerSecond } from "../../../shared/components/SpinnerSecond";
 import { getEmailDomainSuggestions } from "../../../helper/emailDomainSuggest";
 import { buildCoinImageUri } from "../../../helper/coinIconUrl";
-import { account_restrictions, ARROW_REVERSE, back_ic, bitcoinIcon, checkIc, down_arrow, downIcon, editIcon, email_vector, EMAIL_VERIFY, GOOGLE_VERIFY, INFO, LOCKED, PASSKEY_VERIFY, PHONE_VERIFY, printIcon, Refresh, REMOVE, right_ic, searchIcon, SECURITY_SHEIELD, upIcon, user_withdarwal } from "../../../helper/ImageAssets";
+import { account_restrictions, account_restrictions_light, ARROW_REVERSE, back_ic, bitcoinIcon, checkIc, down_arrow, downIcon, editIcon, email_vector, EMAIL_VERIFY, GOOGLE_VERIFY, INFO, LOCKED, PASSKEY_VERIFY, PHONE_VERIFY, printIcon, Refresh, REMOVE, right_ic, searchIcon, SECURITY_SHEIELD, upIcon, user_withdarwal } from "../../../helper/ImageAssets";
 import { showError, showSuccess } from "../../../helper/logger";
 import { getNotificationList } from "../../../actions/homeActions";
 import { appOperation } from "../../../appOperation";
@@ -4118,7 +4118,7 @@ const WithdrawForm = () => {
 
             {/* Illustration */}
             <FastImage
-              source={account_restrictions}
+              source={isDark ? account_restrictions_light : account_restrictions}
               style={{ width: 150, height: 150, marginBottom: 10 }}
               resizeMode="contain"
             />
@@ -4137,7 +4137,7 @@ const WithdrawForm = () => {
                 NavigationService.navigate(KYC_STATUS_SCREEN);
               }}
               style={{
-                backgroundColor: isDark ? "#2A2A2E" : "#F3F4F6",
+                backgroundColor: isDark ? colors.white : "#F3F4F6",
                 height: 56,
                 borderRadius: 28,
                 justifyContent: "center",
@@ -4145,7 +4145,7 @@ const WithdrawForm = () => {
                 width: "90%"
               }}
             >
-              <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: colors.white }}>Verify now</AppText>
+              <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: isDark ? colors.black : colors.white }}>Verify now</AppText>
             </TouchableOpacity>
           </View>
         </View>

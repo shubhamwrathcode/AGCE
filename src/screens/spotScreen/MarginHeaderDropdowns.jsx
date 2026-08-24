@@ -3,7 +3,7 @@ import { View, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { AppText, SEMI_BOLD, MEDIUM, Button } from "../../shared";
-import { colors, lightTheme } from "../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import { checkIc, downIcon, tick, closeIcon, add, minus, right_ic } from "../../helper/ImageAssets";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
 
@@ -181,7 +181,7 @@ const MarginHeaderDropdowns = ({
         animationType="slide"
         customStyles={{
           container: {
-            backgroundColor: themeColors.themeElevationColor,
+            backgroundColor: isDark ? colors.newThemeColor : themeColors.themeElevationColor,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingHorizontal: universalPaddingHorizontal,
@@ -271,7 +271,7 @@ const MarginHeaderDropdowns = ({
         }}
         customStyles={{
           container: {
-            backgroundColor: themeColors.themeElevationColor,
+            backgroundColor: isDark ? colors.newThemeColor : themeColors.themeElevationColor,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingHorizontal: universalPaddingHorizontal,
@@ -284,7 +284,10 @@ const MarginHeaderDropdowns = ({
         }}
       >
         <View style={{ flex: 1, paddingHorizontal: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4, paddingBottom: 20 }}>
+          <View style={{
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            paddingTop: 4, paddingBottom: 20
+          }}>
             <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text, marginTop: 10 }}>
               Adjust Leverage
             </AppText>
@@ -301,7 +304,7 @@ const MarginHeaderDropdowns = ({
 
             {/* Coin Row */}
             <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Coin</AppText>
-            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7", padding: 12, borderRadius: 10, marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#F2F2F7", padding: 12, borderRadius: 10, marginBottom: 16 }}>
               {!!coinIconSrc && (
                 <FastImage source={{ uri: coinIconSrc }} style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }} />
               )}
@@ -310,7 +313,7 @@ const MarginHeaderDropdowns = ({
 
             {/* Leverage Input */}
             <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Leverage</AppText>
-            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7", padding: 12, borderRadius: 10, marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#F2F2F7", padding: 12, borderRadius: 10, marginBottom: 16 }}>
               <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: themeColors.text }}>{leverageDraft}x</AppText>
             </View>
 
@@ -329,7 +332,7 @@ const MarginHeaderDropdowns = ({
                       borderRadius: 8,
                       borderWidth: 1,
                       borderColor: isSelected ? themeColors.text : "transparent",
-                      backgroundColor: isDark ? "#2C2C2E" : "#F2F2F7",
+                      backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#F2F2F7",
                     }}
                   >
                     <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>

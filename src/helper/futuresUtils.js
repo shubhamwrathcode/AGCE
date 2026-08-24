@@ -280,21 +280,44 @@ export function formatCloseReason(reason, status) {
 }
 
 export function computeClosedPosition(pos) {
-  const entry = decNum(pos.average_entry_price ?? pos.entry_price);
-  const exit = decNum(pos.average_exit_price ?? pos.close_price ?? pos.mark_price);
-  let qty = decNum(pos.quantity);
+  if (!pos || typeof pos !== "object") {
+    return { entry: 0, exit: 0, qty: 0, pnl: 0, fees: 0, funding: 0, reason: "—" };
+  }
+
+  const entryVal = decNum(pos.average_entry_price ?? pos.entry_price ?? pos.avg_price ?? pos.order_price ?? pos.price);
+  const entry = Number.isFinite(entryVal) ? entryVal : 0;
+
+  const exitVal = decNum(pos.average_exit_price ?? pos.close_price ?? pos.exit_price ?? pos.mark_price ?? pos.last_price);
+  const exit = Number.isFinite(exitVal) ? exitVal : 0;
+
+  let qty = decNum(pos.quantity ?? pos.filled_quantity ?? pos.executed_quantity ?? pos.amount ?? pos.size);
   
-  if ((!Number.isFinite(qty) || qty <= 0) && Number.isFinite(entry) && entry > 0) {
-    const initMargin = decNum(pos.initial_margin ?? pos.isolated_margin_allocated);
+  if ((!Number.isFinite(qty) || qty <= 0) && entry > 0) {
+    const initMargin = decNum(pos.initial_margin ?? pos.isolated_margin_allocated ?? pos.margin);
     const lev = Number(pos.leverage);
     if (Number.isFinite(initMargin) && initMargin > 0 && Number.isFinite(lev) && lev > 0) {
       qty = (initMargin * lev) / entry;
     }
   }
+  if (!Number.isFinite(qty) || qty < 0) qty = 0;
 
-  const pnl = decNum(pos.realized_pnl);
-  const fees = decNum(pos.total_fees ?? pos.fees ?? pos.accumulated_fees);
-  const funding = decNum(pos.total_funding ?? pos.funding_fee);
+  let pnl = decNum(pos.realized_pnl ?? pos.realised_pnl ?? pos.pnl ?? pos.closed_pnl ?? pos.profit ?? pos.unrealized_pnl);
+
+  if (!Number.isFinite(pnl)) {
+    if (entry > 0 && exit > 0 && qty > 0) {
+      const sideSign = String(pos.side ?? "").toUpperCase() === "SHORT" || String(pos.side ?? "").toUpperCase() === "SELL" ? -1 : 1;
+      pnl = (exit - entry) * qty * sideSign;
+    } else {
+      pnl = 0;
+    }
+  }
+
+  const feesVal = decNum(pos.total_fees ?? pos.fees ?? pos.accumulated_fees ?? pos.fee ?? pos.total_fees_paid);
+  const fees = Number.isFinite(feesVal) ? feesVal : 0;
+
+  const fundingVal = decNum(pos.total_funding ?? pos.funding_fee ?? pos.funding);
+  const funding = Number.isFinite(fundingVal) ? fundingVal : 0;
+
   const reason = formatCloseReason(pos.close_reason, pos.status);
   return { entry, exit, qty, pnl, fees, funding, reason };
 }

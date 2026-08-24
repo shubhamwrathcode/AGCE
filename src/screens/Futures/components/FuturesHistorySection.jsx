@@ -273,10 +273,15 @@ const FuturesHistorySection = ({
 
   const renderFuturesPositionHistoryItem = ({ item: pos, isLast }) => {
     const { entry, exit, qty, pnl, fees, funding, reason } = computeClosedPosition(pos);
-    const isLong = String(pos.side ?? "").toUpperCase() === "LONG";
+    const safePnl = Number.isFinite(Number(pnl)) ? Number(pnl) : 0;
+    const safeFunding = Number.isFinite(Number(funding)) ? Number(funding) : 0;
+    const safeQty = Number.isFinite(Number(qty)) ? Number(qty) : 0;
+    const safeEntry = Number.isFinite(Number(entry)) ? Number(entry) : 0;
+    const safeExit = Number.isFinite(Number(exit)) ? Number(exit) : 0;
+    const isLong = String(pos.side ?? "").toUpperCase() === "LONG" || String(pos.side ?? "").toUpperCase() === "BUY";
     const sideColor = isLong ? colors.green : colors.red;
-    const pnlColor = pnl >= 0 ? colors.green : colors.red;
-    const fundingColor = funding >= 0 ? colors.green : colors.red;
+    const pnlColor = safePnl >= 0 ? colors.green : colors.red;
+    const fundingColor = safeFunding >= 0 ? colors.green : colors.red;
 
     const closedTime = pos.closed_at || pos.updatedAt || pos.createdAt;
     const openedTime = pos.opened_at || pos.createdAt;
@@ -321,26 +326,26 @@ const FuturesHistorySection = ({
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Size</AppText>
-            <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>{Number(qty).toFixed(4)} {selectedCoin?.base_currency || "USDT"}</AppText>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>{safeQty.toFixed(4)} {selectedCoin?.base_currency || "USDT"}</AppText>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Entry Price</AppText>
-            <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>{Number(entry).toFixed(2)}</AppText>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>{safeEntry > 0 ? safeEntry.toFixed(2) : "—"}</AppText>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Exit Price</AppText>
-            <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>{Number(exit).toFixed(2)}</AppText>
+            <AppText type={FOURTEEN} style={{ color: themeColors.text, fontFamily: fontFamilySemiBold }}>{safeExit > 0 ? safeExit.toFixed(2) : "—"}</AppText>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Realized PNL</AppText>
             <AppText type={FOURTEEN} style={{ color: pnlColor, fontFamily: fontFamilySemiBold }}>
-              {pnl >= 0 ? "+" : ""}{Number(pnl).toFixed(4)} USDT
+              {safePnl >= 0 ? "+" : ""}{safePnl.toFixed(4)} USDT
             </AppText>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Funding</AppText>
             <AppText type={FOURTEEN} style={{ color: fundingColor, fontFamily: fontFamilySemiBold }}>
-              {funding >= 0 ? "+" : ""}{Number(funding || 0).toFixed(4)} USDT
+              {safeFunding >= 0 ? "+" : ""}{safeFunding.toFixed(4)} USDT
             </AppText>
           </View>
           {(pos.close_reason || pos.status) && (

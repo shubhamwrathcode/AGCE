@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   Dimensions,
+  useWindowDimensions,
   TouchableOpacity,
   StatusBar,
   Platform,
@@ -68,7 +69,7 @@ import { colors as themePalette } from "../../theme/colors";
 import { fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 
 const { width: Width, height: Height } = Dimensions.get("window");
-const CHART_BLOCK_HEIGHT = Math.round(Height * 0.38);
+const CHART_BLOCK_HEIGHT = Math.round(Height * 0.48);
 // Render full order book list on this screen (web-like).
 // (Binance shows many rows; we avoid slicing here.)
 const ORDER_BOOK_ROWS = 12;
@@ -88,6 +89,24 @@ const CHART_BOTTOM_TAB_ICON = {
 
 const DEFAULT_ORDER_BOOK_AGG_OPTIONS = [0.1, 0.5, 1, 10, 100];
 const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
+
+const INJECTED_CHART_JS = `
+  (function() {
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      document.getElementsByTagName('head')[0].appendChild(meta);
+    }
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden';
+  })();
+  true;
+`;
 
 /** Same idea as web `TradePage/index.js`: steps = tick × 1, 10, 100, … */
 function getOrderBookAggOptionsForPair(tickSize) {
@@ -400,6 +419,10 @@ const FutureChartScreen = () => {
   const route = useRoute();
   const tradeType = route.params?.tradeType || "Spot";
   const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const chartHeight = useMemo(() => {
+    return Math.round(Math.min(Math.max(windowHeight * 0.48, 400), 470));
+  }, [windowHeight]);
   const tabScrollBottomPadding =
     TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
   const { subscribeToFutures, unsubscribeFromFutures, futuresData: socketFuturesData, futuresPrice: socketFuturesPrice } = useContext(SocketContext) || {};
@@ -977,7 +1000,7 @@ const FutureChartScreen = () => {
       }
     };
   }, [webViewReady]);
-console.log(themeColors.background,'====bgcolor')
+  console.log(themeColors.background, '====bgcolor')
   const showSkeleton = !chartRevealed;
   const bg = themeColors.background ?? "transparent";
   const liveChangePct = liveMarketStats?.changePct ?? pairChange;
@@ -1503,7 +1526,7 @@ console.log(themeColors.background,'====bgcolor')
             </View>
 
             {/* Bottom Row */}
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 24, gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 10 }}>
               <AppText type={TWELVE} weight={MEDIUM} style={{ color: themeColors.text }}>
                 {pairBase}{pairQuote} Perpetual
               </AppText>
@@ -1515,23 +1538,24 @@ console.log(themeColors.background,'====bgcolor')
             </View>
           </View>
 
-
-          <View style={{ width: Width, overflow: "hidden", marginTop: 10 }}>
+          <View style={{ width: windowWidth, overflow: "hidden" }}>
             <Animated.View
               style={{
                 flexDirection: "row",
-                width: Width * 2,
+                width: windowWidth * 2,
                 transform: [{ translateX: topTabX }],
               }}
             >
-              <View style={{ width: Width }}>
-                <View style={[styles.chartWrap, { backgroundColor: themeColors.background, height: CHART_BLOCK_HEIGHT }]}>
+              <View style={{ width: windowWidth }}>
+                <View style={[styles.chartWrap, { width: windowWidth, height: chartHeight, backgroundColor: themeColors.background }]}>
                   <View
                     style={[
                       styles.chartWebWrap,
                       {
-                        height: CHART_BLOCK_HEIGHT,
+                        width: windowWidth,
+                        height: chartHeight,
                         opacity: showSkeleton ? 0 : 1,
+                        backgroundColor: themeColors.background,
                       },
                     ]}
                     pointerEvents={showSkeleton ? "none" : "auto"}
@@ -1540,7 +1564,8 @@ console.log(themeColors.background,'====bgcolor')
                       <WebView
                         key={chartUri}
                         source={{ uri: chartUri }}
-                        style={{ width: Width, height: CHART_BLOCK_HEIGHT + 60, marginTop: -30, backgroundColor: colors.iconBgColor }}
+                        injectedJavaScript={INJECTED_CHART_JS}
+                        style={{ width: windowWidth, height: chartHeight + 25, backgroundColor: themeColors.background }}
                         containerStyle={{ backgroundColor: "transparent" }}
                         opaque={false}
                         androidLayerType="hardware"
@@ -1565,7 +1590,7 @@ console.log(themeColors.background,'====bgcolor')
                   </View>
                   {showSkeleton ? (
                     <View style={styles.chartSkeletonOverlay} pointerEvents="none">
-                      <ChartSkeleton height={CHART_BLOCK_HEIGHT} width={Width} />
+                      <ChartSkeleton height={chartHeight} width={windowWidth} />
                     </View>
                   ) : null}
                 </View>
@@ -1594,7 +1619,7 @@ console.log(themeColors.background,'====bgcolor')
                         onPress={() => handleTabChange(tab)}
                         style={[
                           styles.obTab,
-                          { paddingHorizontal: 6, paddingVertical: 12, backgroundColor: "transparent" }
+                          { paddingHorizontal: 6, paddingVertical: 8, backgroundColor: "transparent" }
                         ]}
                       >
                         <AppText
@@ -2405,8 +2430,8 @@ const styles = StyleSheet.create({
   obTabsRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    paddingVertical: 8,
+    marginBottom: 0,
+    paddingVertical: 0,
   },
   obTabsLeftScroll: {
     flex: 1,

@@ -42,7 +42,7 @@ import NavigationService from "../../../navigation/NavigationService";
 import { useAppSelector } from "../../../store/hooks";
 import { useDispatch } from "react-redux";
 import { getDepositFiatCoins, getWithdrawActiveCoins, getUserMainWallet } from "../../../actions/walletActions";
-import { colors, lightTheme } from "../../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../../theme/colors";
 import { useTheme } from "../../../hooks/useTheme";
 import {
   isWithdrawCoinDisabled,
@@ -402,7 +402,7 @@ const SelectCoin = () => {
           {coinQuickPickDisplay.map((item) => (
             <TouchableOpacity
               key={item?._id || item?.short_name}
-              style={[styles.quickPickChip, { backgroundColor: isDark ? "#1E1E1E" : "#F5F5F7" }]}
+              style={[styles.quickPickChip, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#F5F5F7" }]}
               onPress={() => {
                 const withdrawDisabled = isWithdrawCoinDisabled(item);
                 if (withdrawDisabled) {

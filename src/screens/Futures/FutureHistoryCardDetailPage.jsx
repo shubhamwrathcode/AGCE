@@ -29,9 +29,15 @@ const FutureHistoryCardDetailPage = () => {
   }
 
   const { entry, exit, qty, pnl, fees, funding, reason } = computeClosedPosition(pos);
-  const isLong = String(pos.side ?? "").toUpperCase() === "LONG";
-  const pnlColor = pnl >= 0 ? colors.green : colors.red;
-  const fundingColor = funding >= 0 ? colors.green : colors.red;
+  const safePnl = Number.isFinite(Number(pnl)) ? Number(pnl) : 0;
+  const safeFunding = Number.isFinite(Number(funding)) ? Number(funding) : 0;
+  const safeFees = Number.isFinite(Number(fees)) ? Number(fees) : 0;
+  const safeQty = Number.isFinite(Number(qty)) ? Number(qty) : 0;
+  const safeEntry = Number.isFinite(Number(entry)) ? Number(entry) : 0;
+  const safeExit = Number.isFinite(Number(exit)) ? Number(exit) : 0;
+  const isLong = String(pos.side ?? "").toUpperCase() === "LONG" || String(pos.side ?? "").toUpperCase() === "BUY";
+  const pnlColor = safePnl >= 0 ? colors.green : colors.red;
+  const fundingColor = safeFunding >= 0 ? colors.green : colors.red;
 
   const getStatusColor = (statusText) => {
     if (!statusText) return themeColors.text;
@@ -163,12 +169,12 @@ const FutureHistoryCardDetailPage = () => {
             <>
               {renderDetailRow("Closed Time", closedDateFormatted)}
               {renderDetailRow("Opened Time", openedDateFormatted)}
-              {renderDetailRow("Size", `${Number(qty).toFixed(4)} ${selectedCoin?.base_currency || "USDT"}`)}
-              {renderDetailRow("Entry Price", Number(entry) > 0 ? Number(entry).toFixed(4) : "—")}
-              {renderDetailRow("Exit Price", Number(exit) > 0 ? Number(exit).toFixed(4) : "—")}
-              {renderDetailRow("Realized PNL", `${pnl >= 0 ? "+" : ""}${Number(pnl).toFixed(4)} USDT`, pnlColor)}
-              {renderDetailRow("Funding", `${funding >= 0 ? "+" : ""}${Number(funding || 0).toFixed(4)} USDT`, fundingColor)}
-              {renderDetailRow("Fee", `${Number(fees || 0).toFixed(4)} USDT`)}
+              {renderDetailRow("Size", `${safeQty.toFixed(4)} ${selectedCoin?.base_currency || "USDT"}`)}
+              {renderDetailRow("Entry Price", safeEntry > 0 ? safeEntry.toFixed(4) : "—")}
+              {renderDetailRow("Exit Price", safeExit > 0 ? safeExit.toFixed(4) : "—")}
+              {renderDetailRow("Realized PNL", `${safePnl >= 0 ? "+" : ""}${safePnl.toFixed(4)} USDT`, pnlColor)}
+              {renderDetailRow("Funding", `${safeFunding >= 0 ? "+" : ""}${safeFunding.toFixed(4)} USDT`, fundingColor)}
+              {renderDetailRow("Fee", `${safeFees.toFixed(4)} USDT`)}
               {pos.close_reason || pos.status ? renderDetailRow("Status", reason || pos.status, getStatusColor(reason || pos.status)) : null}
             </>
           )}
