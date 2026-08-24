@@ -116,6 +116,7 @@ import {
   SELECT_COIN_SCREEN,
   MARGIN_BORROW_REPAY_SCREEN,
   NAVIGATION_AUTH_STACK,
+  LOGIN_SCREEN,
 } from "../../navigation/routes";
 import { cancelOrder, placeOrder, getCrossAccount, getCrossBorrowable } from "../../actions/homeActions";
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
@@ -573,6 +574,7 @@ const OrderBookPanel = memo(({
 }) => {
   const { colors: themeColors, theme, isDark } = useTheme();
   const navigation = useNavigation();
+  const userData = useAppSelector((state) => state.auth?.userData);
   const isSingleSide = !(showAskSide && showBidSide);
   const singleSideListStyle = useMemo(
     () => ({ height: ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 10, flexGrow: 0 }),
@@ -662,7 +664,14 @@ const OrderBookPanel = memo(({
         >
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => navigation.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}`, marginMode })}
+            onPress={() => {
+              if (!userData) {
+                showError("Please login first to access Margin Borrow/Repay");
+                NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+                return;
+              }
+              navigation.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}`, marginMode });
+            }}
             style={{
               backgroundColor: isDark ? "#2C2C2E" : "#E5E5EA",
               paddingHorizontal: 6,
@@ -674,7 +683,14 @@ const OrderBookPanel = memo(({
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => navigation.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}`, marginMode })}
+            onPress={() => {
+              if (!userData) {
+                showError("Please login first to view Margin details");
+                NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+                return;
+              }
+              navigation.navigate(MARGIN_BORROW_REPAY_SCREEN, { pair: `${base_currency}/${quote_currency}`, marginMode });
+            }}
             style={{ alignItems: "flex-end" }}
           >
             <AppText style={{ fontSize: 9, color: themeColors.secondaryText, lineHeight: 11 }}>Hourly Rate ({quote_currency})...</AppText>
@@ -3276,17 +3292,49 @@ const Spot = () => {
     [filteredMyTrades],
   );
 
-  const tradeHistorySectionNode = useMemo(() => {
-    if (!filteredMyTrades?.length) {
+  const renderSpotOrdersEmptyState = useCallback((message = "Please login to view your orders & history") => {
+    if (!userData) {
       return (
-        <View style={styles.noDataRow}>
+        <View style={[styles.noDataRow, { paddingVertical: 28, alignItems: "center", justifyContent: "center" }]}>
           <FastImage
             source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
             resizeMode="contain"
-            style={{ width: 80, height: 80 }}
+            style={{ width: 70, height: 70, marginBottom: 10 }}
           />
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 12 }}>
+            {message}
+          </AppText>
+          <TouchableOpacity
+            style={{
+              backgroundColor: colors.orangeTheme,
+              paddingHorizontal: 22,
+              paddingVertical: 8,
+              borderRadius: 6,
+              alignItems: "center",
+            }}
+            onPress={() => NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN })}
+          >
+            <AppText weight={SEMI_BOLD} style={{ color: "#fff", fontSize: 13 }}>
+              Login / Register
+            </AppText>
+          </TouchableOpacity>
         </View>
       );
+    }
+    return (
+      <View style={styles.noDataRow}>
+        <FastImage
+          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+          resizeMode="contain"
+          style={{ width: 80, height: 80 }}
+        />
+      </View>
+    );
+  }, [userData, isDark, themeColors.secondaryText]);
+
+  const tradeHistorySectionNode = useMemo(() => {
+    if (!filteredMyTrades?.length) {
+      return renderSpotOrdersEmptyState("Please login to view your trade history");
     }
     const baseHint = effectiveCurrency?.base_currency;
     const quoteHint = effectiveCurrency?.quote_currency;
@@ -3426,8 +3474,6 @@ const Spot = () => {
     effectiveCurrency?.quote_currency,
     styles.scrollContent,
     styles.kvRow,
-    styles.kvK,
-    styles.kvV,
     styles.viewAllButton,
     styles.viewAllText,
     styles.noDataRow,
@@ -4544,6 +4590,11 @@ const Spot = () => {
                     inputSelectionColor={inputSelectionColor}
                     fontFamilySemiBold={fontFamilySemiBold}
                     onBorrowPress={() => {
+                      if (!userData) {
+                        showError("Please login first to manage margin funds");
+                        NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+                        return;
+                      }
                       rbSheetAddFunds?.current?.open();
                     }}
                     marginLeverage={marginLeverage}
@@ -4576,11 +4627,17 @@ const Spot = () => {
                               </AppText>
                             )}
                             <TouchableOpacity
-                              activeOpacity={0.8}
+                              activeOpacity={0.7}
+                              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                               onPress={() => {
+                                if (!userData) {
+                                  showError("Please login first to deposit funds");
+                                  NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+                                  return;
+                                }
                                 navigation.navigate(DEPOSIT_COIN_SCREEN);
                               }}
-                              style={{ marginLeft: 6, flexShrink: 0, marginBottom: 2 }}
+                              style={{ marginLeft: 6, padding: 4, flexShrink: 0, marginBottom: 2 }}
                             >
                               <FastImage source={add} style={{ width: 14, height: 14 }} tintColor={themeColors.text} resizeMode="contain" />
                             </TouchableOpacity>
@@ -4828,13 +4885,7 @@ const Spot = () => {
                                 )}
                               </>
                             ) : (
-                              <View style={styles.noDataRow}>
-                                <FastImage
-                                  source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                                  resizeMode="contain"
-                                  style={{ width: 80, height: 80 }}
-                                />
-                              </View>
+                              renderSpotOrdersEmptyState("Please login to view your open orders")
                             )}
                           </View>
                         ) : null}
@@ -4861,13 +4912,7 @@ const Spot = () => {
                                 )}
                               </>
                             ) : (
-                              <View style={styles.noDataRow}>
-                                <FastImage
-                                  source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
-                                  resizeMode="contain"
-                                  style={{ width: 80, height: 80 }}
-                                />
-                              </View>
+                              renderSpotOrdersEmptyState("Please login to view your order history")
                             )}
                           </View>
                         ) : null}

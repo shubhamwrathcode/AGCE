@@ -8,10 +8,14 @@ import { useTheme } from '../../../hooks/useTheme';
 import { BOLD, fontFamilyMedium, fontFamilySemiBold, MEDIUM, REGULAR, SEMI_BOLD } from '../../../theme/typography';
 import { downIcon, filterNew, history, historyIcon, menuIcon, printIcon } from '../../../helper/ImageAssets'; // using existing icons
 import { colors } from '../../../theme/colors';
+import { useAppSelector } from '../../../store/hooks';
+import { showError } from '../../../helper/logger';
+import { LOGIN_SCREEN } from '../../../navigation/routes';
 
 const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelectedOptionType, onOpenSettings, onOpenMoreSheet, selectedAsset, onOpenPairList }) => {
   const { colors: themeColors, isDark } = useTheme();
   const navigation = useNavigation();
+  const userData = useAppSelector((state) => state.auth.userData);
 
   const topNavItems = ['Options Chain', 'Easy', 'Options Strategies'];
   const optionTypes = ['All', 'Call', 'Put'];
@@ -31,7 +35,16 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
             <AppText style={{ color: '#fff', fontSize: 10, fontFamily: fontFamilyMedium }}>+50.47%</AppText>
           </View>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity onPress={() => navigation.navigate('OptionHistory')}>
+          <TouchableOpacity
+            onPress={() => {
+              if (!userData) {
+                showError("Please login first to view options history");
+                navigation.navigate(LOGIN_SCREEN);
+                return;
+              }
+              navigation.navigate('OptionHistory');
+            }}
+          >
             <FastImage source={historyIcon} style={styles.historyIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
         </View>

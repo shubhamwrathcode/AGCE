@@ -14,10 +14,8 @@ import SetPassword from "../screens/auth/SetPassword";
 import VerifyAccount from "../screens/auth/VerifyAccount";
 import OnboardingCddScreen from "../screens/auth/OnboardingCddScreen";
 import AccountActivated from "../screens/auth/AccountActivated";
-// import OtpVerify from "../screens/auth/OtpVerify";
 import AuthVerificationScreen from "../screens/auth/AuthVerificationScreen";
 import FastImage from "react-native-fast-image";
-import { commonStyles } from "../theme/commonStyles";
 import { colors } from "../theme/colors";
 import {
   futuresActiveIcon,
@@ -102,6 +100,7 @@ import {
 import { Platform, StyleSheet, TouchableOpacity, View, Keyboard, PanResponder, ScrollView } from "react-native";
 import Animated, { useSharedValue, withTiming, useAnimatedStyle, Easing as REasing, interpolateColor, interpolate } from 'react-native-reanimated';
 import Toast from "react-native-simple-toast";
+import { showError } from "../helper/logger";
 import { useAppSelector } from "../store/hooks";
 import { ChartPreloaderProvider } from "../context/ChartPreloaderContext";
 import SpotOrderHistoryDetail from "../screens/spotScreen/SpotOrderHistoryDetail";
@@ -216,6 +215,8 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
   const [visible, setVisible] = React.useState(true);
   const [localIndex, setLocalIndex] = React.useState(state.index);
   const { colors: themeColors, isDark } = useTheme();
+  const userData = useAppSelector((state: any) => state.auth.userData);
+  const isLoggedIn = !!(userData && (userData.token || userData.id || userData.email || userData.user_id));
 
   React.useEffect(() => {
     setLocalIndex(state.index);
@@ -223,6 +224,26 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
 
   const currentIndexRef = React.useRef(state.index);
   currentIndexRef.current = state.index;
+
+  const labelByRoute: any = {
+    [routes.HOME_SCREEN]: "Home",
+    [routes.MARKET_SCREEN]: "Market",
+    [routes.TRADE_SCREEN]: "Trade",
+    [routes.FUTURES_SCREEN]: "Future",
+    [routes.WALLET_SCREEN]: "Wallet",
+  };
+
+  const isAuthRequiredRoute = (routeName: string) => {
+    return (
+      routeName === routes.HOME_SCREEN ||
+      routeName === routes.WALLET_SCREEN
+    );
+  };
+
+  const handleUnauthorizedPress = (tabName?: string) => {
+    showError(tabName ? `Please login first to access ${tabName}` : "Please login first");
+    NavigationService.navigate(routes.NAVIGATION_AUTH_STACK, { screen: routes.LOGIN_SCREEN });
+  };
 
   const panResponder = React.useMemo(
     () =>
@@ -244,6 +265,10 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
             if (currentIdx < totalRoutes - 1) {
               const nextRoute = state.routes[currentIdx + 1];
               if (nextRoute) {
+                if (!isLoggedIn && isAuthRequiredRoute(nextRoute.name)) {
+                  handleUnauthorizedPress(labelByRoute[nextRoute.name]);
+                  return;
+                }
                 setLocalIndex(currentIdx + 1);
                 navigation.navigate(nextRoute.name);
               }
@@ -254,6 +279,10 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
             if (currentIdx > 0) {
               const prevRoute = state.routes[currentIdx - 1];
               if (prevRoute) {
+                if (!isLoggedIn && isAuthRequiredRoute(prevRoute.name)) {
+                  handleUnauthorizedPress(labelByRoute[prevRoute.name]);
+                  return;
+                }
                 setLocalIndex(currentIdx - 1);
                 navigation.navigate(prevRoute.name);
               }
@@ -261,7 +290,7 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
           }
         },
       }),
-    [state.routes, navigation]
+    [state.routes, navigation, isLoggedIn]
   );
 
   React.useEffect(() => {
@@ -293,8 +322,14 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
       <View style={customTabBarStyles.scrollContent}>
         {state.routes.map((route: any, index: number) => {
           const isFocused = localIndex === index;
+          const label = labelByRoute[route.name] ?? route.name;
 
           const onPress = () => {
+            if (!isLoggedIn && isAuthRequiredRoute(route.name)) {
+              handleUnauthorizedPress(label);
+              return;
+            }
+
             const event = navigation.emit({
               type: "tabPress",
               target: route.key,
@@ -324,16 +359,7 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
             [routes.WALLET_SCREEN]: wallet_ic,
           };
 
-          const labelByRoute: any = {
-            [routes.HOME_SCREEN]: "Home",
-            [routes.MARKET_SCREEN]: "Market",
-            [routes.TRADE_SCREEN]: "Trade",
-            [routes.FUTURES_SCREEN]: "Future",
-            [routes.WALLET_SCREEN]: "Wallet",
-          };
-
           const icon = iconByRoute[route.name];
-          const label = labelByRoute[route.name] ?? route.name;
 
           return (
             <TabItem
@@ -772,36 +798,36 @@ const AuthStack = () => {
 
   return (
     <Stack.Navigator screenOptions={screenOptions}>
-    <Stack.Screen name={routes.WELCOME_SCREEN} component={Welcome} />
-    <Stack.Screen name={routes.LOGIN_SCREEN} component={Login} />
-    <Stack.Screen
-      name={routes.FORGOT_PASSWORD_SCREEN}
-      component={ForgotPassword}
-    />
-    <Stack.Screen name={routes.REGISTER_SCREEN} component={Register} />
-    <Stack.Screen name={routes.SET_PASSWORD_SCREEN} component={SetPassword} />
-    <Stack.Screen name={routes.VERIFY_ACCOUNT_SCREEN} component={VerifyAccount} />
-    <Stack.Screen name={routes.ONBOARDING_CDD_SCREEN} component={OnboardingCddScreen} />
-    <Stack.Screen name={routes.ACCOUNT_ACTIVATED_SCREEN} component={AccountActivated} />
-    {/* <Stack.Screen name={routes.OTP_VERIFY_SCREEN} component={OtpVerify} /> */}
-    <Stack.Screen
-      name={routes.AUTH_VERIFICATION_SCREEN}
-      component={AuthVerificationScreen}
-      options={{
-        cardStyleInterpolator: ({ current }) => ({
-          cardStyle: { opacity: current.progress },
-        }),
-        transitionSpec: {
-          open: { animation: 'timing' as const, config: { duration: 350 } },
-          close: { animation: 'timing' as const, config: { duration: 300 } },
-        },
-      }}
-    />
-    <Stack.Screen
-      name={routes.RESET_PASSWORD_SCREEN}
-      component={ResetPassword}
-    />
-  </Stack.Navigator>
+      <Stack.Screen name={routes.WELCOME_SCREEN} component={Welcome} />
+      <Stack.Screen name={routes.LOGIN_SCREEN} component={Login} />
+      <Stack.Screen
+        name={routes.FORGOT_PASSWORD_SCREEN}
+        component={ForgotPassword}
+      />
+      <Stack.Screen name={routes.REGISTER_SCREEN} component={Register} />
+      <Stack.Screen name={routes.SET_PASSWORD_SCREEN} component={SetPassword} />
+      <Stack.Screen name={routes.VERIFY_ACCOUNT_SCREEN} component={VerifyAccount} />
+      <Stack.Screen name={routes.ONBOARDING_CDD_SCREEN} component={OnboardingCddScreen} />
+      <Stack.Screen name={routes.ACCOUNT_ACTIVATED_SCREEN} component={AccountActivated} />
+      {/* <Stack.Screen name={routes.OTP_VERIFY_SCREEN} component={OtpVerify} /> */}
+      <Stack.Screen
+        name={routes.AUTH_VERIFICATION_SCREEN}
+        component={AuthVerificationScreen}
+        options={{
+          cardStyleInterpolator: ({ current }) => ({
+            cardStyle: { opacity: current.progress },
+          }),
+          transitionSpec: {
+            open: { animation: 'timing' as const, config: { duration: 350 } },
+            close: { animation: 'timing' as const, config: { duration: 300 } },
+          },
+        }}
+      />
+      <Stack.Screen
+        name={routes.RESET_PASSWORD_SCREEN}
+        component={ResetPassword}
+      />
+    </Stack.Navigator>
   );
 };
 

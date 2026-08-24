@@ -18,7 +18,7 @@ import moment from "moment";
 import { useSelector } from "react-redux";
 import SimpleToast from "react-native-simple-toast";
 import NavigationService from "../../navigation/NavigationService";
-import { SPOT_ORDER_HISTORY_DETAIL, MARGIN_BORROW_REPAY_SCREEN } from "../../navigation/routes";
+import { SPOT_ORDER_HISTORY_DETAIL, MARGIN_BORROW_REPAY_SCREEN, LOGIN_SCREEN } from "../../navigation/routes";
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, FIFTEEN, FOURTEEN, THIRTEEN, TWELVE } from "../../shared";
 import HistorySectionLoader from "../../common/HistorySectionLoader/HistorySectionLoader";
@@ -229,6 +229,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
   const { colors: themeColorsHook, isDark: isDarkHook } = useTheme();
   const themeColors = themeColorsProp || themeColorsHook;
   const isDark = typeof isDarkProp === "boolean" ? isDarkProp : isDarkHook;
+  const userData = useSelector((state) => state.auth?.userData);
   const [activeTab, setActiveTab] = useState(initialTab);
   const [subTab, setSubTab] = useState("borrow"); // used in Asset History tab
   const [tabData, setTabData] = useState({});
@@ -291,7 +292,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
   const secondaryTextThemeColor = themeColors.secondaryText || colors.placeholderColor;
 
   const fetchTabDetails = useCallback(async (isSilent = false) => {
-    if (!pairSymbol) {
+    if (!userData || !pairSymbol) {
       setLoading(false);
       return;
     }
@@ -398,13 +399,13 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
   }, [loading, activeTab]);
 
   useEffect(() => {
-    if (!pairSymbol) {
+    if (!userData || !pairSymbol) {
       setLoading(false);
       return;
     }
     const hasCache = (tabDataRef.current[activeTab]?.length ?? 0) > 0;
     fetchTabDetailsRef.current?.(hasCache);
-  }, [activeTab, subTab, pairSymbol, pairId, marginMode]);
+  }, [userData, activeTab, subTab, pairSymbol, pairId, marginMode]);
 
   const getFilteredDataList = (tabId) => {
     let list = tabData[tabId] || [];
@@ -563,13 +564,33 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
   };
 
   const renderNoData = () => (
-    <View style={styles.noDataContainer}>
+    <View style={[styles.noDataContainer, { paddingVertical: 35, alignItems: "center", justifyContent: "center" }]}>
       <FastImage
         source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
         resizeMode="contain"
-        style={{ width: 80, height: 80 }}
+        style={{ width: 75, height: 75, marginBottom: 10 }}
       />
-
+      {!userData && (
+        <>
+          <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 12 }}>
+            Please login to view your margin history
+          </AppText>
+          <TouchableOpacity
+            style={{
+              backgroundColor: colors.orangeTheme,
+              paddingHorizontal: 22,
+              paddingVertical: 8,
+              borderRadius: 6,
+              alignItems: "center",
+            }}
+            onPress={() => NavigationService.navigate(LOGIN_SCREEN)}
+          >
+            <AppText weight={SEMI_BOLD} style={{ color: "#fff", fontSize: 13 }}>
+              Login / Register
+            </AppText>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 
@@ -1251,7 +1272,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
 
       {/* Content panel */}
       <View style={[{ overflow: 'hidden', minHeight: 150 }, isFullScreen && { flex: 1 }]}>
-        {loading ? (
+        {!userData ? (
+          renderNoData()
+        ) : loading ? (
           <HistorySectionLoader color={textThemeColor} />
         ) : (
         <View style={[{ width: "100%" }, isFullScreen && { flex: 1 }]}>

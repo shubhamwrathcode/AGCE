@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -58,6 +59,24 @@ const formatVol = (vol) => {
   if (n >= 1e3) return (n / 1e3).toFixed(2) + "K";
   return n.toFixed(2);
 };
+
+const INJECTED_CHART_JS = `
+  (function() {
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      document.getElementsByTagName('head')[0].appendChild(meta);
+    }
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden';
+  })();
+  true;
+`;
 
 const formatPriceWithTick = (p, tickSize) => {
   const n = Number(p);
@@ -122,6 +141,10 @@ const C = {
 
 const Welcome = () => {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const chartHeight = useMemo(() => {
+    return Math.round(Math.min(Math.max(windowHeight * 0.48, 410), 470));
+  }, [windowHeight]);
   const { colors: themeColors, isDark } = useTheme();
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const futuresPairs = useAppSelector((state) => state.home.futuresPairs ?? []);
@@ -525,7 +548,7 @@ const Welcome = () => {
                     </TouchableOpacity>
 
                     {expandedRow === idx && !isFutures && (
-                      <View style={{ marginHorizontal: -16, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: isDark ? darkTheme.sheetDarkColor : palette.card }}>
+                      <View style={{ marginHorizontal: -16, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: palette.bg }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 20, marginTop: 8 }}>
                           <TouchableOpacity
                             style={{ flex: 1, paddingVertical: 6, backgroundColor: isDark ? colors.white : '#1A1A1A', borderRadius: 30, alignItems: 'center', justifyContent: 'center' }}
@@ -584,11 +607,12 @@ const Welcome = () => {
                         </View>
 
                         {/* Chart WebView */}
-                        <View style={{ height: 330, width: "100%", backgroundColor: palette.card, borderRadius: 8, overflow: 'hidden' }}>
+                        <View style={{ height: chartHeight, width: "100%", backgroundColor: "transparent", overflow: 'hidden' }}>
                           <WebView
                             key={`${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}`}
                             source={{ uri: `${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}` }}
-                            style={{ width: "100%", height: 330,  backgroundColor: "transparent" }}
+                            injectedJavaScript={INJECTED_CHART_JS}
+                            style={{ width: "100%", height: chartHeight + 25, backgroundColor: "transparent" }}
                             containerStyle={{ backgroundColor: "transparent" }}
                             opaque={false}
                             androidLayerType="hardware"

@@ -67,6 +67,7 @@ import NavigationService from "../../navigation/NavigationService";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors as themePalette } from "../../theme/colors";
 import { fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
+import { showError } from "../../helper/logger";
 
 const { width: Width, height: Height } = Dimensions.get("window");
 const CHART_BLOCK_HEIGHT = Math.round(Height * 0.48);
@@ -99,6 +100,9 @@ const INJECTED_CHART_JS = `
       meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
       document.getElementsByTagName('head')[0].appendChild(meta);
     }
+    var style = document.createElement('style');
+    style.innerHTML = 'html, body, #root, #__next, .tradingview-widget-container, iframe { height: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }';
+    document.head.appendChild(style);
     document.documentElement.style.height = '100%';
     document.body.style.height = '100%';
     document.body.style.margin = '0';
@@ -419,10 +423,8 @@ const FutureChartScreen = () => {
   const route = useRoute();
   const tradeType = route.params?.tradeType || "Spot";
   const insets = useSafeAreaInsets();
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const chartHeight = useMemo(() => {
-    return Math.round(Math.min(Math.max(windowHeight * 0.48, 400), 470));
-  }, [windowHeight]);
+  const { width: windowWidth } = useWindowDimensions();
+  const chartHeight = 400;
   const tabScrollBottomPadding =
     TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
   const { subscribeToFutures, unsubscribeFromFutures, futuresData: socketFuturesData, futuresPrice: socketFuturesPrice } = useContext(SocketContext) || {};
@@ -507,6 +509,11 @@ const FutureChartScreen = () => {
   const [favLoading, setFavLoading] = useState(false);
 
   const toggleFavorite = useCallback(async () => {
+    if (!userData) {
+      showError("Please login first to add favorites");
+      NavigationService.navigate(routes.LOGIN_SCREEN);
+      return;
+    }
     if (!mergedPair?._id || favLoading) {
       return;
     }
@@ -518,11 +525,16 @@ const FutureChartScreen = () => {
     } finally {
       setFavLoading(false);
     }
-  }, [dispatch, mergedPair?._id, favLoading]);
+  }, [dispatch, mergedPair?._id, favLoading, userData]);
 
   const onNotificationPress = useCallback(() => {
+    if (!userData) {
+      showError("Please login first to view notifications");
+      NavigationService.navigate(routes.LOGIN_SCREEN);
+      return;
+    }
     NavigationService.navigate(routes.NOTIFICATION_SCREEN);
-  }, []);
+  }, [userData]);
 
   const showComingSoon = useCallback(() => {
     Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
@@ -679,13 +691,34 @@ const FutureChartScreen = () => {
           </View>
 
           <View style={[styles.assetsActionRow, { paddingHorizontal: 16 }]}>
-            <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}>
+            <TouchableOpacity
+              style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]}
+              onPress={() => {
+                if (!userData) {
+                  showError("Please login first to deposit funds");
+                  NavigationService.navigate(routes.LOGIN_SCREEN);
+                  return;
+                }
+                NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN);
+              }}
+            >
               <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Deposit</AppText>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.SWAP_SCREEN)}>
+            {/* Convert button commented out */}
+            {/* <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => NavigationService.navigate(routes.SWAP_SCREEN)}>
               <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Convert</AppText>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]} onPress={() => Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM)}>
+            </TouchableOpacity> */}
+            <TouchableOpacity
+              style={[styles.assetActionBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]}
+              onPress={() => {
+                if (!userData) {
+                  showError("Please login first to transfer funds");
+                  NavigationService.navigate(routes.LOGIN_SCREEN);
+                  return;
+                }
+                NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN);
+              }}
+            >
               <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Transfer</AppText>
             </TouchableOpacity>
           </View>
@@ -755,7 +788,14 @@ const FutureChartScreen = () => {
         <View style={styles.assetsActionRow}>
           <TouchableOpacity
             style={[styles.assetActionBtn, { backgroundColor: themeColors.green }]}
-            onPress={() => NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN)}
+            onPress={() => {
+              if (!userData) {
+                showError("Please login first to deposit funds");
+                NavigationService.navigate(routes.LOGIN_SCREEN);
+                return;
+              }
+              NavigationService.navigate(routes.DEPOSIT_COIN_SCREEN);
+            }}
           >
             <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
               Deposit
@@ -763,7 +803,14 @@ const FutureChartScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.assetActionBtn, { backgroundColor: themeColors.red }]}
-            onPress={() => NavigationService.navigate(routes.SELECT_COIN_SCREEN)}
+            onPress={() => {
+              if (!userData) {
+                showError("Please login first to withdraw funds");
+                NavigationService.navigate(routes.LOGIN_SCREEN);
+                return;
+              }
+              NavigationService.navigate(routes.SELECT_COIN_SCREEN);
+            }}
           >
             <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
               Withdraw
@@ -771,7 +818,14 @@ const FutureChartScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.assetActionBtn, { backgroundColor: themeColors.button }]}
-            onPress={() => Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM)}
+            onPress={() => {
+              if (!userData) {
+                showError("Please login first to transfer funds");
+                NavigationService.navigate(routes.LOGIN_SCREEN);
+                return;
+              }
+              NavigationService.navigate(routes.MARGIN_TRANSFER_SCREEN);
+            }}
           >
             <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
               Transfer
@@ -1564,8 +1618,7 @@ const FutureChartScreen = () => {
                       <WebView
                         key={chartUri}
                         source={{ uri: chartUri }}
-                        injectedJavaScript={INJECTED_CHART_JS}
-                        style={{ width: windowWidth, height: chartHeight + 25, backgroundColor: themeColors.background }}
+                        style={{ width: windowWidth, height: chartHeight, backgroundColor: themeColors.background }}
                         containerStyle={{ backgroundColor: "transparent" }}
                         opaque={false}
                         androidLayerType="hardware"
@@ -1600,6 +1653,9 @@ const FutureChartScreen = () => {
                     styles.obTabsRow,
                     {
                       paddingHorizontal: 12,
+                      paddingVertical: 0,
+                      marginBottom: 0,
+                      marginTop: 0,
                       borderBottomWidth: StyleSheet.hairlineWidth,
                       borderBottomColor: themeColors.themeBorderColor,
                     },
@@ -1772,7 +1828,9 @@ const FutureChartScreen = () => {
                                     Please login to view your wallets
                                   </AppText>
                                   <TouchableOpacity
-                                    style={styles.loginBtn}
+                                    style={[styles.loginBtn, {
+                                      backgroundColor: colors.orangeTheme,
+                                    }]}
                                     onPress={() => NavigationService.navigate(routes.LOGIN_SCREEN)}
                                   >
                                     <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
@@ -1853,7 +1911,9 @@ const FutureChartScreen = () => {
                                   <AppText type={TEN} style={{ color: themeColors.secondaryText, marginBottom: 10 }}>
                                     Please login to view your wallets
                                   </AppText>
-                                  <TouchableOpacity style={styles.loginBtn} onPress={() => NavigationService.navigate(routes.LOGIN_SCREEN)}>
+                                  <TouchableOpacity style={[styles.loginBtn, {
+                                    backgroundColor: colors.orangeTheme,
+                                  }]} onPress={() => NavigationService.navigate(routes.LOGIN_SCREEN)}>
                                     <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                                       Login
                                     </AppText>
@@ -1938,7 +1998,9 @@ const FutureChartScreen = () => {
                               <AppText type={TEN} style={{ color: themeColors.secondaryText, marginBottom: 10 }}>
                                 Please login to view your wallets
                               </AppText>
-                              <TouchableOpacity style={styles.loginBtn} onPress={() => NavigationService.navigate(routes.LOGIN_SCREEN)}>
+                              <TouchableOpacity style={[styles.loginBtn, {
+                                backgroundColor: colors.orangeTheme,
+                              }]} onPress={() => NavigationService.navigate(routes.LOGIN_SCREEN)}>
                                 <AppText type={TEN} weight={SEMI_BOLD} style={{ color: "#fff" }}>
                                   Login
                                 </AppText>

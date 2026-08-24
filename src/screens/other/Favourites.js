@@ -21,6 +21,7 @@ const Favourites = ({ style, from, coinPairs: propsCoinPairs, search: propsSearc
   const dispatch = useDispatch();
   const { colors: themeColors, isDark } = useTheme();
   const theme = isDark ? "Dark" : "Light";
+  const userData = useAppSelector((state) => state.auth.userData);
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const [btnLoading, setBtnLoading] = useState(false);
   const [processingId, setProcessingId] = useState(null);
@@ -247,6 +248,26 @@ const Favourites = ({ style, from, coinPairs: propsCoinPairs, search: propsSearc
           </AppText>
           {" "}to manage and view your favorite coins from Spot.
         </AppText>
+      </View>
+    );
+  }
+
+  if (!userData && from !== "home") {
+    return (
+      <View style={styles.emptyContainer}>
+        <FastImage
+          source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+          style={styles.emptyIcon}
+          resizeMode="contain"
+        />
+        <AppText style={[styles.emptyText, { color: themeColors.secondaryText }]}>
+          Log in to view and manage your favorites.
+        </AppText>
+        <Button
+          children="Log In / Sign Up"
+          containerStyle={styles.emptyBtn}
+          onPress={() => NavigationService.navigate(LOGIN_SCREEN)}
+        />
       </View>
     );
   }

@@ -15,6 +15,9 @@ import { useTheme } from "../../hooks/useTheme";
 import { colors } from "../../theme/colors";
 import { Alert, Platform, ToastAndroid } from "react-native";
 import NavigationService from "../../navigation/NavigationService";
+import { useAppSelector } from "../../store/hooks";
+import { showError } from "../../helper/logger";
+import { LOGIN_SCREEN } from "../../navigation/routes";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const HEADER_SHIMMER_STRIP = 140;
@@ -94,6 +97,7 @@ const SpotHeader = ({
 }) => {
   const openLockRef = useRef(false);
   const { colors: themeColors, theme, isDark: isDarkFromHook } = useTheme();
+  const userData = useAppSelector((state) => state.auth.userData);
   const darkMode =
     typeof isDarkProp === "boolean" ? isDarkProp : isDarkFromHook;
 
@@ -250,6 +254,11 @@ const SpotHeader = ({
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={() => {
+                if (!userData) {
+                  showError("Please login first to view order history");
+                  NavigationService.navigate(LOGIN_SCREEN);
+                  return;
+                }
                 if (activeHeaderTab === "Margin") {
                   NavigationService.navigate("MARGIN_HISTORY_SCREEN", { currencyData });
                 } else {
@@ -258,7 +267,7 @@ const SpotHeader = ({
               }}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel="Open chart"
+              accessibilityLabel="Open history"
             >
               <FastImage
                 source={history_line}

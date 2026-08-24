@@ -59,7 +59,8 @@ import { appOperation } from '../../appOperation';
 import { CUSTOMER_TYPE } from '../../appOperation/types';
 import SimpleToast from 'react-native-simple-toast';
 import NavigationService from '../../navigation/NavigationService';
-import { NAVIGATION_AUTH_STACK, KYC_STATUS_SCREEN } from '../../navigation/routes';
+import { NAVIGATION_AUTH_STACK, KYC_STATUS_SCREEN, LOGIN_SCREEN } from '../../navigation/routes';
+import { showError } from '../../helper/logger';
 import {
   futuresErrSelectPair,
   futuresErrInvalidSize,
@@ -1223,6 +1224,11 @@ const FuturesUI = () => {
             style={styles.headerIconBtn}
             activeOpacity={0.7}
             onPress={() => {
+              if (!userData) {
+                showError("Please login first to view futures history");
+                navigation.navigate(LOGIN_SCREEN);
+                return;
+              }
               if (liveCoin) {
                 navigation.navigate('FutureHistoryScreen', { selectedCoin: liveCoin, initialTab: activeHistoryTab });
               }
@@ -1238,7 +1244,7 @@ const FuturesUI = () => {
         </View>
       </View>
     </View>
-  ), [activeHistoryTab, liveCoin, navigation, openPairSheet, themeColors.text]);
+  ), [activeHistoryTab, liveCoin, navigation, openPairSheet, themeColors.text, userData]);
 
   const obAsks = React.useMemo(() => {
     const allAsks = futuresData?.sell_order || [];
@@ -1774,8 +1780,20 @@ const FuturesUI = () => {
               <>
                 <AppText type={TWELVE}
                   style={{ fontFamily: fontFamilyMedium }}>{parseFloat((Math.trunc(Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) * 100000) / 100000).toFixed(5))} USDT</AppText>
-                <TouchableOpacity onPress={() => navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' })}>
-                  <FastImage source={add} tintColor={isDark ? colors.white : colors.black} style={{ width: 15, height: 15, marginLeft: 6 }} resizeMode='contain' />
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  style={{ padding: 4 }}
+                  onPress={() => {
+                    if (!userData) {
+                      showError("Please login first to view futures wallet");
+                      navigation.navigate(LOGIN_SCREEN);
+                      return;
+                    }
+                    navigation.navigate('WALLET_SCREEN', { activeTab: 'Futures' });
+                  }}
+                >
+                  <FastImage source={add} tintColor={isDark ? colors.white : colors.black} style={{ width: 15, height: 15, marginLeft: 2 }} resizeMode='contain' />
                 </TouchableOpacity>
               </>
             )}
@@ -2152,6 +2170,11 @@ const FuturesUI = () => {
           selectedCoin={selectedCoin}
           limit={5}
           onViewMore={() => {
+            if (!userData) {
+              showError("Please login first to view futures history");
+              navigation.navigate(LOGIN_SCREEN);
+              return;
+            }
             navigation.navigate('FutureHistoryScreen', { selectedCoin, initialTab: activeHistoryTab });
           }}
           onRefresh={() => {

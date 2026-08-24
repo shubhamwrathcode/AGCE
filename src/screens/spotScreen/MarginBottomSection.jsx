@@ -141,9 +141,10 @@ const MarginBottomSection = ({
               </AppText>
             )}
             <TouchableOpacity
-              activeOpacity={0.8}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               onPress={onBorrowPress}
-              style={{ marginLeft: 6 }}
+              style={{ marginLeft: 6, padding: 4 }}
             >
               <FastImage source={add} style={{ width: 14, height: 14 }} tintColor={themeColors.text} resizeMode="contain" />
             </TouchableOpacity>

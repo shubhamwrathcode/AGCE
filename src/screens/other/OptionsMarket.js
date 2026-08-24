@@ -4,7 +4,8 @@ import { FlashList } from "@shopify/flash-list";
 import { AppText, ELEVEN, SEMI_BOLD, TWELVE } from "../../shared";
 import { colors } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
-import { FUTURES_SCREEN } from "../../navigation/routes";
+import { FUTURES_SCREEN, NAVIGATION_AUTH_STACK, LOGIN_SCREEN } from "../../navigation/routes";
+import { showError } from "../../helper/logger";
 import FastImage from "react-native-fast-image";
 import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, downIcon, starIcon, starFillIcon } from "../../helper/ImageAssets";
 import { useTheme } from "../../hooks/useTheme";
@@ -133,7 +134,8 @@ const OptionsMarket = ({ search, isActive = true }) => {
   const [isLoading, setIsLoading] = useState(() => globalCachedContracts.size === 0);
 
   const coinPairs = useAppSelector((state) => state.home.coinPairs) || [];
-  const favoriteArray = useAppSelector((state) => state.home.favoriteArray) || [];
+  const favoriteArray = useAppSelector((state) => state.home?.favoriteArray) || [];
+  const userData = useAppSelector((state) => state.auth?.userData);
   const dispatch = useDispatch();
 
   // Fast O(1) hashmap for coin icons
@@ -397,10 +399,15 @@ const OptionsMarket = ({ search, isActive = true }) => {
   }, []);
 
   const handleToggleFavorite = useCallback((id) => {
+    if (!userData) {
+      showError("Please login first to add favorites");
+      NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+      return;
+    }
     if (id) {
       dispatch(addToFavorites({ pair_id: id }));
     }
-  }, [dispatch]);
+  }, [dispatch, userData]);
 
   const renderItem = useCallback(({ item }) => (
     <OptionContractItem

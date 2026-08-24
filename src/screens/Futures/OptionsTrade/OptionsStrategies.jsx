@@ -7,10 +7,14 @@ import { fontFamilyMedium, fontFamilySemiBold, fontFamilyBold } from '../../../t
 import { colors } from '../../../theme/colors';
 import { bitcoinIcon, downIcon, historyIcon } from '../../../helper/ImageAssets';
 import { useNavigation } from '@react-navigation/native';
+import { useAppSelector } from '../../../store/hooks';
+import { showError } from '../../../helper/logger';
+import { LOGIN_SCREEN } from '../../../navigation/routes';
 
 const OptionsStrategies = () => {
   const { colors: themeColors, isDark } = useTheme();
   const navigation = useNavigation();
+  const userData = useAppSelector((state) => state.auth.userData);
 
   const [activeStrategyTab, setActiveStrategyTab] = useState(0);
   const strategyTabs = ['Dip Sniper', 'Peak Sniper', 'Buy Low', 'Sell High'];
@@ -76,7 +80,16 @@ const OptionsStrategies = () => {
               <FastImage source={downIcon} style={styles.downArrow} tintColor={themeColors.text} resizeMode="contain" />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('OptionHistory')}>
+          <TouchableOpacity
+            onPress={() => {
+              if (!userData) {
+                showError("Please login first to view options history");
+                navigation.navigate(LOGIN_SCREEN);
+                return;
+              }
+              navigation.navigate('OptionHistory');
+            }}
+          >
             <FastImage source={historyIcon} style={styles.historyIcon} tintColor={themeColors.text} resizeMode="contain" />
           </TouchableOpacity>
         </View>

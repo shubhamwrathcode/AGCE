@@ -15,6 +15,8 @@ import FuturesCancelModal from './FuturesCancelModal';
 import FuturesClosePositionModal from './FuturesClosePositionModal';
 import FuturesHistoryFilterSheet from './FuturesHistoryFilterSheet';
 import { appOperation } from '../../../appOperation';
+import { useAppSelector } from '../../../store/hooks';
+import { LOGIN_SCREEN } from '../../../navigation/routes';
 
 const getStatusColor = (statusText, themeColors) => {
   if (!statusText) return themeColors.text;
@@ -52,6 +54,7 @@ const FuturesHistorySection = ({
   onRefresh,
 }) => {
   const navigation = useNavigation();
+  const userData = useAppSelector((state) => state.auth.userData);
   const [cancelModalVisible, setCancelModalVisible] = React.useState(false);
   const [orderToCancel, setOrderToCancel] = React.useState(null);
   const [cancelLoading, setCancelLoading] = React.useState(false);
@@ -128,8 +131,29 @@ const FuturesHistorySection = ({
   };
 
   const EmptyState = () => (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40, minHeight: LOADER_MIN_HEIGHT }}>
-      <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 80, height: 80, marginBottom: 12, opacity: 0.8 }} />
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 35, minHeight: LOADER_MIN_HEIGHT }}>
+      <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 75, height: 75, marginBottom: 12, opacity: 0.8 }} />
+      {!userData && (
+        <>
+          <AppText style={{ color: themeColors?.secondaryText || "#888", fontSize: 13, marginBottom: 12 }}>
+            Please login to view your futures orders & history
+          </AppText>
+          <TouchableOpacity
+            style={{
+              backgroundColor: colors.orangeTheme,
+              paddingHorizontal: 22,
+              paddingVertical: 8,
+              borderRadius: 6,
+              alignItems: "center",
+            }}
+            onPress={() => navigation.navigate(LOGIN_SCREEN)}
+          >
+            <AppText weight={SEMI_BOLD} style={{ color: "#fff", fontSize: 13 }}>
+              Login / Register
+            </AppText>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 

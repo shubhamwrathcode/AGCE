@@ -1,5 +1,5 @@
 import { StyleSheet, View, Dimensions, Animated, RefreshControl } from "react-native";
-import { AppSafeAreaView } from "../../shared";
+import { AppSafeAreaView, AppText, Button } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import MarketHeader from "./MarketHeader";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -18,12 +18,15 @@ import { useRoute, useIsFocused } from "@react-navigation/native";
 import { SocketContext } from "../../SocketProvider";
 import { getFavoriteArray, addToFavorites } from "../../actions/homeActions";
 import NavigationService from "../../navigation/NavigationService";
-import { TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
+import { TRADE_SCREEN, WALLET_SCREEN, NAVIGATION_AUTH_STACK, LOGIN_SCREEN } from "../../navigation/routes";
 import MarketSkeleton from "./MarketSkeleton";
 import { futureSocketService } from "../../services/socket/FutureSocketService";
 import { setFuturesPairs } from "../../slices/homeSlice";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from "../../helper/ImageAssets";
+import FastImage from "react-native-fast-image";
+import { showError } from "../../helper/logger";
 
 const SIDE_SPACE = 20;
 const HOT_BASE_ORDER = ["BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "MATIC"];
@@ -31,7 +34,7 @@ const SHIMMER_STRIP = 120;
 
 // Reusable shimmer box shared by TabListSkeleton
 const ShimmerCell = ({ width: w, height, borderRadius = 5, style }) => {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   const shimmerX = useRef(new Animated.Value(-SHIMMER_STRIP)).current;
   const mounted = useRef(true);
   useEffect(() => {
@@ -104,7 +107,7 @@ const TabListSkeleton = ({ rows = 8 }) => {
 };
 
 const Market = () => {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, isDark } = useTheme();
   const route = useRoute();
   const isFocused = useIsFocused();
   const socketContextVars = useContext(SocketContext) || {};
@@ -249,6 +252,15 @@ const Market = () => {
     return out;
   }, [coinPairs, hotPairsChart]);
 
+  const handleToggleFavorite = (id) => {
+    if (!userData) {
+      showError("Please login first to add favorites");
+      NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+      return;
+    }
+    dispatch(addToFavorites({ pair_id: id }));
+  };
+
 
 
   return (
@@ -279,11 +291,27 @@ const Market = () => {
                 <View style={styles.tabContent}>
                   {!initialLoaded ? (
                     <TabListSkeleton rows={7} />
+                  ) : !userData ? (
+                    <View style={styles.emptyContainer}>
+                      <FastImage
+                        source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT}
+                        style={styles.emptyIcon}
+                        resizeMode="contain"
+                      />
+                      <AppText style={[styles.emptyText, { color: themeColors.secondaryText }]}>
+                        Log in to view and manage your favorites.
+                      </AppText>
+                      <Button
+                        children="Log In / Sign Up"
+                        containerStyle={styles.emptyBtn}
+                        onPress={() => NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN })}
+                      />
+                    </View>
                   ) : favoriteArray?.length > 0 ? (
                     <MarketList
                       filterData={coinPairs.filter(p => favoriteArray.includes(p._id))}
                       onPress={(item) => NavigationService.navigate(TRADE_SCREEN, { coinDetail: item })}
-                      onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))}
+                      onToggleFavorite={handleToggleFavorite}
                       favoriteArray={favoriteArray}
                       hideStar={false}
                     />
@@ -298,12 +326,12 @@ const Market = () => {
               )}
               {activeTab === "Spot" && (
                 <View style={styles.tabContent}>
-                  {!initialLoaded ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
+                  {!initialLoaded ? <TabListSkeleton rows={8} /> : <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={handleToggleFavorite} />}
                 </View>
               )}
               {activeTab === "Cryptos" && (
                 <View style={styles.tabContent}>
-                  {!initialLoaded ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={(id) => dispatch(addToFavorites({ pair_id: id }))} />}
+                  {!initialLoaded ? <TabListSkeleton rows={8} /> : <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favoriteArray} onToggleFavorite={handleToggleFavorite} />}
                 </View>
               )}
               {activeTab === "USD_M_FUTURES" && (
@@ -353,6 +381,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: universalPaddingHorizontal,
     marginTop: 4,
     minHeight: 0,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 50,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    marginBottom: 15,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  emptyBtn: {
+    width: 170,
+    height: 42,
   },
 });
 
