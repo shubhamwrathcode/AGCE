@@ -4953,7 +4953,10 @@ const Spot = () => {
           closeOnDragDown={true}
           closeOnPressMask={true}
           height={orderTypeSheetHeight}
-          animationType="slide"
+          animationType="fade"
+          openDuration={250}
+          closeDuration={200}
+          customModalProps={{ statusBarTranslucent: true }}
           customStyles={{
             container: {
               backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.themeElevationColor,
@@ -4982,7 +4985,10 @@ const Spot = () => {
           closeOnDragDown={true}
           closeOnPressMask={true}
           height={500}
-          animationType="slide"
+          animationType="fade"
+          openDuration={250}
+          closeDuration={200}
+          customModalProps={{ statusBarTranslucent: true }}
           customStyles={{
             container: {
               backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.themeElevationColor,
@@ -5017,7 +5023,10 @@ const Spot = () => {
           closeOnDragDown={true}
           closeOnPressMask={true}
           height={460}
-          animationType="slide"
+          animationType="fade"
+          openDuration={250}
+          closeDuration={200}
+          customModalProps={{ statusBarTranslucent: true }}
           customStyles={{
             container: {
               backgroundColor: isDark ? themeColors.sheetDarkColor : themeColors.themeElevationColor,
