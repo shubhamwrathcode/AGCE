@@ -384,10 +384,9 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
     () => (
       <View style={[styles.tableHeaderWrap, { borderBottomColor: rowBorderColor }]}>
         <View style={styles.tableHeaderLeft}>
-          <TouchableOpacity
+          <View
             style={styles.headerSortRow}
-            onPress={() => cycleSort("pair")}
-            activeOpacity={0.7}
+
           >
             {/* Trading Pair */}
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -415,14 +414,13 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
                 <Text style={{ fontSize: 8, color: subTextColor, marginTop: -3 }}>▼</Text>
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
 
         </View>
         <View style={styles.tableHeaderRight}>
-          <TouchableOpacity
+          <View
             style={styles.headerSortRowEnd}
-            onPress={() => cycleSort("price")}
-            activeOpacity={0.7}
+
           >
             {/* Price */}
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -450,7 +448,7 @@ const TradingDataModal = memo(forwardRef(({ visible, onClose, setCurrency, isDar
                 <Text style={{ fontSize: 8, color: subTextColor, marginTop: -3 }}>▼</Text>
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
 
         </View>
       </View>

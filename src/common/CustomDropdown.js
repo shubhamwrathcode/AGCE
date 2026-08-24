@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors, darkTheme } from '../theme/colors';
 import { AppText, ELEVEN, SEMI_BOLD, THIRTEEN, FOURTEEN, FIFTEEN, MEDIUM } from './AppText';
 import FastImage from 'react-native-fast-image';
 import { DOWN_ARROW, downIcon, tick } from '../helper/ImageAssets';
@@ -15,7 +15,21 @@ import { useTheme } from '../hooks/useTheme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const CustomDropdown = ({ data = [], onSelect, selected, compact = false, triggerStyle, icon, isOpen, onToggle }) => {
+const CustomDropdown = ({
+  data = [],
+  onSelect,
+  selected,
+  compact = false,
+  triggerStyle,
+  icon,
+  isOpen,
+  onToggle,
+  innerDropDownStyle = {},
+  dropdownStyle = {},
+  dropdownWidth,
+  flatListStyle = {},
+  align = 'left',
+}) => {
   const { colors: themeColors, isDark } = useTheme();
   const [visible, setVisible] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
@@ -42,6 +56,7 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
   };
 
   const isPlaceholder = !selected || selected.toLowerCase().includes("select");
+  const alignStyle = align === 'right' ? { right: 0, left: undefined } : { left: 0, right: undefined };
 
   return (
     <View style={{ zIndex: 9999, elevation: 9999 }}>
@@ -92,10 +107,13 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
         <View
           style={[
             styles.inlineContent,
+            alignStyle,
             {
-              backgroundColor: isDark ? colors.newThemeColor : "rgba(0,0,0,0.05)",
+              backgroundColor: isDark ? colors.newThemeColor : (isDark ? darkTheme.darkThemeInputColor : "#FFFFFF"),
               borderColor: themeColors.border,
-            }
+            },
+            dropdownWidth ? { width: dropdownWidth, minWidth: dropdownWidth } : null,
+            dropdownStyle,
           ]}
         >
           <FlatList
@@ -103,17 +121,20 @@ const CustomDropdown = ({ data = [], onSelect, selected, compact = false, trigge
             keyExtractor={(item, index) => index.toString()}
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled={true}
+            style={flatListStyle}
             renderItem={({ item, index }) => (
               <TouchableOpacity
                 onPress={() => handleSelect(item)}
                 style={[
                   styles.option,
+                  compact && styles.optionCompact,
                   { borderBottomColor: themeColors.border },
+                  innerDropDownStyle,
                   index === data.length - 1 && { borderBottomWidth: 0 }
                 ]}
               >
                 <AppText
-                  type={FOURTEEN}
+                  type={compact ? THIRTEEN : FOURTEEN}
                   style={{ color: themeColors.text }}
                   weight={selected === item ? SEMI_BOLD : MEDIUM}
                 >
@@ -161,7 +182,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '100%',
     left: 0,
-    right: 0,
+    minWidth: '100%',
     zIndex: 9999,
     elevation: 9999,
     maxHeight: 250,
@@ -169,13 +190,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 4,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   option: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  optionCompact: {
+    paddingVertical: 9,
+    paddingHorizontal: 12,
   },
 });
