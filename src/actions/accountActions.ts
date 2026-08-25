@@ -178,18 +178,14 @@ export const getUserProfile =
             isNavigate ? NavigationService.goBack() : null;
             isHome ? NavigationService.reset(NAVIGATION_BOTTOM_TAB_STACK) : null;
           }
-        } else if (!response?.success || response?.code === 401) {
+        } else if (response?.code === 401 || (isAppStartup && !response?.success)) {
           NavigationService.reset(NAVIGATION_AUTH_STACK);
         }
-        //  else {
-        //   NavigationService.reset(NAVIGATION_AUTH_STACK);
-        // }
-      } catch (e) {
+      } catch (e: any) {
         logger(e);
-        // if (e?.code === 401 || e?.code === 403) {
-        NavigationService.reset(NAVIGATION_AUTH_STACK);
-
-        // }
+        if (e?.code === 401 || (isAppStartup && e?.code !== 200)) {
+          NavigationService.reset(NAVIGATION_AUTH_STACK);
+        }
       } finally {
         if (!skipGlobalLoading) {
           dispatch(setLoading(false));

@@ -2015,7 +2015,9 @@ const DepositCoin = () => {
                         </TouchableOpacity>
                     </View>
                     <View style={styles.detailsContainer}>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
                                 Minimum deposit
                             </AppText>
@@ -2025,7 +2027,9 @@ const DepositCoin = () => {
                                 {selectedCurrency?.short_name}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
                                 Maximum deposit
                             </AppText>
@@ -2035,7 +2039,9 @@ const DepositCoin = () => {
                                 {selectedCurrency?.short_name}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
                                 Wallet
                             </AppText>
@@ -2043,7 +2049,9 @@ const DepositCoin = () => {
                                 Spot Wallet
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={TWELVE} style={styles.modalLabel} color={themeColors.text}>
                                 Credited (Trading enabled)
                             </AppText>
@@ -2088,7 +2096,9 @@ const DepositCoin = () => {
                         </TouchableOpacity>
                     </View>
                     <View style={styles.detailsContainer}>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 Status
                             </AppText>
@@ -2101,7 +2111,9 @@ const DepositCoin = () => {
                                 {modalData?.status === 'SUCCESS' ? 'Completed' : 'Pending'}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 Date
                             </AppText>
@@ -2114,7 +2126,9 @@ const DepositCoin = () => {
                                 {moment(modalData?.updatedAt).format('DD-MM-YYYY hh:mm A')}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 Coin
                             </AppText>
@@ -2127,7 +2141,9 @@ const DepositCoin = () => {
                                 {modalData?.short_name}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 Deposit amount
                             </AppText>
@@ -2140,7 +2156,9 @@ const DepositCoin = () => {
                                 {modalData?.amount} {modalData?.short_name}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 Network
                             </AppText>
@@ -2153,7 +2171,9 @@ const DepositCoin = () => {
                                 {modalData?.chain || 'Internal Transaction'}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 From Address
                             </AppText>
@@ -2182,7 +2202,9 @@ const DepositCoin = () => {
                                 )}
                             </View>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 Deposit Address
                             </AppText>
@@ -2211,7 +2233,9 @@ const DepositCoin = () => {
                                 )}
                             </View>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 TxID
                             </AppText>
@@ -2240,7 +2264,9 @@ const DepositCoin = () => {
                                 )}
                             </View>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN} color={themeColors.text} style={styles.modalLabel}>
                                 Deposit wallet
                             </AppText>
@@ -2315,31 +2341,41 @@ const DepositCoin = () => {
                                 ----
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN}>Status</AppText>
                             <AppText type={FOURTEEN} weight={SEMI_BOLD} color={YELLOW}>
                                 Pending
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN}>Coin</AppText>
                             <AppText type={FOURTEEN} weight={SEMI_BOLD}>
                                 {modalData?.short_name}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN}>Deposited amount</AppText>
                             <AppText type={FOURTEEN} weight={SEMI_BOLD}>
                                 {modalData?.amount}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN}>Network</AppText>
                             <AppText type={FOURTEEN} weight={SEMI_BOLD}>
                                 {modalData?.chain}
                             </AppText>
                         </View>
-                        <View style={styles.detailRow}>
+                        <View style={[styles.detailRow, {
+                            borderBottomColor: isDark ? colors.secondaryText : lightTheme.inputBorder
+                        }]}>
                             <AppText type={FOURTEEN}>TxID</AppText>
                             <AppText type={FOURTEEN} weight={SEMI_BOLD}>
                                 {modalData?.shortTxHash?.trim() || '----'}
@@ -2807,7 +2843,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: lightTheme.inputBorder,
+
         minHeight: 44,
     },
     modalLabel: {

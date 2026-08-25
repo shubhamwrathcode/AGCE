@@ -62,6 +62,15 @@ export default (appOperation: AppOperation) => ({
     appOperation.get('options/transaction/history', params, undefined, CUSTOMER_TYPE),
   // -------------------------
 
+  // --- Spot PnL Endpoints ---
+  spot_me_pnl: (params?: any) =>
+    appOperation.get('spot/v1/me/pnl', params, undefined, CUSTOMER_TYPE),
+  spotPnlAnalysis: (params?: any) =>
+    appOperation.get('spot/v1/me/pnl/analysis', params, undefined, CUSTOMER_TYPE),
+  spotPnlAnalysisDetails: (params?: any) =>
+    appOperation.get('spot/v1/me/pnl/analysis/details', params, undefined, CUSTOMER_TYPE),
+  // --------------------------
+
   get_profile: () =>
     appOperation.get(`user/profile`, undefined, undefined, CUSTOMER_TYPE),
   get_alert_settings_setting: () =>

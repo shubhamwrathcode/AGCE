@@ -5,6 +5,19 @@ import { AppText, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SIXTEEN,
 import { colors, darkTheme } from "../../../theme/colors";
 import { bitcoin_ic, checkIc, moreOption, searchIcon, NO_NOTIFICATION_ICON } from "../../../helper/ImageAssets";
 import WalletTabQuickActions from "../WalletTabQuickActions";
+import NavigationService from "../../../navigation/NavigationService";
+import { SPOT_PNL_ANALYSIS_SCREEN } from "../../../navigation/routes";
+
+function parseSpotPnlValue(raw) {
+  if (raw === undefined || raw === null || raw === "") return null;
+  const n = typeof raw === "number" ? raw : parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatSpotPnl(n, { asset = "USDT", decimals = 2 } = {}) {
+  if (n == null) return "—";
+  return `${n >= 0 ? "+" : ""}${n.toFixed(decimals)} ${asset}`;
+}
 
 const SpotWalletTab = ({
   theme,
@@ -24,6 +37,7 @@ const SpotWalletTab = ({
   failedIconMap,
   setFailedIconMap,
   userSpotWallet,
+  spotPnlData,
   onDeposit,
   onBuyCrypto,
   onTransfer,
@@ -34,6 +48,10 @@ const SpotWalletTab = ({
 }) => {
   const [spotHideZeroBalance, setSpotHideZeroBalance] = React.useState(false);
   const [spotSearch, setSpotSearch] = React.useState("");
+
+  const pnlAsset = spotPnlData?.valuation_asset || "USDT";
+  const rawPnl = spotPnlData?.realized_pnl_usdt ?? spotPnlData?.realized_pnl ?? spotPnlData?.today_pnl_usd ?? spotPnlData?.today_pnl;
+  const realizedPnl = parseSpotPnlValue(rawPnl);
 
   const spotRows = useMemo(() => {
     const rows = Array.isArray(userSpotWallet) ? [...userSpotWallet] : [];
@@ -95,6 +113,39 @@ const SpotWalletTab = ({
             <AppText type={FOURTEEN} color={theme === 'Dark' ? colors.white : DISCLAIMTEXT}>
               ≈ {showBalance ? formatEstimateHeader(portfolioUsdtEstimate(walletBalanceSpot), 5) : "****"}{" "}
               {walletBalanceSpot?.Currency || "USD"}
+            </AppText>
+          </View>
+          <View style={{ marginTop: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: theme === 'Dark' ? colors.white : themeColors.text }}>
+              24h PnL
+            </AppText>
+            <TouchableOpacity onPress={() => NavigationService.navigate(SPOT_PNL_ANALYSIS_SCREEN)}>
+              <AppText
+                type={FOURTEEN}
+                weight={SEMI_BOLD}
+                style={{
+                  color: "#D1AA67",
+                  textDecorationLine: "underline",
+                }}
+              >
+                Analysis
+              </AppText>
+            </TouchableOpacity>
+          </View>
+          <View style={{ marginTop: 4 }}>
+            <AppText
+              type={SIXTEEN}
+              weight={SEMI_BOLD}
+              style={{
+                color:
+                  !showBalance || realizedPnl == null || realizedPnl === 0
+                    ? (theme === 'Dark' ? colors.white : colors.disclaimText)
+                    : realizedPnl > 0
+                      ? "#01bc8d"
+                      : "#e45561",
+              }}
+            >
+              {showBalance ? formatSpotPnl(realizedPnl, { asset: pnlAsset }) : "****"}
             </AppText>
           </View>
         </View>

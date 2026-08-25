@@ -116,7 +116,7 @@ const Market = () => {
   const hotPairsChart = useAppSelector((state) => state.home.hotPairsChart) ?? {};
   const futuresPairs = useAppSelector((state) => state.home.futuresPairs ?? []);
   const userData = useAppSelector((state) => state.auth.userData);
-  const isLoggedIn = useAppSelector((state) => state.auth.isLoggedIn);
+  const isLoggedIn = Boolean(userData && (userData._id || userData.id || userData.emailId || userData.email || userData.mobileNumber || userData.token));
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const dispatch = useDispatch();
 

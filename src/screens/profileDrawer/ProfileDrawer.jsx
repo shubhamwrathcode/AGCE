@@ -759,8 +759,7 @@ const ProfileDrawer = () => {
               <FastImage source={right_ic} style={{ width: 18, height: 18, right: 15 }} tintColor={themeColors.text} resizeMode="contain" />
             </TouchableOpacity>
           </LinearGradient>
-
-></TouchableOpacity>
+        </TouchableOpacity>
 
         <TouchableOpacity
           activeOpacity={0.9}

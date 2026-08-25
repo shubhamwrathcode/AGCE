@@ -5,6 +5,7 @@ import { createMaterialTopTabNavigator } from "@react-navigation/material-top-ta
 import NavigationService from "./NavigationService";
 import * as routes from "./routes";
 import * as React from "react";
+import { appOperation } from "../appOperation";
 import AuthLoading from "../screens/other/AuthLoading";
 import Welcome from "../screens/auth/Welcome";
 import Login from "../screens/auth/Login";
@@ -152,6 +153,7 @@ import SwitchAccountScreen from "../screens/account/SwitchAccountScreen";
 import MarginTransferHistoryScreen from "../screens/spotScreen/MarginTransferHistoryScreen";
 import OptionHistory from "../screens/Futures/OptionsTrade/OptionHistory";
 import OptionsPnlAnalysisScreen from "../screens/wallet/OptionsPnlAnalysisScreen";
+import SpotPnlAnalysisScreen from "../screens/wallet/SpotPnlAnalysisScreen";
 import FutureHistoryCardDetailPage from "../screens/Futures/FutureHistoryCardDetailPage";
 import OptionHistoryCardDetailPage from "../screens/Futures/OptionsTrade/OptionHistoryCardDetailPage";
 import FutureHistoryScreen from "../screens/Futures/FutureHistoryScreen";
@@ -216,7 +218,10 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
   const [localIndex, setLocalIndex] = React.useState(state.index);
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state: any) => state.auth.userData);
-  const isLoggedIn = !!(userData && (userData.token || userData.id || userData.email || userData.user_id));
+  const isLoggedIn = !!(
+    (userData && (userData._id || userData.id || userData.emailId || userData.email || userData.mobileNumber || userData.token || userData.user_id || userData.username || userData.userName)) ||
+    appOperation.customerToken
+  );
 
   React.useEffect(() => {
     setLocalIndex(state.index);
@@ -235,7 +240,6 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
 
   const isAuthRequiredRoute = (routeName: string) => {
     return (
-      routeName === routes.HOME_SCREEN ||
       routeName === routes.WALLET_SCREEN
     );
   };
@@ -755,6 +759,11 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen
         name="OptionsPnlAnalysis"
         component={OptionsPnlAnalysisScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SpotPnlAnalysis"
+        component={SpotPnlAnalysisScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

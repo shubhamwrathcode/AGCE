@@ -231,6 +231,7 @@ const WalletNew = ({ route }) => {
   const accountDetailSheet = useRef(null);
   const [marginSummary, setMarginSummary] = useState(null);
   const [crossMarginSummary, setCrossMarginSummary] = useState(null);
+  const [spotPnlData, setSpotPnlData] = useState(null);
   const [globalPortfolio, setGlobalPortfolio] = useState(null);
 
   const currentBalance = useMemo(() => {
@@ -700,6 +701,14 @@ const WalletNew = ({ route }) => {
     appOperation.get("cross/risk", undefined, undefined, CUSTOMER_TYPE)
       .then((res) => { if (res?.success) setCrossMarginSummary(res?.data); })
       .catch(() => { });
+    appOperation.get("spot/v1/me/pnl", { period: "24h" }, undefined, CUSTOMER_TYPE)
+      .then((res) => {
+        if (res?.success && res?.data) setSpotPnlData(res.data);
+        else setSpotPnlData(null);
+      })
+      .catch(() => {
+        setSpotPnlData(null);
+      });
   }, [dispatch, noGlobalLoader]);
 
   useFocusEffect(
@@ -1107,6 +1116,7 @@ const WalletNew = ({ route }) => {
                         failedIconMap={failedIconMap}
                         setFailedIconMap={setFailedIconMap}
                         userSpotWallet={userSpotWallet}
+                        spotPnlData={spotPnlData}
                         onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
                         onBuyCrypto={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
                         onTransfer={() =>

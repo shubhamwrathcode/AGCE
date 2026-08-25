@@ -33,7 +33,7 @@ const EnterOtp = () => {
   const userData = useAppSelector((state) => state.auth.userData);
   const { emailId, mobileNumber, country_code } = userData ?? {};
   const route = useRoute();
-  const params: any = route?.params ?? {};
+  const params = route?.params ?? {};
   const isLogin = params?.isLogin ?? false;
   const authType = params?.authType ?? 1;
   const loginSignId = params?.loginSignId ?? "";
@@ -58,11 +58,11 @@ const EnterOtp = () => {
   const getVerifySignId = () => {
     if (!isLogin) return (emailId || `${country_code || ""} ${mobileNumber || ""}`.trim()) || email_or_phone;
     if (selectedAuthMethod === 3) {
-      const m = availableMethods.find((x: any) => x.type === 3);
+      const m = availableMethods.find((x) => x.type === 3);
       return m?.value ?? loginSignId;
     }
     if (selectedAuthMethod === 1) {
-      const m = availableMethods.find((x: any) => x.type === 1);
+      const m = availableMethods.find((x) => x.type === 1);
       return m?.value ?? loginSignId;
     }
     return loginSignId;
@@ -173,8 +173,8 @@ const EnterOtp = () => {
                         Prefer another method?
                     </AppText>
                     {availableMethods
-                        .filter((m: any) => m.type !== selectedAuthMethod && m.type !== 4)
-                        .map((method: any) => (
+                        .filter((m) => m.type !== selectedAuthMethod && m.type !== 4)
+                        .map((method) => (
                         <TouchableOpacityView
                             key={method.type}
                             onPress={() => {

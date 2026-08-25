@@ -38,11 +38,11 @@ function fmtSigned(val, decimals = 4) {
   return abs;
 }
 
-function pnlColor(val) {
+function pnlColor(val, isDark = false) {
   const n = num(val);
   if (n > 0) return colors.green;
   if (n < 0) return colors.red;
-  return colors.disclaimText;
+  return isDark ? colors.white : colors.disclaimText;
 }
 
 function parseDateInput(str) {
@@ -58,20 +58,21 @@ function toDateInput(d) {
   return `${y}-${m}-${day}`;
 }
 
-function SummaryCard({ label, card, updatedAt, showValues, cardStyle }) {
+function SummaryCard({ label, card, updatedAt, showValues, cardStyle, isDark, themeColors }) {
   const pnl = num(card?.pnl_usdt);
   const pct = num(card?.pnl_pct);
+  const secondaryTextColor = isDark ? colors.white : themeColors.secondaryText;
   return (
     <View style={[styles.metricCard, cardStyle]}>
-      <AppText type={TWELVE} color={DISCLAIMTEXT}>{label}</AppText>
-      <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: pnlColor(pnl), marginTop: 6 }}>
+      <AppText type={TWELVE} style={{ color: secondaryTextColor }}>{label}</AppText>
+      <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: pnlColor(pnl, isDark), marginTop: 6 }}>
         {showValues ? `${fmtSigned(pct, 2)}%` : "****"}
       </AppText>
-      <AppText type={TWELVE} style={{ color: pnlColor(pnl), marginTop: 4 }}>
+      <AppText type={TWELVE} style={{ color: pnlColor(pnl, isDark), marginTop: 4 }}>
         {showValues ? `${fmtSigned(pnl, 4)} USDT` : "****"}
       </AppText>
       {label === "Daily PNL" && updatedAt ? (
-        <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ marginTop: 8 }}>
+        <AppText type={TWELVE} style={{ color: isDark ? colors.white : themeColors.secondaryText, marginTop: 8 }}>
           Update Time: {formatOptionsPnlUpdatedAt(updatedAt)}
         </AppText>
       ) : null}
@@ -86,6 +87,9 @@ const OptionsPnlAnalysisScreen = () => {
   const [viewTab, setViewTab] = useState("overview");
   const [datePicker, setDatePicker] = useState(null);
   const [pickerDraft, setPickerDraft] = useState(new Date());
+
+  const defaultTextColor = isDark ? colors.white : themeColors.text;
+  const secondaryTextColor = isDark ? colors.white : themeColors.secondaryText;
 
   const {
     period,
@@ -158,17 +162,16 @@ const OptionsPnlAnalysisScreen = () => {
   const renderDetailRow = ({ item }) => {
     const daily = num(item.daily_pnl);
     const cum = num(item.cumulative_pnl);
-    const cumPct = num(item.cumulative_pnl_pct);
     return (
       <View style={[styles.detailRow, { borderBottomColor: themeColors.border }]}>
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ flex: 1, color: themeColors.text }}>{item.date}</AppText>
-        <AppText type={TWELVE} style={{ width: 72, textAlign: "right", color: themeColors.text }}>
+        <AppText type={TWELVE} weight={SEMI_BOLD} style={{ flex: 1, color: defaultTextColor }}>{item.date}</AppText>
+        <AppText type={TWELVE} style={{ width: 72, textAlign: "right", color: defaultTextColor }}>
           {showBalance ? fmt(item.total_equity, 2) : "****"}
         </AppText>
-        <AppText type={TWELVE} style={{ width: 72, textAlign: "right", color: showBalance ? pnlColor(daily) : undefined }}>
+        <AppText type={TWELVE} style={{ width: 72, textAlign: "right", color: showBalance ? pnlColor(daily, isDark) : defaultTextColor }}>
           {showBalance ? fmtSigned(daily, 2) : "****"}
         </AppText>
-        <AppText type={TWELVE} style={{ width: 88, textAlign: "right", color: showBalance ? pnlColor(cum) : undefined }}>
+        <AppText type={TWELVE} style={{ width: 88, textAlign: "right", color: showBalance ? pnlColor(cum, isDark) : defaultTextColor }}>
           {showBalance ? `${fmtSigned(cum, 2)}` : "****"}
         </AppText>
       </View>
@@ -179,10 +182,10 @@ const OptionsPnlAnalysisScreen = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: pageBg }]}>
       <View style={[styles.header, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cardBorder }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <FastImage source={back_ic} style={styles.backIcon} resizeMode="contain" tintColor={themeColors.text} />
+          <FastImage source={back_ic} style={styles.backIcon} resizeMode="contain" tintColor={defaultTextColor} />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: "center" }}>
-          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+          <AppText type={SIXTEEN} weight={SEMI_BOLD} style={{ color: defaultTextColor }}>
             Options PNL Analysis
           </AppText>
         </View>
@@ -191,7 +194,7 @@ const OptionsPnlAnalysisScreen = () => {
             source={showBalance ? eye_close_icon : eye_open_icon}
             style={{ width: 18, height: 18 }}
             resizeMode="contain"
-            tintColor={themeColors.text}
+            tintColor={defaultTextColor}
           />
         </TouchableOpacity>
       </View>
@@ -204,9 +207,9 @@ const OptionsPnlAnalysisScreen = () => {
         ) : null}
 
         <View style={styles.cardsRow}>
-          <SummaryCard label="Daily PNL" card={cards?.daily} updatedAt={analysis?.updated_at} showValues={showBalance} cardStyle={metricCardStyle} />
-          <SummaryCard label="7D PNL" card={cards?.["7d"]} showValues={showBalance} cardStyle={metricCardStyle} />
-          <SummaryCard label="30D PNL" card={cards?.["30d"]} showValues={showBalance} cardStyle={metricCardStyle} />
+          <SummaryCard label="Daily PNL" card={cards?.daily} updatedAt={analysis?.updated_at} showValues={showBalance} cardStyle={metricCardStyle} isDark={isDark} themeColors={themeColors} />
+          <SummaryCard label="7D PNL" card={cards?.["7d"]} showValues={showBalance} cardStyle={metricCardStyle} isDark={isDark} themeColors={themeColors} />
+          <SummaryCard label="30D PNL" card={cards?.["30d"]} showValues={showBalance} cardStyle={metricCardStyle} isDark={isDark} themeColors={themeColors} />
         </View>
 
         <View style={[styles.panel, panelStyle]}>
@@ -224,7 +227,7 @@ const OptionsPnlAnalysisScreen = () => {
                   <AppText
                     type={TWELVE}
                     weight={SEMI_BOLD}
-                    style={{ color: period === p ? colors.white : themeColors.secondaryText }}
+                    style={{ color: period === p ? colors.white : secondaryTextColor }}
                   >
                     {p.toUpperCase()}
                   </AppText>
@@ -233,21 +236,21 @@ const OptionsPnlAnalysisScreen = () => {
             </View>
             <View style={styles.dateRow}>
               <TouchableOpacity onPress={() => openDatePicker("from")} style={[styles.dateCell, { backgroundColor: chipBg, borderWidth: StyleSheet.hairlineWidth, borderColor: cardBorder }]}>
-                <AppText type={TWELVE} style={{ color: themeColors.text }}>{dateFrom || "—"}</AppText>
+                <AppText type={TWELVE} style={{ color: defaultTextColor }}>{dateFrom || "—"}</AppText>
               </TouchableOpacity>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}> → </AppText>
+              <AppText type={TWELVE} style={{ color: secondaryTextColor }}> → </AppText>
               <TouchableOpacity onPress={() => openDatePicker("to")} style={[styles.dateCell, { backgroundColor: chipBg, borderWidth: StyleSheet.hairlineWidth, borderColor: cardBorder }]}>
-                <AppText type={TWELVE} style={{ color: themeColors.text }}>{dateTo || "—"}</AppText>
+                <AppText type={TWELVE} style={{ color: defaultTextColor }}>{dateTo || "—"}</AppText>
               </TouchableOpacity>
             </View>
           </View>
 
-          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ marginTop: 16, color: themeColors.text }}>
+          <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ marginTop: 16, color: defaultTextColor }}>
             Profit and Loss Summary
           </AppText>
 
           {loading ? (
-            <ActivityIndicator style={{ marginTop: 20 }} color={themeColors.text} />
+            <ActivityIndicator style={{ marginTop: 20 }} color={defaultTextColor} />
           ) : (
             <View style={styles.summaryGrid}>
               <View style={{ flex: 1, gap: 10 }}>
@@ -257,8 +260,8 @@ const OptionsPnlAnalysisScreen = () => {
                   ["Net PNL", summary?.net_pnl],
                 ].map(([label, value]) => (
                   <View key={label} style={styles.summaryRow}>
-                    <AppText type={TWELVE} color={DISCLAIMTEXT}>{label}</AppText>
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: showBalance ? pnlColor(value) : themeColors.text }}>
+                    <AppText type={TWELVE} style={{ color: secondaryTextColor }}>{label}</AppText>
+                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: showBalance ? pnlColor(value, isDark) : defaultTextColor }}>
                       {showBalance ? `${fmtSigned(value, 4)} USDT` : "****"}
                     </AppText>
                   </View>
@@ -272,8 +275,8 @@ const OptionsPnlAnalysisScreen = () => {
                   ["Breakeven Days", summary?.breakeven_days, false],
                 ].map(([label, value, isPct]) => (
                   <View key={label} style={styles.summaryRow}>
-                    <AppText type={TWELVE} color={DISCLAIMTEXT}>{label}</AppText>
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                    <AppText type={TWELVE} style={{ color: secondaryTextColor }}>{label}</AppText>
+                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: defaultTextColor }}>
                       {showBalance ? (isPct ? `${fmt(value, 2)}%` : String(value ?? 0)) : "****"}
                     </AppText>
                   </View>
@@ -288,7 +291,7 @@ const OptionsPnlAnalysisScreen = () => {
                 <AppText
                   type={FOURTEEN}
                   weight={SEMI_BOLD}
-                  style={{ color: viewTab === tab ? themeColors.text : themeColors.secondaryText }}
+                  style={{ color: viewTab === tab ? defaultTextColor : (isDark ? "rgba(255,255,255,0.6)" : themeColors.secondaryText) }}
                 >
                   {tab === "overview" ? "Overview" : "Details"}
                 </AppText>
@@ -312,13 +315,13 @@ const OptionsPnlAnalysisScreen = () => {
           {viewTab === "details" && (
             <View style={{ marginTop: 12 }}>
               <View style={[styles.detailHeader, { borderBottomColor: themeColors.border }]}>
-                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ flex: 1, color: themeColors.text }}>Date</AppText>
-                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ width: 72, textAlign: "right", color: themeColors.text }}>Equity</AppText>
-                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ width: 72, textAlign: "right", color: themeColors.text }}>Daily</AppText>
-                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ width: 88, textAlign: "right", color: themeColors.text }}>Cum. PNL</AppText>
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ flex: 1, color: defaultTextColor }}>Date</AppText>
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ width: 72, textAlign: "right", color: defaultTextColor }}>Equity</AppText>
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ width: 72, textAlign: "right", color: defaultTextColor }}>Daily</AppText>
+                <AppText type={TWELVE} weight={SEMI_BOLD} style={{ width: 88, textAlign: "right", color: defaultTextColor }}>Cum. PNL</AppText>
               </View>
               {loading ? (
-                <ActivityIndicator style={{ marginTop: 20 }} color={themeColors.text} />
+                <ActivityIndicator style={{ marginTop: 20 }} color={defaultTextColor} />
               ) : (
                 <FlatList
                   data={detailsRows}
@@ -326,7 +329,7 @@ const OptionsPnlAnalysisScreen = () => {
                   renderItem={renderDetailRow}
                   scrollEnabled={false}
                   ListEmptyComponent={
-                    <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ textAlign: "center", marginTop: 24 }}>
+                    <AppText type={TWELVE} style={{ textAlign: "center", marginTop: 24, color: secondaryTextColor }}>
                       No data
                     </AppText>
                   }
@@ -343,9 +346,9 @@ const OptionsPnlAnalysisScreen = () => {
                     ]}
                     onPress={() => setDetailsPage((p) => Math.max(1, p - 1))}
                   >
-                    <AppText type={FOURTEEN} style={{ color: themeColors.text }}>‹</AppText>
+                    <AppText type={FOURTEEN} style={{ color: defaultTextColor }}>‹</AppText>
                   </TouchableOpacity>
-                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Page {detailsPage} / {detailsPages}</AppText>
+                  <AppText type={TWELVE} style={{ color: secondaryTextColor }}>Page {detailsPage} / {detailsPages}</AppText>
                   <TouchableOpacity
                     disabled={detailsPage >= detailsPages}
                     style={[
@@ -355,7 +358,7 @@ const OptionsPnlAnalysisScreen = () => {
                     ]}
                     onPress={() => setDetailsPage((p) => p + 1)}
                   >
-                    <AppText type={FOURTEEN} style={{ color: themeColors.text }}>›</AppText>
+                    <AppText type={FOURTEEN} style={{ color: defaultTextColor }}>›</AppText>
                   </TouchableOpacity>
                 </View>
               )}
