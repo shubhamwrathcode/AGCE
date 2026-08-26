@@ -1,4 +1,5 @@
 import {createSlice} from '@reduxjs/toolkit';
+import isEqual from 'lodash/isEqual';
 import {WalletSliceProps} from '../helper/types';
 export const initialState: WalletSliceProps = {
   walletBalance: 0,
@@ -131,7 +132,10 @@ export const walletSlice = createSlice({
       state.walletHistory = null;
     },
     setTradeHistory: (state, {payload}) => {
-      state.tradeHistory = payload ?? [];
+      const next = payload ?? [];
+      if (!isEqual(state.tradeHistory, next)) {
+        state.tradeHistory = next;
+      }
     },
     clearTradeHistory: (state) => {
       state.tradeHistory = null;

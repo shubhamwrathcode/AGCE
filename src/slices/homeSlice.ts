@@ -230,7 +230,10 @@ export const homeSlice = createSlice({
       state.spotOpenOrders = [];
     },
     setPastOrders: (state, {payload}) => {
-      state.pastOrders = payload;
+      const next = payload ?? [];
+      if (!isEqual(state.pastOrders, next)) {
+        state.pastOrders = next;
+      }
     },
     onCancelOrder: (state, {payload}) => {
       const targetId = String(payload || "");
