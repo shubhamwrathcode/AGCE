@@ -205,4 +205,4 @@ const MarginBottomSection = ({
   );
 };
 
-export default MarginBottomSection;
+export default React.memo(MarginBottomSection);

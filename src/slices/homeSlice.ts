@@ -219,22 +219,27 @@ export const homeSlice = createSlice({
       state.favoriteArrayLoaded = payload;
     },
     setOpenOrders: (state, {payload}) => {
-      state.openOrders = payload ?? [];
+      const next = payload ?? [];
+      if (!isEqual(state.spotOpenOrders, next)) {
+        state.openOrders = next;
+        state.spotOpenOrders = next;
+      }
     },
     clearOpenOrders: (state) => {
-      state.openOrders = null;
+      state.openOrders = [];
+      state.spotOpenOrders = [];
     },
     setPastOrders: (state, {payload}) => {
       state.pastOrders = payload;
     },
     onCancelOrder: (state, {payload}) => {
-      if (!Array.isArray(state.openOrders)) return;
-      const openOrders = state.openOrders;
-      const index = openOrders.findIndex(e => {
-        return e._id === payload;
-      });
-      if (index === -1) return;
-      openOrders.splice(index, 1);
+      const targetId = String(payload || "");
+      if (Array.isArray(state.openOrders)) {
+        state.openOrders = state.openOrders.filter(e => String(e?._id || e?.id || "") !== targetId);
+      }
+      if (Array.isArray(state.spotOpenOrders)) {
+        state.spotOpenOrders = state.spotOpenOrders.filter(e => String(e?._id || e?.id || "") !== targetId);
+      }
     },
     setHistoricData: (state, {payload}) => {
       state.openOrders = payload;

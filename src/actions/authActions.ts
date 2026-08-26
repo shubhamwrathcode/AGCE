@@ -1060,11 +1060,11 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
   }
 };
 
-export const logoutAction = () => async () => {
+export const logoutAction = () => async (dispatch: AppDispatch) => {
   appOperation.setCustomerToken('');
   await AsyncStorage.removeItem(USER_TOKEN_KEY);
   await AsyncStorage.removeItem(USER_REFRESH_TOKEN_KEY);
-  appOperation.setCustomerToken('');
   if (appOperation.setCustomerRefreshToken) appOperation.setCustomerRefreshToken('');
+  dispatch(setUserData(null));
   NavigationService.reset(NAVIGATION_AUTH_STACK);
 };

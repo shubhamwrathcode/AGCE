@@ -317,13 +317,6 @@ export const cancelOrder =
       if (response?.success) {
         showSuccess("Order Cancelled Successfully");
         dispatch(onCancelOrder(data.order_id));
-        if (data.tradeType === 'cross') {
-          dispatch(getOpenOrders(0, 10, 'cross')); // Maybe we'll need crossOpenOrders later
-        } else if (data.tradeType === 'margin') {
-          dispatch(getOpenOrders(0, 10, 'margin'));
-        } else {
-          dispatch(getOpenOrders(0, 10, 'spot'));
-        }
         return { ...response, success: true };
       }
       showError(response?.message || "Failed to cancel order");
@@ -338,10 +331,9 @@ export const cancelOrder =
 export const placeOrder =
   (data: PlaceOrderProps & { tradeType?: string }, setVisible: any) => async (dispatch: AppDispatch) => {
     try {
-      dispatch(setLoading(true));
       const { total: _orderTotalUi, tradeType, ...spotOrderBody } = data;
       let response: any;
-      
+
       if (tradeType === 'cross') {
         response = await appOperation.customer.crossPlaceOrder(spotOrderBody);
       } else if (tradeType === 'margin') {
@@ -350,25 +342,16 @@ export const placeOrder =
         response = await appOperation.customer.place_order(spotOrderBody);
       }
 
-      if (response.success) {
-        dispatch(setOrderData(data));
+      if (response?.success) {
         showSuccess(response?.message || 'Order placed successfully');
-        setVisible(true);
-        if (tradeType === 'cross') {
-          dispatch(getOpenOrders(0, 50, 'cross', spotOrderBody.pair));
-        } else if (tradeType === 'margin') {
-          dispatch(getOpenOrders(0, 50, 'margin', spotOrderBody.pair));
-        } else {
-          dispatch(getOpenOrders(0, 50, 'spot', spotOrderBody.pair));
-        }
       } else {
         showError(response?.message);
       }
-    } catch (e) {
+      return response;
+    } catch (e: any) {
       logger(e);
       showError(e?.message);
-    } finally {
-      dispatch(setLoading(false));
+      return { success: false, message: e?.message };
     }
   };
 

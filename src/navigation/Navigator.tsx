@@ -240,7 +240,8 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
 
   const isAuthRequiredRoute = (routeName: string) => {
     return (
-      routeName === routes.WALLET_SCREEN
+      routeName === routes.WALLET_SCREEN ||
+      routeName === routes.HOME_SCREEN
     );
   };
 

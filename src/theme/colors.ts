@@ -132,5 +132,7 @@ export const darkTheme = {
   spotTradeSell: '#ED4E4E',
   cardBgColor: "#3A3A3C",
   sheetDarkColor: '#0F141C',
-  darkThemeInputColor: "#2b313d"
+  darkThemeInputColor: "#2b313d",
+  lightthemeinputcolor: '#EDEDEE',
+  lightThemeInputColor: '#EDEDEE'
 };

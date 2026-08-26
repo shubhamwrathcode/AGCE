@@ -205,7 +205,9 @@ const AppText = ({
       numberOfLines={numberOfLines}
       style={StyleSheet.flatten([styles.text(type, weight, color), style])}
       {...props}
-    />
+    >
+      {props.children ?? ""}
+    </Text>
   );
 };
 

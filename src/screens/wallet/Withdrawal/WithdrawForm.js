@@ -40,7 +40,7 @@ import { getNotificationList } from "../../../actions/homeActions";
 import { appOperation } from "../../../appOperation";
 import { CUSTOMER_TYPE } from "../../../appOperation/types";
 import { AppSafeAreaView, AppText, BOLD, Button, DISCLAIMTEXT, EIGHT, EIGHTEEN, ELEVEN, FIFTEEN, FOURTEEN, Input, MEDIUM, SEMI_BOLD, SIXTEEN, TEN, THIRTEEN, TWELVE, TWENTY, YELLOW } from "../../../common";
-import { colors, lightTheme } from "../../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../../theme/colors";
 import { countriesList } from "../../../helper/CountriesList";
 import Accordion from "react-native-collapsible/Accordion";
 import { NOTIFICATION_SCREEN, WITHDRAW_HISTORY_SCREEN, KYC_STATUS_SCREEN } from "../../../navigation/routes";
@@ -2304,11 +2304,11 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("email") && (
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Email verification code</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
-                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
                   inputStyle={{ fontSize: 14, color: themeColors.text }}
                   placeholder="Enter email code"
                   keyboardType="numeric"
@@ -2331,11 +2331,11 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("mobile") && (
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Mobile verification code</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
-                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
                   inputStyle={{ fontSize: 14, color: themeColors.text }}
                   placeholder="Enter mobile code"
                   keyboardType="numeric"
@@ -2358,11 +2358,11 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("google_authenticator") && (
             <View style={{ marginBottom: 20 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Authenticator app</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, borderRadius: 12, paddingRight: 8 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
-                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
                   inputStyle={{ fontSize: 14, color: themeColors.text }}
                   placeholder="Enter authenticator app code"
                   keyboardType="numeric"
@@ -2386,11 +2386,11 @@ const WithdrawForm = () => {
           {getNonPasskeyEnabledMethods().includes("fund_password") && (
             <View style={{ marginBottom: 28 }}>
               <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, marginBottom: 8 }}>Fund password</AppText>
-              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, borderRadius: 12, paddingRight: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, borderRadius: 12, paddingRight: 16 }}>
                 <Input
                   maxLength={6}
                   mainContainer={{ flex: 1, marginBottom: 0 }}
-                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? '#2A2A2E' : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
+                  containerStyle={{ borderWidth: 0, backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, height: 48, paddingHorizontal: 16, borderRadius: 12 }}
                   inputStyle={{ fontSize: 14, color: themeColors.text }}
                   placeholder="Enter fund password"
                   secureTextEntry={!withdrawFundPasswordVisible}
@@ -2423,7 +2423,7 @@ const WithdrawForm = () => {
                   (!getNonPasskeyEnabledMethods().includes("google_authenticator") || (authAppCode || "").trim().length > 0) &&
                   (!getNonPasskeyEnabledMethods().includes("fund_password") || (withdrawFundPassword || "").trim().length > 0)
                   ? (isDark ? colors.white : colors.black)
-                  : (isDark ? "#3A3A3C" : "#E5E7EB"),
+                  : (isDark ? darkTheme.darkThemeInputColor : "#E5E7EB"),
               height: 50,
               borderRadius: 25,
               justifyContent: "center",
@@ -2526,7 +2526,7 @@ const WithdrawForm = () => {
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
+                  backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input,
                   opacity: activeWithdrawChains.length === 0 ? 0.6 : 1
                 }}
               >
@@ -2545,7 +2545,7 @@ const WithdrawForm = () => {
                   paddingHorizontal: 20,
                   flexDirection: "row",
                   alignItems: "center",
-                  backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
+                  backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input,
                 }}
               >
                 <TextInput
@@ -2644,7 +2644,7 @@ const WithdrawForm = () => {
                       height: 48,
                       borderWidth: 0,
                       borderRadius: 12,
-                      backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
+                      backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input,
                       paddingHorizontal: 4, // Input component internally has padding usually
                     }}
                     mainContainer={styles.emailFieldMain}
@@ -2654,7 +2654,7 @@ const WithdrawForm = () => {
                       style={[
                         styles.emailSuggestList,
                         {
-                          backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
+                          backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input,
                           borderColor: themeColors.border,
                         },
                       ]}
@@ -2686,7 +2686,7 @@ const WithdrawForm = () => {
                 <View style={[styles.wdAgcePhoneWrap, {}]}>
                   <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text, marginBottom: 4 }}>Phone Number</AppText>
                   <View style={[styles.wdAgcePhoneRow, {
-                    backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
+                    backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input,
                     borderRadius: 12,
                     height: 48,
                     paddingHorizontal: 12,
@@ -2735,7 +2735,7 @@ const WithdrawForm = () => {
                       height: 48,
                       borderWidth: 0,
                       borderRadius: 12,
-                      backgroundColor: isDark ? '#2A2A2E' : lightTheme.input
+                      backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input
                     }}
                   />
                   <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
@@ -2762,7 +2762,7 @@ const WithdrawForm = () => {
                 paddingHorizontal: 16,
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
+                backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input,
               }}>
                 <TextInput
                   style={{ flex: 1, color: themeColors.text, fontSize: 14, fontWeight: "400", padding: 0 }}
@@ -2888,7 +2888,7 @@ const WithdrawForm = () => {
                 (withdrawToTab === "address" && !showWithdrawContentAfterValidatedAddress) ||
                 (withdrawToTab === "agce_user" && !isAgceFormValid)
               )
-                ? (isDark ? "#3A3A3C" : "#E5E7EB")
+                ? (isDark ? darkTheme.darkThemeInputColor : "#E5E7EB")
                 : (isDark ? colors.white : colors.black),
               justifyContent: "center",
               alignItems: "center"
@@ -3233,7 +3233,7 @@ const WithdrawForm = () => {
             <View style={{
               flexDirection: "row",
               alignItems: "center",
-              backgroundColor: isDark ? '#2A2A2E' : lightTheme.input,
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input,
               borderRadius: 12,
               height: 52,
               paddingHorizontal: 16

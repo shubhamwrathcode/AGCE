@@ -280,7 +280,8 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
 
   const [orderHistoryTypeFilter, setOrderHistoryTypeFilter] = useState("All");
 
-  const { orderData, spotOpenOrders } = useSelector((state) => state.home);
+  const spotOpenOrders = useSelector((state) => state.home?.spotOpenOrders);
+  const orderData = useSelector((state) => state.home?.orderData);
 
   const baseSymbol = currencyData?.base_currency || "";
   const quoteSymbol = currencyData?.quote_currency || "";
@@ -449,14 +450,12 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
     return list;
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      const intervalId = setInterval(() => {
-        fetchTabDetailsRef.current?.(true);
-      }, 5000);
-      return () => clearInterval(intervalId);
-    }, [])
-  );
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchTabDetailsRef.current?.(true);
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Cancel order handler (Open Orders tab)
   const handleCancelOrder = async (orderId) => {
@@ -1531,7 +1530,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
   );
 };
 
-export default MarginHistorySection;
+export default React.memo(MarginHistorySection);
 
 const styles = StyleSheet.create({
   container: {

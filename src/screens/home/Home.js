@@ -85,10 +85,12 @@ import { getVersion } from "react-native-device-info";
 import { setLoading } from "../../slices/authSlice";
 import HeaderTop from "../../shared/components/HeaderTop";
 import FastImage from "react-native-fast-image";
-import { KYC_STATUS_SCREEN, SEARCH_SCREEN, WALLET_SCREEN, DEPOSIT_COIN_SCREEN } from "../../navigation/routes";
+import { KYC_STATUS_SCREEN, SEARCH_SCREEN, WALLET_SCREEN, DEPOSIT_COIN_SCREEN, NAVIGATION_AUTH_STACK, LOGIN_SCREEN } from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
 import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import { SocketContext } from "../../SocketProvider";
+import { showError } from "../../helper/logger";
+import { appOperation } from "../../appOperation";
 
 import { useTheme } from "../../hooks/useTheme";
 
@@ -165,6 +167,15 @@ const Home = () => {
 
   useFocusEffect(
     useCallback(() => {
+      const isAuth = !!(
+        (userData && (userData._id || userData.id || userData.emailId || userData.email || userData.token)) ||
+        appOperation.customerToken
+      );
+      if (!isAuth) {
+        showError("Please login first to access Home");
+        NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+        return undefined;
+      }
       dispatch(setLoading(false));
       requestMarketData();
       const sliderTimer = setTimeout(() => setSliderReady(true), 300);
@@ -172,7 +183,7 @@ const Home = () => {
         clearTimeout(sliderTimer);
         if (unsubscribeFromMarket) unsubscribeFromMarket("home");
       };
-    }, [dispatch, requestMarketData, unsubscribeFromMarket])
+    }, [userData, dispatch, requestMarketData, unsubscribeFromMarket])
   );
 
   useEffect(() => {

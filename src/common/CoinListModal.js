@@ -26,7 +26,7 @@ import FastImage from "react-native-fast-image";
 import { toFixedFive } from "../helper/utility";
 import { showError } from "../helper/logger";
 import { closeIcon, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, searchIcon, checkIcon } from "../helper/ImageAssets";
-import { colors } from "../theme/colors";
+import { colors, darkTheme } from "../theme/colors";
 import { useTheme } from "../hooks/useTheme";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -232,7 +232,7 @@ const CoinListModal = ({ visible, data, onSelect, onClose, disabledCoinId, selec
                   tintColor={isDark ? "rgba(255,255,255,0.4)" : "#98A2B3"} />
                 <TextInput
                   placeholder="Search currency..."
-                  placeholderTextColor={isDark ? "rgba(255,255,255,0.3)" : "#98A2B3"}
+                  placeholderTextColor={isDark ? darkTheme.darkThemeInputColor : "#98A2B3"}
                   value={searchText}
                   onChangeText={setSearchText}
                   style={[

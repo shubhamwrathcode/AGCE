@@ -19,6 +19,7 @@ import { formatToLakh, toFixedEight } from "../helper/utility";
 import { Button } from "./Button";
 import { AppText } from "./AppText";
 import { SpinnerSecond } from "./SpinnerSecond";
+import { darkTheme } from "../theme/colors";
 
 const BuyPackageModal = ({ visible, onClose, packages, WalletTypes, onNext, theme }) => {
   const dispatch = useDispatch();
@@ -34,7 +35,7 @@ const BuyPackageModal = ({ visible, onClose, packages, WalletTypes, onNext, them
 
   // console.log(earnWalletBal, "earnWalletBal");
 
-  const handleNextStep= () => {
+  const handleNextStep = () => {
     let data = {
       amount: amount,
       walletType: selectedWallet,
@@ -56,8 +57,8 @@ const BuyPackageModal = ({ visible, onClose, packages, WalletTypes, onNext, them
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           {/* Prevent closing when tapping inside the modal content */}
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View style={[styles.container, { backgroundColor: theme !== "Dark" ? "#FAF9F6" : "#18191D"}]}>
+          <TouchableWithoutFeedback onPress={() => { }}>
+            <View style={[styles.container, { backgroundColor: theme !== "Dark" ? "#FAF9F6" : "#18191D" }]}>
               {/* Header */}
               <View style={styles.header}>
                 <AppText style={styles.title}>
@@ -79,30 +80,30 @@ const BuyPackageModal = ({ visible, onClose, packages, WalletTypes, onNext, them
                   <Text>{selectedWallet}</Text>
                 </View> */}
                 <EarningDropdown
-                theme={theme}
+                  theme={theme}
                   data={WalletTypes}
                   selected={selectedWallet}
                   onSelect={setSelectedWallet}
                 />
 
-                <Text style={[styles.balance, {marginTop: 10}]}>
+                <Text style={[styles.balance, { marginTop: 10 }]}>
                   Balance:{" "}
                   <Text style={styles.highlight}>
                     {earnWalletBal || 0} {packages?.currency}
                   </Text>
-                  </Text>
-                  <Text style={styles.balance}>
+                </Text>
+                <Text style={styles.balance}>
                   Duration:{" "}
                   <Text style={styles.highlight}>
-                  {packages?.duration_days || 0} Days
+                    {packages?.duration_days || 0} Days
                   </Text>
-                  
+
                 </Text>
 
                 <View style={styles.inputRow}>
                   <TextInput
                     placeholder={amount ? String(amount) : "Enter Subscription Amount"}
-                    style={[styles.input, {color: theme !== "Dark" ? "#000":"#fff"}]}
+                    style={[styles.input, { color: theme !== "Dark" ? darkTheme.darkThemeInputColor : "#fff" }]}
                     keyboardType="numeric"
                     placeholderTextColor="#888"
                     value={amount}
@@ -137,25 +138,25 @@ const BuyPackageModal = ({ visible, onClose, packages, WalletTypes, onNext, them
                 <View style={styles.bonusContainer}>
                   <AppText style={styles.bonusHeader}>Bonus Rate</AppText>
                   <Text style={styles.bonusItem}>
-                     Monthly ROI (%):{" "}
+                    Monthly ROI (%):{" "}
                     {packages?.return_percentage_monthly || 0} %
                   </Text>
                   <Text style={styles.bonusItem}>
-                     Yearly ROI (%): {packages?.return_percentage_yearly || 0}{" "}
+                    Yearly ROI (%): {packages?.return_percentage_yearly || 0}{" "}
                     %
                   </Text>
                   <Text style={styles.bonusItem}>
-                     Estimated Bonus:{" "}
+                    Estimated Bonus:{" "}
                     {toFixedEight(
                       (packages?.return_percentage_yearly * +amount) / 100
                     ) || 0}{" "}
                     {packages?.currency}
                   </Text>
                   <Text style={styles.bonusItem}>
-                     Receive Amount:{" "}
+                    Receive Amount:{" "}
                     {toFixedEight(
                       +amount +
-                        (packages?.return_percentage_yearly * +amount) / 100
+                      (packages?.return_percentage_yearly * +amount) / 100
                     ) || 0}{" "}
                     {packages?.currency}
                   </Text>
@@ -174,7 +175,7 @@ const BuyPackageModal = ({ visible, onClose, packages, WalletTypes, onNext, them
                 </TouchableOpacity> */}
                 <Button
                   children="Next"
-                  containerStyle={{marginTop: 20}}
+                  containerStyle={{ marginTop: 20 }}
                   // disabled={
                   //   earnWalletBal < packages?.min_amount ||
                   //   amount > earnWalletBal ||
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   container: {
-   
+
     borderRadius: 12,
     padding: 16,
     maxHeight: "90%",
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#CFCFCF33",
     padding: 10,
     borderRadius: 8,
-    
+
   },
   maxBtn: {
     backgroundColor: "#f4c430",

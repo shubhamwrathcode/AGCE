@@ -4,7 +4,7 @@ import FastImage from "react-native-fast-image";
 import CountryPicker from "react-native-country-picker-modal";
 import { downIcon } from "../../helper/ImageAssets";
 import { useTheme } from "../../hooks/useTheme";
-import { colors } from "../../theme/colors";
+import { colors, darkTheme } from "../../theme/colors";
 import { borderWidth, inputHeight, universalPaddingHorizontal } from "../../theme/dimens";
 import TouchableOpacityView from "./TouchableOpacityView";
 import { AppText } from "..";
@@ -33,15 +33,13 @@ const AuthPhoneInput = ({
       style={[
         styles.container,
         {
-          backgroundColor: isDark ? 'transparent' : '#EDEDEE',
+          backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#EDEDEE',
           borderColor: hasError
             ? colors.red
             : isFocused
               ? themeColors.button
-              : isDark
-                ? themeColors.border
-                : "transparent",
-          borderWidth: hasError ? 1 : isFocused ? 1 : isDark ? borderWidth : 0,
+              : "transparent",
+          borderWidth: hasError || isFocused ? 1 : 0,
         },
       ]}
     >

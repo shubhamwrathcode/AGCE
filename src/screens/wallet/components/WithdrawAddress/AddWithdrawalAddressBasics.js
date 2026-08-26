@@ -1,7 +1,7 @@
 import React from "react";
 import { View, TextInput, TouchableOpacity, ScrollView } from "react-native";
 import { AppText, FOURTEEN, TWELVE, MEDIUM, SIXTEEN, SEMI_BOLD, THIRTEEN, BOLD, TEN, ELEVEN, Input, FIFTEEN } from "../../../../shared";
-import { colors, lightTheme } from "../../../../theme/colors";
+import { colors, darkTheme, lightTheme } from "../../../../theme/colors";
 import FastImage from "react-native-fast-image";
 import { EMAIL, FINGERPRINT, KEY_ICON, PHONE, security_vector2 } from "../../../../helper/ImageAssets";
 import { buildCoinImageUri } from "../../../../helper/coinIconUrl";
@@ -97,12 +97,12 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Label</AppText>
             <View style={{
-              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
               borderRadius: 9,
               paddingHorizontal: 16,
               height: 48,
               justifyContent: "center",
-              borderWidth: isDark ? 1 : 0,
+              borderWidth: isDark ? 0 : 0,
               borderColor: isDark ? themeColors.border : "transparent"
             }}>
               <TextInput
@@ -125,14 +125,14 @@ const AddWithdrawalAddressBasics = ({
                 setSaveAddrCoinOpen(!saveAddrCoinOpen);
               }}
               style={{
-                backgroundColor: isDark ? "transparent" : "#EDEDEE",
+                backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
                 borderRadius: 9,
                 paddingHorizontal: 16,
                 height: 48,
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
-                borderWidth: isDark ? 1 : 0,
+                borderWidth: 0,
                 borderColor: isDark ? themeColors.border : "transparent"
               }}
             >
@@ -215,14 +215,14 @@ const AddWithdrawalAddressBasics = ({
                 setSaveAddrNetworkOpen(!saveAddrNetworkOpen);
               }}
               style={{
-                backgroundColor: isDark ? "transparent" : "#EDEDEE",
+                backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
                 borderRadius: 9,
                 paddingHorizontal: 16,
                 height: 48,
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
-                borderWidth: isDark ? 1 : 0,
+                borderWidth: 0,
                 borderColor: isDark ? themeColors.border : "transparent"
               }}
             >
@@ -301,13 +301,13 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Address</AppText>
             <View style={{
-              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
               borderRadius: 9,
               paddingHorizontal: 16,
               height: 48,
               justifyContent: "center",
-              borderWidth: (saveAddrAddressInlineError || saveAddrAddressValidError) ? 1 : (isDark ? 1 : 0),
-              borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? colors.red : (isDark ? themeColors.border : "transparent")
+              borderWidth: (saveAddrAddressInlineError || saveAddrAddressValidError) ? 1 : 0,
+              borderColor: saveAddrAddressInlineError || saveAddrAddressValidError ? colors.red : "transparent"
             }}>
               <TextInput
                 placeholder="Enter wallet address"
@@ -340,13 +340,13 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 16 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Memo (Optional)</AppText>
             <View style={{
-              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
               borderRadius: 9,
               paddingHorizontal: 16,
               height: 48,
               justifyContent: "center",
-              borderWidth: isDark ? 1 : 0,
-              borderColor: isDark ? themeColors.border : "transparent"
+              borderWidth: 0,
+              borderColor: "transparent"
             }}>
               <TextInput
                 placeholder="e.g. XRP destination tag"
@@ -411,13 +411,13 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 20 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full legal name</AppText>
             <View style={{
-              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
               borderRadius: 9,
               paddingHorizontal: 16,
               height: 48,
               justifyContent: "center",
-              borderWidth: isDark ? 1 : 0,
-              borderColor: isDark ? themeColors.border : "transparent"
+              borderWidth: 0,
+              borderColor: "transparent"
             }}>
               <TextInput
                 placeholder="Enter full legal name"
@@ -434,13 +434,13 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 20 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PAN or National ID</AppText>
             <View style={{
-              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
               borderRadius: 9,
               paddingHorizontal: 16,
               height: 48,
               justifyContent: "center",
-              borderWidth: isDark ? 1 : 0,
-              borderColor: isDark ? themeColors.border : "transparent"
+              borderWidth: 0,
+              borderColor: "transparent"
             }}>
               <TextInput
                 placeholder="Enter PAN or National ID"
@@ -459,15 +459,15 @@ const AddWithdrawalAddressBasics = ({
             <TouchableOpacity
               onPress={() => saveAddrCountrySheetRef.current?.open()}
               style={{
-                backgroundColor: isDark ? "transparent" : "#EDEDEE",
+                backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
                 borderRadius: 9,
                 paddingHorizontal: 16,
                 height: 48,
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
-                borderWidth: isDark ? 1 : 0,
-                borderColor: isDark ? themeColors.border : "transparent"
+                borderWidth: 0,
+                borderColor: "transparent"
               }}
             >
               <AppText type={FOURTEEN} style={{ color: saveAddrBenCountry ? themeColors.text : "#84888C" }}>
@@ -485,13 +485,13 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 20 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>PIN / Postal code</AppText>
             <View style={{
-              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
               borderRadius: 9,
               paddingHorizontal: 16,
               height: 48,
               justifyContent: "center",
-              borderWidth: isDark ? 1 : 0,
-              borderColor: isDark ? themeColors.border : "transparent"
+              borderWidth: 0,
+              borderColor: "transparent"
             }}>
               <TextInput
                 placeholder="Enter PIN or Postal code"
@@ -508,13 +508,13 @@ const AddWithdrawalAddressBasics = ({
           <View style={{ marginBottom: 20 }}>
             <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 8 }}>Full residential address</AppText>
             <View style={{
-              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
               borderRadius: 9,
               paddingHorizontal: 16,
               minHeight: 80,
               paddingTop: 12,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: isDark ? themeColors.border : "transparent"
+              borderWidth: 0,
+              borderColor: "transparent"
             }}>
               <TextInput
                 placeholder="Enter address"
@@ -622,9 +622,9 @@ const AddWithdrawalAddressBasics = ({
             onPress={() => setSaveAddrExchangeOpen(!saveAddrExchangeOpen)}
             style={{
               borderRadius: 9,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: isDark ? themeColors.border : "transparent",
-              backgroundColor: isDark ? "transparent" : "#EDEDEE",
+              borderWidth: 0,
+              borderColor: "transparent",
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
               paddingHorizontal: 16,
               flexDirection: "row",
               alignItems: "center",
@@ -684,6 +684,13 @@ const AddWithdrawalAddressBasics = ({
                 onChangeText={setSaveAddrExchangeManual}
                 autoCapitalize="words"
                 mainContainer={{ marginBottom: 0 }}
+                containerStyle={{
+                  backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
+                  borderWidth: 0,
+                  borderRadius: 9,
+                  height: 48,
+                  paddingHorizontal: 16,
+                }}
                 inputStyle={{ fontSize: 14 }}
               />
             </View>
@@ -715,7 +722,7 @@ const AddWithdrawalAddressBasics = ({
       )}
 
       {saveAddrStep === "verify_method" && (
-        <View style={{ alignItems: "center", bottom: 20 }}>
+        <View style={{ alignItems: "center", }}>
           <View style={{ width: "100%", alignItems: "flex-start" }}>
             <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginBottom: 24, lineHeight: 20 }}>
               Select one option, then tap Continue. The next step is your code or passkey prompt—no second method picker.
@@ -759,10 +766,10 @@ const AddWithdrawalAddressBasics = ({
                     padding: 16,
                     width: "100%",
                     marginBottom: 12,
-                    backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#EDEDEE",
+                    backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#EDEDEE",
                     borderRadius: 12,
-                    borderWidth: isDark ? 1 : 0,
-                    borderColor: isDark ? (isSelected ? themeColors.text : themeColors.border) : "transparent",
+                    borderWidth: isDark ? (isSelected ? 1 : 0) : 0,
+                    borderColor: isDark ? (isSelected ? themeColors.text : "transparent") : "transparent",
                     opacity: methods.length === 1 ? 0.8 : 1
                   }}
                 >

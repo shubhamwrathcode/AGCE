@@ -64,8 +64,9 @@ import {
   ACCOUNT_SCREEN, CURRENCY_PREFERENCE_SCREEN, DEPOSIT_COIN_SCREEN,
   WALLET_SCREEN, SELECT_COIN_SCREEN,
   MARGIN_TRANSFER_SCREEN, OPTIONS_PNL_ANALYSIS_SCREEN, EARNING_SCREEN,
-  TRADE_SCREEN,
+  TRADE_SCREEN, NAVIGATION_AUTH_STACK, LOGIN_SCREEN,
 } from "../../navigation/routes";
+import { showError } from "../../helper/logger";
 import { setSpotSelectedPair, setBuyOrders, setSellOrders } from "../../slices/homeSlice";
 import WalletSkeleton from "./WalletSkeleton";
 import RBSheet from "react-native-raw-bottom-sheet";
@@ -199,14 +200,25 @@ const WalletNew = ({ route }) => {
     }
   }, [route?.params?.activeTab, setActiveTab]);
 
+  const userData = useAppSelector((state) => state.auth.userData);
+
   useFocusEffect(
     useCallback(() => {
+      const isAuth = !!(
+        (userData && (userData._id || userData.id || userData.emailId || userData.email || userData.token)) ||
+        appOperation.customerToken
+      );
+      if (!isAuth) {
+        showError("Please login first to access Wallet");
+        NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+        return undefined;
+      }
       if (!route?.params?.openPnlAnalysis) return undefined;
       const timer = setTimeout(() => {
         NavigationService.navigate(OPTIONS_PNL_ANALYSIS_SCREEN);
       }, 350);
       return () => clearTimeout(timer);
-    }, [route?.params?.openPnlAnalysis])
+    }, [userData, route?.params?.openPnlAnalysis])
   );
 
   const layout = useWindowDimensions();

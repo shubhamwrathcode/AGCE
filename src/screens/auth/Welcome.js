@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -59,24 +60,6 @@ const formatVol = (vol) => {
   if (n >= 1e3) return (n / 1e3).toFixed(2) + "K";
   return n.toFixed(2);
 };
-
-const INJECTED_CHART_JS = `
-  (function() {
-    var meta = document.querySelector('meta[name="viewport"]');
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.name = 'viewport';
-      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-      document.getElementsByTagName('head')[0].appendChild(meta);
-    }
-    document.documentElement.style.height = '100%';
-    document.body.style.height = '100%';
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    document.body.style.overflow = 'hidden';
-  })();
-  true;
-`;
 
 const formatPriceWithTick = (p, tickSize) => {
   const n = Number(p);
@@ -142,9 +125,7 @@ const C = {
 const Welcome = () => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const chartHeight = useMemo(() => {
-    return Math.round(Math.min(Math.max(windowHeight * 0.48, 410), 470));
-  }, [windowHeight]);
+  const chartHeight = 400;
   const { colors: themeColors, isDark } = useTheme();
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const futuresPairs = useAppSelector((state) => state.home.futuresPairs ?? []);
@@ -183,7 +164,6 @@ const Welcome = () => {
       };
     }, [subscribeToMarket, unsubscribeFromMarket])
   );
-
   /** CoinList parity: 1=Trending, 2=Spot, 3=Futures, 4=Hot, 5=New Listing, 6=Top Gainers (no Favorite). */
   const [activeTabList, setActiveTabList] = useState(1);
   const [expandedRow, setExpandedRow] = useState(null);
@@ -607,13 +587,12 @@ const Welcome = () => {
                         </View>
 
                         {/* Chart WebView */}
-                        <View style={{ height: chartHeight, width: "100%", backgroundColor: "transparent", overflow: 'hidden' }}>
+                        <View style={{ height: chartHeight, marginHorizontal: -16, backgroundColor: palette.bg, overflow: 'hidden' }}>
                           <WebView
                             key={`${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}`}
                             source={{ uri: `${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${sym}_${q}` }}
-                            injectedJavaScript={INJECTED_CHART_JS}
-                            style={{ width: "100%", height: chartHeight + 25, backgroundColor: "transparent" }}
-                            containerStyle={{ backgroundColor: "transparent" }}
+                            style={{ width: "100%", height: chartHeight + 25, backgroundColor: palette.bg }}
+                            containerStyle={{ backgroundColor: palette.bg }}
                             opaque={false}
                             androidLayerType="hardware"
                             cacheEnabled
@@ -624,6 +603,8 @@ const Welcome = () => {
                             javaScriptEnabled
                             domStorageEnabled
                             scrollEnabled={false}
+                            showsHorizontalScrollIndicator={false}
+                            showsVerticalScrollIndicator={false}
                             bounces={false}
                             sharedCookiesEnabled
                             javaScriptEnabledAndroid
@@ -631,6 +612,12 @@ const Welcome = () => {
                             automaticallyAdjustContentInsets={false}
                             setSupportMultipleWindows={false}
                             overScrollMode="never"
+                            startInLoadingState={true}
+                            renderLoading={() => (
+                              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: palette.bg, justifyContent: 'center', alignItems: 'center' }}>
+                                <ActivityIndicator size="small" color={palette.text} />
+                              </View>
+                            )}
                           />
                         </View>
                       </View>

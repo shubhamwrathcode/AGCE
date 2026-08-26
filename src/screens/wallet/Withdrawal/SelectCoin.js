@@ -385,11 +385,11 @@ const SelectCoin = () => {
       </View>
 
       <View style={styles.searchSection}>
-        <View style={[styles.searchBar, { backgroundColor: isDark ? '#2A2A2E' : lightTheme.input }]}>
-          <FastImage source={searchIcon} style={styles.searchIconStyle} tintColor={colors.textGray} resizeMode="contain" />
+        <View style={[styles.searchBar, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input }]}>
+          <FastImage source={searchIcon} style={styles.searchIconStyle} tintColor={isDark ? colors.secondaryText : colors.textGray} resizeMode="contain" />
           <TextInput
             placeholder="Search for Coin"
-            placeholderTextColor={colors.textGray}
+            placeholderTextColor={isDark ? colors.secondaryText : colors.textGray}
             value={searchResult}
             onChangeText={setSearchResult}
             style={[styles.searchInput, { color: isDark ? colors.white : colors.black }]}

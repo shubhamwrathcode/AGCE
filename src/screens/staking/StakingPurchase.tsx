@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from
 import FastImage from 'react-native-fast-image';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import { AppSafeAreaView, AppText } from '../../shared';
-import { colors } from '../../theme/colors';
+import { colors, darkTheme, lightTheme } from '../../theme/colors';
 import { back_ic, closeIcon, checkIc, usdtIcon } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import NavigationService from '../../navigation/NavigationService';
@@ -244,7 +244,11 @@ const StakingPurchase = ({ route, navigation }: any) => {
 
           <View style={{ marginBottom: 20 }}>
             <AppText style={{ fontSize: 13, color: isDark ? themeColors.secondaryText : '#888', marginBottom: 8 }}>Amount</AppText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: isDark ? themeColors.border : '#eee', borderRadius: 8, height: 48, paddingHorizontal: 12 }}>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', borderWidth: 1,
+              borderColor: isDark ? darkTheme.darkThemeInputColor : '#eee',
+              borderRadius: 8, height: 48, paddingHorizontal: 12, backgroundColor: isDark ? darkTheme.darkThemeInputColor : darkTheme.lightthemeinputcolor
+            }}>
               <TextInput
                 style={{ flex: 1, fontSize: 14, color: themeColors.text, height: '100%' }}
                 placeholder={`Min. ${stakeSelectedPlan.minAmount ?? stakeSelectedPlan.minimumAmount ?? 0}`}
@@ -281,13 +285,19 @@ const StakingPurchase = ({ route, navigation }: any) => {
           {/* Est APR */}
           <View style={{ marginBottom: 20 }}>
             <AppText style={{ fontSize: 13, color: isDark ? themeColors.secondaryText : '#888', marginBottom: 8 }}>Est. APR</AppText>
-            <View style={{ borderWidth: 1, borderColor: isDark ? themeColors.border : '#eee', borderRadius: 8, padding: 12 }}>
+            <View style={{
+              borderWidth: 1,
+              borderColor: isDark ? darkTheme.darkThemeInputColor : '#eee',
+              borderRadius: 8,
+              padding: 12,
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : darkTheme.lightthemeinputcolor
+            }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <AppText style={{ fontSize: 14, color: isDark ? themeColors.secondaryText : '#888' }}>Standard APR</AppText>
                 <AppText style={{ fontSize: 14, fontFamily: fontFamilySemiBold, color: themeColors.text }}>{stakeSelectedPlan.returnPercentage}%</AppText>
               </View>
               {Array.isArray(stakeSelectedPlan.bonusAprTiers) && stakeSelectedPlan.bonusAprTiers.length > 0 && (
-                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: isDark ? themeColors.border : '#eee' }}>
+                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: isDark ? "rgba(255,255,255,0.08)" : '#eee' }}>
                   <AppText style={{ fontSize: 13, color: isDark ? themeColors.secondaryText : '#888', marginBottom: 8 }}>Bonus APR</AppText>
                   {stakeSelectedPlan.bonusAprTiers.map((tier: any, index: number) => (
                     <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -303,7 +313,15 @@ const StakingPurchase = ({ route, navigation }: any) => {
           {/* Est Daily Return */}
           <View style={{ marginBottom: 24 }}>
             <AppText style={{ fontSize: 13, color: themeColors.text, fontFamily: fontFamilySemiBold, marginBottom: 8 }}>Est. Daily Return</AppText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: isDark ? themeColors.border : '#eee', borderRadius: 8, padding: 12 }}>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: isDark ? darkTheme.darkThemeInputColor : '#eee',
+              borderRadius: 8,
+              padding: 12,
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : darkTheme.lightthemeinputcolor
+            }}>
               <FastImage source={{ uri: `${IMAGE_BASE_URL}${stakeSelectedPlan.iconPath || stakeSelectedPlan.image || ''}` }} style={{ width: 24, height: 24, marginRight: 10 }} resizeMode="contain" />
               <AppText style={{ fontSize: 14, fontFamily: fontFamilySemiBold, color: '#03a66d' }}>{estDailyReturn} {stakeSelectedPlan.currency}</AppText>
             </View>
@@ -349,7 +367,16 @@ const StakingPurchase = ({ route, navigation }: any) => {
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: isDark ? themeColors.card : '#f9f9f9', padding: 12, borderRadius: 8, marginTop: 8 }}>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              backgroundColor: isDark ? darkTheme.darkThemeInputColor : darkTheme.lightthemeinputcolor,
+              borderWidth: 1,
+              borderColor: isDark ? darkTheme.darkThemeInputColor : '#eee',
+              padding: 12,
+              borderRadius: 8,
+              marginTop: 8
+            }}>
               <AppText style={{ fontSize: 13, color: isDark ? themeColors.secondaryText : '#888' }}>Early Withdrawal Penalty</AppText>
               <AppText style={{ fontSize: 13, fontFamily: fontFamilySemiBold, color: themeColors.text }}>{stakeSelectedPlan.earlyWithdrawalPenalty || 10}%</AppText>
             </View>
@@ -413,7 +440,14 @@ const StakingPurchase = ({ route, navigation }: any) => {
             You are about to stake the following package. Please review the details.
           </AppText>
 
-          <View style={{ backgroundColor: isDark ? themeColors.card : '#f9f9f9', padding: 16, borderRadius: 12, marginBottom: 20 }}>
+          <View style={{
+            backgroundColor: isDark ? darkTheme.darkThemeInputColor : darkTheme.lightthemeinputcolor,
+            borderWidth: 1,
+            borderColor: isDark ? darkTheme.darkThemeInputColor : '#eee',
+            padding: 16,
+            borderRadius: 12,
+            marginBottom: 20
+          }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
               <AppText style={{ fontSize: 14, color: isDark ? themeColors.secondaryText : '#888', fontFamily: fontFamilyMedium }}>Currency</AppText>
               <AppText style={{ fontSize: 14, color: themeColors.text, fontFamily: fontFamilyMedium }}>{stakeSelectedPlan?.currency || "—"}</AppText>

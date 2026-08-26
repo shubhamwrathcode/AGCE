@@ -59,7 +59,7 @@ const CustomDropdown = ({
   const alignStyle = align === 'right' ? { right: 0, left: undefined } : { left: 0, right: undefined };
 
   return (
-    <View style={{ zIndex: 9999, elevation: 9999 }}>
+    <View style={{ zIndex: isVisible ? 999 : 1 }}>
       <TouchableOpacity
         ref={buttonRef}
         style={[
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     left: 0,
     minWidth: '100%',
     zIndex: 9999,
-    elevation: 9999,
+    elevation: 6,
     maxHeight: 250,
     borderRadius: 8,
     borderWidth: 1,

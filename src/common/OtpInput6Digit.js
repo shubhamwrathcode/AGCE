@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
-import { colors } from '../theme/colors';
+import { colors, darkTheme } from '../theme/colors';
 import { useTheme } from '../hooks/useTheme';
 
 const CODE_LENGTH = 6;
@@ -21,7 +21,6 @@ const styles = StyleSheet.create({
   box: {
     width: 42,
     height: 48,
-    borderWidth: 1.5,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -75,25 +74,32 @@ const OtpInput6Digit = forwardRef(function OtpInput6Digit(
         style={{ width: '100%' ,marginTop:5}}
       >
         <View style={styles.boxRow}>
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <View
-              key={i}
-              style={[
-                styles.box,
-                { 
-                  borderColor: themeColors.border, 
-                  backgroundColor: themeColors.input 
-                },
-                normalized.length === i && [styles.boxHighlight, { borderColor: themeColors.button }],
-                // Error state must win over focus highlight.
-                hasError && { borderColor: colors.red },
-              ]}
-            >
-              <AppText style={{ fontSize: 14, fontWeight: '600', color: textColor }}>
-                {normalized[i] || ''}
-              </AppText>
-            </View>
-          ))}
+          {[0, 1, 2, 3, 4, 5].map((i) => {
+            const isCurrent = normalized.length === i;
+            return (
+              <View
+                key={i}
+                style={[
+                  styles.box,
+                  { 
+                    backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#EDEDEE',
+                    borderColor: hasError
+                      ? colors.red
+                      : isCurrent
+                        ? themeColors.button
+                        : isDark
+                          ? "transparent"
+                          : themeColors.border,
+                    borderWidth: hasError || isCurrent ? 1.5 : (isDark ? 0 : 1),
+                  },
+                ]}
+              >
+                <AppText style={{ fontSize: 14, fontWeight: '600', color: textColor }}>
+                  {normalized[i] || ''}
+                </AppText>
+              </View>
+            );
+          })}
         </View>
         <TextInput
           ref={inputRef}

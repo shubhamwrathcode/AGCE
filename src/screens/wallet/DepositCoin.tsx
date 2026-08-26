@@ -50,7 +50,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import NavigationService from '../../navigation/NavigationService';
 import { buildCoinImageUri } from '../../helper/coinIconUrl';
-import { colors, lightTheme } from '../../theme/colors';
+import { colors, darkTheme, lightTheme } from '../../theme/colors';
 import { useTheme } from '../../hooks/useTheme';
 import {
     getDepositActiveCoins,
@@ -1403,7 +1403,7 @@ const DepositCoin = () => {
                     <DepositCoinSelectListSkeleton />
                 ) : (
                     <View style={styles.selectCoinPhase}>
-                        <View style={[styles.selectCoinSearchWrap, { backgroundColor: isDark ? '#2A2A2E' : lightTheme.input }]}>
+                        <View style={[styles.selectCoinSearchWrap, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input }]}>
                             <FastImage
                                 source={searchIcon}
                                 style={styles.selectCoinSearchIcon}

@@ -16,7 +16,7 @@ import {
   universalPaddingHorizontal,
 } from "../theme/dimens";
 import { fontFamily, fontFamilyMedium } from "../theme/typography";
-import { colors } from "../theme/colors";
+import { colors, darkTheme } from "../theme/colors";
 import { eye_close_icon, eye_open_icon } from "../helper/ImageAssets";
 import TouchableOpacityView from "./TouchableOpacityView";
 import FastImage from "react-native-fast-image";
@@ -85,15 +85,13 @@ const Input = ({
         style={[
           styles.container,
           {
-            backgroundColor: isDark ? 'transparent' : '#EDEDEE',
+            backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#EDEDEE',
             borderColor: hasError
               ? colors.red
               : isFocused
                 ? themeColors.button
-                : isDark
-                  ? themeColors.border
-                  : "transparent",
-            borderWidth: hasError ? 1 : isFocused ? 1 : isDark ? 1 : 0,
+                : "transparent",
+            borderWidth: hasError || isFocused ? 1 : 0,
             ...(title ? { marginTop: 0 } : {}),
           },
           containerStyle && typeof containerStyle === "object" ? containerStyle : undefined,

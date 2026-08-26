@@ -126,7 +126,10 @@ export const toFixedFour = (value: string | number) => {
 
 export const toFixedEight = (value: string | number) => {
   let val = Number(value);
-  return val < 1 ? val?.toFixed(8) : val?.toFixed(3);
+  if (isNaN(val) || !Number.isFinite(val)) {
+    return "0.00";
+  }
+  return val < 1 ? val.toFixed(8) : val.toFixed(3);
 };
 
 export const SPOT_PAIR_QUOTES = [
