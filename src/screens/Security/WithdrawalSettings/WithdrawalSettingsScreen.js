@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -66,7 +66,60 @@ const WithdrawalSettingsScreen = () => {
   const [smsVerify, setSmsVerify] = useState(false);
   const [googleVerify, setGoogleVerify] = useState(false);
   const [fundPassword, setFundPassword] = useState(false);
+  const [fundPasswordStatus, setFundPasswordStatus] = useState(null);
   const [trustedAddresses, setTrustedAddresses] = useState(false);
+
+  const hasFundPassword = useMemo(() => {
+    const v =
+      userData?.fundPassword ??
+      userData?.fund_password ??
+      userData?.payPin ??
+      userData?.pay_pin ??
+      userData?.isFundPasswordSet ??
+      userData?.is_fund_password_set ??
+      userData?.tradingPassword ??
+      userData?.trading_password;
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'number') return v === 1;
+    if (typeof v === 'string') return v.trim().length > 0 && v !== '0' && v !== 'false';
+    return false;
+  }, [userData]);
+
+  const effectiveHasFundPassword = fundPasswordStatus !== null ? fundPasswordStatus : hasFundPassword;
+
+  const hasUserPhone = useMemo(() => {
+    const candidates = [
+      userData?.mobileNumber,
+      userData?.phoneNumber,
+      userData?.phone,
+      userData?.mobile,
+      userData?.mobile_number,
+      userData?.phone_number,
+    ].filter(Boolean);
+    if (!candidates.length) return false;
+    const v = String(candidates[0]).trim();
+    return v.length >= 6 && v !== 'null' && v !== 'undefined';
+  }, [userData]);
+
+  const hasTrustedAddresses = useMemo(() => {
+    const candidates = [
+      userData?.trustedAddresses,
+      userData?.trusted_addresses,
+      userData?.withdrawAddressBook,
+      userData?.withdraw_address_book,
+      userData?.addressBook,
+      userData?.address_book,
+      userData?.whitelistAddresses,
+      userData?.whitelist_addresses,
+    ].filter(Boolean);
+    if (!candidates.length) return false;
+    const v = candidates[0];
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === 'number') return v > 0;
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'string') return v.trim().length > 0 && v !== '0';
+    return false;
+  }, [userData]);
 
   // Bottom Sheet state
   const sheetRef = useRef(null);
@@ -90,7 +143,10 @@ const WithdrawalSettingsScreen = () => {
   const fetchSettings = async () => {
     try {
       setLoadingSettings(true);
-      const res = await appOperation.customer.fetch_withdrawal_security_settings();
+      const [res, fundRes] = await Promise.all([
+        appOperation.customer.fetch_withdrawal_security_settings().catch(() => null),
+        appOperation.customer.security_get_fund_password_status().catch(() => null),
+      ]);
       if (res?.success) {
         const s = res.data?.settings;
         if (s) {
@@ -100,6 +156,9 @@ const WithdrawalSettingsScreen = () => {
           setFundPassword(!!s.methods?.fund_password?.enabled);
           setTrustedAddresses(!!s.trusted_addresses_only || !!s.trusted_addresses || !!s.methods?.trusted_addresses?.enabled || !!s.trustedAddresses);
         }
+      }
+      if (fundRes?.success) {
+        setFundPasswordStatus(!!fundRes.data);
       }
     } catch (e) {
       // silent fallback
@@ -227,8 +286,7 @@ const WithdrawalSettingsScreen = () => {
             type === 'fundPassword' ? 'fund_password' : '';
 
     if (type === 'smsVerify' && enable) {
-      const isPhoneBound = !!(userData?.mobileNumber || userData?.mobile_number);
-      if (!isPhoneBound) {
+      if (!hasUserPhone) {
         setSheetType('unbound_phone');
         sheetRef.current?.open();
         return;
@@ -244,9 +302,18 @@ const WithdrawalSettingsScreen = () => {
       }
     }
 
-    if (type === 'fundPassword') {
-      const hasFP = !!(userData?.fundPassword || userData?.payPin || userData?.isFundPasswordSet);
-      if (!hasFP) {
+    if (type === 'fundPassword' && enable) {
+      let isSet = effectiveHasFundPassword;
+      if (fundPasswordStatus === null && !isSet) {
+        try {
+          const fundRes = await appOperation.customer.security_get_fund_password_status();
+          if (fundRes?.success) {
+            isSet = !!fundRes.data;
+            setFundPasswordStatus(isSet);
+          }
+        } catch { }
+      }
+      if (!isSet) {
         setSheetType('missing_fund_password');
         sheetRef.current?.open();
         return;
@@ -254,8 +321,7 @@ const WithdrawalSettingsScreen = () => {
     }
 
     if (type === 'trustedAddresses') {
-      const hasTA = !!(userData?.trustedAddresses || userData?.trusted_addresses || userData?.addressBook?.length);
-      if (!hasTA) {
+      if (!hasTrustedAddresses) {
         setSheetType('missing_trusted_addresses');
         sheetRef.current?.open();
         return;
@@ -709,14 +775,14 @@ const WithdrawalSettingsScreen = () => {
           </View>
         ) : (
           <KeyboardAwareScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          enableOnAndroid={true}
-          enableAutomaticScroll={true}
-          extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
-        >
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            enableOnAndroid={true}
+            enableAutomaticScroll={true}
+            extraScrollHeight={Platform.OS === 'ios' ? 24 : 60}
+          >
             {/* Description Card */}
             <View style={[styles.infoCard, { backgroundColor: cardBg, borderColor }]}>
               <AppText type={TWELVE} weight={MEDIUM} style={{ color: subTextColor, lineHeight: 18 }}>

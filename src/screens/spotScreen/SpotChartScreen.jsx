@@ -458,9 +458,10 @@ const SpotChartScreen = () => {
   const chartHeight = 400;
   const tabScrollBottomPadding =
     TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
-  const { subscribeToExchange, unsubscribeFromExchange } = useContext(SocketContext) || {};
+  const { subscribeToExchange, unsubscribeFromExchange, exchangeData } = useContext(SocketContext) || {};
 
   const spotSelectedPair = useAppSelector((state) => state.home.spotSelectedPair);
+  const coinData = useAppSelector((state) => state.home.coinData);
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
   const sellOrders = useAppSelector((state) => state.home.sellOrders);
   const userData = useAppSelector((state) => state.auth.userData);
@@ -473,31 +474,114 @@ const SpotChartScreen = () => {
 
   const params = route.params || {};
   /** Redux pair wins over stale navigation params after user changes pair in `TradingDataModal`. */
-  const mergedPair = useMemo(
-    () => ({
+  const mergedPair = useMemo(() => {
+    const raw = {
       ...spotSelectedPair,
       ...params,
-      base_currency: spotSelectedPair?.base_currency || params.base_currency,
-      quote_currency: spotSelectedPair?.quote_currency || params.quote_currency,
-      base_currency_id: spotSelectedPair?.base_currency_id ?? params.base_currency_id,
-      quote_currency_id: spotSelectedPair?.quote_currency_id ?? params.quote_currency_id,
-      high: params.high ?? spotSelectedPair?.high,
-      low: params.low ?? spotSelectedPair?.low,
-      volume: params.volume ?? spotSelectedPair?.volume,
-      /** Absolute 24h price change (quote); same role as web `changesHour` / ticker `change`. */
-      change: spotSelectedPair?.change ?? params?.change ?? params?.change_24hour,
+    };
+    const fromList = Array.isArray(coinData)
+      ? coinData.find((c) => {
+        if (raw._id && (c._id === raw._id || c.pair_id === raw._id)) return true;
+        if (
+          raw.base_currency_id != null &&
+          raw.quote_currency_id != null &&
+          c.base_currency_id === raw.base_currency_id &&
+          c.quote_currency_id === raw.quote_currency_id
+        ) {
+          return true;
+        }
+        if (
+          raw.base_currency &&
+          raw.quote_currency &&
+          c.base_currency === raw.base_currency &&
+          c.quote_currency === raw.quote_currency
+        ) {
+          return true;
+        }
+        return false;
+      })
+      : null;
+
+    let baseCur =
+      raw.base_currency ||
+      raw.base_currency_short_name ||
+      raw.baseCurrency ||
+      raw.base_symbol ||
+      raw.base ||
+      fromList?.base_currency ||
+      fromList?.base_currency_short_name ||
+      fromList?.base;
+
+    let quoteCur =
+      raw.quote_currency ||
+      raw.quote_currency_short_name ||
+      raw.quoteCurrency ||
+      raw.quote_symbol ||
+      raw.quote ||
+      fromList?.quote_currency ||
+      fromList?.quote_currency_short_name ||
+      fromList?.quote;
+
+    if ((!baseCur || !quoteCur) && (raw.symbol || raw.pair || raw.pair_name)) {
+      const parts = String(raw.symbol || raw.pair || raw.pair_name).split(/[/_-]/);
+      if (parts.length >= 2) {
+        if (!baseCur) baseCur = parts[0];
+        if (!quoteCur) quoteCur = parts[1];
+      }
+    }
+
+    return {
+      ...fromList,
+      ...raw,
+      base_currency: baseCur || "",
+      quote_currency: quoteCur || "",
+      base_currency_id: raw.base_currency_id ?? fromList?.base_currency_id,
+      quote_currency_id: raw.quote_currency_id ?? fromList?.quote_currency_id,
+      high: raw.high ?? raw.high_24h ?? fromList?.high ?? fromList?.high_24h,
+      low: raw.low ?? raw.low_24h ?? fromList?.low ?? fromList?.low_24h,
+      volume:
+        raw.volume ??
+        raw.volume_24h ??
+        raw.base_volume ??
+        fromList?.volume ??
+        fromList?.volume_24h ??
+        fromList?.base_volume,
+      change:
+        raw.change ??
+        raw.price_change_24h ??
+        raw.change_24hour ??
+        fromList?.change ??
+        fromList?.price_change_24h ??
+        fromList?.change_24hour,
       volume_quote:
-        spotSelectedPair?.volume_quote ??
-        spotSelectedPair?.quote_volume ??
-        params?.volume_quote ??
-        params?.quote_volume,
-      buy_price: spotSelectedPair?.buy_price ?? params.buy_price,
-      change_percentage: spotSelectedPair?.change_percentage ?? params.change_percentage,
-      _id: spotSelectedPair?._id ?? params._id ?? params.pair_id,
-      tick_size: spotSelectedPair?.tick_size ?? params?.tick_size,
-    }),
-    [spotSelectedPair, params]
-  );
+        raw.volumeQuote ??
+        raw.volume_quote ??
+        raw.quote_volume ??
+        raw.volume_24h_quote ??
+        raw.quoteVolume ??
+        fromList?.volumeQuote ??
+        fromList?.volume_quote ??
+        fromList?.quote_volume ??
+        fromList?.volume_24h_quote ??
+        fromList?.quoteVolume,
+      buy_price:
+        raw.buy_price ??
+        raw.last_price ??
+        raw.price ??
+        raw.last ??
+        fromList?.buy_price ??
+        fromList?.last_price ??
+        fromList?.price,
+      change_percentage:
+        raw.change_percentage ??
+        raw.changePercentage ??
+        raw.change_24h ??
+        fromList?.change_percentage,
+      _id: raw._id ?? raw.pair_id ?? fromList?._id,
+      step_size: raw.step_size ?? fromList?.step_size,
+      tick_size: raw.tick_size ?? fromList?.tick_size ?? 0.01,
+    };
+  }, [spotSelectedPair, params, coinData]);
 
   const pairRef = useRef(mergedPair);
   pairRef.current = mergedPair;
@@ -546,13 +630,32 @@ const SpotChartScreen = () => {
 
   const [pairSheetVisible, setPairSheetVisible] = useState(false);
 
-  const pairBase = mergedPair?.base_currency || "-";
-  const pairQuote = mergedPair?.quote_currency || "-";
+  const pairBase = mergedPair?.base_currency || "—";
+  const pairQuote = mergedPair?.quote_currency || "—";
   const pairChange = mergedPair?.change_percentage ?? 0;
   const pairPrice = mergedPair?.buy_price ?? "—";
   const high = mergedPair?.high;
   const low = mergedPair?.low;
   const volume = mergedPair?.volume;
+
+  // Derive decimal places implied by a tick/step size (matching web TradeCenterSection parity)
+  const decimalsFromIncrement = useCallback((increment, fallback = 2) => {
+    const n = Number(increment);
+    if (!Number.isFinite(n) || n <= 0) return fallback;
+    if (Math.floor(n) === n) return 0;
+    const s = n.toString();
+    if (s.includes("e-")) return parseInt(s.split("e-")[1], 10) || fallback;
+    return s.split(".")[1]?.length ?? fallback;
+  }, []);
+
+  const baseVolumeDecimals = useMemo(
+    () => decimalsFromIncrement(mergedPair?.step_size),
+    [decimalsFromIncrement, mergedPair?.step_size]
+  );
+  const quoteVolumeDecimals = useMemo(
+    () => decimalsFromIncrement(mergedPair?.tick_size),
+    [decimalsFromIncrement, mergedPair?.tick_size]
+  );
 
   const [topTab, setTopTab] = useState("Chart");
   const topTabX = useRef(new Animated.Value(0)).current;
@@ -1200,26 +1303,26 @@ const SpotChartScreen = () => {
   /** Merge REST pair snapshot with optional socket ticker (web TradeCenterSection parity). */
   const liveMarketStats = useMemo(() => {
     const base = {
-      high: mergedPair?.high,
-      low: mergedPair?.low,
-      volume: mergedPair?.volume,
-      changeAbs: mergedPair?.change,
-      volQuote: mergedPair?.volume_quote ?? mergedPair?.quote_volume,
+      high: mergedPair?.high_24h ?? mergedPair?.high,
+      low: mergedPair?.low_24h ?? mergedPair?.low,
+      volume: mergedPair?.volume_24h ?? mergedPair?.volume ?? mergedPair?.base_volume,
+      changeAbs: mergedPair?.change ?? mergedPair?.price_change_24h ?? mergedPair?.change_24hour,
+      volQuote: mergedPair?.volumeQuote ?? mergedPair?.volume_quote ?? mergedPair?.quote_volume ?? mergedPair?.volume_24h_quote ?? mergedPair?.quoteVolume,
       last: mergedPair?.buy_price ?? mergedPair?.last_price ?? mergedPair?.price,
     };
-    const d = lastSocketData;
+    const d = exchangeData || lastSocketData;
     if (!d) return base;
     const t = d.ticker != null && typeof d.ticker === "object" ? d.ticker : null;
     const src = t || d;
     return {
-      high: src.high ?? src.h ?? base.high,
-      low: src.low ?? src.l ?? base.low,
-      volume: src.volume ?? src.v ?? base.volume,
-      changeAbs: src.change ?? src.change_24hour ?? src.changePercentage ?? base.changeAbs,
-      volQuote: src.quote_volume ?? src.volume_quote ?? src.quoteVolume ?? base.volQuote,
-      last: src.last ?? src.buy_price ?? src.c ?? base.last,
+      high: src.high_24h ?? src.high ?? src.h ?? base.high,
+      low: src.low_24h ?? src.low ?? src.l ?? base.low,
+      volume: src.volume_24h ?? src.volume ?? src.base_volume ?? src.v ?? base.volume,
+      changeAbs: src.change ?? src.price_change_24h ?? src.change_24hour ?? src.changePercentage ?? base.changeAbs,
+      volQuote: src.volumeQuote ?? src.volume_24h_quote ?? src.quote_volume ?? src.volume_quote ?? src.quoteVolume ?? src.q ?? base.volQuote,
+      last: src.last ?? src.buy_price ?? src.last_price ?? src.price ?? src.c ?? base.last,
     };
-  }, [lastSocketData, mergedPair]);
+  }, [exchangeData, lastSocketData, mergedPair]);
 
   const formatChangeAbsDisplay = useCallback(
     (raw) => {
@@ -1229,6 +1332,17 @@ const SpotChartScreen = () => {
       const sign = n >= 0 ? "" : "-";
       const body = formatWithCommas(String(Math.abs(n).toFixed(dec)).replace(/\.?0+$/, ""));
       return `${sign}${body}`;
+    },
+    [formatWithCommas]
+  );
+
+  /** Volume formatter matching web TradeCenterSection: fallback to 0.00 instead of dash */
+  const formatVolDisplay = useCallback(
+    (val, decimals = 2) => {
+      if (val == null || val === "" || isNaN(Number(val))) return "0.00";
+      const num = Number(val);
+      if (num === 0) return "0.00";
+      return formatWithCommas(num.toFixed(decimals));
     },
     [formatWithCommas]
   );
@@ -1593,11 +1707,11 @@ const SpotChartScreen = () => {
                     </AppText>
                   </View>
                   <View style={[styles.statKV, styles.statKVGap]}>
-                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
+                    <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: isDark ? colors.white : colors.black }]}>
                       {`24h Volume (${pairBase})`}
                     </AppText>
-                    <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: themeColors.secondaryText }]} numberOfLines={1}>
-                      {liveMarketStats.volume != null ? formatWithCommas(twoFixedTwo(liveMarketStats.volume)) : "—"}
+                    <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: isDark ? colors.white : colors.black }]} numberOfLines={1}>
+                      {formatVolDisplay(liveMarketStats.volume, baseVolumeDecimals)}
                     </AppText>
                   </View>
                 </View>
@@ -1607,15 +1721,15 @@ const SpotChartScreen = () => {
                       {`24h Low (${pairQuote})`}
                     </AppText>
                     <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVValue, { color: themeColors.red }]}>
-                      {liveMarketStats.low != null ? formatPriceComma(liveMarketStats.low) : "—"}
+                      {liveMarketStats.low != null && liveMarketStats.low !== "" ? formatPriceComma(liveMarketStats.low) : "—"}
                     </AppText>
                   </View>
                   <View style={[styles.statKV, styles.statKVGap]}>
                     <AppText type={ELEVEN} weight={SEMI_BOLD} style={[styles.statKVLabel, { color: themeColors.text }]}>
                       {`24h Volume (${pairQuote})`}
                     </AppText>
-                    <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: themeColors.secondaryText }]} numberOfLines={1}>
-                      {liveMarketStats.volQuote != null ? formatWithCommas(twoFixedTwo(liveMarketStats.volQuote)) : "—"}
+                    <AppText type={ELEVEN} style={[styles.statKVValueMuted, { color: isDark ? colors.white : colors.black }]} numberOfLines={1}>
+                      {formatVolDisplay(liveMarketStats.volQuote, quoteVolumeDecimals)}
                     </AppText>
                   </View>
                 </View>
@@ -2100,7 +2214,7 @@ const SpotChartScreen = () => {
 
           {/* //// */}
         </ScrollView>
-      </View>
+      </View >
 
       <View
         style={[
@@ -2182,7 +2296,7 @@ const SpotChartScreen = () => {
         isDark={isDark}
         theme={theme}
       />
-    </View>
+    </View >
   );
 };
 
@@ -2253,6 +2367,7 @@ const styles = StyleSheet.create({
   chartBottomTabBody: {
     width: Width,
     alignSelf: "center",
+    marginTop: 10
   },
   header: {
     flexDirection: "row",

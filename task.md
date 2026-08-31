@@ -61,6 +61,12 @@
 
 ---
 
-## 5. Build & Release Verification
+## 5. iOS 18.2 New Architecture Compatibility
+- [x] **`RCTEventEmitter.receiveEvent` Module Registration**: Registered callable module `RCTEventEmitter` in `index.js` for New Architecture Fabric backwards compatibility with legacy native event emitters.
+- [x] **`AppDelegate.mm` Bridge URL Provider**: Added `sourceURLForBridge:` in `AppDelegate.mm` returning `[self bundleURL]`.
+
+---
+
+## 6. Build & Release Verification
 - [x] **Android Debug Build**: Verified successful compilation and running on device.
 - [x] **Android Release Bundle**: `./gradlew assembleRelease` passed with **BUILD SUCCESSFUL**.

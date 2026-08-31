@@ -1,6 +1,14 @@
-/**
- * @format
- */
+import 'react-native-gesture-handler';
+import { enableScreens } from 'react-native-screens';
+enableScreens(true);
+
+import registerCallableModule from 'react-native/Libraries/Core/registerCallableModule';
+
+// Register legacy RCTEventEmitter for New Architecture Fabric backwards compatibility
+registerCallableModule('RCTEventEmitter', {
+  receiveEvent(rootNodeID, topLevelType, nativeEventParam) {},
+  receiveTouches(eventTopLevelType, touches, changedIndices) {},
+});
 
 import {AppRegistry, LogBox, Text, TextInput} from 'react-native';
 import {name as appName} from './app.json';
