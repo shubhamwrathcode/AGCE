@@ -973,13 +973,20 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
 /** Discoverable passkey login (no email required – same as web “Continue with Passkey”). */
 export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
   try {
-    if (!Passkey.isSupported()) {
+    const isSupported = Passkey.isSupported();
+    console.log('[Passkey][1] Passkey.isSupported():', isSupported);
+    if (!isSupported) {
       showError('Passkeys are not supported on this device');
       return false;
     }
     dispatch(setLoading(true));
+
+    console.log('[Passkey][2] Requesting discoverable auth options from API (security/passkey/discoverable/options)...');
     const optionsRes: any = await appOperation.guest.passkeyDiscoverableAuthOptions();
+    console.log('[Passkey][3] API Auth Options Response:', JSON.stringify(optionsRes, null, 2));
+
     if (!optionsRes?.success || !optionsRes?.data) {
+      console.error('[Passkey][ERROR] Auth options API failed or returned success=false:', optionsRes);
       showError(optionsRes?.message || 'Failed to get authentication options');
       return false;
     }
@@ -988,6 +995,17 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
     const rawChallenge = typeof challengeFromApi === 'string' ? challengeFromApi : '';
     const challengeForNative = maybeBase64ToBase64Url(rawChallenge);
     const rpIdFromServer = String(opts.rpId || opts.rp?.id || '').trim();
+
+    console.log('[Passkey][4] Parsed Options Config:', {
+      rpIdFromServer,
+      configuredRPID: PASSKEY_RP_ID,
+      rawChallenge,
+      challengeForNative,
+      timeout: opts.timeout,
+      userVerification: opts.userVerification,
+      allowCredentialsCount: opts.allowCredentials?.length || 0,
+    });
+
     if (isRpIdMismatchForAndroid(rpIdFromServer)) {
       console.warn('[Passkey][discoverable] rpId mismatch - skipping native prompt', {
         server: rpIdFromServer,
@@ -1013,25 +1031,27 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
         transports: c.transports,
       }));
     }
-    console.log('[Passkey][discoverable] options', {
-      rpId: request.rpId,
-      hasAllowCredentials: !!request.allowCredentials?.length,
-      challengeLen: typeof request.challenge === 'string' ? request.challenge.length : null,
-      challengePreview:
-        typeof request.challenge === 'string'
-          ? `${request.challenge.slice(0, 6)}…${request.challenge.slice(-6)}`
-          : null,
-    });
+    console.log('[Passkey][5] Native Passkey.get() Request Payload:', JSON.stringify(request, null, 2));
+
     const credential = await Passkey.get(request);
+    console.log('[Passkey][6] Native Passkey.get() Result Credential:', JSON.stringify(credential, null, 2));
+
     if (!credential) {
+      console.warn('[Passkey][ERROR] No credential returned from native passkey prompt (user cancelled or prompt failed)');
       showError('Authentication was cancelled');
       return false;
     }
+
+    console.log('[Passkey][7] Sending Discoverable Verify Request to API (security/passkey/discoverable/verify)...');
+    const challengeToSend = challengeFromApi ?? rawChallenge ?? request.challenge;
     const verifyRes: any = await appOperation.guest.passkeyDiscoverableVerify(
       credential,
-      challengeFromApi ?? rawChallenge ?? request.challenge
+      challengeToSend
     );
+    console.log('[Passkey][8] API Discoverable Verify Response:', JSON.stringify(verifyRes, null, 2));
+
     if (!verifyRes?.success || !verifyRes?.data?.token) {
+      console.error('[Passkey][ERROR] Passkey verify returned success=false or missing token:', verifyRes);
       showError(verifyRes?.message || 'Passkey verification failed');
       return false;
     }
@@ -1042,6 +1062,14 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
     dispatch(getUserProfile());
     return true;
   } catch (e: any) {
+    console.error('==================== [Passkey CATCH ERROR] ====================', {
+      message: e?.message,
+      name: e?.name,
+      code: e?.code,
+      response: e?.response?.data || e?.response,
+      error: e?.error,
+      fullError: e,
+    });
     logger(e);
     const msg = String(e?.message ?? e?.error ?? '');
     if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {

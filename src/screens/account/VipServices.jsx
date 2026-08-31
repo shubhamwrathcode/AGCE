@@ -10,7 +10,8 @@ import {
   feeNegotiation, higherLimits, slaSupport, subAccounts,
   apiLimits, autoTier, earlyAccess,
   vipOverride,
-  vip0, vip1, vip2, vip3, vip4
+  vip0, vip1, vip2, vip3, vip4,
+  vip0Light, vip1Light, vip2Light, vip3Light, vip4Light
 } from "../../helper/ImageAssets";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { fontFamilySemiBold } from "../../theme/typography";
@@ -22,11 +23,11 @@ const { width } = Dimensions.get("window");
 const GOLD = "#D1AA67";
 
 const vipTiers = [
-  { id: 'VIP0', volume: '< $50,000', makerFee: '0.10%', takerFee: '0.15%', benefits: 'Standard access', iconColor: '#A0A0A0', image: vip0 },
-  { id: 'VIP1', volume: '$50k – $500k', makerFee: '0.08%', takerFee: '0.08% / 0.12%', benefits: 'Priority support', iconColor: '#CD7F32', image: vip1 },
-  { id: 'VIP2', volume: '$500k – $2M', makerFee: '0.06%', takerFee: '0.10%', benefits: 'Higher API limits', iconColor: '#50C878', image: vip2 },
-  { id: 'VIP3', volume: '$2M – $10M', makerFee: '0.04%', takerFee: '0.08%', benefits: 'Dedicated manager', iconColor: '#4169E1', image: vip3 },
-  { id: 'VIP4', volume: '> $10M', makerFee: 'Negotiated', takerFee: 'Negotiated', benefits: 'OTC desk access', iconColor: '#9370DB', image: vip4 },
+  { id: 'VIP0', volume: '< $50,000', makerFee: '0.10%', takerFee: '0.15%', benefits: 'Standard access', iconColor: '#A0A0A0', image: vip0, imageLight: vip0Light },
+  { id: 'VIP1', volume: '$50k – $500k', makerFee: '0.08%', takerFee: '0.08% / 0.12%', benefits: 'Priority support', iconColor: '#CD7F32', image: vip1, imageLight: vip1Light },
+  { id: 'VIP2', volume: '$500k – $2M', makerFee: '0.06%', takerFee: '0.10%', benefits: 'Higher API limits', iconColor: '#50C878', image: vip2, imageLight: vip2Light },
+  { id: 'VIP3', volume: '$2M – $10M', makerFee: '0.04%', takerFee: '0.08%', benefits: 'Dedicated manager', iconColor: '#4169E1', image: vip3, imageLight: vip3Light },
+  { id: 'VIP4', volume: '> $10M', makerFee: 'Negotiated', takerFee: 'Negotiated', benefits: 'OTC desk access', iconColor: '#9370DB', image: vip4, imageLight: vip4Light },
 ];
 
 const vipFeatures = [
@@ -143,7 +144,7 @@ const VipServices = () => {
                 style={styles.tierCard}
               >
                 <View style={[styles.tierCardLeft, { justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 8 }]}>
-                  <FastImage source={tier.image} style={{ width: '100%', height: 40 }} resizeMode="contain" />
+                  <FastImage source={isDark ? tier.image : tier.imageLight} style={{ width: '100%', height: 40 }} resizeMode="contain" />
                 </View>
 
                 <View style={styles.tierCardRight}>

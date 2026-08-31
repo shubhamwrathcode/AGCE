@@ -99,14 +99,20 @@ const Login = (): JSX.Element => {
   const signInWithPasskey = async () => {
     // Prevent multiple simultaneous calls
     if (isPasskeySignInInProgress || isGoogleSignInInProgress || isAppleSignInInProgress) {
+      console.log('[Passkey] Sign-in already in progress, skipping duplicate tap');
       return;
     }
 
     try {
+      console.log('==================== [Passkey Flow START] ====================');
       setIsPasskeySignInInProgress(true);
-      await dispatch(passkeyDiscoverableLogin());
+      const result = await dispatch(passkeyDiscoverableLogin());
+      console.log('==================== [Passkey Flow COMPLETED] ====================', { result });
+    } catch (error) {
+      console.error('==================== [Passkey Flow UI ERROR] ====================', error);
     } finally {
       setIsPasskeySignInInProgress(false);
+      console.log('==================== [Passkey Flow END] ====================');
     }
   };
 

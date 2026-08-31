@@ -958,6 +958,55 @@ export default (appOperation: AppOperation) => ({
   swap_token: (data: any) =>
     appOperation.post('swap/swap-token', data, CUSTOMER_TYPE),
 
+  // Fiat Convert (Buy/Sell Crypto)
+  fiat_convert_assets: () =>
+    appOperation.get('fiat/convert/assets', undefined, undefined, CUSTOMER_TYPE),
+  fiat_convert_rates: () =>
+    appOperation.get('fiat/convert/rates', undefined, undefined, CUSTOMER_TYPE),
+  fiat_convert_quotes: (data: any) =>
+    appOperation.post('fiat/convert/quotes', data, CUSTOMER_TYPE),
+  fiat_convert_execute: (data: { quote_id: string }, headers?: any) =>
+    appOperation.post('fiat/convert/trades', data, CUSTOMER_TYPE, headers),
+  fiat_convert_trades: (params?: string) =>
+    appOperation.get(`fiat/convert/trades${params ? '?' + params : ''}`, undefined, undefined, CUSTOMER_TYPE),
+  fiat_limits: () =>
+    appOperation.get('fiat/limits', undefined, undefined, CUSTOMER_TYPE),
+  fiat_virtual_account_me: () =>
+    appOperation.get('fiat/virtual-accounts/me', undefined, undefined, CUSTOMER_TYPE),
+  fiat_virtual_account_create: (data: any = {}, headers?: any) =>
+    appOperation.post('fiat/virtual-accounts', data, CUSTOMER_TYPE, headers),
+  fiat_deposits_list: (params?: string) =>
+    appOperation.get(`fiat/deposits${params ? '?' + params : ''}`, undefined, undefined, CUSTOMER_TYPE),
+  fiat_deposit_detail: (id: string) =>
+    appOperation.get(`fiat/deposits/${id}`, undefined, undefined, CUSTOMER_TYPE),
+
+  // Fiat Whitelist / Beneficiaries
+  fiat_whitelist_list: (status?: string) =>
+    appOperation.get(`fiat/whitelist${status ? '?status=' + status : ''}`, undefined, undefined, CUSTOMER_TYPE),
+  fiat_whitelist_create: (data: any) =>
+    appOperation.post('fiat/whitelist', data, CUSTOMER_TYPE),
+  fiat_whitelist_verify: (id: string, data: { otp: string }) =>
+    appOperation.post(`fiat/whitelist/${encodeURIComponent(String(id))}/verify`, data, CUSTOMER_TYPE),
+  fiat_whitelist_resend_otp: (id: string) =>
+    appOperation.post(`fiat/whitelist/${encodeURIComponent(String(id))}/resend-otp`, {}, CUSTOMER_TYPE),
+  fiat_whitelist_delete: (id: string) =>
+    appOperation.delete(`fiat/whitelist/${encodeURIComponent(String(id))}`, null, CUSTOMER_TYPE),
+
+  // Fiat Withdrawals
+  fiat_withdrawals_preview: (params: string) =>
+    appOperation.get(`fiat/withdrawals/preview?${params}`, undefined, undefined, CUSTOMER_TYPE),
+  fiat_withdrawals_submit: (data: any, headers?: any) =>
+    appOperation.post('fiat/withdrawals', data, CUSTOMER_TYPE, headers),
+  fiat_withdrawals_list: (params?: string) =>
+    appOperation.get(`fiat/withdrawals${params ? '?' + params : ''}`, undefined, undefined, CUSTOMER_TYPE),
+  fiat_withdrawals_detail: (id: string) =>
+    appOperation.get(`fiat/withdrawals/${id}`, undefined, undefined, CUSTOMER_TYPE),
+  fiat_withdrawals_cancel: (id: string) =>
+    appOperation.post(`fiat/withdrawals/${encodeURIComponent(String(id))}/cancel`, {}, CUSTOMER_TYPE),
+
+  user_wallet: (wallet_type: string = 'spot') =>
+    appOperation.get(`wallet/user-wallet?wallet_type=${wallet_type}`, undefined, undefined, CUSTOMER_TYPE),
+
   coin_list: () =>
     appOperation.get('coin/get-coin', undefined, undefined, CUSTOMER_TYPE),
 

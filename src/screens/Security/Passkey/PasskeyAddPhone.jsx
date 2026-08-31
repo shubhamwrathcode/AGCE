@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity,  Platform, TextInput, ActivityIndicator, ScrollView, KeyboardAvoidingView, Keyboard } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, TextInput, ActivityIndicator, ScrollView, KeyboardAvoidingView, Keyboard } from 'react-native';
 import { AppText, BOLD, FOURTEEN, SIXTEEN, SEMI_BOLD, TWELVE, MEDIUM, EIGHTEEN, THIRTEEN } from '../../../shared';
 import { useTheme } from '../../../hooks/useTheme';
 import NavigationService from '../../../navigation/NavigationService';
@@ -200,7 +200,7 @@ const PasskeyAddPhone = ({ route }) => {
               value={phone}
               onChangeText={(v) => setPhone(v.replace(/\D/g, ''))}
               keyboardType="phone-pad"
-              cursorColor={colors.black}
+              cursorColor={isDark ? colors.white : colors.black}
             />
           </View>
         </View>
@@ -217,7 +217,7 @@ const PasskeyAddPhone = ({ route }) => {
               onChangeText={(v) => setSmsCode(v.replace(/\D/g, '').slice(0, 6))}
               keyboardType="number-pad"
               maxLength={6}
-              cursorColor={colors.black}
+              cursorColor={isDark ? colors.white : colors.black}
             />
             <TouchableOpacity
               style={styles.actionBtn}

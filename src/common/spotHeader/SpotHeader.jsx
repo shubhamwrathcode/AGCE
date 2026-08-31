@@ -17,7 +17,7 @@ import { Alert, Platform, ToastAndroid } from "react-native";
 import NavigationService from "../../navigation/NavigationService";
 import { useAppSelector } from "../../store/hooks";
 import { showError } from "../../helper/logger";
-import { LOGIN_SCREEN } from "../../navigation/routes";
+import { LOGIN_SCREEN, BUY_CRYPTO_SCREEN } from "../../navigation/routes";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const HEADER_SHIMMER_STRIP = 140;
@@ -189,21 +189,21 @@ const SpotHeader = ({
             <FastImage source={back_ic} style={{ width: 20, height: 20 }} resizeMode="contain" tintColor={darkMode ? colors.white : colors.black} />
           </TouchableOpacity>
           <View style={styles.topTabs}>
-            {["Spot", "Margin",
-              // "Fiat", "P2P", "Convert"
-            ].map((t, idx, arr) => {
+            {["Spot", "Margin", "Buy Crypto"].map((t, idx, arr) => {
               const active = t === activeHeaderTab;
-              const isAvailableTab = t === "Spot" || t === "Margin" || t === "Convert";
               return (
                 <TouchableOpacity
                   key={t}
                   activeOpacity={0.75}
                   disabled={active}
-                  onPress={isAvailableTab ? () => setActiveHeaderTab && setActiveHeaderTab(t) : showComingSoon}
+                  onPress={() => {
+                    if (setActiveHeaderTab) {
+                      setActiveHeaderTab(t);
+                    }
+                  }}
                   style={[
                     styles.topTabItem,
-                    // `gap` is not supported on all RN versions; use margins for consistent spacing
-                    idx !== arr.length - 1 && { marginRight: 5 },
+                    idx !== arr.length - 1 && { marginRight: 6 },
                   ]}
                 >
                   <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: active ? themeColors.text : themeColors.secondaryText }}>
@@ -216,7 +216,7 @@ const SpotHeader = ({
           </View>
         </View>
 
-        {activeHeaderTab !== "Convert" && (
+        {activeHeaderTab !== "Convert" && activeHeaderTab !== "Buy Crypto" && (
           <View style={styles.pairRowMain}>
             <View style={{ flex: 1 }}>
               {leftContent}

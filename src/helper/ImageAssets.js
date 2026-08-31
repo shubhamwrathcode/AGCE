@@ -409,6 +409,13 @@ export const vip3 = require('../../assets/images/vip3.png');
 export const vip2 = require('../../assets/images/vip2.png');
 export const vip1 = require('../../assets/images/vip1.png');
 export const vip0 = require('../../assets/images/vip0.png');
+
+export const vip4Light = require('../../assets/images/vip4Light.png');
+export const vip3Light = require('../../assets/images/vip3Light.png');
+export const vip2Light = require('../../assets/images/vip2Light.png');
+export const vip1Light = require('../../assets/images/vip1Light.png');
+export const vip0Light = require('../../assets/images/vip0Light.png');
+
 export const launchpad_acge = require('../../assets/images/launchpad_acge.png');
 export const invite_earn_img = require('../../assets/images/invite_earn_img.png');
 export const earn_link_icon = require('../../assets/images/earn_link_icon.png');
@@ -420,6 +427,21 @@ export const security_risk_vector_light = require('../../assets/images/security_
 export const stakingImgBlack = require('../../assets/images/stakingImgBlack.png');
 export const stakingBannerDark = require('../../assets/images/stakingBannerDark.png');
 export const agcxNewLogo = require('../../assets/images/agcxNewLogo.png');
+export const fiat_herobg = require('../../assets/images/fiat_herobg.png');
+export const depositFiatWhite = require('../../assets/images/depositFiatWhite.png');
+export const depositFiatBlack = require('../../assets/images/depositFiatBlack.png');
+export const withdrawalFiatWhite = require('../../assets/images/withdrawalFiatWhite.png');
+export const withdrawalFiatBlack = require('../../assets/images/withdrawalFiatBlack.png');
+
+export const WithdrawalCryptoWhite = require('../../assets/images/WithdrawalCryptoWhite.png');
+export const WithdrawalCryptoBlack = require('../../assets/images/WithdrawalCryptoBlack.png');
+export const depositCryptoWhite = require('../../assets/images/depositCryptoWhite.png');
+export const depositCryptoBlack = require('../../assets/images/depositCryptoBlack.png');
+
+
+
+
+
 
 
 

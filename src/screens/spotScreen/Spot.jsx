@@ -34,6 +34,7 @@ import FastImage from "react-native-fast-image";
 import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
 import MarginBottomSection from "./MarginBottomSection";
 import ConvertSection from "./ConvertSection";
+import BuyCryptoScreen from "../buyCrypto/BuyCryptoScreen";
 import {
   add,
   checkIc,
@@ -4241,8 +4242,8 @@ const Spot = () => {
           pairSheetRef={pairSheetRef}
         />
 
-        {headerTab === "Convert" ? (
-          <ConvertSection />
+        {headerTab === "Buy Crypto" || headerTab === "Convert" ? (
+          <BuyCryptoScreen isEmbedded={true} navigation={navigation} />
         ) : (
           <>
             <View style={styles.secondcontainer}>

@@ -88,7 +88,7 @@ import ThirdPartyAccountAccessScreen from "../screens/Security/AccountManagement
 import CloseAccountReasonScreen from "../screens/Security/AccountManagement/CloseAccount/CloseAccountReasonScreen";
 import EmergencyContactVerification from "../screens/Security/EmergencyContact/EmergencyContactVerification";
 import EnterOtp from "../screens/account/EnterOtp";
-import ConvertHistory from "../screens/spotScreen/ConvertHistory";
+import ConvertHistory from "../screens/buyCrypto/ConvertHistoryScreen";
 import Search from "../features/trades/screens/MarketSearchScreen";
 import {
   AppText,
@@ -116,6 +116,11 @@ import DepositCoin from "../screens/wallet/DepositCoin";
 import DashboardInner from "../screens/dashboardInner/DashboardInner";
 import Spot from "../screens/spotScreen/Spot";
 import SpotChartScreen from "../screens/spotScreen/SpotChartScreen";
+import BuyCryptoScreen from "../screens/buyCrypto/BuyCryptoScreen";
+import DepositFiatScreen from "../screens/depositFiat/DepositFiatScreen";
+import DepositFiatHistoryScreen from "../screens/depositFiat/DepositFiatHistoryScreen";
+import WithdrawFiatScreen from "../screens/withdrawFiat/WithdrawFiatScreen";
+import WithdrawFiatHistoryScreen from "../screens/withdrawFiat/WithdrawFiatHistoryScreen";
 import FutureChartScreen from "../screens/Futures/FutureChartScreen";
 import MarginBorrowRepay from "../screens/spotScreen/MarginBorrowRepay";
 import MarginTransfer from "../screens/spotScreen/MarginTransfer";
@@ -634,6 +639,11 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.SPOT_ORDER_HISTORY_DETAIL} component={SpotOrderHistoryDetail} />
       <Stack.Screen name={routes.SPOT_MARKET_SCREEN} component={SpotMarket as any} />
       <Stack.Screen name={routes.SPOT_CHART_SCREEN} component={SpotChartScreen} />
+      <Stack.Screen name={routes.BUY_CRYPTO_SCREEN} component={BuyCryptoScreen} />
+      <Stack.Screen name={routes.DEPOSIT_FIAT_SCREEN} component={DepositFiatScreen} />
+      <Stack.Screen name={routes.DEPOSIT_FIAT_HISTORY_SCREEN} component={DepositFiatHistoryScreen} />
+      <Stack.Screen name={routes.WITHDRAW_FIAT_SCREEN} component={WithdrawFiatScreen} />
+      <Stack.Screen name={routes.WITHDRAW_FIAT_HISTORY_SCREEN} component={WithdrawFiatHistoryScreen} />
       <Stack.Screen name="FutureChartScreen" component={FutureChartScreen} />
       <Stack.Screen name={routes.MARGIN_BORROW_REPAY_SCREEN} component={MarginBorrowRepay} />
       <Stack.Screen name={routes.MARGIN_BORROW_REPAY_HISTORY_SCREEN} component={MarginBorrowRepayHistory} />

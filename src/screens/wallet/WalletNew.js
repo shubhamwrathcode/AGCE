@@ -72,6 +72,8 @@ import WalletSkeleton from "./WalletSkeleton";
 import RBSheet from "react-native-raw-bottom-sheet";
 import DepositSheet from "../../shared/components/DepositSheet";
 import WithdrawSheet from "../../shared/components/WithdrawSheet";
+import DepositChoiceSheet from "./sheets/DepositChoiceSheet";
+import WithdrawChoiceSheet from "./sheets/WithdrawChoiceSheet";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../../hooks/useTheme";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
@@ -116,8 +118,18 @@ const WalletNew = ({ route }) => {
   const dispatch = useDispatch();
   const depsoitSheet = useRef(null);
   const withdrawSheet = useRef(null);
+  const depositChoiceSheetRef = useRef(null);
+  const withdrawChoiceSheetRef = useRef(null);
   const coinDetailSheet = useRef(null);
   const { colors: themeColors, theme, isDark } = useTheme();
+
+  const handleOpenDeposit = useCallback(() => {
+    depositChoiceSheetRef.current?.open?.();
+  }, []);
+
+  const handleOpenWithdraw = useCallback(() => {
+    withdrawChoiceSheetRef.current?.open?.();
+  }, []);
   const walletBalance = useAppSelector((state) => {
     return state.wallet.walletBalance;
   });
@@ -452,8 +464,8 @@ const WalletNew = ({ route }) => {
               theme={theme}
               themeColors={themeColors}
               items={[
-                { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
-                { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
+                { key: "deposit", label: "Deposit", variant: "deposit", onPress: handleOpenDeposit },
+                { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: handleOpenWithdraw },
                 { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN) },
                 { key: "history", label: "History", variant: "history", onPress: () => { NavigationService.navigate("Wallet_History") } },
               ]}
@@ -873,8 +885,8 @@ const WalletNew = ({ route }) => {
                         theme={theme}
                         themeColors={themeColors}
                         items={[
-                          { key: "deposit", label: "Deposit", variant: "deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
-                          { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
+                          { key: "deposit", label: "Deposit", variant: "deposit", onPress: handleOpenDeposit },
+                          { key: "withdraw", label: "Withdraw", variant: "withdraw", onPress: handleOpenWithdraw },
                           { key: "transfer", label: "Transfer", variant: "transfer", onPress: () => NavigationService.navigate(MARGIN_TRANSFER_SCREEN) },
                           { key: "history", label: "History", variant: "history", onPress: () => { NavigationService.navigate("Wallet_History") } },
                         ]}
@@ -1129,12 +1141,12 @@ const WalletNew = ({ route }) => {
                         setFailedIconMap={setFailedIconMap}
                         userSpotWallet={userSpotWallet}
                         spotPnlData={spotPnlData}
-                        onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
+                        onDeposit={handleOpenDeposit}
                         onBuyCrypto={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
                         onTransfer={() =>
                           NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "main" })
                         }
-                        onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
+                        onWithdraw={handleOpenWithdraw}
                         onOpenCoinSheet={(coin) => {
                           setSelectedCoinForSheet(coin);
                           setSelectedCoinSheetWalletType("spot");
@@ -1221,8 +1233,8 @@ const WalletNew = ({ route }) => {
                         setFailedIconMap={setFailedIconMap}
                         userWalletRows={userMainWallet}
                         actions={[
-                          { key: "deposit", label: "Deposit", onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN) },
-                          { key: "withdraw", label: "Withdraw", onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN) },
+                          { key: "deposit", label: "Deposit", onPress: handleOpenDeposit },
+                          { key: "withdraw", label: "Withdraw", onPress: handleOpenWithdraw },
                           {
                             key: "transfer",
                             label: "Transfer",
@@ -1470,56 +1482,16 @@ const WalletNew = ({ route }) => {
         )}
         {/* </ImageBackground> */}
       </KeyBoardAware>
-      <RBSheet
-        ref={depsoitSheet}
-        keyboardAvoidingViewEnabled={false}
-        customModalProps={{ statusBarTranslucent: true }}
-        closeOnDragDown={true}
-        closeOnPressMask={true}
-        height={250}
-        animationType="none"
-        customStyles={{
-          container: {
-            backgroundColor: themeColors.background,
-            height: 250,
-            borderTopRightRadius: 40,
-            borderTopLeftRadius: 40,
-          },
-          wrapper: {
-            backgroundColor: "#0006",
-          },
-          draggableIcon: {
-            backgroundColor: "transparent",
-          },
-        }}
-      >
-        <DepositSheet theme={theme} />
-      </RBSheet>
-      <RBSheet
-        ref={withdrawSheet}
-        keyboardAvoidingViewEnabled={false}
-        customModalProps={{ statusBarTranslucent: true }}
-        closeOnDragDown={true}
-        closeOnPressMask={true}
-        height={260}
-        animationType="fade"
-        customStyles={{
-          container: {
-            backgroundColor: themeColors.background,
-            height: 250,
-            borderTopRightRadius: 40,
-            borderTopLeftRadius: 40,
-          },
-          wrapper: {
-            backgroundColor: "#0006",
-          },
-          draggableIcon: {
-            backgroundColor: "transparent",
-          },
-        }}
-      >
-        <WithdrawSheet theme={theme} />
-      </RBSheet>
+
+      <DepositChoiceSheet
+        sheetRef={depositChoiceSheetRef}
+        isDark={isDark}
+      />
+
+      <WithdrawChoiceSheet
+        sheetRef={withdrawChoiceSheetRef}
+        isDark={isDark}
+      />
 
       <CoinDetailSheet
         sheetRef={coinDetailSheet}
@@ -1536,8 +1508,8 @@ const WalletNew = ({ route }) => {
         spotUsdPriceLabel={spotUsdPriceLabel}
         onTrade={handleTradeCoin}
         onTransfer={(coin) => NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { coin: coin?.short_name || coin?.currency || coin?.asset })}
-        onDeposit={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
-        onWithdraw={() => NavigationService.navigate(SELECT_COIN_SCREEN)}
+        onDeposit={handleOpenDeposit}
+        onWithdraw={handleOpenWithdraw}
         onP2PTrade={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
         onSwap={() => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM)}
         onEarning={() => NavigationService.navigate(EARNING_SCREEN)}
