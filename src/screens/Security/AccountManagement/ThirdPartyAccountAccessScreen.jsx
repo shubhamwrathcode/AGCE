@@ -76,7 +76,7 @@ const ThirdPartyAccountAccessScreen = () => {
   const valCol = themeColors.text;
 
   return (
-    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: colors.newThemeColor }]}>
+    <AppSafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

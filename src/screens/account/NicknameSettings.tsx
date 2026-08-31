@@ -96,7 +96,7 @@ const NicknameSettings = () => {
           {loading ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <AppText weight={SEMI_BOLD} style={[styles.okButtonText, { color: themeColors.text }]}>Ok</AppText>
+            <AppText weight={SEMI_BOLD} style={[styles.okButtonText, { color: isDark ? themeColors.text : colors.white }]}>Ok</AppText>
           )}
         </TouchableOpacity>
       </View>

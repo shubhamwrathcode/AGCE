@@ -4996,6 +4996,7 @@ const Spot = () => {
                     onSubmit={onSubmit}
                     themeColors={themeColors}
                     isDark={isDark}
+                    userData={userData}
                     inputSelectionColor={inputSelectionColor}
                     fontFamilySemiBold={fontFamilySemiBold}
                     onBorrowPress={() => {

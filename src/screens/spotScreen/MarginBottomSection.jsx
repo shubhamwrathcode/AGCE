@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity, Keyboard } from "react-native";
 import FastImage from "react-native-fast-image";
 import { AppText, Button } from "../../shared";
 import { colors } from "../../theme/colors";
 import { add } from "../../helper/ImageAssets";
 import { ShimmerBox } from "./Spot";
+import NavigationService from "../../navigation/NavigationService";
+import { NAVIGATION_AUTH_STACK, LOGIN_SCREEN } from "../../navigation/routes";
 
 const MarginBottomSection = ({
   quote_currency,
@@ -14,6 +16,8 @@ const MarginBottomSection = ({
   isBuy,
   onSubmit,
   themeColors,
+  isDark,
+  userData,
   styles,
   onBorrowPress,
   marginLeverage,
@@ -177,24 +181,37 @@ const MarginBottomSection = ({
       {/* Submit Button */}
       <View style={styles.spotOrderSubmitWrap}>
         <Button
-          children={`${isBuy ? "Buy" : "Sell"} ${base_currency}`}
-          disabled={loading || !amount || parseFloat(amount) <= 0}
+          children={
+            !userData
+              ? "Login"
+              : isBuy
+                ? `Buy ${base_currency}`
+                : `Sell ${base_currency}`
+          }
+          disabled={!userData ? false : loading}
           loading={loading}
-          activeOpacity={(loading || !amount || parseFloat(amount) <= 0) ? 1 : 0.75}
+          activeOpacity={!userData ? 0.75 : (amount && parseFloat(amount) > 0) ? 0.75 : 1}
           containerStyle={[
             styles.spotOrderSubmitBtn,
             {
-              backgroundColor: (amount && parseFloat(amount) > 0)
-                ? (isBuy
-                  ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
-                  : (themeColors.spotTradeSell ?? colors.spotTradeSell))
-                : (isBuy
-                  ? (themeColors.isDark ? "#19402E" : "#A7E2C6")
-                  : (themeColors.isDark ? "#4A1D20" : "#F2B2B4")),
+              backgroundColor: !userData
+                ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
+                : (amount && parseFloat(amount) > 0)
+                  ? (isBuy
+                    ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy)
+                    : (themeColors.spotTradeSell ?? colors.spotTradeSell))
+                  : (isBuy
+                    ? (isDark ? "#19402E" : "#A7E2C6")
+                    : (isDark ? "#4A1D20" : "#F2B2B4")),
             },
           ]}
           onPress={() => {
+            if (!userData) {
+              NavigationService.reset(NAVIGATION_AUTH_STACK);
+              return;
+            }
             if (amount && parseFloat(amount) > 0) {
+              Keyboard.dismiss();
               onSubmit();
             }
           }}
