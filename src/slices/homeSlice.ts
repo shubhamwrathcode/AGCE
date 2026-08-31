@@ -129,9 +129,10 @@ export const homeSlice = createSlice({
           state.coinBalance = { ...state.coinBalance, ...payload.balance };
         }
       }
-      if (Array.isArray(payload?.open_orders)) {
+      if (Array.isArray(payload?.open_orders) && payload.open_orders.length > 0) {
         if (!isEqual(state.spotOpenOrders, payload.open_orders)) {
           state.spotOpenOrders = payload.open_orders;
+          state.openOrders = payload.open_orders;
         }
       }
       if (Array.isArray(payload?.buy_order)) {

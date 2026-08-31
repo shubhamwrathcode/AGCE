@@ -4362,7 +4362,7 @@ const Spot = () => {
                     style={[
                       styles.dropdown,
                       {
-                        backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
+                        backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7',
                         flex: 1,
                         borderRadius: 10,
                         borderWidth: 0,
@@ -4535,7 +4535,7 @@ const Spot = () => {
                       style={[
                         styles.spotOrderFieldCard,
                         {
-                          backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
+                          backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7',
                           borderWidth: 0,
                         },
                       ]}
@@ -4743,7 +4743,7 @@ const Spot = () => {
                       style={[
                         styles.spotOrderFieldCard,
                         {
-                          backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
+                          backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7',
                           borderWidth: 0,
                         },
                       ]}
@@ -4893,7 +4893,7 @@ const Spot = () => {
                         style={[
                           styles.spotOrderFieldCard,
                           {
-                            backgroundColor: isDark ? darkTheme.darkThemeInputColor : colors.white,
+                            backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7',
                             borderWidth: 0,
                           },
                         ]}
