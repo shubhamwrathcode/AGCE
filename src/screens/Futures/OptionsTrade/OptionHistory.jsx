@@ -134,13 +134,13 @@ const OptionsHistoryCard = React.memo(({ item, tabKey, userId, onPress, onCancel
   const isTransTab = tabKey === 'transactionHistory';
   const orderType = String(item.order_type || item.orderType || item.type || "LIMIT").toUpperCase();
   const orderStatus = String(item.status || item.state || "NEW").toUpperCase();
-  
+
   const formatOptionsTransactionType = (type) => {
     const s = String(type || "").toUpperCase();
     const labels = {
-        TRANSFER_IN: "Transfer In", TRANSFER_OUT: "Transfer Out", TRADING_FEE: "Trading Fee",
-        PREMIUM: "Premium", SETTLEMENT: "Settlement", EXERCISE: "Exercise",
-        LIQUIDATION: "Liquidation", TRANSFER: "Transfer", TRADE: "Trade", FEE: "Fee",
+      TRANSFER_IN: "Transfer In", TRANSFER_OUT: "Transfer Out", TRADING_FEE: "Trading Fee",
+      PREMIUM: "Premium", SETTLEMENT: "Settlement", EXERCISE: "Exercise",
+      LIQUIDATION: "Liquidation", TRANSFER: "Transfer", TRADE: "Trade", FEE: "Fee",
     };
     return labels[s] || (s ? s.replace(/_/g, " ") : "—");
   };
@@ -243,15 +243,22 @@ const OptionsHistoryCard = React.memo(({ item, tabKey, userId, onPress, onCancel
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.tradeKvK, { color: isDark ? "#8E8E93" : "#666666" }]}>Action</AppText>
               {canCancel ? (
                 <TouchableOpacity
-                  style={[styles.cancelBtn, isCancelling && styles.cancelBtnDisabled]}
+                  style={[
+                    styles.cancelBtn,
+                    {
+                      backgroundColor: isDark ? 'transparent' : "#FEE2E2",
+                      borderColor: isDark ? colors.white : colors.black,
+                    },
+                    isCancelling && styles.cancelBtnDisabled,
+                  ]}
                   onPress={() => onCancel(orderId)}
                   disabled={isCancelling}
                   activeOpacity={0.7}
                 >
                   {isCancelling ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={isDark ? colors.white : colors.black} />
                   ) : (
-                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={styles.cancelBtnText}>Cancel</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={[styles.cancelBtnText, { color: isDark ? colors.white : colors.black }]}>Cancel</AppText>
                   )}
                 </TouchableOpacity>
               ) : (
@@ -426,8 +433,8 @@ const OptionHistory = () => {
             );
           })}
         </ScrollView>
-        
-      
+
+
       </View>
 
       {loading && listData.length === 0 ? (
@@ -495,15 +502,13 @@ const styles = StyleSheet.create({
   detailsContainer: { marginTop: 4 },
   cancelBtn: {
     paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 5,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#000000",
-    backgroundColor: "#000000",
-    minWidth: 72,
+    minWidth: 70,
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelBtnDisabled: { opacity: 0.6 },
-  cancelBtnText: { color: "#FFFFFF", fontSize: 13 },
+  cancelBtnDisabled: { opacity: 0.5 },
+  cancelBtnText: { fontSize: 13, fontWeight: "600" },
 });

@@ -257,6 +257,17 @@ function dedupeSpotOrderHistoryRows(rows) {
   return out;
 }
 
+function getStableId(item) {
+  if (!item) return "";
+  const raw = item?._id?.$oid || item?._id || item?.order_id || item?.id || item?.client_order_id || item?.orderId;
+  if (raw != null && typeof raw === "object" && typeof raw.toString === "function") {
+    const s = raw.toString();
+    if (s && s !== "[object Object]") return String(s);
+  }
+  if (raw != null && typeof raw !== "object") return String(raw);
+  return "";
+}
+
 export const Data = [
   { label: "0.1", value: "0.1" },
   { label: "0.01", value: "0.01" },
@@ -1257,8 +1268,8 @@ const OpenOrderItemCard = memo(function OpenOrderItemCard({
     </TouchableOpacity>
   );
 }, (prev, next) => {
-  const pId = prev.inv?._id?.$oid || prev.inv?._id || prev.inv?.order_id || prev.inv?.id;
-  const nId = next.inv?._id?.$oid || next.inv?._id || next.inv?.order_id || next.inv?.id;
+  const pId = getStableId(prev.inv);
+  const nId = getStableId(next.inv);
   return (
     pId === nId &&
     prev.inv?.status === next.inv?.status &&
@@ -2049,8 +2060,7 @@ const Spot = () => {
       if (tabId < 1 || tabId > 3) return;
       if (activeTab === tabId) return;
       setExpandedRowIndex(null);
-      if (tabId === 1) setLoadingSpotOpenOrders(true);
-      else if (tabId === 2) setLoadingSpotOrderHistory(true);
+      if (tabId === 2) setLoadingSpotOrderHistory(true);
       else if (tabId === 3) setLoadingSpotTradeHistory(true);
       activeTabRef.current = tabId;
       setActiveTab(tabId);
@@ -2484,10 +2494,7 @@ const Spot = () => {
   const userId = userData?.id || userData?._id;
 
   const fetchSpotOpenOrdersTab = useCallback(async (silent = true) => {
-    if (!userId) {
-      setLoadingSpotOpenOrders(false);
-      return;
-    }
+    if (!userId) return;
     const gen = ++spotHistoryFetchGenRef.current.openOrders;
     try {
       const response = await appOperation.customer.spot_me_orders_open({
@@ -2497,8 +2504,8 @@ const Spot = () => {
       if (gen !== spotHistoryFetchGenRef.current.openOrders) return;
       const items = spotMeOpenOrdersItemsFromResponse(response);
       if (response?.success && Array.isArray(items)) {
-        // If an order was recently placed within 2s and DB read returns 0 items while cache had items, retry shortly without clearing
-        if (items.length === 0 && Date.now() - lastOrderPlacedTimeRef.current < 2000 && openOrdersRef.current?.length > 0) {
+        // If an order was recently placed within 2.5s and DB read returns 0 items, retry shortly without clearing
+        if (items.length === 0 && Date.now() - lastOrderPlacedTimeRef.current < 2500) {
           setTimeout(() => {
             fetchSpotOpenOrdersTab(true);
           }, 350);
@@ -2509,10 +2516,6 @@ const Spot = () => {
     } catch (e) {
       if (gen !== spotHistoryFetchGenRef.current.openOrders) return;
       console.warn("fetchSpotOpenOrdersTab err:", e);
-    } finally {
-      if (gen === spotHistoryFetchGenRef.current.openOrders) {
-        setLoadingSpotOpenOrders(false);
-      }
     }
   }, [userId, dispatch]);
 
@@ -2555,11 +2558,10 @@ const Spot = () => {
   }, [base_currency, quote_currency, userId, dispatch]);
 
   const spotHistoryActiveLoading = useMemo(() => {
-    if (mountedOrdersTab === 1) return loadingSpotOpenOrders && (!openOrders || openOrders.length === 0);
     if (mountedOrdersTab === 2) return loadingSpotOrderHistory && (!pastOrders || pastOrders.length === 0);
     if (mountedOrdersTab === 3) return loadingSpotTradeHistory && (!filteredMyTrades || filteredMyTrades.length === 0);
     return false;
-  }, [mountedOrdersTab, loadingSpotOpenOrders, loadingSpotOrderHistory, loadingSpotTradeHistory, openOrders, pastOrders, filteredMyTrades]);
+  }, [mountedOrdersTab, loadingSpotOrderHistory, loadingSpotTradeHistory, pastOrders, filteredMyTrades]);
 
   const showSpotHistoryLoader = spotHistoryActiveLoading;
 
@@ -2845,6 +2847,7 @@ const Spot = () => {
 
   const handleQty = (text) => {
     handleQuantityInput(text, setAmount);
+    setActivePercentage(0);
     Animated.timing(totalAnim, {
       toValue: text.trim() !== "" ? 1 : 0,
       duration: 200,
@@ -2871,6 +2874,7 @@ const Spot = () => {
     } else {
       setBalance(_balance?.base_currency_balance);
     }
+    setActivePercentage(0);
   }, [isBuy, _balance]);
 
   const handleTotalPercentage = (value) => {
@@ -3292,11 +3296,14 @@ const Spot = () => {
         amountAnim.setValue(0);
         totalAnim.setValue(0);
         setAmount("");
+        setTotal("");
+        setActivePercentage(0);
+
         setTimeout(() => {
           fetchSpotOpenOrdersTab(true);
           if (mountedOrdersTab === 2) fetchSpotOrderHistoryTab(true);
           if (mountedOrdersTab === 3) fetchSpotTradeHistoryTab(true);
-        }, 300);
+        }, 350);
       }
     } finally {
       setIsPlacingOrder(false);
@@ -3327,11 +3334,14 @@ const Spot = () => {
         amountAnim.setValue(0);
         totalAnim.setValue(0);
         setAmount("");
+        setTotal("");
+        setActivePercentage(0);
+
         setTimeout(() => {
           fetchSpotOpenOrdersTab(true);
           if (mountedOrdersTab === 2) fetchSpotOrderHistoryTab(true);
           if (mountedOrdersTab === 3) fetchSpotTradeHistoryTab(true);
-        }, 300);
+        }, 350);
       }
     } finally {
       setIsPlacingOrder(false);
@@ -3521,17 +3531,6 @@ const Spot = () => {
     if (!base || !quote) return `${base || "-"} / ${quote || "-"}`;
     return `${base}/${quote}`;
   }, [base_currency, quote_currency, normalizePairSymbol]);
-
-  const getStableId = (item) => {
-    if (!item) return "";
-    const raw = item?._id?.$oid || item?._id || item?.order_id || item?.id || item?.client_order_id || item?.orderId;
-    if (raw != null && typeof raw === "object" && typeof raw.toString === "function") {
-      const s = raw.toString();
-      if (s && s !== "[object Object]") return String(s);
-    }
-    if (raw != null && typeof raw !== "object") return String(raw);
-    return "";
-  };
 
   // Stable keyExtractors for order FlatLists (avoid inline functions)
   // Prefer stable keys (avoid index fallback -> remounts on sort/filter)
