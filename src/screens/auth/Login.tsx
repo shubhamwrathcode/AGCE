@@ -106,13 +106,19 @@ const Login = (): JSX.Element => {
       return;
     }
 
+    if (!Passkey.isSupported()) {
+      showError('Passkeys are not supported on this device');
+      return;
+    }
+
     try {
       console.log('==================== [Passkey Flow START] ====================');
       setIsPasskeySignInInProgress(true);
       const result = await dispatch(passkeyDiscoverableLogin());
       console.log('==================== [Passkey Flow COMPLETED] ====================', { result });
-    } catch (error) {
+    } catch (error: any) {
       console.error('==================== [Passkey Flow UI ERROR] ====================', error);
+      showError(error?.message || 'Passkey authentication failed');
     } finally {
       setIsPasskeySignInInProgress(false);
       console.log('==================== [Passkey Flow END] ====================');

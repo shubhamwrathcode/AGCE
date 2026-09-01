@@ -229,7 +229,10 @@ const EnablePasskey = ({ route, navigation }) => {
         };
 
         console.warn('[Passkey] Native create request:', JSON.stringify(request, null, 2));
-        const passkeyResponse = await Passkey.create(request);
+        const passkeyResponse =
+          Platform.OS === 'ios'
+            ? await Passkey.createPlatformKey(request)
+            : await Passkey.create(request);
         console.warn('[Passkey] Native Passkey.create Response:', JSON.stringify(passkeyResponse, null, 2));
         if (passkeyResponse) {
           const emailId = userData?.emailId || userData?.email_id || '';

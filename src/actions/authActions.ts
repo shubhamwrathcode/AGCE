@@ -28,9 +28,12 @@ import { PASSKEY_RP_ID } from '../helper/Constants';
 import {
   buildPasskeyAssertionRequest,
   extractOriginFromCredential,
+  getNativePasskeyAssertion,
+  isPasskeyAssociatedDomainError,
   isPasskeyOriginMismatchError,
   logPasskeyAssertionDebug,
   normalizePasskeyAssertionCredential,
+  waitForPasskeyNativePrompt,
 } from '../helper/passkeyAssertion';
 import { getMobilePasskeyUserAgent } from '../helper/passkeyDeviceInfo';
 import { socketService } from '../services/socket/SocketService';
@@ -815,30 +818,32 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
           ? `${request.challenge.slice(0, 6)}…${request.challenge.slice(-6)}`
           : null,
     });
-    console.log(`${logPrefix} Step 2/4 - calling Passkey.get`, {
+    console.log(`${logPrefix} Step 2/4 - calling native passkey assertion`, {
       rpId: request.rpId,
       userVerification: request.userVerification,
       allowCredentials: request.allowCredentials?.length ?? 0,
+      platform: Platform.OS,
     });
-    // Hide global loading modal — it can block the native passkey UI on Android.
+    // Hide global loading modal — it blocks the native passkey sheet (especially iOS Face ID).
     dispatch(setLoading(false));
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await waitForPasskeyNativePrompt();
 
     let credential: any;
     try {
-      credential = await Passkey.get(request);
+      credential = await getNativePasskeyAssertion(request);
     } catch (e: any) {
       const msg = String(e?.message ?? e?.error ?? '');
-      console.error(`${logPrefix} FAIL at Step 2/4 - Passkey.get threw`, {
+      console.error(`${logPrefix} FAIL at Step 2/4 - native assertion threw`, {
         name: e?.name,
         code: e?.code,
         message: e?.message,
         raw: e,
       });
-      // Common native error when RP ID / associated domain doesn't match device/app configuration.
-      if (/incoming request cannot be validated/i.test(msg)) {
+      if (isPasskeyAssociatedDomainError(e) || /incoming request cannot be validated/i.test(msg)) {
         if (!silent) showError(
-          'Passkey is not available for this environment. Please sign in with password (or ask backend to use the correct RP ID).'
+          Platform.OS === 'ios'
+            ? 'Passkey is not available on this iPhone. Associated domain (webcredentials:arabglobal.ae) must be live, then sign in with password or add a passkey on this device.'
+            : 'Passkey is not available for this environment. Please sign in with password (or ask backend to use the correct RP ID).'
         );
       } else {
         if (!silent) showError(e?.message || 'Passkey prompt failed');
@@ -1024,17 +1029,15 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
       timeout: opts.timeout,
       userVerification: opts.userVerification || 'preferred',
     };
-    if (Platform.OS !== 'android' && opts.allowCredentials?.length) {
-      request.allowCredentials = opts.allowCredentials.map((c: any) => ({
-        type: c.type || 'public-key',
-        id: c.id,
-        transports: c.transports,
-      }));
-    }
-    console.log('[Passkey][5] Native Passkey.get() Request Payload:', JSON.stringify(request, null, 2));
+    // Discoverable login must not send allowCredentials. Android already omitted them;
+    // iOS fails if those IDs belong to Android/web and not iCloud Keychain.
+    console.log('[Passkey][5] Native assertion request:', JSON.stringify(request, null, 2));
 
-    const credential = await Passkey.get(request);
-    console.log('[Passkey][6] Native Passkey.get() Result Credential:', JSON.stringify(credential, null, 2));
+    dispatch(setLoading(false));
+    await waitForPasskeyNativePrompt();
+
+    const credential = await getNativePasskeyAssertion(request);
+    console.log('[Passkey][6] Native assertion credential:', JSON.stringify(credential, null, 2));
 
     if (!credential) {
       console.warn('[Passkey][ERROR] No credential returned from native passkey prompt (user cancelled or prompt failed)');
@@ -1074,6 +1077,12 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
     const msg = String(e?.message ?? e?.error ?? '');
     if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
       showError('Authentication was cancelled. Try again or use another method.');
+    } else if (isPasskeyAssociatedDomainError(e)) {
+      showError(
+        Platform.OS === 'ios'
+          ? 'Passkey could not be validated on iOS. Host apple-app-site-association on arabglobal.ae and rebuild the app.'
+          : (e?.message || 'Passkey authentication failed')
+      );
     } else {
       showError(e?.message || 'Passkey authentication failed');
     }

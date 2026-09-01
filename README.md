@@ -1,4 +1,4 @@
-# AGCE
+# AGCX
 
 React Native mobile app project.
 

@@ -34,6 +34,7 @@ import { getReferralList } from './homeActions';
 import { Passkey } from 'react-native-passkey';
 import { CHART_WEB_BASE_URL, PASSKEY_RP_ID } from '../helper/Constants';
 import { getMobilePasskeyDeviceInfo, mergePasskeyListWithLocalDeviceInfo, saveLocalPasskeyDeviceInfo } from '../helper/passkeyDeviceInfo';
+import { getNativePasskeyAssertion } from '../helper/passkeyAssertion';
 
 const toBase64URL = (str: string) =>
   str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -114,7 +115,7 @@ const getPasskeyCredentialForStepUp = async (opts: any, silent: boolean) => {
     return null;
   }
   try {
-    return await Passkey.get(request);
+    return await getNativePasskeyAssertion(request);
   } catch (e: any) {
     const msg = String(e?.message ?? e?.error ?? '');
     if (/NoCredentials|no.*credential|no viable credential/i.test(msg)) {
@@ -1447,7 +1448,7 @@ export const getWithdrawalPasskeyCredential = (silent: boolean = false) => async
         }
       }
     } else {
-      credential = await Passkey.get(request);
+      credential = await getNativePasskeyAssertion(request);
     }
 
     console.warn('[Passkey][getWithdrawalPasskeyCredential] Native Credential Received:', JSON.stringify(credential, null, 2));

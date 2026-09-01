@@ -1,5 +1,47 @@
 import { Platform } from 'react-native';
+import { Passkey } from 'react-native-passkey';
 import { PASSKEY_RP_ID } from './Constants';
+
+/** iOS sheet animation is slower; overlay must be gone before ASAuthorizationController. Android keeps 150ms. */
+export const PASSKEY_NATIVE_PROMPT_DELAY_MS = Platform.OS === 'ios' ? 300 : 150;
+
+export const waitForPasskeyNativePrompt = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, PASSKEY_NATIVE_PROMPT_DELAY_MS));
+
+export const isPasskeyAssociatedDomainError = (err: any): boolean => {
+  const msg = String(err?.message ?? err?.error ?? '');
+  return /incoming request cannot be validated|associated domain|not associated with domain|relying party/i.test(msg);
+};
+
+/**
+ * iOS: Face ID / Touch ID via platform authenticator.
+ * Android: unchanged Passkey.get (Credential Manager).
+ */
+export const getNativePasskeyAssertion = async (request: any) => {
+  if (Platform.OS !== 'ios') {
+    return await Passkey.get(request);
+  }
+
+  try {
+    return await Passkey.getPlatformKey(request);
+  } catch (e: any) {
+    const msg = String(e?.message ?? e?.error ?? '');
+    if (e?.name === 'NotAllowedError' || /cancelled|cancel|NotAllowed/i.test(msg)) {
+      throw e;
+    }
+    // Server may send Android/web credential IDs that iOS Keychain cannot match.
+    if (/NoCredentials|no.*credential|no viable credential/i.test(msg) && request?.allowCredentials?.length) {
+      const discoverableReq = {
+        challenge: request.challenge,
+        rpId: request.rpId,
+        timeout: request.timeout,
+        userVerification: request.userVerification,
+      };
+      return await Passkey.getPlatformKey(discoverableReq);
+    }
+    return await Passkey.get(request);
+  }
+};
 
 export const maybeBase64ToBase64Url = (s: string) => {
   const raw = String(s || '').trim();

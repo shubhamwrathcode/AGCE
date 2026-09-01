@@ -5,11 +5,11 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>AGCE</string>
+	<string>AGCX</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.agce</string>
+	<string>com.agcx.exchange</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -71,11 +71,11 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>AGCE requires access to the photo library.</string>
+	<string>AGCX requires access to the photo library.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>AGCE does not require access to the microphone.</string>
+	<string>AGCX does not require access to the microphone.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>AGCE requires access to the camera.</string>
+	<string>AGCX requires access to the camera.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -83,7 +83,7 @@
 			<string>com.agcx.exchange</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>agce</string>
+				<string>agcx</string>
 			</array>
 		</dict>
 	</array>
