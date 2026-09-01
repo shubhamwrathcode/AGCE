@@ -432,19 +432,19 @@ const DepositFiatScreen = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.orangeTheme }/>}
       >
         {/* Hero Banner Section (Compact Sleek Layout) */}
         <View style={[styles.heroCard, { backgroundColor: cardBg, borderColor }]}>
           <View style={styles.gatewayPill}>
-            <AppText type={TEN} weight={BOLD} style={styles.gatewayPillText} color="#D4AF37">
+            <AppText type={TEN} weight={BOLD} style={styles.gatewayPillText} color={colors.orangeTheme}>
               FIAT GATEWAY
             </AppText>
           </View>
 
           <AppText type={EIGHTEEN} weight={BOLD} style={styles.heroHeading} color={textColor}>
             Deposit Fiat.{" "}
-            <AppText type={EIGHTEEN} weight={BOLD} color="#D4AF37">Buy Crypto Seamlessly.</AppText>
+            <AppText type={EIGHTEEN} weight={BOLD} color={colors.orangeTheme}>Buy Crypto Seamlessly.</AppText>
           </AppText>
 
           <AppText type={TWELVE} style={styles.heroSub} color={subTextColor}>
@@ -500,7 +500,7 @@ const DepositFiatScreen = () => {
         {/* Dynamic Widget: Virtual Account VS Create Bank Account */}
         {vaLoading ? (
           <View style={[styles.loadingBox, { backgroundColor: cardBg, borderColor }]}>
-            <ActivityIndicator size="small" color="#D4AF37" />
+            <ActivityIndicator size="small" color={colors.orangeTheme} />
             <AppText type={THIRTEEN} style={styles.loadingText} color={subTextColor}>
               Checking virtual account…
             </AppText>
@@ -537,7 +537,7 @@ const DepositFiatScreen = () => {
                 style={styles.withdrawLink}
                 activeOpacity={0.7}
               >
-                <AppText type={TWELVE} weight={SEMI_BOLD} color="#D4AF37">
+                <AppText type={TWELVE} weight={SEMI_BOLD} color={colors.orangeTheme}>
                   Fiat Withdrawal ›
                 </AppText>
               </TouchableOpacity>
@@ -663,7 +663,7 @@ const DepositFiatScreen = () => {
                 style={styles.withdrawLink}
                 activeOpacity={0.7}
               >
-                <AppText type={TWELVE} weight={SEMI_BOLD} color="#D4AF37">
+                <AppText type={TWELVE} weight={SEMI_BOLD} color={colors.orangeTheme}>
                   Fiat Withdrawal ›
                 </AppText>
               </TouchableOpacity>
@@ -704,7 +704,7 @@ const DepositFiatScreen = () => {
                     Bank Transfer (UAE)
                   </AppText>
                   <View style={styles.recommendedBadge}>
-                    <AppText type={TEN} weight={BOLD} color="#D4AF37">
+                    <AppText type={TEN} weight={BOLD} color={colors.orangeTheme}>
                       Recommended
                     </AppText>
                   </View>
@@ -712,7 +712,7 @@ const DepositFiatScreen = () => {
                 <FastImage source={checkIc} style={styles.checkIcon} resizeMode="contain" tintColor="#10B981" />
               </View>
 
-              <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.methodSub} color="#D4AF37">
+              <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.methodSub} color={colors.orangeTheme}>
                 Virtual IBAN • Zand Bank
               </AppText>
               <AppText type={TWELVE} style={styles.methodDesc} color={subTextColor}>
@@ -725,10 +725,10 @@ const DepositFiatScreen = () => {
               onPress={handlePrimaryBtnPress}
               disabled={creating || vaLoading}
               activeOpacity={0.85}
-              style={[styles.primaryBtn, { backgroundColor: "#D4AF37" }]}
+              style={[styles.primaryBtn, { backgroundColor: colors.orangeTheme }]}
             >
               {creating ? (
-                <ActivityIndicator color="#000000" size="small" />
+                <ActivityIndicator color={"#000000"} size="small" />
               ) : (
                 <AppText type={FIFTEEN} weight={BOLD} color="#000000">
                   {primaryBtnLabel}
@@ -766,7 +766,7 @@ const DepositFiatScreen = () => {
               kycModalRef.current?.close?.();
               NavigationService.navigate(KYC_STATUS_SCREEN);
             }}
-            style={[styles.primaryBtn, { backgroundColor: "#D4AF37", width: "100%", marginTop: 24 }]}
+            style={[styles.primaryBtn, { backgroundColor: colors.orangeTheme, width: "100%", marginTop: 24 }]}
           >
             <AppText type={FIFTEEN} weight={BOLD} color="#000000">
               {kycReason === "incomplete" ? "Update KYC" : "Verify now"}

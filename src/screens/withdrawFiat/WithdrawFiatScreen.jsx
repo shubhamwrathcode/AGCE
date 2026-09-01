@@ -1664,7 +1664,7 @@ const WithdrawFiatScreen = () => {
         </View>
 
         {/* "How to withdraw Fiat?" Section */}
-        <View style={styles.sectionWrap}>
+        {/* <View style={styles.sectionWrap}>
           <AppText type={EIGHTEEN} weight={BOLD} style={styles.sectionHeading} color={textColor}>
             How to withdraw <AppText type={EIGHTEEN} weight={BOLD} color={colors.orangeTheme}>Fiat</AppText>?
           </AppText>
@@ -1700,9 +1700,9 @@ const WithdrawFiatScreen = () => {
               );
             })}
           </ScrollView>
-        </View>
+        </View> */}
 
-        <View style={{ height: 40 }} />
+        {/* <View style={{ height: 40 }} /> */}
       </ScrollView>
 
       {/* Security Verification & 2FA Modal */}
