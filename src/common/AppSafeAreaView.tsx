@@ -45,6 +45,7 @@ const AppSafeAreaView = ({
   const shellBg = splashLight ? SPLASH_BODY_BG : themeColors.background;
   const barStyle = forceBarStyle ? forceBarStyle : (isDark ? 'light-content' : 'dark-content');
   const androidStatusBg = colors.white;
+  const iosTopInset = insets.top > 0 ? insets.top : 59;
 
   const splashTopOverlay =
     splashLight && Platform.OS === 'ios' ? (
@@ -55,7 +56,7 @@ const AppSafeAreaView = ({
           top: 0,
           left: 0,
           right: 0,
-          height: insets.top,
+          height: iosTopInset,
           backgroundColor: SPLASH_STATUS_BAR_BG,
           zIndex: 2,
         }}
@@ -73,6 +74,7 @@ const AppSafeAreaView = ({
         style,
       ]}>
       <SystemBars style={source ? 'light' : (barStyle === 'light-content' ? 'light' : 'dark')} />
+      <View style={{ height: iosTopInset, width: '100%' }} />
       {source ? (
         <ImageBackground
           source={source}

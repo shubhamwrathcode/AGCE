@@ -2228,7 +2228,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: Platform.OS === "ios" ? 52 : 18,
+    paddingTop: 18,
     paddingBottom: 10,
     // borderBottomWidth: StyleSheet.hairlineWidth,
   },

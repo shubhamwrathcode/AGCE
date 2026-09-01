@@ -136,6 +136,9 @@ const Welcome = () => {
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
 
   useEffect(() => {
+    if (Platform.OS === "ios") {
+      return;
+    }
     try {
       GoogleSignin.configure({
         webClientId:

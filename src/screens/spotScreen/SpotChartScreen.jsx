@@ -1171,6 +1171,8 @@ const SpotChartScreen = () => {
     const symbol = `${pairBase}_${pairQuote}`;
     return `${CHART_WEB_BASE_URL}chart/${themeSlug}/${symbol}`;
   }, [theme, pairBase, pairQuote]);
+  console.log(chartUri,'===chart uri====');
+  
 
   const handleCurrencyChange = useCallback(
     (coin) => {
@@ -1181,7 +1183,6 @@ const SpotChartScreen = () => {
     },
     [dispatch]
   );
-  console.log(chartUri, '====chart urp ')
   // Cleaned up legacy effect as its logic is now merged into the unified subscription hook above.
 
   const [webViewReady, setWebViewReady] = useState(false);
@@ -2372,7 +2373,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: Platform.OS === "ios" ? 52 : 18,
+    paddingTop: 18,
     paddingBottom: 10,
     // borderBottomWidth: StyleSheet.hairlineWidth,
   },

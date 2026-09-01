@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import TouchableOpacityView from './TouchableOpacityView';
 import FastImage from 'react-native-fast-image';
 import {
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   starContainer: {
     position: 'absolute',
-    top: Platform.OS === 'android' ? 15 : 40,
+    top: 15,
     padding: universalPaddingHorizontalHigh,
     right: 0,
   },

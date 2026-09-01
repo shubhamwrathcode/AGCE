@@ -77,6 +77,9 @@ const Login = (): JSX.Element => {
 
   // Configure native Google Sign-In once
   useEffect(() => {
+    if (Platform.OS === "ios") {
+      return;
+    }
     try {
       GoogleSignin.configure({
         webClientId:
@@ -663,7 +666,7 @@ const Login = (): JSX.Element => {
                   tintColor={isDark ? colors.white : colors.black}
                   resizeMode="contain" style={styles.socialBrandIcon} />
               )}
-              <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: themeColors.secondaryText }}>
+              <AppText type={FIFTEEN} weight={MEDIUM} style={{ color: isDark ? colors.white : themeColors.secondaryText }}>
                 Continue with Apple
               </AppText>
             </TouchableOpacityView>

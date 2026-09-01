@@ -135,6 +135,9 @@ const Register = () => {
   const handleClearCaptcha = () => { };
 
   useEffect(() => {
+    if (Platform.OS === "ios") {
+      return;
+    }
     try {
       GoogleSignin.configure({
         webClientId:
