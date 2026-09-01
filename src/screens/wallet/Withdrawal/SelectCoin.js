@@ -9,6 +9,7 @@ import {
   Platform,
   Vibration,
   PanResponder,
+  Dimensions,
 } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
 import {
@@ -35,7 +36,7 @@ import {
   upIcon,
   downIcon,
 } from "../../../helper/ImageAssets";
-import { WITHDRAW_HISTORY_SCREEN } from "../../../navigation/routes";
+import { WITHDRAW_HISTORY_SCREEN, WITHDRAW_FIAT_SCREEN } from "../../../navigation/routes";
 import { buildCoinImageUri } from "../../../helper/coinIconUrl";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import NavigationService from "../../../navigation/NavigationService";
@@ -474,7 +475,7 @@ const SelectCoin = () => {
 
       <RBSheet customModalProps={{ statusBarTranslucent: true }}
         ref={withdrawFaqSheetRef}
-        height={420}
+        height={Math.round(Dimensions.get("window").height * 0.55)}
         closeOnDragDown
         closeOnPressMask
         keyboardAvoidingViewEnabled={false}
@@ -483,13 +484,12 @@ const SelectCoin = () => {
             backgroundColor: themeColors.background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            // borderColor: isDark ? themeColors.border : "#EEE",
-            // borderWidth: 1,
           },
-          draggableIcon: { backgroundColor: isDark ? "#374151" : "#E5E7EB", width: 40 },
+          wrapper: { backgroundColor: "rgba(0,0,0,0.6)" },
+          draggableIcon: { backgroundColor: colors.textGray },
         }}
       >
-        <View style={{ padding: 20, flex: 1 }}>
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
           <View style={styles.modalHeader}>
             <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
               Withdraw help
@@ -500,7 +500,12 @@ const SelectCoin = () => {
               </AppText>
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            style={styles.modalList}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {faqData.map((item, index) => (
               <View
                 key={String(index)}
@@ -537,6 +542,27 @@ const SelectCoin = () => {
               </View>
             ))}
           </ScrollView>
+
+          {/* Bottom Note & Withdraw Fiat Link */}
+          <View style={{ borderTopWidth: 1, borderTopColor: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0", paddingTop: 14, marginTop: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-start", flexWrap: "wrap" }}>
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                Looking to withdraw local currency (AED) instead?{" "}
+              </AppText>
+              <TouchableOpacity
+                onPress={() => {
+                  withdrawFaqSheetRef.current?.close();
+                  NavigationService.navigate(WITHDRAW_FIAT_SCREEN);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
+                  Withdraw Fiat ›
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </RBSheet>
     </AppSafeAreaView>
@@ -584,10 +610,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 15,
   },
   modalList: {
-    maxHeight: 400,
+    flex: 1,
   },
   faqItemInner: {
     paddingVertical: 12,

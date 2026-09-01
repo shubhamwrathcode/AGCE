@@ -49,6 +49,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import NavigationService from '../../navigation/NavigationService';
+import { DEPOSIT_FIAT_SCREEN } from '../../navigation/routes';
 import { buildCoinImageUri } from '../../helper/coinIconUrl';
 import { colors, darkTheme, lightTheme } from '../../theme/colors';
 import { useTheme } from '../../hooks/useTheme';
@@ -1985,6 +1986,27 @@ const DepositCoin = () => {
                             </View>
                         ))}
                     </ScrollView>
+
+                    {/* Bottom Note & Deposit Fiat Link */}
+                    <View style={{ borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0', paddingTop: 14, marginTop: 10 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+                            <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                                Looking to deposit local currency (AED) instead?{' '}
+                            </AppText>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    selectCoinFaqSheetRef.current?.close();
+                                    NavigationService.navigate(DEPOSIT_FIAT_SCREEN);
+                                }}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                activeOpacity={0.7}
+                            >
+                                <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
+                                    Deposit Fiat ›
+                                </AppText>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </View>
             </RBSheet>
 

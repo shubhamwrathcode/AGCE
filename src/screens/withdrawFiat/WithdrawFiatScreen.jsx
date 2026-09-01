@@ -20,12 +20,17 @@ import {
   WITHDRAW_FIAT_HISTORY_SCREEN,
   DEPOSIT_FIAT_SCREEN,
   SECURITY_SCREEN,
+  WALLET_WITHDRAW_SCREEN,
 } from "../../navigation/routes";
 import {
   back_ic,
   closeIcon,
   historyIcon,
+  INFO,
+  upIcon,
+  downIcon,
 } from "../../helper/ImageAssets";
+import RBSheet from "react-native-raw-bottom-sheet";
 import AnimatedBottomSheet from "../../common/AnimatedBottomSheet/AnimatedBottomSheet";
 import {
   AppSafeAreaView,
@@ -42,10 +47,34 @@ import {
   TWELVE,
   ELEVEN,
   TEN,
+  TWENTY,
 } from "../../shared";
 import { colors } from "../../theme/colors";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+const FIAT_WITHDRAW_FAQ_DATA = [
+  {
+    title: "How do I withdraw Fiat (AED) to my bank?",
+    content:
+      "To withdraw AED, first add and verify your personal UAE bank account (IBAN). Once verified, enter the withdrawal amount, review the fee breakdown, complete security verification (OTP/2FA), and submit your request.",
+  },
+  {
+    title: "Withdraw fiat — step by step",
+    content:
+      "• Add Bank Account — Enter your UAE IBAN and bank details.\n• Verify Bank Account — Confirm the email verification code sent to you.\n• Enter Amount — Specify the AED amount you wish to withdraw.\n• Security Verification — Complete 2FA / OTP verification.\n• Bank Processing — Funds are sent directly to your UAE bank account.",
+  },
+  {
+    title: "Important withdrawal rules & limits",
+    content:
+      "• Same-name account — You can only withdraw to a bank account in your own KYC-verified name.\n• Whitelist cooldown — Newly added bank accounts may have a brief security cooldown.\n• Daily limits — Withdrawals must comply with your tier's daily and single transaction limits.",
+  },
+  {
+    title: "My fiat withdrawal hasn't arrived — what should I do?",
+    content:
+      "• Check Status — Go to Withdrawal History to check if the transaction is Under review, Sent to bank, or Completed.\n• Bank settlement — UAE local transfers are usually processed within hours on business days; weekends or holidays may take longer.\n• Contact Support — If status is Completed but funds haven't reflected after 1 business day, contact support with your bank reference.",
+  },
+];
 
 // Web SVG Vector Icons
 const SecurityShieldIcon = ({ size = 20, color = colors.orangeTheme }) => (
@@ -355,6 +384,8 @@ const WithdrawFiatScreen = () => {
   const securityVerifySheetRef = useRef(null);
   const removeBankSheetRef = useRef(null);
   const noMethodsSheetRef = useRef(null);
+  const fiatWithdrawFaqSheetRef = useRef(null);
+  const [faqActiveIndex, setFaqActiveIndex] = useState(null);
 
   const previewSeq = useRef(0);
   const idempotencyKeyRef = useRef("");
@@ -1499,19 +1530,38 @@ const WithdrawFiatScreen = () => {
           Withdraw Fiat
         </AppText>
 
-        <TouchableOpacity
-          onPress={() => NavigationService.navigate(WITHDRAW_FIAT_HISTORY_SCREEN)}
-          style={styles.headerBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          activeOpacity={0.7}
-        >
-          <FastImage
-            source={historyIcon}
-            style={styles.historyHeaderIcon}
-            resizeMode={FastImage.resizeMode.contain}
-            tintColor={textColor}
-          />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setFaqActiveIndex(null);
+              fiatWithdrawFaqSheetRef.current?.open?.();
+            }}
+            style={styles.headerBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <FastImage
+              source={INFO}
+              style={styles.headerInfoIcon}
+              resizeMode={FastImage.resizeMode.contain}
+              tintColor={textColor}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => NavigationService.navigate(WITHDRAW_FIAT_HISTORY_SCREEN)}
+            style={styles.headerBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <FastImage
+              source={historyIcon}
+              style={styles.historyHeaderIcon}
+              resizeMode={FastImage.resizeMode.contain}
+              tintColor={textColor}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -1924,6 +1974,114 @@ const WithdrawFiatScreen = () => {
           </View>
         </View>
       </AnimatedBottomSheet>
+
+      {/* Fiat Withdraw Help / FAQ Bottom Sheet */}
+      {/* @ts-ignore */}
+      <RBSheet
+        customModalProps={{ statusBarTranslucent: true }}
+        ref={fiatWithdrawFaqSheetRef}
+        height={Math.round(Dimensions.get("window").height * 0.72) - 50}
+        closeOnDragDown
+        closeOnPressMask
+        customStyles={{
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            backgroundColor: themeColors.background,
+          },
+          wrapper: { backgroundColor: "rgba(0,0,0,0.6)" },
+          draggableIcon: { backgroundColor: colors.textGray },
+        }}
+      >
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
+          <View style={styles.modalHeader}>
+            <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+              Withdraw Fiat Help
+            </AppText>
+            <TouchableOpacity
+              onPress={() => fiatWithdrawFaqSheetRef.current?.close()}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <AppText type={TWENTY} style={{ color: themeColors.text }}>
+                ×
+              </AppText>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={styles.modalList}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {FIAT_WITHDRAW_FAQ_DATA.map((item, index) => (
+              <View
+                key={String(index)}
+                style={[
+                  styles.faqItemInner,
+                  index === FIAT_WITHDRAW_FAQ_DATA.length - 1 && styles.faqItemInnerLast,
+                  { borderColor: colors.inputBorder },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.faqQuestionRow}
+                  onPress={() =>
+                    setFaqActiveIndex(faqActiveIndex === index ? null : index)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <AppText
+                    type={THIRTEEN}
+                    weight={SEMI_BOLD}
+                    style={[styles.faqQuestion, { color: themeColors.secondaryText }]}
+                  >
+                    {item.title}
+                  </AppText>
+                  <FastImage
+                    source={faqActiveIndex === index ? upIcon : downIcon}
+                    resizeMode="contain"
+                    style={styles.faqArrow}
+                    tintColor={themeColors.secondaryText}
+                  />
+                </TouchableOpacity>
+                {faqActiveIndex === index && (
+                  <View style={styles.faqAnswer}>
+                    {item.content.split("\n").map((line, lineIndex) => (
+                      <AppText
+                        key={lineIndex}
+                        type={TWELVE}
+                        style={{ color: themeColors.secondaryText, lineHeight: 18 }}
+                      >
+                        {line}
+                      </AppText>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Bottom Note & Withdraw Crypto Link */}
+          <View style={{ borderTopWidth: 1, borderTopColor: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0", paddingTop: 14, marginTop: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-start", flexWrap: "wrap" }}>
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                Looking to withdraw crypto assets instead?{" "}
+              </AppText>
+              <TouchableOpacity
+                onPress={() => {
+                  fiatWithdrawFaqSheetRef.current?.close();
+                  NavigationService.navigate(WALLET_WITHDRAW_SCREEN);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
+                  Withdraw Crypto ›
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </RBSheet>
     </AppSafeAreaView>
   );
 };
@@ -1939,6 +2097,10 @@ const styles = StyleSheet.create({
   },
   headerBtn: {
     padding: 6,
+  },
+  headerInfoIcon: {
+    width: 18,
+    height: 18,
   },
   backIcon: {
     width: 18,
@@ -2334,6 +2496,40 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  modalList: {
+    flex: 1,
+  },
+  faqItemInner: {
+    paddingVertical: 12,
+    borderBottomWidth: 0.7,
+    borderBottomColor: colors.iconBgColor,
+  },
+  faqItemInnerLast: {
+    borderBottomWidth: 0,
+  },
+  faqQuestionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  faqQuestion: {
+    flex: 1,
+  },
+  faqArrow: {
+    width: 10,
+    height: 10,
+    marginLeft: 8,
+  },
+  faqAnswer: {
+    marginTop: 10,
+    paddingTop: 10,
   },
 });
 

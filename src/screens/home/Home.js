@@ -91,7 +91,7 @@ import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import { SocketContext } from "../../SocketProvider";
 import { showError } from "../../helper/logger";
 import { appOperation } from "../../appOperation";
-
+import DepositChoiceSheet from "../wallet/sheets/DepositChoiceSheet";
 import { useTheme } from "../../hooks/useTheme";
 
 const Home = () => {
@@ -105,6 +105,7 @@ const Home = () => {
   const [CheckCurrent, setCheckCurrent] = useState(getVersion());
   const [showBalance, setShowBalance] = useState(true);
 
+  const depositChoiceSheetRef = useRef(null);
   const walletBalance = useAppSelector((state) => state.wallet.walletBalance);
 
   const formatEstimateHeader = useCallback((value, decimals = 2) => {
@@ -324,7 +325,7 @@ const Home = () => {
             </View>
 
             <TouchableOpacity
-              onPress={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
+              onPress={() => depositChoiceSheetRef.current?.open?.()}
               style={{
                 backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#303236',
                 paddingHorizontal: 20,
@@ -399,6 +400,9 @@ const Home = () => {
 
 
       </ScrollView>
+
+      {/* Deposit Choice Sheet */}
+      <DepositChoiceSheet sheetRef={depositChoiceSheetRef} isDark={isDark} />
     </AppSafeAreaView>
   );
 };

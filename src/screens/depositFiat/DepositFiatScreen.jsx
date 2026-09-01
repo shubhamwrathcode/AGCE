@@ -14,11 +14,13 @@ import Toast from "react-native-simple-toast";
 import Svg, { Path, Rect } from "react-native-svg";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
+import { colors } from "../../theme/colors";
 import { appOperation } from "../../appOperation";
 import NavigationService from "../../navigation/NavigationService";
 import {
   KYC_STATUS_SCREEN,
   SELECT_COIN_SCREEN,
+  DEPOSIT_COIN_SCREEN,
   DEPOSIT_FIAT_HISTORY_SCREEN,
   WITHDRAW_FIAT_SCREEN,
 } from "../../navigation/routes";
@@ -26,7 +28,12 @@ import {
   back_ic,
   checkIc,
   historyIcon,
+  INFO,
+  upIcon,
+  downIcon,
+  closeIcon,
 } from "../../helper/ImageAssets";
+import RBSheet from "react-native-raw-bottom-sheet";
 import AnimatedBottomSheet from "../../common/AnimatedBottomSheet/AnimatedBottomSheet";
 import {
   AppSafeAreaView,
@@ -46,7 +53,30 @@ import {
   TEN,
 } from "../../shared";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+const FIAT_FAQ_DATA = [
+  {
+    title: "How do I deposit Fiat (AED) on AGCX?",
+    content:
+      "Create your dedicated Zand Bank virtual IBAN on AGCX. Then log in to your UAE banking app (ENBD, ADCB, FAB, Mashreq, etc.) and transfer AED directly to that virtual IBAN.",
+  },
+  {
+    title: "Deposit fiat — step by step",
+    content:
+      "• Complete KYC — Make sure your account is identity-verified.\n• Get Virtual IBAN — Create your dedicated UAE virtual account.\n• Copy details — Copy the IBAN, Account Name, and Bank Name (Zand Bank).\n• Transfer from bank — Send funds via your UAE bank app.\n• Instant credit — Funds are credited to your Spot AED wallet as soon as the bank settles.",
+  },
+  {
+    title: "Important deposit rules & guidelines",
+    content:
+      "• Same-name transfer — You must transfer from a bank account in your own name matching your AGCX KYC.\n• Third-party deposits — Transfers from third-party or corporate accounts will be rejected and refunded.\n• Currency — Only AED is accepted on this virtual IBAN.",
+  },
+  {
+    title: "My fiat deposit hasn't arrived — what should I do?",
+    content:
+      "• Verify IBAN — Check that you transferred to your exact AGCX virtual IBAN.\n• Bank confirmation — Ensure the transaction was marked successful in your banking app.\n• Processing time — UAE IPP/instant transfers arrive within minutes; standard transfers may take a few hours during banking business days.",
+  },
+];
 
 // Web SVG Icon Components with exact web paths & styling
 const SecurityShieldIcon = ({ size = 20, color = "#D1AA67" }) => (
@@ -209,9 +239,11 @@ const DepositFiatScreen = () => {
   const [copiedField, setCopiedField] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [kycReason, setKycReason] = useState("required");
+  const [faqActiveIndex, setFaqActiveIndex] = useState(null);
 
-  // Bottom Sheet Ref
+  // Bottom Sheet Refs
   const kycModalRef = useRef(null);
+  const fiatFaqSheetRef = useRef(null);
 
   const isKycVerified = useMemo(() => isKycVerifiedCheck(userData), [userData]);
 
@@ -363,19 +395,38 @@ const DepositFiatScreen = () => {
           Deposit Fiat
         </AppText>
 
-        <TouchableOpacity
-          onPress={() => NavigationService.navigate(DEPOSIT_FIAT_HISTORY_SCREEN)}
-          style={styles.headerBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          activeOpacity={0.7}
-        >
-          <FastImage
-            source={historyIcon}
-            style={styles.historyHeaderIcon}
-            resizeMode={FastImage.resizeMode.contain}
-            tintColor={textColor}
-          />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setFaqActiveIndex(null);
+              fiatFaqSheetRef.current?.open?.();
+            }}
+            style={styles.headerBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <FastImage
+              source={INFO}
+              style={styles.headerInfoIcon}
+              resizeMode={FastImage.resizeMode.contain}
+              tintColor={textColor}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => NavigationService.navigate(DEPOSIT_FIAT_HISTORY_SCREEN)}
+            style={styles.headerBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <FastImage
+              source={historyIcon}
+              style={styles.historyHeaderIcon}
+              resizeMode={FastImage.resizeMode.contain}
+              tintColor={textColor}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -687,46 +738,7 @@ const DepositFiatScreen = () => {
           </View>
         )}
 
-        {/* "How to deposit Fiat?" 4-Step Cards (Horizontal Scroll) */}
-        <View style={styles.sectionWrap}>
-          <AppText type={EIGHTEEN} weight={BOLD} style={styles.sectionHeading} color={textColor}>
-            How to deposit <AppText type={EIGHTEEN} weight={BOLD} color="#D4AF37">Fiat</AppText>?
-          </AppText>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.stepsScroll}
-          >
-            {HOW_STEPS.map((step) => {
-              const StepIcon = step.IconComponent;
-              return (
-                <View
-                  key={step.n}
-                  style={[
-                    styles.stepCard,
-                    {
-                      backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : "#FFFFFF",
-                      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "#E5E7EB",
-                    },
-                  ]}
-                >
-                  <View style={styles.stepCircleIcon}>
-                    <StepIcon size={18} color="#D1AA67" />
-                  </View>
-                  <AppText type={FIFTEEN} weight={BOLD} style={styles.stepTitle} color={textColor}>
-                    {step.n}. {step.title}
-                  </AppText>
-                  <AppText type={TWELVE} style={styles.stepDesc} color={subTextColor}>
-                    {step.body}
-                  </AppText>
-                </View>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        <View style={{ height: 40 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* KYC Required Modal (Exact web parity) */}
@@ -762,6 +774,114 @@ const DepositFiatScreen = () => {
           </TouchableOpacity>
         </View>
       </AnimatedBottomSheet>
+
+      {/* Fiat Deposit Help / FAQ Bottom Sheet (Exact UI parity with DepositCoin.tsx) */}
+      {/* @ts-ignore */}
+      <RBSheet
+        customModalProps={{ statusBarTranslucent: true }}
+        ref={fiatFaqSheetRef}
+        height={Math.round(Dimensions.get("window").height * 0.72) - 200}
+        closeOnDragDown
+        closeOnPressMask
+        customStyles={{
+          container: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            backgroundColor: themeColors.background,
+          },
+          wrapper: { backgroundColor: "rgba(0,0,0,0.6)" },
+          draggableIcon: { backgroundColor: colors.textGray },
+        }}
+      >
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
+          <View style={styles.modalHeader}>
+            <AppText weight={SEMI_BOLD} type={SIXTEEN} style={{ color: themeColors.text }}>
+              Deposit Fiat Help
+            </AppText>
+            <TouchableOpacity
+              onPress={() => fiatFaqSheetRef.current?.close()}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <AppText type={TWENTY} style={{ color: themeColors.text }}>
+                ×
+              </AppText>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={styles.modalList}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {FIAT_FAQ_DATA.map((item, index) => (
+              <View
+                key={String(index)}
+                style={[
+                  styles.faqItemInner,
+                  index === FIAT_FAQ_DATA.length - 1 && styles.faqItemInnerLast,
+                  { borderColor: colors.inputBorder },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.faqQuestionRow}
+                  onPress={() =>
+                    setFaqActiveIndex(faqActiveIndex === index ? null : index)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <AppText
+                    type={THIRTEEN}
+                    weight={SEMI_BOLD}
+                    style={[styles.faqQuestion, { color: themeColors.secondaryText }]}
+                  >
+                    {item.title}
+                  </AppText>
+                  <FastImage
+                    source={faqActiveIndex === index ? upIcon : downIcon}
+                    resizeMode="contain"
+                    style={styles.faqArrow}
+                    tintColor={themeColors.secondaryText}
+                  />
+                </TouchableOpacity>
+                {faqActiveIndex === index && (
+                  <View style={styles.faqAnswer}>
+                    {item.content.split("\n").map((line, lineIndex) => (
+                      <AppText
+                        key={lineIndex}
+                        type={TWELVE}
+                        style={{ color: themeColors.secondaryText, lineHeight: 18 }}
+                      >
+                        {line}
+                      </AppText>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Bottom Note & Deposit Crypto Link */}
+          <View style={{ borderTopWidth: 1, borderTopColor: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0", paddingTop: 14, marginTop: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-start", flexWrap: "wrap" }}>
+              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                Looking to deposit crypto assets instead?{" "}
+              </AppText>
+              <TouchableOpacity
+                onPress={() => {
+                  fiatFaqSheetRef.current?.close();
+                  NavigationService.navigate(DEPOSIT_COIN_SCREEN);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
+                  Deposit Crypto ›
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </RBSheet>
     </AppSafeAreaView>
   );
 };
@@ -777,6 +897,10 @@ const styles = StyleSheet.create({
   },
   headerBtn: {
     padding: 6,
+  },
+  headerInfoIcon: {
+    width: 18,
+    height: 18,
   },
   backIcon: {
     width: 18,
@@ -1069,6 +1193,46 @@ const styles = StyleSheet.create({
   kycModalDesc: {
     lineHeight: 18,
     textAlign: "center",
+  },
+  faqSectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  modalList: {
+    flex: 1,
+  },
+  faqItemInner: {
+    paddingVertical: 12,
+    borderBottomWidth: 0.7,
+    borderBottomColor: colors.iconBgColor,
+  },
+  faqItemInnerLast: {
+    borderBottomWidth: 0,
+  },
+  faqQuestionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  faqQuestion: {
+    flex: 1,
+  },
+  faqArrow: {
+    width: 10,
+    height: 10,
+    marginLeft: 8,
+  },
+  faqAnswer: {
+    marginTop: 10,
+    paddingTop: 10,
   },
 });
 

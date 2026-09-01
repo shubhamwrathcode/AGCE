@@ -1,4 +1,3 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -7,6 +6,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
+  NativeModules,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import Clipboard from "@react-native-clipboard/clipboard";
@@ -17,6 +17,7 @@ import NavigationService from "../../navigation/NavigationService";
 import {
   back_ic,
   closeIcon,
+  downIcon,
   NO_NOTIFICATION_ICON,
   NO_NOTIFICATION_ICON_LIGHT,
 } from "../../helper/ImageAssets";
@@ -37,6 +38,7 @@ import {
   ELEVEN,
 } from "../../shared";
 import { colors } from "../../theme/colors";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -48,11 +50,13 @@ const TIME_FILTER_OPTIONS = [
 ];
 
 const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All status" },
   { value: "COMPLETED", label: "Completed" },
   { value: "LIMIT_HOLD", label: "In review" },
+  { value: "REJECTED_HOLD", label: "Not accepted" },
   { value: "REFUND_PENDING", label: "Refund pending" },
   { value: "REFUNDED", label: "Refunded" },
+  { value: "REVERSED", label: "Reversed" },
   { value: "FAILED", label: "Failed" },
 ];
 
@@ -113,7 +117,7 @@ function formatHistDateHeader(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   const day = d.getDate();
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"];
   const month = monthNames[d.getMonth()];
   const year = d.getFullYear();
   const hours = String(d.getHours()).padStart(2, "0");
@@ -125,6 +129,14 @@ function formatAedAmount(val) {
   const n = Number(val);
   if (!Number.isFinite(n)) return String(val || "0.00");
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatFromLast4(item) {
+  const last4 = String(item?.debtor_iban_last4 || item?.last4 || "").trim();
+  if (last4) return `•••• ${last4}`;
+  const iban = String(item?.debtor_iban || item?.iban || "").trim();
+  if (iban && iban.length >= 4) return `•••• ${iban.slice(-4)}`;
+  return "•••• 0001";
 }
 
 function formatBankLabel(item) {
@@ -144,12 +156,15 @@ const DepositFiatHistoryScreen = () => {
   const [historyList, setHistoryList] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [timeFilter, setTimeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTx, setSelectedTx] = useState(null);
   const [copiedField, setCopiedField] = useState("");
 
   const txDetailSheetRef = useRef(null);
+  const timePickerSheetRef = useRef(null);
+  const statusPickerSheetRef = useRef(null);
 
   // Fetch Deposit History
   const fetchDepositsHistory = useCallback(async (isRefresh = false) => {
@@ -181,23 +196,57 @@ const DepositFiatHistoryScreen = () => {
     fetchDepositsHistory(true);
   };
 
-  // Copy to clipboard helper
-  const handleCopy = (text, fieldName, label) => {
-    if (!text) return;
-    Clipboard.setString(String(text));
-    setCopiedField(fieldName);
-    Toast.showWithGravity(`${label} copied`, Toast.SHORT, Toast.BOTTOM);
-    setTimeout(() => {
-      setCopiedField((cur) => (cur === fieldName ? "" : cur));
-    }, 2000);
-  };
+  // Handle Export Excel / CSV
+  const handleExportExcel = async () => {
+    if (!filteredHistory || filteredHistory.length === 0) {
+      Toast.showWithGravity("No deposit history to export.", Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
 
-  const handleCancelPress = (item) => {
-    const status = String(item.status || "").toUpperCase();
-    if (status === "LIMIT_HOLD" || status === "REFUND_PENDING") {
-      Toast.showWithGravity("Cancellation request submitted for review", Toast.SHORT, Toast.BOTTOM);
-    } else {
-      Toast.showWithGravity(`Cannot cancel deposit with status: ${status}`, Toast.SHORT, Toast.BOTTOM);
+    setExporting(true);
+    try {
+      const timeLabel = TIME_FILTER_OPTIONS.find((t) => t.value === timeFilter)?.label || "All time";
+      const statusLabel = STATUS_FILTER_OPTIONS.find((s) => s.value === statusFilter)?.label || "All status";
+
+      const headers = ["Date", "Amount", "From", "Wallet", "Status", "Reference"];
+      const rows = filteredHistory.map((item) => {
+        const statusText = STATUS_CONFIG[String(item.status || "").toUpperCase()]?.label || item.status || "—";
+        const amountStr = `${formatAedAmount(item.amount || item.net_credited || 0)} ${item.currency || "AED"}`;
+        const fromStr = formatFromLast4(item);
+        const walletStr = item.wallet_type === "spot" || !item.wallet_type ? "Spot" : String(item.wallet_type);
+        const ref = item.channel_ref_id || item.id || item._id || "";
+
+        return [
+          `"${formatHistDateHeader(item.created_at || item.credited_at)}"`,
+          `"${amountStr}"`,
+          `"${fromStr}"`,
+          `"${walletStr}"`,
+          `"${statusText}"`,
+          `"${ref}"`,
+        ].join(",");
+      });
+
+      const csvContent = [
+        `AGCE Fiat Deposits History Statement`,
+        `Exported: ${new Date().toLocaleString()} | Filter: Time: ${timeLabel}, Status: ${statusLabel} | Records: ${filteredHistory.length}`,
+        "",
+        headers.join(","),
+        ...rows,
+      ].join("\n");
+
+      const fileName = `AGCE_Fiat_Deposits_History_${new Date().toISOString().slice(0, 10)}.csv`;
+
+      if (NativeModules.FileDownloadModule?.saveToDownloads) {
+        await NativeModules.FileDownloadModule.saveToDownloads(fileName, csvContent, "text/csv");
+        Toast.showWithGravity(`Downloaded ${fileName} to Downloads folder`, Toast.LONG, Toast.BOTTOM);
+      } else {
+        Toast.showWithGravity(`File prepared: ${fileName}`, Toast.LONG, Toast.BOTTOM);
+      }
+    } catch (err) {
+      console.error("[ExportExcel] Error saving file:", err);
+      Toast.showWithGravity("Could not download deposit history.", Toast.SHORT, Toast.BOTTOM);
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -253,75 +302,84 @@ const DepositFiatHistoryScreen = () => {
         <View style={styles.headerRightSpacer} />
       </View>
 
-      {/* Filter Tabs Container */}
-      <View style={[styles.filtersContainer, { borderBottomColor: headerBorderColor }]}>
-        {/* Time Filters - Equal Width Row */}
-        <View style={styles.timeFiltersRow}>
-          {TIME_FILTER_OPTIONS.map((tf) => {
-            const active = timeFilter === tf.value;
-            return (
-              <TouchableOpacity
-                key={tf.value}
-                onPress={() => setTimeFilter(tf.value)}
-                style={[
-                  styles.timeFilterBtn,
-                  {
-                    backgroundColor: active
-                      ? (isDark ? "rgba(212,175,55,0.18)" : "#FFF8E1")
-                      : badgePillBg,
-                    borderColor: active ? colors.orangeTheme : itemBorderColor,
-                  },
-                ]}
-                activeOpacity={0.75}
-              >
-                <AppText
-                  type={TWELVE}
-                  weight={active ? BOLD : MEDIUM}
-                  color={active ? colors.orangeTheme : subTextColor}
-                  numberOfLines={1}
-                >
-                  {tf.label}
-                </AppText>
-              </TouchableOpacity>
-            );
-          })}
+      {/* Top Filter & Export Bar (Parity with Web & Screenshot) */}
+      <View style={[styles.filterBarContainer, { borderBottomColor: headerBorderColor }]}>
+        {/* Time Dropdown Column */}
+        <View style={styles.filterDropdownCol}>
+          <AppText type={TWELVE} color={subTextColor} style={styles.filterFieldLabel}>
+            Time
+          </AppText>
+          <TouchableOpacity
+            style={[styles.filterDropdownBtn, { backgroundColor: badgePillBg, borderColor: itemBorderColor }]}
+            onPress={() => timePickerSheetRef.current?.open?.()}
+            activeOpacity={0.75}
+          >
+            <AppText type={THIRTEEN} weight={MEDIUM} color={textColor} numberOfLines={1} style={styles.dropdownBtnText}>
+              {TIME_FILTER_OPTIONS.find((t) => t.value === timeFilter)?.label || "All time"}
+            </AppText>
+            <FastImage
+              source={downIcon}
+              style={styles.dropdownChevronIcon}
+              resizeMode="contain"
+              tintColor={subTextColor}
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* Status Filters - Uniform Equal Width Scroll */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statusFilterScroll}
-        >
-          {STATUS_FILTER_OPTIONS.map((sf) => {
-            const active = statusFilter === sf.value;
-            return (
+        {/* Status Dropdown Column */}
+        <View style={styles.filterDropdownCol}>
+          <AppText type={TWELVE} color={subTextColor} style={styles.filterFieldLabel}>
+            Status
+          </AppText>
+          <TouchableOpacity
+            style={[styles.filterDropdownBtn, { backgroundColor: badgePillBg, borderColor: itemBorderColor }]}
+            onPress={() => statusPickerSheetRef.current?.open?.()}
+            activeOpacity={0.75}
+          >
+            <AppText type={THIRTEEN} weight={MEDIUM} color={textColor} numberOfLines={1} style={styles.dropdownBtnText}>
+              {STATUS_FILTER_OPTIONS.find((s) => s.value === statusFilter)?.label || "All status"}
+            </AppText>
+            <FastImage
+              source={downIcon}
+              style={styles.dropdownChevronIcon}
+              resizeMode="contain"
+              tintColor={subTextColor}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Export Excel Button Column */}
+        {(() => {
+          const isExportDisabled = exporting || historyLoading || filteredHistory.length === 0;
+          return (
+            <View style={styles.exportBtnCol}>
               <TouchableOpacity
-                key={sf.value}
-                onPress={() => setStatusFilter(sf.value)}
                 style={[
-                  styles.statusFilterPill,
+                  styles.exportExcelBtn,
                   {
-                    backgroundColor: active
-                      ? (isDark ? "rgba(212,175,55,0.18)" : "#FFF8E1")
-                      : badgePillBg,
-                    borderColor: active ? "#D4AF37" : itemBorderColor,
+                    borderColor: isExportDisabled ? itemBorderColor : colors.orangeTheme,
+                    opacity: isExportDisabled ? 0.45 : 1,
                   },
                 ]}
+                onPress={handleExportExcel}
+                disabled={isExportDisabled}
                 activeOpacity={0.75}
               >
-                <AppText
-                  type={TWELVE}
-                  weight={active ? BOLD : MEDIUM}
-                  color={active ? "#D4AF37" : subTextColor}
-                  numberOfLines={1}
-                >
-                  {sf.label}
-                </AppText>
+                {exporting ? (
+                  <ActivityIndicator size="small" color={colors.orangeTheme} />
+                ) : (
+                  <AppText
+                    type={THIRTEEN}
+                    weight={SEMI_BOLD}
+                    color={isExportDisabled ? subTextColor : colors.orangeTheme}
+                  >
+                    Export Excel
+                  </AppText>
+                )}
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+            </View>
+          );
+        })()}
       </View>
 
       {/* Main List ScrollView */}
@@ -363,14 +421,18 @@ const DepositFiatHistoryScreen = () => {
               const statusBadgeBg = isDark ? cfg.darkBg : cfg.lightBg;
 
               const amountFormatted = `${formatAedAmount(item.amount || item.net_credited || 0)} ${item.currency || "AED"}`;
-              const feeFormatted = `${formatAedAmount(item.fee_amount || 0)} ${item.currency || "AED"}`;
               const walletLabel = item.wallet_type === "spot" || !item.wallet_type ? "Spot" : String(item.wallet_type);
-              const bankLabel = formatBankLabel(item);
+              const fromLabel = formatFromLast4(item);
 
               return (
-                <View
+                <TouchableOpacity
                   key={item.id || item._id || String(idx)}
                   style={[styles.historyItemCard, { borderBottomColor: itemBorderColor }]}
+                  onPress={() => {
+                    setSelectedTx(item);
+                    txDetailSheetRef.current?.open?.();
+                  }}
+                  activeOpacity={0.7}
                 >
                   {/* Top Header: Date/Time + Status Badge */}
                   <View style={styles.cardHeaderRow}>
@@ -385,7 +447,7 @@ const DepositFiatHistoryScreen = () => {
                     </View>
                   </View>
 
-                  {/* Key-Value Data Rows */}
+                  {/* Key-Value Data Rows (3 Clean rows matching Web Screenshot) */}
                   <View style={styles.kvList}>
                     {/* Amount */}
                     <View style={styles.kvRow}>
@@ -397,13 +459,13 @@ const DepositFiatHistoryScreen = () => {
                       </AppText>
                     </View>
 
-                    {/* Fee */}
+                    {/* From */}
                     <View style={styles.kvRow}>
                       <AppText type={FOURTEEN} color={subTextColor}>
-                        Fee
+                        From
                       </AppText>
                       <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                        {feeFormatted}
+                        {fromLabel}
                       </AppText>
                     </View>
 
@@ -416,64 +478,8 @@ const DepositFiatHistoryScreen = () => {
                         {walletLabel}
                       </AppText>
                     </View>
-
-                    {/* Bank */}
-                    <View style={styles.kvRow}>
-                      <AppText type={FOURTEEN} color={subTextColor}>
-                        Bank
-                      </AppText>
-                      <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                        {bankLabel}
-                      </AppText>
-                    </View>
-
-                    {/* Action Row */}
-                    <View style={styles.actionRow}>
-                      <AppText type={FOURTEEN} color={subTextColor}>
-                        Action
-                      </AppText>
-
-                      <View style={styles.actionButtonsWrap}>
-                        {/* Review / Details Button */}
-                        <TouchableOpacity
-                          activeOpacity={0.75}
-                          onPress={() => {
-                            setSelectedTx(item);
-                            txDetailSheetRef.current?.open?.();
-                          }}
-                          style={[
-                            styles.actionBtn,
-                            {
-                              borderColor: isDark ? colors.orangeTheme : "#B45309",
-                              backgroundColor: isDark ? "rgba(209,170,103,0.06)" : "#FFFBEB",
-                            },
-                          ]}
-                        >
-                          <AppText type={TWELVE} weight={SEMI_BOLD} color={isDark ? colors.orangeTheme : "#B45309"}>
-                            Review
-                          </AppText>
-                        </TouchableOpacity>
-
-                        {/* Cancel Button */}
-                        <TouchableOpacity
-                          activeOpacity={0.75}
-                          onPress={() => handleCancelPress(item)}
-                          style={[
-                            styles.actionBtn,
-                            {
-                              borderColor: isDark ? "rgba(239,68,68,0.7)" : "#DC2626",
-                              backgroundColor: isDark ? "rgba(239,68,68,0.06)" : "#FEF2F2",
-                            },
-                          ]}
-                        >
-                          <AppText type={TWELVE} weight={SEMI_BOLD} color={isDark ? "#F87171" : "#DC2626"}>
-                            Cancel
-                          </AppText>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -600,6 +606,118 @@ const DepositFiatHistoryScreen = () => {
           ) : null}
         </View>
       </AnimatedBottomSheet>
+
+      {/* Time Filter Picker Bottom Sheet */}
+      <AnimatedBottomSheet
+        ref={timePickerSheetRef}
+        sheetHeight={Math.min(SCREEN_HEIGHT * 0.5, 360)}
+        isDark={isDark}
+      >
+        <View style={styles.pickerSheetInner}>
+          <View style={styles.pickerSheetHeader}>
+            <AppText type={SIXTEEN} weight={BOLD} color={textColor}>
+              Select Time Range
+            </AppText>
+            <TouchableOpacity
+              onPress={() => timePickerSheetRef.current?.close?.()}
+              style={styles.pickerCloseBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <FastImage source={closeIcon} style={styles.closeIconSmall} resizeMode="contain" tintColor={subTextColor} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            {TIME_FILTER_OPTIONS.map((tf) => {
+              const active = timeFilter === tf.value;
+              return (
+                <TouchableOpacity
+                  key={tf.value}
+                  onPress={() => {
+                    setTimeFilter(tf.value);
+                    timePickerSheetRef.current?.close?.();
+                  }}
+                  style={[
+                    styles.pickerOptionRow,
+                    { borderBottomColor: itemBorderColor },
+                    active && { backgroundColor: isDark ? "rgba(209,170,103,0.1)" : "#FFFDF5" },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <AppText
+                    type={FOURTEEN}
+                    weight={active ? BOLD : MEDIUM}
+                    color={active ? colors.orangeTheme : textColor}
+                  >
+                    {tf.label}
+                  </AppText>
+                  {active ? (
+                    <AppText type={FOURTEEN} weight={BOLD} color={colors.orangeTheme}>
+                      ✓
+                    </AppText>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </AnimatedBottomSheet>
+
+      {/* Status Filter Picker Bottom Sheet */}
+      <AnimatedBottomSheet
+        ref={statusPickerSheetRef}
+        sheetHeight={Math.min(SCREEN_HEIGHT * 0.72, 480)}
+        isDark={isDark}
+      >
+        <View style={styles.pickerSheetInner}>
+          <View style={styles.pickerSheetHeader}>
+            <AppText type={SIXTEEN} weight={BOLD} color={textColor}>
+              Select Status
+            </AppText>
+            <TouchableOpacity
+              onPress={() => statusPickerSheetRef.current?.close?.()}
+              style={styles.pickerCloseBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <FastImage source={closeIcon} style={styles.closeIconSmall} resizeMode="contain" tintColor={subTextColor} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            {STATUS_FILTER_OPTIONS.map((sf) => {
+              const active = statusFilter === sf.value;
+              return (
+                <TouchableOpacity
+                  key={sf.value}
+                  onPress={() => {
+                    setStatusFilter(sf.value);
+                    statusPickerSheetRef.current?.close?.();
+                  }}
+                  style={[
+                    styles.pickerOptionRow,
+                    { borderBottomColor: itemBorderColor },
+                    active && { backgroundColor: isDark ? "rgba(209,170,103,0.1)" : "#FFFDF5" },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <AppText
+                    type={FOURTEEN}
+                    weight={active ? BOLD : MEDIUM}
+                    color={active ? colors.orangeTheme : textColor}
+                  >
+                    {sf.label}
+                  </AppText>
+                  {active ? (
+                    <AppText type={FOURTEEN} weight={BOLD} color={colors.orangeTheme}>
+                      ✓
+                    </AppText>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </AnimatedBottomSheet>
     </AppSafeAreaView>
   );
 };
@@ -623,37 +741,73 @@ const styles = StyleSheet.create({
   headerRightSpacer: {
     width: 30,
   },
-  filtersContainer: {
+  filterBarContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 10,
+    paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  timeFiltersRow: {
-    flexDirection: "row",
     gap: 8,
-    marginBottom: 10,
   },
-  timeFilterBtn: {
+  filterDropdownCol: {
     flex: 1,
-    paddingVertical: 8,
+  },
+  filterFieldLabel: {
+    marginBottom: 6,
+    paddingLeft: 2,
+  },
+  filterDropdownBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    height: 40,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  dropdownBtnText: {
+    flex: 1,
+    marginRight: 4,
+  },
+  dropdownChevronIcon: {
+    width: 12,
+    height: 12,
+  },
+  exportBtnCol: {
+    flex: 1.15,
+  },
+  exportExcelBtn: {
+    height: 40,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 8,
   },
-  statusFilterScroll: {
-    gap: 8,
-    paddingRight: 16,
+  pickerSheetInner: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
-  statusFilterPill: {
-    minWidth: 110,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
+  pickerSheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
+    marginBottom: 16,
+  },
+  pickerCloseBtn: {
+    padding: 6,
+  },
+  pickerOptionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderRadius: 8,
   },
   scrollContent: {
     paddingHorizontal: 16,

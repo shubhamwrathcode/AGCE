@@ -7,6 +7,9 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
+  Share,
+  Platform,
+  NativeModules,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import Clipboard from "@react-native-clipboard/clipboard";
@@ -15,9 +18,12 @@ import { useTheme } from "../../hooks/useTheme";
 import { colors } from "../../theme/colors";
 import { appOperation } from "../../appOperation";
 import NavigationService from "../../navigation/NavigationService";
+import { CREATE_TICKET_SCREEN } from "../../navigation/routes";
 import {
   back_ic,
   closeIcon,
+  copyIcon,
+  downIcon,
   NO_NOTIFICATION_ICON,
   NO_NOTIFICATION_ICON_LIGHT,
 } from "../../helper/ImageAssets";
@@ -34,6 +40,7 @@ import {
   FOURTEEN,
   THIRTEEN,
   TWELVE,
+  SIXTEEN,
 } from "../../shared";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -176,6 +183,92 @@ function formatBankLabel(item) {
   return item?.bank_name || ben?.bank_name || "—";
 }
 
+function buildWithdrawSteps(row) {
+  if (!row) return [];
+  const requested = { title: "Withdrawal requested", time: formatHistDateHeader(row.created_at), emphasized: false };
+  if (row.cancelled) {
+    return [
+      requested,
+      { title: "Cancelled", time: formatHistDateHeader(row.finalized_at || row.updated_at || row.created_at), emphasized: true },
+    ];
+  }
+  if (row.status === "REJECTED") {
+    return [
+      requested,
+      { title: "Rejected", time: formatHistDateHeader(row.finalized_at || row.updated_at || row.created_at), emphasized: true },
+    ];
+  }
+  if (row.status === "FAILED") {
+    return [
+      requested,
+      { title: "Failed", time: formatHistDateHeader(row.finalized_at || row.updated_at || row.created_at), emphasized: true },
+    ];
+  }
+  if (row.status === "REVERSED") {
+    return [
+      requested,
+      { title: "Reversed", time: formatHistDateHeader(row.finalized_at || row.updated_at || row.created_at), emphasized: true },
+    ];
+  }
+  if (row.status === "COMPLETED" || row.status === "PROCESSED") {
+    return [
+      requested,
+      { title: "Sent to bank", time: formatHistDateHeader(row.initiated_at || row.created_at), emphasized: false },
+      { title: "Completed", time: formatHistDateHeader(row.finalized_at || row.updated_at || row.created_at), emphasized: true },
+    ];
+  }
+  if (row.status === "INITIATED") {
+    return [
+      requested,
+      { title: "Sent to bank", time: formatHistDateHeader(row.initiated_at || row.created_at), emphasized: true },
+    ];
+  }
+  if (row.status === "SUBMITTED") {
+    return [
+      requested,
+      { title: "Submitted to bank", time: formatHistDateHeader(row.created_at), emphasized: true },
+    ];
+  }
+  return [
+    requested,
+    { title: row.statusLabel || "Under review", time: formatHistDateHeader(row.created_at), emphasized: true },
+  ];
+}
+
+function getStepColors(stepIndex, totalSteps, outcome) {
+  const isLast = stepIndex === totalSteps - 1;
+  if (isLast) {
+    if (outcome === "danger") {
+      return {
+        core: "#EF4444",
+        halo: "rgba(239, 68, 68, 0.22)",
+      };
+    }
+    if (outcome === "pending") {
+      return {
+        core: "#F59E0B",
+        halo: "rgba(245, 158, 11, 0.28)",
+      };
+    }
+    return {
+      core: "#00C087",
+      halo: "rgba(0, 192, 135, 0.18)",
+    };
+  }
+
+  // Initial / Intermediate steps (Green)
+  return {
+    core: "#00C087",
+    halo: "rgba(0, 192, 135, 0.18)",
+  };
+}
+
+function getLineColor(stepIndex, totalSteps, outcome) {
+  if (outcome === "danger") return "rgba(239, 68, 68, 0.5)";
+  if (outcome === "pending") return "rgba(245, 158, 11, 0.55)";
+  return "rgba(0, 192, 135, 0.4)";
+}
+
 const WithdrawFiatHistoryScreen = () => {
   const { colors: themeColors, isDark } = useTheme();
 
@@ -188,9 +281,12 @@ const WithdrawFiatHistoryScreen = () => {
   const [selectedTx, setSelectedTx] = useState(null);
   const [copiedField, setCopiedField] = useState("");
   const [cancellingId, setCancellingId] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const txDetailSheetRef = useRef(null);
   const cancelConfirmSheetRef = useRef(null);
+  const timePickerSheetRef = useRef(null);
+  const statusPickerSheetRef = useRef(null);
   const [targetCancelItem, setTargetCancelItem] = useState(null);
 
   // Fetch Withdrawal History (Exact Web API Mapping)
@@ -238,6 +334,73 @@ const WithdrawFiatHistoryScreen = () => {
     setTimeout(() => {
       setCopiedField((cur) => (cur === fieldName ? "" : cur));
     }, 2000);
+  };
+
+  // Handle Export Excel / CSV
+  const handleExportExcel = async () => {
+    console.log("[ExportExcel] Button pressed. Filtered records count:", filteredHistory?.length);
+
+    if (!filteredHistory || filteredHistory.length === 0) {
+      console.warn("[ExportExcel] No records to export.");
+      Toast.showWithGravity("No withdrawals history to export.", Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const timeLabel = TIME_FILTER_OPTIONS.find((t) => t.value === timeFilter)?.label || "All time";
+      const statusLabel = STATUS_FILTER_OPTIONS.find((s) => s.value === statusFilter)?.label || "All status";
+
+      const headers = ["Date", "Amount", "Fee", "Net Sent", "Bank", "Status", "Reason", "Wallet", "Reference"];
+      const rows = filteredHistory.map((item) => {
+        const ben = item.whitelist || item.beneficiary || null;
+        const bankLine = [formatBankLabel(item), ben?.bank_name || item.bank_name].filter(Boolean).join(" · ");
+        const statusText = item.statusLabel || (item.cancelled ? "Cancelled" : item.status || "—");
+        const reason = item.status_reason || item.reject_reason || "";
+        const netAmount = `${formatAedAmount(item.net_aed || item.amount || 0)} ${item.currency || "AED"}`;
+        const grossAmount = `${formatAedAmount(item.amount || 0)} ${item.currency || "AED"}`;
+        const feeAmount = `${formatAedAmount(item.fee_aed || item.fee || 0)} ${item.currency || "AED"}`;
+        const ref = item.id || item._id || "";
+
+        return [
+          `"${formatHistDateHeader(item.created_at)}"`,
+          `"${grossAmount}"`,
+          `"${feeAmount}"`,
+          `"${netAmount}"`,
+          `"${bankLine.replace(/"/g, '""')}"`,
+          `"${statusText}"`,
+          `"${reason.replace(/"/g, '""')}"`,
+          `"${item.wallet_type || "Spot"}"`,
+          `"${ref}"`,
+        ].join(",");
+      });
+
+      const csvContent = [
+        `AGCE Fiat Withdrawals History Statement`,
+        `Exported: ${new Date().toLocaleString()} | Filter: Time: ${timeLabel}, Status: ${statusLabel} | Records: ${filteredHistory.length}`,
+        "",
+        headers.join(","),
+        ...rows,
+      ].join("\n");
+
+      const fileName = `AGCE_Fiat_Withdrawals_History_${new Date().toISOString().slice(0, 10)}.csv`;
+      console.log("[ExportExcel] Generated file content. Target fileName:", fileName);
+      console.log("[ExportExcel] NativeModules.FileDownloadModule:", NativeModules.FileDownloadModule);
+
+      if (NativeModules.FileDownloadModule?.saveToDownloads) {
+        const savedPath = await NativeModules.FileDownloadModule.saveToDownloads(fileName, csvContent, "text/csv");
+        console.log("[ExportExcel] File successfully saved to Downloads at:", savedPath);
+        Toast.showWithGravity(`Downloaded ${fileName} to Downloads folder`, Toast.LONG, Toast.BOTTOM);
+      } else {
+        console.warn("[ExportExcel] FileDownloadModule not found on native side. Please ensure app is reinstalled.");
+        Toast.showWithGravity(`File prepared: ${fileName}`, Toast.LONG, Toast.BOTTOM);
+      }
+    } catch (err) {
+      console.error("[ExportExcel] Error saving file:", err);
+      Toast.showWithGravity("Could not download withdrawals history.", Toast.SHORT, Toast.BOTTOM);
+    } finally {
+      setExporting(false);
+    }
   };
 
   // Handle Cancel Withdrawal Click
@@ -329,75 +492,84 @@ const WithdrawFiatHistoryScreen = () => {
         <View style={styles.headerRightSpacer} />
       </View>
 
-      {/* Filter Tabs Container */}
-      <View style={[styles.filtersContainer, { borderBottomColor: headerBorderColor }]}>
-        {/* Time Filters - Equal Width Row */}
-        <View style={styles.timeFiltersRow}>
-          {TIME_FILTER_OPTIONS.map((tf) => {
-            const active = timeFilter === tf.value;
-            return (
-              <TouchableOpacity
-                key={tf.value}
-                onPress={() => setTimeFilter(tf.value)}
-                style={[
-                  styles.timeFilterBtn,
-                  {
-                    backgroundColor: active
-                      ? (isDark ? "rgba(209,170,103,0.18)" : "#FFFDF5")
-                      : badgePillBg,
-                    borderColor: active ? colors.orangeTheme : itemBorderColor,
-                  },
-                ]}
-                activeOpacity={0.75}
-              >
-                <AppText
-                  type={TWELVE}
-                  weight={active ? BOLD : MEDIUM}
-                  color={active ? colors.orangeTheme : subTextColor}
-                  numberOfLines={1}
-                >
-                  {tf.label}
-                </AppText>
-              </TouchableOpacity>
-            );
-          })}
+      {/* Filter Dropdowns & Export Button Row (Matching Web Screenshot) */}
+      <View style={[styles.filtersRowContainer, { borderBottomColor: headerBorderColor }]}>
+        {/* Time Dropdown Column */}
+        <View style={styles.filterDropdownCol}>
+          <AppText type={TWELVE} color={subTextColor} style={styles.filterFieldLabel}>
+            Time
+          </AppText>
+          <TouchableOpacity
+            style={[styles.filterDropdownBtn, { backgroundColor: badgePillBg, borderColor: itemBorderColor }]}
+            onPress={() => timePickerSheetRef.current?.open?.()}
+            activeOpacity={0.75}
+          >
+            <AppText type={THIRTEEN} weight={MEDIUM} color={textColor} numberOfLines={1} style={styles.dropdownBtnText}>
+              {TIME_FILTER_OPTIONS.find((t) => t.value === timeFilter)?.label || "All time"}
+            </AppText>
+            <FastImage
+              source={downIcon}
+              style={styles.dropdownChevronIcon}
+              resizeMode="contain"
+              tintColor={subTextColor}
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* Status Filters - Uniform Equal Width Scroll */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statusFilterScroll}
-        >
-          {STATUS_FILTER_OPTIONS.map((sf) => {
-            const active = statusFilter === sf.value;
-            return (
+        {/* Status Dropdown Column */}
+        <View style={styles.filterDropdownCol}>
+          <AppText type={TWELVE} color={subTextColor} style={styles.filterFieldLabel}>
+            Status
+          </AppText>
+          <TouchableOpacity
+            style={[styles.filterDropdownBtn, { backgroundColor: badgePillBg, borderColor: itemBorderColor }]}
+            onPress={() => statusPickerSheetRef.current?.open?.()}
+            activeOpacity={0.75}
+          >
+            <AppText type={THIRTEEN} weight={MEDIUM} color={textColor} numberOfLines={1} style={styles.dropdownBtnText}>
+              {STATUS_FILTER_OPTIONS.find((s) => s.value === statusFilter)?.label || "All status"}
+            </AppText>
+            <FastImage
+              source={downIcon}
+              style={styles.dropdownChevronIcon}
+              resizeMode="contain"
+              tintColor={subTextColor}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Export Excel Button Column */}
+        {(() => {
+          const isExportDisabled = exporting || historyLoading || filteredHistory.length === 0;
+          return (
+            <View style={styles.exportBtnCol}>
               <TouchableOpacity
-                key={sf.value}
-                onPress={() => setStatusFilter(sf.value)}
                 style={[
-                  styles.statusFilterPill,
+                  styles.exportExcelBtn,
                   {
-                    backgroundColor: active
-                      ? (isDark ? "rgba(209,170,103,0.18)" : "#FFFDF5")
-                      : badgePillBg,
-                    borderColor: active ? colors.orangeTheme : itemBorderColor,
+                    borderColor: isExportDisabled ? itemBorderColor : colors.orangeTheme,
+                    opacity: isExportDisabled ? 0.45 : 1,
                   },
                 ]}
+                onPress={handleExportExcel}
+                disabled={isExportDisabled}
                 activeOpacity={0.75}
               >
-                <AppText
-                  type={TWELVE}
-                  weight={active ? BOLD : MEDIUM}
-                  color={active ? colors.orangeTheme : subTextColor}
-                  numberOfLines={1}
-                >
-                  {sf.label}
-                </AppText>
+                {exporting ? (
+                  <ActivityIndicator size="small" color={colors.orangeTheme} />
+                ) : (
+                  <AppText
+                    type={THIRTEEN}
+                    weight={SEMI_BOLD}
+                    color={isExportDisabled ? subTextColor : colors.orangeTheme}
+                  >
+                    Export Excel
+                  </AppText>
+                )}
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+            </View>
+          );
+        })()}
       </View>
 
       {/* Main List ScrollView */}
@@ -566,134 +738,172 @@ const WithdrawFiatHistoryScreen = () => {
       {/* Transaction Detail Bottom Sheet */}
       <AnimatedBottomSheet
         ref={txDetailSheetRef}
-        sheetHeight={Math.min(SCREEN_HEIGHT * 0.72, 540)}
+        sheetHeight={Math.min(SCREEN_HEIGHT * 0.88, 620)}
         isDark={isDark}
       >
         <View style={styles.txSheetInner}>
           <View style={styles.txSheetHeader}>
             <AppText type={EIGHTEEN} weight={BOLD} color={textColor}>
-              Withdrawal Details
+              Withdrawal details
             </AppText>
             <TouchableOpacity
               onPress={() => txDetailSheetRef.current?.close?.()}
-              style={[styles.closeCircle, { backgroundColor: badgePillBg }]}
+              style={styles.txCloseBtn}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <FastImage source={closeIcon} style={styles.closeIconSmall} resizeMode="contain" tintColor={subTextColor} />
             </TouchableOpacity>
           </View>
 
-          {selectedTx ? (
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-              <View style={styles.txAmountHero}>
-                <AppText type={TWENTY_FOUR} weight={BOLD} color={textColor}>
-                  {formatAedAmount(selectedTx.net_aed || selectedTx.amount || 0)} {selectedTx.currency || "AED"}
-                </AppText>
-                <View
-                  style={[
-                    styles.statusBadgePill,
-                    {
-                      marginTop: 8,
-                      alignSelf: "center",
-                      backgroundColor: selectedTx.cancelled
-                        ? (isDark ? "rgba(255,255,255,0.08)" : "#F1F5F9")
-                        : (isDark ? "rgba(209,170,103,0.15)" : "#FFFDF5"),
-                    },
-                  ]}
-                >
-                  <AppText
-                    type={TWELVE}
-                    weight={BOLD}
-                    color={selectedTx.cancelled ? (isDark ? "#A1A1AA" : "#64748B") : colors.orangeTheme}
+          {selectedTx ? (() => {
+            const steps = buildWithdrawSteps(selectedTx);
+            const statusKey = String(selectedTx.status || "").toUpperCase();
+            const isCancelled = selectedTx.cancelled;
+            const isSuccess = statusKey === "COMPLETED" || statusKey === "PROCESSED";
+            const isDanger = statusKey === "REJECTED" || statusKey === "FAILED" || statusKey === "REVERSED";
+
+            const stepperOutcome = isSuccess ? "success" : isDanger ? "danger" : "pending";
+
+            const ben = selectedTx.whitelist || selectedTx.beneficiary || null;
+            const bankLine = [formatBankLabel(selectedTx), ben?.bank_name || selectedTx.bank_name].filter((v) => v && v !== "—").join(" · ");
+            const accountNameVal = ben?.account_name_masked || selectedTx.account_name_masked || "";
+
+            const fields = [
+              { label: "Status", value: selectedTx.statusLabel || (isCancelled ? "Cancelled" : STATUS_CONFIG[statusKey]?.label || selectedTx.status) },
+              { label: "Date", value: formatHistDateHeader(selectedTx.created_at) },
+              { label: "Withdraw amount", value: `${formatAedAmount(selectedTx.amount)} ${selectedTx.currency || "AED"}` },
+              { label: "Fee", value: `${formatAedAmount(selectedTx.fee_aed || selectedTx.fee || 0)} ${selectedTx.currency || "AED"}` },
+              { label: "Sent to bank", value: `${formatAedAmount(selectedTx.net_aed || selectedTx.amount || 0)} ${selectedTx.currency || "AED"}` },
+              { label: "Wallet", value: selectedTx.wallet_type === "spot" || !selectedTx.wallet_type ? "Spot" : String(selectedTx.wallet_type) },
+              { label: "Bank account", value: bankLine },
+              { label: "Account name", value: accountNameVal },
+              { label: "Approval", value: selectedTx.approval_mode === "AUTO" ? "Auto" : "Manual" },
+              { label: "Reference", value: selectedTx.id || selectedTx._id, copy: true, fieldName: "ref_id" },
+              { label: "Bank reference", value: selectedTx.channel_ref_id, copy: true, fieldName: "bank_ref" },
+              { label: "Sent at", value: formatHistDateHeader(selectedTx.initiated_at) },
+              { label: "Finalized", value: formatHistDateHeader(selectedTx.finalized_at) },
+            ].filter((f) => f.value && f.value !== "—");
+
+            const canCancelTx = !isCancelled && (statusKey === "AWAITING_ADMIN" || statusKey === "SUBMITTED");
+
+            return (
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+                {/* Stepper Progress */}
+                <View style={styles.stepperContainer}>
+                  {steps.map((s, i, arr) => {
+                    const isLast = i === arr.length - 1;
+                    const stepColors = getStepColors(i, arr.length, stepperOutcome);
+                    const lineColor = getLineColor(i, arr.length, stepperOutcome);
+                    return (
+                      <View key={`step-${i}`} style={styles.stepRow}>
+                        <View style={styles.stepIndicatorCol}>
+                          <View style={[styles.stepDotHalo, { backgroundColor: stepColors.halo }]}>
+                            <View style={[styles.stepDotCore, { backgroundColor: stepColors.core }]} />
+                          </View>
+                          {!isLast ? (
+                            <View style={[styles.stepLine, { backgroundColor: lineColor }]} />
+                          ) : null}
+                        </View>
+                        <View style={[styles.stepTextCol, !isLast && { paddingBottom: 16 }]}>
+                          <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
+                            {s.title}
+                          </AppText>
+                          {s.time && s.time !== "—" ? (
+                            <AppText type={TWELVE} color={subTextColor} style={{ marginTop: 2 }}>
+                              {s.time}
+                            </AppText>
+                          ) : null}
+                          {isLast && (selectedTx.status_reason || selectedTx.reject_reason || (isSuccess ? "AED was sent to your bank" : "")) ? (
+                            <AppText
+                              type={TWELVE}
+                              color={isDanger ? "#EF4444" : subTextColor}
+                              style={{ marginTop: 4 }}
+                            >
+                              {selectedTx.status_reason || selectedTx.reject_reason || (isSuccess ? "AED was sent to your bank" : "")}
+                            </AppText>
+                          ) : null}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Table of Details */}
+                <View style={styles.txDetailList}>
+                  {fields.map((f) => (
+                    <View key={f.label} style={styles.txDetailRow}>
+                      <AppText type={THIRTEEN} color={subTextColor} style={styles.txDetailLabel}>
+                        {f.label}
+                      </AppText>
+                      <View style={styles.copyableValueRow}>
+                        <AppText
+                          type={THIRTEEN}
+                          weight={BOLD}
+                          color={textColor}
+                          numberOfLines={1}
+                          ellipsizeMode={f.copy ? "middle" : "tail"}
+                          style={styles.copyableText}
+                        >
+                          {f.value}
+                        </AppText>
+                        {f.copy ? (
+                          <TouchableOpacity
+                            onPress={() => handleCopy(f.value, f.fieldName, f.label)}
+                            style={[
+                              styles.copyIconBtn,
+                              {
+                                backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "#F3F4F6",
+                                borderColor: itemBorderColor,
+                              },
+                            ]}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            activeOpacity={0.7}
+                          >
+                            <FastImage
+                              source={copyIcon}
+                              style={styles.copyIconImage}
+                              resizeMode="contain"
+                              tintColor={subTextColor}
+                            />
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Cancel Button if eligible */}
+                {canCancelTx ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      txDetailSheetRef.current?.close?.();
+                      handleCancelClick(selectedTx);
+                    }}
+                    style={[styles.modalCancelFullBtn, { backgroundColor: colors.orangeTheme }]}
+                    activeOpacity={0.85}
                   >
-                    {selectedTx.statusLabel || (selectedTx.cancelled ? "Cancelled" : STATUS_CONFIG[String(selectedTx.status || "").toUpperCase()]?.label || selectedTx.status)}
-                  </AppText>
-                </View>
-                {selectedTx.status_reason || selectedTx.reject_reason ? (
-                  <AppText type={TWELVE} color={selectedTx.cancelled ? subTextColor : "#EF4444"} style={{ marginTop: 6, textAlign: "center" }}>
-                    {selectedTx.status_reason || selectedTx.reject_reason}
-                  </AppText>
-                ) : null}
-              </View>
-
-              <View style={[styles.txDetailList, { borderColor: itemBorderColor }]}>
-                {selectedTx.id || selectedTx._id ? (
-                  <View style={styles.txDetailRow}>
-                    <AppText type={THIRTEEN} weight={MEDIUM} color={subTextColor}>Transaction ID</AppText>
-                    <View style={styles.copyableValueRow}>
-                      <AppText type={FOURTEEN} weight={BOLD} color={textColor} numberOfLines={1}>
-                        {selectedTx.id || selectedTx._id}
-                      </AppText>
-                      <TouchableOpacity
-                        onPress={() => handleCopy(selectedTx.id || selectedTx._id, "tx_id", "ID")}
-                        style={[styles.copyBtn, { backgroundColor: badgePillBg }]}
-                      >
-                        <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
-                          {copiedField === "tx_id" ? "Copied" : "Copy"}
-                        </AppText>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : null}
-
-                {selectedTx.channel_ref_id ? (
-                  <View style={styles.txDetailRow}>
-                    <AppText type={THIRTEEN} weight={MEDIUM} color={subTextColor}>Channel Ref</AppText>
-                    <View style={styles.copyableValueRow}>
-                      <AppText type={FOURTEEN} weight={BOLD} color={textColor} numberOfLines={1}>
-                        {selectedTx.channel_ref_id}
-                      </AppText>
-                      <TouchableOpacity
-                        onPress={() => handleCopy(selectedTx.channel_ref_id, "channel_ref", "Channel Ref")}
-                        style={[styles.copyBtn, { backgroundColor: badgePillBg }]}
-                      >
-                        <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
-                          {copiedField === "channel_ref" ? "Copied" : "Copy"}
-                        </AppText>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : null}
-
-                <View style={styles.txDetailRow}>
-                  <AppText type={THIRTEEN} weight={MEDIUM} color={subTextColor}>Gross Amount</AppText>
-                  <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                    {formatAedAmount(selectedTx.amount || 0)} {selectedTx.currency || "AED"}
-                  </AppText>
-                </View>
-
-                {selectedTx.fee_aed || selectedTx.fee ? (
-                  <View style={styles.txDetailRow}>
-                    <AppText type={THIRTEEN} weight={MEDIUM} color={subTextColor}>Fee</AppText>
-                    <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                      {formatAedAmount(selectedTx.fee_aed || selectedTx.fee)} {selectedTx.currency || "AED"}
+                    <AppText type={FOURTEEN} weight={BOLD} color="#000000">
+                      Cancel withdrawal
                     </AppText>
-                  </View>
+                  </TouchableOpacity>
                 ) : null}
 
-                <View style={styles.txDetailRow}>
-                  <AppText type={THIRTEEN} weight={MEDIUM} color={subTextColor}>Destination Bank</AppText>
-                  <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                    {formatBankLabel(selectedTx)}
+                {/* Need Help Link */}
+                <TouchableOpacity
+                  style={styles.helpLinkContainer}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    txDetailSheetRef.current?.close?.();
+                    NavigationService.navigate(CREATE_TICKET_SCREEN);
+                  }}
+                >
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme }}>
+                    Need help? Chat with us
                   </AppText>
-                </View>
-
-                <View style={styles.txDetailRow}>
-                  <AppText type={THIRTEEN} weight={MEDIUM} color={subTextColor}>Wallet</AppText>
-                  <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                    {selectedTx.wallet_type === "spot" || !selectedTx.wallet_type ? "Spot" : String(selectedTx.wallet_type)}
-                  </AppText>
-                </View>
-
-                <View style={styles.txDetailRow}>
-                  <AppText type={THIRTEEN} weight={MEDIUM} color={subTextColor}>Date & Time</AppText>
-                  <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                    {formatHistDateHeader(selectedTx.created_at)}
-                  </AppText>
-                </View>
-              </View>
-            </ScrollView>
-          ) : null}
+                </TouchableOpacity>
+              </ScrollView>
+            );
+          })() : null}
         </View>
       </AnimatedBottomSheet>
 
@@ -735,6 +945,117 @@ const WithdrawFiatHistoryScreen = () => {
           </View>
         </View>
       </AnimatedBottomSheet>
+      {/* Time Filter Picker Bottom Sheet */}
+      <AnimatedBottomSheet
+        ref={timePickerSheetRef}
+        sheetHeight={280}
+        isDark={isDark}
+      >
+        <View style={styles.pickerSheetInner}>
+          <View style={styles.pickerSheetHeader}>
+            <AppText type={SIXTEEN} weight={BOLD} color={textColor}>
+              Select Time Range
+            </AppText>
+            <TouchableOpacity
+              onPress={() => timePickerSheetRef.current?.close?.()}
+              style={styles.pickerCloseBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <FastImage source={closeIcon} style={styles.closeIconSmall} resizeMode="contain" tintColor={subTextColor} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            {TIME_FILTER_OPTIONS.map((tf) => {
+              const active = timeFilter === tf.value;
+              return (
+                <TouchableOpacity
+                  key={tf.value}
+                  onPress={() => {
+                    setTimeFilter(tf.value);
+                    timePickerSheetRef.current?.close?.();
+                  }}
+                  style={[
+                    styles.pickerOptionRow,
+                    { borderBottomColor: itemBorderColor },
+                    active && { backgroundColor: isDark ? "rgba(209,170,103,0.1)" : "#FFFDF5" },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <AppText
+                    type={FOURTEEN}
+                    weight={active ? BOLD : MEDIUM}
+                    color={active ? colors.orangeTheme : textColor}
+                  >
+                    {tf.label}
+                  </AppText>
+                  {active ? (
+                    <AppText type={FOURTEEN} weight={BOLD} color={colors.orangeTheme}>
+                      ✓
+                    </AppText>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </AnimatedBottomSheet>
+
+      {/* Status Filter Picker Bottom Sheet */}
+      <AnimatedBottomSheet
+        ref={statusPickerSheetRef}
+        sheetHeight={Math.min(SCREEN_HEIGHT * 0.72, 480)}
+        isDark={isDark}
+      >
+        <View style={styles.pickerSheetInner}>
+          <View style={styles.pickerSheetHeader}>
+            <AppText type={SIXTEEN} weight={BOLD} color={textColor}>
+              Select Status
+            </AppText>
+            <TouchableOpacity
+              onPress={() => statusPickerSheetRef.current?.close?.()}
+              style={styles.pickerCloseBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <FastImage source={closeIcon} style={styles.closeIconSmall} resizeMode="contain" tintColor={subTextColor} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            {STATUS_FILTER_OPTIONS.map((sf) => {
+              const active = statusFilter === sf.value;
+              return (
+                <TouchableOpacity
+                  key={sf.value}
+                  onPress={() => {
+                    setStatusFilter(sf.value);
+                    statusPickerSheetRef.current?.close?.();
+                  }}
+                  style={[
+                    styles.pickerOptionRow,
+                    { borderBottomColor: itemBorderColor },
+                    active && { backgroundColor: isDark ? "rgba(209,170,103,0.1)" : "#FFFDF5" },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <AppText
+                    type={FOURTEEN}
+                    weight={active ? BOLD : MEDIUM}
+                    color={active ? colors.orangeTheme : textColor}
+                  >
+                    {sf.label}
+                  </AppText>
+                  {active ? (
+                    <AppText type={FOURTEEN} weight={BOLD} color={colors.orangeTheme}>
+                      ✓
+                    </AppText>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </AnimatedBottomSheet>
     </AppSafeAreaView>
   );
 };
@@ -758,37 +1079,75 @@ const styles = StyleSheet.create({
   headerRightSpacer: {
     width: 30,
   },
-  filtersContainer: {
+  filtersRowContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 10,
+    paddingBottom: 14,
+    gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  timeFiltersRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 10,
-  },
-  timeFilterBtn: {
+  filterDropdownCol: {
     flex: 1,
-    paddingVertical: 8,
+  },
+  filterFieldLabel: {
+    marginBottom: 6,
+    paddingLeft: 2,
+  },
+  filterDropdownBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  dropdownBtnText: {
+    flex: 1,
+    marginRight: 4,
+  },
+  dropdownChevronIcon: {
+    width: 10,
+    height: 10,
+  },
+  exportBtnCol: {
+    justifyContent: "flex-end",
+  },
+  exportExcelBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  statusFilterScroll: {
-    gap: 8,
-    paddingRight: 16,
+  pickerSheetInner: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
-  statusFilterPill: {
-    minWidth: 110,
-    paddingVertical: 7,
+  pickerSheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  pickerCloseBtn: {
+    padding: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickerOptionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
     paddingHorizontal: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -873,10 +1232,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  closeCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  txCloseBtn: {
+    padding: 6,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -884,30 +1241,93 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
   },
-  txAmountHero: {
+  stepperContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+    marginBottom: 8,
+  },
+  stepRow: {
+    flexDirection: "row",
+  },
+  stepIndicatorCol: {
+    width: 20,
     alignItems: "center",
-    paddingVertical: 14,
+  },
+  stepDotHalo: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  stepDotCore: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  stepLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 28,
+    marginVertical: 2,
+    borderRadius: 1,
+  },
+  stepTextCol: {
+    flex: 1,
+    paddingLeft: 12,
   },
   txDetailList: {
-    marginTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 12,
+    marginTop: 4,
   },
   txDetailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 9,
+    gap: 12,
+  },
+  txDetailLabel: {
+    flexShrink: 0,
   },
   copyableValueRow: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: 8,
+    maxWidth: "70%",
   },
-  copyBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+  copyableText: {
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  copyIconBtn: {
+    width: 26,
+    height: 26,
     borderRadius: 6,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  copyIconImage: {
+    width: 13,
+    height: 13,
+  },
+  modalCancelFullBtn: {
+    borderRadius: 999,
+    paddingVertical: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  helpLinkContainer: {
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   modalSecondaryBtn: {
     flex: 1,

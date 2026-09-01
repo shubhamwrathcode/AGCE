@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import LinearGradient from "react-native-linear-gradient";
 import FastImage from "react-native-fast-image";
 import Toast from "react-native-simple-toast";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import DepositChoiceSheet from "../wallet/sheets/DepositChoiceSheet";
+import WithdrawChoiceSheet from "../wallet/sheets/WithdrawChoiceSheet";
 
 const showComingSoonToast = () =>
   Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM);
@@ -291,12 +293,12 @@ const getShortcutMenuItems = (theme) => [
 
 ];
 
-const getPopularMenuItems = (theme) => [
+const getPopularMenuItems = (theme, callbacks = {}) => [
   {
     id: "p1",
     title: "Deposit",
     icon: newDepositIcon,
-    onPress: () => NavigationService.navigate(DEPOSIT_COIN_SCREEN),
+    onPress: callbacks.onOpenDeposit || (() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)),
   },
   // {
   //   id: "p2",
@@ -308,7 +310,7 @@ const getPopularMenuItems = (theme) => [
     id: "p3",
     title: "Withdrawal",
     icon: newWidthrawIcon,
-    onPress: () => NavigationService.navigate(SELECT_COIN_SCREEN),
+    onPress: callbacks.onOpenWithdraw || (() => NavigationService.navigate(SELECT_COIN_SCREEN)),
   },
   // {
   //   id: "p4",
@@ -529,10 +531,26 @@ const ProfileDrawer = () => {
   const emailTextTranslateY = useRef(new Animated.Value(10)).current;
 
   const [showAllServicesModal, setShowAllServicesModal] = useState(false);
-  const [addToHome, setAddToHome] = useState(true);
+  const depositChoiceSheetRef = useRef(null);
+  const withdrawChoiceSheetRef = useRef(null);
+
+  const handleOpenDepositChoice = useCallback(() => {
+    depositChoiceSheetRef.current?.open?.();
+  }, []);
+
+  const handleOpenWithdrawChoice = useCallback(() => {
+    withdrawChoiceSheetRef.current?.open?.();
+  }, []);
 
   const shortcutItems = useMemo(() => getShortcutMenuItems(effectiveTheme), [effectiveTheme]);
-  const popularItems = useMemo(() => getPopularMenuItems(effectiveTheme), [effectiveTheme]);
+  const popularItems = useMemo(
+    () =>
+      getPopularMenuItems(effectiveTheme, {
+        onOpenDeposit: handleOpenDepositChoice,
+        onOpenWithdraw: handleOpenWithdrawChoice,
+      }),
+    [effectiveTheme, handleOpenDepositChoice, handleOpenWithdrawChoice]
+  );
   const securityVerificationItems = useMemo(
     () => getSecurityVerificationItems(effectiveTheme),
     [effectiveTheme]
@@ -897,6 +915,10 @@ const ProfileDrawer = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Deposit & Withdraw Choice Sheets */}
+      <DepositChoiceSheet sheetRef={depositChoiceSheetRef} isDark={isDark} />
+      <WithdrawChoiceSheet sheetRef={withdrawChoiceSheetRef} isDark={isDark} />
 
     </View >
   );
