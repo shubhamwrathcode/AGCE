@@ -19,11 +19,11 @@ import NavigationService from "../../navigation/NavigationService";
 import {
   WITHDRAW_FIAT_HISTORY_SCREEN,
   DEPOSIT_FIAT_SCREEN,
+  SECURITY_SCREEN,
 } from "../../navigation/routes";
 import {
   back_ic,
   closeIcon,
-  checkIc,
   historyIcon,
 } from "../../helper/ImageAssets";
 import AnimatedBottomSheet from "../../common/AnimatedBottomSheet/AnimatedBottomSheet";
@@ -43,11 +43,12 @@ import {
   ELEVEN,
   TEN,
 } from "../../shared";
+import { colors } from "../../theme/colors";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // Web SVG Vector Icons
-const SecurityShieldIcon = ({ size = 20, color = "#D1AA67" }) => (
+const SecurityShieldIcon = ({ size = 20, color = colors.orangeTheme }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M9 12L11 14L15 10M20.618 5.984C17.4561 6.15192 14.3567 5.05861 12 2.944C9.64327 5.05861 6.5439 6.15192 3.382 5.984C3.12754 6.96911 2.99918 7.98255 3 9C3 14.591 6.824 19.29 12 20.622C17.176 19.29 21 14.592 21 9C21 7.958 20.867 6.948 20.618 5.984Z"
@@ -59,25 +60,13 @@ const SecurityShieldIcon = ({ size = 20, color = "#D1AA67" }) => (
   </Svg>
 );
 
-const InstantBoltIcon = ({ size = 20, color = "#D1AA67" }) => (
+const InstantBoltIcon = ({ size = 20, color = colors.orangeTheme }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M13 10V3L4 14H11V21L20 10H13V10" fill={color} />
   </Svg>
 );
 
-const GlobalGlobeIcon = ({ size = 20, color = "#D1AA67" }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M21 12C21 16.9672 16.9672 21 12 21M21 12C21 7.03276 16.9672 3 12 3M21 12H3M12 21C7.03276 21 3 16.9672 3 12M12 21C13.657 21 15 16.97 15 12C15 7.03 13.657 3 12 3M12 21C10.343 21 9 16.97 9 12C9 7.03 10.343 3 12 3M3 12C3 7.03276 7.03276 3 12 3"
-      stroke={color}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
-const BankPillarsIcon = ({ size = 24, color = "#D1AA67" }) => (
+const BankPillarsIcon = ({ size = 24, color = colors.orangeTheme }) => (
   <Svg width={size} height={size} viewBox="0 0 29 29" fill="none">
     <Path
       d="M8.55078 14.5527V17.5527M12.5508 14.5527V17.5527M16.5508 14.5527V17.5527M3.55078 21.5527H21.5508M3.55078 10.5527H21.5508M3.55078 7.55273L12.5508 3.55273L21.5508 7.55273M4.55078 10.5527H20.5508V21.5527H4.55078V10.5527Z"
@@ -89,7 +78,7 @@ const BankPillarsIcon = ({ size = 24, color = "#D1AA67" }) => (
   </Svg>
 );
 
-const RatesGraphIcon = ({ size = 20, color = "#D1AA67" }) => (
+const RatesGraphIcon = ({ size = 20, color = colors.orangeTheme }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M3 3V21H21M7 16L12 11L16 15L21 9"
@@ -107,6 +96,30 @@ const UaeFlagIcon = ({ width = 24, height = 16 }) => (
     <Rect y="5.33" width="24" height="5.33" fill="#FFFFFF" />
     <Rect y="10.66" width="24" height="5.34" fill="#000000" />
     <Rect width="6" height="16" fill="#FF0000" />
+  </Svg>
+);
+
+const RadioCheckedIcon = ({ size = 18, color = colors.orangeTheme }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+      stroke={color}
+      strokeWidth="2"
+    />
+    <Path
+      d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"
+      fill={color}
+    />
+  </Svg>
+);
+
+const RadioUncheckedIcon = ({ size = 18, color = "#6B7280" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+      stroke={color}
+      strokeWidth="2"
+    />
   </Svg>
 );
 
@@ -137,6 +150,8 @@ const HOW_STEPS = [
   },
 ];
 
+const RESEND_COOLDOWN_SEC = 60;
+const VERIFY_CODE_LEN = 6;
 const EMPTY_LIMITS = {
   dailyRemaining: null,
   dailyLimit: null,
@@ -155,6 +170,28 @@ function sanitizeAedAmount(raw) {
   const intPart = cleaned.slice(0, firstDot) || "0";
   const frac = cleaned.slice(firstDot + 1).replace(/\./g, "").slice(0, 2);
   return frac.length ? `${intPart}.${frac}` : `${intPart}.`;
+}
+
+function normalizePersonName(raw) {
+  return String(raw || "")
+    .normalize("NFKC")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function kycLegalName(vaAccount, userDetails) {
+  const fromVa = String(vaAccount?.account_name || "").trim();
+  if (fromVa) return fromVa;
+  const first = String(userDetails?.firstName || userDetails?.first_name || "").trim();
+  const last = String(userDetails?.lastName || userDetails?.last_name || "").trim();
+  return `${first} ${last}`.trim();
+}
+
+function namesMatch(kycName, typed) {
+  const a = normalizePersonName(kycName);
+  const b = normalizePersonName(typed);
+  return a.length >= 2 && a === b;
 }
 
 function formatAedAmount(val) {
@@ -186,51 +223,120 @@ function beneficiaryIbanLabel(ben) {
   return "••••";
 }
 
+export const FIAT_ERROR_COPY = {
+  KYC_REQUIRED: "Complete identity verification before using fiat.",
+  KYC_PROFILE_INCOMPLETE: "Your KYC profile is missing details required for a bank account.",
+  USER_NOT_FOUND: "Account not found. Please sign in again.",
+  VA_NOT_FOUND: "No virtual account yet.",
+  VA_REQUIRED: "Create a virtual account before depositing.",
+  FIAT_SERVICE_HELD: "Fiat is temporarily paused. New converts and withdrawals are unavailable.",
+  ZAND_UNAVAILABLE: "Bank service is unavailable. Please try again later.",
+  QUOTE_EXPIRED: "This quote expired. Request a new price.",
+  QUOTE_UNAVAILABLE: "Live price is unavailable. Try again in a moment.",
+  PRICE_MOVED: "The price moved. Request a new quote.",
+  INVENTORY_LOW: "This buy cannot be filled right now. Your AED is unchanged.",
+  FEE_WALLET_NOT_CONFIGURED: "Convert fees are not configured. Try again later.",
+  INSUFFICIENT_BALANCE: "Not enough balance. Add funds or reduce the amount.",
+  TREASURY_LOW: "Withdrawals are paused while liquidity is low.",
+  CONVERT_ASSET_DISABLED: "This pair is not available.",
+  AMOUNT_BELOW_MIN: "Amount is below the minimum.",
+  AMOUNT_ABOVE_MAX: "Amount is above the maximum.",
+  LIMIT_EXCEEDED: "This would exceed your limit.",
+  BENEFICIARY_NOT_VERIFIED: "Verify the bank account before withdrawing.",
+  BENEFICIARY_NOT_FOUND: "That bank account is no longer available.",
+  BENEFICIARY_IN_USE: "This bank account cannot be removed while a withdrawal is in progress.",
+  WHITELIST_NOT_VERIFIED: "Verify the bank account before withdrawing.",
+  WHITELIST_NOT_FOUND: "That bank account is no longer available.",
+  WHITELIST_IN_USE: "This bank account cannot be removed while a withdrawal is in progress.",
+  INVALID_IBAN: "Enter a valid UAE IBAN.",
+  DUPLICATE_BENEFICIARY: "This bank account is already saved.",
+  DUPLICATE_WHITELIST: "This bank account is already saved.",
+  OTP_INVALID: "That code is incorrect or has expired.",
+  OTP_LOCKED: "Too many attempts. Remove the account and add it again.",
+  OTP_CHANNEL_UNAVAILABLE: "A verified email is required to confirm a bank account.",
+  PAYOUT_SOURCE_UNAVAILABLE: "Payouts are unavailable right now. Try again later.",
+  RATE_LIMITED: "Please wait before requesting another code.",
+  NO_VERIFICATION_METHOD: "Add a security method before withdrawing.",
+  EMAIL_OTP_INVALID: "That email code is incorrect.",
+  MOBILE_OTP_INVALID: "That SMS code is incorrect.",
+  GOOGLE_AUTH_INVALID: "That authenticator code is incorrect.",
+  FUND_PASSWORD_INVALID: "That fund password is incorrect.",
+  OTP_EXPIRED: "That code expired. Request a new one.",
+  OTP_NOT_FOUND: "Request a new verification code, then try again.",
+  WITHDRAWAL_NOT_FOUND: "Withdrawal not found.",
+  INVALID_STATE: "This withdrawal can no longer be cancelled.",
+  INTENT_NOT_FOUND: "Deposit instructions not found.",
+  DEPOSIT_NOT_FOUND: "Deposit not found.",
+  QUOTE_NOT_FOUND: "Quote not found.",
+  QUOTE_ALREADY_EXECUTED: "This quote was already converted.",
+  VALIDATION_ERROR: "Please check the form and try again.",
+};
+
+function getFiatErrorMessage(res, fallback = "Request failed") {
+  if (!res) return fallback;
+  const code = res?.code || res?.error?.code || (typeof res?.error === "string" ? res.error : "") || "";
+  if (code && FIAT_ERROR_COPY[code]) {
+    return FIAT_ERROR_COPY[code];
+  }
+  const msg = res?.message || res?.error?.message || (typeof res?.error === "string" ? res.error : "") || res?.data?.message || "";
+  if (msg) {
+    if (FIAT_ERROR_COPY[msg]) return FIAT_ERROR_COPY[msg];
+    return msg;
+  }
+  return fallback;
+}
+
+function getEnabledVerifyMethods(settings) {
+  const methods = settings?.methods;
+  if (!methods) return ["email"];
+  const enabled = [];
+  if (methods.email?.enabled) enabled.push("email");
+  if (methods.mobile?.enabled) enabled.push("mobile");
+  if (methods.google_authenticator?.enabled) enabled.push("google_authenticator");
+  if (methods.fund_password?.enabled) enabled.push("fund_password");
+  return enabled.length ? enabled : ["email"];
+}
+
 const WithdrawFiatScreen = () => {
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth?.userData || state.user?.userData || {});
 
-  // Main page states
+  // Page level states
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [selectedId, setSelectedId] = useState("");
-  const [spotBalance, setSpotBalance] = useState("0");
+  const [step, setStep] = useState("main"); // 'main' | 'add' | 'otp' | 'withdraw'
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Balances & Limits & Profile
+  const [balance, setBalance] = useState("0");
   const [withdrawLimits, setWithdrawLimits] = useState(EMPTY_LIMITS);
   const [vaAccount, setVaAccount] = useState(null);
 
-  // Form & Preview states
+  // Withdraw amount & preview
   const [amount, setAmount] = useState("");
   const [preview, setPreview] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState("");
-  const [pageError, setPageError] = useState("");
 
   // Add Beneficiary State
-  const [newIban, setNewIban] = useState("");
-  const [newAccountName, setNewAccountName] = useState("");
-  const [newBankName, setNewBankName] = useState("");
-  const [addingBank, setAddingBank] = useState(false);
-  const [addBankError, setAddBankError] = useState("");
+  const [iban, setIban] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [bankName, setBankName] = useState("");
 
-  // Verify OTP State for new Beneficiary
-  const [pendingBenId, setPendingBenId] = useState("");
-  const [emailOtp, setEmailOtp] = useState("");
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [otpError, setOtpError] = useState("");
-  const [resendCooldown, setResendCooldown] = useState(0);
+  // Beneficiary OTP Verification State
+  const [otp, setOtp] = useState("");
+  const [resendSec, setResendSec] = useState(0);
+  const [otpSentTo, setOtpSentTo] = useState("email");
 
-  // Remove Beneficiary State
+  // Remove Modal State
   const [removeTarget, setRemoveTarget] = useState(null);
-  const [removingBank, setRemovingBank] = useState(false);
 
-  // Security Verification Modal State (Withdrawal Submit)
-  const [securitySettings, setSecuritySettings] = useState({
-    email: true,
-    mobile: false,
-    google_authenticator: false,
-    fund_password: false,
-  });
+  // Security Verification (Final Withdrawal) State
+  const [securitySettings, setSecuritySettings] = useState(null);
   const [emailVerifyCode, setEmailVerifyCode] = useState("");
   const [mobileVerifyCode, setMobileVerifyCode] = useState("");
   const [authAppCode, setAuthAppCode] = useState("");
@@ -238,323 +344,587 @@ const WithdrawFiatScreen = () => {
   const [fundVisible, setFundVisible] = useState(false);
   const [otpSending, setOtpSending] = useState({ email: false, mobile: false });
   const [otpResend, setOtpResend] = useState({ email: 0, mobile: 0 });
-  const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
-  const [verifyFieldErrors, setVerifyFieldErrors] = useState({});
+  const [verifyFieldErrors, setVerifyFieldErrors] = useState({
+    email: "",
+    mobile: "",
+    google_authenticator: "",
+    fund_password: "",
+  });
 
   // Bottom Sheet Refs
-  const addBankSheetRef = useRef(null);
-  const verifyEmailOtpSheetRef = useRef(null);
   const securityVerifySheetRef = useRef(null);
   const removeBankSheetRef = useRef(null);
+  const noMethodsSheetRef = useRef(null);
 
-  // Load Beneficiaries & Limits & Spot AED Balance
-  const loadPageData = useCallback(async () => {
-    setLoading(true);
-    setPageError("");
+  const previewSeq = useRef(0);
+  const idempotencyKeyRef = useRef("");
+
+  // Derived Objects
+  const activeBeneficiary = useMemo(
+    () => beneficiaries.find((b) => String(b.id || b._id) === String(selectedId)) || null,
+    [beneficiaries, selectedId]
+  );
+
+  const verifiedReady = useMemo(
+    () => beneficiaries.filter((b) => b.status === "VERIFIED"),
+    [beneficiaries]
+  );
+
+  const kycName = useMemo(() => kycLegalName(vaAccount, userData), [vaAccount, userData]);
+
+  const enabledMethods = useMemo(() => getEnabledVerifyMethods(securitySettings), [securitySettings]);
+
+  // Load All Page Data
+  const loadData = useCallback(async () => {
+    setError("");
     try {
-      const [bRes, lRes, wRes, vaRes] = await Promise.all([
+      const [benRes, balRes, limitsRes, vaRes] = await Promise.all([
         appOperation.customer.fiat_whitelist_list().catch(() => null),
-        appOperation.customer.fiat_limits().catch(() => null),
         appOperation.customer.user_wallet("spot").catch(() => null),
+        appOperation.customer.fiat_limits().catch(() => null),
         appOperation.customer.fiat_virtual_account_me().catch(() => null),
       ]);
 
       // Beneficiaries
-      if (bRes?.success && bRes?.data) {
-        const list = Array.isArray(bRes.data) ? bRes.data : bRes.data.items || [];
+      if (benRes?.success && benRes?.data) {
+        const list = Array.isArray(benRes.data) ? benRes.data : benRes.data.items || [];
         const activeList = list.filter((b) => b && b.status !== "DISABLED");
         setBeneficiaries(activeList);
-        const verified = activeList.find((b) => b.status === "VERIFIED");
-        if (verified) setSelectedId(verified.id || verified._id);
-        else if (activeList.length > 0) setSelectedId(activeList[0].id || activeList[0]._id);
-      }
-
-      // Limits
-      if (lRes?.success && lRes?.data) {
-        const root = lRes.data;
-        const parsed = parseLimitSide(root.withdraw || root.withdrawal || {}, root, "withdraw");
-        setWithdrawLimits(parsed);
+        setSelectedId((prev) => {
+          if (activeList.some((b) => String(b.id || b._id) === String(prev))) return prev;
+          const verified = activeList.find((b) => b.status === "VERIFIED");
+          return String(verified?.id || verified?._id || activeList[0]?.id || activeList[0]?._id || "");
+        });
+      } else {
+        setBeneficiaries([]);
       }
 
       // Spot AED Balance
-      if (wRes?.success && Array.isArray(wRes?.data)) {
-        const aedRow = wRes.data.find(
+      if (balRes?.success && Array.isArray(balRes?.data)) {
+        const aedRow = balRes.data.find(
           (r) =>
             String(r?.short_name || "").toUpperCase() === "AED" ||
             String(r?.currency || "").toUpperCase() === "AED"
         );
-        if (aedRow) {
-          setSpotBalance(String(aedRow.balance ?? "0"));
-        } else {
-          setSpotBalance("0");
-        }
+        setBalance(aedRow ? String(aedRow.balance ?? "0") : "0");
       }
 
-      // Virtual Account / Name info
+      // Limits
+      if (limitsRes?.success && limitsRes?.data) {
+        const root = limitsRes.data;
+        const parsed = parseLimitSide(root.withdraw || root.withdrawal || {}, root, "withdraw");
+        setWithdrawLimits(parsed);
+      }
+
+      // Virtual Account
       if (vaRes?.success && vaRes?.data) {
         setVaAccount(vaRes.data);
-        if (vaRes.data.account_name && !newAccountName) {
-          setNewAccountName(vaRes.data.account_name);
-        }
       }
     } catch {
-      setPageError("Could not load withdrawal details.");
+      setError("Could not load bank accounts or balance.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [newAccountName]);
+  }, []);
+
+  // Fetch 2FA settings
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await appOperation.customer.fetch_withdrawal_security_settings().catch(() => null);
+        if (res?.success) {
+          setSecuritySettings(res.data?.settings || res.data || null);
+        }
+      } catch {
+        /* fallback to email */
+      }
+    })();
+  }, []);
 
   useEffect(() => {
-    loadPageData();
-  }, [loadPageData]);
+    loadData();
+  }, [loadData]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadPageData();
-    setRefreshing(false);
+    await loadData();
   };
 
-  // Currently selected beneficiary object
-  const selectedBeneficiary = useMemo(() => {
-    return beneficiaries.find((b) => (b.id || b._id) === selectedId) || null;
-  }, [beneficiaries, selectedId]);
+  // Resend Countdown for Add Beneficiary OTP
+  useEffect(() => {
+    if (resendSec <= 0) return;
+    const t = setInterval(() => setResendSec((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [resendSec]);
+
+  // Resend Countdown for Withdrawal 2FA OTP
+  const otpResendActive = otpResend.email > 0 || otpResend.mobile > 0;
+  useEffect(() => {
+    if (!otpResendActive) return;
+    const id = setInterval(() => {
+      setOtpResend((prev) => ({
+        email: prev.email > 0 ? prev.email - 1 : 0,
+        mobile: prev.mobile > 0 ? prev.mobile - 1 : 0,
+      }));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [otpResendActive]);
+
+  // Max withdrawable calculation
+  const maxWithdrawable = useMemo(() => {
+    const vals = [
+      parseFloat(balance) || 0,
+      withdrawLimits.dailyRemaining != null ? parseFloat(withdrawLimits.dailyRemaining) : null,
+      withdrawLimits.monthlyRemaining != null ? parseFloat(withdrawLimits.monthlyRemaining) : null,
+      withdrawLimits.maxPerTx != null ? parseFloat(withdrawLimits.maxPerTx) : null,
+    ].filter((n) => n != null && n > 0);
+    if (!vals.length) return "";
+    const minVal = Math.min(...vals);
+    return minVal > 0 ? minVal.toFixed(2) : "";
+  }, [balance, withdrawLimits]);
+
+  // Amount Block Reason
+  const amountReady = !!amount && parseFloat(amount) > 0;
+  const amountBlockReason = useMemo(() => {
+    if (!amountReady) return "";
+    const amt = parseFloat(amount);
+    const avail = parseFloat(balance) || 0;
+    if (amt > avail) return "insufficient";
+    if (withdrawLimits.minPerTx != null && amt < parseFloat(withdrawLimits.minPerTx)) {
+      return "min";
+    }
+    if (maxWithdrawable && amt > parseFloat(maxWithdrawable)) {
+      return "limit";
+    }
+    return "";
+  }, [amountReady, amount, balance, withdrawLimits.minPerTx, maxWithdrawable]);
+
+  const insufficientBalance = amountBlockReason === "insufficient";
+  const belowMin = amountBlockReason === "min";
+  const overLimit = amountBlockReason === "limit";
+  const amountBlocked = !!amountBlockReason;
 
   // Real-time Preview Quote
   useEffect(() => {
-    const amtNum = parseFloat(amount);
-    if (!amount || isNaN(amtNum) || amtNum <= 0 || !selectedId) {
+    if (step !== "withdraw" || !amountReady || !activeBeneficiary || amountBlocked) {
       setPreview(null);
+      setPreviewing(false);
       setPreviewError("");
       return;
     }
 
-    let active = true;
-    const fetchPreview = async () => {
-      setPreviewing(true);
-      setPreviewError("");
+    const seq = ++previewSeq.current;
+    setPreviewing(true);
+    setPreviewError("");
+
+    const timer = setTimeout(async () => {
       try {
-        const query = `amount=${encodeURIComponent(amount)}&whitelist_id=${encodeURIComponent(selectedId)}`;
+        const query = `amount=${encodeURIComponent(amount)}&whitelist_id=${encodeURIComponent(activeBeneficiary.id || activeBeneficiary._id)}`;
         const res = await appOperation.customer.fiat_withdrawals_preview(query).catch((e) => e);
-        if (!active) return;
+        if (seq !== previewSeq.current) return;
+        setPreviewing(false);
         if (res?.success && res?.data) {
           setPreview(res.data);
         } else {
           setPreview(null);
-          setPreviewError(res?.message || res?.error?.message || "Could not calculate fee quote");
+          setPreviewError(res?.message || res?.error?.message || "Could not load withdrawal quote.");
         }
       } catch {
-        if (active) {
+        if (seq === previewSeq.current) {
           setPreview(null);
-          setPreviewError("Could not calculate fee quote");
+          setPreviewError("Could not load withdrawal quote.");
+          setPreviewing(false);
         }
-      } finally {
-        if (active) setPreviewing(false);
       }
-    };
+    }, 400);
 
-    const timer = setTimeout(fetchPreview, 350);
     return () => {
-      active = false;
       clearTimeout(timer);
+      previewSeq.current += 1;
     };
-  }, [amount, selectedId]);
+  }, [step, amountReady, amount, activeBeneficiary, amountBlocked]);
 
-  // Resend OTP Countdown Effect
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = setInterval(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
-
-  // Handle Max Amount Tap
-  const handleMaxAmount = () => {
-    const balNum = parseFloat(spotBalance) || 0;
-    if (balNum <= 0) {
-      Toast.showWithGravity("Insufficient AED balance", Toast.SHORT, Toast.BOTTOM);
-      return;
+  const validateWithdrawAmount = () => {
+    if (!amountReady) return "Enter an amount to withdraw.";
+    const amt = parseFloat(amount);
+    if (isNaN(amt) || amt <= 0) return "Enter an amount to withdraw.";
+    const avail = parseFloat(balance) || 0;
+    if (amt > avail) return "Insufficient available balance.";
+    if (withdrawLimits.minPerTx != null && amt < parseFloat(withdrawLimits.minPerTx)) {
+      return `Minimum withdrawal is ${formatAedAmount(withdrawLimits.minPerTx)} AED.`;
     }
-    const maxVal = withdrawLimits.dailyRemaining
-      ? Math.min(balNum, withdrawLimits.dailyRemaining)
-      : balNum;
-    setAmount(maxVal.toFixed(2));
+    if (withdrawLimits.maxPerTx != null && amt > parseFloat(withdrawLimits.maxPerTx)) {
+      return `Maximum per transaction is ${formatAedAmount(withdrawLimits.maxPerTx)} AED.`;
+    }
+    if (withdrawLimits.dailyRemaining != null && amt > parseFloat(withdrawLimits.dailyRemaining)) {
+      return `Daily limit remaining is ${formatAedAmount(withdrawLimits.dailyRemaining)} AED.`;
+    }
+    if (withdrawLimits.monthlyRemaining != null && amt > parseFloat(withdrawLimits.monthlyRemaining)) {
+      return `Monthly limit remaining is ${formatAedAmount(withdrawLimits.monthlyRemaining)} AED.`;
+    }
+    if (maxWithdrawable && amt > parseFloat(maxWithdrawable)) {
+      return `Maximum you can withdraw now is ${formatAedAmount(maxWithdrawable)} AED.`;
+    }
+    if (previewError) return previewError;
+    if (!preview) return previewing ? "Loading quote…" : "Enter an amount to see the fee quote.";
+    return "";
   };
 
-  // Open Add Bank Sheet
-  const handleOpenAddBank = () => {
-    setNewIban("");
-    const kycName =
-      vaAccount?.account_name ||
-      `${userData?.firstName || userData?.first_name || ""} ${userData?.lastName || userData?.last_name || ""}`.trim();
-    setNewAccountName(kycName);
-    setNewBankName("");
-    setAddBankError("");
-    addBankSheetRef.current?.open?.();
-  };
-
-  // Submit Add Bank
-  const handleSubmitAddBank = async () => {
-    const cleanIban = newIban.replace(/\s+/g, "").toUpperCase();
-    if (!cleanIban || cleanIban.length < 15) {
-      setAddBankError("Please enter a valid IBAN (e.g. AE...)");
-      return;
-    }
-    if (!newAccountName.trim()) {
-      setAddBankError("Account name is required");
-      return;
-    }
-
-    setAddingBank(true);
-    setAddBankError("");
-    try {
-      const payload = {
-        iban: cleanIban,
-        account_name: newAccountName.trim(),
-        bank_name: newBankName.trim() || "UAE Bank",
-        currency: "AED",
-      };
-      const res = await appOperation.customer.fiat_whitelist_create(payload).catch((e) => e);
-      if (res?.success && res?.data) {
-        addBankSheetRef.current?.close?.();
-        const created = res.data;
-        setPendingBenId(created.id || created._id);
-        setEmailOtp("");
-        setOtpError("");
-        setResendCooldown(60);
-        Toast.showWithGravity("Verification code sent to your email", Toast.LONG, Toast.BOTTOM);
-        verifyEmailOtpSheetRef.current?.open?.();
-      } else {
-        setAddBankError(res?.message || res?.error?.message || "Could not add bank account");
-      }
-    } catch {
-      setAddBankError("Could not add bank account. Please try again.");
-    } finally {
-      setAddingBank(false);
-    }
-  };
-
-  // Verify Email OTP for Beneficiary
-  const handleVerifyEmailOtp = async () => {
-    if (!emailOtp || emailOtp.length < 6) {
-      setOtpError("Please enter the 6-digit email OTP");
-      return;
-    }
-
-    setVerifyingOtp(true);
-    setOtpError("");
-    try {
-      const res = await appOperation.customer
-        .fiat_whitelist_verify(pendingBenId, { otp: emailOtp })
-        .catch((e) => e);
-      if (res?.success) {
-        verifyEmailOtpSheetRef.current?.close?.();
-        Toast.showWithGravity("Bank account verified successfully!", Toast.LONG, Toast.BOTTOM);
-        await loadPageData();
-      } else {
-        setOtpError(res?.message || res?.error?.message || "Invalid OTP. Please try again.");
-      }
-    } catch {
-      setOtpError("Verification failed. Please try again.");
-    } finally {
-      setVerifyingOtp(false);
-    }
-  };
-
-  // Resend Beneficiary OTP
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0 || !pendingBenId) return;
-    try {
-      const res = await appOperation.customer.fiat_whitelist_resend_otp(pendingBenId).catch((e) => e);
-      if (res?.success) {
-        setResendCooldown(60);
-        Toast.showWithGravity("New verification code sent", Toast.SHORT, Toast.BOTTOM);
-      } else {
-        Toast.showWithGravity(res?.message || "Could not resend OTP", Toast.SHORT, Toast.BOTTOM);
-      }
-    } catch {
-      Toast.showWithGravity("Could not resend OTP", Toast.SHORT, Toast.BOTTOM);
-    }
-  };
-
-  // Remove Beneficiary
-  const handleConfirmRemoveBank = async () => {
-    if (!removeTarget) return;
-    setRemovingBank(true);
-    try {
-      const targetId = removeTarget.id || removeTarget._id;
-      const res = await appOperation.customer.fiat_whitelist_delete(targetId).catch((e) => e);
-      if (res?.success) {
-        removeBankSheetRef.current?.close?.();
-        Toast.showWithGravity("Bank account removed", Toast.SHORT, Toast.BOTTOM);
-        setRemoveTarget(null);
-        await loadPageData();
-      } else {
-        Toast.showWithGravity(res?.message || "Could not remove account", Toast.SHORT, Toast.BOTTOM);
-      }
-    } catch {
-      Toast.showWithGravity("Could not remove account", Toast.SHORT, Toast.BOTTOM);
-    } finally {
-      setRemovingBank(false);
-    }
-  };
-
-  // Open Security Verification Modal before Submit
-  const handleProceedWithdrawal = () => {
-    const amtNum = parseFloat(amount);
-    if (!selectedBeneficiary || selectedBeneficiary.status !== "VERIFIED") {
-      Toast.showWithGravity("Please select a verified bank account", Toast.SHORT, Toast.BOTTOM);
-      return;
-    }
-    if (!amtNum || amtNum <= 0) {
-      Toast.showWithGravity("Please enter a valid withdrawal amount", Toast.SHORT, Toast.BOTTOM);
-      return;
-    }
-    if (amtNum > parseFloat(spotBalance)) {
-      Toast.showWithGravity("Amount exceeds spot AED balance", Toast.SHORT, Toast.BOTTOM);
-      return;
-    }
-
+  const resetVerifyFields = () => {
     setEmailVerifyCode("");
     setMobileVerifyCode("");
     setAuthAppCode("");
     setFundPassword("");
-    setVerifyFieldErrors({});
-    securityVerifySheetRef.current?.open?.();
+    setFundVisible(false);
+    setVerifyFieldErrors({ email: "", mobile: "", google_authenticator: "", fund_password: "" });
   };
 
-  // Submit Final Withdrawal
-  const handleFinalSubmitWithdrawal = async () => {
-    setSubmittingWithdrawal(true);
-    setVerifyFieldErrors({});
-    try {
-      const key = `wd_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const payload = {
-        whitelist_id: selectedBeneficiary?.id || selectedBeneficiary?._id,
-        amount: String(amount).trim(),
-        currency: "AED",
-        email_code: emailVerifyCode.trim(),
-        mobile_code: mobileVerifyCode.trim(),
-        google_authenticator_code: authAppCode.trim(),
-        fund_password: fundPassword.trim(),
-      };
+  const verificationReady = useMemo(() => {
+    if (!enabledMethods.length) return false;
+    if (enabledMethods.includes("email") && !emailVerifyCode.trim()) return false;
+    if (enabledMethods.includes("mobile") && !mobileVerifyCode.trim()) return false;
+    if (enabledMethods.includes("google_authenticator") && !authAppCode.trim()) return false;
+    if (enabledMethods.includes("fund_password") && !fundPassword.trim()) return false;
+    return true;
+  }, [enabledMethods, emailVerifyCode, mobileVerifyCode, authAppCode, fundPassword]);
 
+  // Handlers for Add Bank Account
+  const startAddAccount = () => {
+    setStep("add");
+    setAccountName(kycName);
+    setIban("");
+    setBankName("");
+    setError("");
+    setInfo("");
+  };
+
+  const handleAddAccount = async () => {
+    if (accountName.trim().length < 2) {
+      const msg = "Enter the account holder name as shown on the bank account.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+    if (!normalizePersonName(kycName)) {
+      const msg = "Complete KYC and create your deposit IBAN before adding a withdrawal account.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+    if (!namesMatch(kycName, accountName)) {
+      const msg = `Account holder name must match your KYC name: ${kycName}`;
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+    const cleanIban = iban.replace(/\s+/g, "").toUpperCase();
+    if (!cleanIban) {
+      const msg = "Enter your bank account IBAN.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+    if (!bankName.trim()) {
+      const msg = "Enter the bank name.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    setInfo("");
+    try {
+      const res = await appOperation.customer.fiat_whitelist_create({
+        iban: cleanIban,
+        account_name: accountName.trim(),
+        bank_name: bankName.trim(),
+      }).catch((e) => e);
+
+      if (res?.success && res?.data) {
+        const created = res.data;
+        const targetId = created.id || created._id;
+        setBeneficiaries((prev) => {
+          const filtered = prev.filter((b) => String(b.id || b._id) !== String(targetId));
+          return [created, ...filtered];
+        });
+        setSelectedId(targetId);
+        setIban("");
+        setAccountName("");
+        setBankName("");
+        setOtp("");
+        setOtpSentTo(created.otp_sent_to || res.otpSentTo || "email");
+        setResendSec(RESEND_COOLDOWN_SEC);
+        setStep("otp");
+        setInfo("Verification code sent to your registered email.");
+        Toast.showWithGravity("Verification code sent to your registered email.", Toast.LONG, Toast.BOTTOM);
+      } else {
+        const errMsg = getFiatErrorMessage(res, "Could not save bank account.");
+        setError(errMsg);
+        Toast.showWithGravity(errMsg, Toast.LONG, Toast.BOTTOM);
+      }
+    } catch {
+      const errMsg = "Could not save bank account. Please try again.";
+      setError(errMsg);
+      Toast.showWithGravity(errMsg, Toast.LONG, Toast.BOTTOM);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handlers for OTP verification on new Bank Account
+  const handleVerifyOtp = async () => {
+    if (!selectedId || otp.trim().length !== 6) {
+      const msg = "Please enter the 6-digit verification code.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    setInfo("");
+    try {
       const res = await appOperation.customer
-        .fiat_withdrawals_submit(payload, { "Idempotency-Key": key })
+        .fiat_whitelist_verify(selectedId, { otp: otp.trim() })
         .catch((e) => e);
 
       if (res?.success) {
+        const updated = res.data || { ...activeBeneficiary, status: "VERIFIED" };
+        setBeneficiaries((prev) =>
+          prev.map((b) => (String(b.id || b._id) === String(selectedId) ? updated : b))
+        );
+        setOtp("");
+        setStep("main");
+        setInfo("Bank account verified. You can withdraw AED to this IBAN.");
+        Toast.showWithGravity("Bank account verified successfully!", Toast.LONG, Toast.BOTTOM);
+      } else {
+        const errMsg = getFiatErrorMessage(res, "Invalid verification code.");
+        setError(errMsg);
+        Toast.showWithGravity(errMsg, Toast.LONG, Toast.BOTTOM);
+      }
+    } catch {
+      const errMsg = "Invalid verification code. Please try again.";
+      setError(errMsg);
+      Toast.showWithGravity(errMsg, Toast.LONG, Toast.BOTTOM);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!selectedId || resendSec > 0) return;
+    setError("");
+    try {
+      const res = await appOperation.customer.fiat_whitelist_resend_otp(selectedId).catch((e) => e);
+      if (res?.success) {
+        setOtpSentTo(res.data?.otp_sent_to || "email");
+        setResendSec(RESEND_COOLDOWN_SEC);
+        setInfo("A new verification code was sent to your email.");
+        Toast.showWithGravity("New verification code sent", Toast.SHORT, Toast.BOTTOM);
+      } else {
+        const errMsg = getFiatErrorMessage(res, "Could not resend code.");
+        setError(errMsg);
+        Toast.showWithGravity(errMsg, Toast.SHORT, Toast.BOTTOM);
+      }
+    } catch {
+      const errMsg = "Could not resend code. Please try again.";
+      setError(errMsg);
+      Toast.showWithGravity(errMsg, Toast.SHORT, Toast.BOTTOM);
+    }
+  };
+
+  // Remove Account Handlers
+  const handleRemoveAccount = (id) => {
+    if (!id) return;
+    const ben = beneficiaries.find((b) => String(b.id || b._id) === String(id));
+    if (!ben) return;
+    setError("");
+    setInfo("");
+    setRemoveTarget(ben);
+    removeBankSheetRef.current?.open?.();
+  };
+
+  const confirmRemoveAccount = async () => {
+    const id = removeTarget?.id || removeTarget?._id;
+    if (!id) return;
+    setSubmitting(true);
+    setError("");
+    setInfo("");
+    try {
+      const res = await appOperation.customer.fiat_whitelist_delete(id).catch((e) => e);
+      if (res?.success) {
+        removeBankSheetRef.current?.close?.();
+        setBeneficiaries((prev) => prev.filter((b) => String(b.id || b._id) !== String(id)));
+        if (String(selectedId) === String(id)) {
+          setSelectedId("");
+          setStep("main");
+        }
+        setRemoveTarget(null);
+        setInfo("Bank account removed.");
+        Toast.showWithGravity("Bank account removed.", Toast.SHORT, Toast.BOTTOM);
+      } else {
+        removeBankSheetRef.current?.close?.();
+        const errMsg = getFiatErrorMessage(res, "Could not remove bank account.");
+        setError(errMsg);
+        Toast.showWithGravity(errMsg, Toast.LONG, Toast.BOTTOM);
+      }
+    } catch {
+      removeBankSheetRef.current?.close?.();
+      const errMsg = "Could not remove bank account. Please try again.";
+      setError(errMsg);
+      Toast.showWithGravity(errMsg, Toast.LONG, Toast.BOTTOM);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Withdraw Flow Start & Confirm
+  const startWithdrawFlow = () => {
+    const ben = beneficiaries.find(
+      (b) => String(b.id || b._id) === String(selectedId) && b.status === "VERIFIED"
+    );
+    if (!ben) {
+      const msg = "Select a verified bank account to withdraw.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+    const amountError = validateWithdrawAmount();
+    if (step === "withdraw" && amountError) {
+      setError(amountError);
+      Toast.showWithGravity(amountError, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+    setSelectedId(ben.id || ben._id);
+    setError("");
+    setInfo("");
+
+    if (step !== "withdraw") {
+      setStep("withdraw");
+      return;
+    }
+
+    if (!preview || previewing) {
+      const msg = previewError || "Wait for the fee quote before withdrawing.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+
+    if (!enabledMethods.length) {
+      noMethodsSheetRef.current?.open?.();
+      return;
+    }
+
+    resetVerifyFields();
+    idempotencyKeyRef.current = `wd_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    securityVerifySheetRef.current?.open?.();
+  };
+
+  // Send 2FA verification OTP during withdrawal
+  const handleSendVerifyOtp = async (method) => {
+    if (method !== "email" && method !== "mobile") return;
+    setOtpSending((p) => ({ ...p, [method]: true }));
+    try {
+      const res = await appOperation.customer.withdrawal_verification_otp({ method }).catch((e) => e);
+      if (res?.success) {
+        setOtpResend((p) => ({ ...p, [method]: RESEND_COOLDOWN_SEC }));
+        Toast.showWithGravity(res?.message || "Verification code sent.", Toast.SHORT, Toast.BOTTOM);
+      } else {
+        const errMsg = getFiatErrorMessage(res, "Could not send code.");
+        Toast.showWithGravity(errMsg, Toast.SHORT, Toast.BOTTOM);
+      }
+    } catch {
+      Toast.showWithGravity(method === "email" ? "Could not send email code." : "Could not send SMS code.", Toast.SHORT, Toast.BOTTOM);
+    } finally {
+      setOtpSending((p) => ({ ...p, [method]: false }));
+    }
+  };
+
+  // Final submit withdrawal API
+  const handleConfirmWithdrawal = async () => {
+    if (!activeBeneficiary) return;
+    const amountError = validateWithdrawAmount();
+    if (amountError) {
+      setError(amountError);
+      Toast.showWithGravity(amountError, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
+    if (!enabledMethods.length) {
+      securityVerifySheetRef.current?.close?.();
+      noMethodsSheetRef.current?.open?.();
+      return;
+    }
+
+    const nextErrors = { email: "", mobile: "", google_authenticator: "", fund_password: "" };
+    if (enabledMethods.includes("email") && !emailVerifyCode.trim()) nextErrors.email = "Enter the email OTP.";
+    if (enabledMethods.includes("mobile") && !mobileVerifyCode.trim()) nextErrors.mobile = "Enter the mobile OTP.";
+    if (enabledMethods.includes("google_authenticator") && !authAppCode.trim()) {
+      nextErrors.google_authenticator = "Enter the authenticator app code.";
+    }
+    if (enabledMethods.includes("fund_password") && !fundPassword.trim()) {
+      nextErrors.fund_password = "Enter your fund password.";
+    }
+    if (Object.values(nextErrors).some(Boolean)) {
+      setVerifyFieldErrors(nextErrors);
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = `wd_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    }
+
+    const payload = {
+      whitelist_id: activeBeneficiary.id || activeBeneficiary._id,
+      amount: String(amount).trim(),
+      currency: "AED",
+    };
+    if (enabledMethods.includes("email")) payload.email_code = emailVerifyCode.trim();
+    if (enabledMethods.includes("mobile")) payload.mobile_code = mobileVerifyCode.trim();
+    if (enabledMethods.includes("google_authenticator")) payload.google_authenticator_code = authAppCode.trim();
+    if (enabledMethods.includes("fund_password")) payload.fund_password = fundPassword.trim();
+
+    try {
+      const res = await appOperation.customer
+        .fiat_withdrawals_submit(payload, { "Idempotency-Key": idempotencyKeyRef.current })
+        .catch((e) => e);
+
+      if (res?.success) {
+        const label = res.data?.status_label || res.message || "Withdrawal requested.";
+        const reason = res.data?.status_reason || "";
         securityVerifySheetRef.current?.close?.();
-        Toast.showWithGravity(res.message || "Withdrawal submitted successfully!", Toast.LONG, Toast.BOTTOM);
+        resetVerifyFields();
+        idempotencyKeyRef.current = "";
         setAmount("");
         setPreview(null);
-        NavigationService.navigate(WITHDRAW_FIAT_HISTORY_SCREEN);
+        setStep("main");
+        setInfo(reason ? `${label} ${reason}` : label);
+        Toast.showWithGravity(label, Toast.LONG, Toast.BOTTOM);
+        await loadData();
       } else {
-        const msg = res?.message || res?.error?.message || "Withdrawal request failed";
+        const code = res?.code || res?.error?.code || "";
+        const msg = getFiatErrorMessage(res, "Could not submit withdrawal.");
+        const errMap = { email: "", mobile: "", google_authenticator: "", fund_password: "" };
+        if (code === "EMAIL_OTP_INVALID" || code === "OTP_EXPIRED" || code === "OTP_NOT_FOUND") errMap.email = msg;
+        else if (code === "MOBILE_OTP_INVALID") errMap.mobile = msg;
+        else if (code === "GOOGLE_AUTH_INVALID") errMap.google_authenticator = msg;
+        else if (code === "FUND_PASSWORD_INVALID" || code === "FUND_PASSWORD_REQUIRED") errMap.fund_password = msg;
+
+        if (Object.values(errMap).some(Boolean)) {
+          setVerifyFieldErrors(errMap);
+        }
+        setError(msg);
         Toast.showWithGravity(msg, Toast.LONG, Toast.BOTTOM);
       }
     } catch {
-      Toast.showWithGravity("Withdrawal request failed. Please try again.", Toast.LONG, Toast.BOTTOM);
+      const errMsg = "Could not submit withdrawal. Please try again.";
+      setError(errMsg);
+      Toast.showWithGravity(errMsg, Toast.LONG, Toast.BOTTOM);
     } finally {
-      setSubmittingWithdrawal(false);
+      setSubmitting(false);
     }
   };
 
@@ -565,6 +935,547 @@ const WithdrawFiatScreen = () => {
   const textColor = isDark ? "#FFFFFF" : "#111827";
   const subTextColor = isDark ? "rgba(255,255,255,0.55)" : "#6B7280";
   const badgeBg = isDark ? "rgba(255,255,255,0.08)" : "#EDF2F7";
+
+  // Widget Body Renderer based on step
+  const renderWidgetBody = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingWidgetBox}>
+          <ActivityIndicator color={colors.orangeTheme} size="small" />
+          <AppText type={THIRTEEN} style={{ marginTop: 8 }} color={subTextColor}>
+            Loading bank accounts…
+          </AppText>
+        </View>
+      );
+    }
+
+    // Step 1: Add Bank Account
+    if (step === "add") {
+      return (
+        <View style={styles.widgetStepContainer}>
+          <AppText type={FOURTEEN} weight={BOLD} style={styles.stepHeaderLabel} color={textColor}>
+            Step 1 — Add bank account
+          </AppText>
+          <AppText type={TWELVE} style={styles.stepHelpText} color={subTextColor}>
+            Enter the UAE bank account where you want to receive AED withdrawals. After save, only the masked IBAN is shown.
+          </AppText>
+
+          {/* Account Holder Name */}
+          <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.fieldLabel} color={subTextColor}>
+            Account holder name
+          </AppText>
+          <View style={[styles.inputBox, { backgroundColor: badgeBg, borderColor }]}>
+            <TextInput
+              style={[styles.textInput, { color: textColor }]}
+              value={accountName}
+              onChangeText={setAccountName}
+              placeholder="Must match your KYC name"
+              placeholderTextColor={subTextColor}
+              editable={!submitting}
+            />
+          </View>
+          <AppText type={ELEVEN} style={styles.fieldHint} color={colors.orangeTheme}>
+            {kycName
+              ? `Must match your KYC name: ${kycName}`
+              : "Complete KYC and create your deposit IBAN first. The name must match KYC."}
+          </AppText>
+
+          {/* Account Number (IBAN) */}
+          <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { marginTop: 12 }]} color={subTextColor}>
+            Account number (IBAN)
+          </AppText>
+          <View style={[styles.inputBox, { backgroundColor: badgeBg, borderColor }]}>
+            <TextInput
+              style={[styles.textInput, { color: textColor }]}
+              value={iban}
+              onChangeText={(t) => setIban(t.toUpperCase())}
+              placeholder="AE070331234567890123456"
+              placeholderTextColor={subTextColor}
+              autoCapitalize="characters"
+              editable={!submitting}
+            />
+          </View>
+
+          {/* Bank Name */}
+          <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { marginTop: 12 }]} color={subTextColor}>
+            Bank name
+          </AppText>
+          <View style={[styles.inputBox, { backgroundColor: badgeBg, borderColor }]}>
+            <TextInput
+              style={[styles.textInput, { color: textColor }]}
+              value={bankName}
+              onChangeText={setBankName}
+              placeholder="e.g. Emirates NBD"
+              placeholderTextColor={subTextColor}
+              editable={!submitting}
+            />
+          </View>
+
+          {/* Action Buttons */}
+          <TouchableOpacity
+            onPress={handleAddAccount}
+            disabled={submitting}
+            activeOpacity={0.85}
+            style={[
+              styles.primaryBtn,
+              {
+                backgroundColor: colors.orangeTheme,
+                opacity: submitting ? 0.7 : 1,
+                marginTop: 20,
+              },
+            ]}
+          >
+            {submitting ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <ActivityIndicator color="#000000" size="small" />
+                <AppText type={FIFTEEN} weight={BOLD} color="#000000">
+                  Saving…
+                </AppText>
+              </View>
+            ) : (
+              <AppText type={FIFTEEN} weight={BOLD} color="#000000">
+                Send verification code
+              </AppText>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setStep("main");
+              setError("");
+            }}
+            disabled={submitting}
+            style={[styles.secondaryOutlineBtn, { borderColor }]}
+            activeOpacity={0.7}
+          >
+            <AppText type={FOURTEEN} weight={SEMI_BOLD} color={textColor}>
+              Cancel
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Step 2: Verify Beneficiary OTP
+    if (step === "otp" && activeBeneficiary) {
+      return (
+        <View style={styles.widgetStepContainer}>
+          <AppText type={FOURTEEN} weight={BOLD} style={styles.stepHeaderLabel} color={textColor}>
+            Step 2 — Verify email
+          </AppText>
+          <AppText type={TWELVE} style={styles.stepHelpText} color={subTextColor}>
+            Enter the 6-digit code sent to your registered {otpSentTo === "email" ? "email" : "contact"}. This confirms the IBAN and adds it to the Zand whitelist.
+          </AppText>
+
+          {/* Bank Summary Card */}
+          <View style={[styles.selectedBankCard, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#F9FAFB", borderColor }]}>
+            <View style={styles.selectedBankCardTop}>
+              <View style={styles.selectedBankTitleWrap}>
+                <BankPillarsIcon size={18} color={colors.orangeTheme} />
+                <AppText type={FOURTEEN} weight={BOLD} color={textColor} numberOfLines={1} style={styles.selectedAccountName}>
+                  {activeBeneficiary.account_name_masked || "Bank account"}
+                </AppText>
+              </View>
+            </View>
+            <AppText type={TWELVE} color={subTextColor} numberOfLines={1} style={styles.selectedBankMeta}>
+              {beneficiaryIbanLabel(activeBeneficiary)}
+              {activeBeneficiary.bank_name ? ` · ${activeBeneficiary.bank_name}` : ""}
+            </AppText>
+          </View>
+
+          {/* OTP Input with inline resend */}
+          <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { marginTop: 14 }]} color={subTextColor}>
+            Verification code
+          </AppText>
+          <View style={[styles.otpInputRowWrap, { backgroundColor: badgeBg, borderColor }]}>
+            <TextInput
+              style={[styles.otpInput, { color: textColor }]}
+              value={otp}
+              onChangeText={(t) => setOtp(t.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              placeholderTextColor={subTextColor}
+              keyboardType="number-pad"
+              maxLength={6}
+              editable={!submitting}
+            />
+            <TouchableOpacity
+              onPress={handleResendOtp}
+              disabled={resendSec > 0 || submitting}
+              style={styles.resendInlineBtn}
+              activeOpacity={0.7}
+            >
+              <AppText type={TWELVE} weight={BOLD} color={resendSec > 0 ? subTextColor : colors.orangeTheme}>
+                {resendSec > 0 ? `Resend in ${resendSec}s` : "Resend code"}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Actions */}
+          <TouchableOpacity
+            onPress={handleVerifyOtp}
+            disabled={submitting || otp.length !== 6}
+            activeOpacity={0.85}
+            style={[
+              styles.primaryBtn,
+              {
+                backgroundColor: otp.length === 6 ? colors.orangeTheme : isDark ? "rgba(209,170,103,0.3)" : "#F3E8B6",
+                marginTop: 20,
+              },
+            ]}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#000000" size="small" />
+            ) : (
+              <AppText type={FIFTEEN} weight={BOLD} color="#000000">
+                Verify email
+              </AppText>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.otpActionButtonsRow}>
+            <TouchableOpacity
+              onPress={() => setStep("main")}
+              style={[styles.secondaryOutlineBtn, { borderColor, flex: 1, marginTop: 0 }]}
+              activeOpacity={0.7}
+            >
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} color={textColor}>
+                Back
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => handleRemoveAccount(activeBeneficiary.id || activeBeneficiary._id)}
+              style={[styles.secondaryOutlineBtn, { borderColor: "rgba(239,68,68,0.4)", flex: 1, marginTop: 0 }]}
+              activeOpacity={0.7}
+            >
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} color="#EF4444">
+                Remove account
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    // Step 3: Withdraw AED Form
+    if (step === "withdraw" && activeBeneficiary) {
+      return (
+        <View style={styles.widgetStepContainer}>
+          <AppText type={FOURTEEN} weight={BOLD} style={styles.stepHeaderLabel} color={textColor}>
+            Withdraw AED
+          </AppText>
+
+          {/* Destination Card with Verified Badge */}
+          <View style={[styles.selectedBankCard, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#F9FAFB", borderColor }]}>
+            <View style={styles.selectedBankCardTop}>
+              <View style={styles.selectedBankTitleWrap}>
+                <BankPillarsIcon size={18} color={colors.orangeTheme} />
+                <AppText type={FOURTEEN} weight={BOLD} color={textColor} numberOfLines={1} style={styles.selectedAccountName}>
+                  {activeBeneficiary.account_name_masked || "Bank account"}
+                </AppText>
+              </View>
+              <View style={[styles.statusPill, { backgroundColor: isDark ? "rgba(34,197,94,0.12)" : "#DCFCE7" }]}>
+                <AppText type={ELEVEN} weight={BOLD} color={isDark ? "#4ADE80" : "#15803D"}>
+                  Verified
+                </AppText>
+              </View>
+            </View>
+            <AppText type={TWELVE} color={subTextColor} numberOfLines={1} style={styles.selectedBankMeta}>
+              {beneficiaryIbanLabel(activeBeneficiary)}
+              {activeBeneficiary.bank_name ? ` · ${activeBeneficiary.bank_name}` : ""}
+            </AppText>
+          </View>
+
+          {/* Balance Strip */}
+          <AppText
+            type={TWELVE}
+            style={[styles.availableBalanceNotice, { color: insufficientBalance ? "#EF4444" : subTextColor }]}
+          >
+            Available: {formatAedAmount(balance)} AED
+            {insufficientBalance ? " · Not enough for this withdrawal" : ""}
+          </AppText>
+
+          {/* Amount Input */}
+          <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.fieldLabel} color={subTextColor}>
+            Enter amount
+          </AppText>
+          <View style={[styles.amountInputWrap, { backgroundColor: badgeBg, borderColor }]}>
+            <View style={styles.currencyPrefix}>
+              <UaeFlagIcon width={22} height={15} />
+              <AppText type={FOURTEEN} weight={BOLD} color={textColor} style={{ marginLeft: 6 }}>
+                AED
+              </AppText>
+            </View>
+            <TextInput
+              style={[styles.amountInput, { color: textColor }]}
+              value={amount}
+              onChangeText={(t) => setAmount(sanitizeAedAmount(t))}
+              placeholder="0.00"
+              placeholderTextColor={subTextColor}
+              keyboardType="decimal-pad"
+            />
+            <TouchableOpacity
+              onPress={() => setAmount(maxWithdrawable || "")}
+              disabled={!maxWithdrawable}
+              style={[styles.maxBtn, { backgroundColor: isDark ? "rgba(209,170,103,0.18)" : "#FFF9E6" }]}
+              activeOpacity={0.7}
+            >
+              <AppText type={ELEVEN} weight={BOLD} color={colors.orangeTheme}>
+                MAX
+              </AppText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Limit Hints */}
+          <View style={{ marginTop: 6 }}>
+            {withdrawLimits.minPerTx != null ? (
+              <AppText type={ELEVEN} color={belowMin ? "#EF4444" : subTextColor}>
+                Minimum: {formatAedAmount(withdrawLimits.minPerTx)} AED
+              </AppText>
+            ) : null}
+            {overLimit && maxWithdrawable ? (
+              <AppText type={ELEVEN} color="#EF4444" style={{ marginTop: 2 }}>
+                Max now: {formatAedAmount(maxWithdrawable)} AED (balance / limits)
+              </AppText>
+            ) : null}
+          </View>
+
+          {/* Preview Fee Breakdown */}
+          {preview && !amountBlocked ? (
+            <View style={[styles.previewBreakdown, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#F9FAFB", borderColor }]}>
+              <View style={styles.previewRow}>
+                <AppText type={THIRTEEN} color={subTextColor}>You send</AppText>
+                <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
+                  {formatAedAmount(preview.amount || amount)} AED
+                </AppText>
+              </View>
+              <View style={styles.previewRow}>
+                <AppText type={THIRTEEN} color={subTextColor}>Fee</AppText>
+                <AppText type={FOURTEEN} weight={BOLD} color={colors.orangeTheme}>
+                  {formatAedAmount(preview.fee_aed || preview.fee || 0)} AED
+                </AppText>
+              </View>
+              <View style={[styles.previewRow, styles.previewTotalRow, { borderTopColor: borderColor }]}>
+                <AppText type={FOURTEEN} weight={BOLD} color={textColor}>Bank receives</AppText>
+                <AppText type={SIXTEEN} weight={BOLD} color="#10B981">
+                  {formatAedAmount(preview.net_aed || preview.net || amount)} AED
+                </AppText>
+              </View>
+            </View>
+          ) : previewing && amountReady && !amountBlocked ? (
+            <View style={styles.loadingQuoteWrap}>
+              <ActivityIndicator size="small" color={colors.orangeTheme} />
+              <AppText type={TWELVE} style={{ marginLeft: 8 }} color={subTextColor}>
+                Loading fee quote…
+              </AppText>
+            </View>
+          ) : previewError ? (
+            <View style={styles.previewErrorWrap}>
+              <AppText type={TWELVE} color="#EF4444">{previewError}</AppText>
+            </View>
+          ) : null}
+
+          {/* Submit Action Button */}
+          <TouchableOpacity
+            onPress={startWithdrawFlow}
+            disabled={submitting || previewing || amountBlocked || !preview || !amountReady}
+            activeOpacity={0.85}
+            style={[
+              styles.primaryBtn,
+              {
+                backgroundColor:
+                  amountBlocked || !preview || !amountReady
+                    ? isDark ? "rgba(209,170,103,0.3)" : "#F3E8B6"
+                    : colors.orangeTheme,
+                marginTop: 20,
+              },
+            ]}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#000000" size="small" />
+            ) : (
+              <AppText type={FIFTEEN} weight={BOLD} color="#000000">
+                {insufficientBalance
+                  ? "Insufficient balance"
+                  : belowMin
+                    ? "Below minimum"
+                    : overLimit
+                      ? "Over limit"
+                      : "Withdraw"}
+              </AppText>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setStep("main")}
+            style={styles.changeBankLinkBtn}
+            activeOpacity={0.7}
+          >
+            <AppText type={THIRTEEN} weight={SEMI_BOLD} color={colors.orangeTheme}>
+              Change bank account
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Default: 'main' Step (Bank Accounts List)
+    return (
+      <View style={styles.widgetStepContainer}>
+        <AppText type={FOURTEEN} weight={BOLD} style={styles.stepHeaderLabel} color={textColor}>
+          Bank accounts
+        </AppText>
+
+        {beneficiaries.length === 0 ? (
+          <View style={styles.emptyBeneficiariesWrap}>
+            <AppText type={TWELVE} style={styles.emptyBeneficiariesText} color={subTextColor}>
+              Add a UAE bank account to withdraw AED from your spot wallet.
+            </AppText>
+            <TouchableOpacity
+              onPress={startAddAccount}
+              activeOpacity={0.85}
+              style={[styles.primaryBtn, { backgroundColor: colors.orangeTheme, marginTop: 14 }]}
+            >
+              <AppText type={FIFTEEN} weight={BOLD} color="#000000">
+                Add bank account
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {beneficiaries.map((ben) => {
+              const benId = ben.id || ben._id;
+              const isSelected = String(selectedId) === String(benId);
+              const needsContinue = ben.status === "PENDING_OTP";
+              const isVerified = ben.status === "VERIFIED";
+
+              return (
+                <TouchableOpacity
+                  key={benId}
+                  activeOpacity={0.85}
+                  onPress={() => setSelectedId(benId)}
+                  style={[
+                    styles.bankRadioCard,
+                    {
+                      backgroundColor: isSelected
+                        ? isDark ? "rgba(209,170,103,0.08)" : "#FFFDF5"
+                        : isDark ? "rgba(255,255,255,0.03)" : "#F9FAFB",
+                      borderColor: isSelected ? colors.orangeTheme : borderColor,
+                    },
+                  ]}
+                >
+                  <View style={styles.bankRadioRow}>
+                    <View style={styles.radioIconWrap}>
+                      {isSelected ? (
+                        <RadioCheckedIcon size={18} color={colors.orangeTheme} />
+                      ) : (
+                        <RadioUncheckedIcon size={18} color={subTextColor} />
+                      )}
+                    </View>
+
+                    <View style={styles.bankCardBody}>
+                      <View style={styles.bankCardHeaderRow}>
+                        <AppText
+                          type={FOURTEEN}
+                          weight={BOLD}
+                          color={textColor}
+                          style={styles.bankAccountNameText}
+                          numberOfLines={1}
+                        >
+                          {ben.account_name_masked || "Bank account"}
+                        </AppText>
+                        <View
+                          style={[
+                            styles.statusPill,
+                            {
+                              backgroundColor: isVerified
+                                ? isDark ? "rgba(34,197,94,0.12)" : "#DCFCE7"
+                                : isDark ? "rgba(96,165,250,0.12)" : "#DBEAFE",
+                            },
+                          ]}
+                        >
+                          <AppText
+                            type={ELEVEN}
+                            weight={BOLD}
+                            color={isVerified ? (isDark ? "#4ADE80" : "#15803D") : (isDark ? "#60A5FA" : "#2563EB")}
+                          >
+                            {isVerified ? "Verified" : "Verify email"}
+                          </AppText>
+                        </View>
+                      </View>
+
+                      <AppText type={TWELVE} color={subTextColor} style={styles.bankMetaText} numberOfLines={1}>
+                        {beneficiaryIbanLabel(ben)}
+                        {ben.bank_name ? ` · ${ben.bank_name}` : ""}
+                      </AppText>
+
+                      <View style={styles.bankActionButtonsWrap}>
+                        {needsContinue ? (
+                          <TouchableOpacity
+                            onPress={() => {
+                              setSelectedId(benId);
+                              setStep("otp");
+                              setOtp("");
+                            }}
+                            style={[styles.smallActionBtn, { borderColor: colors.orangeTheme }]}
+                            activeOpacity={0.7}
+                          >
+                            <AppText type={ELEVEN} weight={BOLD} color={colors.orangeTheme}>
+                              Verify email
+                            </AppText>
+                          </TouchableOpacity>
+                        ) : null}
+
+                        <TouchableOpacity
+                          onPress={() => handleRemoveAccount(benId)}
+                          style={[styles.smallActionBtn, { borderColor: "rgba(239,68,68,0.4)" }]}
+                          activeOpacity={0.7}
+                        >
+                          <AppText type={ELEVEN} weight={SEMI_BOLD} color="#EF4444">
+                            Remove
+                          </AppText>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
+            {/* Actions: Withdraw Button + Add Bank Account */}
+            <TouchableOpacity
+              onPress={startWithdrawFlow}
+              disabled={!verifiedReady.some((b) => String(b.id || b._id) === String(selectedId))}
+              activeOpacity={0.85}
+              style={[
+                styles.primaryBtn,
+                {
+                  backgroundColor: verifiedReady.some((b) => String(b.id || b._id) === String(selectedId))
+                    ? colors.orangeTheme
+                    : isDark ? "rgba(209,170,103,0.3)" : "#F3E8B6",
+                  marginTop: 18,
+                },
+              ]}
+            >
+              <AppText type={FIFTEEN} weight={BOLD} color="#000000">
+                Withdraw
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={startAddAccount}
+              style={[styles.secondaryOutlineBtn, { borderColor }]}
+              activeOpacity={0.7}
+            >
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} color={textColor}>
+                + Add bank account
+              </AppText>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    );
+  };
 
   return (
     <AppSafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
@@ -606,272 +1517,106 @@ const WithdrawFiatScreen = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.orangeTheme} />}
       >
-        {/* Hero Banner Section (Compact Sleek Layout) */}
+        {/* Hero Banner Section */}
         <View style={[styles.heroCard, { backgroundColor: cardBg, borderColor }]}>
           <View style={styles.gatewayPill}>
-            <AppText type={TEN} weight={BOLD} style={styles.gatewayPillText} color="#D4AF37">
-              FIAT PAYOUT
+            <AppText type={TEN} weight={BOLD} style={styles.gatewayPillText} color={colors.orangeTheme}>
+              FIAT GATEWAY
             </AppText>
           </View>
 
           <AppText type={EIGHTEEN} weight={BOLD} style={styles.heroHeading} color={textColor}>
-            Withdraw Fiat.{" "}
-            <AppText type={EIGHTEEN} weight={BOLD} color="#D4AF37">Direct to UAE Bank.</AppText>
+            AED Withdrawals{"\n"}to Your Bank
           </AppText>
 
           <AppText type={TWELVE} style={styles.heroSub} color={subTextColor}>
-            Withdraw AED from your spot wallet directly to your verified UAE bank account.
+            Withdraw AED from your spot wallet to a verified UAE bank account securely.
           </AppText>
 
-          {/* 3 Value Props */}
+          {/* 3 Features */}
           <View style={styles.featureList}>
             <View style={styles.featureRow}>
               <View style={styles.featureIconBadge}>
-                <SecurityShieldIcon size={15} color="#D1AA67" />
+                <SecurityShieldIcon size={15} color={colors.orangeTheme} />
               </View>
               <View style={styles.featureTextWrap}>
                 <AppText type={THIRTEEN} weight={BOLD} style={styles.featureTitle} color={textColor}>
-                  Bank-Level Security
+                  Secure & Reliable
                 </AppText>
                 <AppText type={ELEVEN} style={styles.featureDesc} color={subTextColor}>
-                  2FA protection and whitelist verification on every withdrawal.
+                  Email OTP confirms your IBAN, then it is whitelisted for AED payouts.
                 </AppText>
               </View>
             </View>
 
             <View style={styles.featureRow}>
               <View style={styles.featureIconBadge}>
-                <InstantBoltIcon size={15} color="#D1AA67" />
+                <InstantBoltIcon size={15} color={colors.orangeTheme} />
               </View>
               <View style={styles.featureTextWrap}>
                 <AppText type={THIRTEEN} weight={BOLD} style={styles.featureTitle} color={textColor}>
-                  Domestic UAE Rails
+                  Verified Accounts Only
                 </AppText>
                 <AppText type={ELEVEN} style={styles.featureDesc} color={subTextColor}>
-                  Processed through Zand Bank domestic clearing network.
+                  Whitelist your IBAN once, then withdraw when you need.
                 </AppText>
               </View>
             </View>
 
             <View style={styles.featureRow}>
               <View style={styles.featureIconBadge}>
-                <RatesGraphIcon size={15} color="#D1AA67" />
+                <BankPillarsIcon size={15} color={colors.orangeTheme} />
               </View>
               <View style={styles.featureTextWrap}>
                 <AppText type={THIRTEEN} weight={BOLD} style={styles.featureTitle} color={textColor}>
-                  Transparent Limits
+                  UAE AED Rail
                 </AppText>
                 <AppText type={ELEVEN} style={styles.featureDesc} color={subTextColor}>
-                  Real-time fee quotes with daily and monthly limit tracking.
+                  Domestic AED payouts via Zand Bank.
                 </AppText>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Withdrawal Form Card */}
+        {/* Withdrawal Widget Container Card */}
         <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
           <View style={styles.cardHeaderRow}>
             <AppText type={EIGHTEEN} weight={BOLD} color={textColor}>
-              Withdrawal Details
+              Withdraw Fiat
             </AppText>
             <TouchableOpacity
               onPress={() => NavigationService.navigate(DEPOSIT_FIAT_SCREEN)}
               style={styles.depositLink}
               activeOpacity={0.7}
             >
-              <AppText type={TWELVE} weight={SEMI_BOLD} color="#D4AF37">
+              <AppText type={TWELVE} weight={SEMI_BOLD} color={colors.orangeTheme}>
                 Fiat Deposit ›
               </AppText>
             </TouchableOpacity>
           </View>
 
-          {/* Spot Balance & Limits Strip */}
-          <View style={[styles.balanceStrip, { backgroundColor: badgeBg, borderColor }]}>
-            <View style={styles.balanceInfo}>
-              <AppText type={TWELVE} color={subTextColor}>Spot AED Available</AppText>
-              <AppText type={SIXTEEN} weight={BOLD} color={textColor}>
-                {formatAedAmount(spotBalance)} AED
-              </AppText>
+          {/* Alerts */}
+          {error ? (
+            <View style={styles.errorAlertBox}>
+              <AppText type={TWELVE} color="#EF4444">{error}</AppText>
             </View>
-            {withdrawLimits.dailyRemaining != null ? (
-              <View style={styles.limitInfo}>
-                <AppText type={TWELVE} color={subTextColor}>Daily Left</AppText>
-                <AppText type={FOURTEEN} weight={SEMI_BOLD} color="#D4AF37">
-                  {formatAedAmount(withdrawLimits.dailyRemaining)} AED
-                </AppText>
-              </View>
-            ) : null}
-          </View>
-
-          {/* Destination Bank Account Section */}
-          <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.fieldLabel} color={subTextColor}>
-            Destination Bank Account
-          </AppText>
-
-          {beneficiaries.length === 0 ? (
-            /* No bank account added */
-            <TouchableOpacity
-              onPress={handleOpenAddBank}
-              activeOpacity={0.75}
-              style={[styles.addBankBtn, { borderColor: "#D4AF37", backgroundColor: isDark ? "rgba(212,175,55,0.08)" : "#FFF9E6" }]}
-            >
-              <BankPillarsIcon size={20} color="#D4AF37" />
-              <AppText type={FOURTEEN} weight={BOLD} color="#D4AF37">
-                + Add Bank Account (IBAN)
-              </AppText>
-            </TouchableOpacity>
-          ) : selectedBeneficiary ? (
-            /* Selected Bank Account Card */
-            <View style={[styles.selectedBankCard, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#F9FAFB", borderColor }]}>
-              <View style={styles.bankCardTop}>
-                <View style={styles.bankTitleRow}>
-                  <BankPillarsIcon size={20} color="#D1AA67" />
-                  <View style={{ flex: 1 }}>
-                    <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                      {selectedBeneficiary.bank_name || "UAE Bank"}
-                    </AppText>
-                    <AppText type={TWELVE} color={subTextColor}>
-                      {beneficiaryIbanLabel(selectedBeneficiary)}
-                    </AppText>
-                  </View>
-                </View>
-                <View
-                  style={[
-                    styles.statusPill,
-                    {
-                      backgroundColor: selectedBeneficiary.status === "VERIFIED" ? (isDark ? "rgba(34,197,94,0.18)" : "#DCFCE7") : (isDark ? "rgba(245,158,11,0.18)" : "#FEF3C7"),
-                    },
-                  ]}
-                >
-                  <AppText
-                    type={ELEVEN}
-                    weight={BOLD}
-                    color={selectedBeneficiary.status === "VERIFIED" ? (isDark ? "#22C55E" : "#15803D") : (isDark ? "#D1AA67" : "#D97706")}
-                  >
-                    {selectedBeneficiary.status === "VERIFIED" ? "Verified" : "Pending OTP"}
-                  </AppText>
-                </View>
-              </View>
-
-              <View style={styles.bankCardActions}>
-                <TouchableOpacity
-                  onPress={handleOpenAddBank}
-                  style={styles.bankActionBtn}
-                  activeOpacity={0.7}
-                >
-                  <AppText type={TWELVE} weight={SEMI_BOLD} color="#D4AF37">
-                    + Add another
-                  </AppText>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    setRemoveTarget(selectedBeneficiary);
-                    removeBankSheetRef.current?.open?.();
-                  }}
-                  style={styles.bankActionBtn}
-                  activeOpacity={0.7}
-                >
-                  <AppText type={TWELVE} weight={SEMI_BOLD} color="#EF4444">
-                    Remove
-                  </AppText>
-                </TouchableOpacity>
-              </View>
+          ) : null}
+          {info ? (
+            <View style={styles.infoAlertBox}>
+              <AppText type={TWELVE} color={colors.orangeTheme}>{info}</AppText>
             </View>
           ) : null}
 
-          {/* Withdrawal Amount Input */}
-          <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { marginTop: 18 }]} color={subTextColor}>
-            Withdrawal Amount
-          </AppText>
-          <View style={[styles.amountInputWrap, { backgroundColor: badgeBg, borderColor }]}>
-            <View style={styles.currencyPrefix}>
-              <UaeFlagIcon width={22} height={15} />
-              <AppText type={FOURTEEN} weight={BOLD} color={textColor} style={{ marginLeft: 6 }}>
-                AED
-              </AppText>
-            </View>
-
-            <TextInput
-              style={[styles.amountInput, { color: textColor }]}
-              placeholder="0.00"
-              placeholderTextColor={subTextColor}
-              keyboardType="decimal-pad"
-              value={amount}
-              onChangeText={(text) => setAmount(sanitizeAedAmount(text))}
-            />
-
-            <TouchableOpacity
-              onPress={handleMaxAmount}
-              style={[styles.maxBtn, { backgroundColor: isDark ? "rgba(212,175,55,0.18)" : "#FFF9E6" }]}
-              activeOpacity={0.7}
-            >
-              <AppText type={ELEVEN} weight={BOLD} color="#D4AF37">
-                MAX
-              </AppText>
-            </TouchableOpacity>
-          </View>
-
-          {/* Fee & Payout Quote Preview */}
-          {preview ? (
-            <View style={[styles.previewBreakdown, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#F9FAFB", borderColor }]}>
-              <View style={styles.previewRow}>
-                <AppText type={THIRTEEN} color={subTextColor}>Withdrawal Amount</AppText>
-                <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                  {formatAedAmount(preview.amount || amount)} AED
-                </AppText>
-              </View>
-
-              <View style={styles.previewRow}>
-                <AppText type={THIRTEEN} color={subTextColor}>Network Fee</AppText>
-                <AppText type={FOURTEEN} weight={BOLD} color="#D4AF37">
-                  {formatAedAmount(preview.fee_aed || preview.fee || 0)} AED
-                </AppText>
-              </View>
-
-              <View style={[styles.previewRow, styles.previewTotalRow, { borderTopColor: borderColor }]}>
-                <AppText type={FOURTEEN} weight={BOLD} color={textColor}>You will receive</AppText>
-                <AppText type={SIXTEEN} weight={BOLD} color="#10B981">
-                  {formatAedAmount(preview.net_aed || preview.net || amount)} AED
-                </AppText>
-              </View>
-            </View>
-          ) : previewError ? (
-            <View style={styles.previewErrorWrap}>
-              <AppText type={TWELVE} color="#EF4444">{previewError}</AppText>
-            </View>
-          ) : null}
-
-          {/* Withdraw Action CTA */}
-          <TouchableOpacity
-            onPress={handleProceedWithdrawal}
-            disabled={!selectedBeneficiary || selectedBeneficiary.status !== "VERIFIED" || !amount || previewing}
-            activeOpacity={0.85}
-            style={[
-              styles.primaryBtn,
-              {
-                backgroundColor: !selectedBeneficiary || selectedBeneficiary.status !== "VERIFIED" || !amount ? (isDark ? "rgba(212,175,55,0.3)" : "#F3E8B6") : "#D4AF37",
-                marginTop: 20,
-              },
-            ]}
-          >
-            {previewing ? (
-              <ActivityIndicator color="#000000" size="small" />
-            ) : (
-              <AppText type={FIFTEEN} weight={BOLD} color="#000000">
-                Confirm Withdrawal
-              </AppText>
-            )}
-          </TouchableOpacity>
+          {renderWidgetBody()}
         </View>
 
-        {/* "How to withdraw Fiat?" Steps Carousel */}
+        {/* "How to withdraw Fiat?" Section */}
         <View style={styles.sectionWrap}>
           <AppText type={EIGHTEEN} weight={BOLD} style={styles.sectionHeading} color={textColor}>
-            How to withdraw <AppText type={EIGHTEEN} weight={BOLD} color="#D4AF37">Fiat</AppText>?
+            How to withdraw <AppText type={EIGHTEEN} weight={BOLD} color={colors.orangeTheme}>Fiat</AppText>?
           </AppText>
 
           <ScrollView
@@ -879,11 +1624,11 @@ const WithdrawFiatScreen = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.stepsScroll}
           >
-            {HOW_STEPS.map((step) => {
-              const StepIcon = step.IconComponent;
+            {HOW_STEPS.map((s) => {
+              const StepIcon = s.IconComponent;
               return (
                 <View
-                  key={step.n}
+                  key={s.n}
                   style={[
                     styles.stepCard,
                     {
@@ -893,13 +1638,13 @@ const WithdrawFiatScreen = () => {
                   ]}
                 >
                   <View style={styles.stepCircleIcon}>
-                    <StepIcon size={18} color="#D1AA67" />
+                    <StepIcon size={18} color={colors.orangeTheme} />
                   </View>
                   <AppText type={FIFTEEN} weight={BOLD} style={styles.stepTitle} color={textColor}>
-                    {step.n}. {step.title}
+                    {s.n}. {s.title}
                   </AppText>
                   <AppText type={TWELVE} style={styles.stepDesc} color={subTextColor}>
-                    {step.body}
+                    {s.body}
                   </AppText>
                 </View>
               );
@@ -910,19 +1655,19 @@ const WithdrawFiatScreen = () => {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Add Bank Account Bottom Sheet */}
+      {/* Security Verification & 2FA Modal */}
       <AnimatedBottomSheet
-        ref={addBankSheetRef}
-        sheetHeight={460}
+        ref={securityVerifySheetRef}
+        sheetHeight={Math.min(SCREEN_HEIGHT * 0.78, 560)}
         isDark={isDark}
       >
         <View style={styles.sheetInner}>
           <View style={styles.sheetHeader}>
             <AppText type={EIGHTEEN} weight={BOLD} color={textColor}>
-              Add Bank Account
+              Security verification
             </AppText>
             <TouchableOpacity
-              onPress={() => addBankSheetRef.current?.close?.()}
+              onPress={() => securityVerifySheetRef.current?.close?.()}
               style={[styles.closeCircle, { backgroundColor: badgeBg }]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
@@ -931,145 +1676,217 @@ const WithdrawFiatScreen = () => {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {addBankError ? (
-              <View style={styles.errorBox}>
-                <AppText type={TWELVE} color="#EF4444">{addBankError}</AppText>
+            <AppText type={TWELVE} style={{ marginBottom: 16 }} color={subTextColor}>
+              Complete all enabled methods. For email or SMS, tap Send code, then enter the OTP.
+            </AppText>
+
+            {/* Email OTP Field */}
+            {enabledMethods.includes("email") ? (
+              <View style={{ marginBottom: 14 }}>
+                <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
+                  Email verification code
+                </AppText>
+                <View style={[styles.otpInputRowWrap, { backgroundColor: badgeBg, borderColor }]}>
+                  <TextInput
+                    style={[styles.otpInput, { color: textColor }]}
+                    placeholder="Enter email code"
+                    placeholderTextColor={subTextColor}
+                    keyboardType="number-pad"
+                    value={emailVerifyCode}
+                    onChangeText={(v) => {
+                      setEmailVerifyCode(v.replace(/\D/g, "").slice(0, VERIFY_CODE_LEN));
+                      setVerifyFieldErrors((p) => ({ ...p, email: "" }));
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => handleSendVerifyOtp("email")}
+                    disabled={otpSending.email || otpResend.email > 0}
+                    style={styles.resendInlineBtn}
+                    activeOpacity={0.7}
+                  >
+                    <AppText type={TWELVE} weight={BOLD} color={otpResend.email > 0 ? subTextColor : colors.orangeTheme}>
+                      {otpSending.email
+                        ? "Sending…"
+                        : otpResend.email > 0
+                          ? `Resend in ${otpResend.email}s`
+                          : "Send code"}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+                {verifyFieldErrors.email ? (
+                  <AppText type={ELEVEN} color="#EF4444" style={{ marginTop: 4 }}>
+                    {verifyFieldErrors.email}
+                  </AppText>
+                ) : null}
               </View>
             ) : null}
 
-            {/* IBAN Input */}
-            <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
-              UAE IBAN Number
-            </AppText>
-            <View style={[styles.modalInputWrap, { backgroundColor: badgeBg, borderColor }]}>
-              <TextInput
-                style={[styles.modalTextInput, { color: textColor }]}
-                placeholder="AE..."
-                placeholderTextColor={subTextColor}
-                autoCapitalize="characters"
-                value={newIban}
-                onChangeText={(t) => setNewIban(t.toUpperCase())}
-              />
-            </View>
+            {/* Mobile SMS OTP Field */}
+            {enabledMethods.includes("mobile") ? (
+              <View style={{ marginBottom: 14 }}>
+                <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
+                  Mobile verification code
+                </AppText>
+                <View style={[styles.otpInputRowWrap, { backgroundColor: badgeBg, borderColor }]}>
+                  <TextInput
+                    style={[styles.otpInput, { color: textColor }]}
+                    placeholder="Enter mobile code"
+                    placeholderTextColor={subTextColor}
+                    keyboardType="number-pad"
+                    value={mobileVerifyCode}
+                    onChangeText={(v) => {
+                      setMobileVerifyCode(v.replace(/\D/g, "").slice(0, VERIFY_CODE_LEN));
+                      setVerifyFieldErrors((p) => ({ ...p, mobile: "" }));
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => handleSendVerifyOtp("mobile")}
+                    disabled={otpSending.mobile || otpResend.mobile > 0}
+                    style={styles.resendInlineBtn}
+                    activeOpacity={0.7}
+                  >
+                    <AppText type={TWELVE} weight={BOLD} color={otpResend.mobile > 0 ? subTextColor : colors.orangeTheme}>
+                      {otpSending.mobile
+                        ? "Sending…"
+                        : otpResend.mobile > 0
+                          ? `Resend in ${otpResend.mobile}s`
+                          : "Send code"}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+                {verifyFieldErrors.mobile ? (
+                  <AppText type={ELEVEN} color="#EF4444" style={{ marginTop: 4 }}>
+                    {verifyFieldErrors.mobile}
+                  </AppText>
+                ) : null}
+              </View>
+            ) : null}
 
-            {/* Account Name */}
-            <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
-              Account Holder Name
-            </AppText>
-            <View style={[styles.modalInputWrap, { backgroundColor: badgeBg, borderColor }]}>
-              <TextInput
-                style={[styles.modalTextInput, { color: textColor }]}
-                placeholder="Beneficiary Name"
-                placeholderTextColor={subTextColor}
-                value={newAccountName}
-                onChangeText={setNewAccountName}
-              />
-            </View>
+            {/* Authenticator App */}
+            {enabledMethods.includes("google_authenticator") ? (
+              <View style={{ marginBottom: 14 }}>
+                <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
+                  Authenticator app
+                </AppText>
+                <View style={[styles.inputBox, { backgroundColor: badgeBg, borderColor }]}>
+                  <TextInput
+                    style={[styles.textInput, { color: textColor }]}
+                    placeholder="Enter authenticator app code"
+                    placeholderTextColor={subTextColor}
+                    keyboardType="number-pad"
+                    value={authAppCode}
+                    onChangeText={(v) => {
+                      setAuthAppCode(v.replace(/\D/g, "").slice(0, VERIFY_CODE_LEN));
+                      setVerifyFieldErrors((p) => ({ ...p, google_authenticator: "" }));
+                    }}
+                  />
+                </View>
+                {verifyFieldErrors.google_authenticator ? (
+                  <AppText type={ELEVEN} color="#EF4444" style={{ marginTop: 4 }}>
+                    {verifyFieldErrors.google_authenticator}
+                  </AppText>
+                ) : null}
+              </View>
+            ) : null}
 
-            {/* Bank Name */}
-            <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
-              Bank Name (Optional)
-            </AppText>
-            <View style={[styles.modalInputWrap, { backgroundColor: badgeBg, borderColor }]}>
-              <TextInput
-                style={[styles.modalTextInput, { color: textColor }]}
-                placeholder="e.g. Emirates NBD, ENBD, ADCB"
-                placeholderTextColor={subTextColor}
-                value={newBankName}
-                onChangeText={setNewBankName}
-              />
-            </View>
+            {/* Fund Password */}
+            {enabledMethods.includes("fund_password") ? (
+              <View style={{ marginBottom: 14 }}>
+                <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
+                  Fund password
+                </AppText>
+                <View style={[styles.otpInputRowWrap, { backgroundColor: badgeBg, borderColor }]}>
+                  <TextInput
+                    style={[styles.otpInput, { color: textColor }]}
+                    placeholder="Enter fund password"
+                    placeholderTextColor={subTextColor}
+                    secureTextEntry={!fundVisible}
+                    value={fundPassword}
+                    onChangeText={(v) => {
+                      setFundPassword(v);
+                      setVerifyFieldErrors((p) => ({ ...p, fund_password: "" }));
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setFundVisible((v) => !v)}
+                    style={styles.resendInlineBtn}
+                    activeOpacity={0.7}
+                  >
+                    <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
+                      {fundVisible ? "Hide" : "Show"}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+                {verifyFieldErrors.fund_password ? (
+                  <AppText type={ELEVEN} color="#EF4444" style={{ marginTop: 4 }}>
+                    {verifyFieldErrors.fund_password}
+                  </AppText>
+                ) : null}
+              </View>
+            ) : null}
 
+            {/* Confirm Withdrawal CTA */}
             <TouchableOpacity
-              onPress={handleSubmitAddBank}
-              disabled={addingBank}
+              onPress={handleConfirmWithdrawal}
+              disabled={submitting || !verificationReady}
               activeOpacity={0.85}
-              style={[styles.primaryBtn, { backgroundColor: "#D4AF37", marginTop: 20 }]}
+              style={[
+                styles.primaryBtn,
+                {
+                  backgroundColor: verificationReady ? colors.orangeTheme : isDark ? "rgba(209,170,103,0.3)" : "#F3E8B6",
+                  marginTop: 18,
+                },
+              ]}
             >
-              {addingBank ? (
+              {submitting ? (
                 <ActivityIndicator color="#000000" size="small" />
               ) : (
                 <AppText type={FIFTEEN} weight={BOLD} color="#000000">
-                  Save & Verify Email
+                  Confirm withdrawal
                 </AppText>
               )}
             </TouchableOpacity>
+
+            <View style={styles.protectedFooterRow}>
+              <SecurityShieldIcon size={14} color={subTextColor} />
+              <AppText type={ELEVEN} style={{ marginLeft: 6 }} color={subTextColor}>
+                Protected by Advanced Encryption
+              </AppText>
+            </View>
           </ScrollView>
         </View>
       </AnimatedBottomSheet>
 
-      {/* Verify Email OTP Bottom Sheet */}
+      {/* No Methods Modal */}
       <AnimatedBottomSheet
-        ref={verifyEmailOtpSheetRef}
-        sheetHeight={350}
+        ref={noMethodsSheetRef}
+        sheetHeight={280}
         isDark={isDark}
       >
         <View style={styles.sheetInner}>
-          <View style={styles.sheetHeader}>
-            <AppText type={EIGHTEEN} weight={BOLD} color={textColor}>
-              Verify Bank Account
-            </AppText>
-            <TouchableOpacity
-              onPress={() => verifyEmailOtpSheetRef.current?.close?.()}
-              style={[styles.closeCircle, { backgroundColor: badgeBg }]}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <FastImage source={closeIcon} style={styles.closeIconSmall} resizeMode="contain" tintColor={subTextColor} />
-            </TouchableOpacity>
-          </View>
-
-          <AppText type={THIRTEEN} style={{ marginBottom: 14 }} color={subTextColor}>
-            Enter the 6-digit verification code sent to your registered email to whitelist this IBAN.
+          <AppText type={EIGHTEEN} weight={BOLD} style={{ marginBottom: 8 }} color={textColor}>
+            Enable a verification method
+          </AppText>
+          <AppText type={THIRTEEN} style={{ marginBottom: 20, lineHeight: 18 }} color={subTextColor}>
+            To withdraw AED, enable at least one security method: email, mobile, authenticator, or fund password.
           </AppText>
 
-          {otpError ? (
-            <View style={styles.errorBox}>
-              <AppText type={TWELVE} color="#EF4444">{otpError}</AppText>
-            </View>
-          ) : null}
-
-          <View style={[styles.modalInputWrap, { backgroundColor: badgeBg, borderColor }]}>
-            <TextInput
-              style={[styles.modalTextInput, { color: textColor, letterSpacing: 4, textAlign: "center" }]}
-              placeholder="000000"
-              placeholderTextColor={subTextColor}
-              keyboardType="number-pad"
-              maxLength={6}
-              value={emailOtp}
-              onChangeText={setEmailOtp}
-            />
-          </View>
-
-          <View style={styles.resendRow}>
-            <TouchableOpacity
-              onPress={handleResendOtp}
-              disabled={resendCooldown > 0}
-              activeOpacity={0.7}
-            >
-              <AppText type={TWELVE} weight={SEMI_BOLD} color={resendCooldown > 0 ? subTextColor : "#D4AF37"}>
-                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend code"}
-              </AppText>
-            </TouchableOpacity>
-          </View>
-
           <TouchableOpacity
-            onPress={handleVerifyEmailOtp}
-            disabled={verifyingOtp || emailOtp.length < 6}
+            onPress={() => {
+              noMethodsSheetRef.current?.close?.();
+              NavigationService.navigate(SECURITY_SCREEN);
+            }}
             activeOpacity={0.85}
-            style={[styles.primaryBtn, { backgroundColor: emailOtp.length === 6 ? "#D4AF37" : (isDark ? "rgba(212,175,55,0.3)" : "#F3E8B6"), marginTop: 14 }]}
+            style={[styles.primaryBtn, { backgroundColor: colors.orangeTheme, width: "100%" }]}
           >
-            {verifyingOtp ? (
-              <ActivityIndicator color="#000000" size="small" />
-            ) : (
-              <AppText type={FIFTEEN} weight={BOLD} color="#000000">
-                Confirm & Whitelist
-              </AppText>
-            )}
+            <AppText type={FIFTEEN} weight={BOLD} color="#000000">
+              Go to security settings
+            </AppText>
           </TouchableOpacity>
         </View>
       </AnimatedBottomSheet>
 
-      {/* Remove Bank Confirmation Sheet */}
+      {/* Remove Account Confirmation Sheet */}
       <AnimatedBottomSheet
         ref={removeBankSheetRef}
         sheetHeight={260}
@@ -1080,7 +1897,7 @@ const WithdrawFiatScreen = () => {
             Remove bank account?
           </AppText>
           <AppText type={THIRTEEN} style={{ marginBottom: 20 }} color={subTextColor}>
-            Remove {beneficiaryIbanLabel(removeTarget)}? You can add this IBAN again later.
+            Remove {beneficiaryIbanLabel(removeTarget)}? You can add the same IBAN again later.
           </AppText>
 
           <View style={{ flexDirection: "row", gap: 12 }}>
@@ -1093,92 +1910,18 @@ const WithdrawFiatScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleConfirmRemoveBank}
-              disabled={removingBank}
+              onPress={confirmRemoveAccount}
+              disabled={submitting}
               style={[styles.modalDangerBtn, { backgroundColor: "#EF4444" }]}
               activeOpacity={0.85}
             >
-              {removingBank ? (
+              {submitting ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <AppText type={FOURTEEN} weight={BOLD} color="#FFFFFF">Remove</AppText>
               )}
             </TouchableOpacity>
           </View>
-        </View>
-      </AnimatedBottomSheet>
-
-      {/* 2FA Security Verification & Submit Sheet */}
-      <AnimatedBottomSheet
-        ref={securityVerifySheetRef}
-        sheetHeight={380}
-        isDark={isDark}
-      >
-        <View style={styles.sheetInner}>
-          <View style={styles.sheetHeader}>
-            <AppText type={EIGHTEEN} weight={BOLD} color={textColor}>
-              Security Verification
-            </AppText>
-            <TouchableOpacity
-              onPress={() => securityVerifySheetRef.current?.close?.()}
-              style={[styles.closeCircle, { backgroundColor: badgeBg }]}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <FastImage source={closeIcon} style={styles.closeIconSmall} resizeMode="contain" tintColor={subTextColor} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <AppText type={THIRTEEN} style={{ marginBottom: 14 }} color={subTextColor}>
-              Confirm your withdrawal of {formatAedAmount(amount)} AED to {beneficiaryIbanLabel(selectedBeneficiary)}.
-            </AppText>
-
-            {/* Email OTP Field */}
-            <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
-              Email Verification Code
-            </AppText>
-            <View style={[styles.modalInputWrap, { backgroundColor: badgeBg, borderColor }]}>
-              <TextInput
-                style={[styles.modalTextInput, { color: textColor }]}
-                placeholder="Enter 6-digit code"
-                placeholderTextColor={subTextColor}
-                keyboardType="number-pad"
-                maxLength={6}
-                value={emailVerifyCode}
-                onChangeText={setEmailVerifyCode}
-              />
-            </View>
-
-            {/* Fund Password Field */}
-            <AppText type={THIRTEEN} weight={SEMI_BOLD} style={styles.modalFieldLabel} color={subTextColor}>
-              Fund Password (if enabled)
-            </AppText>
-            <View style={[styles.modalInputWrap, { backgroundColor: badgeBg, borderColor }]}>
-              <TextInput
-                style={[styles.modalTextInput, { color: textColor }]}
-                placeholder="Enter fund password"
-                placeholderTextColor={subTextColor}
-                secureTextEntry={!fundVisible}
-                value={fundPassword}
-                onChangeText={setFundPassword}
-              />
-            </View>
-
-            <TouchableOpacity
-              onPress={handleFinalSubmitWithdrawal}
-              disabled={submittingWithdrawal}
-              activeOpacity={0.85}
-              style={[styles.primaryBtn, { backgroundColor: "#D4AF37", marginTop: 20 }]}
-            >
-              {submittingWithdrawal ? (
-                <ActivityIndicator color="#000000" size="small" />
-              ) : (
-                <AppText type={FIFTEEN} weight={BOLD} color="#000000">
-                  Submit Withdrawal
-                </AppText>
-              )}
-            </TouchableOpacity>
-          </ScrollView>
         </View>
       </AnimatedBottomSheet>
     </AppSafeAreaView>
@@ -1215,7 +1958,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   gatewayPill: {
-    backgroundColor: "rgba(212,175,55,0.15)",
+    backgroundColor: "rgba(209, 170, 103, 0.15)",
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: 4,
@@ -1276,70 +2019,110 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
-  balanceStrip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 16,
+  errorAlertBox: {
+    backgroundColor: "rgba(239,68,68,0.12)",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
   },
-  balanceInfo: {
-    gap: 2,
+  infoAlertBox: {
+    backgroundColor: "rgba(209, 170, 103, 0.12)",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
   },
-  limitInfo: {
-    alignItems: "flex-end",
-    gap: 2,
-  },
-  fieldLabel: {
-    marginBottom: 8,
-  },
-  addBankBtn: {
-    flexDirection: "row",
+  loadingWidgetBox: {
+    paddingVertical: 30,
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    padding: 16,
-    borderRadius: 12,
+  },
+  widgetStepContainer: {
+    marginTop: 4,
+  },
+  stepHeaderLabel: {
+    marginBottom: 6,
+  },
+  stepHelpText: {
+    lineHeight: 16,
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    marginBottom: 6,
+  },
+  fieldHint: {
+    marginTop: 4,
+  },
+  inputBox: {
+    borderRadius: 10,
     borderWidth: 1,
-    borderStyle: "dashed",
-    marginBottom: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    justifyContent: "center",
+  },
+  textInput: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  otpInputRowWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  otpInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  resendInlineBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  otpActionButtonsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
   },
   selectedBankCard: {
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 10,
+    marginBottom: 12,
+    overflow: "hidden",
   },
-  bankCardTop: {
+  selectedBankCardTop: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
   },
-  bankTitleRow: {
+  selectedBankTitleWrap: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    marginRight: 8,
+    minWidth: 0,
+  },
+  selectedAccountName: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  selectedBankMeta: {
+    marginTop: 6,
+    marginLeft: 26,
   },
   statusPill: {
     paddingVertical: 3,
     paddingHorizontal: 8,
-    borderRadius: 6,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  bankCardActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 14,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.06)",
-  },
-  bankActionBtn: {
-    paddingVertical: 2,
-    paddingHorizontal: 4,
+  availableBalanceNotice: {
+    marginBottom: 12,
+    marginTop: 2,
   },
   amountInputWrap: {
     flexDirection: "row",
@@ -1384,17 +2167,85 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
+  loadingQuoteWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    padding: 8,
+  },
   previewErrorWrap: {
     marginTop: 10,
     padding: 10,
     borderRadius: 8,
     backgroundColor: "rgba(239,68,68,0.1)",
   },
+  changeBankLinkBtn: {
+    alignSelf: "center",
+    marginTop: 14,
+    padding: 6,
+  },
+  emptyBeneficiariesWrap: {
+    paddingVertical: 14,
+  },
+  emptyBeneficiariesText: {
+    lineHeight: 18,
+  },
+  bankRadioCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  bankRadioRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  radioIconWrap: {
+    marginTop: 2,
+    marginRight: 10,
+  },
+  bankCardBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  bankCardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bankAccountNameText: {
+    flex: 1,
+    marginRight: 8,
+  },
+  bankMetaText: {
+    marginTop: 4,
+  },
+  bankActionButtonsWrap: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 8,
+  },
+  smallActionBtn: {
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
   primaryBtn: {
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  secondaryOutlineBtn: {
+    borderRadius: 999,
+    paddingVertical: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    marginTop: 10,
   },
   sectionWrap: {
     marginTop: 10,
@@ -1447,7 +2298,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   closeCircle: {
     width: 28,
@@ -1460,30 +2311,14 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
   },
-  errorBox: {
-    backgroundColor: "rgba(239,68,68,0.12)",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
   modalFieldLabel: {
     marginBottom: 6,
-    marginTop: 10,
   },
-  modalInputWrap: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 46,
-    justifyContent: "center",
-  },
-  modalTextInput: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  resendRow: {
+  protectedFooterRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
+    justifyContent: "center",
+    marginTop: 16,
   },
   modalSecondaryBtn: {
     flex: 1,

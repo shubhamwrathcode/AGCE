@@ -12,6 +12,7 @@ import FastImage from "react-native-fast-image";
 import Clipboard from "@react-native-clipboard/clipboard";
 import Toast from "react-native-simple-toast";
 import { useTheme } from "../../hooks/useTheme";
+import { colors } from "../../theme/colors";
 import { appOperation } from "../../appOperation";
 import NavigationService from "../../navigation/NavigationService";
 import {
@@ -29,12 +30,10 @@ import {
   MEDIUM,
   TWENTY_FOUR,
   EIGHTEEN,
-  SIXTEEN,
   FIFTEEN,
   FOURTEEN,
   THIRTEEN,
   TWELVE,
-  ELEVEN,
 } from "../../shared";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -47,7 +46,7 @@ const TIME_FILTER_OPTIONS = [
 ];
 
 const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All status" },
   { value: "AWAITING_ADMIN", label: "Under review" },
   { value: "SUBMITTED", label: "Submitted" },
   { value: "INITIATED", label: "Sent to bank" },
@@ -55,6 +54,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: "REJECTED", label: "Rejected" },
   { value: "CANCELLED", label: "Cancelled" },
   { value: "FAILED", label: "Failed" },
+  { value: "REVERSED", label: "Reversed" },
 ];
 
 const STATUS_CONFIG = {
@@ -130,6 +130,22 @@ function isUserCancelled(item, status) {
   return reason === "Cancelled by user" || /^you cancelled this withdrawal/i.test(reason);
 }
 
+function mapFiatWithdrawRow(item) {
+  const status = String(item?.status || "").toUpperCase();
+  const cancelled = isUserCancelled(item, status);
+  let statusLabel = item?.status_label || status || "—";
+  if (cancelled) statusLabel = "Cancelled";
+  else if (status === "REJECTED" && (statusLabel === "Declined" || !item?.status_label)) {
+    statusLabel = "Rejected";
+  }
+  return {
+    ...item,
+    status,
+    statusLabel,
+    cancelled,
+  };
+}
+
 function formatHistDateHeader(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -177,13 +193,19 @@ const WithdrawFiatHistoryScreen = () => {
   const cancelConfirmSheetRef = useRef(null);
   const [targetCancelItem, setTargetCancelItem] = useState(null);
 
-  // Fetch Withdrawal History
+  // Fetch Withdrawal History (Exact Web API Mapping)
   const fetchWithdrawalsHistory = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setHistoryLoading(true);
 
     try {
-      const query = statusFilter === "all" ? "" : `status=${encodeURIComponent(statusFilter)}`;
+      const apiStatus =
+        statusFilter === "all"
+          ? ""
+          : statusFilter === "CANCELLED"
+            ? "REJECTED"
+            : statusFilter;
+      const query = apiStatus ? `status=${encodeURIComponent(apiStatus)}` : "";
       const res = await appOperation.customer.fiat_withdrawals_list(query).catch(() => null);
       if (res?.success && res?.data) {
         const items = Array.isArray(res.data) ? res.data : res.data.items || [];
@@ -238,9 +260,10 @@ const WithdrawFiatHistoryScreen = () => {
       const res = await appOperation.customer.fiat_withdrawals_cancel(targetId).catch((e) => e);
       if (res?.success) {
         cancelConfirmSheetRef.current?.close?.();
-        Toast.showWithGravity("Withdrawal cancelled successfully", Toast.LONG, Toast.BOTTOM);
+        txDetailSheetRef.current?.close?.();
+        Toast.showWithGravity(res?.withdrawal?.status_label || "Withdrawal cancelled successfully", Toast.LONG, Toast.BOTTOM);
         setTargetCancelItem(null);
-        await fetchWithdrawalsHistory();
+        await fetchWithdrawalsHistory(true);
       } else {
         Toast.showWithGravity(res?.message || "Could not cancel withdrawal", Toast.SHORT, Toast.BOTTOM);
       }
@@ -251,29 +274,32 @@ const WithdrawFiatHistoryScreen = () => {
     }
   };
 
-  // Filtered History
+  // Filtered History (Exact Web Filtering Parity)
   const filteredHistory = useMemo(() => {
-    return historyList.filter((item) => {
+    return historyList.map(mapFiatWithdrawRow).filter((row) => {
       if (timeFilter !== "all") {
-        const iso = item?.created_at;
+        const iso = row?.created_at;
         if (iso) {
           const d = new Date(iso);
           if (!Number.isNaN(d.getTime())) {
             const days = { "7d": 7, "30d": 30, "90d": 90 }[timeFilter];
             if (days) {
               const cutoff = new Date();
+              cutoff.setHours(0, 0, 0, 0);
               cutoff.setDate(cutoff.getDate() - days);
               if (d < cutoff) return false;
             }
           }
         }
       }
+      if (statusFilter === "CANCELLED") return row.cancelled;
+      if (statusFilter === "REJECTED") return row.status === "REJECTED" && !row.cancelled;
       return true;
     });
-  }, [historyList, timeFilter]);
+  }, [historyList, timeFilter, statusFilter]);
 
   // Color tokens
-  const bgColor = themeColors.background;;
+  const bgColor = themeColors.background;
   const itemBorderColor = isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0";
   const headerBorderColor = isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0";
   const textColor = isDark ? "#FFFFFF" : "#0F172A";
@@ -317,9 +343,9 @@ const WithdrawFiatHistoryScreen = () => {
                   styles.timeFilterBtn,
                   {
                     backgroundColor: active
-                      ? (isDark ? "rgba(212,175,55,0.18)" : "#FFF8E1")
+                      ? (isDark ? "rgba(209,170,103,0.18)" : "#FFFDF5")
                       : badgePillBg,
-                    borderColor: active ? "#D4AF37" : itemBorderColor,
+                    borderColor: active ? colors.orangeTheme : itemBorderColor,
                   },
                 ]}
                 activeOpacity={0.75}
@@ -327,7 +353,7 @@ const WithdrawFiatHistoryScreen = () => {
                 <AppText
                   type={TWELVE}
                   weight={active ? BOLD : MEDIUM}
-                  color={active ? "#D4AF37" : subTextColor}
+                  color={active ? colors.orangeTheme : subTextColor}
                   numberOfLines={1}
                 >
                   {tf.label}
@@ -353,9 +379,9 @@ const WithdrawFiatHistoryScreen = () => {
                   styles.statusFilterPill,
                   {
                     backgroundColor: active
-                      ? (isDark ? "rgba(212,175,55,0.18)" : "#FFF8E1")
+                      ? (isDark ? "rgba(209,170,103,0.18)" : "#FFFDF5")
                       : badgePillBg,
-                    borderColor: active ? "#D4AF37" : itemBorderColor,
+                    borderColor: active ? colors.orangeTheme : itemBorderColor,
                   },
                 ]}
                 activeOpacity={0.75}
@@ -363,7 +389,7 @@ const WithdrawFiatHistoryScreen = () => {
                 <AppText
                   type={TWELVE}
                   weight={active ? BOLD : MEDIUM}
-                  color={active ? "#D4AF37" : subTextColor}
+                  color={active ? colors.orangeTheme : subTextColor}
                   numberOfLines={1}
                 >
                   {sf.label}
@@ -378,11 +404,11 @@ const WithdrawFiatHistoryScreen = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.orangeTheme} />}
       >
         {historyLoading && !refreshing ? (
           <View style={[styles.historyEmptyCard, { borderColor: itemBorderColor }]}>
-            <ActivityIndicator size="small" color="#D4AF37" />
+            <ActivityIndicator size="small" color={colors.orangeTheme} />
             <AppText type={THIRTEEN} style={styles.loadingText} color={subTextColor}>
               Loading withdrawal history…
             </AppText>
@@ -401,11 +427,11 @@ const WithdrawFiatHistoryScreen = () => {
           <View style={styles.historyListWrap}>
             {filteredHistory.map((item, idx) => {
               const statusKey = String(item.status || "COMPLETED").toUpperCase();
-              const cancelled = isUserCancelled(item, statusKey);
-              const cfg = cancelled
+              const isCancelled = item.cancelled;
+              const cfg = isCancelled
                 ? STATUS_CONFIG.CANCELLED
                 : STATUS_CONFIG[statusKey] || {
-                  label: item.status || "—",
+                  label: item.statusLabel || item.status || "—",
                   darkText: "#A1A1AA",
                   darkBg: "rgba(255,255,255,0.08)",
                   lightText: "#64748B",
@@ -414,12 +440,13 @@ const WithdrawFiatHistoryScreen = () => {
 
               const statusBadgeText = isDark ? cfg.darkText : cfg.lightText;
               const statusBadgeBg = isDark ? cfg.darkBg : cfg.lightBg;
+              const statusDisplayName = item.statusLabel || cfg.label;
 
               const amountFormatted = `${formatAedAmount(item.amount || item.net_aed || 0)} ${item.currency || "AED"}`;
               const feeFormatted = `${formatAedAmount(item.fee_aed || item.fee || 0)} ${item.currency || "AED"}`;
               const walletLabel = item.wallet_type === "spot" || !item.wallet_type ? "Spot" : String(item.wallet_type);
               const bankLabel = formatBankLabel(item);
-              const canCancel = statusKey === "AWAITING_ADMIN" || statusKey === "SUBMITTED";
+              const canCancel = !isCancelled && (statusKey === "AWAITING_ADMIN" || statusKey === "SUBMITTED");
 
               return (
                 <View
@@ -434,7 +461,7 @@ const WithdrawFiatHistoryScreen = () => {
 
                     <View style={[styles.statusBadgePill, { backgroundColor: statusBadgeBg }]}>
                       <AppText type={TWELVE} weight={MEDIUM} color={statusBadgeText}>
-                        {cfg.label}
+                        {statusDisplayName}
                       </AppText>
                     </View>
                   </View>
@@ -498,12 +525,12 @@ const WithdrawFiatHistoryScreen = () => {
                           style={[
                             styles.actionBtn,
                             {
-                              borderColor: isDark ? "#D1AA67" : "#B45309",
-                              backgroundColor: isDark ? "rgba(209,170,103,0.06)" : "#FFFBEB",
+                              borderColor: colors.orangeTheme,
+                              backgroundColor: isDark ? "rgba(209,170,103,0.06)" : "#FFFDF5",
                             },
                           ]}
                         >
-                          <AppText type={TWELVE} weight={SEMI_BOLD} color={isDark ? "#D1AA67" : "#B45309"}>
+                          <AppText type={TWELVE} weight={SEMI_BOLD} color={colors.orangeTheme}>
                             Review
                           </AppText>
                         </TouchableOpacity>
@@ -562,13 +589,28 @@ const WithdrawFiatHistoryScreen = () => {
                 <AppText type={TWENTY_FOUR} weight={BOLD} color={textColor}>
                   {formatAedAmount(selectedTx.net_aed || selectedTx.amount || 0)} {selectedTx.currency || "AED"}
                 </AppText>
-                <View style={[styles.statusBadgePill, { marginTop: 8, alignSelf: "center", backgroundColor: isDark ? "rgba(212,175,55,0.15)" : "#FFF9E6" }]}>
-                  <AppText type={TWELVE} weight={BOLD} color="#D4AF37">
-                    {STATUS_CONFIG[String(selectedTx.status || "").toUpperCase()]?.label || selectedTx.status}
+                <View
+                  style={[
+                    styles.statusBadgePill,
+                    {
+                      marginTop: 8,
+                      alignSelf: "center",
+                      backgroundColor: selectedTx.cancelled
+                        ? (isDark ? "rgba(255,255,255,0.08)" : "#F1F5F9")
+                        : (isDark ? "rgba(209,170,103,0.15)" : "#FFFDF5"),
+                    },
+                  ]}
+                >
+                  <AppText
+                    type={TWELVE}
+                    weight={BOLD}
+                    color={selectedTx.cancelled ? (isDark ? "#A1A1AA" : "#64748B") : colors.orangeTheme}
+                  >
+                    {selectedTx.statusLabel || (selectedTx.cancelled ? "Cancelled" : STATUS_CONFIG[String(selectedTx.status || "").toUpperCase()]?.label || selectedTx.status)}
                   </AppText>
                 </View>
                 {selectedTx.status_reason || selectedTx.reject_reason ? (
-                  <AppText type={TWELVE} color="#EF4444" style={{ marginTop: 6, textAlign: "center" }}>
+                  <AppText type={TWELVE} color={selectedTx.cancelled ? subTextColor : "#EF4444"} style={{ marginTop: 6, textAlign: "center" }}>
                     {selectedTx.status_reason || selectedTx.reject_reason}
                   </AppText>
                 ) : null}
@@ -586,7 +628,7 @@ const WithdrawFiatHistoryScreen = () => {
                         onPress={() => handleCopy(selectedTx.id || selectedTx._id, "tx_id", "ID")}
                         style={[styles.copyBtn, { backgroundColor: badgePillBg }]}
                       >
-                        <AppText type={TWELVE} weight={BOLD} color="#D4AF37">
+                        <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
                           {copiedField === "tx_id" ? "Copied" : "Copy"}
                         </AppText>
                       </TouchableOpacity>
@@ -605,7 +647,7 @@ const WithdrawFiatHistoryScreen = () => {
                         onPress={() => handleCopy(selectedTx.channel_ref_id, "channel_ref", "Channel Ref")}
                         style={[styles.copyBtn, { backgroundColor: badgePillBg }]}
                       >
-                        <AppText type={TWELVE} weight={BOLD} color="#D4AF37">
+                        <AppText type={TWELVE} weight={BOLD} color={colors.orangeTheme}>
                           {copiedField === "channel_ref" ? "Copied" : "Copy"}
                         </AppText>
                       </TouchableOpacity>
