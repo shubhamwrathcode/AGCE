@@ -668,7 +668,8 @@ const ProfileDrawer = () => {
                 AsyncStorage.setItem('theme', newTheme);
               }}
               hitSlop={8}
-            > <FastImage source={themeIcon} resizeMode="contain" style={{ width: 25, height: 25 }} tintColor={themeColors.text} />
+            >
+              <FastImage source={themeIcon} resizeMode="contain" style={{ width: 25, height: 25 }} tintColor={themeColors.text} />
             </TouchableOpacity>
             {/* <TouchableOpacity onPress={() => NavigationService.navigate(SETTING_SCREEN_New)} hitSlop={8}>
               <FastImage source={setting_icon} resizeMode="contain" style={{ width: 22, height: 22 }} tintColor={themeColors.text} />
@@ -920,7 +921,7 @@ const ProfileDrawer = () => {
       <DepositChoiceSheet sheetRef={depositChoiceSheetRef} isDark={isDark} />
       <WithdrawChoiceSheet sheetRef={withdrawChoiceSheetRef} isDark={isDark} />
 
-    </View >
+    </View>
   );
 };
 

@@ -55,6 +55,57 @@ export function formatQtyByStep(qty, pair) {
   return parseFloat(rounded.toFixed(precision));
 }
 
+export function formatOrderDecimal(value, increment) {
+  const n = decNum(value);
+  if (!Number.isFinite(n)) return "";
+  const dp = Math.max(getDecimalPlaces(Number(increment) || 0), 0);
+  if (dp === 0) return String(Math.trunc(n));
+  return n.toFixed(dp).replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "") || "0";
+}
+
+export function floorToIncrement(value, increment) {
+  const v = decNum(value);
+  const inc = decNum(increment);
+  if (!Number.isFinite(v) || v <= 0) return 0;
+  if (!Number.isFinite(inc) || inc <= 0) return v;
+  const floored = Math.floor(v / inc + 1e-12) * inc;
+  const dp = getDecimalPlaces(inc);
+  return dp > 0 ? parseFloat(floored.toFixed(dp)) : floored;
+}
+
+export function snapToIncrementInput(raw, increment) {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return "";
+  const floored = floorToIncrement(trimmed, increment);
+  if (floored <= 0) return "";
+  return formatOrderDecimal(floored, increment);
+}
+
+/** Snap qty to step_size and cap at position size (web close-position). */
+export function snapAndCapCloseQty(raw, stepSize, maxQty) {
+  const snapped = snapToIncrementInput(raw, stepSize);
+  if (!snapped) return "";
+  const n = decNum(snapped);
+  const max = decNum(maxQty);
+  if (Number.isFinite(max) && max > 0 && Number.isFinite(n) && n > max + 1e-12) {
+    return snapToIncrementInput(String(max), stepSize);
+  }
+  return snapped;
+}
+
+export function sanitizeIncrementInput(raw, increment) {
+  let s = String(raw ?? "").replace(/[^\d.]/g, "");
+  const maxDp = Math.max(getDecimalPlaces(Number(increment) || 0), 0);
+  const dotIdx = s.indexOf(".");
+  if (dotIdx >= 0) {
+    const intPart = s.slice(0, dotIdx);
+    const fracPart = s.slice(dotIdx + 1).replace(/\./g, "");
+    if (maxDp === 0) return intPart;
+    s = `${intPart}.${fracPart.slice(0, maxDp)}`;
+  }
+  return s;
+}
+
 function isMultipleOf(value, step) {
   if (!step || step <= 0) return true;
   const ratio = value / step;
@@ -224,12 +275,85 @@ export function computeMaxOpenNotional(effectiveAvailable, leverage, takerFeeRat
 }
 
 export function decNum(val) {
-  if (val == null) return NaN;
-  if (typeof val === "object" && val.$numberDecimal !== undefined) {
-    return parseFloat(val.$numberDecimal);
+  if (val == null || val === "") return NaN;
+  if (typeof val === "object") {
+    if (val.$numberDecimal !== undefined) return parseFloat(val.$numberDecimal);
+    if (typeof val.valueOf === "function") {
+      const inner = val.valueOf();
+      if (typeof inner === "number" && Number.isFinite(inner)) return inner;
+      if (inner !== val) {
+        const nested = decNum(inner);
+        if (Number.isFinite(nested)) return nested;
+      }
+    }
+    if (typeof val.toString === "function") {
+      const s = val.toString();
+      if (s && s !== "[object Object]") {
+        const n = parseFloat(s);
+        if (Number.isFinite(n)) return n;
+      }
+    }
+    return NaN;
   }
   const n = parseFloat(val);
   return Number.isFinite(n) ? n : NaN;
+}
+
+export const FUTURES_DECIMAL_CAP = 8;
+
+export function capDecStr(n, dp = FUTURES_DECIMAL_CAP) {
+  const v = typeof n === "number" ? n : Number(n);
+  if (!Number.isFinite(v)) return null;
+  return parseFloat(v.toFixed(dp)).toString();
+}
+
+export function fmtFuturesQty(n, fallback = "—") {
+  const v = typeof n === "number" ? n : decNum(n);
+  if (!Number.isFinite(v)) return fallback;
+  return capDecStr(v) ?? fallback;
+}
+
+export function fmtFuturesPrice(n, fallback = "—") {
+  const v = typeof n === "number" ? n : decNum(n);
+  if (!Number.isFinite(v) || v <= 0) return fallback;
+  return capDecStr(v) ?? fallback;
+}
+
+export function fmtFuturesUsdt(n, { signed = false, fallback = "—" } = {}) {
+  const v = typeof n === "number" ? n : decNum(n);
+  if (!Number.isFinite(v)) return fallback;
+  const body = capDecStr(signed ? Math.abs(v) : v) ?? "0";
+  if (!signed) return `${body} USDT`;
+  const signedStr = v > 0 ? `+${body}` : v < 0 ? `-${body}` : body;
+  return `${signedStr} USDT`;
+}
+
+export function fmtFuturesPct(n, { signed = false, fallback = "—" } = {}) {
+  const v = typeof n === "number" ? n : decNum(n);
+  if (!Number.isFinite(v)) return fallback;
+  const body = capDecStr(v) ?? "0";
+  if (signed && v > 0) return `+${body}%`;
+  return `${body}%`;
+}
+
+let _historyDetail = null;
+
+export function setFuturesHistoryDetail(data) {
+  _historyDetail = data;
+}
+
+export function getFuturesHistoryDetail() {
+  return _historyDetail;
+}
+
+export function openFuturesHistoryDetail(navigation, payload) {
+  setFuturesHistoryDetail(payload);
+  navigation.navigate("FutureHistoryCardDetailPage", {
+    title: payload?.title,
+    liqFeeDisplay: payload?.liqFeeDisplay,
+    closedTimeDisplay: payload?.closedTimeDisplay,
+    openedTimeDisplay: payload?.openedTimeDisplay,
+  });
 }
 
 export function computePosition(pos, liveMarkPrice = null, selectedCoin = null) {
@@ -272,11 +396,64 @@ export function computePosition(pos, liveMarkPrice = null, selectedCoin = null) 
 export function formatCloseReason(reason, status) {
   const r = String(reason ?? status ?? "").toUpperCase();
   if (r === "USER") return "Closed manually";
-  if (r === "LIQUIDATED" || r === "LIQUIDATION") return "Liquidated";
+  if (r.includes("LIQUIDAT")) return "Liquidated";
   if (r === "ADL") return "ADL";
   if (r === "CLOSED") return "Closed";
   if (r === "EXPIRED") return "Expired";
   return reason || status || "—";
+}
+
+function unwrapTs(raw) {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "object") {
+    if (raw.$date != null) return unwrapTs(raw.$date);
+    if (raw.$numberLong != null) return unwrapTs(raw.$numberLong);
+    if (typeof raw.toISOString === "function") {
+      const t = raw.getTime?.();
+      return Number.isFinite(t) && !Number.isNaN(t) ? raw : null;
+    }
+  }
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const d = new Date(raw < 1e12 ? raw * 1000 : raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+/** Format API timestamps (ISO, epoch, Mongo $date). Invalid → "—". */
+export function formatFuturesTs(raw) {
+  const d = unwrapTs(raw);
+  if (!d) return "—";
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+
+export function pickOpenedTs(pos) {
+  return pos?.opened_at ?? pos?.openedAt ?? pos?.created_at ?? pos?.createdAt ?? pos?.open_time ?? null;
+}
+
+export function pickClosedTs(pos) {
+  return pos?.closed_at ?? pos?.closedAt ?? pos?.updated_at ?? pos?.updatedAt ?? pos?.close_time ?? pos?.created_at ?? pos?.createdAt ?? null;
+}
+
+export function isLiquidatedPosition(pos) {
+  const reason = String(pos?.close_reason ?? pos?.closeReason ?? "").toUpperCase();
+  const status = String(pos?.status ?? "").toUpperCase();
+  if (reason.includes("LIQUIDAT") || status.includes("LIQUIDAT")) return true;
+  return pos?.liquidated === true || pos?.liquidated === "YES" || pos?.liquidated === 1;
+}
+
+/** Liquidation fee for history. Show when fee > 0; else null (UI shows —). */
+export function formatLiqFee(pos, fallbackAsset = "USDT") {
+  const n = decNum(pos?.liq_fee ?? pos?.liqFee ?? pos?.liquidation_fee ?? pos?.liquidationFee);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const asset = pos?.liq_fee_asset || pos?.liqFeeAsset || fallbackAsset || "USDT";
+  const value = capDecStr(n) ?? "0";
+  return { value, asset, display: `${value} ${asset}`.trim() };
 }
 
 export function computeClosedPosition(pos) {
@@ -318,7 +495,7 @@ export function computeClosedPosition(pos) {
   const fundingVal = decNum(pos.total_funding ?? pos.funding_fee ?? pos.funding);
   const funding = Number.isFinite(fundingVal) ? fundingVal : 0;
 
-  const reason = formatCloseReason(pos.close_reason, pos.status);
+  const reason = formatCloseReason(pos.close_reason ?? pos.closeReason, pos.status);
   return { entry, exit, qty, pnl, fees, funding, reason };
 }
 

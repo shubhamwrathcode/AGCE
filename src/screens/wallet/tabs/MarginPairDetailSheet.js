@@ -8,7 +8,14 @@ import { AppText, BOLD, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from 
 import { colors } from "../../../theme/colors";
 import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_BORROW_REPAY_SCREEN, MARGIN_TRANSFER_SCREEN, TRADE_SCREEN } from "../../../navigation/routes";
-import { close_ic } from "../../../helper/ImageAssets";
+import { close_ic, INFO } from "../../../helper/ImageAssets";
+import {
+  formatMarginLevel,
+  getMarginLevelStatus,
+  pairHasDebt,
+  parseMarginLevel,
+  resolveMarginThresholds,
+} from "../../spotScreen/crossMargin/marginLevelUtils";
 
 const DetailRow = ({ label, valBase, valQuote, base, quote, themeColors }) => (
   <View style={styles.row}>
@@ -41,7 +48,7 @@ const ActionBtn = ({ label, onPress, theme, themeColors }) => (
   </TouchableOpacity>
 );
 
-const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, buildCoinIconUri }, ref) => {
+const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, buildCoinIconUri, onOpenMarginRisk }, ref) => {
   const [liveData, setLiveData] = useState(null);
   const isDark = theme === "Dark";
 
@@ -61,6 +68,19 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
 
   const borrowableBase = fmt(liveData?.borrowable?.base ?? selectedPair?.borrowableBase ?? "0");
   const borrowableQuote = fmt(liveData?.borrowable?.quote ?? selectedPair?.borrowableQuote ?? "0");
+
+  const mergedAccount = { ...(selectedPair || {}), ...(liveData || {}) };
+  const detailMl = parseMarginLevel(liveData?.margin_level ?? selectedPair?.margin_level);
+  const detailHasDebt = pairHasDebt({
+    ...mergedAccount,
+    base_borrowed: liveData?.base_borrowed ?? selectedPair?.borrowedBase,
+    quote_borrowed: liveData?.quote_borrowed ?? selectedPair?.borrowedQuote,
+  }, detailMl);
+  const detailStatus = getMarginLevelStatus(
+    detailHasDebt ? detailMl : null,
+    resolveMarginThresholds(mergedAccount),
+    { hasDebt: detailHasDebt },
+  );
 
   return (
     <RBSheet
@@ -116,11 +136,29 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
                 <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{selectedPair.liqPrice || "—"}</AppText>
               </View>
 
-              {selectedPair.mmr ? (
-                <View style={styles.row}>
-                  <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>Margin Level</AppText>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{selectedPair.marginLevel}</AppText>
-                </View>
+              {selectedPair?.status !== "NOT_OPENED" ? (
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => onOpenMarginRisk?.({
+                    ...selectedPair,
+                    ...liveData,
+                    pair_id: selectedPair?.pair_id,
+                    pairRaw: selectedPair?.pairRaw || selectedPair?.pair,
+                    pair: selectedPair?.pair,
+                    margin_level: liveData?.margin_level ?? selectedPair?.margin_level,
+                    base_borrowed: liveData?.base_borrowed ?? selectedPair?.borrowedBase,
+                    quote_borrowed: liveData?.quote_borrowed ?? selectedPair?.borrowedQuote,
+                  })}
+                  style={styles.row}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>Margin Level</AppText>
+                    <FastImage source={INFO} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                  </View>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: detailStatus.color }}>
+                    {detailHasDebt ? formatMarginLevel(detailMl) : "Safe"}
+                  </AppText>
+                </TouchableOpacity>
               ) : null}
             </View>
           </ScrollView>

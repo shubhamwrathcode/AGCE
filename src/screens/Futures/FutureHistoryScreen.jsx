@@ -84,13 +84,14 @@ const FutureHistoryScreen = () => {
     { id: 'Transaction History', label: 'Transaction History' },
   ], [futuresPositions, futuresOpenOrders]);
 
-  const fetchFuturesPositions = useCallback(async () => {
+  const fetchFuturesPositions = useCallback(async (opts = {}) => {
     if (!selectedCoin?.symbol) {
       setLoadingPositions(false);
       return;
     }
+    const silent = opts?.silent === true;
     const gen = ++historyFetchGenRef.current.positions;
-    setLoadingPositions(true);
+    if (!silent) setLoadingPositions(true);
     try {
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 100 };
       const result = await appOperation.customer.futuresOpenPositions(params);
@@ -292,7 +293,15 @@ const FutureHistoryScreen = () => {
           isDark={isDark}
           futuresPrice={futuresPrice}
           selectedCoin={selectedCoin}
-          onRefresh={fetchFuturesOpenOrders}
+          onRefresh={(opts) => {
+            fetchFuturesPositions(opts);
+            fetchFuturesOpenOrders();
+          }}
+          onPositionClosed={(posId) => {
+            setFuturesPositions((prev) =>
+              prev.filter((p) => String(p._id || p.symbol || '') !== String(posId))
+            );
+          }}
         />
       </ScrollView>
     </AppSafeAreaView>

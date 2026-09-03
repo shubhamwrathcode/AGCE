@@ -33,6 +33,17 @@ import TradingDataModal from "../../common/TradingDataModal/TradingDataModal";
 import FastImage from "react-native-fast-image";
 import MarginHeaderDropdowns from "./MarginHeaderDropdowns";
 import MarginBottomSection from "./MarginBottomSection";
+import CrossMarginRiskModal, { parseCrossRisk } from "./crossMargin/CrossMarginRiskModal";
+import CrossMarginLevelGauge from "./crossMargin/CrossMarginLevelGauge";
+import IsolatedMarginRiskModal from "./isolatedMargin/IsolatedMarginRiskModal";
+import {
+  buildMarginRiskRow,
+  formatMarginLevel,
+  getMarginLevelStatus,
+  parseMarginLevel,
+  pairHasDebt,
+  resolveMarginThresholds,
+} from "./crossMargin/marginLevelUtils";
 import ConvertSection from "./ConvertSection";
 import BuyCryptoScreen from "../buyCrypto/BuyCryptoScreen";
 import {
@@ -449,6 +460,9 @@ const orderBookPanelAreEqual = (prev, next) =>
   prev.showBidSide === next.showBidSide &&
   prev.quoteHourlyRate === next.quoteHourlyRate &&
   prev.isHourlyRateLoading === next.isHourlyRateLoading &&
+  prev.headerTab === next.headerTab &&
+  prev.marginMode === next.marginMode &&
+  prev.visibleRows === next.visibleRows &&
   orderBookDataEqual(prev.sellData, next.sellData) &&
   orderBookDataEqual(prev.buyData, next.buyData);
 
@@ -520,11 +534,18 @@ export const ShimmerBox = ({
 
 /** ~6 visible rows per list; user scrolls for more. */
 const ORDER_BOOK_VISIBLE_ROWS = 6;
+/** Extra rows per side so Cross ML card + CTA line up with the order book. */
+const ORDER_BOOK_CROSS_EXTRA_ROWS = 1;
 const ORDER_BOOK_ROW_LAYOUT_HEIGHT = 28;
 const ORDER_BOOK_LIST_MAX_HEIGHT =
   ORDER_BOOK_VISIBLE_ROWS * ORDER_BOOK_ROW_LAYOUT_HEIGHT;
 /** Use fixed height (not maxHeight) so switching view modes never collapses the panel. */
 const ORDER_BOOK_LIST_STYLE = { height: ORDER_BOOK_LIST_MAX_HEIGHT, flexGrow: 0 };
+
+const getOrderBookVisibleRows = (headerTab, marginMode, hasUser) =>
+  headerTab === "Margin" && (marginMode === "Cross" || marginMode === "Isolated") && hasUser
+    ? ORDER_BOOK_VISIBLE_ROWS + ORDER_BOOK_CROSS_EXTRA_ROWS
+    : ORDER_BOOK_VISIBLE_ROWS;
 /** Tail inset after last row; inverted asks use paddingTop for the scroll end. */
 const ORDER_BOOK_LIST_END_PAD = 10;
 const ORDER_BOOK_HEADER_ROW_STYLE = { flexDirection: "row", justifyContent: "space-between" };
@@ -533,9 +554,9 @@ const ORDER_BOOK_HEADER_LABEL_STYLE = { color: "#9D9D9D" };
 const ORDER_BOOK_PANEL_FIXED_HEIGHT = ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 70;
 const ORDER_BOOK_SHIMMER_STRIP_WIDTH = 240;
 
-const OrderBookSkeleton = () => {
+const OrderBookSkeleton = ({ rows = ORDER_BOOK_VISIBLE_ROWS }) => {
   const { colors: themeColors, isDark } = useTheme();
-  const ROWS = ORDER_BOOK_VISIBLE_ROWS;
+  const ROWS = rows;
   const ROW_HEIGHT = 22;
   const BONE_HEIGHT = 15;
   const BONE_RADIUS = 6;
@@ -579,6 +600,7 @@ const OrderBookPanel = memo(({
   getOrderItemLayout,
   headerTab,
   marginMode,
+  visibleRows = ORDER_BOOK_VISIBLE_ROWS,
   quoteHourlyRate,
   isHourlyRateLoading,
 }) => {
@@ -586,35 +608,43 @@ const OrderBookPanel = memo(({
   const navigation = useNavigation();
   const userData = useAppSelector((state) => state.auth?.userData);
   const isSingleSide = !(showAskSide && showBidSide);
-  const singleSideListStyle = useMemo(
-    () => ({ height: ORDER_BOOK_LIST_MAX_HEIGHT * 2 + 10, flexGrow: 0 }),
-    []
+  const listHeight = visibleRows * ORDER_BOOK_ROW_LAYOUT_HEIGHT;
+  const extraListTotal = (visibleRows - ORDER_BOOK_VISIBLE_ROWS) * ORDER_BOOK_ROW_LAYOUT_HEIGHT * 2;
+  const dualSideListStyle = useMemo(
+    () => (visibleRows === ORDER_BOOK_VISIBLE_ROWS
+      ? ORDER_BOOK_LIST_STYLE
+      : { height: listHeight, flexGrow: 0 }),
+    [visibleRows, listHeight]
   );
-  const sellListStyle = isSingleSide ? singleSideListStyle : ORDER_BOOK_LIST_STYLE;
-  const buyListStyle = isSingleSide ? singleSideListStyle : ORDER_BOOK_LIST_STYLE;
+  const singleSideListStyle = useMemo(
+    () => ({ height: listHeight * 2 + 10, flexGrow: 0 }),
+    [listHeight]
+  );
+  const sellListStyle = isSingleSide ? singleSideListStyle : dualSideListStyle;
+  const buyListStyle = isSingleSide ? singleSideListStyle : dualSideListStyle;
   const listEmptySell = useMemo(
     () => (
       <View style={styles.emptyOrderBook}>
         {showOrderBookSkeleton ? (
-          <OrderBookSkeleton />
+          <OrderBookSkeleton rows={visibleRows} />
         ) : (
           <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>No ask data</AppText>
         )}
       </View>
     ),
-    [showOrderBookSkeleton, themeColors.secondaryText, styles.emptyOrderBook, theme]
+    [showOrderBookSkeleton, themeColors.secondaryText, styles.emptyOrderBook, theme, visibleRows]
   );
   const listEmptyBuy = useMemo(
     () => (
       <View style={styles.emptyOrderBook}>
         {showOrderBookSkeleton ? (
-          <OrderBookSkeleton />
+          <OrderBookSkeleton rows={visibleRows} />
         ) : (
           <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>No bid data</AppText>
         )}
       </View>
     ),
-    [showOrderBookSkeleton, themeColors.secondaryText, styles.emptyOrderBook, theme, isDark]
+    [showOrderBookSkeleton, themeColors.secondaryText, styles.emptyOrderBook, theme, isDark, visibleRows]
   );
   const [isPricePositive, setIsPricePositive] = React.useState(true);
   const prevPriceRef = React.useRef(0);
@@ -654,9 +684,9 @@ const OrderBookPanel = memo(({
       )}
     </View>
   );
-  const containerHeight = headerTab === "Margin"
+  const containerHeight = (headerTab === "Margin"
     ? ORDER_BOOK_PANEL_FIXED_HEIGHT + 45
-    : ORDER_BOOK_PANEL_FIXED_HEIGHT;
+    : ORDER_BOOK_PANEL_FIXED_HEIGHT) + extraListTotal;
 
   return (
     <View style={{ height: containerHeight, flexGrow: 0 }}>
@@ -731,8 +761,8 @@ const OrderBookPanel = memo(({
             renderItem={renderSellOrderItem}
             getItemLayout={getOrderItemLayout}
             removeClippedSubviews={true}
-            initialNumToRender={ORDER_BOOK_VISIBLE_ROWS + 2}
-            maxToRenderPerBatch={ORDER_BOOK_VISIBLE_ROWS + 2}
+            initialNumToRender={visibleRows + 2}
+            maxToRenderPerBatch={visibleRows + 2}
             windowSize={5}
             updateCellsBatchingPeriod={100}
             inverted={true}
@@ -755,8 +785,8 @@ const OrderBookPanel = memo(({
             inverted={false}
             getItemLayout={getOrderItemLayout}
             removeClippedSubviews={true}
-            initialNumToRender={ORDER_BOOK_VISIBLE_ROWS + 2}
-            maxToRenderPerBatch={ORDER_BOOK_VISIBLE_ROWS + 2}
+            initialNumToRender={visibleRows + 2}
+            maxToRenderPerBatch={visibleRows + 2}
             windowSize={5}
             updateCellsBatchingPeriod={100}
             style={buyListStyle}
@@ -781,8 +811,8 @@ const OrderBookPanel = memo(({
             inverted={false}
             getItemLayout={getOrderItemLayout}
             removeClippedSubviews={true}
-            initialNumToRender={ORDER_BOOK_VISIBLE_ROWS + 4}
-            maxToRenderPerBatch={ORDER_BOOK_VISIBLE_ROWS + 4}
+            initialNumToRender={visibleRows + 4}
+            maxToRenderPerBatch={visibleRows + 4}
             windowSize={7}
             updateCellsBatchingPeriod={80}
             style={buyListStyle}
@@ -805,8 +835,8 @@ const OrderBookPanel = memo(({
             renderItem={renderSellOrderItem}
             getItemLayout={getOrderItemLayout}
             removeClippedSubviews={true}
-            initialNumToRender={ORDER_BOOK_VISIBLE_ROWS + 4}
-            maxToRenderPerBatch={ORDER_BOOK_VISIBLE_ROWS + 4}
+            initialNumToRender={visibleRows + 4}
+            maxToRenderPerBatch={visibleRows + 4}
             windowSize={7}
             updateCellsBatchingPeriod={80}
             inverted={true}
@@ -848,8 +878,10 @@ const OrderBookSection = memo(({
   isHourlyRateLoading,
 }) => {
   const { theme, colors: themeColors, isDark } = useTheme();
+  const userData = useAppSelector((state) => state.auth?.userData);
   const buyOrders = useAppSelector((state) => state.home.buyOrders);
   const sellOrders = useAppSelector((state) => state.home.sellOrders);
+  const visibleRows = getOrderBookVisibleRows(headerTab, marginMode, !!userData);
   const orderBookAggOptions = useMemo(() => getSpotOrderBookAggOptionsForPair(tickSize), [tickSize]);
   const [orderBookAggStep, setOrderBookAggStep] = useState(SPOT_ORDER_BOOK_AGG_DEFAULTS[0]);
   const [orderBookAggOpen, setOrderBookAggOpen] = useState(false);
@@ -909,58 +941,58 @@ const OrderBookSection = memo(({
       if (showOrderBookSkeleton) return [];
       if (!orderBookReady || !showAskSide) return [];
       const isSingleSide = !(showAskSide && showBidSide);
-      const minRows = isSingleSide ? 12 : 6;
+      const minRows = isSingleSide ? visibleRows * 2 : visibleRows;
       const data = [...asksAggregated];
       while (data.length < minRows) {
         data.push({ isPlaceholder: true, price: `placeholder-ask-${data.length}`, remaining: 0 });
       }
       return data;
     },
-    [showOrderBookSkeleton, orderBookReady, showAskSide, showBidSide, asksAggregated]
+    [showOrderBookSkeleton, orderBookReady, showAskSide, showBidSide, asksAggregated, visibleRows]
   );
   const buyOrdersForDisplay = useMemo(
     () => {
       if (showOrderBookSkeleton) return [];
       if (!orderBookReady || !showBidSide) return [];
       const isSingleSide = !(showAskSide && showBidSide);
-      const minRows = isSingleSide ? 12 : 6;
+      const minRows = isSingleSide ? visibleRows * 2 : visibleRows;
       const data = [...bidsAggregated];
       while (data.length < minRows) {
         data.push({ isPlaceholder: true, price: `placeholder-bid-${data.length}`, remaining: 0 });
       }
       return data;
     },
-    [showOrderBookSkeleton, orderBookReady, showAskSide, showBidSide, bidsAggregated]
+    [showOrderBookSkeleton, orderBookReady, showAskSide, showBidSide, bidsAggregated, visibleRows]
   );
 
   const maxBuyVolume = useMemo(
     () => {
       // Match web/mobile perception: scale depth by *visible* rows, so one huge order deep in book
       // doesn't make all shown bars look tiny.
-      const vis = bidsAggregated.slice(0, ORDER_BOOK_VISIBLE_ROWS);
+      const vis = bidsAggregated.slice(0, visibleRows);
       // Do not force >= 1 (many pairs have < 1 quantities). Denom fallback handled in row component.
       return Math.max(0, ...vis.map((o) => toFiniteOB(o?.remaining)).filter(Number.isFinite));
     },
-    [bidsAggregated]
+    [bidsAggregated, visibleRows]
   );
   const maxSellVolume = useMemo(
     () => {
-      const vis = asksAggregated.slice(0, ORDER_BOOK_VISIBLE_ROWS);
+      const vis = asksAggregated.slice(0, visibleRows);
       return Math.max(0, ...vis.map((o) => toFiniteOB(o?.remaining)).filter(Number.isFinite));
     },
-    [asksAggregated]
+    [asksAggregated, visibleRows]
   );
 
   /** Binance-like OB ratio bar uses visible rows volume sum. */
   const obRatio = useMemo(() => {
-    const takeN = ORDER_BOOK_VISIBLE_ROWS;
+    const takeN = visibleRows;
     const bidSum = bidsAggregated.slice(0, takeN).reduce((s, o) => s + (toFiniteOB(o?.remaining) || 0), 0);
     const askSum = asksAggregated.slice(0, takeN).reduce((s, o) => s + (toFiniteOB(o?.remaining) || 0), 0);
     const total = bidSum + askSum;
     if (!total || !Number.isFinite(total)) return { bidPct: 50, askPct: 50 };
     const bidPct = (bidSum / total) * 100;
     return { bidPct, askPct: 100 - bidPct };
-  }, [bidsAggregated, asksAggregated]);
+  }, [bidsAggregated, asksAggregated, visibleRows]);
 
   const renderSellOrderItem = useCallback(
     ({ item }) => {
@@ -1048,6 +1080,7 @@ const OrderBookSection = memo(({
         getOrderItemLayout={getOrderItemLayout}
         headerTab={headerTab}
         marginMode={marginMode}
+        visibleRows={visibleRows}
         quoteHourlyRate={quoteHourlyRate}
         isHourlyRateLoading={isHourlyRateLoading}
       />
@@ -1535,6 +1568,7 @@ const Spot = () => {
   const [isOrderTypeModalVisible, setIsOrderTypeModalVisible] = useState(false);
   const [isCancelLoading, setIsCancelLoading] = useState(false);
   const [marginAccountData, setMarginAccountData] = useState(null);
+  const [crossRisk, setCrossRisk] = useState(null);
   const coinDataRef = useRef(coinData);
   useEffect(() => {
     coinDataRef.current = coinData;
@@ -1672,6 +1706,8 @@ const Spot = () => {
   const rbSheetlimit = useRef();
   const rbSheetAddFunds = useRef();
   const rbSheetMarginConfirm = useRef();
+  const rbSheetCrossRisk = useRef();
+  const rbSheetIsolatedRisk = useRef();
   const lastMarginFetchRef = useRef("");
   const [marginConfirmPayload, setMarginConfirmPayload] = useState(null);
   const [dontShowMarginConfirm, setDontShowMarginConfirm] = useState(false);
@@ -1891,6 +1927,9 @@ const Spot = () => {
           appOperation.get(`cross/account`, undefined, undefined, CUSTOMER_TYPE)
             .then((res) => { if (res?.success) setMarginAccountData(res.data); })
             .catch(() => { });
+          appOperation.get("cross/risk", undefined, undefined, CUSTOMER_TYPE)
+            .then((res) => { if (res?.success) setCrossRisk(res.data); })
+            .catch(() => { });
         } else {
           appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
             .then((res) => { if (res?.success) setMarginAccountData(res.data); })
@@ -2080,9 +2119,97 @@ const Spot = () => {
   const [marginMode, setMarginMode] = useState("Isolated");
   const [marginLeverage, setMarginLeverage] = useState("5x");
 
+  const fetchCrossRisk = useCallback(async () => {
+    if (!userData) return;
+    try {
+      const res = await appOperation.get("cross/risk", undefined, undefined, CUSTOMER_TYPE);
+      if (res?.success && res.data) setCrossRisk(res.data);
+    } catch {
+      /* keep previous risk */
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    const onCrossTrade = headerTab === "Margin" && marginMode === "Cross" && !!userData;
+    if (!onCrossTrade) {
+      setCrossRisk(null);
+      rbSheetCrossRisk.current?.close();
+      return undefined;
+    }
+    if (!isSpotFocused) return undefined;
+    fetchCrossRisk();
+    const id = setInterval(() => { void fetchCrossRisk(); }, 5000);
+    return () => clearInterval(id);
+  }, [headerTab, marginMode, userData, isSpotFocused, fetchCrossRisk]);
+
+  useEffect(() => {
+    const onIsolatedTrade = headerTab === "Margin" && marginMode === "Isolated" && !!userData;
+    if (!onIsolatedTrade) {
+      rbSheetIsolatedRisk.current?.close();
+      return undefined;
+    }
+    if (!isSpotFocused) return undefined;
+    let pairId = effectiveCurrency?._id || currencyData?._id;
+    if (!pairId && effectiveCurrency && Array.isArray(coinDataRef.current)) {
+      const match = coinDataRef.current.find(
+        (p) => p.base_currency === effectiveCurrency.base_currency && p.quote_currency === effectiveCurrency.quote_currency
+      );
+      pairId = match?._id;
+    }
+    if (!pairId) return undefined;
+    const pull = () => {
+      appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE)
+        .then((res) => { if (res?.success) setMarginAccountData(res.data); })
+        .catch(() => {});
+    };
+    pull();
+    const id = setInterval(pull, 5000);
+    return () => clearInterval(id);
+  }, [headerTab, marginMode, userData, isSpotFocused, effectiveCurrency?._id, effectiveCurrency?.base_currency, effectiveCurrency?.quote_currency, currencyData?._id]);
+
+  const parsedCrossRisk = useMemo(() => parseCrossRisk(crossRisk || {}), [crossRisk]);
+
+  const isolatedRiskRow = useMemo(() => {
+    if (headerTab !== "Margin" || marginMode !== "Isolated") return null;
+    const pairId = currencyData?._id || effectiveCurrency?._id || "";
+    return buildMarginRiskRow({
+      ...(marginAccountData || {}),
+      pair: `${base_currency || ""}${quote_currency || ""}`,
+      pairRaw: `${base_currency || ""}/${quote_currency || ""}`,
+      pair_id: pairId,
+      margin_level: coinBalance?.margin_level ?? marginAccountData?.margin_level,
+      base_borrowed: coinBalance?.base_currency_borrowed ?? marginAccountData?.base_borrowed,
+      quote_borrowed: coinBalance?.quote_currency_borrowed ?? marginAccountData?.quote_borrowed,
+      leverage: parseInt(String(marginLeverage || "").replace(/x/i, ""), 10) || marginAccountData?.leverage,
+    }, pairId);
+  }, [
+    headerTab,
+    marginMode,
+    marginAccountData,
+    coinBalance?.margin_level,
+    coinBalance?.base_currency_borrowed,
+    coinBalance?.quote_currency_borrowed,
+    base_currency,
+    quote_currency,
+    currencyData?._id,
+    effectiveCurrency?._id,
+    marginLeverage,
+  ]);
+
+  const isolatedMl = parseMarginLevel(isolatedRiskRow?.margin_level);
+  const isolatedHasDebt = isolatedRiskRow ? pairHasDebt(isolatedRiskRow, isolatedMl) : false;
+  const isolatedThresholds = isolatedRiskRow ? resolveMarginThresholds(isolatedRiskRow) : {};
+  const isolatedMlStatus = getMarginLevelStatus(
+    isolatedHasDebt ? isolatedMl : null,
+    isolatedThresholds,
+    { hasDebt: isolatedHasDebt },
+  );
+  const isolatedMlDisplay = isolatedHasDebt ? formatMarginLevel(isolatedMl) : "Safe";
+
   useEffect(() => {
     if (headerTab === "Margin" && marginMode === "Cross") {
       dispatch(getCrossAccount());
+      fetchCrossRisk();
 
       const baseId = currencyData?.base_currency_id || currentCurrencyRef.current?.base_currency_id;
       const quoteId = currencyData?.quote_currency_id || currentCurrencyRef.current?.quote_currency_id;
@@ -2093,7 +2220,7 @@ const Spot = () => {
         dispatch(getCrossBorrowable(quoteId));
       }
     }
-  }, [headerTab, marginMode, currencyData?.base_currency_id, currencyData?.quote_currency_id, dispatch]);
+  }, [headerTab, marginMode, currencyData?.base_currency_id, currencyData?.quote_currency_id, dispatch, fetchCrossRisk]);
   const [tpPrice, setTpPrice] = useState("");
   const [slPrice, setSlPrice] = useState("");
   const [staticBuyPrice, setStaticBuyPrice] = useState("");
@@ -2657,24 +2784,77 @@ const Spot = () => {
     }).start();
   }, [isLimit, formatPrice, formatQuantity, syncAmountAnimForQuantityString]);
 
+  const parseOrderQty = (s) => {
+    const n = parseFloat(String(s ?? "").replace(/,/g, ""));
+    return Number.isFinite(n) ? n : NaN;
+  };
+
+  const parsePriceNum = (v) => {
+    const n = parseFloat(String(v ?? "").replace(/,/g, ""));
+    return Number.isFinite(n) ? n : NaN;
+  };
+
+  const getStepSize = () => Number(currencyData?.step_size) || 0.00001;
+
+  /** Snap qty to step_size without float drift (e.g. 0.00007 must not floor to 0.00006). */
+  const snapQtyToStep = (qty, mode = "floor") => {
+    const step = getStepSize();
+    if (!Number.isFinite(qty) || qty <= 0) return 0;
+    const units = qty / step;
+    const scaled = Math.round(units * 1e12) / 1e12;
+    const steps = mode === "ceil"
+      ? Math.ceil(scaled - 1e-12)
+      : mode === "round"
+        ? Math.round(scaled)
+        : Math.floor(scaled + 1e-12);
+    const precision = getDecimalPlaces(step);
+    return parseFloat((steps * step).toFixed(precision));
+  };
+
+  const toFixed8 = (data) => snapQtyToStep(data, "floor");
+  const ceilQuantityToStep = (qty) => snapQtyToStep(qty, "ceil");
+
+  const parseMinNotional = () => {
+    const raw = currencyData?.min_notional;
+    const n = typeof raw === "object" && raw?.$numberDecimal != null
+      ? Number(raw.$numberDecimal)
+      : Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 5;
+  };
+
+  const roundQuoteNotional = (n) => {
+    if (!Number.isFinite(n)) return NaN;
+    const dp = currencyData?.quote_decimal ?? getPricePrecision();
+    return parseFloat(n.toFixed(dp));
+  };
+
   const validateOrder = (price, quantity, side, orderKind = "LIMIT", amountIsQuote = false) => {
     const tick_size = currencyData?.tick_size || 0.01;
     const step_size = currencyData?.step_size || 0.00001;
-    const min_notional = currencyData?.min_notional || 5;
+    const min_notional = parseMinNotional();
     const max_order_qty = currencyData?.max_order_qty || 9000;
 
     const skipPriceTick = orderKind === "MARKET" || orderKind === "STOP_MARKET";
 
-    const numPrice = parseFloat(price);
-    const numQuantity = parseFloat(quantity);
+    const numPrice = parsePriceNum(price);
+    const numQuantity = parseOrderQty(quantity);
 
     if (!Number.isFinite(numPrice) || !Number.isFinite(numQuantity)) {
       showError("Invalid price or amount");
       return false;
     }
 
-    const baseQty = amountIsQuote && numPrice > 0 ? numQuantity / numPrice : numQuantity;
-    const total = amountIsQuote ? numQuantity : numPrice * numQuantity;
+    if (amountIsQuote && numPrice <= 0) {
+      showError("Price is required to size this order");
+      return false;
+    }
+
+    const baseQty = amountIsQuote && numPrice > 0
+      ? ceilQuantityToStep(numQuantity / numPrice)
+      : snapQtyToStep(numQuantity, "floor");
+    const minCheckTotal = amountIsQuote
+      ? roundQuoteNotional(numQuantity)
+      : roundQuoteNotional(numPrice * baseQty);
 
     if (!skipPriceTick) {
       const pricePrecisionVal = getDecimalPlaces(tick_size);
@@ -2683,11 +2863,6 @@ const Spot = () => {
         showError(`Price must be a multiple of ${tick_size}`);
         return false;
       }
-    }
-
-    if (amountIsQuote && numPrice <= 0) {
-      showError("Price is required to size this order");
-      return false;
     }
 
     const qtyPrecision = getDecimalPlaces(step_size);
@@ -2702,7 +2877,7 @@ const Spot = () => {
       return false;
     }
 
-    if (total < min_notional) {
+    if (!Number.isFinite(minCheckTotal) || minCheckTotal < min_notional - 0.001) {
       showError(`Minimum order value is ${min_notional} ${currencyData?.quote_currency}`);
       return false;
     }
@@ -2752,13 +2927,14 @@ const Spot = () => {
   };
 
   const isValidPriceInput = (value) => {
-    if (value === "" || value === "0") return true;
+    const valueClean = String(value).replace(/,/g, "");
+    if (valueClean === "" || valueClean === "0") return true;
     const tickSize = currencyData?.tick_size || 0.01;
     const pricePrec = getPricePrecision();
     const regex = new RegExp(`^\\d*\\.?\\d{0,${pricePrec}}$`);
-    if (!regex.test(value)) return false;
-    if (value.endsWith(".")) return true;
-    const numValue = parseFloat(value);
+    if (!regex.test(valueClean)) return false;
+    if (valueClean.endsWith(".")) return true;
+    const numValue = parsePriceNum(valueClean);
     if (isNaN(numValue)) return false;
     if (numValue === 0) return true;
     return numValue >= tickSize;
@@ -2774,7 +2950,7 @@ const Spot = () => {
       return;
     }
     const tickSize = currencyData?.tick_size || 0.01;
-    const numValue = parseFloat(value);
+    const numValue = parsePriceNum(value);
     if (isNaN(numValue) || numValue === 0) {
       setter("");
       return;
@@ -2805,7 +2981,7 @@ const Spot = () => {
       return;
     }
     const stepSize = currencyData?.step_size || 0.00001;
-    const numValue = parseFloat(value);
+    const numValue = parseOrderQty(value);
     if (isNaN(numValue) || numValue === 0) {
       setter("");
       return;
@@ -2814,31 +2990,28 @@ const Spot = () => {
       setter(stepSize.toString());
       return;
     }
-    const rounded = Math.round(numValue / stepSize) * stepSize;
-    const prec = getQuantityPrecision();
-    setter(parseFloat(rounded.toFixed(prec)).toString());
+    setter(String(snapQtyToStep(numValue, "round")));
   };
 
   const tickSize = currencyData?.tick_size || 0.01;
   const stepSize = currencyData?.step_size || 0.00001;
   const handlePriceStep = (delta) => {
-    const current = parseFloat(price || buy_price || "0") || 0;
+    const current = parsePriceNum(price || buy_price || "0") || 0;
     const next = Math.max(0, current + delta * tickSize);
     const prec = getPricePrecision();
     const val = parseFloat(next.toFixed(prec)).toString();
     setPrice(val);
   };
   const handleAmountStep = (delta) => {
-    const current = parseFloat(amount || "0") || 0;
+    const current = parseOrderQty(amount || "0") || 0;
     const next = Math.max(0, current + delta * stepSize);
-    const prec = getQuantityPrecision();
-    const val = parseFloat(next.toFixed(prec)).toString();
+    const val = String(snapQtyToStep(next, "round"));
     syncAmountAnimForQuantityString(val);
     setAmount(val);
   };
 
   const handleStopPriceStep = (delta) => {
-    const current = parseFloat(stopPrice || buy_price || "0") || 0;
+    const current = parsePriceNum(stopPrice || buy_price || "0") || 0;
     const next = Math.max(0, current + delta * tickSize);
     const prec = getPricePrecision();
     const val = parseFloat(next.toFixed(prec)).toString();
@@ -2856,19 +3029,6 @@ const Spot = () => {
     }).start();
   };
 
-  const toFixed8 = (data) => {
-    const precision = getQuantityPrecision();
-    const multiplier = Math.pow(10, precision);
-    return Math.floor(data * multiplier) / multiplier;
-  };
-
-  const toFixedStepSize = (data) => {
-    const stepSize = currencyData?.step_size || 0.00001;
-    const precision = getQuantityPrecision();
-    const multiplier = Math.pow(10, precision);
-    return Math.floor(data * multiplier) / multiplier;
-  };
-
   useEffect(() => {
     if (isBuy && _balance) {
       setBalance(_balance?.quote_currency_balance);
@@ -2882,7 +3042,7 @@ const Spot = () => {
     setActivePercentage(value);
 
     let balToUse = 0;
-    const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+    const refPx = (!isMarketLikeOrder ? parsePriceNum(price) : parsePriceNum(buy_price)) || 0;
 
     if (headerTab === "Margin") {
       const leverage = parseInt(marginLeverage, 10) || 5;
@@ -2972,7 +3132,7 @@ const Spot = () => {
           useNativeDriver: false,
         }).start();
       } else {
-        const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+        const refPx = (!isMarketLikeOrder ? parsePriceNum(price) : parsePriceNum(buy_price)) || 0;
         const quoteAmt = toFixed8(val * refPx);
         const amtStr = quoteAmt.toString();
         syncAmountAnimForQuantityString(amtStr);
@@ -2980,7 +3140,7 @@ const Spot = () => {
       }
     } else {
       if (isBuy) {
-        const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+        const refPx = (!isMarketLikeOrder ? parsePriceNum(price) : parsePriceNum(buy_price)) || 0;
         const finalQuantity = refPx > 0 ? toFixed8(val / refPx) : 0;
         const amtStr = finalQuantity.toString() || "0";
         syncAmountAnimForQuantityString(amtStr);
@@ -3001,12 +3161,12 @@ const Spot = () => {
 
   const handleTotal = (text) => {
     setTotal(text);
-    const refPx = (!isMarketLikeOrder ? parseFloat(price) : parseFloat(buy_price)) || 0;
+    const refPx = (!isMarketLikeOrder ? parsePriceNum(price) : parsePriceNum(buy_price)) || 0;
     if (refPx > 0) {
-      const val = parseFloat(text);
+      const val = parseOrderQty(text);
       if (Number.isFinite(val) && val > 0) {
-        const qty = toFixed8(val / refPx);
-        const qStr = qty.toString();
+        const qty = ceilQuantityToStep(val / refPx);
+        const qStr = String(qty);
         syncAmountAnimForQuantityString(qStr);
         setAmount(qStr);
       } else if (!text || text === "0") {
@@ -3168,7 +3328,7 @@ const Spot = () => {
   const validateStopTriggerPrice = useCallback(
     (rawStop) => {
       const tick_size = currencyData?.tick_size || 0.01;
-      const numPrice = parseFloat(rawStop);
+      const numPrice = parsePriceNum(rawStop);
       if (!Number.isFinite(numPrice) || numPrice <= 0) {
         showError("Enter a valid stop price");
         return false;
@@ -3185,10 +3345,10 @@ const Spot = () => {
   );
 
   const buildSpotOrderPayload = useCallback(() => {
-    const refPrice = Number(buy_price) || 0;
+    const refPrice = parsePriceNum(buy_price) || 0;
     const limitFromUi =
       price !== undefined && price !== null && String(price).trim() !== ""
-        ? parseFloat(price)
+        ? parsePriceNum(price)
         : refPrice;
     const orderPriceForValidation =
       spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET" ? refPrice : limitFromUi;
@@ -3200,12 +3360,12 @@ const Spot = () => {
     const quoteSym = String(quote_currency ?? "").trim().toUpperCase();
     const pair = baseSym && quoteSym ? `${baseSym}${quoteSym}` : "";
 
-    const amtNum = parseFloat(String(amount)) || 0;
-    let baseQty = amtNum;
+    const amtNum = parseOrderQty(amount);
+    let baseQty = Number.isFinite(amtNum) && amtNum > 0 ? snapQtyToStep(amtNum, "floor") : 0;
     if (showAmtDenomSelect && amtDenom === "QUOTE") {
-      const refPx = orderPriceForValidation || Number(buy_price) || 0;
-      if (refPx > 0 && amtNum > 0) {
-        baseQty = toFixed8(amtNum / refPx);
+      const refPx = orderPriceForValidation || parsePriceNum(buy_price) || 0;
+      if (refPx > 0 && Number.isFinite(amtNum) && amtNum > 0) {
+        baseQty = ceilQuantityToStep(amtNum / refPx);
       } else {
         baseQty = 0;
       }
@@ -3240,6 +3400,8 @@ const Spot = () => {
     return { data, orderPriceForValidation };
   }, [
     amount,
+    amtDenom,
+    showAmtDenomSelect,
     base_currency,
     buy_price,
     isBuy,
@@ -4353,6 +4515,7 @@ const Spot = () => {
                     loading={isPlacingOrder}
                     price={price}
                     buy_price={buy_price}
+                    customModalProps={{ statusBarTranslucent: true }}
                   />
                 )}
 
@@ -4817,6 +4980,7 @@ const Spot = () => {
                     </View>
                   </View>
                 ) : null}
+
                 {/* Web parity: IOC/FOK toggles are visible for Spot form footer.
                     API uses them only for LIMIT / STOP_LIMIT (we only send then), but UI stays consistent. */}
                 {(headerTab !== "Margin" || isMarketLikeOrder) && (
@@ -5019,6 +5183,150 @@ const Spot = () => {
                     styles={styles}
                     currencyData={currencyData}
                     loading={isPlacingOrder}
+                    aboveButton={
+                      headerTab === "Margin" && userData && marginMode === "Cross" ? (
+                        <View
+                          style={{
+                            width: "100%",
+                            marginBottom: 8,
+                            borderWidth: 1,
+                            borderColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)",
+                            borderRadius: 10,
+                            paddingHorizontal: 10,
+                            paddingTop: 8,
+                            paddingBottom: 6,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              paddingBottom: 4,
+                            }}
+                          >
+                            <AppText weight={BOLD} style={{ fontSize: 13, color: themeColors.text }}>
+                              {`${base_currency || "BTC"}/${quote_currency || "USDT"}`}
+                            </AppText>
+                            <View
+                              style={{
+                                backgroundColor: isDark ? "rgba(142,148,158,0.18)" : "rgba(142,148,158,0.15)",
+                                borderRadius: 3,
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                              }}
+                            >
+                              <AppText style={{ fontSize: 10, color: themeColors.secondaryText }}>Cross</AppText>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => rbSheetCrossRisk.current?.open()}
+                            style={{ alignItems: "center", paddingTop: 4 }}
+                          >
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 5 }}>
+                              <AppText style={{ fontSize: 12, color: themeColors.secondaryText }}>
+                                Margin Level
+                              </AppText>
+                              <FastImage
+                                source={INFO}
+                                style={{ height: 12, width: 12 }}
+                                resizeMode="contain"
+                                tintColor={themeColors.secondaryText}
+                              />
+                            </View>
+                            <CrossMarginLevelGauge
+                              level={parsedCrossRisk.margin_level}
+                              mmr={parsedCrossRisk.liquidationMarginLevel ?? 1.1}
+                              warningRate={parsedCrossRisk.marginCallLevel ?? 1.15}
+                              isDark={isDark}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ) : headerTab === "Margin" && userData && marginMode === "Isolated" ? (
+                        <View
+                          style={{
+                            width: "100%",
+                            marginBottom: 8,
+                            paddingBottom: 10,
+                            borderBottomWidth: StyleSheet.hairlineWidth,
+                            borderBottomColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              marginBottom: 8,
+                            }}
+                          >
+                            <AppText weight={BOLD} style={{ fontSize: 13, color: themeColors.text }}>
+                              {`${base_currency || "BTC"}/${quote_currency || "USDT"}`}
+                            </AppText>
+                            <View
+                              style={{
+                                backgroundColor: isDark ? "rgba(142,148,158,0.18)" : "rgba(142,148,158,0.15)",
+                                borderRadius: 3,
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                              }}
+                            >
+                              <AppText style={{ fontSize: 10, color: themeColors.secondaryText }}>Isolated</AppText>
+                            </View>
+                          </View>
+                          <AppText style={{ fontSize: 12, color: themeColors.secondaryText, marginBottom: 6 }}>
+                            Margin Level
+                          </AppText>
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => rbSheetIsolatedRisk.current?.open()}
+                            style={{
+                              alignSelf: "flex-start",
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 4,
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 4,
+                              backgroundColor: isolatedMlStatus.key === "margin_call"
+                                ? (isDark ? "rgba(217,119,6,0.28)" : "#fff7ed")
+                                : isolatedMlStatus.key === "liquidated"
+                                  ? (isDark ? "rgba(220,38,38,0.28)" : "#fef2f2")
+                                  : isolatedMlStatus.key === "unavailable"
+                                    ? (isDark ? "rgba(156,163,175,0.18)" : "rgba(156,163,175,0.15)")
+                                    : (isDark ? "rgba(22,163,74,0.28)" : "#e8f5e9"),
+                            }}
+                          >
+                            <AppText
+                              weight={SEMI_BOLD}
+                              style={{
+                                fontSize: 12,
+                                color: isolatedMlStatus.key === "margin_call"
+                                  ? (isDark ? "#ffffff" : "#d97706")
+                                  : isolatedMlStatus.key === "liquidated"
+                                    ? (isDark ? "#ffffff" : "#dc2626")
+                                    : isolatedMlStatus.key === "unavailable"
+                                      ? (isDark ? "#9ca3af" : "#9ca3af")
+                                      : (isDark ? "#ffffff" : "#16a34a"),
+                              }}
+                            >
+                              {isolatedMlDisplay}
+                            </AppText>
+                            <FastImage
+                              source={INFO}
+                              style={{ height: 11, width: 11 }}
+                              resizeMode="contain"
+                              tintColor={
+                                isolatedMlStatus.key === "unavailable"
+                                  ? "#9ca3af"
+                                  : (isDark ? "#ffffff" : isolatedMlStatus.color)
+                              }
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ) : null
+                    }
                   />
                 ) : (
                   <>
@@ -5138,6 +5446,7 @@ const Spot = () => {
                 themeColors={themeColors}
                 isDark={isDark}
                 marginMode={marginMode}
+                marginAccountData={marginAccountData}
               />
             ) : (
               <>
@@ -5421,6 +5730,15 @@ const Spot = () => {
           {renderNumber()}
         </RBSheet>
       </ScrollView>
+
+      <CrossMarginRiskModal
+        ref={rbSheetCrossRisk}
+        risk={crossRisk}
+      />
+      <IsolatedMarginRiskModal
+        ref={rbSheetIsolatedRisk}
+        row={isolatedRiskRow}
+      />
 
       {/* Order Type Modal (Native 0-lag) */}
       <Modal

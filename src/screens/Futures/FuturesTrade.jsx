@@ -282,8 +282,10 @@ const FuturesUI = () => {
   const [amount, setAmount] = useState("");
 
   const [showTpSl, setShowTpSl] = useState(false);
-  const [takeProfit, setTakeProfit] = useState("");
-  const [stopLoss, setStopLoss] = useState("");
+  const [buyTpPrice, setBuyTpPrice] = useState("");
+  const [buySlPrice, setBuySlPrice] = useState("");
+  const [sellTpPrice, setSellTpPrice] = useState("");
+  const [sellSlPrice, setSellSlPrice] = useState("");
   const [postOnly, setPostOnly] = useState(false);
   const [tif, setTif] = useState('GTC');
 
@@ -358,6 +360,11 @@ const FuturesUI = () => {
   const slAnim = useRef(new Animated.Value(0)).current;
   const [isTpFocused, setIsTpFocused] = useState(false);
   const [isSlFocused, setIsSlFocused] = useState(false);
+  const isBuyForm = activeTab === 'Buy';
+  const formTp = isBuyForm ? buyTpPrice : sellTpPrice;
+  const formSl = isBuyForm ? buySlPrice : sellSlPrice;
+  const setFormTp = isBuyForm ? setBuyTpPrice : setSellTpPrice;
+  const setFormSl = isBuyForm ? setBuySlPrice : setSellSlPrice;
 
   useEffect(() => {
     Animated.timing(triggerAnim, {
@@ -377,19 +384,19 @@ const FuturesUI = () => {
 
   useEffect(() => {
     Animated.timing(tpAnim, {
-      toValue: isTpFocused || String(takeProfit ?? "").trim() !== "" ? 1 : 0,
+      toValue: isTpFocused || String(formTp ?? "").trim() !== "" ? 1 : 0,
       duration: 150,
       useNativeDriver: false,
     }).start();
-  }, [isTpFocused, takeProfit]);
+  }, [isTpFocused, formTp]);
 
   useEffect(() => {
     Animated.timing(slAnim, {
-      toValue: isSlFocused || String(stopLoss ?? "").trim() !== "" ? 1 : 0,
+      toValue: isSlFocused || String(formSl ?? "").trim() !== "" ? 1 : 0,
       duration: 150,
       useNativeDriver: false,
     }).start();
-  }, [isSlFocused, stopLoss]);
+  }, [isSlFocused, formSl]);
 
   const priceAnim = useRef(new Animated.Value(0)).current;
   const amountAnim = useRef(new Animated.Value(0)).current;
@@ -452,13 +459,14 @@ const FuturesUI = () => {
     }
   }, [route.params?.coin, route.params?.pair, route.params?.coinDetail, subscribeToFutures, dispatch]);
 
-  const fetchFuturesPositions = React.useCallback(async () => {
+  const fetchFuturesPositions = React.useCallback(async (opts = {}) => {
     if (!selectedCoin?.symbol) {
       setLoadingPositions(false);
       return;
     }
+    const silent = opts?.silent === true;
     const gen = ++historyFetchGenRef.current.positions;
-    setLoadingPositions(true);
+    if (!silent) setLoadingPositions(true);
     try {
       const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOpenPositions(params);
@@ -665,9 +673,9 @@ const FuturesUI = () => {
 
   const [placingOrderSide, setPlacingOrderSide] = useState("");
 
-  const handlePlaceOrder = async (side) => {
-    // console.log("=== handlePlaceOrder START ===", side);
-    setPlacingOrderSide(side === "BUY" ? "BUY" : "SELL");
+  const handlePlaceOrder = async (uiSide, formSideArg) => {
+    const formSide = String(formSideArg || (activeTab === 'Buy' ? 'BUY' : 'SELL')).toUpperCase();
+    setPlacingOrderSide(String(uiSide).toUpperCase() === "BUY" ? "BUY" : "SELL");
     try {
       if (!selectedCoin?.symbol) {
         SimpleToast.show(futuresErrSelectPair(), SimpleToast.SHORT);
@@ -675,7 +683,7 @@ const FuturesUI = () => {
         return;
       }
 
-      const isBuy = side === "BUY";
+      const isBuy = String(uiSide).toUpperCase() === "BUY";
       const apiSide = isBuy ? "BUY" : "SELL";
       const order_type = orderType.toUpperCase();
       // console.log("=== Order Basics ===", { isBuy, apiSide, order_type, amount, price });
@@ -786,6 +794,14 @@ const FuturesUI = () => {
       }
 
       if (showTpSl) {
+        // TP/SL from the form the user is using (buy vs sell tab), not only from Long/Short.
+        // If that panel is empty, fall back to the other panel — same as web callPlaceOrder.
+        const preferredTp = formSide === "BUY" ? buyTpPrice : sellTpPrice;
+        const preferredSl = formSide === "BUY" ? buySlPrice : sellSlPrice;
+        const otherTp = formSide === "BUY" ? sellTpPrice : buyTpPrice;
+        const otherSl = formSide === "BUY" ? sellSlPrice : buySlPrice;
+        const takeProfit = String(preferredTp || "").trim() || String(otherTp || "").trim();
+        const stopLoss = String(preferredSl || "").trim() || String(otherSl || "").trim();
         const markPriceForTpSl = Number(futuresPrice?.mark_price) || 0;
         if (takeProfit && String(takeProfit).trim() !== "") {
           const tpVal = parseFloat(takeProfit);
@@ -868,8 +884,10 @@ const FuturesUI = () => {
           setConditionalPrice("");
         }
         if (showTpSl) {
-          setTakeProfit("");
-          setStopLoss("");
+          setBuyTpPrice("");
+          setBuySlPrice("");
+          setSellTpPrice("");
+          setSellSlPrice("");
         }
 
         fetchFuturesPositions();
@@ -1877,8 +1895,8 @@ const FuturesUI = () => {
                 </Animated.View>
                 <TextInput
                   cursorColor={isDark ? colors.white : colors.black}
-                  value={takeProfit}
-                  onChangeText={setTakeProfit}
+                  value={formTp}
+                  onChangeText={setFormTp}
                   onFocus={() => setIsTpFocused(true)}
                   onBlur={() => setIsTpFocused(false)}
                   placeholder=""
@@ -1919,8 +1937,8 @@ const FuturesUI = () => {
                 </Animated.View>
                 <TextInput
                   cursorColor={isDark ? colors.white : colors.black}
-                  value={stopLoss}
-                  onChangeText={setStopLoss}
+                  value={formSl}
+                  onChangeText={setFormSl}
                   onFocus={() => setIsSlFocused(true)}
                   onBlur={() => setIsSlFocused(false)}
                   placeholder=""
@@ -2044,14 +2062,14 @@ const FuturesUI = () => {
                     Submit Kyc
                   </AppText>
                 </TouchableOpacity>
-              ) : activeTab === 'Buy' ? (
+              ) : isBuyForm ? (
                 <TouchableOpacity
                   style={[
                     styles.actionBtn,
                     { backgroundColor: colors.green, opacity: (!amount || Number(amount) <= 0) ? 0.5 : 1 }
                   ]}
                   disabled={placingOrderSide === "BUY" || !amount || Number(amount) <= 0}
-                  onPress={() => handlePlaceOrder("BUY", false)}
+                  onPress={() => handlePlaceOrder("BUY", "BUY")}
                 >
                   {placingOrderSide === "BUY" ? (
                     <ActivityIndicator size="small" color={colors.white} />
@@ -2068,7 +2086,7 @@ const FuturesUI = () => {
                     { backgroundColor: colors.red, opacity: (!amount || Number(amount) <= 0) ? 0.5 : 1 }
                   ]}
                   disabled={placingOrderSide === "SELL" || !amount || Number(amount) <= 0}
-                  onPress={() => handlePlaceOrder("SELL", false)}
+                  onPress={() => handlePlaceOrder("SELL", "SELL")}
                 >
                   {placingOrderSide === "SELL" ? (
                     <ActivityIndicator size="small" color={colors.white} />
@@ -2183,12 +2201,17 @@ const FuturesUI = () => {
             }
             navigation.navigate('FutureHistoryScreen', { selectedCoin, initialTab: activeHistoryTab });
           }}
-          onRefresh={() => {
-            fetchFuturesPositions();
+          onRefresh={(opts) => {
+            fetchFuturesPositions(opts);
             fetchFuturesOpenOrders();
             fetchFuturesPositionHistory();
             fetchFuturesOrderHistory();
             fetchFuturesTransactionHistory();
+          }}
+          onPositionClosed={(posId) => {
+            setFuturesPositions((prev) =>
+              prev.filter((p) => String(p._id || p.symbol || '') !== String(posId))
+            );
           }}
         />
       </View>

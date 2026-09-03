@@ -28,6 +28,7 @@ const MarginBottomSection = ({
   formatTotal,
   loading,
   currencyData,
+  aboveButton = null,
 }) => {
   const [isSwitching, setIsSwitching] = useState(true);
 
@@ -133,7 +134,7 @@ const MarginBottomSection = ({
   return (
     <View style={{ marginTop: 8 }}>
       {/* Available / Max / Borrowable */}
-      <View style={{ marginBottom: 16, gap: 6 }}>
+      <View style={{ marginBottom: aboveButton ? 8 : 16, gap: 6 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <AppText style={{ fontSize: 13, color: colors.placeholderColor }}>Available</AppText>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -177,6 +178,8 @@ const MarginBottomSection = ({
           )}
         </View>
       </View>
+
+      {aboveButton}
 
       {/* Submit Button */}
       <View style={styles.spotOrderSubmitWrap}>

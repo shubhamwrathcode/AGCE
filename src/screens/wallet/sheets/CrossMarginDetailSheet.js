@@ -1,5 +1,5 @@
 import React, { forwardRef, useRef, useState } from "react";
-import { View, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { View, TouchableOpacity, ScrollView, StyleSheet, Modal, ActivityIndicator } from "react-native";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
 import { AppText, BOLD, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_TWO } from "../../../shared";
@@ -28,11 +28,39 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
   const d = rowPopup?.data;
   const borrowRepaySheetRef = useRef(null);
   const [borrowRepayMode, setBorrowRepayMode] = useState("borrow"); // "borrow" | "repay"
+  const closeInFlightRef = useRef(false);
+  const closedPairsRef = useRef({});
+  const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const isDark = theme === "Dark";
+  const mPairKey = d?.pair || `${d?.asset}USDT`;
+  const alreadyClosed = !!(mPairKey && closedPairsRef.current[mPairKey]);
 
-  const handleClosePosition = async (pairKey) => {
+  const requestCloseConfirm = () => {
+    if (!d?.position_id || closeInFlightRef.current || closing || alreadyClosed) return;
+    setCloseConfirmVisible(true);
+  };
+
+  const cancelCloseConfirm = () => {
+    if (closeInFlightRef.current || closing) return;
+    setCloseConfirmVisible(false);
+  };
+
+  const submitClosePosition = async () => {
+    if (closeInFlightRef.current) return;
+    closeInFlightRef.current = true;
+    if (!d?.position_id || alreadyClosed || (mPairKey && closedPairsRef.current[mPairKey])) {
+      closeInFlightRef.current = false;
+      return;
+    }
+    setClosing(true);
+    let succeeded = false;
     try {
-      const res = await appOperation.post("cross/position/close", { pair: pairKey }, CUSTOMER_TYPE);
+      const res = await appOperation.post("cross/position/close", { pair: mPairKey }, CUSTOMER_TYPE);
       if (res?.success) {
+        succeeded = true;
+        closedPairsRef.current[mPairKey] = true;
+        setCloseConfirmVisible(false);
         Toast.showWithGravity(res.message || "Position closed.", Toast.SHORT, Toast.BOTTOM);
         ref.current?.close();
         if (onSuccess) onSuccess();
@@ -41,6 +69,11 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
       }
     } catch (error) {
       Toast.showWithGravity(error?.message || "Failed to close position.", Toast.SHORT, Toast.BOTTOM);
+    } finally {
+      if (!succeeded) {
+        closeInFlightRef.current = false;
+        setClosing(false);
+      }
     }
   };
 
@@ -58,8 +91,6 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
   const roe = parseFloat(d?.roe_pct || 0);
   const pnlColor = pnl >= 0 ? colors.green : colors.red;
   const sideColorText = isLong ? "GREEN" : "RED";
-
-  const mPairKey = d?.pair || `${d?.asset}USDT`;
 
   return (
     <>
@@ -154,14 +185,12 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
             <View style={styles.actions}>
               {!isFund && (
                 <ActionBtn
-                  label="Close Position"
+                  label={closing || alreadyClosed ? "Closing…" : "Close Position"}
                   theme={theme}
                   themeColors={themeColors}
                   color={colors.red}
-                  disabled={!d.position_id}
-                  onPress={() => {
-                    if (d.position_id) handleClosePosition(mPairKey);
-                  }}
+                  disabled={!d.position_id || closing || alreadyClosed || closeConfirmVisible}
+                  onPress={requestCloseConfirm}
                 />
               )}
               <ActionBtn
@@ -191,9 +220,112 @@ const CrossMarginDetailSheet = forwardRef(({ theme, themeColors, rowPopup, asset
         ) : <View />}
       </RBSheet>
 
-      {d && (
-        <View />
-      )}
+      <Modal
+        visible={closeConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelCloseConfirm}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={cancelCloseConfirm}
+            style={StyleSheet.absoluteFillObject}
+            disabled={closing}
+          />
+          <View
+            style={{
+              backgroundColor: isDark ? themeColors.sheetDarkColor || themeColors.background : themeColors.themeElevationColor || colors.white,
+              borderRadius: 20,
+              padding: 25,
+              width: "85%",
+              alignSelf: "center",
+              alignItems: "center",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
+              borderWidth: 1,
+              borderColor: themeColors.themeBorderColor || (isDark ? "#333" : "#e5e7eb"),
+            }}
+          >
+            <AppText
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                color: themeColors.text,
+                textAlign: "center",
+                marginBottom: 15,
+              }}
+            >
+              Close Position
+            </AppText>
+            <AppText
+              style={{
+                fontSize: 15,
+                color: themeColors.secondaryText,
+                textAlign: "center",
+                marginBottom: 25,
+                lineHeight: 22,
+              }}
+            >
+              Are you sure you want to close this market position?
+            </AppText>
+            <View style={{ flexDirection: "row", width: "100%", gap: 10 }}>
+              <TouchableOpacity
+                onPress={cancelCloseConfirm}
+                disabled={closing}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 12,
+                  backgroundColor: themeColors.themeElevationColor || (isDark ? "#2C2C2E" : "#F3F4F6"),
+                  borderWidth: 1,
+                  borderColor: themeColors.themeBorderColor || (isDark ? "#444" : "#e5e7eb"),
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: closing ? 0.6 : 1,
+                }}
+              >
+                <AppText style={{ fontSize: 14, fontWeight: "600", color: themeColors.text }}>
+                  No
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={submitClosePosition}
+                disabled={closing}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 12,
+                  backgroundColor: themeColors.red || colors.red,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: closing ? 0.85 : 1,
+                }}
+              >
+                {closing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <AppText style={{ fontSize: 14, fontWeight: "600", color: "#FFFFFF" }}>
+                    Yes
+                  </AppText>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 });

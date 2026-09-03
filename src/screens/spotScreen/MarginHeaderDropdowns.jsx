@@ -179,6 +179,7 @@ const MarginHeaderDropdowns = ({
         closeOnPressMask={true}
         height={330}
         animationType="slide"
+        customModalProps={{ statusBarTranslucent: true }}
         customStyles={{
           container: {
             backgroundColor: isDark ? colors.newThemeColor : themeColors.themeElevationColor,
@@ -269,6 +270,7 @@ const MarginHeaderDropdowns = ({
         onOpen={() => {
           setLeverageDraft(getInitialLeverage(marginLeverage));
         }}
+        customModalProps={{ statusBarTranslucent: true }}
         customStyles={{
           container: {
             backgroundColor: isDark ? colors.newThemeColor : themeColors.themeElevationColor,

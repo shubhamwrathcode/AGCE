@@ -1,6 +1,6 @@
-set(CMAKE_HOST_SYSTEM "Darwin-25.5.0")
+set(CMAKE_HOST_SYSTEM "Darwin-25.6.0")
 set(CMAKE_HOST_SYSTEM_NAME "Darwin")
-set(CMAKE_HOST_SYSTEM_VERSION "25.5.0")
+set(CMAKE_HOST_SYSTEM_VERSION "25.6.0")
 set(CMAKE_HOST_SYSTEM_PROCESSOR "x86_64")
 
 include("/Users/wrathcodetechnology/Library/Android/sdk/ndk/28.2.13676358/build/cmake/android.toolchain.cmake")

@@ -8,7 +8,6 @@ import {
   Dimensions,
   ActivityIndicator,
   Animated,
-  Alert,
   Modal,
   TextInput,
 } from "react-native";
@@ -22,7 +21,7 @@ import { SPOT_ORDER_HISTORY_DETAIL, MARGIN_BORROW_REPAY_SCREEN, LOGIN_SCREEN } f
 import CustomDropdown from "../../shared/components/CustomDropdown";
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, FIFTEEN, FOURTEEN, THIRTEEN, TWELVE } from "../../shared";
 import HistorySectionLoader from "../../common/HistorySectionLoader/HistorySectionLoader";
-import { colors } from "../../theme/colors";
+import { colors, darkTheme } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import {
   NO_NOTIFICATION_ICON,
@@ -30,9 +29,18 @@ import {
   right_ic,
   downIcon,
   Refresh,
+  INFO,
 } from "../../helper/ImageAssets";
 import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
+import IsolatedMarginRiskModal from "./isolatedMargin/IsolatedMarginRiskModal";
+import {
+  buildMarginRiskRow,
+  formatMarginLevel,
+  getMarginLevelStatus,
+  pairHasDebt,
+  parseMarginLevel,
+} from "./crossMargin/marginLevelUtils";
 
 const ISOLATED_TABS = [
   { id: "size", label: "Size" },
@@ -63,6 +71,53 @@ const AH_SUB_TABS = [
 const parseNum = (val) => {
   if (val && val.$numberDecimal != null) return parseFloat(val.$numberDecimal);
   return parseFloat(val);
+};
+
+const dec = (v) => (v != null && typeof v === "object" && v.$numberDecimal != null ? v.$numberDecimal : v);
+
+const isLiquidatedPos = (pos) => {
+  const reason = String(pos?.close_reason || "").toUpperCase();
+  const status = String(pos?.status || "").toUpperCase();
+  return reason === "LIQUIDATION" || reason === "LIQUIDATED" || status === "LIQUIDATED";
+};
+
+const posStatusLabel = (pos) => {
+  if (isLiquidatedPos(pos)) return "Liquidated";
+  const statusMap = { CLOSED: "Close All", LIQUIDATED: "Liquidated", OPEN: "Open Position" };
+  return statusMap[pos?.status] || pos?.status || "—";
+};
+
+const formatMarginLiqFee = (pos, quoteAsset) => {
+  const n = parseNum(pos?.liq_fee);
+  if (!isLiquidatedPos(pos) || !Number.isFinite(n) || n === 0) return null;
+  const asset = pos?.liq_fee_asset || quoteAsset || "";
+  return { value: Number.isFinite(n) ? n.toFixed(4) : "—", asset };
+};
+
+const splitPairAssets = (raw, fallbackBase = "", fallbackQuote = "") => {
+  const s = String(raw || "");
+  if (s.includes("/")) {
+    const [base, quote] = s.split("/");
+    return { base: base || fallbackBase, quote: quote || fallbackQuote };
+  }
+  if (s.length > 4) return { base: s.slice(0, -4), quote: s.slice(-4) };
+  return { base: fallbackBase, quote: fallbackQuote };
+};
+
+const normalizeMarginPositionHistoryItem = (raw) => {
+  if (!raw) return raw;
+  return {
+    ...raw,
+    quantity: dec(raw.quantity),
+    entry_price: dec(raw.entry_price),
+    close_price: dec(raw.close_price),
+    notional: dec(raw.notional),
+    liquidation_price: dec(raw.liquidation_price),
+    realized_pnl: dec(raw.realized_pnl),
+    total_fees: dec(raw.total_fees),
+    liq_fee: dec(raw.liq_fee),
+    total_interest_charged: dec(raw.total_interest_charged),
+  };
 };
 
 const normalizeApiList = (res) => {
@@ -225,7 +280,7 @@ const CustomDraggableSlider = ({ value, onValueChange, themeColors, isDark }) =>
   );
 };
 
-const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp, isDark: isDarkProp, isFullScreen = false, initialTab = "size", marginMode = "Isolated" }) => {
+const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp, isDark: isDarkProp, isFullScreen = false, initialTab = "size", marginMode = "Isolated", marginAccountData = null }) => {
   const { colors: themeColorsHook, isDark: isDarkHook } = useTheme();
   const themeColors = themeColorsProp || themeColorsHook;
   const isDark = typeof isDarkProp === "boolean" ? isDarkProp : isDarkHook;
@@ -243,6 +298,13 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
     tabDataRef.current = tabData;
   }, [tabData]);
 
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const cancelInFlightRef = useRef(false);
+  const rbSheetIsolatedRisk = useRef(null);
+  const [isolatedRiskRow, setIsolatedRiskRow] = useState(null);
+
   // Close Position Modal states
   const [closePositionModal, setClosePositionModal] = useState(false);
   const [selectedPosToClose, setSelectedPosToClose] = useState(null);
@@ -250,6 +312,36 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
   const [closePositionQty, setClosePositionQty] = useState("");
   const [closePositionPrice, setClosePositionPrice] = useState("");
   const [closePositionSliderPct, setClosePositionSliderPct] = useState(0);
+  const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
+  const closeInFlightRef = useRef(false);
+  const [closingPairs, setClosingPairs] = useState({});
+  const closingPairsRef = useRef({});
+  const closingTimersRef = useRef({});
+
+  useEffect(() => () => {
+    Object.values(closingTimersRef.current).forEach(clearTimeout);
+    closingTimersRef.current = {};
+    closingPairsRef.current = {};
+  }, []);
+
+  const positionCloseKey = (pos) => String(pos?.position_id || pos?.pair || pos?.pair_id || "");
+
+  const markPositionClosing = (key) => {
+    if (!key) return;
+    closingPairsRef.current[key] = true;
+    setClosingPairs((prev) => ({ ...prev, [key]: true }));
+    if (closingTimersRef.current[key]) clearTimeout(closingTimersRef.current[key]);
+    closingTimersRef.current[key] = setTimeout(() => {
+      delete closingPairsRef.current[key];
+      setClosingPairs((prev) => {
+        if (!prev[key]) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      delete closingTimersRef.current[key];
+    }, 10000);
+  };
 
   const screenW = Dimensions.get("window").width;
   const slideWidth = screenW - 16; // Account for container paddingHorizontal: 8
@@ -320,21 +412,39 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
       if (tabAtFetch === "size") {
         if (isCross) {
           res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
+          commitList(res?.success ? normalizeApiList(res) : []);
         } else {
-          res = await appOperation.get(`margin/position/${pairSymbol}`, undefined, undefined, CUSTOMER_TYPE);
-        }
-        if (res?.success) {
-          commitList(isCross ? normalizeApiList(res) : (res.data ? [res.data] : []));
-        } else {
-          commitList([]);
+          const [posRes, accRes] = await Promise.all([
+            appOperation.get(`margin/position/${pairSymbol}`, undefined, undefined, CUSTOMER_TYPE),
+            pairId
+              ? appOperation.get(`margin/account/${pairId}`, undefined, undefined, CUSTOMER_TYPE).catch(() => null)
+              : Promise.resolve(null),
+          ]);
+          if (posRes?.success && posRes.data) {
+            const pos = posRes.data;
+            const acc = accRes?.success ? accRes.data : null;
+            commitList([{
+              ...acc,
+              ...pos,
+              margin_level: acc?.margin_level ?? pos?.margin_level,
+              margin_call_level: acc?.margin_call_level ?? pos?.margin_call_level,
+              liquidation_margin_level: acc?.liquidation_margin_level ?? pos?.liquidation_margin_level,
+              warning_margin_rate: acc?.warning_margin_rate ?? pos?.warning_margin_rate,
+              maintenance_margin_rate: acc?.maintenance_margin_rate ?? pos?.maintenance_margin_rate,
+              base_borrowed: pos?.base_borrowed ?? acc?.base_borrowed,
+              quote_borrowed: pos?.quote_borrowed ?? acc?.quote_borrowed,
+            }]);
+          } else {
+            commitList([]);
+          }
         }
       } else if (tabAtFetch === "positionHistory") {
         if (isCross) {
           res = await appOperation.get(`cross/positions`, undefined, undefined, CUSTOMER_TYPE);
           commitList(res?.success ? normalizeApiList(res).map(p => ({ ...p, status: "OPEN" })) : []);
         } else {
-          res = await appOperation.get(`margin/position/${pairSymbol}/history`, { page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
-          commitList(res?.success ? normalizeApiList(res) : []);
+          res = await appOperation.get(`margin/positions/history`, { page: 1, limit: 50 }, undefined, CUSTOMER_TYPE);
+          commitList(res?.success ? normalizeApiList(res).map(normalizeMarginPositionHistoryItem) : []);
         }
       } else if (tabAtFetch === "positions") {
         const endpoint = isCross ? `cross/orders/open` : `margin/orders/open`;
@@ -457,36 +567,46 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
     return () => clearInterval(intervalId);
   }, []);
 
-  // Cancel order handler (Open Orders tab)
-  const handleCancelOrder = async (orderId) => {
-    if (!orderId) return;
-    Alert.alert("Cancel Order", "Are you sure you want to cancel this order?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Yes",
-        onPress: async () => {
-          setActionLoading(true);
-          try {
-            const endpoint = marginMode === "Cross" ? `cross/order/${orderId}` : `margin/order/${orderId}`;
-            const res = await appOperation.delete(endpoint, undefined, CUSTOMER_TYPE);
-            if (res?.success) {
-              fetchTabDetails();
-            } else {
-              Alert.alert("Error", res?.message || "Failed to cancel order");
-            }
-          } catch (err) {
-            Alert.alert("Error", err?.message || "Failed to cancel order");
-          } finally {
-            setActionLoading(false);
-          }
-        },
-      },
-    ]);
+  const closeCancelModal = () => {
+    if (cancelLoading || cancelInFlightRef.current) return;
+    setCancelModalVisible(false);
+    setOrderToCancel(null);
+  };
+
+  const handleCancelOrder = (orderId) => {
+    if (!orderId || cancelLoading || cancelInFlightRef.current) return;
+    setOrderToCancel(orderId);
+    setCancelModalVisible(true);
+  };
+
+  const confirmCancelOrder = async () => {
+    if (!orderToCancel || cancelInFlightRef.current) return;
+    cancelInFlightRef.current = true;
+    setCancelLoading(true);
+    try {
+      const endpoint = marginMode === "Cross" ? `cross/order/${orderToCancel}` : `margin/order/${orderToCancel}`;
+      const res = await appOperation.delete(endpoint, undefined, CUSTOMER_TYPE);
+      if (res?.success) {
+        setCancelModalVisible(false);
+        setOrderToCancel(null);
+        fetchTabDetails();
+      } else {
+        SimpleToast.show(res?.message || "Failed to cancel order");
+      }
+    } catch (err) {
+      SimpleToast.show(err?.message || "Failed to cancel order");
+    } finally {
+      cancelInFlightRef.current = false;
+      setCancelLoading(false);
+    }
   };
 
   const handleClosePosition = (pos) => {
+    if (closeInFlightRef.current || actionLoading) return;
     const pair = pos?.pair || pairSymbol;
+    const key = positionCloseKey({ ...pos, pair });
     if (!pair) return;
+    if (key && closingPairsRef.current[key]) return;
     setSelectedPosToClose({
       ...pos,
       pair,
@@ -497,32 +617,62 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
     setClosePositionQty("");
     setClosePositionPrice("");
     setClosePositionSliderPct(0);
+    setCloseConfirmVisible(false);
     setClosePositionModal(true);
   };
 
+  const dismissCloseSheet = () => {
+    if (closeInFlightRef.current || actionLoading) return;
+    setCloseConfirmVisible(false);
+    setClosePositionModal(false);
+  };
+
+  const requestCloseConfirm = () => {
+    if (!selectedPosToClose?.pair || closeInFlightRef.current || actionLoading) return;
+    const closeKey = positionCloseKey(selectedPosToClose);
+    if (closeKey && closingPairsRef.current[closeKey]) return;
+    if (closePositionType === "LIMIT") {
+      if (!closePositionPrice || isNaN(Number(closePositionPrice)) || Number(closePositionPrice) <= 0) {
+        SimpleToast.show("Please enter a valid price");
+        return;
+      }
+      if (!closePositionQty || isNaN(Number(closePositionQty)) || Number(closePositionQty) <= 0) {
+        SimpleToast.show("Please enter a valid quantity");
+        return;
+      }
+    }
+    setCloseConfirmVisible(true);
+  };
+
+  const cancelCloseConfirm = () => {
+    if (closeInFlightRef.current || actionLoading) return;
+    setCloseConfirmVisible(false);
+  };
+
   const submitClosePosition = async () => {
-    if (!selectedPosToClose?.pair) return;
+    if (closeInFlightRef.current) return;
+    closeInFlightRef.current = true;
+
+    const pos = selectedPosToClose;
+    const closeKey = positionCloseKey(pos);
+    if (!pos?.pair || (closeKey && closingPairsRef.current[closeKey])) {
+      closeInFlightRef.current = false;
+      return;
+    }
+
     setActionLoading(true);
     try {
-      const payload = { type: closePositionType };
-      if (closePositionType === "LIMIT") {
-        if (!closePositionPrice || isNaN(Number(closePositionPrice)) || Number(closePositionPrice) <= 0) {
-          Alert.alert("Error", "Please enter a valid price");
-          setActionLoading(false);
-          return;
-        }
-        if (!closePositionQty || isNaN(Number(closePositionQty)) || Number(closePositionQty) <= 0) {
-          Alert.alert("Error", "Please enter a valid quantity");
-          setActionLoading(false);
-          return;
-        }
+      const payload = marginMode === "Cross"
+        ? { type: closePositionType }
+        : { type: "MARKET" };
+      if (marginMode === "Cross" && closePositionType === "LIMIT") {
         payload.price = closePositionPrice;
         payload.quantity = closePositionQty;
       }
 
       let res;
       if (marginMode === "Cross") {
-        payload.pair = selectedPosToClose.pair;
+        payload.pair = pos.pair;
         res = await appOperation.post(
           `cross/position/close`,
           payload,
@@ -530,21 +680,25 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
         );
       } else {
         res = await appOperation.post(
-          `margin/position/${encodeURIComponent(selectedPosToClose.pair)}/close`,
+          `margin/position/${encodeURIComponent(pos.pair)}/close`,
           payload,
           CUSTOMER_TYPE
         );
       }
       if (res?.success) {
+        markPositionClosing(closeKey);
+        setCloseConfirmVisible(false);
         setClosePositionModal(false);
+        setSelectedPosToClose(null);
         SimpleToast.show("Position close request submitted");
         fetchTabDetails();
       } else {
-        Alert.alert("Error", res?.message || "Failed to close position");
+        SimpleToast.show(res?.message || "Failed to close position");
       }
     } catch (err) {
-      Alert.alert("Error", err?.message || "Failed to close position");
+      SimpleToast.show(err?.message || "Failed to close position");
     } finally {
+      closeInFlightRef.current = false;
       setActionLoading(false);
     }
   };
@@ -595,8 +749,10 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
 
   const renderItemCard = (item, index, tabId) => {
     if (tabId === "size") {
-      const ml = item?.margin_level != null ? parseFloat(item.margin_level) : null;
-      const marginLevelDisplay = ml === null ? "—" : ml >= 999 ? "∞" : ml.toFixed(2);
+      const ml = parseMarginLevel(item?.margin_level ?? marginAccountData?.margin_level);
+      const hasDebt = pairHasDebt({ ...marginAccountData, ...item }, ml);
+      const mlStatus = getMarginLevelStatus(hasDebt ? ml : null, { ...marginAccountData, ...item }, { hasDebt });
+      const maintMarginDisplay = hasDebt ? formatMarginLevel(ml) : "Safe";
       const isLong = item?.side === "LONG";
       const itemPairStr = item?.pair || "";
       const cardBaseSymbol = itemPairStr ? itemPairStr.slice(0, -4) : baseSymbol;
@@ -605,6 +761,10 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
       const minNotional = parseFloat(currencyData?.min_notional ?? 10);
       const tooSmall = posVal > 0 && posVal < minNotional;
       const noLiability = marginMode === "Cross" && !item?.position_id;
+      const closeKey = positionCloseKey(item);
+      const isThisClosing = actionLoading && positionCloseKey(selectedPosToClose) === closeKey;
+      const alreadyClosing = !!(closeKey && (closingPairs[closeKey] || closingPairsRef.current[closeKey]));
+      const closeDisabled = tooSmall || noLiability || actionLoading || alreadyClosing;
       return (
         <View key={item?._id || index} style={[styles.card, { borderBottomColor: borderThemeColor }]}>
           <View style={[styles.cardHeader, { alignItems: "flex-start", marginBottom: 12 }]}>
@@ -638,8 +798,9 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                 paddingHorizontal: 12,
                 paddingVertical: 6,
                 borderRadius: 4,
-                opacity: (tooSmall || noLiability) ? 0.5 : 1,
+                opacity: closeDisabled ? 0.5 : 1,
               }}
+              disabled={closeDisabled}
               onPress={() => {
                 if (noLiability) {
                   SimpleToast.show("There is no liability on this position");
@@ -651,9 +812,11 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                 }
                 handleClosePosition(item);
               }}
-              activeOpacity={(tooSmall || noLiability) ? 0.5 : 0.8}
+              activeOpacity={closeDisabled ? 0.5 : 0.8}
             >
-              <AppText style={{ color: colors.white, fontSize: 12 }} weight={MEDIUM}>Market Close</AppText>
+              <AppText style={{ color: colors.white, fontSize: 12 }} weight={MEDIUM}>
+                {isThisClosing || alreadyClosing ? "Closing…" : "Market Close"}
+              </AppText>
             </TouchableOpacity>
           </View>
 
@@ -686,12 +849,34 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                     {(item?.liquidation_price != null || item?.warning_price != null) ? toFixedTwo(item?.liquidation_price ?? item?.warning_price) : "—"}
                   </AppText>
                 </View>
-                <View style={styles.kvRow}>
-                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Maint. Margin Ratio</AppText>
-                  <AppText style={[styles.value, { color: themeColors.spotTradeBuy || colors.green }]} weight={SEMI_BOLD}>
-                    {item?.maintenance_margin_ratio != null ? `${(parseFloat(item.maintenance_margin_ratio) * 100).toFixed(2)}%` : (ml != null ? `${ml >= 999 ? "999+" : ml.toFixed(0)}%` : "—")}
-                  </AppText>
-                </View>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    const row = buildMarginRiskRow({
+                      ...marginAccountData,
+                      ...item,
+                      pair_id: item?.pair_id || pairId,
+                      pair: item?.pair || `${cardBaseSymbol}${cardQuoteSymbol}`,
+                      pairRaw: `${cardBaseSymbol}/${cardQuoteSymbol}`,
+                    }, pairId);
+                    setIsolatedRiskRow(row);
+                    rbSheetIsolatedRisk.current?.open();
+                  }}
+                  style={styles.kvRow}
+                >
+                  <AppText style={[styles.label, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Maint. Margin</AppText>
+                  <View style={{ flex: 2, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
+                    <AppText style={{ fontSize: 13, color: mlStatus.color, textAlign: "right" }} weight={SEMI_BOLD}>
+                      {maintMarginDisplay}
+                    </AppText>
+                    <FastImage
+                      source={INFO}
+                      style={{ height: 12, width: 12 }}
+                      resizeMode="contain"
+                      tintColor={secondaryTextThemeColor}
+                    />
+                  </View>
+                </TouchableOpacity>
               </>
             )}
             <View style={styles.kvRow}>
@@ -713,27 +898,31 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
 
     if (tabId === "positionHistory") {
       const isLong = item?.side === "LONG";
-      const statusMap = { CLOSED: "Close All", LIQUIDATED: "Liquidated", OPEN: "Open Position" };
-      const statusText = statusMap[item?.status] || item?.status || "—";
+      const statusText = posStatusLabel(item);
+      const { base: histBase, quote: histQuote } = splitPairAssets(item?.pair, baseSymbol, quoteSymbol);
       const entryDt = fmtHistDate(item?.opened_at || item?.created_at);
       const closeDt = fmtHistDate(item?.closed_at || item?.updated_at || item?.end_time);
-      const rpnl = parseFloat(item?.realized_pnl || 0);
+      const rpnl = parseNum(item?.realized_pnl);
+      const rpnlN = Number.isFinite(rpnl) ? rpnl : 0;
+      const feesN = parseNum(item?.total_fees);
+      const qtyN = parseNum(item?.quantity);
+      const notionalN = parseNum(item?.notional);
+      const liqFee = formatMarginLiqFee(item, histQuote);
 
       return (
-        <View key={item?._id || index} style={[styles.histCard, { borderBottomColor: borderThemeColor }]}>
+        <View key={item?._id || item?.position_id || index} style={[styles.histCard, { borderBottomColor: borderThemeColor }]}>
           {/* Row 1: Spot/Leverage | Side */}
           <View style={styles.histRow}>
             <View style={styles.histCellLeft}>
               <AppText style={[styles.histLabel, { color: secondaryTextThemeColor }]} weight={MEDIUM}>Spot/Leverage</AppText>
               <View style={styles.pairRow}>
                 <AppText style={[styles.histPairText, { color: textThemeColor }]} weight={BOLD}>
-                  {`${baseSymbol}/${quoteSymbol}`}
+                  {histBase && histQuote ? `${histBase}/${histQuote}` : "—"}
                 </AppText>
                 <View style={[styles.tagPill, { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#EAEAEA" }]}>
                   <AppText style={[styles.tagText, { color: secondaryTextThemeColor }]} weight={SEMI_BOLD}>Isolated</AppText>
                 </View>
               </View>
-              {/* Status Tag */}
               <View style={[styles.statusTagPill, { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#EAEAEA" }]}>
                 <AppText style={[styles.statusTagText, { color: textThemeColor }]} weight={SEMI_BOLD}>
                   {statusText}
@@ -769,14 +958,14 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
             <View style={styles.histCellLeft}>
               <AppText style={[styles.histLabel, { color: secondaryTextThemeColor }]} weight={MEDIUM}>Entry Price</AppText>
               <AppText style={[styles.histValPrimary, { color: textThemeColor }]} weight={SEMI_BOLD}>
-                {toFixedFour(item?.entry_price)} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{quoteSymbol}</AppText>
+                {toFixedFour(item?.entry_price)} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{histQuote}</AppText>
               </AppText>
             </View>
 
             <View style={styles.histCellRight}>
               <AppText style={[styles.histLabel, { color: secondaryTextThemeColor }]} weight={MEDIUM}>Exit Price</AppText>
               <AppText style={[styles.histValPrimary, { color: textThemeColor }]} weight={SEMI_BOLD}>
-                {item?.close_price ? toFixedFour(item.close_price) : "—"} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{quoteSymbol}</AppText>
+                {item?.close_price ? toFixedFour(item.close_price) : "—"} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{histQuote}</AppText>
               </AppText>
             </View>
           </View>
@@ -786,14 +975,14 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
             <View style={styles.histCellLeft}>
               <AppText style={[styles.histLabel, { color: secondaryTextThemeColor }]} weight={MEDIUM}>Peak Position</AppText>
               <AppText style={[styles.histValPrimary, { color: textThemeColor }]} weight={SEMI_BOLD}>
-                {toFixedFour(item?.quantity)} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{baseSymbol}</AppText>
+                {Number.isFinite(qtyN) && qtyN > 0 ? toFixedFour(qtyN) : "—"} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{histBase}</AppText>
               </AppText>
             </View>
 
             <View style={styles.histCellRight}>
               <AppText style={[styles.histLabel, { color: secondaryTextThemeColor }]} weight={MEDIUM}>Notional</AppText>
               <AppText style={[styles.histValPrimary, { color: textThemeColor }]} weight={SEMI_BOLD}>
-                {toFixedFour(item?.notional)} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{quoteSymbol}</AppText>
+                {Number.isFinite(notionalN) && notionalN > 0 ? toFixedFour(notionalN) : "—"} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{histQuote}</AppText>
               </AppText>
             </View>
           </View>
@@ -802,15 +991,25 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
           <View style={styles.histRow}>
             <View style={styles.histCellLeft}>
               <AppText style={[styles.histLabel, { color: secondaryTextThemeColor }]} weight={MEDIUM}>Realized PnL</AppText>
-              <AppText style={{ color: getSideColor(rpnl >= 0 ? "LONG" : "SHORT"), fontSize: 14 }} weight={SEMI_BOLD}>
-                {rpnl >= 0 ? "+" : ""}{rpnl.toFixed(4)} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{quoteSymbol}</AppText>
+              <AppText style={{ color: getSideColor(rpnlN >= 0 ? "LONG" : "SHORT"), fontSize: 14 }} weight={SEMI_BOLD}>
+                {rpnlN >= 0 ? "+" : ""}{rpnlN.toFixed(4)} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{histQuote}</AppText>
               </AppText>
             </View>
 
             <View style={styles.histCellRight}>
               <AppText style={[styles.histLabel, { color: secondaryTextThemeColor }]} weight={MEDIUM}>Fees</AppText>
               <AppText style={[styles.histValPrimary, { color: textThemeColor }]} weight={SEMI_BOLD}>
-                {toFixedFour(item?.total_fees)} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{quoteSymbol}</AppText>
+                {Number.isFinite(feesN) && feesN !== 0 ? toFixedFour(feesN) : "—"} <AppText style={{ color: secondaryTextThemeColor, fontSize: 12 }}>{histQuote}</AppText>
+              </AppText>
+            </View>
+          </View>
+
+          {/* Row 6: Liq. Fee */}
+          <View style={styles.histRow}>
+            <View style={styles.histCellLeft}>
+              <AppText style={[styles.histLabel, { color: secondaryTextThemeColor }]} weight={MEDIUM}>Liq. Fee</AppText>
+              <AppText style={[styles.histValPrimary, { color: textThemeColor }]} weight={SEMI_BOLD}>
+                {liqFee ? `${liqFee.value}${liqFee.asset ? ` ${liqFee.asset}` : ""}` : "—"}
               </AppText>
             </View>
           </View>
@@ -820,7 +1019,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
 
     if (tabId === "positions") {
       // Open Orders
-      const orderId = item?._id || item?.id;
+      const orderId = item?._id?.$oid || item?._id || item?.order_id || item?.id;
       const m = moment(item?.created_at || item?.timestamp);
       const dateStr = m.isValid() ? m.format("DD/MM/YYYY") : "—";
       const timeStr = m.isValid() ? m.format("HH:mm:ss") : "—";
@@ -879,8 +1078,16 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
           </View>
           <View style={[styles.actionRow, { justifyContent: "flex-end", marginTop: 16 }]}>
             <TouchableOpacity
-              style={{ paddingHorizontal: 12, paddingVertical: 4, borderWidth: 1, borderColor: themeColors.red, borderRadius: 4 }}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderWidth: 1,
+                borderColor: themeColors.red,
+                borderRadius: 4,
+                opacity: cancelLoading && orderToCancel === orderId ? 0.6 : 1,
+              }}
               onPress={() => handleCancelOrder(orderId)}
+              disabled={cancelLoading}
               activeOpacity={0.8}
             >
               <AppText style={{ color: themeColors.red, fontSize: 14 }} weight={MEDIUM}>Cancel order</AppText>
@@ -1326,16 +1533,223 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
           </View>
         )}
 
+        <Modal
+          visible={cancelModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeCancelModal}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.6)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={closeCancelModal}
+              style={StyleSheet.absoluteFillObject}
+              disabled={cancelLoading}
+            />
+            <View
+              style={{
+                backgroundColor: isDark ? themeColors.sheetDarkColor || themeColors.background : themeColors.themeElevationColor || colors.white,
+                borderRadius: 20,
+                padding: 25,
+                width: "85%",
+                alignSelf: "center",
+                alignItems: "center",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.25,
+                shadowRadius: 20,
+                elevation: 10,
+                borderWidth: 1,
+                borderColor: themeColors.themeBorderColor || (isDark ? "#333" : "#e5e7eb"),
+              }}
+            >
+              <AppText
+                style={{
+                  fontSize: 20,
+                  fontWeight: "700",
+                  color: textThemeColor,
+                  textAlign: "center",
+                  marginBottom: 15,
+                }}
+              >
+                Cancel Order
+              </AppText>
+              <AppText
+                style={{
+                  fontSize: 15,
+                  color: secondaryTextThemeColor,
+                  textAlign: "center",
+                  marginBottom: 25,
+                  lineHeight: 22,
+                }}
+              >
+                Are you sure you want to cancel this order?
+              </AppText>
+              <View style={{ flexDirection: "row", width: "100%", gap: 10 }}>
+                <TouchableOpacity
+                  onPress={closeCancelModal}
+                  disabled={cancelLoading}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    backgroundColor: themeColors.themeElevationColor || (isDark ? "#2C2C2E" : "#F3F4F6"),
+                    borderWidth: 1,
+                    borderColor: themeColors.themeBorderColor || (isDark ? "#444" : "#e5e7eb"),
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: cancelLoading ? 0.6 : 1,
+                  }}
+                >
+                  <AppText style={{ fontSize: 14, fontWeight: "600", color: textThemeColor }}>
+                    No
+                  </AppText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={confirmCancelOrder}
+                  disabled={cancelLoading}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    backgroundColor: themeColors.red || colors.red,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: cancelLoading ? 0.85 : 1,
+                  }}
+                >
+                  {cancelLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <AppText style={{ fontSize: 14, fontWeight: "600", color: "#FFFFFF" }}>
+                      Yes
+                    </AppText>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        <IsolatedMarginRiskModal
+          ref={rbSheetIsolatedRisk}
+          row={isolatedRiskRow}
+        />
+
         {/* Close Position Modal */}
         <Modal
           visible={closePositionModal}
           transparent={true}
           animationType="slide"
-          onRequestClose={() => setClosePositionModal(false)}
+          onRequestClose={dismissCloseSheet}
+          statusBarTranslucent={true}
         >
-          <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor:  "rgba(0,0,0,0.5)" }}>
+            {marginMode !== "Cross" ? (() => {
+              const isLong = selectedPosToClose?.side === "LONG";
+              const pairStr = selectedPosToClose?.pair || "";
+              const baseAsset = pairStr ? pairStr.slice(0, -4) : baseSymbol;
+              const quoteAsset = pairStr ? pairStr.slice(-4) : quoteSymbol;
+              const pairLabel = baseAsset && quoteAsset ? `${baseAsset}/${quoteAsset}` : "—";
+              const qtyN = parseFloat(selectedPosToClose?.quantity);
+              const holdStr = Number.isFinite(qtyN) && qtyN > 0
+                ? qtyN.toFixed(8).replace(/\.?0+$/, "")
+                : "—";
+              const notionalN = parseFloat(selectedPosToClose?.notional);
+              const notionalStr = Number.isFinite(notionalN) && notionalN > 0
+                ? notionalN.toFixed(4)
+                : "—";
+              return (
+                <View style={{
+                  backgroundColor: isDark ? themeColors.background || "#1E1E1E" : colors.white,
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+                  padding: 16,
+                  paddingBottom: 32,
+                }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <AppText style={{ color: textThemeColor, fontSize: 18 }} weight={BOLD}>Close Position</AppText>
+                    <TouchableOpacity
+                      onPress={dismissCloseSheet}
+                      disabled={actionLoading || closeConfirmVisible}
+                      style={{ padding: 4, opacity: (actionLoading || closeConfirmVisible) ? 0.5 : 1 }}
+                    >
+                      <AppText style={{ color: secondaryTextThemeColor, fontSize: 20 }}>✕</AppText>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                    <AppText style={{ color: textThemeColor, fontSize: 13 }} weight={SEMI_BOLD}>{pairLabel}</AppText>
+                    <AppText style={{ color: secondaryTextThemeColor }}>·</AppText>
+                    <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }}>Isolated</AppText>
+                    <AppText style={{ color: secondaryTextThemeColor }}>·</AppText>
+                    <AppText style={{ color: isLong ? themeColors.spotTradeBuy || colors.green : themeColors.spotTradeSell || colors.red, fontSize: 13 }} weight={BOLD}>
+                      {isLong ? "Long" : "Short"}
+                    </AppText>
+                  </View>
+
+                  <View style={{
+                    borderWidth: 1,
+                    borderColor: isDark ? "#8B7355" : "#C9A66B",
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 16,
+                  }}>
+                    <AppText style={{ color: textThemeColor, fontSize: 14, marginBottom: 6 }} weight={SEMI_BOLD}>Settle the position</AppText>
+                    <AppText style={{ color: secondaryTextThemeColor, fontSize: 12, lineHeight: 18 }}>
+                      Your full holding will be closed as a market order. Remaining assets stay in your Isolated Margin account for this pair.
+                    </AppText>
+                  </View>
+
+                  <View style={{ marginBottom: 16 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 }}>
+                      <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }}>Holding</AppText>
+                      <AppText style={{ color: textThemeColor, fontSize: 13 }} weight={MEDIUM}>{holdStr} {baseAsset}</AppText>
+                    </View>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 }}>
+                      <AppText style={{ color: secondaryTextThemeColor, fontSize: 13 }}>Notional</AppText>
+                      <AppText style={{ color: textThemeColor, fontSize: 13 }} weight={MEDIUM}>{notionalStr} {quoteAsset}</AppText>
+                    </View>
+                  </View>
+
+                  <AppText style={{ color: secondaryTextThemeColor, fontSize: 12, lineHeight: 18, marginBottom: 8 }}>
+                    Using Close Position for large sizes may result in losses due to market slippage. Only trading fees are charged.
+                  </AppText>
+                  <AppText style={{ color: secondaryTextThemeColor, fontSize: 12, lineHeight: 18, marginBottom: 20 }}>
+                    Amounts received may differ due to the nature of market orders. Larger orders may experience higher slippage. Submit another request if your position is not fully settled.
+                  </AppText>
+
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: isDark ? colors.white : "#111827",
+                      paddingVertical: 14,
+                      borderRadius: 10,
+                      alignItems: "center",
+                      opacity: (actionLoading || closeConfirmVisible) ? 0.7 : 1,
+                    }}
+                    disabled={actionLoading || closeConfirmVisible}
+                    onPress={requestCloseConfirm}
+                  >
+                    {actionLoading ? (
+                      <ActivityIndicator size="small" color={isDark ? colors.black : colors.white} />
+                    ) : (
+                      <AppText style={{ color: isDark ? colors.black : colors.white, fontSize: 15 }} weight={BOLD}>Confirm</AppText>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              );
+            })() : (
             <View style={{
-              backgroundColor: isDark ? colors.bottomsheetDark || "#1E1E1E" : colors.white,
+              backgroundColor: isDark ? themeColors.background|| "#1E1E1E" : colors.white,
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
               padding: 16,
@@ -1346,7 +1760,11 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                 <AppText style={{ color: textThemeColor, fontSize: 18 }} weight={BOLD}>
                   Close by {closePositionType === "MARKET" ? "Market" : "Limit"}
                 </AppText>
-                <TouchableOpacity onPress={() => setClosePositionModal(false)} style={{ padding: 4 }}>
+                <TouchableOpacity
+                  onPress={dismissCloseSheet}
+                  disabled={actionLoading}
+                  style={{ padding: 4, opacity: actionLoading ? 0.5 : 1 }}
+                >
                   <AppText style={{ color: secondaryTextThemeColor, fontSize: 20 }}>✕</AppText>
                 </TouchableOpacity>
               </View>
@@ -1390,7 +1808,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                       paddingVertical: 10,
                       borderRadius: 8,
                       alignItems: "center",
-                      backgroundColor: closePositionType === t ? (isDark ? colors.white : "#111827") : (isDark ? "#2A2A2A" : "#f3f4f6"),
+                      backgroundColor: closePositionType === t ? (isDark ? colors.white : "#111827") : (isDark ? darkTheme.darkThemeInputColor: "#f3f4f6"),
                       borderWidth: closePositionType === t ? 0 : 1,
                       borderColor: isDark ? "#444" : "#e5e7eb",
                     }}
@@ -1407,7 +1825,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                 <View style={{ marginBottom: 12, position: "relative" }}>
                   <TextInput
                     style={{
-                      backgroundColor: isDark ? "#2A2A2A" : "#f9fafb",
+                      backgroundColor: isDark ? darkTheme.darkThemeInputColor: "#f9fafb",
                       borderWidth: 1,
                       borderColor: isDark ? "#444" : "#e5e7eb",
                       borderRadius: 10,
@@ -1435,7 +1853,7 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                 <View style={{ position: "relative" }}>
                   <TextInput
                     style={{
-                      backgroundColor: isDark ? "#2A2A2A" : "#f9fafb",
+                      backgroundColor: isDark ?darkTheme.darkThemeInputColor : "#f9fafb",
                       borderWidth: 1,
                       borderColor: isDark ? "#444" : "#e5e7eb",
                       borderRadius: 10,
@@ -1512,9 +1930,10 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                   paddingVertical: 14,
                   borderRadius: 10,
                   alignItems: "center",
+                  opacity: (actionLoading || closeConfirmVisible) ? 0.7 : 1,
                 }}
-                disabled={actionLoading}
-                onPress={submitClosePosition}
+                disabled={actionLoading || closeConfirmVisible}
+                onPress={requestCloseConfirm}
               >
                 {actionLoading ? (
                   <ActivityIndicator size="small" color={isDark ? colors.black : colors.white} />
@@ -1522,6 +1941,116 @@ const MarginHistorySection = ({ currencyData = {}, themeColors: themeColorsProp,
                   <AppText style={{ color: isDark ? colors.black : colors.white, fontSize: 15 }} weight={BOLD}>Confirm</AppText>
                 )}
               </TouchableOpacity>
+            </View>
+            )}
+          </View>
+        </Modal>
+
+        <Modal
+          visible={closeConfirmVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={cancelCloseConfirm}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.6)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={cancelCloseConfirm}
+              style={StyleSheet.absoluteFillObject}
+              disabled={actionLoading}
+            />
+            <View
+              style={{
+                backgroundColor: isDark ? themeColors.sheetDarkColor || themeColors.background : themeColors.themeElevationColor || colors.white,
+                borderRadius: 20,
+                padding: 25,
+                width: "85%",
+                alignSelf: "center",
+                alignItems: "center",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.25,
+                shadowRadius: 20,
+                elevation: 10,
+                borderWidth: 1,
+                borderColor: themeColors.themeBorderColor || (isDark ? "#333" : "#e5e7eb"),
+              }}
+            >
+              <AppText
+                style={{
+                  fontSize: 20,
+                  fontWeight: "700",
+                  color: textThemeColor,
+                  textAlign: "center",
+                  marginBottom: 15,
+                }}
+              >
+                Close Position
+              </AppText>
+              <AppText
+                style={{
+                  fontSize: 15,
+                  color: secondaryTextThemeColor,
+                  textAlign: "center",
+                  marginBottom: 25,
+                  lineHeight: 22,
+                }}
+              >
+                {marginMode === "Isolated"
+                  ? "Are you sure you want to close this position?"
+                  : `Are you sure you want to close this ${closePositionType === "MARKET" ? "market" : "limit"} position?`}
+              </AppText>
+              <View style={{ flexDirection: "row", width: "100%", gap: 10 }}>
+                <TouchableOpacity
+                  onPress={cancelCloseConfirm}
+                  disabled={actionLoading}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    backgroundColor: themeColors.themeElevationColor || (isDark ? "#2C2C2E" : "#F3F4F6"),
+                    borderWidth: 1,
+                    borderColor: themeColors.themeBorderColor || (isDark ? "#444" : "#e5e7eb"),
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: actionLoading ? 0.6 : 1,
+                  }}
+                >
+                  <AppText style={{ fontSize: 14, fontWeight: "600", color: textThemeColor }}>
+                    No
+                  </AppText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  disabled={actionLoading}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    backgroundColor: themeColors.red || colors.red,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: actionLoading ? 0.85 : 1,
+                  }}
+                  onPress={submitClosePosition}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <AppText style={{ fontSize: 14, fontWeight: "600", color: "#FFFFFF" }}>
+                      Yes
+                    </AppText>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>

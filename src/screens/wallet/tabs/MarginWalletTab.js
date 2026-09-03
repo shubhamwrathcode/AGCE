@@ -6,11 +6,20 @@ import { AppText, BOLD, DISCLAIMTEXT, EIGHTEEN, FIFTEEN, FOURTEEN, SEMI_BOLD, SI
 import { colors, darkTheme } from "../../../theme/colors";
 import { appOperation } from "../../../appOperation";
 import { CUSTOMER_TYPE } from "../../../appOperation/types";
-import { searchIcon, checkIc, NO_NOTIFICATION_ICON, moreOption, bitcoin_ic } from "../../../helper/ImageAssets";
+import { searchIcon, checkIc, NO_NOTIFICATION_ICON, moreOption, bitcoin_ic, INFO } from "../../../helper/ImageAssets";
 import MarginPairDetailSheet from "./MarginPairDetailSheet";
+import IsolatedMarginRiskModal from "../../spotScreen/isolatedMargin/IsolatedMarginRiskModal";
 import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
 import WalletShimmerCell from "../WalletShimmerCell";
+import {
+  buildMarginRiskRow,
+  formatMarginLevel,
+  getMarginLevelStatus,
+  pairHasDebt,
+  parseMarginLevel,
+  resolveMarginThresholds,
+} from "../../spotScreen/crossMargin/marginLevelUtils";
 
 function fmt(val, decimals = 8) {
   const n = parseFloat(val);
@@ -42,8 +51,17 @@ function buildPairRows(balanceRows, accounts) {
 
   return Object.values(pairMap).map(({ pair, base, quote }) => {
     const acc = accountMap[pair] || {};
-    const ml = acc.margin_level ? parseFloat(acc.margin_level) : null;
-    const mlDisplay = ml === null ? "—" : ml >= 999 ? "∞" : ml.toFixed(2);
+    const ml = parseMarginLevel(acc.margin_level);
+    const riskSource = {
+      ...acc,
+      margin_level: acc.margin_level,
+      base_borrowed: base?.borrowed ?? acc.base_borrowed,
+      quote_borrowed: quote?.borrowed ?? acc.quote_borrowed,
+    };
+    const hasDebt = pairHasDebt(riskSource, ml);
+    const thresholds = resolveMarginThresholds(acc);
+    const mlStatus = getMarginLevelStatus(hasDebt ? ml : null, thresholds, { hasDebt });
+    const mlDisplay = hasDebt ? formatMarginLevel(ml) : (ml == null ? "—" : "Safe");
     return {
       pair_id: acc.pair_id || "",
       pair: `${base?.coin || acc.base_asset || ""}/${quote?.coin || acc.quote_asset || ""}`,
@@ -53,6 +71,15 @@ function buildPairRows(balanceRows, accounts) {
       icon_path: acc.icon_path || "",
       mmr: mlDisplay !== "—" ? mlDisplay : null,
       marginLevel: mlDisplay,
+      margin_level: acc.margin_level,
+      margin_call_level: acc.margin_call_level,
+      liquidation_margin_level: acc.liquidation_margin_level,
+      warning_margin_rate: acc.warning_margin_rate,
+      maintenance_margin_rate: acc.maintenance_margin_rate,
+      leverage: acc.leverage ?? acc.default_leverage,
+      effective_multiple: acc.effective_multiple ?? acc.effective_leverage,
+      mlStatus,
+      hasDebt,
       status: acc.status || "NOT_OPENED",
       availableBase: fmt(base?.available ?? acc.base_balance ?? "0"),
       availableQuote: fmt(quote?.available ?? acc.quote_balance ?? "0"),
@@ -85,6 +112,21 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary: propMarginSummary,
   const [hideSmall, setHideSmall] = useState(false);
   const [selectedPair, setSelectedPair] = useState(null);
   const sheetRef = useRef(null);
+  const isolatedRiskRef = useRef(null);
+  const [isolatedRiskRow, setIsolatedRiskRow] = useState(null);
+
+  const openIsolatedRisk = useCallback((item) => {
+    if (!item?.pair_id && !item?.pairRaw) return;
+    setIsolatedRiskRow(buildMarginRiskRow({
+      ...item,
+      pair: item.pairRaw || item.pair,
+      pairRaw: item.pair,
+      pair_id: item.pair_id,
+      base_borrowed: item.borrowedBase,
+      quote_borrowed: item.borrowedQuote,
+    }, item.pair_id));
+    isolatedRiskRef.current?.open();
+  }, []);
 
   const summary = localSummary || propMarginSummary;
 
@@ -244,14 +286,19 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary: propMarginSummary,
                     <View style={{ backgroundColor: theme === "Dark" ? "rgba(142,148,158,0.2)" : "rgba(142,148,158,0.1)", borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2, alignSelf: "flex-start", marginTop: 4 }}>
                       <AppText type={TWELVE} color={DISCLAIMTEXT} style={{ fontSize: 10, lineHeight: 12 }}>Not opened</AppText>
                     </View>
-                  ) : item.mmr ? (
-                    <View style={{ backgroundColor: "rgba(1,188,141,0.1)", borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2, alignSelf: "flex-start", marginTop: 4 }}>
-                      <AppText type={TWELVE} style={{ color: "#01bc8d", fontSize: 10, lineHeight: 12 }}>{item.mmr}</AppText>
-                    </View>
                   ) : (
-                    <View style={{ backgroundColor: "rgba(1,188,141,0.1)", borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2, alignSelf: "flex-start", marginTop: 4 }}>
-                      <AppText type={TWELVE} style={{ color: "#01bc8d", fontSize: 10, lineHeight: 12 }}>{item.status}</AppText>
-                    </View>
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      onPress={() => openIsolatedRisk(item)}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, alignSelf: "flex-start" }}
+                    >
+                      <View style={{ backgroundColor: `${item.mlStatus?.color || "#01bc8d"}1A`, borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2 }}>
+                        <AppText type={TWELVE} style={{ color: item.mlStatus?.color || "#01bc8d", fontSize: 10, lineHeight: 12 }}>
+                          {item.marginLevel}
+                        </AppText>
+                      </View>
+                      <FastImage source={INFO} style={{ width: 11, height: 11 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                    </TouchableOpacity>
                   )}
                 </View>
               </View>
@@ -306,6 +353,11 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary: propMarginSummary,
         themeColors={themeColors}
         selectedPair={selectedPair}
         buildCoinIconUri={buildCoinIconUri}
+        onOpenMarginRisk={openIsolatedRisk}
+      />
+      <IsolatedMarginRiskModal
+        ref={isolatedRiskRef}
+        row={isolatedRiskRow}
       />
     </View>
   );

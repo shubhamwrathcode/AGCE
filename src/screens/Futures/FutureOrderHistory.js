@@ -20,6 +20,7 @@ import { setLoading } from "../../slices/authSlice";
 import { showError } from "../../helper/logger";
 import { setFutureOrders } from "../../slices/homeSlice";
 import { toFixedFive } from "../../helper/utility";
+import { formatLiqFee } from "../../helper/futuresUtils";
 import { useRoute } from "@react-navigation/native";
 
 const formatNumber = (value, digits = 5) => {
@@ -418,6 +419,7 @@ const renderPositionCard = (pos, themeColors, styles) => {
           <Text style={styles.label}>Entry Price</Text>
           <Text style={styles.label}>Exit Price</Text>
           <Text style={styles.label}>PNL</Text>
+          <Text style={styles.label}>Liq. Fee</Text>
           <Text style={styles.label}>Open</Text>
           <Text style={styles.label}>Closed</Text>
           <Text style={styles.label}>Liquidated?</Text>
@@ -436,6 +438,8 @@ const renderPositionCard = (pos, themeColors, styles) => {
           >
             {toFixedFive(pnl)}
           </Text>
+
+          <Text style={styles.value}>{formatLiqFee(pos, pos.quoteCurrency || "USDT")?.display || "—"}</Text>
 
           <Text style={styles.value}>
             {formatDate(openTime)}
