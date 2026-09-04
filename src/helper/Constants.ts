@@ -1,3 +1,10 @@
+/** Google Cloud OAuth web client (type 3). Used by native Google Sign-In. */
+export const GOOGLE_WEB_CLIENT_ID =
+  '79105712683-trmuln9ls862v3amdlpn4uu2tam5n07d.apps.googleusercontent.com';
+/** iOS OAuth client from GoogleService-Info.plist CLIENT_ID. */
+export const GOOGLE_IOS_CLIENT_ID =
+  '79105712683-ar8pvcfqv1nprrdpbi0o6gefjn637fd0.apps.googleusercontent.com';
+
 export const USER_TOKEN_KEY = 'USER_TOKEN_KEY';
 export const USER_REFRESH_TOKEN_KEY = 'USER_REFRESH_TOKEN_KEY';
 export const FCM_TOKEN_KEY = 'FCM_TOKEN_KEY';

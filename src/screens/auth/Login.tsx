@@ -3,6 +3,7 @@ import FastImage from "react-native-fast-image";
 import { ActivityIndicator, Keyboard, Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
+import { prepareGoogleSignIn } from "../../helper/googleSignIn";
 import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../navigation/routes";
 import { AppSafeAreaView, AppText, Button, ELEVEN, FIFTEEN, FOURTEEN, Input, MEDIUM, TEN, THIRD, THIRTEEN, TWELVE } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
@@ -75,25 +76,8 @@ const Login = (): JSX.Element => {
     setEmailSuggestListVisible(false);
   }, [index]);
 
-  // Configure native Google Sign-In once
   useEffect(() => {
-    if (Platform.OS === "ios") {
-      return;
-    }
-    try {
-      GoogleSignin.configure({
-        webClientId:
-          "79105712683-trmuln9ls862v3amdlpn4uu2tam5n07d.apps.googleusercontent.com",
-        offlineAccess: true,
-        forceCodeForRefreshToken: true,
-      });
-    } catch (e) {
-      console.warn("GoogleSignin.configure error", e);
-    }
-
-    // Cleanup function to handle component unmounting
     return () => {
-      // Reset Google Sign-In state when component unmounts
       setIsGoogleSignInInProgress(false);
       setIsPasskeySignInInProgress(false);
     };
@@ -141,10 +125,7 @@ const Login = (): JSX.Element => {
       console.log("Starting Google Sign-In...");
       setIsGoogleSignInInProgress(true);
       dispatch(setLoading(true));
-      // Prefer native Google sign-in (no external browser)
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
+      await prepareGoogleSignIn();
       const account = await GoogleSignin.signIn();
       console.log("Native Google account:", account);
 
@@ -160,7 +141,7 @@ const Login = (): JSX.Element => {
       dispatch(googleLogin(data));
       // await api.post('/login', userData);
     } catch (error: any) {
-      console.error("Google Sign In Error:", error?.code, error?.message, error);
+      console.warn("Google Sign In Error:", error?.code, error?.message, error);
 
       // Handle specific error types
       if (

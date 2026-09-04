@@ -47,6 +47,7 @@ import {
   GoogleSignin,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
+import { prepareGoogleSignIn } from "../../helper/googleSignIn";
 
 
 /** Matches AppOperation.send(): only `api/*` skips the `v1/` prefix. */
@@ -135,23 +136,7 @@ const Register = () => {
   const handleClearCaptcha = () => { };
 
   useEffect(() => {
-    if (Platform.OS === "ios") {
-      return;
-    }
-    try {
-      GoogleSignin.configure({
-        webClientId:
-          "79105712683-trmuln9ls862v3amdlpn4uu2tam5n07d.apps.googleusercontent.com",
-        offlineAccess: true,
-        forceCodeForRefreshToken: true,
-      });
-    } catch (e) {
-      console.warn("GoogleSignin.configure error", e);
-    }
-
-    // Cleanup function to handle component unmounting
     return () => {
-      // Reset Google Sign-In state when component unmounts
       setIsGoogleSignInInProgress(false);
     };
   }, []);
@@ -256,10 +241,7 @@ const Register = () => {
       console.log("Starting Google Sign-In...");
       setIsGoogleSignInInProgress(true);
       dispatch(setLoading(true));
-      // Prefer native Google sign-in (no external browser)
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
+      await prepareGoogleSignIn();
       const account = await GoogleSignin.signIn();
       console.log("Native Google account:", account);
 
@@ -279,7 +261,7 @@ const Register = () => {
       dispatch(googleRegister(data, () => { }, () => { }, handleClearCaptcha));
       // await api.post('/login', userData);
     } catch (error) {
-      console.error("Google Sign In Error:", error);
+      console.warn("Google Sign In Error:", error);
 
       // Handle specific error types
       if (

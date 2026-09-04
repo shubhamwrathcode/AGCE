@@ -16,6 +16,7 @@ import { getUserProfile } from "./actions/accountActions";
 import NavigationService from "./navigation/NavigationService";
 import { KYC_STATUS_SCREEN } from "./navigation/routes";
 import { CHART_WEB_BASE_URL } from "./helper/Constants";
+import { configureGoogleSignIn } from "./helper/googleSignIn";
 
 class AppErrorBoundary extends Component<
   { children: ReactNode },
@@ -103,6 +104,7 @@ const MainApp = () => {
   const { colors: themeColors, isDark } = useTheme();
 
   useEffect(() => {
+    configureGoogleSignIn();
     onAppStart(store);
     try {
       SplashScreen?.hide?.();

@@ -14,6 +14,7 @@
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		1A8F3C6E91B24D0A9E7C4B12 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 1A8F3C6E91B24D0A9E7C4B11 /* GoogleService-Info.plist */; };
 		1DF835D902634C6B9ED5CB6B /* Inter_18pt-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C9BAD17788AB4BB18AE48D21 /* Inter_18pt-Bold.ttf */; };
 		20E43F98926EF622728AC7A6 /* Pods_AGCX_AGCXTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FE04A0C3E5DBFF5E4F300E06 /* Pods_AGCX_AGCXTests.framework */; };
 		2E39910D9B154B05ABC93919 /* Inter_18pt-BlackItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6D0207FBDAF8400DB6223CA1 /* Inter_18pt-BlackItalic.ttf */; };
@@ -57,6 +58,7 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = AGCX/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = AGCX/main.m; sourceTree = "<group>"; };
 		183A3E79EB053D1603DD7FCD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = AGCX/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		1A8F3C6E91B24D0A9E7C4B11 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "AGCX/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		229138AA4AEC40E9939BB69C /* Inter_18pt-BoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-BoldItalic.ttf"; path = "../assets/fonts/Inter_18pt-BoldItalic.ttf"; sourceTree = "<group>"; };
 		3FB80A937ADF43EEA6A46512 /* Inter_18pt-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-Regular.ttf"; path = "../assets/fonts/Inter_18pt-Regular.ttf"; sourceTree = "<group>"; };
 		42EADAD15D7B48D1AAD3F31C /* Inter_18pt-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-ExtraBold.ttf"; path = "../assets/fonts/Inter_18pt-ExtraBold.ttf"; sourceTree = "<group>"; };
@@ -130,6 +132,7 @@
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
+				1A8F3C6E91B24D0A9E7C4B11 /* GoogleService-Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				183A3E79EB053D1603DD7FCD /* PrivacyInfo.xcprivacy */,
@@ -329,6 +332,7 @@
 				A73DFF42565049F58AB26580 /* Inter_18pt-Thin.ttf in Resources */,
 				426B9073DFEF4C7BA60B45FF /* Inter_18pt-ThinItalic.ttf in Resources */,
 				074EC3A82F7EF1EA50279DD4 /* PrivacyInfo.xcprivacy in Resources */,
+				1A8F3C6E91B24D0A9E7C4B12 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -571,10 +575,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = AGCX/AGCX.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 35L2R5UU6Q;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = S83T7H5Z7T;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = AGCX/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -588,6 +597,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agcx.exchange;
 				PRODUCT_NAME = AGCE;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ARAB GLOBAL VIRTUAL ASSETS SERVICES - L.L.C - S.P.";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -607,9 +618,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = AGCX/AGCX.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 35L2R5UU6Q;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = S83T7H5Z7T;
 				INFOPLIST_FILE = AGCX/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -622,6 +638,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.agcx.exchange;
 				PRODUCT_NAME = AGCX;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ARAB GLOBAL VIRTUAL ASSETS SERVICES - L.L.C - S.P.";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;

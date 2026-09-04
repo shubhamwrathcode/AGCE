@@ -20,6 +20,33 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.agcx.exchange</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>agcx</string>
+				<string>agce</string>
+				<string>com.googleusercontent.apps.79105712683-ar8pvcfqv1nprrdpbi0o6gefjn637fd0</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>REVERSED_CLIENT_ID</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.79105712683-ar8pvcfqv1nprrdpbi0o6gefjn637fd0</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>79105712683-ar8pvcfqv1nprrdpbi0o6gefjn637fd0.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>79105712683-trmuln9ls862v3amdlpn4uu2tam5n07d.apps.googleusercontent.com</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -33,8 +60,14 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>AGCX requires access to the camera.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string/>
+	<string></string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>AGCX does not require access to the microphone.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>AGCX requires access to the photo library.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Inter_18pt-Black.ttf</string>
@@ -65,27 +98,14 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>AGCX requires access to the photo library.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>AGCX does not require access to the microphone.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>AGCX requires access to the camera.</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.agcx.exchange</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>agcx</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>

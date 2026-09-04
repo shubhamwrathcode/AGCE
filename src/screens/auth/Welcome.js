@@ -48,6 +48,7 @@ import { fontFamilyMedium } from "../../theme/typography";
 import WebView from "react-native-webview";
 import { CHART_WEB_BASE_URL } from "../../helper/Constants";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
+import { prepareGoogleSignIn } from "../../helper/googleSignIn";
 import { googleLogin } from "../../actions/authActions";
 import { setLoading } from "../../slices/authSlice";
 import { showError } from "../../helper/logger";
@@ -136,20 +137,6 @@ const Welcome = () => {
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
 
   useEffect(() => {
-    if (Platform.OS === "ios") {
-      return;
-    }
-    try {
-      GoogleSignin.configure({
-        webClientId:
-          "79105712683-trmuln9ls862v3amdlpn4uu2tam5n07d.apps.googleusercontent.com",
-        offlineAccess: true,
-        forceCodeForRefreshToken: true,
-      });
-    } catch (e) {
-      console.warn("GoogleSignin.configure error", e);
-    }
-
     return () => {
       setIsGoogleSignInInProgress(false);
     };
@@ -311,9 +298,7 @@ const Welcome = () => {
       setIsGoogleSignInInProgress(true);
       dispatch(setLoading(true));
 
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
+      await prepareGoogleSignIn();
       const account = await GoogleSignin.signIn();
       const tokens = await GoogleSignin.getTokens();
 
@@ -324,7 +309,7 @@ const Welcome = () => {
 
       dispatch(googleLogin(data));
     } catch (error) {
-      console.error("Google Sign In Error:", error?.code, error?.message, error);
+      console.warn("Google Sign In Error:", error?.code, error?.message, error);
       if (
         typeof error === "object" &&
         error !== null &&
