@@ -1,50 +1,44 @@
 # AGCE Development Tasks
 
 
+### 1. Profile drawer — RN Text warning
+- Removed extra whitespace inside the theme-toggle `TouchableOpacity` (`Text strings must be rendered within a <Text> component` on focus).
 
-### 1. Cross margin — Margin Level + risk
-- Cross trade page pe `GET /v1/cross/risk` poll (~5s) + wallet/balance refresh ke baad risk refresh.
-- Cross-specific risk **sheet** (isolated modal reuse nahi); drag-to-close hataaya taaki scroll flicker / accidental close na ho.
-- ML gauge UI: compact arc + (i), Buy/Sell ke upar, halki border, chart se 5px gap.
-- Order book height **7 rows** pe lock — trade panel alignment ke liye.
+### 2. Login — lost method recovery (“Unable to verify?”)
+- Start/verify APIs plus remaining-method OTP; after the last method is proven, **re-login** (no auto-login / no kept session).
+- RBSheet flow: select lost method → 24h warning → remaining OTP; X closes recovery; “Back to methods” returns to the select step.
+- After complete: toast, then login screen. Verify OTP keyboard cover: sheet `marginBottom` + `ScrollView`.
 
-### 2. Cross Positions — Maint. Margin
-- Size tab pe web jaisa **Maint. Margin** value (pehle dash aa raha tha).
+### 3. KYB status screens
+- Slim `GET /api/v1/kyb/status`: legal name, application id, verified_at — do not render verifications / documents / webhook blobs.
+- Due / Pending / Failed / Success views. Success matches web: 4 rows (Business Name, Status, Date, Method), orange theme, unlocked cards.
 
-### 3. Isolated margin — ML + risk + Size tab
-- Isolated ML green pill + (i) → isolated risk sheet (`margin/account/:pairId`); Cross gauge Isolated pe nahi.
-- Size tab label **Maint. Margin** (web jaisa) + card alignment fix.
-- Isolated ≠ Cross risk APIs alag rakhe.
+### 4. Login — “this device is block”
+- HTTP rejects never hit the old login success log. Added `[Login]` + `send()` status/body logs; toast uses catch `e.message`. Device-id policy is backend-side.
 
-### 4. Isolated + Cross — Market Close confirm + single press
-- Close pe pehle Yes/No confirm; **Yes** pe hi API.
-- Isolated settle sheet (web: Close Position + Holding/Notional); Cross Market/Limit sheet + confirm.
-- In-flight lock: ek position pe 3–4 tap se multiple close nahi. Isolated, Cross trade, Futures close, wallet Cross sheet.
+### 5. Google Play — target API 36
+- `compileSdk` / `targetSdk` / `buildTools` **36**. Play requires targeting Android 16 (API 36). Warning clears after a new AAB is uploaded.
 
-### 5. Futures — Close Position modal
-- Web-like sheet: Market/Limit, %, Holding + Est. value; Close bottom pe pin.
-- Full close → `close_position: true`; partial → `quantity` + `reduce_only: true`.
-- Yes/No + lock until response. First Yes pe “Closing…” dikh ke close na hone wala bug fix.
+### 6. Google Play — photo / video permissions
+- Removed `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` (`tools:node="remove"`). Gallery uses the system photo picker; no gallery permission prompt on Android 13+.
+- `READ_EXTERNAL_STORAGE` with `maxSdkVersion=32`. Camera permission unchanged.
 
-### 6. Futures — TP/SL (Buy/Sell tab)
-- App web **mobile** follow: ek Buy/Sell tab + ek button (desktop dual buttons nahi).
-- Short TP/SL Buy panel se bhi sahi side pe jaaye.
+### 7. Google Play — obfuscation 2%
+- R8 minify (class renaming) enabled on release for Play’s obfuscation threshold.
+- `shrinkResources` **off** — stripping RN library drawables caused a launch crash.
+- `proguard-android.txt` (not optimize) plus keep-rules. Upload `mapping.txt` to Play.
 
-### 7. Futures — Position History + detail
-- Liq. Fee: liquidated **and** `liq_fee > 0` pe show (max 8 decimals), warna `—`.
-- Open position detail: Size, Entry, Mark, Liq. Price, Margin, PNL, Opened Time, Status. Closed Time / Exit / Liq. Fee open pe `—`.
-- History detail: Closed/Opened Time, Exit, Realized PNL, Liq. Fee. Payload `liq_fee` drop na ho (module store).
-- Qty/price/PnL/fee/margin/ROE max **8 decimals**, trailing zeros trim.
+### 8. Android back — app exits from inner screens
+- Targeting API 36 enabled predictive back, which skipped RN `onBackPressed`. Set `enableOnBackInvokedCallback=false` and forward MainActivity dispatcher to the RN stack. Hardware back now pops to the previous screen.
 
-### 8. Isolated — Position History (Spot Size / history)
-- `GET margin/positions/history` all pairs (pair-only nahi).
-- Status Liquidated vs Close All (`close_reason`). Liq. Fee same rule; pair from `pos.pair`.
+### 9. iOS Google Sign-In
+- `configure()` was skipped on iOS (`No active configuration`). Configure at app start; `GoogleService-Info.plist` lives in `ios/AGCX/`.
+- URL scheme from `REVERSED_CLIENT_ID`; AppDelegate `GIDSignIn handleURL`. Native **rebuild** required (Metro reload is not enough).
 
-### 9. Isolated + Cross — false “Minimum 5 USDT” error
-- Qty snap `step_size` pe **bina float drift** (`0.00007` → `0.00006` nahi).
-- Total / quote USDT → base qty **ceil to step**.
-- Min notional: USDT mode pe entered USDT; warna `price × snapped qty`. Price parse se commas strip.
-- Retest: `77332.2 × 0.00007` (Total `5.4`) pe 5 USDT error nahi.
+### 10. Play Console — appeal + new build
+- Submitted an **appeal** on Play for the given issue.
+- Uploaded a **new build** for the remaining issues (API 36, media permissions, R8/obfuscation, back fix).
 
-### 10. Profile drawer — RN Text warning
-- Theme toggle `TouchableOpacity` ke andar extra space hataaya (`Text strings must be rendered within a <Text> component` on focus).
+### 11. Android release crash on launch (debug OK)
+- Debug ran; **release** crashed on open. R8 optimize + `shrinkResources` were stripping RN/native modules and drawables.
+- `shrinkResources=false`, `-dontoptimize`, R8 fullMode off, keep RN + third-party modules. Uninstall the old `app-release.apk` and install a **new** `./gradlew assembleRelease` build.

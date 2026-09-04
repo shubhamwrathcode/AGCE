@@ -53,10 +53,24 @@
 -dontwarn com.facebook.react.**
 -dontwarn com.facebook.jni.**
 
-# Hermes / JNI
+# RN 0.79 New Architecture / Hermes — keep the whole RN surface so release does not crash on launch
+-keep class com.facebook.react.** { *; }
+-keep class com.facebook.hermes.** { *; }
 -keep class com.facebook.jni.** { *; }
--keep class com.facebook.hermes.unicode.** { *; }
 -keep class com.facebook.soloader.** { *; }
+-keep class com.facebook.yoga.** { *; }
+-keep class com.facebook.perftest.** { *; }
+-keep class com.facebook.systrace.** { *; }
+-keep class com.facebook.debug.** { *; }
+-keep class com.facebook.proguard.** { *; }
+
+-keep class * implements com.facebook.react.ReactPackage { *; }
+-keep class * implements com.facebook.react.turbomodule.core.interfaces.TurboModule { *; }
+-keep class * extends com.facebook.react.bridge.ReactContextBaseJavaModule { *; }
+-keep class * extends com.facebook.react.uimanager.ViewManager { *; }
+
+# App native modules
+-keep class com.agcx.exchange.** { *; }
 
 # Yoga
 -keep,allowobfuscation @interface com.facebook.yoga.annotations.DoNotStrip
@@ -133,3 +147,29 @@
 # Crash deobfuscation (upload mapping.txt to Play)
 -keepattributes SourceFile,LineNumberTable,*Annotation*,Signature,Exceptions,InnerClasses,EnclosingMethod
 -renamesourcefileattribute SourceFile
+
+# Optimization (not renaming) is what typically breaks RN release launches.
+-dontoptimize
+
+# Third-party RN modules (JNI / reflection)
+-keep class com.swmansion.** { *; }
+-keep class com.th3rdwave.** { *; }
+-keep class com.reactnativecommunity.** { *; }
+-keep class org.devio.** { *; }
+-keep class com.learnium.** { *; }
+-keep class com.zoontek.** { *; }
+-keep class com.google.android.gms.** { *; }
+-keep class com.google.android.libraries.** { *; }
+-keep class kotlinx.** { *; }
+-keep class com.bumptech.glide.** { *; }
+-keep class **AppGlideModule { *; }
+-keep class **GeneratedAppGlideModuleImpl { *; }
+-keep class androidx.activity.** { *; }
+-keep class androidx.core.view.WindowCompat { *; }
+-keep class com.facebook.fbreact.specs.** { *; }
+-keep class com.facebook.react.viewmanagers.** { *; }
+-keep class com.oblador.** { *; }
+-keep class cl.json.** { *; }
+-keep class com.RNFetchBlob.** { *; }
+-keep class app.notifee.** { *; }
+-keep class io.invertase.** { *; }

@@ -19,22 +19,30 @@ class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     WindowCompat.setDecorFitsSystemWindows(window, true)
-    // API 36 predictive back skips Activity.onBackPressed(); forward it to RN.
-    onBackPressedDispatcher.addCallback(
-      this,
-      object : OnBackPressedCallback(true) {
-        override fun handleOnBackPressed() {
-          if (!reactActivityDelegate.onBackPressed()) {
-            isEnabled = false
-            try {
-              onBackPressedDispatcher.onBackPressed()
-            } finally {
-              isEnabled = true
+    try {
+      onBackPressedDispatcher.addCallback(
+        this,
+        object : OnBackPressedCallback(true) {
+          override fun handleOnBackPressed() {
+            val handled = try {
+              reactActivityDelegate.onBackPressed()
+            } catch (_: Throwable) {
+              false
+            }
+            if (!handled) {
+              isEnabled = false
+              try {
+                onBackPressedDispatcher.onBackPressed()
+              } finally {
+                isEnabled = true
+              }
             }
           }
-        }
-      },
-    )
+        },
+      )
+    } catch (_: Throwable) {
+      /* back callback is best-effort; do not crash launch */
+    }
   }
 
   /**
