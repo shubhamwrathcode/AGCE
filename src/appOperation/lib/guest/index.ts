@@ -47,6 +47,25 @@ export default (appOperation: AppOperation) => ({
   },
   login: (data: LoginProps) =>
     appOperation.post('user/login', data, GUEST_TYPE),
+  /** Lost Login 2-Step — POST /v1/user/login-methods/recovery/start (tempToken, no Bearer) */
+  loginMethodRecoveryStart: (data: { tempToken: string; challenge_id?: string; lost_method: string }) => {
+    const params: Record<string, string> = {
+      tempToken: String(data.tempToken || ""),
+      lost_method: String(data.lost_method || "").toLowerCase(),
+    };
+    if (data.challenge_id) params.challenge_id = String(data.challenge_id);
+    return appOperation.post("user/login-methods/recovery/start", params, GUEST_TYPE);
+  },
+  loginMethodRecoveryVerify: (data: { tempToken: string; challenge_id?: string; method: string; code: string }) => {
+    const params: Record<string, string> = {
+      tempToken: String(data.tempToken || ""),
+      method: String(data.method || "").toLowerCase(),
+      code: String(data.code ?? ""),
+      otp: String(data.code ?? ""),
+    };
+    if (data.challenge_id) params.challenge_id = String(data.challenge_id);
+    return appOperation.post("user/login-methods/recovery/verify", params, GUEST_TYPE);
+  },
   google_login: (data: LoginProps) =>
     appOperation.post('user/third-party-login', data, GUEST_TYPE),
   forgot: (data: ForgotPasswordProps) =>

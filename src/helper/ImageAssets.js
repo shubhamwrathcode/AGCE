@@ -437,6 +437,10 @@ export const WithdrawalCryptoWhite = require('../../assets/images/WithdrawalCryp
 export const WithdrawalCryptoBlack = require('../../assets/images/WithdrawalCryptoBlack.png');
 export const depositCryptoWhite = require('../../assets/images/depositCryptoWhite.png');
 export const depositCryptoBlack = require('../../assets/images/depositCryptoBlack.png');
+export const security_vector_light2 = require('../../assets/images/security_vector_light2.png');
+
+
+
 
 
 

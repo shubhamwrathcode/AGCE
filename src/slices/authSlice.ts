@@ -13,6 +13,8 @@ export type Pending2FA = {
   verifySubStep?: 'methods' | 'code';
   /** Method the user explicitly tapped on the methods list / switch sheet */
   activeMethod?: number;
+  /** Login 2-step methods that can be recovered (totp | email | phone) */
+  recoverableMethods?: string[];
 } | null;
 
 export const initialState = {

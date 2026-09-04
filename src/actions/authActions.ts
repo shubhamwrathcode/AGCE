@@ -38,6 +38,10 @@ import {
 import { getMobilePasskeyUserAgent } from '../helper/passkeyDeviceInfo';
 import { socketService } from '../services/socket/SocketService';
 import { Platform } from 'react-native';
+import {
+  isLoginChallengeExpired,
+  normalizeRecoverableMethodKeys,
+} from '../helper/loginRecoveryHelpers';
 
 /** Persist signup/login JWT so customer APIs + socket work after register / verify-otp. */
 async function persistSignupSessionToken(tokenObj: any) {
@@ -421,6 +425,10 @@ function resolveLogin2FADefaultMethod(
   return methods[0]?.type ?? 1;
 }
 
+function recoverableMethodsFromLogin(d: any): string[] {
+  return normalizeRecoverableMethodKeys(d?.recoverable_methods ?? d?.recoverableMethods);
+}
+
 export type LoginThunkResult = {
   success: boolean;
   highlightPasswordField?: boolean;
@@ -488,6 +496,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
         tempToken: d?.tempToken,
         verifySubStep: 'methods',
         activeMethod: undefined,
+        recoverableMethods: recoverableMethodsFromLogin(d),
         data: d,
       }));
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -511,6 +520,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
         tempToken: d?.tempToken,
         verifySubStep: 'methods',
         activeMethod: undefined,
+        recoverableMethods: recoverableMethodsFromLogin(d),
         data: d?.['2fa'] === 2 ? data : d,
       }));
       NavigationService.navigate(AUTH_VERIFICATION_SCREEN);
@@ -614,6 +624,65 @@ export const sendLoginOtp =
         dispatch(setLoading(false));
       }
     };
+
+const expireLoginChallenge = (dispatch: AppDispatch, message?: string) => {
+  showError(message || 'Login challenge expired. Please sign in again.');
+  dispatch(clearPending2FA());
+  NavigationService.navigate(LOGIN_SCREEN);
+};
+
+/** Lost 2FA method — POST /v1/user/login-methods/recovery/start */
+export const startLoginMethodRecovery = (lostMethod: string) => async (dispatch: AppDispatch, getState: () => any) => {
+  const pending2FA = getState()?.auth?.pending2FA;
+  if (!pending2FA?.tempToken) {
+    expireLoginChallenge(dispatch);
+    return { expired: true };
+  }
+  try {
+    const response: any = await appOperation.guest.loginMethodRecoveryStart({
+      tempToken: String(pending2FA.tempToken),
+      challenge_id: pending2FA.challengeId ? String(pending2FA.challengeId) : undefined,
+      lost_method: String(lostMethod || '').toLowerCase(),
+    });
+    if (isLoginChallengeExpired(response?.code)) {
+      expireLoginChallenge(dispatch, response?.message);
+      return { expired: true };
+    }
+    if (!response?.success) {
+      showError(response?.message || 'Could not start method recovery');
+      return { success: false };
+    }
+    return response;
+  } catch (e: any) {
+    showError(e?.message || 'Could not start method recovery');
+    return { success: false };
+  }
+};
+
+/** Prove a remaining recovery method — POST /v1/user/login-methods/recovery/verify */
+export const verifyLoginMethodRecovery = (method: string, code: string) => async (dispatch: AppDispatch, getState: () => any) => {
+  const pending2FA = getState()?.auth?.pending2FA;
+  if (!pending2FA?.tempToken) {
+    expireLoginChallenge(dispatch);
+    return { expired: true };
+  }
+  try {
+    const response: any = await appOperation.guest.loginMethodRecoveryVerify({
+      tempToken: String(pending2FA.tempToken),
+      challenge_id: pending2FA.challengeId ? String(pending2FA.challengeId) : undefined,
+      method: String(method || '').toLowerCase(),
+      code: String(code ?? ''),
+    });
+    if (isLoginChallengeExpired(response?.code)) {
+      expireLoginChallenge(dispatch, response?.message);
+      return { expired: true };
+    }
+    return response;
+  } catch (e: any) {
+    showError(e?.message || 'Invalid verification code. Please try again.');
+    return { success: false };
+  }
+};
 
 /** Same as web RegistrationVerification handleLogin: verify-registration-otp API, success → Login (account activated) */
 export const verifyOtp = (

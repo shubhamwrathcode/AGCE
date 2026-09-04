@@ -1,25 +1,50 @@
 # AGCE Development Tasks
 
-### 1. iOS Launch & Fabric Crash Fixes
-- Fixed blank white screen / crash on iOS by setting `RCTAppDependencyProvider` in `AppDelegate` (RN 0.79 Fabric).
-- Restored `RCTEventEmitter` no-op registration in `index.js` so Fabric native events do not redbox; `LogBox.ignoreAllLogs()` now only runs outside `__DEV__`.
-- Added `enableScreens(false)` for react-native-screens 3.37 + RN 0.79 Fabric compatibility.
-- Wrapped the app in `GestureHandlerRootView`, `AppErrorBoundary`, and iOS-safe `SafeAreaProvider` initial metrics in `App.tsx`.
-- Patched `react-native-fast-image` (`FFFastImageView`) to use `imageWithTintColor:` on iOS 13+ so tab-icon tint no longer crashes on iOS 26.
-- Skipped `GoogleSignin.configure()` on iOS until `iosClientId` / `GoogleService-Info.plist` exist (configure returns void; used try/catch, not `.catch()`).
 
-### 2. iOS Safe Area & Header Layout
-- `AppSafeAreaView`: added an iOS top inset spacer (`insets.top`, fallback 59) so headers sit below the status bar; Android spacer unchanged.
-- Toolbar star `top` on iOS reduced from 40 to 15 to avoid double offset.
-- Spot and Futures chart screens: header `paddingTop` set to 18 on iOS (was 52 on top of container `insets.top`), matching Android.
 
-### 3. Deposit Fiat Theme Color
-- Replaced hardcoded `#D4AF37` with `colors.orangeTheme` across `DepositFiatScreen.jsx`.
+### 1. Cross margin — Margin Level + risk
+- Cross trade page pe `GET /v1/cross/risk` poll (~5s) + wallet/balance refresh ke baad risk refresh.
+- Cross-specific risk **sheet** (isolated modal reuse nahi); drag-to-close hataaya taaki scroll flicker / accidental close na ho.
+- ML gauge UI: compact arc + (i), Buy/Sell ke upar, halki border, chart se 5px gap.
+- Order book height **7 rows** pe lock — trade panel alignment ke liye.
 
-### 4. iOS Passkey Support (Login + Registration)
-- Added `ios/AGCX/AGCX.entitlements` with Associated Domains `webcredentials:arabglobal.ae` (plus `?mode=developer` for debug) and wired `CODE_SIGN_ENTITLEMENTS` in the Xcode project.
-- Login “Continue with Passkey” now checks `Passkey.isSupported()` and surfaces errors instead of failing silently.
-- `passkeyDiscoverableLogin` / `verifyPasskeyLogin`: dismiss loading overlay and wait before the native sheet so iOS Face ID is not blocked.
-- iOS uses `Passkey.getPlatformKey` (Face ID / Touch ID); Android still uses `Passkey.get`. Discoverable login omits `allowCredentials` on iOS the same way Android already did.
-- Enable Passkey registration uses `Passkey.createPlatformKey` on iOS only.
-- Added hostable AASA file at `ios/apple-app-site-association` for `35L2R5UU6Q.com.agcx.exchange`. **Must be served at `https://arabglobal.ae/.well-known/apple-app-site-association` (JSON 200, no redirect)** or iOS passkeys will still fail. Android passkeys do not sync to iCloud — add a passkey on the iPhone after AASA is live. Test on a real device.
+### 2. Cross Positions — Maint. Margin
+- Size tab pe web jaisa **Maint. Margin** value (pehle dash aa raha tha).
+
+### 3. Isolated margin — ML + risk + Size tab
+- Isolated ML green pill + (i) → isolated risk sheet (`margin/account/:pairId`); Cross gauge Isolated pe nahi.
+- Size tab label **Maint. Margin** (web jaisa) + card alignment fix.
+- Isolated ≠ Cross risk APIs alag rakhe.
+
+### 4. Isolated + Cross — Market Close confirm + single press
+- Close pe pehle Yes/No confirm; **Yes** pe hi API.
+- Isolated settle sheet (web: Close Position + Holding/Notional); Cross Market/Limit sheet + confirm.
+- In-flight lock: ek position pe 3–4 tap se multiple close nahi. Isolated, Cross trade, Futures close, wallet Cross sheet.
+
+### 5. Futures — Close Position modal
+- Web-like sheet: Market/Limit, %, Holding + Est. value; Close bottom pe pin.
+- Full close → `close_position: true`; partial → `quantity` + `reduce_only: true`.
+- Yes/No + lock until response. First Yes pe “Closing…” dikh ke close na hone wala bug fix.
+
+### 6. Futures — TP/SL (Buy/Sell tab)
+- App web **mobile** follow: ek Buy/Sell tab + ek button (desktop dual buttons nahi).
+- Short TP/SL Buy panel se bhi sahi side pe jaaye.
+
+### 7. Futures — Position History + detail
+- Liq. Fee: liquidated **and** `liq_fee > 0` pe show (max 8 decimals), warna `—`.
+- Open position detail: Size, Entry, Mark, Liq. Price, Margin, PNL, Opened Time, Status. Closed Time / Exit / Liq. Fee open pe `—`.
+- History detail: Closed/Opened Time, Exit, Realized PNL, Liq. Fee. Payload `liq_fee` drop na ho (module store).
+- Qty/price/PnL/fee/margin/ROE max **8 decimals**, trailing zeros trim.
+
+### 8. Isolated — Position History (Spot Size / history)
+- `GET margin/positions/history` all pairs (pair-only nahi).
+- Status Liquidated vs Close All (`close_reason`). Liq. Fee same rule; pair from `pos.pair`.
+
+### 9. Isolated + Cross — false “Minimum 5 USDT” error
+- Qty snap `step_size` pe **bina float drift** (`0.00007` → `0.00006` nahi).
+- Total / quote USDT → base qty **ceil to step**.
+- Min notional: USDT mode pe entered USDT; warna `price × snapped qty`. Price parse se commas strip.
+- Retest: `77332.2 × 0.00007` (Total `5.4`) pe 5 USDT error nahi.
+
+### 10. Profile drawer — RN Text warning
+- Theme toggle `TouchableOpacity` ke andar extra space hataaya (`Text strings must be rendered within a <Text> component` on focus).

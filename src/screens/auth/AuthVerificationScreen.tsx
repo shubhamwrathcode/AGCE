@@ -14,7 +14,7 @@ import {
 import RBSheet from "react-native-raw-bottom-sheet";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { clearPending2FA, updatePending2FA } from "../../slices/authSlice";
-import { sendLoginOtp, verifyUser, verifyPasskeyLogin } from "../../actions/authActions";
+import { sendLoginOtp, verifyUser, verifyPasskeyLogin, startLoginMethodRecovery, verifyLoginMethodRecovery } from "../../actions/authActions";
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN } from "../../navigation/routes";
 import { AppText, AppSafeAreaView, Button, BOLD, FOURTEEN as FOURTEEN_CONST, SEMI_BOLD, THIRTEEN, EIGHTEEN, SIXTEEN, MEDIUM, TWENTY_SIX, TWELVE, FOURTEEN } from "../../shared";
@@ -23,11 +23,22 @@ import FastImage from "react-native-fast-image";
 import { closeIcon, EMAIL, PHONE, KEY_ICON, pasteImg, SHARE_NEW_ICON, passkey_login, right_ic, checkIc } from "../../helper/ImageAssets";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import { OtpInput6Digit } from "../../shared";
-import { showError } from "../../helper/logger";
+import { showError, showSuccess } from "../../helper/logger";
 import { SpinnerSecond } from "../../shared/components/SpinnerSecond";
 import { useTheme } from "../../hooks/useTheme";
 import Clipboard from "@react-native-community/clipboard";
 import { AuthHeader } from "../../shared/components";
+import LoginMethodRecoveryOverlays from "./LoginMethodRecoveryOverlays";
+import {
+  isRecoveryVerifyComplete,
+  methodTypeToRecoveryKey,
+  normalizeRecoverableMethodKeys,
+  normalizeRecoveryMethodKey,
+  recoveryKeyToMethodType,
+  recoveryLostMethodTitle,
+  recoveryRestrictionHours,
+  recoveryVerifyErrorMessage,
+} from "../../helper/loginRecoveryHelpers";
 
 const getMethodIcon = (type: number) => {
   switch (type) {
@@ -93,6 +104,22 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
   const [resendTimer, setResendTimer] = useState((initialMethod === 1 || initialMethod === 3) ? 60 : 0);
   const optionsSheetRef = useRef<any>(null);
   const otpInputRef = useRef<any>(null);
+
+  const recoverableMethods = normalizeRecoverableMethodKeys(pending2FA?.recoverableMethods);
+  const [recoveryUiStep, setRecoveryUiStep] = useState<null | "select" | "warn" | "requirements" | "verify">(null);
+  const [recoverySelectLost, setRecoverySelectLost] = useState("");
+  const [recoveryLostMethod, setRecoveryLostMethod] = useState("");
+  const [recoveryRemainingKeys, setRecoveryRemainingKeys] = useState<string[]>([]);
+  const [recoveryVerifiedKeys, setRecoveryVerifiedKeys] = useState<string[]>([]);
+  const [recoveryResetAck, setRecoveryResetAck] = useState(false);
+  const [recoveryRestrictionHrs, setRecoveryRestrictionHrs] = useState(24);
+  const [recoveryStartBusy, setRecoveryStartBusy] = useState(false);
+  const [recoveryVerifyBusy, setRecoveryVerifyBusy] = useState(false);
+  const [recoveryOtp, setRecoveryOtp] = useState("");
+  const [recoveryOtpError, setRecoveryOtpError] = useState(false);
+  const [recoveryVerifyKey, setRecoveryVerifyKey] = useState("");
+  const recoveryVerifyInFlight = useRef(false);
+  const recoveryLeftRef = useRef(false);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -211,6 +238,128 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
     dispatch(sendLoginOtp(getVerifySignId(targetMethod), sendTo, setResendTimer));
   };
 
+  const resetRecoveryUi = () => {
+    setRecoveryUiStep(null);
+    setRecoveryResetAck(false);
+    setRecoveryLostMethod("");
+    setRecoveryRemainingKeys([]);
+    setRecoveryVerifiedKeys([]);
+    setRecoveryOtp("");
+    setRecoveryOtpError(false);
+    setRecoveryVerifyKey("");
+  };
+
+  const goToLoginAfterRecovery = () => {
+    if (recoveryLeftRef.current) return;
+    recoveryLeftRef.current = true;
+    resetRecoveryUi();
+    dispatch(clearPending2FA());
+    NavigationService.navigate(LOGIN_SCREEN);
+  };
+
+  const applyRecoveryProgress = async (data: any, opts: { fromStart?: boolean; forceStep?: any } = {}) => {
+    const remaining = normalizeRecoverableMethodKeys(data?.remaining_methods);
+    const verified = normalizeRecoverableMethodKeys(data?.verified_methods);
+    const lost = normalizeRecoveryMethodKey(data?.lost_method) || recoveryLostMethod;
+    const next = normalizeRecoveryMethodKey(data?.next_method) || remaining[0];
+    const nextType = recoveryKeyToMethodType(next);
+    const fromStart = opts.fromStart === true;
+
+    setRecoveryLostMethod(lost);
+    setRecoveryRemainingKeys(remaining);
+    setRecoveryVerifiedKeys(verified);
+    setRecoveryOtp("");
+    setRecoveryOtpError(false);
+    if (nextType) {
+      setSelectedAuthMethod(nextType);
+      setRecoveryVerifyKey(next);
+    }
+    const nextStep =
+      opts.forceStep ||
+      (!fromStart && remaining.length > 0 ? "requirements" : nextType ? "verify" : "requirements");
+    setRecoveryUiStep(nextStep);
+    if (nextStep === "verify" && (next === "email" || next === "phone") && nextType) {
+      handleGetOtp(nextType);
+    }
+  };
+
+  const handleStartMethodRecovery = async (lostMethod: string) => {
+    const lost = normalizeRecoveryMethodKey(lostMethod);
+    if (!lost || recoveryStartBusy) return;
+    setRecoveryStartBusy(true);
+    try {
+      const result: any = await dispatch(startLoginMethodRecovery(lost) as any);
+      if (result?.expired || !result?.success) return;
+      setRecoveryRestrictionHrs(recoveryRestrictionHours(result?.data));
+      await applyRecoveryProgress(result.data || {}, { fromStart: true });
+    } finally {
+      setRecoveryStartBusy(false);
+    }
+  };
+
+  const handleRecoveryVerify = async (otpCode: string) => {
+    if (recoveryVerifyInFlight.current || recoveryLeftRef.current) return;
+    const method = recoveryVerifyKey || methodTypeToRecoveryKey(selectedAuthMethod) || recoveryRemainingKeys[0] || "";
+    if (!method) {
+      showError("Select a remaining method to verify.");
+      return;
+    }
+    recoveryVerifyInFlight.current = true;
+    setRecoveryVerifyBusy(true);
+    try {
+      const result: any = await dispatch(verifyLoginMethodRecovery(method, otpCode) as any);
+      if (result?.expired) return;
+      if (!result?.success) {
+        setRecoveryOtp("");
+        setRecoveryOtpError(true);
+        showError(recoveryVerifyErrorMessage(result));
+        return;
+      }
+      const remaining = normalizeRecoverableMethodKeys(result?.data?.remaining_methods);
+      if (!isRecoveryVerifyComplete(result) || remaining.length > 0) {
+        if (remaining.length > 0) {
+          await applyRecoveryProgress(result.data || {}, { forceStep: remaining.length > 1 ? "requirements" : "verify" });
+          return;
+        }
+      }
+      const lostTitle = recoveryLostMethodTitle(recoveryLostMethod || recoverySelectLost);
+      showSuccess(result?.message || `${lostTitle} has been removed. Please sign in again.`);
+      goToLoginAfterRecovery();
+    } finally {
+      recoveryVerifyInFlight.current = false;
+      setRecoveryVerifyBusy(false);
+    }
+  };
+
+  const openRecoveryChooser = () => {
+    const first = recoverableMethods[0] || "";
+    const nextLost = recoverySelectLost || (recoverableMethods.length === 1 ? first : "");
+    setRecoverySelectLost(nextLost);
+    setRecoveryResetAck(false);
+    setRecoveryOtp("");
+    setRecoveryUiStep("select");
+  };
+
+  const closeRecoveryChooser = () => {
+    resetRecoveryUi();
+  };
+
+  const openRecoveryMethodVerify = async (methodKey: string) => {
+    const key = normalizeRecoveryMethodKey(methodKey);
+    const type = recoveryKeyToMethodType(key);
+    if (!key || !type) return;
+    setSelectedAuthMethod(type);
+    setRecoveryVerifyKey(key);
+    setRecoveryOtp("");
+    setRecoveryOtpError(false);
+    setRecoveryUiStep("verify");
+    if (key === "email" || key === "phone") {
+      handleGetOtp(type);
+    }
+  };
+
+  const showUnableToVerify = recoverableMethods.length > 0 && !recoveryUiStep;
+
   const handlePasteOtp = async () => {
     try {
       const text = await Clipboard.getString();
@@ -218,6 +367,19 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
       if (digits.length) {
         setOtpError(false);
         setOtpCode(digits);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handlePasteOtpForRecovery = async () => {
+    try {
+      const text = await Clipboard.getString();
+      const digits = String(text || "").replace(/\D/g, "").slice(0, 6);
+      if (digits.length) {
+        setRecoveryOtpError(false);
+        setRecoveryOtp(digits);
       }
     } catch {
       // ignore
@@ -431,6 +593,13 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                   </TouchableOpacityView>
                 );
               })}
+              {showUnableToVerify ? (
+                <TouchableOpacityView onPress={openRecoveryChooser} style={{ marginTop: 8, alignSelf: "center" }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme, textDecorationLine: "underline" }}>
+                    Unable to verify?
+                  </AppText>
+                </TouchableOpacityView>
+              ) : null}
             </View>
           ) : selectedAuthMethod === 4 ? (
             <View style={styles.passkeyContainer}>
@@ -563,6 +732,13 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
                 loading={showButtonLoading}
                 containerStyle={styles.submitBtn}
               />
+              {showUnableToVerify ? (
+                <TouchableOpacityView onPress={openRecoveryChooser} style={{ marginTop: 16, alignSelf: "center" }}>
+                  <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: colors.orangeTheme, textDecorationLine: "underline" }}>
+                    Unable to verify?
+                  </AppText>
+                </TouchableOpacityView>
+              ) : null}
             </>
           )}
 
@@ -660,6 +836,51 @@ export const AuthVerificationContent = ({ onClose }: AuthVerificationContentProp
           </ScrollView>
         </View>
       </RBSheet>
+
+      <LoginMethodRecoveryOverlays
+        step={recoveryUiStep}
+        recoverableMethods={recoverableMethods}
+        selectedLost={recoverySelectLost}
+        availableMethods={pending2FA?.availableMethods || []}
+        remainingKeys={recoveryRemainingKeys}
+        verifiedKeys={recoveryVerifiedKeys}
+        verifyKey={recoveryVerifyKey || methodTypeToRecoveryKey(selectedAuthMethod) || recoveryRemainingKeys[0] || ""}
+        otpValue={recoveryOtp}
+        otpError={recoveryOtpError}
+        resendTimer={resendTimer}
+        verifyBusy={recoveryVerifyBusy}
+        startBusy={recoveryStartBusy}
+        resetAck={recoveryResetAck}
+        restrictionHours={recoveryRestrictionHrs}
+        isDark={isDark}
+        themeColors={themeColors}
+        onSelectLost={setRecoverySelectLost}
+        onResetAck={setRecoveryResetAck}
+        onClose={closeRecoveryChooser}
+        onSelectConfirm={() => {
+          if (!recoverySelectLost) return;
+          setRecoveryUiStep("warn");
+        }}
+        onWarnCancel={() => setRecoveryUiStep("select")}
+        onWarnConfirm={() => { void handleStartMethodRecovery(recoverySelectLost); }}
+        onPickRemaining={(key: string) => { void openRecoveryMethodVerify(key); }}
+        onRequirementsBack={() => setRecoveryUiStep("warn")}
+        onBackToMethods={() => {
+          setRecoveryResetAck(false);
+          setRecoveryUiStep("select");
+        }}
+        onVerifySubmit={(code: string) => { void handleRecoveryVerify(code); }}
+        onGetCode={() => {
+          const key = recoveryVerifyKey || methodTypeToRecoveryKey(selectedAuthMethod) || recoveryRemainingKeys[0];
+          const type = recoveryKeyToMethodType(key);
+          if (key === "email" || key === "phone") handleGetOtp(type);
+        }}
+        onPaste={handlePasteOtpForRecovery}
+        onOtpChange={(v: string) => {
+          setRecoveryOtpError(false);
+          setRecoveryOtp(v);
+        }}
+      />
 
       <SpinnerSecond />
     </AppSafeAreaView>
