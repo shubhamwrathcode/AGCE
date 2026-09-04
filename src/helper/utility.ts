@@ -215,22 +215,16 @@ export async function getCameraPermission() {
 }
 
 export async function getGalleryPermissions() {
-  let permission;
-
   if (Platform.OS === 'android') {
+    // Android 13+ photo picker does not need gallery access.
     if (Platform.Version >= 33) {
-      // Android 13+ requires new permissions
-      permission = PERMISSIONS.ANDROID.READ_MEDIA_IMAGES;
-    } else {
-      permission = PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE;
+      return true;
     }
-  } else {
-    // iOS
-    permission = PERMISSIONS.IOS.PHOTO_LIBRARY;
+    const result = await request(PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE);
+    return result === RESULTS.GRANTED;
   }
 
-  const result = await request(permission);
-
+  const result = await request(PERMISSIONS.IOS.PHOTO_LIBRARY);
   return result === RESULTS.GRANTED;
 }
 export const copyText = (val: string) => {

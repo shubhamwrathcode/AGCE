@@ -1,9 +1,12 @@
-import React, { useLayoutEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   useWindowDimensions,
+  Keyboard,
+  Platform,
+  ScrollView,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
@@ -32,6 +35,39 @@ function methodSub(key, availableMethods) {
   return RECOVERY_METHOD_META[key]?.fallbackSub || "";
 }
 
+/**
+ * @param {{
+ *   step?: null | "select" | "warn" | "requirements" | "verify",
+ *   recoverableMethods?: string[],
+ *   selectedLost?: string,
+ *   availableMethods?: any[],
+ *   remainingKeys?: string[],
+ *   verifiedKeys?: string[],
+ *   verifyKey?: string,
+ *   otpValue?: string,
+ *   otpError?: boolean,
+ *   resendTimer?: number,
+ *   verifyBusy?: boolean,
+ *   startBusy?: boolean,
+ *   resetAck?: boolean,
+ *   restrictionHours?: number,
+ *   isDark?: boolean,
+ *   themeColors?: any,
+ *   onSelectLost?: (key: string) => void,
+ *   onResetAck?: (ack: boolean) => void,
+ *   onClose?: () => void,
+ *   onSelectConfirm?: () => void,
+ *   onWarnCancel?: () => void,
+ *   onWarnConfirm?: () => void,
+ *   onPickRemaining?: (key: string) => void,
+ *   onRequirementsBack?: () => void,
+ *   onVerifySubmit?: (code: string) => void,
+ *   onGetCode?: () => void,
+ *   onPaste?: () => void,
+ *   onOtpChange?: (value: string) => void,
+ *   onBackToMethods?: () => void,
+ * }} props
+ */
 export default function LoginMethodRecoveryOverlays({
   step,
   recoverableMethods = [],
@@ -68,6 +104,7 @@ export default function LoginMethodRecoveryOverlays({
   const lockedHeightRef = useRef(null);
   const insets = useSafeAreaInsets();
   const { height: winHeight } = useWindowDimensions();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const busy = startBusy || verifyBusy;
   const bottomPad = Math.max(insets.bottom, 16);
   const methodRows = recoverableMethods.length || 1;
@@ -91,6 +128,25 @@ export default function LoginMethodRecoveryOverlays({
     lockedHeightRef.current = null;
   }
   const sheetHeight = lockedHeightRef.current || sessionHeight;
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => setKeyboardHeight(e.endCoordinates?.height || 0)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKeyboardHeight(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (step !== "verify") setKeyboardHeight(0);
+  }, [step]);
 
   useLayoutEffect(() => {
     if (step) {
@@ -129,10 +185,11 @@ export default function LoginMethodRecoveryOverlays({
 
   const cardBg = isDark ? themeColors.sheetDarkColor || themeColors.card || "#1E1E1E" : colors.white;
   const border = themeColors.border || (isDark ? "#333" : "#e5e7eb");
+  const kbLift = step === "verify" && keyboardHeight > 0 ? keyboardHeight : 0;
 
   return (
     <RBSheet
-    customModalProps={{ statusBarTranslucent: true }}
+      customModalProps={{ statusBarTranslucent: true, navigationBarTranslucent: true }}
       ref={sheetRef}
       height={sheetHeight}
       openDuration={220}
@@ -141,6 +198,7 @@ export default function LoginMethodRecoveryOverlays({
       closeOnPressMask={false}
       keyboardAvoidingViewEnabled={false}
       onClose={() => {
+        setKeyboardHeight(0);
         if (step && !busy) onClose?.();
       }}
       customStyles={{
@@ -148,6 +206,7 @@ export default function LoginMethodRecoveryOverlays({
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           backgroundColor: cardBg,
+          marginBottom: kbLift,
         },
         wrapper: { backgroundColor: "rgba(0,0,0,0.5)" },
         draggableIcon: { backgroundColor: "transparent" },
@@ -288,7 +347,12 @@ export default function LoginMethodRecoveryOverlays({
         ) : null}
 
         {step === "verify" ? (
-          <>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="none"
+            contentContainerStyle={{ paddingBottom: 8 }}
+          >
             <AppText weight={BOLD} type={SIXTEEN} style={{ color: themeColors.text, marginBottom: 6 }}>
               {verifyHeading}
             </AppText>
@@ -331,7 +395,7 @@ export default function LoginMethodRecoveryOverlays({
                 Back to methods
               </AppText>
             </TouchableOpacityView>
-          </>
+          </ScrollView>
         ) : null}
       </View>
     </RBSheet>

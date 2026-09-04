@@ -248,6 +248,14 @@ export class AppOperation {
                 };
               }
               const errData = { code: status, ...parsed };
+              if (uri.includes("user/login")) {
+                console.log("[Login][HTTP] user/login error", {
+                  httpStatus: status,
+                  url: uri,
+                  parsed,
+                  errData,
+                });
+              }
               // Suppress known fallback 404 warnings to keep console clean
               const isFallbackEndpoint = uri.includes('withdrawal-coins') || uri.includes('deposit-coins') || uri.includes('credential_options') || uri.includes('passkey-withdrawal-challenge');
               if (!(status === 404 && isFallbackEndpoint)) {

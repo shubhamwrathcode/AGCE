@@ -230,6 +230,11 @@ const Login = (): JSX.Element => {
 
   const onLogin = async () => {
     const normalizedId = getNormalizedLoginId();
+    console.log("[Login][onLogin] button press", {
+      email_or_phone: normalizedId,
+      index,
+      passwordLength: String(password || "").length,
+    });
     const result = (await dispatch(
       login({
         email_or_phone: normalizedId,
@@ -237,6 +242,7 @@ const Login = (): JSX.Element => {
         token: "",
       })
     )) as LoginThunkResult;
+    console.log("[Login][onLogin] thunk result", result);
     setPasswordError(false);
     setIdentifierError(false);
     if (!result?.success) {

@@ -440,10 +440,33 @@ export const login = (data: LoginProps & { token?: string }) => async (
 ): Promise<LoginThunkResult> => {
   try {
     dispatch(setLoading(true));
+    let deviceId = "";
+    let platform = "";
+    try {
+      const { Platform } = require("react-native");
+      const DeviceInfo = require("react-native-device-info");
+      deviceId = DeviceInfo.getUniqueIdSync?.() || "";
+      platform = Platform.OS;
+    } catch {
+      // ignore
+    }
+    console.log("[Login][API] request user/login", {
+      email_or_phone: data?.email_or_phone,
+      hasPassword: !!data?.password,
+      deviceId,
+      platform,
+    });
     const response: any = await appOperation.guest.login(data);
 
-    console.log('response login', response)
+    console.log("[Login][API] response", {
+      success: response?.success,
+      code: response?.code,
+      message: response?.message,
+      data: response?.data,
+      full: response,
+    });
     if (!response.success) {
+      console.log("[Login][API] success=false body", JSON.stringify(response));
       if (response?.code == 403) {
         const failMsg = loginFailMessage(response);
         if (isSuspendedMessage(failMsg)) {
@@ -529,6 +552,24 @@ export const login = (data: LoginProps & { token?: string }) => async (
   } catch (e: any) {
     logger(e);
     const errMsg = e?.response?.data?.message ?? e?.message ?? 'An error occurred. Please try again later.';
+    console.log("[Login][API] CATCH — this is likely the device-block toast path", {
+      errMsg,
+      code: e?.code,
+      message: e?.message,
+      error: e?.error,
+      status: e?.status,
+      keys: e && typeof e === "object" ? Object.keys(e) : [],
+      responseData: e?.response?.data,
+      data: e?.data,
+      full: e,
+      json: (() => {
+        try {
+          return JSON.stringify(e);
+        } catch {
+          return String(e);
+        }
+      })(),
+    });
     showError(errMsg);
     if (e?.code == 403) {
       if (isSuspendedMessage(errMsg)) {

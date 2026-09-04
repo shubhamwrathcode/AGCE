@@ -438,6 +438,11 @@ export const WithdrawalCryptoBlack = require('../../assets/images/WithdrawalCryp
 export const depositCryptoWhite = require('../../assets/images/depositCryptoWhite.png');
 export const depositCryptoBlack = require('../../assets/images/depositCryptoBlack.png');
 export const security_vector_light2 = require('../../assets/images/security_vector_light2.png');
+export const kyb_failled_icon = require('../../assets/images/kyb_failled_icon.png');
+export const kyb_successful = require('../../assets/images/kyb_successful.png');
+
+
+
 
 
 

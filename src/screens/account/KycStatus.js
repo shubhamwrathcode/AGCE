@@ -52,6 +52,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLoading } from "../../slices/authSlice";
 import { getUserProfile, getKycStatus, getKybStatus, createKycSession, createKybSession } from "../../actions/accountActions";
+import { KYB_FAQ, slimKybStatusPayload } from "../../helper/kybDisplayFields";
+import { resolveKybView } from "./KybStatusViews";
 import KycStepHeader from "./KycStepHeader";
 import { useTheme } from "../../hooks/useTheme";
 import WebView from "react-native-webview";
@@ -620,6 +622,7 @@ const KycStatus = ({ route }) => {
   const userData = useAppSelector((state) => state.auth.userData);
   const dispatch = useAppDispatch();
   const { width: screenWidth } = useWindowDimensions();
+  const isLoading = useAppSelector((state) => state.auth.isLoading);
   const kycVerified = userData?.kycVerified != null ? Number(userData.kycVerified) : 0;
 
   const isKyb = route?.params?.from === 'kyb';
@@ -637,6 +640,7 @@ const KycStatus = ({ route }) => {
   const [trackingStatus, setTrackingStatus] = useState("");
   const [kycVerifiedFromApi, setKycVerifiedFromApi] = useState(null);
   const [diditVendorStatus, setDiditVendorStatus] = useState("");
+  const [kybPayload, setKybPayload] = useState(null);
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
   const [contentLoading, setContentLoading] = useState(true);
   const [diditWebviewUrl, setDiditWebviewUrl] = useState(null);
@@ -665,7 +669,8 @@ const KycStatus = ({ route }) => {
     }
     setStatusCanonical(toCanonicalStatus(data.status));
     setTrackingStatus(data.trackingStatus || "");
-    setDiditVendorStatus(data.diditVendorStatus || data.didit_vendor_status || "");
+    setDiditVendorStatus(data.diditVendorStatus || data.didit_vendor_status || data.diditStatus || data.didit_status || "");
+    setKybPayload(slimKybStatusPayload(data));
 
     const apiTier = data.kycVerified ?? data.kyc_verified;
     if (apiTier !== undefined && apiTier !== null && apiTier !== "") {
@@ -777,7 +782,7 @@ const KycStatus = ({ route }) => {
       mounted = false;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [dispatch, kycVerified, kycVerifiedFromApi, applyKycStatusData]);
+  }, [dispatch, kycVerified, kycVerifiedFromApi, applyKycStatusData, isKyb]);
 
   const getRejectReason = (docType) => {
     const doc = documentsToResubmit.find((d) => d.type === docType);
@@ -843,6 +848,26 @@ const KycStatus = ({ route }) => {
 
 
   const kycStatusView = () => {
+    if (isKyb) {
+      const effectiveTier = kycVerifiedFromApi !== null ? kycVerifiedFromApi : kycVerified;
+      let st = statusCanonical;
+      if (!st) {
+        if (effectiveTier === 2) st = "APPROVED";
+        else if (effectiveTier === 3) st = "REJECTED";
+        else if (effectiveTier === 1) st = "PENDING";
+        else if (effectiveTier === 4) st = "RESUBMISSION_REQUESTED";
+        else st = "NOT_STARTED";
+      }
+      return resolveKybView({
+        statusCanonical: st,
+        diditVendorStatus,
+        payload: kybPayload,
+        loading: isLoading,
+        onStart: openVerifyModal,
+        onRetry: openVerifyAgainModal,
+      });
+    }
+
     const effectiveTier = kycVerifiedFromApi !== null ? kycVerifiedFromApi : kycVerified;
     // 1. Prioritize Resubmission requested (matches web kycPayloadRequestsResubmission)
     const hasResubmitRequest = statusCanonical === "RESUBMISSION_REQUESTED" ||
@@ -901,7 +926,7 @@ const KycStatus = ({ route }) => {
         <KeyBoardAware style={{ flex: 1 }}>
           <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false} bounces={false}>
             <KycStepHeader
-              title={"Verification Center"}
+              title={isKyb ? (statusCanonical === "PENDING" || statusCanonical === "APPROVED" || statusCanonical === "REJECTED" ? "KYB Verification" : "KYB Verification Center") : "Verification Center"}
               theme={isDark ? "Dark" : "Light"}
               onInfoPress={() => faqSheetRef.current?.open()}
               onSupportPress={() => { NavigationService.navigate("Support") }}
@@ -935,13 +960,13 @@ const KycStatus = ({ route }) => {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {faqData.map((item, index) => (
+            {(isKyb ? KYB_FAQ : faqData).map((item, index) => (
               <View
                 key={index}
                 style={[
                   styles.faqItemInner,
                   { borderBottomColor: themeColors.border },
-                  index === faqData.length - 1 && { borderBottomWidth: 0 }
+                  index === (isKyb ? KYB_FAQ : faqData).length - 1 && { borderBottomWidth: 0 }
                 ]}
               >
                 <TouchableOpacity

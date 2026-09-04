@@ -1,6 +1,7 @@
 package com.agcx.exchange
 
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -18,6 +19,22 @@ class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     WindowCompat.setDecorFitsSystemWindows(window, true)
+    // API 36 predictive back skips Activity.onBackPressed(); forward it to RN.
+    onBackPressedDispatcher.addCallback(
+      this,
+      object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+          if (!reactActivityDelegate.onBackPressed()) {
+            isEnabled = false
+            try {
+              onBackPressedDispatcher.onBackPressed()
+            } finally {
+              isEnabled = true
+            }
+          }
+        }
+      },
+    )
   }
 
   /**
