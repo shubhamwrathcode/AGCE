@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Animated, Easing, Dimensions, Modal } from 'react-native';
 import { useAppSelector } from '../store/hooks';
-import { agcxNewLogo, APP_LOGO } from '../helper/ImageAssets';
+import {  APP_LOGO, APP_LOGO_Black } from '../helper/ImageAssets';
 import FastImage from 'react-native-fast-image';
 import { colors } from '../theme/colors';
 import { useTheme } from '../hooks/useTheme';
@@ -55,7 +55,7 @@ const SpinnerSecond = ({ loading, localOnly = false }: SpinnerSecondProps) => {
       <View style={styles.container}>
         <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
           <FastImage
-            source={isDark? agcxNewLogo: APP_LOGO}
+            source={!isDark? APP_LOGO_Black: APP_LOGO}
             style={styles.logo}
             resizeMode="contain"
 

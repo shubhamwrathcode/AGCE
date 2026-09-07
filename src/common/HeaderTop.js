@@ -4,7 +4,7 @@ import FastImage from "react-native-fast-image";
 import {
   agceLogoName,
   agceLogoNamelight,
-  APP_LOGO,
+
   bell_ic,
   defaultPic,
   headPhoneIcon,

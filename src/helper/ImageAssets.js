@@ -230,6 +230,8 @@ export const NO_NOTIFICATION_ICON_LIGHT = require('../../assets/images/no_notifi
 
 export const ID_CARD_ICON = require('../../assets/images/idcardicon.png');
 export const APP_LOGO = require('../../assets/images/applogo.png');
+export const APP_LOGO_Black = require('../../assets/images/applogoBlack.png');
+
 export const trade_btn = require('../../assets/images/tradeBtnImg.png');
 export const earining_bnr_vector = require('../../assets/images/earining_bnr_vector.png');
 export const usdtearn_vector = require('../../assets/images/usdtearn_vector.png');

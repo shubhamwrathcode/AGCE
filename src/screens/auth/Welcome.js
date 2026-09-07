@@ -34,6 +34,7 @@ import {
   welcome_banner,
   NO_NOTIFICATION_ICON,
   NO_NOTIFICATION_ICON_LIGHT,
+  APP_LOGO_Black,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import { LOGIN_SCREEN, REGISTER_SCREEN, TRADE_SCREEN, FUTURES_SCREEN, NAVIGATION_BOTTOM_TAB_STACK } from "../../navigation/routes";
@@ -373,7 +374,8 @@ const Welcome = () => {
           {/* Header */}
           <View style={[styles.header, { paddingTop: 8 }]}>
             <View style={[styles.logoCircle, { backgroundColor: '#F5F6F7' }]}>
-              <FastImage source={APP_LOGO} style={styles.logoImg} resizeMode="contain" />
+              <FastImage source={isDark?  APP_LOGO : APP_LOGO_Black} style={styles.logoImg} 
+              resizeMode="contain" />
             </View>
             <TouchableOpacity onPress={onLogin} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: palette.text }}>
@@ -710,7 +712,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoImg: { width: 26, height: 20 },
+  logoImg: { width: 30, height: 30 },
   heroCard: {
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
