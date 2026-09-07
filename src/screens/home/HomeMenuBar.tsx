@@ -1,6 +1,5 @@
 import React from "react";
-import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
-import FastImage from "react-native-fast-image";
+import { Dimensions, Image, ScrollView, StyleSheet, View } from "react-native";
 import TouchableOpacityView from "../../shared/components/TouchableOpacityView";
 import Animated, {
   useSharedValue,
@@ -69,17 +68,16 @@ const MenuItem = React.memo(({ item, index }: any) => {
             },
           ]}
         >
-          <FastImage
+          <Image
+            key={`${item?.id}-${isDark ? "dark" : "light"}`}
             resizeMode="contain"
             source={item.icon}
-            tintColor={
-              item?.id === "1"
-                ? undefined
-                : isDark
-                  ? colors.white
-                  : (item?.id === "6" ? themeColors.text : item?.id === "7" ? "#000" : undefined)
-            }
-            style={[item?.id === "6" ? styles.iconMore : styles.icon, item?.id === "1" && isDark && { width: 45, height: 45 }]}
+            style={[
+              item?.id === "6" ? styles.iconMore : styles.icon,
+              item?.id === "1" && isDark && { width: 45, height: 45 },
+              item?.id !== "1" && isDark ? { tintColor: colors.white } : null,
+              item?.id === "6" && !isDark ? { tintColor: themeColors.text } : null,
+            ]}
           />
         </View>
         <AppText style={{ color: themeColors.text }} type={THIRTEEN}>

@@ -13,8 +13,8 @@ import {
   connectwallet5,
 } from "../../helper/ImageAssets";
 import FastImage from "react-native-fast-image";
-import { AppText, ELEVEN, FOURTEEN, MEDIUM, NINE, SEMI_BOLD, TEN, TWELVE } from "../../shared";
-import { colors, darkTheme, lightTheme } from "../../theme/colors";
+import { AppText, ELEVEN, FOURTEEN, MEDIUM, NINE, SEMI_BOLD } from "../../shared";
+import { colors, darkTheme } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import {
   DEPOSIT_COIN_SCREEN,
@@ -27,9 +27,11 @@ const SLIDER_HEIGHT = 84;
 const AUTO_PLAY_MS = 3600;
 const SCROLL_MS = 420;
 
-const HomeSlider = () => {
+const HomeSlider = ({ theme: themeProp }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const carouselRef = useRef(null);
+  const { isDark: isDarkFromHook } = useTheme();
+  const isDark = themeProp === "Light" ? false : themeProp === "Dark" ? true : isDarkFromHook;
   const userData = useAppSelector((state) => state.auth.userData);
   const kycVerified = userData?.kycVerified != null ? Number(userData.kycVerified) : 0;
 
@@ -94,6 +96,7 @@ const HomeSlider = () => {
 
   const slideCount = bannerList.length;
   const dataKey = useMemo(() => bannerList.map((b) => b.index).join("-"), [bannerList]);
+  const themeKey = isDark ? "dark" : "light";
 
   const windowSize = useMemo(() => {
     if (slideCount <= 1) return 3;
@@ -110,17 +113,23 @@ const HomeSlider = () => {
       }
     }, AUTO_PLAY_MS);
     return () => clearInterval(id);
-  }, [slideCount]);
-  const { isDark } = useTheme();
+  }, [slideCount, themeKey]);
+
+  const slideBg = isDark ? darkTheme.darkThemeInputColor : "#F7F7F7";
+  const cardBg = isDark ? "#2C2C2E" : "#F0F0F0";
+  const titleColor = isDark ? colors.white : "#111827";
+  const mutedColor = isDark ? "#8A8A93" : "#9ca3af";
+  const counterBg = isDark ? darkTheme.darkThemeInputColor : "#E5E7EB";
+  const counterColor = isDark ? colors.white : "#000";
 
   const renderItem = useCallback(
     ({ item }) => {
       const total = slideCount || 1;
       const current = Math.min(activeIndex + 1, total);
-      const totalColor = current === total ? isDark ? colors.white : "#000" : "#9CA3AF";
+      const totalColor = current === total ? counterColor : "#9CA3AF";
 
       return (
-        <View style={[styles.slideOuter, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7' }]}>
+        <View style={[styles.slideOuter, { backgroundColor: slideBg }]}>
           <TouchableOpacity
             style={styles.slideInner}
             onPress={item?.onPress}
@@ -133,22 +142,20 @@ const HomeSlider = () => {
             />
 
             <View style={styles.textBlock}>
-              <AppText type={ELEVEN} weight={MEDIUM} style={{ color: isDark ? '#8A8A93' : '#9ca3af' }} numberOfLines={1}>
+              <AppText type={ELEVEN} weight={MEDIUM} style={{ color: mutedColor }} numberOfLines={1}>
                 Events
               </AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} numberOfLines={2} style={styles.titleText}>
+              <AppText type={FOURTEEN} weight={SEMI_BOLD} numberOfLines={2} style={[styles.titleText, { color: titleColor }]}>
                 {item?.title}
               </AppText>
-              <AppText type={NINE} numberOfLines={1}>
+              <AppText type={NINE} numberOfLines={1} style={{ color: titleColor }}>
                 Explore now →
               </AppText>
             </View>
 
-            <View style={[styles.counterBadge, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#E5E7EB' }]}>
+            <View style={[styles.counterBadge, { backgroundColor: counterBg }]}>
               <Text numberOfLines={1}>
-                <Text style={[styles.counterCurrent, {
-                  color: isDark ? colors.white : "#000",
-                }]}>{current}</Text>
+                <Text style={[styles.counterCurrent, { color: counterColor }]}>{current}</Text>
                 <Text style={[styles.counterTotal, { color: totalColor }]}>{`/${total}`}</Text>
               </Text>
             </View>
@@ -156,7 +163,7 @@ const HomeSlider = () => {
         </View>
       );
     },
-    [slideCount, activeIndex]
+    [slideCount, activeIndex, slideBg, mutedColor, titleColor, counterBg, counterColor]
   );
 
   if (slideCount === 0) {
@@ -171,16 +178,17 @@ const HomeSlider = () => {
           {
             width: carouselWidth,
             height: SLIDER_HEIGHT,
-            backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0',
+            backgroundColor: cardBg,
           },
         ]}
       >
         <View style={styles.carouselHost}>
           <Carousel
-            key={dataKey}
+            key={`${dataKey}-${themeKey}`}
             ref={carouselRef}
             {...baseOptions}
             data={bannerList}
+            defaultIndex={Math.min(activeIndex, Math.max(0, slideCount - 1))}
             renderItem={renderItem}
             onSnapToItem={setActiveIndex}
             loop={slideCount > 1}

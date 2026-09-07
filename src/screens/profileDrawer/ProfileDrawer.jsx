@@ -679,18 +679,22 @@ const ProfileDrawer = () => {
             </TouchableOpacity>
           </View>
         </View>
-        <TouchableOpacity onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}>
-          <LinearGradient
-            colors={isDark ? ["#23242a", "#1a1b21"] : ["#FFFFFF", "#FFFFFF"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+        <TouchableOpacity
+          onPress={() => NavigationService.navigate(ACCOUNT_SCREEN)}
+          activeOpacity={0.9}
+          style={{
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: isDark ? "rgba(255,255,255,0.18)" : "#E8E8E8",
+            overflow: "hidden",
+            backgroundColor: isDark ? "#23242a" : "#FFFFFF",
+          }}
+        >
+          <View
             style={{
               flexDirection: "row",
               alignItems: "center",
               padding: 5,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: isDark ? "#2A2A2E" : "#E8E8E8",
             }}
           >
             <View
@@ -777,7 +781,7 @@ const ProfileDrawer = () => {
             >
               <FastImage source={right_ic} style={{ width: 18, height: 18, right: 15 }} tintColor={themeColors.text} resizeMode="contain" />
             </TouchableOpacity>
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
