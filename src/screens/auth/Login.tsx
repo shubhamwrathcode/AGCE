@@ -8,7 +8,8 @@ import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../n
 import { AppSafeAreaView, AppText, Button, ELEVEN, FIFTEEN, FOURTEEN, Input, MEDIUM, TEN, THIRD, THIRTEEN, TWELVE } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
-import { showError } from "../../helper/logger";
+import { showError, showSuccess } from "../../helper/logger";
+import { isAppleSignInCancelled, performAppleSignIn } from "../../helper/appleSignIn";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   googleLogin,
@@ -183,11 +184,23 @@ const Login = (): JSX.Element => {
   };
 
   const signInWithApple = async () => {
-    setIsAppleSignInInProgress(true);
+    if (isAppleSignInInProgress || isGoogleSignInInProgress || isPasskeySignInInProgress) {
+      return;
+    }
     try {
-      showError("Apple sign-in is not available yet. Please use email or Google.");
+      setIsAppleSignInInProgress(true);
+      const data = await performAppleSignIn();
+      console.log("[Login] Apple sign-in data (API not called)", data);
+      showSuccess("Apple data received. Check Metro logs.");
+    } catch (error: any) {
+      console.warn("[Login] Apple Sign-In Error:", error?.code, error?.message, error);
+      if (isAppleSignInCancelled(error)) {
+        showError("Apple Sign-In was cancelled");
+        return;
+      }
+      showError(error?.message || "Apple Sign-In failed. Please try again.");
     } finally {
-      setTimeout(() => setIsAppleSignInInProgress(false), 300);
+      setIsAppleSignInInProgress(false);
     }
   };
 

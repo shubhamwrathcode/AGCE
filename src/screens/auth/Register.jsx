@@ -17,7 +17,8 @@ import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, View } fr
 import { AuthHeader, AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/components";
 import { authStyles } from "./authStyles";
 import { BASE_URL } from "../../helper/Constants";
-import { showError } from "../../helper/logger";
+import { showError, showSuccess } from "../../helper/logger";
+import { isAppleSignInCancelled, performAppleSignIn } from "../../helper/appleSignIn";
 import Toast from "react-native-simple-toast";
 import { appOperation } from "../../appOperation";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -305,11 +306,23 @@ const Register = () => {
   };
 
   const signupWithApple = async () => {
-    setIsAppleSignInInProgress(true);
+    if (isAppleSignInInProgress || isGoogleSignInInProgress) {
+      return;
+    }
     try {
-      showError("Apple sign-in is not available yet. Please use email or Google.");
+      setIsAppleSignInInProgress(true);
+      const data = await performAppleSignIn();
+      console.log("[Register] Apple sign-in data (API not called)", data);
+      showSuccess("Apple data received. Check Metro logs.");
+    } catch (error) {
+      console.warn("[Register] Apple Sign-In Error:", error?.code, error?.message, error);
+      if (isAppleSignInCancelled(error)) {
+        showError("Apple Sign-In was cancelled");
+        return;
+      }
+      showError(error?.message || "Apple Sign-In failed. Please try again.");
     } finally {
-      setTimeout(() => setIsAppleSignInInProgress(false), 300);
+      setIsAppleSignInInProgress(false);
     }
   };
 

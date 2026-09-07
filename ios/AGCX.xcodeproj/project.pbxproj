@@ -576,11 +576,9 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = AGCX/AGCX.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = S83T7H5Z7T;
+				DEVELOPMENT_TEAM = S83T7H5Z7T;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = AGCX/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AGCX;
@@ -599,7 +597,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.agcx.exchange;
 				PRODUCT_NAME = AGCE;
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ARAB GLOBAL VIRTUAL ASSETS SERVICES - L.L.C - S.P.";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -620,11 +617,9 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = AGCX/AGCX.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = S83T7H5Z7T;
+				DEVELOPMENT_TEAM = S83T7H5Z7T;
 				INFOPLIST_FILE = AGCX/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AGCX;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -641,7 +636,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.agcx.exchange;
 				PRODUCT_NAME = AGCX;
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ARAB GLOBAL VIRTUAL ASSETS SERVICES - L.L.C - S.P.";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;

@@ -51,7 +51,8 @@ import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-si
 import { prepareGoogleSignIn } from "../../helper/googleSignIn";
 import { googleLogin } from "../../actions/authActions";
 import { setLoading } from "../../slices/authSlice";
-import { showError } from "../../helper/logger";
+import { showError, showSuccess } from "../../helper/logger";
+import { isAppleSignInCancelled, performAppleSignIn } from "../../helper/appleSignIn";
 
 const formatVol = (vol) => {
   const n = Number(vol);
@@ -340,6 +341,21 @@ const Welcome = () => {
     } finally {
       setIsGoogleSignInInProgress(false);
       dispatch(setLoading(false));
+    }
+  };
+
+  const onApple = async () => {
+    try {
+      const data = await performAppleSignIn();
+      console.log("[Welcome] Apple sign-in data (API not called)", data);
+      showSuccess("Apple data received. Check Metro logs.");
+    } catch (error) {
+      console.warn("[Welcome] Apple Sign-In Error:", error?.code, error?.message, error);
+      if (isAppleSignInCancelled(error)) {
+        showError("Apple Sign-In was cancelled");
+        return;
+      }
+      showError(error?.message || "Apple Sign-In failed. Please try again.");
     }
   };
 
@@ -662,7 +678,7 @@ const Welcome = () => {
           </TouchableOpacity>
           {Platform.OS === 'ios' && <TouchableOpacity
             style={[styles.socialBtn, { backgroundColor: palette.card, borderColor: palette.border }]}
-            onPress={() => { }}
+            onPress={onApple}
             activeOpacity={0.8}
           >
             <FastImage source={apple} tintColor={isDark ? colors.white : colors.black} style={[styles.socialIcon, {}]} resizeMode="contain" />
