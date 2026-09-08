@@ -74,7 +74,9 @@ const AppSafeAreaView = ({
         style,
       ]}>
       <SystemBars style={source ? 'light' : (barStyle === 'light-content' ? 'light' : 'dark')} />
-      <View style={{ height: iosTopInset, width: '100%' }} />
+      {!source ? (
+        <View style={{ height: iosTopInset, width: '100%', backgroundColor: shellBg }} />
+      ) : null}
       {source ? (
         <ImageBackground
           source={source}

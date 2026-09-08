@@ -55,7 +55,7 @@ const SpinnerSecond = ({ loading, localOnly = false }: SpinnerSecondProps) => {
       <View style={styles.container}>
         <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
           <FastImage
-            source={!isDark? APP_LOGO_Black: APP_LOGO}
+           source={isDark?  APP_LOGO : APP_LOGO_Black}
             style={styles.logo}
             resizeMode="contain"
 

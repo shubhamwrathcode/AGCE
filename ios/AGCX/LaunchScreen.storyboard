@@ -16,13 +16,18 @@
                         <rect key="frame" x="0.0" y="0.0" width="390" height="844"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="splash" translatesAutoresizingMaskIntoConstraints="NO" id="rsI-0K-hL8">
-                                <rect key="frame" x="-3" y="0.0" width="390" height="844"/>
-                                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="splash" translatesAutoresizingMaskIntoConstraints="NO" id="rsI-0K-hL8">
+                                <rect key="frame" x="0.0" y="0.0" width="390" height="844"/>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS" propertyAccessControl="all"/>
-                        <color key="backgroundColor" red="0.30980392156862746" green="0.42745098039215684" blue="0.47843137254901957" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" red="0.090196078431372549" green="0.10196078431372549" blue="0.12549019607843137" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="rsI-0K-hL8" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="splash-top"/>
+                            <constraint firstItem="rsI-0K-hL8" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="splash-lead"/>
+                            <constraint firstItem="rsI-0K-hL8" firstAttribute="trailing" secondItem="Ze5-6b-2t3" secondAttribute="trailing" id="splash-trail"/>
+                            <constraint firstItem="rsI-0K-hL8" firstAttribute="bottom" secondItem="Ze5-6b-2t3" secondAttribute="bottom" id="splash-bot"/>
+                        </constraints>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>

@@ -52,8 +52,8 @@ import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-si
 import { prepareGoogleSignIn } from "../../helper/googleSignIn";
 import { googleLogin } from "../../actions/authActions";
 import { setLoading } from "../../slices/authSlice";
-import { showError, showSuccess } from "../../helper/logger";
-import { isAppleSignInCancelled, performAppleSignIn } from "../../helper/appleSignIn";
+import { showError } from "../../helper/logger";
+import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody } from "../../helper/appleSignIn";
 
 const formatVol = (vol) => {
   const n = Number(vol);
@@ -347,9 +347,15 @@ const Welcome = () => {
 
   const onApple = async () => {
     try {
-      const data = await performAppleSignIn();
-      console.log("[Welcome] Apple sign-in data (API not called)", data);
-      showSuccess("Apple data received. Check Metro logs.");
+      dispatch(setLoading(true));
+      const apple = await performAppleSignIn();
+      const data = buildAppleThirdPartyBody(apple);
+      console.log("[Welcome] Apple third-party-login payload", {
+        type: data.type,
+        codeLength: data.code?.length,
+        tokenLength: data.Token?.length,
+      });
+      dispatch(googleLogin(data));
     } catch (error) {
       console.warn("[Welcome] Apple Sign-In Error:", error?.code, error?.message, error);
       if (isAppleSignInCancelled(error)) {
@@ -357,6 +363,8 @@ const Welcome = () => {
         return;
       }
       showError(error?.message || "Apple Sign-In failed. Please try again.");
+    } finally {
+      dispatch(setLoading(false));
     }
   };
 
@@ -373,7 +381,7 @@ const Welcome = () => {
         >
           {/* Header */}
           <View style={[styles.header, { paddingTop: 8 }]}>
-            <View style={[styles.logoCircle, { backgroundColor: '#F5F6F7' }]}>
+            <View style={[styles.logoCircle, { backgroundColor: themeColors.card }]}>
               <FastImage source={isDark?  APP_LOGO : APP_LOGO_Black} style={styles.logoImg} 
               resizeMode="contain" />
             </View>

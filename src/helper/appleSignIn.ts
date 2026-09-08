@@ -1,5 +1,6 @@
 import { NativeModules, Platform, TurboModuleRegistry } from 'react-native';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
+import { APPLE_IOS_CLIENT_ID } from './Constants';
 
 export type AppleSignInPayload = {
   Token: string;
@@ -15,6 +16,16 @@ export type AppleSignInPayload = {
   } | null;
   nonce: string | null;
   realUserStatus: number;
+};
+
+export type AppleThirdPartyBody = {
+  Token: string;
+  type: 'apple';
+  referral_code: string;
+  code: string;
+  /** Helps backend pick JWT audience: Bundle ID on iOS, Services ID on web. */
+  client_id: string;
+  platform: 'ios';
 };
 
 const safeJson = (value: unknown) => {
@@ -106,7 +117,31 @@ export async function performAppleSignIn(): Promise<AppleSignInPayload> {
 
   console.log('==================== [Apple Sign-In PAYLOAD FOR API] ====================');
   console.log(safeJson(payload));
-  console.log('[Apple Sign-In] API not called. Token length:', payload.Token.length);
+  console.log('[Apple Sign-In] identityToken length:', payload.Token.length);
 
   return payload;
+}
+
+/** Body for `user/third-party-signup` / `user/third-party-login` (web curl parity + iOS aud hint). */
+export function buildAppleThirdPartyBody(
+  apple: AppleSignInPayload,
+  extras: { referral_code?: string } = {},
+): AppleThirdPartyBody {
+  const body: AppleThirdPartyBody = {
+    Token: apple.Token,
+    type: 'apple',
+    referral_code: String(extras.referral_code ?? ''),
+    code: apple.authorizationCode ?? '',
+    client_id: APPLE_IOS_CLIENT_ID,
+    platform: 'ios',
+  };
+  console.log('[Apple Sign-In] API body (what backend receives):', {
+    type: body.type,
+    client_id: body.client_id,
+    platform: body.platform,
+    codeLength: body.code.length,
+    tokenLength: body.Token.length,
+    referral_code: body.referral_code,
+  });
+  return body;
 }

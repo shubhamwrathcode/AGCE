@@ -11,7 +11,7 @@ import { useTheme } from "../../hooks/useTheme";
  */
 const AuthHeader = ({ onSupportPress, onClosePress, title }) => {
   const { colors: themeColors, isDark } = useTheme();
-  const logoBg = "#F5F6F7";
+  const logoBg = themeColors.card;
 
   return (
     <View>

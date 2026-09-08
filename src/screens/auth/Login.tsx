@@ -8,8 +8,8 @@ import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../n
 import { AppSafeAreaView, AppText, Button, ELEVEN, FIFTEEN, FOURTEEN, Input, MEDIUM, TEN, THIRD, THIRTEEN, TWELVE } from "../../shared";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
-import { showError, showSuccess } from "../../helper/logger";
-import { isAppleSignInCancelled, performAppleSignIn } from "../../helper/appleSignIn";
+import { showError } from "../../helper/logger";
+import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody } from "../../helper/appleSignIn";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   googleLogin,
@@ -189,9 +189,15 @@ const Login = (): JSX.Element => {
     }
     try {
       setIsAppleSignInInProgress(true);
-      const data = await performAppleSignIn();
-      console.log("[Login] Apple sign-in data (API not called)", data);
-      showSuccess("Apple data received. Check Metro logs.");
+      dispatch(setLoading(true));
+      const apple = await performAppleSignIn();
+      const data = buildAppleThirdPartyBody(apple);
+      console.log("[Login] Apple third-party-login payload", {
+        type: data.type,
+        codeLength: data.code?.length,
+        tokenLength: data.Token?.length,
+      });
+      dispatch(googleLogin(data));
     } catch (error: any) {
       console.warn("[Login] Apple Sign-In Error:", error?.code, error?.message, error);
       if (isAppleSignInCancelled(error)) {
@@ -201,6 +207,7 @@ const Login = (): JSX.Element => {
       showError(error?.message || "Apple Sign-In failed. Please try again.");
     } finally {
       setIsAppleSignInInProgress(false);
+      dispatch(setLoading(false));
     }
   };
 

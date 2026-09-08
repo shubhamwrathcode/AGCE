@@ -17,8 +17,8 @@ import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, View } fr
 import { AuthHeader, AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/components";
 import { authStyles } from "./authStyles";
 import { BASE_URL } from "../../helper/Constants";
-import { showError, showSuccess } from "../../helper/logger";
-import { isAppleSignInCancelled, performAppleSignIn } from "../../helper/appleSignIn";
+import { showError } from "../../helper/logger";
+import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody } from "../../helper/appleSignIn";
 import Toast from "react-native-simple-toast";
 import { appOperation } from "../../appOperation";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -311,9 +311,13 @@ const Register = () => {
     }
     try {
       setIsAppleSignInInProgress(true);
-      const data = await performAppleSignIn();
-      console.log("[Register] Apple sign-in data (API not called)", data);
-      showSuccess("Apple data received. Check Metro logs.");
+      dispatch(setLoading(true));
+      const apple = await performAppleSignIn();
+      const data = buildAppleThirdPartyBody(apple, {
+        referral_code: referCode || "",
+      });
+      logRegisterPayload("Apple signup", "user/third-party-signup", data);
+      dispatch(googleRegister(data, () => { }, () => { }, handleClearCaptcha));
     } catch (error) {
       console.warn("[Register] Apple Sign-In Error:", error?.code, error?.message, error);
       if (isAppleSignInCancelled(error)) {
@@ -323,6 +327,7 @@ const Register = () => {
       showError(error?.message || "Apple Sign-In failed. Please try again.");
     } finally {
       setIsAppleSignInInProgress(false);
+      dispatch(setLoading(false));
     }
   };
 

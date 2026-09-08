@@ -5,6 +5,11 @@ export const GOOGLE_WEB_CLIENT_ID =
 export const GOOGLE_IOS_CLIENT_ID =
   '79105712683-ar8pvcfqv1nprrdpbi0o6gefjn637fd0.apps.googleusercontent.com';
 
+/** iOS native Sign in with Apple — JWT `aud` is always the App Bundle ID. */
+export const APPLE_IOS_CLIENT_ID = 'com.agcx.exchange';
+/** Web Sign in with Apple Services ID (not used as iOS token audience). */
+export const APPLE_WEB_CLIENT_ID = 'com.agcx.exchange.app';
+
 export const USER_TOKEN_KEY = 'USER_TOKEN_KEY';
 export const USER_REFRESH_TOKEN_KEY = 'USER_REFRESH_TOKEN_KEY';
 export const FCM_TOKEN_KEY = 'FCM_TOKEN_KEY';
