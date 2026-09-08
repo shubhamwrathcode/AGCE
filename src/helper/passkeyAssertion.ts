@@ -13,6 +13,25 @@ export const isPasskeyAssociatedDomainError = (err: any): boolean => {
   return /incoming request cannot be validated|associated domain|not associated with domain|relying party/i.test(msg);
 };
 
+export const isPasskeyNoCredentialsError = (err: any): boolean => {
+  const msg = String(err?.message ?? err?.error ?? '');
+  return /No Credentials were returned|NoCredentials|no viable credential|no.*credential/i.test(msg);
+};
+
+export const IOS_NO_PASSKEY_MESSAGE =
+  'No passkey found on this iPhone. Sign in with your password, then add a passkey from Security. Android passkeys cannot be used on iPhone.';
+
+/**
+ * iOS: Face ID / Touch ID via platform authenticator.
+ * Android: unchanged Passkey.create (Credential Manager).
+ */
+export const getNativePasskeyRegistration = async (request: any) => {
+  if (Platform.OS !== 'ios') {
+    return await Passkey.create(request);
+  }
+  return await Passkey.createPlatformKey(request);
+};
+
 /**
  * iOS: Face ID / Touch ID via platform authenticator.
  * Android: unchanged Passkey.get (Credential Manager).

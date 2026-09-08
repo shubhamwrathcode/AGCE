@@ -62,6 +62,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>AGCX requires access to the camera.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>AGCX uses Face ID to confirm it is you when signing in or verifying with a passkey.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>NSMicrophoneUsageDescription</key>

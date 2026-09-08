@@ -34,7 +34,11 @@ import { getReferralList } from './homeActions';
 import { Passkey } from 'react-native-passkey';
 import { CHART_WEB_BASE_URL, PASSKEY_RP_ID } from '../helper/Constants';
 import { getMobilePasskeyDeviceInfo, mergePasskeyListWithLocalDeviceInfo, saveLocalPasskeyDeviceInfo } from '../helper/passkeyDeviceInfo';
-import { getNativePasskeyAssertion } from '../helper/passkeyAssertion';
+import {
+  getNativePasskeyAssertion,
+  isPasskeyAssociatedDomainError,
+  waitForPasskeyNativePrompt,
+} from '../helper/passkeyAssertion';
 
 const toBase64URL = (str: string) =>
   str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -115,6 +119,10 @@ const getPasskeyCredentialForStepUp = async (opts: any, silent: boolean) => {
     return null;
   }
   try {
+    if (Platform.OS === 'ios') {
+      store.dispatch(setLoading(false));
+      await waitForPasskeyNativePrompt();
+    }
     return await getNativePasskeyAssertion(request);
   } catch (e: any) {
     const msg = String(e?.message ?? e?.error ?? '');
@@ -124,6 +132,14 @@ const getPasskeyCredentialForStepUp = async (opts: any, silent: boolean) => {
     }
     if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
       if (!silent) showError('Authentication was cancelled');
+      return null;
+    }
+    if (Platform.OS === 'ios' && isPasskeyAssociatedDomainError(e)) {
+      if (!silent) {
+        showError(
+          'Passkey is not available on this iPhone yet. Host apple-app-site-association on arabglobal.ae, then add a passkey on this device.',
+        );
+      }
       return null;
     }
     throw e;
@@ -1448,6 +1464,8 @@ export const getWithdrawalPasskeyCredential = (silent: boolean = false) => async
         }
       }
     } else {
+      dispatch(setLoading(false));
+      await waitForPasskeyNativePrompt();
       credential = await getNativePasskeyAssertion(request);
     }
 
@@ -1459,6 +1477,12 @@ export const getWithdrawalPasskeyCredential = (silent: boolean = false) => async
     const msg = String(e?.message ?? e?.error ?? '');
     if (e?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
       if (!silent) showError('Authentication was cancelled');
+    } else if (Platform.OS === 'ios' && isPasskeyAssociatedDomainError(e)) {
+      if (!silent) {
+        showError(
+          'Passkey is not available on this iPhone yet. Host apple-app-site-association on arabglobal.ae, then add a passkey on this device.',
+        );
+      }
     } else {
       if (!silent) showError(e?.message || 'Passkey verification failed');
     }

@@ -29,7 +29,9 @@ import {
   buildPasskeyAssertionRequest,
   extractOriginFromCredential,
   getNativePasskeyAssertion,
+  IOS_NO_PASSKEY_MESSAGE,
   isPasskeyAssociatedDomainError,
+  isPasskeyNoCredentialsError,
   isPasskeyOriginMismatchError,
   logPasskeyAssertionDebug,
   normalizePasskeyAssertionCredential,
@@ -955,6 +957,8 @@ export const verifyPasskeyLogin = (signId: string, silent = false) => async (dis
             ? 'Passkey is not available on this iPhone. Associated domain (webcredentials:arabglobal.ae) must be live, then sign in with password or add a passkey on this device.'
             : 'Passkey is not available for this environment. Please sign in with password (or ask backend to use the correct RP ID).'
         );
+      } else if (Platform.OS === 'ios' && isPasskeyNoCredentialsError(e)) {
+        if (!silent) showError(IOS_NO_PASSKEY_MESSAGE);
       } else {
         if (!silent) showError(e?.message || 'Passkey prompt failed');
       }
@@ -1193,6 +1197,8 @@ export const passkeyDiscoverableLogin = () => async (dispatch: AppDispatch) => {
           ? 'Passkey could not be validated on iOS. Host apple-app-site-association on arabglobal.ae and rebuild the app.'
           : (e?.message || 'Passkey authentication failed')
       );
+    } else if (Platform.OS === 'ios' && isPasskeyNoCredentialsError(e)) {
+      showError(IOS_NO_PASSKEY_MESSAGE);
     } else {
       showError(e?.message || 'Passkey authentication failed');
     }

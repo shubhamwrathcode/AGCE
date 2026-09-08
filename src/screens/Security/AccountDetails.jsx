@@ -402,45 +402,47 @@ const AccountDetails = () => {
             borderRadius: 16,
             marginTop: 10,
             borderWidth: 1,
-            borderColor: isDark ? "#2A2A2E" : "#E8E8E8"
+            borderColor: isDark ? "#2A2A2E" : "#E8E8E8",
           }]}
         >
-          <View style={styles.avatarContainer}>
-            {finalAvatarUri ? (
-              <FastImage
-                source={{ uri: finalAvatarUri }}
-                style={styles.avatar}
-              />
-            ) : (
-              <LinearGradient
-                colors={KYC_AVATAR_GRADIENT}
-                locations={KYC_AVATAR_GRADIENT_LOCATIONS}
-                style={styles.avatar}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 20 }}>
-                  {initials}
-                </AppText>
-              </LinearGradient>
-            )}
-            <TouchableOpacity style={[styles.editBadge, { backgroundColor: isDark ? "#2A2A2E" : "#FFFFFF", borderColor: isDark ? themeColors.border : "#E5E7EB" }]} onPress={() => setIsAvatarModalVisible(true)}>
-              <FastImage source={editIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.text} />
-            </TouchableOpacity>
-          </View>
-          <View style={{ bottom: 8 }}>
-            <AppText type={TWENTY} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-              {userData?.emailId ? maskProfileEmail(userData.emailId) : displayName}
-            </AppText>
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 6 }}>
-              <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
-                UID: {userData?.uuid || "—"}
+          <View style={styles.userSectionInner}>
+            <View style={styles.avatarContainer}>
+              {finalAvatarUri ? (
+                <FastImage
+                  source={{ uri: finalAvatarUri }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <LinearGradient
+                  colors={KYC_AVATAR_GRADIENT}
+                  locations={KYC_AVATAR_GRADIENT_LOCATIONS}
+                  style={styles.avatar}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 20 }}>
+                    {initials}
+                  </AppText>
+                </LinearGradient>
+              )}
+              <TouchableOpacity style={[styles.editBadge, { backgroundColor: isDark ? "#2A2A2E" : "#FFFFFF", borderColor: isDark ? themeColors.border : "#E5E7EB" }]} onPress={() => setIsAvatarModalVisible(true)}>
+                <FastImage source={editIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.userMeta}>
+              <AppText type={TWENTY} weight={SEMI_BOLD} numberOfLines={1} style={{ color: themeColors.text }}>
+                {userData?.emailId ? maskProfileEmail(userData.emailId) : displayName}
               </AppText>
-              {userData?.uuid ? (
-                <TouchableOpacity onPress={() => copyText(userData.uuid)} hitSlop={8}>
-                  <FastImage source={copyIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.secondaryText} />
-                </TouchableOpacity>
-              ) : null}
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 6, flexShrink: 1 }}>
+                <AppText type={TWELVE} numberOfLines={1} style={{ color: themeColors.secondaryText, flexShrink: 1 }}>
+                  UID: {userData?.uuid || "—"}
+                </AppText>
+                {userData?.uuid ? (
+                  <TouchableOpacity onPress={() => copyText(userData.uuid)} hitSlop={8}>
+                    <FastImage source={copyIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.secondaryText} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
           </View>
         </LinearGradient>
@@ -820,22 +822,32 @@ export default AccountDetails;
 
 const styles = StyleSheet.create({
   userSection: {
+    marginTop: 10,
+    overflow: "hidden",
+  },
+  userSectionInner: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
   },
   avatarContainer: {
-    position: "relative",
     width: 65,
     height: 65,
-    marginVertical: 16,
-    marginRight: 16,
+    marginRight: 14,
+    overflow: "visible",
   },
   avatar: {
     width: 65,
     height: 65,
     borderRadius: 32.5,
     alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  userMeta: {
+    flex: 1,
+    minWidth: 0,
     justifyContent: "center",
   },
   modalOverlay: {
@@ -873,7 +885,7 @@ const styles = StyleSheet.create({
   editBadge: {
     position: "absolute",
     bottom: 0,
-    right: -4,
+    right: 0,
     width: 24,
     height: 24,
     borderRadius: 12,

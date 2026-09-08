@@ -12,6 +12,13 @@ import { useAppSelector, useAppDispatch } from '../../../store/hooks';
 import { Passkey } from 'react-native-passkey';
 import { getPasskeyList, getPasskeyRegistrationOptions, verifyPasskeyRegistration, verifySecurityPasskey, deletePasskey, getUserProfile, deleteAccount } from '../../../actions/accountActions';
 import { showError, showSuccess } from '../../../helper/logger';
+import { setLoading } from '../../../slices/authSlice';
+import { PASSKEY_RP_ID } from '../../../helper/Constants';
+import {
+  getNativePasskeyRegistration,
+  isPasskeyAssociatedDomainError,
+  waitForPasskeyNativePrompt,
+} from '../../../helper/passkeyAssertion';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   extractPasskeyIdFromVerifyResult,
@@ -210,7 +217,13 @@ const EnablePasskey = ({ route, navigation }) => {
 
         const request = {
           challenge: optionsResult.challenge,
-          rp: optionsResult.rp,
+          rp:
+            Platform.OS === 'ios'
+              ? {
+                  name: optionsResult.rp?.name || 'Arab Global Exchange',
+                  id: optionsResult.rp?.id || PASSKEY_RP_ID,
+                }
+              : optionsResult.rp,
           user: optionsResult.user,
           pubKeyCredParams: optionsResult.pubKeyCredParams || [
             { alg: -7, type: 'public-key' }, // ES256 (Most compatible)
@@ -229,10 +242,11 @@ const EnablePasskey = ({ route, navigation }) => {
         };
 
         console.warn('[Passkey] Native create request:', JSON.stringify(request, null, 2));
-        const passkeyResponse =
-          Platform.OS === 'ios'
-            ? await Passkey.createPlatformKey(request)
-            : await Passkey.create(request);
+        if (Platform.OS === 'ios') {
+          dispatch(setLoading(false));
+          await waitForPasskeyNativePrompt();
+        }
+        const passkeyResponse = await getNativePasskeyRegistration(request);
         console.warn('[Passkey] Native Passkey.create Response:', JSON.stringify(passkeyResponse, null, 2));
         if (passkeyResponse) {
           const emailId = userData?.emailId || userData?.email_id || '';
@@ -282,6 +296,10 @@ const EnablePasskey = ({ route, navigation }) => {
           showError('Registration was cancelled');
         } else if (error?.name === 'InvalidStateError') {
           showError('This passkey is already registered on this device.');
+        } else if (Platform.OS === 'ios' && isPasskeyAssociatedDomainError(error)) {
+          showError(
+            'Passkey is not available on this iPhone yet. Host apple-app-site-association on arabglobal.ae, then try again.',
+          );
         } else {
           showError(error?.message || 'Failed to create passkey');
         }

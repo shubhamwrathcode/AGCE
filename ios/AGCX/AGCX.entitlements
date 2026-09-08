@@ -11,5 +11,9 @@
 		<string>webcredentials:arabglobal.ae</string>
 		<string>webcredentials:arabglobal.ae?mode=developer</string>
 	</array>
+	<key>com.apple.developer.networking.slicing.appcategory</key>
+	<array/>
+	<key>com.apple.developer.networking.slicing.trafficcategory</key>
+	<array/>
 </dict>
 </plist>
