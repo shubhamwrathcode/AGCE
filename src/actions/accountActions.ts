@@ -176,25 +176,25 @@ export const getUserProfile =
           dispatch(setLoading(true));
         }
         const response: any = await appOperation.customer.get_profile();
-        const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
-        const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
+        // CDD onboarding temporarily disabled — skip screen on login/register.
+        // const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
+        // const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
 
         if (response?.success) {
           dispatch(setUserData(response?.data));
           dispatch(setCurrency(response?.data?.currency_prefrence));
 
-          if (shouldForceCddOnboarding(response?.data, true)) {
-            if (isAppStartup) {
-              // User killed app before finishing CDD -> Log them out
-              const { logoutAction } = require('./authActions');
-              dispatch(logoutAction());
-            } else {
-              NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
-            }
-          } else {
+          // if (shouldForceCddOnboarding(response?.data, true)) {
+          //   if (isAppStartup) {
+          //     const { logoutAction } = require('./authActions');
+          //     dispatch(logoutAction());
+          //   } else {
+          //     NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
+          //   }
+          // } else {
             isNavigate ? NavigationService.goBack() : null;
             isHome ? NavigationService.reset(NAVIGATION_BOTTOM_TAB_STACK) : null;
-          }
+          // }
         } else if (response?.code === 401 || (isAppStartup && !response?.success)) {
           NavigationService.reset(NAVIGATION_AUTH_STACK);
         }

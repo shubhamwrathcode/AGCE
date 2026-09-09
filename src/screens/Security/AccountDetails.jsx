@@ -407,24 +407,27 @@ const AccountDetails = () => {
         >
           <View style={styles.userSectionInner}>
             <View style={styles.avatarContainer}>
-              {finalAvatarUri ? (
-                <FastImage
-                  source={{ uri: finalAvatarUri }}
-                  style={styles.avatar}
-                />
-              ) : (
-                <LinearGradient
-                  colors={KYC_AVATAR_GRADIENT}
-                  locations={KYC_AVATAR_GRADIENT_LOCATIONS}
-                  style={styles.avatar}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 20 }}>
-                    {initials}
-                  </AppText>
-                </LinearGradient>
-              )}
+              <View style={styles.avatarClip}>
+                {finalAvatarUri ? (
+                  <FastImage
+                    source={{ uri: finalAvatarUri }}
+                    style={styles.avatar}
+                    resizeMode={FastImage.resizeMode.cover}
+                  />
+                ) : (
+                  <LinearGradient
+                    colors={KYC_AVATAR_GRADIENT}
+                    locations={KYC_AVATAR_GRADIENT_LOCATIONS}
+                    style={styles.avatar}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 20 }}>
+                      {initials}
+                    </AppText>
+                  </LinearGradient>
+                )}
+              </View>
               <TouchableOpacity style={[styles.editBadge, { backgroundColor: isDark ? "#2A2A2E" : "#FFFFFF", borderColor: isDark ? themeColors.border : "#E5E7EB" }]} onPress={() => setIsAvatarModalVisible(true)}>
                 <FastImage source={editIcon} style={{ width: 12, height: 12 }} tintColor={themeColors.text} />
               </TouchableOpacity>
@@ -835,15 +838,40 @@ const styles = StyleSheet.create({
     width: 65,
     height: 65,
     marginRight: 14,
+    flexShrink: 0,
+    alignSelf: "center",
     overflow: "visible",
+  },
+  avatarClip: {
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    overflow: "hidden",
   },
   avatar: {
     width: 65,
     height: 65,
     borderRadius: 32.5,
+    aspectRatio: 1,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
+  },
+  editBadge: {
+    position: "absolute",
+    bottom: -1,
+    right: -1,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    zIndex: 2,
   },
   userMeta: {
     flex: 1,
@@ -881,24 +909,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     borderRadius: 6,
     alignItems: "center",
-  },
-  editBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   tabBar: {
     flexDirection: "row",

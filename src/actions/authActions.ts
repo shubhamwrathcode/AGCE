@@ -758,11 +758,12 @@ export const verifyOtp = (
       if (tok) {
         await persistSignupSessionToken(tok);
       }
-      const { markPostSignupCdd } = require('../utils/cddOnboarding');
-      const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
-      await markPostSignupCdd();
-      NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
-      dispatch(getUserProfile());
+      // CDD onboarding temporarily disabled — go straight to app after signup.
+      // const { markPostSignupCdd } = require('../utils/cddOnboarding');
+      // const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
+      // await markPostSignupCdd();
+      // NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
+      dispatch(getUserProfile(false, true));
     }
   } catch (e: any) {
     logger(e);
@@ -832,8 +833,9 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
       showSuccess(response?.message ?? 'Login successful');
       await persistSignupSessionToken(response?.data ?? pending2FA?.data);
       dispatch(clearPending2FA());
-      const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
-      const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
+      // CDD onboarding temporarily disabled — go straight to app after login.
+      // const { shouldForceCddOnboarding } = require('../utils/cddOnboarding');
+      // const { ONBOARDING_CDD_SCREEN } = require('../navigation/routes');
 
       try {
         const profileRes: any = await appOperation.customer.get_profile();
@@ -841,11 +843,11 @@ export const verifyUser = (data: { email_or_phone: string; otp: string; type: nu
         if (userData) {
           dispatch(setUserData(userData)); // from your slice
         }
-        if (shouldForceCddOnboarding(userData, true)) {
-          NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
-        } else {
+        // if (shouldForceCddOnboarding(userData, true)) {
+        //   NavigationService.resetToAuthCddScreen(ONBOARDING_CDD_SCREEN);
+        // } else {
           NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
-        }
+        // }
       } catch (e) {
         NavigationService.resetToMainApp(NAVIGATION_BOTTOM_TAB_STACK);
       }
