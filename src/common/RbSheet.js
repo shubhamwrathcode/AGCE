@@ -39,6 +39,7 @@ import {
 import {useAppDispatch, useAppSelector} from '../store/hooks';
 import TouchableOpacityView from './TouchableOpacityView';
 import {BASE_URL} from '../helper/Constants';
+import {buildCoinImageUri} from '../helper/coinIconUrl';
 import {Button} from './Button';
 import {toFixedFive} from '../helper/utility';
 import {swapToken} from '../actions/homeActions';
@@ -62,7 +63,7 @@ const CoinList = ({onSelectCoin, hideCoin}) => {
               <FastImage
                 resizeMode="contain"
                 style={styles.coinLogo}
-                source={{uri: `${BASE_URL}${item.icon_path}`}}
+                source={buildCoinImageUri(item) ? {uri: buildCoinImageUri(item)} : undefined}
               />
               <View style={{marginLeft: 10}}>
                 <AppText color={themeColors.text}>{item?.short_name}</AppText>

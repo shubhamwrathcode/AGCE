@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { getStaking } from '../../actions/homeActions';
 import { IMAGE_BASE_URL } from '../../helper/Constants';
+import { buildCoinImageUri } from '../../helper/coinIconUrl';
 import { appOperation } from '../../appOperation';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -216,7 +217,7 @@ const StakingDashboard = () => {
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.tableRow} onPress={() => openSheet(item)}>
                     <View style={styles.coinInfo}>
-                      <FastImage source={{ uri: `${IMAGE_BASE_URL}${item.iconPath}` }} style={styles.coinIcon} resizeMode="contain" />
+                      <FastImage source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item)! } : usdtIcon} style={styles.coinIcon} resizeMode="contain" />
                       <AppText style={styles.coinName}>{item?.currency || item?.coin || 'Unknown'}</AppText>
                       {!!item?.tag && (
                         <View style={[
@@ -402,7 +403,7 @@ const StakingDashboard = () => {
 
         <View style={styles.sheetRow}>
           <AppText style={styles.sheetLabel}>Reward Coin</AppText>
-          <FastImage source={{ uri: `${IMAGE_BASE_URL}${selectedPackage?.iconPath || ''}` }} style={styles.sheetCoinIcon} resizeMode="contain" />
+          <FastImage source={buildCoinImageUri(selectedPackage) ? { uri: buildCoinImageUri(selectedPackage) } : usdtIcon} style={styles.sheetCoinIcon} resizeMode="contain" />
         </View>
 
         <View style={styles.sheetRow}>
@@ -442,7 +443,7 @@ const StakingDashboard = () => {
         <View style={styles.planHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <FastImage
-              source={selectedPackage?.iconPath ? { uri: `${IMAGE_BASE_URL}${selectedPackage.iconPath}` } : usdtIcon}
+              source={buildCoinImageUri(selectedPackage) ? { uri: buildCoinImageUri(selectedPackage) } : usdtIcon}
               style={styles.planHeaderIcon}
               resizeMode="contain"
             />

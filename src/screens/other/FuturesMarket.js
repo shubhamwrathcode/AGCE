@@ -10,6 +10,7 @@ import FastImage from "react-native-fast-image";
 import { Coin, tetherIcon, bitcoinIcon, bnbIcon, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT } from "../../helper/ImageAssets";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
 import { buildCoinImageUri } from "../../helper/coinIconUrl";
+import CoinIcon from "../../common/CoinIcon";
 import { useTheme } from "../../hooks/useTheme";
 
 const QUOTE_OPTIONS = [
@@ -77,69 +78,7 @@ const FuturesMarket = ({ search }) => {
 
   return (
     <View style={styles.container}>
-      {/* Row 1: Filter Type */}
-      {/* <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.filterScroll, styles.filterScrollType]}
-        style={styles.filterRow}
-      >
-        {TYPE_OPTIONS.map(({ key, label }) => (
-          <TouchableOpacity
-            key={key}
-            onPress={() => setFilterType(key)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: chipBg(filterType === key),
-                borderColor: chipBorder(filterType === key),
-                borderWidth: 1
-              }
-            ]}
-            activeOpacity={0.8}
-          >
-            <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: chipTextColor(filterType === key) }}>
-              {label}
-            </AppText>
-          </TouchableOpacity>
-        ))}
-      </ScrollView> */}
-
-      {/* Row 2: Quote Currency */}
-      {/* <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.filterScroll, styles.filterScrollType]}
-        style={styles.filterRow}
-      >
-        {QUOTE_OPTIONS.map((opt) => (
-          <TouchableOpacity
-            key={opt.key}
-            onPress={() => setQuoteCurrency(opt.key)}
-            style={[
-              styles.chip, 
-              styles.chipWithIcon, 
-              { 
-                backgroundColor: chipBg(quoteCurrency === opt.key),
-                borderColor: chipBorder(quoteCurrency === opt.key),
-                borderWidth: 1
-              }
-            ]}
-            activeOpacity={0.8}
-          >
-            {opt.key !== "All" && (
-              <FastImage
-                source={opt.icon}
-                resizeMode="contain"
-                style={styles.chipIcon}
-              />
-            )}
-            <AppText type={ELEVEN} weight={SEMI_BOLD} style={{ color: chipTextColor(quoteCurrency === opt.key) }}>
-              {opt.label}
-            </AppText>
-          </TouchableOpacity>
-        ))}
-      </ScrollView> */}
+    
 
       {filterFuturesData?.length > 0 ? (
         <FuturesList data={filterFuturesData} onPress={handleNavigate} />
@@ -180,10 +119,11 @@ export const FuturesList = ({ data, onPress }) => {
             <View style={styles.nameCol}>
               <View style={styles.nameRow}>
                 <View style={[styles.iconWrap, { backgroundColor: themeColors.card }]}>
-                  <FastImage
-                    source={iconSource}
+                  <CoinIcon
+                    coin={item}
                     resizeMode="contain"
                     style={styles.coinIconImg}
+                    fallback={Coin}
                   />
                 </View>
                 <View style={styles.nameBlock}>

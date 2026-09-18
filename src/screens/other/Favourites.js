@@ -16,6 +16,8 @@ import { colors } from "../../theme/colors";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
+import CoinIcon from "../../common/CoinIcon";
 
 const Favourites = ({ style, from, coinPairs: propsCoinPairs, search: propsSearch = "", isLoggedIn = true, isSelectionModeForce = false, subCategory = "All", onPress }) => {
   const dispatch = useDispatch();
@@ -157,7 +159,7 @@ const Favourites = ({ style, from, coinPairs: propsCoinPairs, search: propsSearc
     const change = Number(item?.change_percentage) || 0;
     const isPositive = change >= 0;
     const pctStr = `${isPositive ? '+' : ''}${change.toFixed(2)}%`;
-    const iconUri = item?.icon_path ? IMAGE_BASE_URL + item.icon_path : null;
+    const iconUri = buildCoinImageUri(item);
     const priceStr = `$${Number(item?.last_price || item?.buy_price || 0).toFixed(2)}`;
 
     return (
@@ -176,11 +178,12 @@ const Favourites = ({ style, from, coinPairs: propsCoinPairs, search: propsSearc
       >
         <View style={isCard ? styles.cardTop : styles.rowContent}>
           <View style={styles.cardInfo}>
-            {iconUri ? (
-              <FastImage source={{ uri: iconUri }} style={styles.cardIcon} resizeMode="contain" />
-            ) : (
-              <View style={[styles.cardIcon, { backgroundColor: '#ddd', borderRadius: 10 }]} />
-            )}
+            <CoinIcon
+              coin={item}
+              style={styles.cardIcon}
+              resizeMode="contain"
+              placeholderBg="#ddd"
+            />
             <View>
               <AppText weight={MEDIUM} style={[styles.cardSym, { color: themeColors.text }]}>
                 {sym}<AppText style={{ color: '#9CA3AF', fontSize: 12 }}>/{quote}</AppText>
@@ -336,6 +339,7 @@ const Favourites = ({ style, from, coinPairs: propsCoinPairs, search: propsSearc
             scrollEnabled={true}
             contentContainerStyle={{ paddingBottom: 20 }}
             ListFooterComponent={null}
+            showsVerticalScrollIndicator={false}
           />
         )}
       </View>

@@ -5,6 +5,8 @@ import NavigationService from '../../navigation/NavigationService';
 import { WALLET_SCREEN } from '../../navigation/routes';
 import FastImage from 'react-native-fast-image';
 import { IMAGE_BASE_URL } from '../../helper/Constants';
+import { buildCoinImageUri } from '../../helper/coinIconUrl';
+import CoinIcon from '../../common/CoinIcon';
 import MiniSparkline from '../../shared/components/MiniSparkline';
 import { AppText, BOLD, ELEVEN, FOURTEEN, NINE, SEMI_BOLD, TEN, TWELVE } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
@@ -123,8 +125,8 @@ const CoinSlider = () => {
       <View style={{ marginHorizontal: GAP / 2, }}>
         <View style={[styles.card, { backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7', width: ITEM_WIDTH }]}>
           <View style={styles.topRow}>
-            <FastImage
-              source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
+            <CoinIcon
+              coin={item}
               resizeMode="contain"
               style={styles.coinIcon}
             />

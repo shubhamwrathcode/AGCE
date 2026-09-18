@@ -15,6 +15,7 @@ import { getMemeList } from "../../actions/homeActions";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from "../../store/hooks";
 import { BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import NavigationService from "../../navigation/NavigationService";
 import MemexSkeleton from "./MemexSkeleton";
@@ -89,7 +90,7 @@ const Memex = () => {
                 >
                   <View style={styles.imageWrap}>
                     <FastImage
-                      source={{ uri: BASE_URL + item?.icon_path }}
+                      source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item) } : undefined}
                       resizeMode="cover"
                       style={styles.memeImage}
                     />

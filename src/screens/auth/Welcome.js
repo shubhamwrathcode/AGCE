@@ -44,6 +44,8 @@ import Toast from "react-native-simple-toast";
 import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
+import CoinIcon from "../../common/CoinIcon";
 import { setFuturesPairs } from "../../slices/homeSlice";
 import { fontFamilyMedium } from "../../theme/typography";
 import WebView from "react-native-webview";
@@ -382,8 +384,8 @@ const Welcome = () => {
           {/* Header */}
           <View style={[styles.header, { paddingTop: 8 }]}>
             <View style={[styles.logoCircle, { backgroundColor: themeColors.card }]}>
-              <FastImage source={isDark?  APP_LOGO : APP_LOGO_Black} style={styles.logoImg} 
-              resizeMode="contain" />
+              <FastImage source={isDark ? APP_LOGO : APP_LOGO_Black} style={styles.logoImg}
+                resizeMode="contain" />
             </View>
             <TouchableOpacity onPress={onLogin} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: palette.text }}>
@@ -393,7 +395,8 @@ const Welcome = () => {
           </View>
 
           {/* Hero card */}
-          <View style={[styles.heroCard, { backgroundColor: isDark ? darkTheme.inputBorder : palette.card, borderColor: palette.border }]}>
+          <View style={[styles.heroCard,
+          { backgroundColor: isDark ? darkTheme.inputBorder : palette.card, borderColor: palette.border }]}>
             <View style={styles.heroStripeWrap} pointerEvents="none">
               {[...Array(24)].map((_, i) => (
                 <View key={i} style={[styles.heroStripe, { backgroundColor: palette.stripe }]} />
@@ -508,8 +511,8 @@ const Welcome = () => {
                     >
                       <View style={[styles.colSymbol, { flex: 1.2, right: 5 }]}>
                         <View style={[styles.iconCircle, {}]}>
-                          <FastImage
-                            source={item?.icon_path ? { uri: IMAGE_BASE_URL + item.icon_path } : undefined}
+                          <CoinIcon
+                            coin={item}
                             resizeMode="contain"
                             style={{ width: 32, height: 32, borderRadius: 50 }}
                           />

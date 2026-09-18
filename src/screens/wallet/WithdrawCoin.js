@@ -27,6 +27,7 @@ import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
 import { getDepositFiatCoins, getWithdrawActiveCoins } from "../../actions/walletActions";
 import { BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import { colors } from "../../theme/colors";
 import {
   isWithdrawCoinDisabled,
@@ -279,7 +280,7 @@ const WithdrawCoin = () => {
                 >
                   <View style={{ borderRadius: 50, overflow: "hidden" }}>
                     <FastImage
-                      source={{ uri: BASE_URL + item?.icon_path }}
+                      source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item) } : undefined}
                       style={{ width: 30, height: 30 }}
                       resizeMode="cover"
                     />

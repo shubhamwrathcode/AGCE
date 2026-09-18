@@ -55,6 +55,7 @@ import FuturesHistorySection from './components/FuturesHistorySection';
 import { LogBox } from 'react-native';
 import { getUserFuturesWallet, getOpenOrders } from '../../actions/walletActions';
 import { IMAGE_BASE_URL } from '../../helper/Constants';
+import { buildCoinImageUri } from '../../helper/coinIconUrl';
 import { appOperation } from '../../appOperation';
 import { CUSTOMER_TYPE } from '../../appOperation/types';
 import SimpleToast from 'react-native-simple-toast';
@@ -2576,9 +2577,9 @@ const FuturesUI = () => {
                 {/* Pair Row */}
                 <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Pair</AppText>
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
-                  {selectedCoin?.icon_path ? (
+                  {buildCoinImageUri(selectedCoin) ? (
                     <FastImage
-                      source={{ uri: IMAGE_BASE_URL + selectedCoin.icon_path.replace(/^\//, '') }}
+                      source={{ uri: buildCoinImageUri(selectedCoin) }}
                       style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
                     />
                   ) : null}

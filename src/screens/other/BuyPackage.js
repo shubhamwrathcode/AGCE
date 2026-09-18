@@ -38,6 +38,7 @@ import FastImage from "react-native-fast-image";
 import { BACK_ICON } from "../../helper/ImageAssets";
 import { colors } from "../../theme/colors";
 import { BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import NavigationService from "../../navigation/NavigationService";
 import TransferModal from "../../shared/components/TransferModal";
 
@@ -144,7 +145,7 @@ const BuyPackage = ({ }) => {
                   }}
                 >
                   <FastImage
-                    source={{ uri: BASE_URL + packages?.icon_path }}
+                    source={buildCoinImageUri(packages) ? { uri: buildCoinImageUri(packages) } : undefined}
                     resizeMode="contain"
                     style={{ width: 30, height: 30 }}
                   />

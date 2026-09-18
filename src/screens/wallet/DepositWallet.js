@@ -39,6 +39,7 @@ import {
   getDepositFiatCoins,
 } from "../../actions/walletActions";
 import { BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import { colors } from "../../theme/colors";
 
 const DepositWallet = () => {
@@ -192,7 +193,7 @@ const DepositWallet = () => {
                   >
                     <View style={{ borderRadius: 50, overflow: "hidden" }}>
                       <FastImage
-                        source={{ uri: BASE_URL + item?.icon_path }}
+                        source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item) } : bitcoin_ic}
                         style={{ width: 30, height: 30 }}
                         resizeMode="cover"
                       />

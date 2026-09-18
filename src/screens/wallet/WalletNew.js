@@ -77,6 +77,7 @@ import WithdrawChoiceSheet from "./sheets/WithdrawChoiceSheet";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../../hooks/useTheme";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import CoinIcon from "../../common/CoinIcon";
 import { TabView } from "react-native-tab-view";
 import Toast from "react-native-simple-toast";
 import SpotWalletTab from "./tabs/SpotWalletTab";
@@ -1006,21 +1007,11 @@ const WalletNew = ({ route }) => {
                                   <View style={[styles.aoRow, isLast && { borderBottomWidth: 0 }]}>
                                     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
                                       <View style={{ borderRadius: 16, overflow: "hidden" }}>
-                                        <FastImage
-                                          source={
-                                            failedIconMap?.[String(item?.currency_id)]
-                                              ? bitcoin_ic
-                                              : (buildCoinIconUri(item?.icon_path)
-                                                ? { uri: buildCoinIconUri(item?.icon_path) }
-                                                : bitcoin_ic)
-                                          }
+                                        <CoinIcon
+                                          coin={item}
                                           style={{ width: 28, height: 28 }}
                                           resizeMode="cover"
-                                          onError={() => {
-                                            const id = String(item?.currency_id ?? "");
-                                            if (!id) return;
-                                            setFailedIconMap((prev) => (prev?.[id] ? prev : { ...(prev || {}), [id]: true }));
-                                          }}
+                                          fallback={bitcoin_ic}
                                         />
                                       </View>
                                       <View style={{ flex: 1 }}>

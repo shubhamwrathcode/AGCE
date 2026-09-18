@@ -51,6 +51,7 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import NavigationService from '../../navigation/NavigationService';
 import { DEPOSIT_FIAT_SCREEN } from '../../navigation/routes';
 import { buildCoinImageUri } from '../../helper/coinIconUrl';
+import CoinIcon from '../../common/CoinIcon';
 import { colors, darkTheme, lightTheme } from '../../theme/colors';
 import { useTheme } from '../../hooks/useTheme';
 import {
@@ -991,15 +992,12 @@ const DepositCoin = () => {
                 onPress={() => openNetworkSheetForCoin(item)}
                 activeOpacity={disabled ? 1 : 0.7}
             >
-                {coinIconUri ? (
-                    <FastImage
-                        source={{ uri: coinIconUri }}
-                        style={styles.coinIcon}
-                        resizeMode="cover"
-                    />
-                ) : (
-                    <View style={[styles.coinIcon, { backgroundColor: colors.textGray, opacity: 0.25 }]} />
-                )}
+                <CoinIcon
+                    coin={item}
+                    style={styles.coinIcon}
+                    resizeMode="cover"
+                    placeholderBg={colors.textGray}
+                />
                 <View style={styles.coinInfo}>
                     <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: themeColors.text }}>
                         {item?.short_name || item?.name}
@@ -1264,20 +1262,12 @@ const DepositCoin = () => {
                                         onPress={() => openNetworkSheetForCoin(item)}
                                         activeOpacity={0.7}
                                     >
-                                        {chipIconUri ? (
-                                            <FastImage
-                                                source={{ uri: chipIconUri }}
-                                                style={styles.depositRecentChipIcon}
-                                                resizeMode="cover"
-                                            />
-                                        ) : (
-                                            <View
-                                                style={[
-                                                    styles.depositRecentChipIcon,
-                                                    { backgroundColor: colors.textGray, opacity: 0.25 },
-                                                ]}
-                                            />
-                                        )}
+                                        <CoinIcon
+                                            coin={item}
+                                            style={styles.depositRecentChipIcon}
+                                            resizeMode="cover"
+                                            placeholderBg={colors.textGray}
+                                        />
                                         <AppText
                                             type={THIRTEEN}
                                             weight={SEMI_BOLD}

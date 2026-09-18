@@ -83,6 +83,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import RBSheet from "react-native-raw-bottom-sheet";
 import { universalPaddingHorizontal, borderWidth } from "../../theme/dimens";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 /** Same vertical space between Buy/Sell column sections (tabs → fields → slider → IOC → assets → CTA → footer). */
 const SPOT_ORDER_V_GAP = 8;
 import {
@@ -3535,9 +3536,9 @@ const Spot = () => {
           paddingHorizontal: 10
         }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {!!currencyData?.icon_path && (
+            {buildCoinImageUri(currencyData) && (
               <FastImage
-                source={{ uri: `${IMAGE_BASE_URL}${currencyData.icon_path}` }}
+                source={{ uri: buildCoinImageUri(currencyData) }}
                 style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
               />
             )}

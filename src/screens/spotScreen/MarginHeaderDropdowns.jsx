@@ -6,6 +6,7 @@ import { AppText, SEMI_BOLD, MEDIUM, Button } from "../../shared";
 import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import { checkIc, downIcon, tick, closeIcon, add, minus, right_ic } from "../../helper/ImageAssets";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 
 const MarginHeaderDropdowns = ({
   marginMode,
@@ -30,7 +31,7 @@ const MarginHeaderDropdowns = ({
   const quoteSymbol = currencyData?.quote_currency || "USDT";
   const baseSymbol = currencyData?.base_currency || "BTC";
   const coinLabel = `${baseSymbol}/${quoteSymbol}`;
-  const coinIconSrc = currencyData?.icon_path ? `${IMAGE_BASE_URL}${currencyData.icon_path}` : null;
+  const coinIconSrc = buildCoinImageUri(currencyData);
 
   const minLeverage = currencyData?.margin_config?.min_leverage ?? 1;
   const maxLeverage = (isCross ? crossAccount?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;

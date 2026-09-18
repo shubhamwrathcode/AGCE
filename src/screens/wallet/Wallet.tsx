@@ -66,6 +66,7 @@ import { getHistoricData } from "../../actions/homeActions";
 import { useDispatch } from "react-redux";
 import { useIsFocused, useRoute } from "@react-navigation/native";
 import { BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 
 
 
@@ -153,7 +154,7 @@ const Wallet = () => {
                     </AppText>
                   </TouchableOpacityView>
                   <FastImage
-                    source={{ uri: `${BASE_URL}${item?.icon_path}` }}
+                    source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item) } : bitcoin_ic}
                     resizeMode="contain"
                     style={{
                       height: 30,

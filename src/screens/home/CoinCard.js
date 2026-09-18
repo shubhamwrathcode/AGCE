@@ -9,6 +9,8 @@ import { commonStyles } from '../../theme/commonStyles';
 import NavigationService from '../../navigation/NavigationService';
 import { SPOT_MARKET_SCREEN, WALLET_SCREEN } from '../../navigation/routes';
 import { BASE_URL } from '../../helper/Constants';
+import { buildCoinImageUri } from '../../helper/coinIconUrl';
+import CoinIcon from '../../common/CoinIcon';
 import { useAppSelector } from '../../store/hooks';
 
 const WIDTH = Dimensions.get('window').width;
@@ -22,10 +24,11 @@ const CoinCard = ({ data }) => {
     <TouchableOpacityView style={[theme !== "Dark" ? styles.container :styles.containerDark]} activeOpacity={0.7} onPress={()=> NavigationService.navigate(WALLET_SCREEN, { coinDetail: data })}>
      <View style={styles.containerSecond}>
         <View style={{borderRadius: 15, overflow: "hidden"}}>
-        <FastImage
-          resizeMode="contain"
+        <CoinIcon
+          coin={data}
           style={styles.coinLogo}
-          source={{ uri: BASE_URL + data?.icon_path}}
+          resizeMode="contain"
+          fallback={bitcoin_ic}
         />
         
         </View>

@@ -12,6 +12,8 @@ import { colors } from "../../theme/colors";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import { useTheme } from "../../hooks/useTheme";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
+import CoinIcon from "../../common/CoinIcon";
 import { searchIcon, closeIcon, starIcon, starFillIcon } from "../../helper/ImageAssets";
 import { useAppSelector } from "../../store/hooks";
 import { useDispatch } from "react-redux";
@@ -36,7 +38,7 @@ const FuturePairRow = memo(({
   const price = item?.last_price ?? item?.buy_price;
   const priceStr = price != null ? toFixedFive(price) : "—";
   const changeStr = `${sign}${toFixedThree(changeVal)}%`;
-  const iconUri = item?.icon_path ? `${IMAGE_BASE_URL}${item.icon_path}` : null;
+  const iconUri = buildCoinImageUri(item);
   const base = item?.base_asset || item?.short_name || "—";
   const quote = item?.margin_asset || item?.quote_asset || "";
   const subtitle = `$${priceStr}${item?.price_change_24h ? ` · ${item.price_change_24h}` : ""}`;
@@ -63,11 +65,12 @@ const FuturePairRow = memo(({
             tintColor={isFavorite ? colors.starColor : subTextColor}
           />
         </TouchableOpacity>
-        {iconUri ? (
-          <FastImage source={{ uri: iconUri }} resizeMode="cover" style={styles.coinIcon} />
-        ) : (
-          <View style={[styles.coinIcon, { backgroundColor: searchBarBg }]} />
-        )}
+        <CoinIcon
+          coin={item}
+          resizeMode="cover"
+          style={styles.coinIcon}
+          placeholderBg={searchBarBg}
+        />
         <View style={styles.pairBlock}>
           <Text style={[styles.pairLine, { color: textColor }]} numberOfLines={1}>
             {base}

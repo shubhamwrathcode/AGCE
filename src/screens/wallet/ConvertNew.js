@@ -38,6 +38,7 @@ import NavigationService from "../../navigation/NavigationService";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import { useDispatch } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -333,8 +334,8 @@ function ConvertNew() {
                   <View>
                     <AppText type={TEN} style={{ color: labelColor, marginBottom: 2 }}>From</AppText>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      {fromCoin?.icon_path && (
-                        <FastImage source={{ uri: BASE_URL + fromCoin.icon_path }} style={styles.coinIconSmall} resizeMode="contain" />
+                      {buildCoinImageUri(fromCoin) && (
+                        <FastImage source={{ uri: buildCoinImageUri(fromCoin) }} style={styles.coinIconSmall} resizeMode="contain" />
                       )}
                       <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN}>{fromCoin?.short_name || "Select"}</AppText>
                       <FastImage source={Down_Imgs} resizeMode="contain" tintColor={colors.secondaryText} style={styles.dropdownArrow} />
@@ -346,8 +347,8 @@ function ConvertNew() {
                   <View>
                     <AppText type={TEN} style={{ color: labelColor, marginBottom: 2 }}>To</AppText>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      {toCoin?.icon_path && (
-                        <FastImage source={{ uri: BASE_URL + toCoin.icon_path }} style={styles.coinIconSmall} resizeMode="contain" />
+                      {buildCoinImageUri(toCoin) && (
+                        <FastImage source={{ uri: buildCoinImageUri(toCoin) }} style={styles.coinIconSmall} resizeMode="contain" />
                       )}
                       <AppText color={themeColors.text} weight={MEDIUM} type={FOURTEEN}>{toCoin?.short_name || "Select"}</AppText>
                       <FastImage source={Down_Imgs} resizeMode="contain" tintColor={colors.secondaryText} style={styles.dropdownArrow} />

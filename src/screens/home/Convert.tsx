@@ -19,6 +19,7 @@ import {
 } from '../../shared';
 import { conversion } from '../../actions/homeActions';
 import { BASE_URL } from '../../helper/Constants';
+import { buildCoinImageUri } from '../../helper/coinIconUrl';
 import {
   RECYCLE,
   bitcoinIcon,
@@ -114,7 +115,7 @@ const Convert = () => {
           <View style={styles.first}>
             <View style={styles.topLeft}>
               <FastImage
-                source={{ uri: `${BASE_URL}${firstCoin?.icon_path}` }}
+                source={buildCoinImageUri(firstCoin) ? { uri: buildCoinImageUri(firstCoin) } : bitcoinIcon}
                 // source={bitcoinIcon}
                 style={styles.coinIcon}
                 resizeMode="contain"
@@ -183,7 +184,7 @@ const Convert = () => {
           <View style={styles.first}>
             <View style={styles.topLeft}>
               <FastImage
-                source={{ uri: `${BASE_URL}${secondCoin?.icon_path}` }}
+                source={buildCoinImageUri(secondCoin) ? { uri: buildCoinImageUri(secondCoin) } : bitcoinIcon}
                 // source={bitcoinIcon}
                 style={styles.coinIcon}
                 resizeMode="contain"
@@ -274,8 +275,8 @@ const Convert = () => {
         setCoin={selectCoin === 1 ? setFirstCoin : setSecondCoin}
         hideCoin={hideCoin}
         data={{
-          img1: { uri: `${BASE_URL}${firstCoin?.icon_path}` },
-          img2: { uri: `${BASE_URL}${secondCoin?.icon_path}` },
+          img1: buildCoinImageUri(firstCoin) ? { uri: buildCoinImageUri(firstCoin) } : bitcoinIcon,
+          img2: buildCoinImageUri(secondCoin) ? { uri: buildCoinImageUri(secondCoin) } : bitcoinIcon,
           coin1: firstCoin?.short_name,
           coin2: secondCoin?.short_name,
           coinQuantity: firstValue,

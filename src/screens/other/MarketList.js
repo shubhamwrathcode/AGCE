@@ -14,6 +14,8 @@ import { useAppSelector } from "../../store/hooks";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import { colors } from "../../theme/colors";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
+import CoinIcon from "../../common/CoinIcon";
 import { useTheme } from "../../hooks/useTheme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -57,7 +59,7 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
       .toUpperCase() || "USDT";
   const pairLabel = ticker && ticker !== "—" ? `${ticker}/${quote}` : "—";
   const fullName = item?.base_currency_fullname || item?.base_currency_name || item?.base_currency || ticker;
-  const iconUri = item?.icon_path ? IMAGE_BASE_URL + item.icon_path : null;
+  const iconUri = buildCoinImageUri(item);
 
   if (isHomeTab) {
     const last = item?.buy_price ?? item?.last_price ?? item?.price ?? 0;
@@ -86,11 +88,12 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
               </TouchableOpacity>
             )}
             <View style={[styles.iconCircleHomeTab, {}]}>
-              {iconUri ? (
-                <FastImage source={{ uri: iconUri }} resizeMode="contain" style={styles.coinIconHomeTab} />
-              ) : (
-                <View style={[styles.coinIconHomeTab, styles.coinIconPlaceholder, { backgroundColor: themeColors.card }]} />
-              )}
+              <CoinIcon
+                coin={item}
+                style={styles.coinIconHomeTab}
+                resizeMode="contain"
+                placeholderBg={themeColors.card}
+              />
             </View>
             <View style={styles.nameBlock}>
               <PairLabel ticker={ticker} quote={quote} textColor={themeColors.text} />
@@ -151,11 +154,12 @@ const MarketRow = React.memo(({ item, favoriteArray, onPress, onToggleFavorite, 
               />
             </TouchableOpacity>
           )}
-          {iconUri ? (
-            <FastImage source={{ uri: iconUri }} resizeMode="cover" style={styles.coinIcon} />
-          ) : (
-            <View style={[styles.coinIcon, styles.coinIconPlaceholder, { backgroundColor: themeColors.card }]} />
-          )}
+          <CoinIcon
+            coin={item}
+            style={styles.coinIcon}
+            resizeMode="cover"
+            placeholderBg={themeColors.card}
+          />
           <View style={styles.nameBlock}>
             <PairLabel ticker={ticker} quote={quote} textColor={themeColors.text} />
             <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
@@ -228,6 +232,7 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
 
   const renderItem = useCallback(
     ({ item }) => (
+      console.log(item, '-----item---'),
       <MarketRow
         item={item}
         favoriteArray={favoriteArray}
@@ -393,6 +398,7 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
           offset: rowHeight * index,
           index,
         })}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );

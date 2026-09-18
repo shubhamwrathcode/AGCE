@@ -10,6 +10,7 @@ import { bitcoin_ic, coinActive, externalLinkIcon, searchIcon } from "../../help
 import FastImage from "react-native-fast-image";
 import { colors } from "../../theme/colors";
 import { BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import { toFixedFive, toFixedFour, twoFixedTwo } from "../../helper/utility";
 import { useEffect, useRef, useState } from "react";
 
@@ -128,7 +129,7 @@ const WalletList = ({ userWallet, theme, onSheetOpen }) => {
               >
                 <View style={{ borderRadius: 50, overflow: "hidden" }}>
                   <FastImage
-                    source={{ uri: BASE_URL + item?.icon_path }}
+                    source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item) } : bitcoin_ic}
                     style={{ width: 30, height: 30 }}
                     resizeMode="cover"
                   />

@@ -55,6 +55,7 @@ import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
 import { setBuyOrders, setRecentTrades, setSellOrders, setSpotSelectedPair } from "../../slices/homeSlice";
 import { getUserSpotWallet } from "../../actions/walletActions";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
 import { colors, lightTheme } from "../../theme/colors";
 import * as routes from "../../navigation/routes";
 import NavigationService from "../../navigation/NavigationService";
@@ -958,7 +959,7 @@ const SpotChartScreen = () => {
             <View key={wallet?._id || index} style={styles.assetRow}>
               <View style={styles.assetInfo}>
                 <FastImage
-                  source={{ uri: `${IMAGE_BASE_URL}${wallet?.icon_path}` }}
+                  source={buildCoinImageUri(wallet) ? { uri: buildCoinImageUri(wallet) } : undefined}
                   style={styles.assetIcon}
                   resizeMode="contain"
                 />
@@ -2165,9 +2166,9 @@ const SpotChartScreen = () => {
                 <View style={styles.infoTopRow}>
                   <View style={styles.infoCoinRow}>
                     <View style={styles.infoCoinIconWrap}>
-                      {mergedPair?.icon_path ? (
+                      {buildCoinImageUri(mergedPair) ? (
                         <FastImage
-                          source={{ uri: `${IMAGE_BASE_URL}${mergedPair.icon_path}` }}
+                          source={{ uri: buildCoinImageUri(mergedPair) }}
                           style={styles.infoCoinIcon}
                           resizeMode="contain"
                         />

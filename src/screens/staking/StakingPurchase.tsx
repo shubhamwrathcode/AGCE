@@ -8,6 +8,7 @@ import { back_ic, closeIcon, checkIc, usdtIcon } from '../../helper/ImageAssets'
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import NavigationService from '../../navigation/NavigationService';
 import { IMAGE_BASE_URL } from '../../helper/Constants';
+import { buildCoinImageUri } from '../../helper/coinIconUrl';
 import { appOperation } from '../../appOperation';
 import { useDispatch } from 'react-redux';
 import { getStaking } from '../../actions/homeActions';
@@ -322,7 +323,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
               padding: 12,
               backgroundColor: isDark ? darkTheme.darkThemeInputColor : darkTheme.lightthemeinputcolor
             }}>
-              <FastImage source={{ uri: `${IMAGE_BASE_URL}${stakeSelectedPlan.iconPath || stakeSelectedPlan.image || ''}` }} style={{ width: 24, height: 24, marginRight: 10 }} resizeMode="contain" />
+              <FastImage source={buildCoinImageUri(stakeSelectedPlan) ? { uri: buildCoinImageUri(stakeSelectedPlan) } : usdtIcon} style={{ width: 24, height: 24, marginRight: 10 }} resizeMode="contain" />
               <AppText style={{ fontSize: 14, fontFamily: fontFamilySemiBold, color: '#03a66d' }}>{estDailyReturn} {stakeSelectedPlan.currency}</AppText>
             </View>
           </View>
@@ -427,7 +428,7 @@ const StakingPurchase = ({ route, navigation }: any) => {
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: isDark ? themeColors.border : '#eee' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <FastImage source={stakeSelectedPlan?.iconPath ? { uri: `${IMAGE_BASE_URL}${stakeSelectedPlan.iconPath}` } : usdtIcon} style={{ width: 24, height: 24, marginRight: 8 }} resizeMode="contain" />
+            <FastImage source={buildCoinImageUri(stakeSelectedPlan) ? { uri: buildCoinImageUri(stakeSelectedPlan) } : usdtIcon} style={{ width: 24, height: 24, marginRight: 8 }} resizeMode="contain" />
             <AppText style={{ fontSize: 18, fontFamily: fontFamilySemiBold, color: themeColors.text }}>Staking Overview</AppText>
           </View>
           <TouchableOpacity onPress={() => confirmOverviewSheetRef.current?.close()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

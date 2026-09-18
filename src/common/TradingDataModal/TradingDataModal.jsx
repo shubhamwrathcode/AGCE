@@ -19,6 +19,8 @@ import FastImage from "react-native-fast-image";
 import { closeIcon, downIcon, searchIcon, starFillIcon, starIcon } from "../../helper/ImageAssets";
 import { colors } from "../../theme/colors";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import { buildCoinImageUri } from "../../helper/coinIconUrl";
+import CoinIcon from "../CoinIcon";
 import { toFixedFive, toFixedThree } from "../../helper/utility";
 import { addToFavorites } from "../../actions/homeActions";
 
@@ -82,7 +84,7 @@ const rowAreEqual = (prev, next) => {
 const CoinRow = memo(({ item, isFavorite, onToggleFavorite, onChangePair, searchBarBg, rowBorderColor, textColor, subTextColor }) => {
   const chg = getChangePct(item);
   const chgNeg = chg < 0;
-  const iconUri = item?.icon_path ? IMAGE_BASE_URL + item.icon_path : null;
+  const iconUri = buildCoinImageUri(item);
   const fullName = item?.base_currency_fullname || item?.base_currency || "—";
   const volStr = compactVolume(item?.volume);
   const subtitle = `${fullName} | ${volStr}`;
@@ -111,11 +113,12 @@ const CoinRow = memo(({ item, isFavorite, onToggleFavorite, onChangePair, search
             tintColor={isFavorite ? colors.starColor : subTextColor}
           />
         </TouchableOpacity>
-        {iconUri ? (
-          <FastImage source={{ uri: iconUri }} resizeMode="cover" style={styles.coinIcon} />
-        ) : (
-          <View style={[styles.coinIcon, styles.coinIconPh, { backgroundColor: searchBarBg }]} />
-        )}
+        <CoinIcon
+          coin={item}
+          resizeMode="cover"
+          style={styles.coinIcon}
+          placeholderBg={searchBarBg}
+        />
         <View style={styles.pairBlock}>
           <Text style={[styles.pairLine, { color: textColor }]} numberOfLines={1}>
             {item?.base_currency}
