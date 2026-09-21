@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, StyleProp, ImageStyle, ViewStyle } from 'react-native';
-import FastImage, { ResizeMode, Source } from 'react-native-fast-image';
+import FastImage, { ImageStyle as FastImageStyle, ResizeMode, Source } from 'react-native-fast-image';
 import { SvgXml } from 'react-native-svg';
 import { buildCoinImageUri } from '../helper/coinIconUrl';
+import { activities_icon } from '../helper/ImageAssets';
 
 // In-memory cache for clean SVG XML strings
 const svgXmlCache = new Map<string, string | null>();
@@ -21,6 +22,10 @@ async function checkAndFetchSvg(uri: string): Promise<string | null> {
   }
   try {
     const res = await fetch(uri);
+    if (!res.ok) {
+      svgXmlCache.set(uri, null);
+      return null;
+    }
     const contentType = res.headers.get('content-type') || '';
     const text = await res.text();
 
@@ -50,7 +55,7 @@ async function checkAndFetchSvg(uri: string): Promise<string | null> {
 interface CoinIconProps {
   coin?: any;
   uri?: string | null;
-  style?: StyleProp<ImageStyle>;
+  style?: StyleProp<ImageStyle | FastImageStyle>;
   resizeMode?: ResizeMode;
   fallback?: Source | number;
   placeholderBg?: string;
@@ -92,7 +97,11 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
 
     // Check SVG cache or fetch for SVG / extensionless URLs (e.g. Fireblocks)
     if (svgXmlCache.has(resolvedUri)) {
-      setSvgXml(svgXmlCache.get(resolvedUri) || null);
+      const cached = svgXmlCache.get(resolvedUri) || null;
+      setSvgXml(cached);
+      if (!cached && isDirectSvg) {
+        setLoadFailed(true);
+      }
       return;
     }
 
@@ -102,6 +111,9 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
           setSvgXml(clean);
         } else {
           setSvgXml(null);
+          if (isDirectSvg) {
+            setLoadFailed(true);
+          }
         }
       }
     });
@@ -109,24 +121,17 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
     return () => {
       active = false;
     };
-  }, [resolvedUri, isDirectRaster]);
+  }, [resolvedUri, isDirectRaster, isDirectSvg]);
 
   const flatStyle = StyleSheet.flatten(style) || {};
   const width = (flatStyle.width as number) || 24;
   const height = (flatStyle.height as number) || 24;
   const borderRadius = (flatStyle.borderRadius as number) || 0;
 
+  const effectiveFallback = fallback || activities_icon;
+
   if (!resolvedUri || loadFailed) {
-    if (fallback) {
-      return (
-        <FastImage
-          source={fallback}
-          style={style}
-          resizeMode={resizeMode}
-        />
-      );
-    }
-    if (placeholderBg) {
+    if (placeholderBg && !fallback) {
       return (
         <View
           style={[
@@ -136,7 +141,13 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
         />
       );
     }
-    return null;
+    return (
+      <FastImage
+        source={effectiveFallback}
+        style={style as StyleProp<FastImageStyle>}
+        resizeMode={resizeMode}
+      />
+    );
   }
 
   // Render SVG if XML is available
@@ -169,8 +180,9 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
   return (
     <FastImage
       source={{ uri: resolvedUri }}
-      style={style}
+      style={style as StyleProp<FastImageStyle>}
       resizeMode={resizeMode}
+      onError={() => setLoadFailed(true)}
     />
   );
 };

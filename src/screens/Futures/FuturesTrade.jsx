@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, TextI
 import React, { useState, useRef, useEffect } from 'react';
 import { setFuturesData } from "../../slices/homeSlice";
 import FastImage from 'react-native-fast-image';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
@@ -44,7 +45,10 @@ import {
   getDecimalPlaces,
   getOrderBookAggOptionsForPair,
   aggregateOrderBookRows,
+  normalizeOrderbookOrders,
   getTickSize,
+  getStepSize,
+  sanitizeIncrementInput,
   resolveTakerFeeRate,
   computeMaxOpenNotional,
   computePosition,
@@ -79,6 +83,34 @@ import {
 LogBox.ignoreLogs(['VirtualizedLists should never be nested inside plain ScrollViews']);
 
 const { width: Width, height: Height } = Dimensions.get('window');
+
+function getLeverageOptions(maxLeverage) {
+  const max = Math.max(1, Number(maxLeverage) || 125);
+  let milestones = [];
+  if (max <= 10) {
+    milestones = [1, 2, 3, 5, 10];
+  } else if (max <= 20) {
+    milestones = [2, 3, 5, 10, 15, 20];
+  } else if (max <= 50) {
+    milestones = [5, 10, 15, 20, 25, 50];
+  } else if (max <= 75) {
+    milestones = [5, 10, 20, 25, 50, 75];
+  } else if (max <= 100) {
+    milestones = [5, 10, 20, 50, 75, 100];
+  } else if (max <= 125) {
+    milestones = [5, 10, 20, 50, 75, 100, 125];
+  } else if (max <= 150) {
+    milestones = [5, 10, 20, 50, 75, 100, 125, 150];
+  } else {
+    milestones = [5, 10, 20, 50, 75, 100, 125, 150, max];
+  }
+
+  const list = milestones.filter((x) => x <= max);
+  if (!list.includes(max)) {
+    list.push(max);
+  }
+  return Array.from(new Set(list)).sort((a, b) => a - b);
+}
 
 const SHIMMER_STRIP_WIDTH_DEFAULT = 240;
 
@@ -169,7 +201,7 @@ const OrderBookSkeleton = () => {
   );
 };
 
-const OrderBookAskRow = React.memo(({ item: ask, maxVolume, themeColors, isDark, selectedCoin, styles }) => {
+const OrderBookAskRow = React.memo(({ item: ask, maxVolume, themeColors, isDark, selectedCoin, precision, styles }) => {
   if (ask.isPlaceholder) {
     return (
       <View style={styles.obRow}>
@@ -178,7 +210,12 @@ const OrderBookAskRow = React.memo(({ item: ask, maxVolume, themeColors, isDark,
       </View>
     );
   }
-  const ratio = Math.min(100, (ask.remaining / maxVolume) * 100);
+  const ratio = Math.min(100, ((Number(ask.remaining) || 0) / (maxVolume || 1)) * 100);
+  const priceDecimals = Math.max(getDecimalPlaces(precision || getTickSize(selectedCoin)), 0);
+  const qtyDecimals = Math.max(getDecimalPlaces(getStepSize(selectedCoin)), 0);
+  const formattedPrice = Number.isFinite(Number(ask.price)) ? Number(ask.price).toFixed(priceDecimals) : '—';
+  const formattedQty = Number.isFinite(Number(ask.remaining)) ? Number(ask.remaining).toFixed(qtyDecimals) : '—';
+
   return (
     <View style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
       <View
@@ -193,16 +230,16 @@ const OrderBookAskRow = React.memo(({ item: ask, maxVolume, themeColors, isDark,
         }}
       />
       <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.red }}>
-        {formatPriceByTick(ask.price, selectedCoin)}
+        {formattedPrice}
       </AppText>
       <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-        {formatQtyByStep(ask.remaining, selectedCoin)}
+        {formattedQty}
       </AppText>
     </View>
   );
-}, (prev, next) => prev.item.price === next.item.price && prev.item.remaining === next.item.remaining && prev.maxVolume === next.maxVolume);
+}, (prev, next) => prev.item.price === next.item.price && prev.item.remaining === next.item.remaining && prev.maxVolume === next.maxVolume && prev.precision === next.precision && prev.isDark === next.isDark);
 
-const OrderBookBidRow = React.memo(({ item: bid, maxVolume, themeColors, isDark, selectedCoin, styles }) => {
+const OrderBookBidRow = React.memo(({ item: bid, maxVolume, themeColors, isDark, selectedCoin, precision, styles }) => {
   if (bid.isPlaceholder) {
     return (
       <View style={styles.obRow}>
@@ -211,7 +248,12 @@ const OrderBookBidRow = React.memo(({ item: bid, maxVolume, themeColors, isDark,
       </View>
     );
   }
-  const ratio = Math.min(100, (bid.remaining / maxVolume) * 100);
+  const ratio = Math.min(100, ((Number(bid.remaining) || 0) / (maxVolume || 1)) * 100);
+  const priceDecimals = Math.max(getDecimalPlaces(precision || getTickSize(selectedCoin)), 0);
+  const qtyDecimals = Math.max(getDecimalPlaces(getStepSize(selectedCoin)), 0);
+  const formattedPrice = Number.isFinite(Number(bid.price)) ? Number(bid.price).toFixed(priceDecimals) : '—';
+  const formattedQty = Number.isFinite(Number(bid.remaining)) ? Number(bid.remaining).toFixed(qtyDecimals) : '—';
+
   return (
     <View style={[styles.obRow, { position: 'relative', overflow: 'hidden' }]}>
       <View
@@ -226,14 +268,14 @@ const OrderBookBidRow = React.memo(({ item: bid, maxVolume, themeColors, isDark,
         }}
       />
       <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: colors.green }}>
-        {formatPriceByTick(bid.price, selectedCoin)}
+        {formattedPrice}
       </AppText>
       <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-        {formatQtyByStep(bid.remaining, selectedCoin)}
+        {formattedQty}
       </AppText>
     </View>
   );
-}, (prev, next) => prev.item.price === next.item.price && prev.item.remaining === next.item.remaining && prev.maxVolume === next.maxVolume);
+}, (prev, next) => prev.item.price === next.item.price && prev.item.remaining === next.item.remaining && prev.maxVolume === next.maxVolume && prev.precision === next.precision && prev.isDark === next.isDark);
 
 const SPOT_OB_VIEW_ICONS = [order_1, order_2, order_3];
 
@@ -318,6 +360,9 @@ const FuturesUI = () => {
   const [futuresTransactionHistory, setFuturesTransactionHistory] = useState([]);
   const [loadingTransactionHistory, setLoadingTransactionHistory] = useState(false);
 
+  const [futuresTradeHistory, setFuturesTradeHistory] = useState([]);
+  const [loadingTradeHistory, setLoadingTradeHistory] = useState(false);
+
   const [futuresPositions, setFuturesPositions] = useState([]);
   const [loadingPositions, setLoadingPositions] = useState(false);
 
@@ -326,6 +371,7 @@ const FuturesUI = () => {
     positionHistory: 0,
     openOrders: 0,
     orderHistory: 0,
+    tradeHistory: 0,
     transactionHistory: 0,
   });
 
@@ -342,6 +388,9 @@ const FuturesUI = () => {
         break;
       case 'Order History':
         setLoadingOrderHistory(true);
+        break;
+      case 'Trade History':
+        setLoadingTradeHistory(true);
         break;
       case 'Transaction History':
         setLoadingTransactionHistory(true);
@@ -461,15 +510,11 @@ const FuturesUI = () => {
   }, [route.params?.coin, route.params?.pair, route.params?.coinDetail, subscribeToFutures, dispatch]);
 
   const fetchFuturesPositions = React.useCallback(async (opts = {}) => {
-    if (!selectedCoin?.symbol) {
-      setLoadingPositions(false);
-      return;
-    }
     const silent = opts?.silent === true;
     const gen = ++historyFetchGenRef.current.positions;
     if (!silent) setLoadingPositions(true);
     try {
-      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
+      const params = { skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOpenPositions(params);
       if (gen !== historyFetchGenRef.current.positions) return;
       if (result?.success) {
@@ -483,17 +528,13 @@ const FuturesUI = () => {
         setLoadingPositions(false);
       }
     }
-  }, [selectedCoin?.symbol]);
+  }, []);
 
   const fetchFuturesPositionHistory = React.useCallback(async () => {
-    if (!selectedCoin?.symbol) {
-      setLoadingPositionHistory(false);
-      return;
-    }
     const gen = ++historyFetchGenRef.current.positionHistory;
     setLoadingPositionHistory(true);
     try {
-      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
+      const params = { skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresPositionHistory(params);
       if (gen !== historyFetchGenRef.current.positionHistory) return;
       if (result?.success) {
@@ -509,17 +550,13 @@ const FuturesUI = () => {
         setLoadingPositionHistory(false);
       }
     }
-  }, [selectedCoin?.symbol]);
+  }, []);
 
   const fetchFuturesOpenOrders = React.useCallback(async () => {
-    if (!selectedCoin?.symbol) {
-      setLoadingOpenOrders(false);
-      return;
-    }
     const gen = ++historyFetchGenRef.current.openOrders;
     setLoadingOpenOrders(true);
     try {
-      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
+      const params = { skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOpenOrders(params);
       if (gen !== historyFetchGenRef.current.openOrders) return;
       if (result?.success) {
@@ -533,17 +570,13 @@ const FuturesUI = () => {
         setLoadingOpenOrders(false);
       }
     }
-  }, [selectedCoin?.symbol]);
+  }, []);
 
   const fetchFuturesOrderHistory = React.useCallback(async () => {
-    if (!selectedCoin?.symbol) {
-      setLoadingOrderHistory(false);
-      return;
-    }
     const gen = ++historyFetchGenRef.current.orderHistory;
     setLoadingOrderHistory(true);
     try {
-      const params = { symbol: selectedCoin.symbol, skip: 0, limit: 50 };
+      const params = { skip: 0, limit: 50 };
       const result = await appOperation.customer.futuresOrderHistory(params);
       if (gen !== historyFetchGenRef.current.orderHistory) return;
       if (result?.success) {
@@ -557,7 +590,38 @@ const FuturesUI = () => {
         setLoadingOrderHistory(false);
       }
     }
-  }, [selectedCoin?.symbol]);
+  }, []);
+
+  const fetchFuturesTradeHistory = React.useCallback(async () => {
+    const gen = ++historyFetchGenRef.current.tradeHistory;
+    setLoadingTradeHistory(true);
+    try {
+      const params = { skip: 0, limit: 50 };
+      const res = await appOperation.customer.futuresExecutions(params);
+      if (gen !== historyFetchGenRef.current.tradeHistory) return;
+      if (res?.success) {
+        const list = Array.isArray(res?.data?.trades)
+          ? res.data.trades
+          : Array.isArray(res?.trades)
+          ? res.trades
+          : Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data?.executions)
+          ? res.data.executions
+          : Array.isArray(res?.data)
+          ? res.data
+          : [];
+        setFuturesTradeHistory(list);
+      }
+    } catch (e) {
+      if (gen !== historyFetchGenRef.current.tradeHistory) return;
+      console.warn("fetchFuturesTradeHistory err:", e);
+    } finally {
+      if (gen === historyFetchGenRef.current.tradeHistory) {
+        setLoadingTradeHistory(false);
+      }
+    }
+  }, []);
 
   const fetchFuturesTransactionHistory = React.useCallback(async () => {
     const gen = ++historyFetchGenRef.current.transactionHistory;
@@ -590,13 +654,17 @@ const FuturesUI = () => {
         fetchFuturesPositionHistory();
       } else if (activeHistoryTab === 'Order History') {
         fetchFuturesOrderHistory();
+      } else if (activeHistoryTab === 'Trade History') {
+        fetchFuturesTradeHistory();
+        fetchFuturesOrderHistory();
+        fetchFuturesPositionHistory();
       } else if (activeHistoryTab === 'Transaction History') {
         fetchFuturesTransactionHistory();
       }
     });
 
     return () => task.cancel();
-  }, [isFocused, activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory, fetchFuturesTransactionHistory]);
+  }, [isFocused, activeHistoryTab, fetchFuturesPositions, fetchFuturesPositionHistory, fetchFuturesOpenOrders, fetchFuturesOrderHistory, fetchFuturesTradeHistory, fetchFuturesTransactionHistory]);
 
   const liveCoin = React.useMemo(() => {
     return pairData?.find((p) => p._id === selectedCoin?._id) || selectedCoin;
@@ -991,12 +1059,21 @@ const FuturesUI = () => {
   const [contractUnitDraft, setContractUnitDraft] = useState('Amount (BTC)');
   const contractUnitSheetRef = useRef(null);
 
+  const currentBaseAsset = selectedCoin?.short_name || selectedCoin?.base_asset || selectedCoin?.base_currency || (selectedCoin?.symbol ? selectedCoin.symbol.split('USDT')[0].replace(/[^A-Za-z0-9]/g, '') : '') || 'BTC';
+  const currentQuoteAsset = selectedCoin?.margin_asset || selectedCoin?.quote_asset || selectedCoin?.quote_currency || 'USDT';
+
   useEffect(() => {
-    if (selectedCoin?.short_name) {
-      setContractUnit(`Amount (${selectedCoin.short_name})`);
-      setContractUnitDraft(`Amount (${selectedCoin.short_name})`);
+    if (selectedCoin) {
+      const isValueUnit = (contractUnit || '').includes('Value');
+      if (isValueUnit) {
+        setContractUnit(`Value (${currentQuoteAsset})`);
+        setContractUnitDraft(`Value (${currentQuoteAsset})`);
+      } else {
+        setContractUnit(`Amount (${currentBaseAsset})`);
+        setContractUnitDraft(`Amount (${currentBaseAsset})`);
+      }
     }
-  }, [selectedCoin]);
+  }, [selectedCoin?.symbol, selectedCoin?._id, currentBaseAsset, currentQuoteAsset]);
 
   // Precision Dropdown State
   const obPrecisionOptions = React.useMemo(() => {
@@ -1006,10 +1083,11 @@ const FuturesUI = () => {
   const [precision, setPrecision] = useState(null);
 
   useEffect(() => {
-    if (obPrecisionOptions.length > 0 && (!precision || !obPrecisionOptions.includes(precision))) {
-      setPrecision(obPrecisionOptions[0]);
+    if (selectedCoin) {
+      const tick = getTickSize(selectedCoin);
+      setPrecision(tick);
     }
-  }, [obPrecisionOptions, selectedCoin]);
+  }, [selectedCoin?.symbol, selectedCoin?._id]);
   const [obPrecisionOpen, setObPrecisionOpen] = useState(false);
   const [obPrecisionLayout, setObPrecisionLayout] = useState(null);
   const precisionTriggerRef = useRef(null);
@@ -1036,6 +1114,21 @@ const FuturesUI = () => {
   const [leverageDraft, setLeverageDraft] = useState(1);
   const [isLeverageModalVisible, setIsLeverageModalVisible] = useState(false);
   const rbSheetMarginLeverage = useRef(null);
+
+  const triggerPriceInputRef = useRef(null);
+  const priceInputRef = useRef(null);
+  const amountInputRef = useRef(null);
+  const tpInputRef = useRef(null);
+  const slInputRef = useRef(null);
+
+  useEffect(() => {
+    if (selectedCoin?.max_leverage) {
+      const maxL = Number(selectedCoin.max_leverage);
+      if (maxL > 0 && marginLeverage > maxL) {
+        setMarginLeverage(maxL);
+      }
+    }
+  }, [selectedCoin?.max_leverage, marginLeverage]);
 
   const ORDER_TYPE_SHEET_BASIC = [
     {
@@ -1268,47 +1361,45 @@ const FuturesUI = () => {
     </View>
   ), [activeHistoryTab, liveCoin, navigation, openPairSheet, themeColors.text, userData]);
 
+  const visibleRowCount = viewModeIndex === 0 ? 6 : 12;
+
   const obAsks = React.useMemo(() => {
-    const allAsks = futuresData?.sell_order || [];
+    if (viewModeIndex === 1) return [];
+    const allAsks = normalizeOrderbookOrders(futuresData?.sell_order || []);
     const aggregated = aggregateOrderBookRows(allAsks, precision);
     const sorted = [...aggregated].sort((a, b) => Number(a.price) - Number(b.price));
-    let data = viewModeIndex === 1 ? [] : sorted.slice(0, 50);
-
-    if (viewModeIndex !== 1) {
-      const minRows = viewModeIndex === 0 ? 6 : 12;
-      data = [...data];
-      while (data.length < minRows) {
-        data.push({ isPlaceholder: true, _id: `placeholder-ask-${data.length}` });
-      }
+    const sliced = sorted.slice(0, visibleRowCount);
+    const data = [...sliced];
+    while (data.length < visibleRowCount) {
+      data.push({ isPlaceholder: true, _id: `placeholder-ask-${data.length}` });
     }
     return data;
-  }, [futuresData?.sell_order, viewModeIndex, precision]);
+  }, [futuresData?.sell_order, viewModeIndex, precision, visibleRowCount]);
 
   const obBids = React.useMemo(() => {
-    const allBids = futuresData?.buy_order || [];
+    if (viewModeIndex === 2) return [];
+    const allBids = normalizeOrderbookOrders(futuresData?.buy_order || []);
     const aggregated = aggregateOrderBookRows(allBids, precision);
     const sorted = [...aggregated].sort((a, b) => Number(b.price) - Number(a.price));
-    let data = viewModeIndex === 2 ? [] : sorted.slice(0, 50);
-
-    if (viewModeIndex !== 2) {
-      const minRows = viewModeIndex === 0 ? 6 : 12;
-      data = [...data];
-      while (data.length < minRows) {
-        data.push({ isPlaceholder: true, _id: `placeholder-bid-${data.length}` });
-      }
+    const sliced = sorted.slice(0, visibleRowCount);
+    const data = [...sliced];
+    while (data.length < visibleRowCount) {
+      data.push({ isPlaceholder: true, _id: `placeholder-bid-${data.length}` });
     }
     return data;
-  }, [futuresData?.buy_order, viewModeIndex, precision]);
+  }, [futuresData?.buy_order, viewModeIndex, precision, visibleRowCount]);
 
   const maxVolume = React.useMemo(() => {
-    const maxAsk = obAsks.reduce((max, a) => Math.max(max, a.remaining || 0), 0);
-    const maxBid = obBids.reduce((max, b) => Math.max(max, b.remaining || 0), 0);
+    const askVols = obAsks.filter(a => !a.isPlaceholder).map(a => Number(a.remaining) || 0);
+    const bidVols = obBids.filter(b => !b.isPlaceholder).map(b => Number(b.remaining) || 0);
+    const maxAsk = askVols.length > 0 ? Math.max(...askVols) : 0;
+    const maxBid = bidVols.length > 0 ? Math.max(...bidVols) : 0;
     return Math.max(maxAsk, maxBid) || 1;
   }, [obAsks, obBids]);
 
   const orderBookBidAskRatio = React.useMemo(() => {
-    const bid = obBids.reduce((s, o) => s + (Number(o.remaining ?? o.quantity) || 0), 0);
-    const ask = obAsks.reduce((s, o) => s + (Number(o.remaining ?? o.quantity) || 0), 0);
+    const bid = obBids.filter(b => !b?.isPlaceholder).reduce((s, o) => s + (Number(o?.remaining) || 0), 0);
+    const ask = obAsks.filter(a => !a?.isPlaceholder).reduce((s, o) => s + (Number(o?.remaining) || 0), 0);
     const t = bid + ask;
     if (t <= 0) return { bidPct: 50, askPct: 50 };
     return { bidPct: (bid / t) * 100, askPct: (ask / t) * 100 };
@@ -1317,7 +1408,8 @@ const FuturesUI = () => {
   const renderAskItem = React.useCallback(({ item }) => (
     <TouchableOpacity onPress={() => {
       if (item.isPlaceholder) return;
-      setPrice(String(formatPriceByTick(item.price, selectedCoin)));
+      const priceDecimals = Math.max(getDecimalPlaces(precision || getTickSize(selectedCoin)), 0);
+      setPrice(String(Number(item.price).toFixed(priceDecimals)));
     }}>
       <OrderBookAskRow
         item={item}
@@ -1325,15 +1417,17 @@ const FuturesUI = () => {
         themeColors={themeColors}
         isDark={isDark}
         selectedCoin={selectedCoin}
+        precision={precision}
         styles={styles}
       />
     </TouchableOpacity>
-  ), [maxVolume, themeColors, isDark, selectedCoin]);
+  ), [maxVolume, themeColors, isDark, selectedCoin, precision]);
 
   const renderBidItem = React.useCallback(({ item }) => (
     <TouchableOpacity onPress={() => {
       if (item.isPlaceholder) return;
-      setPrice(String(formatPriceByTick(item.price, selectedCoin)));
+      const priceDecimals = Math.max(getDecimalPlaces(precision || getTickSize(selectedCoin)), 0);
+      setPrice(String(Number(item.price).toFixed(priceDecimals)));
     }}>
       <OrderBookBidRow
         item={item}
@@ -1341,10 +1435,11 @@ const FuturesUI = () => {
         themeColors={themeColors}
         isDark={isDark}
         selectedCoin={selectedCoin}
+        precision={precision}
         styles={styles}
       />
     </TouchableOpacity>
-  ), [maxVolume, themeColors, isDark, selectedCoin]);
+  ), [maxVolume, themeColors, isDark, selectedCoin, precision]);
 
   const getLayout = React.useCallback((_, index) => ({
     length: 26, offset: 26 * index, index
@@ -1352,11 +1447,13 @@ const FuturesUI = () => {
 
   const renderOrderBook = () => (
     <View style={styles.leftColumn}>
-
-
       <View style={styles.obHeader}>
-        <AppText type={TEN} color={themeColors.secondaryText}>Price{"\n"}(USDT)</AppText>
-        <AppText type={TEN} color={themeColors.secondaryText} style={{ textAlign: 'right' }}>Size{"\n"}(USDT)</AppText>
+        <AppText type={TEN} color={themeColors.secondaryText}>
+          Price{"\n"}({selectedCoin?.margin_asset || selectedCoin?.quote_asset || 'USDT'})
+        </AppText>
+        <AppText type={TEN} color={themeColors.secondaryText} style={{ textAlign: 'right' }}>
+          Size{"\n"}({selectedCoin?.short_name || selectedCoin?.base_asset || 'BTC'})
+        </AppText>
       </View>
 
       {(!futuresData?.sell_order && !futuresData?.buy_order) ? (
@@ -1377,12 +1474,12 @@ const FuturesUI = () => {
                 data={obAsks}
                 inverted={true}
                 showsVerticalScrollIndicator={false}
-                nestedScrollEnabled={true}
+                nestedScrollEnabled={false}
+                scrollEnabled={false}
                 removeClippedSubviews={true}
-                initialNumToRender={8}
-                maxToRenderPerBatch={8}
-                windowSize={5}
-                updateCellsBatchingPeriod={100}
+                initialNumToRender={visibleRowCount}
+                maxToRenderPerBatch={visibleRowCount}
+                windowSize={3}
                 getItemLayout={getLayout}
                 keyExtractor={(item, i) => item._id ? `ask-${item._id}` : `ask-idx-${i}`}
                 renderItem={renderAskItem}
@@ -1408,12 +1505,12 @@ const FuturesUI = () => {
               <FlatList
                 data={obBids}
                 showsVerticalScrollIndicator={false}
-                nestedScrollEnabled={true}
+                nestedScrollEnabled={false}
+                scrollEnabled={false}
                 removeClippedSubviews={true}
-                initialNumToRender={8}
-                maxToRenderPerBatch={8}
-                windowSize={5}
-                updateCellsBatchingPeriod={100}
+                initialNumToRender={visibleRowCount}
+                maxToRenderPerBatch={visibleRowCount}
+                windowSize={3}
                 getItemLayout={getLayout}
                 keyExtractor={(item, i) => item._id ? `bid-${item._id}` : `bid-idx-${i}`}
                 renderItem={renderBidItem}
@@ -1639,9 +1736,24 @@ const FuturesUI = () => {
                   </Animated.Text>
                 </Animated.View>
                 <TextInput
+                  ref={triggerPriceInputRef}
                   cursorColor={isDark ? colors.white : colors.black}
                   value={triggerPrice}
-                  onChangeText={setTriggerPrice}
+                  maxLength={(() => {
+                    const tick = getTickSize(selectedCoin);
+                    const maxDp = getDecimalPlaces(tick);
+                    const dotIdx = (triggerPrice || '').indexOf('.');
+                    return dotIdx >= 0 ? dotIdx + 1 + maxDp : undefined;
+                  })()}
+                  onChangeText={(text) => {
+                    const tick = getTickSize(selectedCoin);
+                    const sanitized = sanitizeIncrementInput(text, tick);
+                    setTriggerPrice(sanitized);
+                    if (triggerPriceInputRef.current && sanitized !== text) {
+                      triggerPriceInputRef.current.setNativeProps({ text: sanitized });
+                      setTimeout(() => triggerPriceInputRef.current?.setNativeProps({ text: sanitized }), 0);
+                    }
+                  }}
                   onFocus={() => setIsTriggerFocused(true)}
                   onBlur={() => setIsTriggerFocused(false)}
                   placeholder=""
@@ -1683,9 +1795,30 @@ const FuturesUI = () => {
                 </Animated.Text>
               </Animated.View>
               <TextInput
+                ref={priceInputRef}
                 cursorColor={isDark ? colors.white : colors.black}
                 value={orderType === 'Market' ? '---Best Market Price---' : (orderType === 'Conditional' ? conditionalPrice : price)}
-                onChangeText={orderType === 'Conditional' ? setConditionalPrice : setPrice}
+                maxLength={(() => {
+                  if (orderType === 'Market') return undefined;
+                  const tick = getTickSize(selectedCoin);
+                  const maxDp = getDecimalPlaces(tick);
+                  const currentVal = orderType === 'Conditional' ? (conditionalPrice || '') : (price || '');
+                  const dotIdx = currentVal.indexOf('.');
+                  return dotIdx >= 0 ? dotIdx + 1 + maxDp : undefined;
+                })()}
+                onChangeText={(text) => {
+                  const tick = getTickSize(selectedCoin);
+                  const sanitized = sanitizeIncrementInput(text, tick);
+                  if (orderType === 'Conditional') {
+                    setConditionalPrice(sanitized);
+                  } else {
+                    setPrice(sanitized);
+                  }
+                  if (priceInputRef.current && sanitized !== text) {
+                    priceInputRef.current.setNativeProps({ text: sanitized });
+                    setTimeout(() => priceInputRef.current?.setNativeProps({ text: sanitized }), 0);
+                  }
+                }}
                 onFocus={() => orderType === 'Conditional' ? setIsConditionalPriceFocused(true) : setIsPriceFocused(true)}
                 onBlur={() => orderType === 'Conditional' ? setIsConditionalPriceFocused(false) : setIsPriceFocused(false)}
                 placeholder=""
@@ -1738,12 +1871,31 @@ const FuturesUI = () => {
               </Animated.Text>
             </Animated.View>
             <TextInput
+              ref={amountInputRef}
               cursorColor={isDark ? colors.white : colors.black}
               value={amount}
+              maxLength={(() => {
+                const isValueUnit = (contractUnit || '').includes('Value');
+                const increment = isValueUnit
+                  ? Math.pow(10, -(selectedCoin?.quote_decimal ?? 2))
+                  : getStepSize(selectedCoin);
+                const maxDp = getDecimalPlaces(increment);
+                const dotIdx = (amount || '').indexOf('.');
+                return dotIdx >= 0 ? dotIdx + 1 + maxDp : undefined;
+              })()}
               onChangeText={(text) => {
                 if (isAmountFocused) {
-                  setAmount(text);
+                  const isValueUnit = (contractUnit || '').includes('Value');
+                  const increment = isValueUnit
+                    ? Math.pow(10, -(selectedCoin?.quote_decimal ?? 2))
+                    : getStepSize(selectedCoin);
+                  const sanitized = sanitizeIncrementInput(text, increment);
+                  setAmount(sanitized);
                   setSliderValue(0);
+                  if (amountInputRef.current && sanitized !== text) {
+                    amountInputRef.current.setNativeProps({ text: sanitized });
+                    setTimeout(() => amountInputRef.current?.setNativeProps({ text: sanitized }), 0);
+                  }
                 }
               }}
               onFocus={() => {
@@ -1895,9 +2047,24 @@ const FuturesUI = () => {
                   </Animated.Text>
                 </Animated.View>
                 <TextInput
+                  ref={tpInputRef}
                   cursorColor={isDark ? colors.white : colors.black}
                   value={formTp}
-                  onChangeText={setFormTp}
+                  maxLength={(() => {
+                    const tick = getTickSize(selectedCoin);
+                    const maxDp = getDecimalPlaces(tick);
+                    const dotIdx = (formTp || '').indexOf('.');
+                    return dotIdx >= 0 ? dotIdx + 1 + maxDp : undefined;
+                  })()}
+                  onChangeText={(text) => {
+                    const tick = getTickSize(selectedCoin);
+                    const sanitized = sanitizeIncrementInput(text, tick);
+                    setFormTp(sanitized);
+                    if (tpInputRef.current && sanitized !== text) {
+                      tpInputRef.current.setNativeProps({ text: sanitized });
+                      setTimeout(() => tpInputRef.current?.setNativeProps({ text: sanitized }), 0);
+                    }
+                  }}
                   onFocus={() => setIsTpFocused(true)}
                   onBlur={() => setIsTpFocused(false)}
                   placeholder=""
@@ -1937,9 +2104,24 @@ const FuturesUI = () => {
                   </Animated.Text>
                 </Animated.View>
                 <TextInput
+                  ref={slInputRef}
                   cursorColor={isDark ? colors.white : colors.black}
                   value={formSl}
-                  onChangeText={setFormSl}
+                  maxLength={(() => {
+                    const tick = getTickSize(selectedCoin);
+                    const maxDp = getDecimalPlaces(tick);
+                    const dotIdx = (formSl || '').indexOf('.');
+                    return dotIdx >= 0 ? dotIdx + 1 + maxDp : undefined;
+                  })()}
+                  onChangeText={(text) => {
+                    const tick = getTickSize(selectedCoin);
+                    const sanitized = sanitizeIncrementInput(text, tick);
+                    setFormSl(sanitized);
+                    if (slInputRef.current && sanitized !== text) {
+                      slInputRef.current.setNativeProps({ text: sanitized });
+                      setTimeout(() => slInputRef.current?.setNativeProps({ text: sanitized }), 0);
+                    }
+                  }}
                   onFocus={() => setIsSlFocused(true)}
                   onBlur={() => setIsSlFocused(false)}
                   placeholder=""
@@ -2076,7 +2258,7 @@ const FuturesUI = () => {
                     <ActivityIndicator size="small" color={colors.white} />
                   ) : (
                     <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
-                      Buy {selectedCoin?.short_name || 'BTC'}
+                      Buy {currentBaseAsset}
                     </AppText>
                   )}
                 </TouchableOpacity>
@@ -2093,7 +2275,7 @@ const FuturesUI = () => {
                     <ActivityIndicator size="small" color={colors.white} />
                   ) : (
                     <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.white }}>
-                      Sell {selectedCoin?.short_name || 'BTC'}
+                      Sell {currentBaseAsset}
                     </AppText>
                   )}
                 </TouchableOpacity>
@@ -2160,10 +2342,10 @@ const FuturesUI = () => {
             </AppText>
             <View
               style={{
-                width: 20,
-                height: 10,
-                marginTop: 2,
-                backgroundColor: activeHistoryTab === t.id ? isDark ? colors.white : colors.black : "transparent",
+                width: 22,
+                height: 2.5,
+                marginTop: 4,
+                backgroundColor: activeHistoryTab === t.id ? (isDark ? colors.white : colors.black) : "transparent",
                 borderRadius: 2,
               }}
             />
@@ -2189,6 +2371,8 @@ const FuturesUI = () => {
           loadingOrderHistory={loadingOrderHistory}
           futuresTransactionHistory={futuresTransactionHistory}
           loadingTransactionHistory={loadingTransactionHistory}
+          futuresTradeHistory={futuresTradeHistory}
+          loadingTradeHistory={loadingTradeHistory}
           themeColors={themeColors}
           isDark={isDark}
           futuresPrice={futuresPrice}
@@ -2207,6 +2391,7 @@ const FuturesUI = () => {
             fetchFuturesOpenOrders();
             fetchFuturesPositionHistory();
             fetchFuturesOrderHistory();
+            fetchFuturesTradeHistory();
             fetchFuturesTransactionHistory();
           }}
           onPositionClosed={(posId) => {
@@ -2236,51 +2421,63 @@ const FuturesUI = () => {
           ref={marginModeSheetRef}
           keyboardAvoidingViewEnabled={false}
           customModalProps={{ statusBarTranslucent: true }}
-          closeOnDragDown={true}
+          closeOnDragDown={false}
           closeOnPressMask={true}
-          height={480}
+          height={520}
           animationType="slide"
           customStyles={{
             container: {
-              backgroundColor: themeColors.background,
+              backgroundColor: isDark ? colors.newThemeColor : (themeColors.background || "#FFFFFF"),
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
-              paddingHorizontal: 20,
+              paddingHorizontal: 16,
+              paddingTop: 12,
+              paddingBottom: 20,
             },
             wrapper: {
               backgroundColor: "#0006",
             },
-            draggableIcon: {
-              backgroundColor: themeColors.themeBorderColor || "#ccc",
-              width: 40,
-            },
           }}
         >
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 8, paddingBottom: 4 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 4, paddingBottom: 6 }}>
               <AppText weight={BOLD} style={{ fontSize: 18, color: themeColors.text }}>
                 Margin Mode
               </AppText>
-
+              <TouchableOpacity
+                onPress={() => marginModeSheetRef?.current?.close()}
+                style={{ padding: 6 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <FastImage
+                  source={closeIcon}
+                  resizeMode="contain"
+                  style={{ width: 14, height: 14 }}
+                  tintColor={themeColors.secondaryText}
+                />
+              </TouchableOpacity>
             </View>
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 20 }}>
+            <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 16 }}>
               Select the unit type you want to use for placing your order.
             </AppText>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
               {[
                 {
                   name: "Isolated",
                   description:
                     "In isolated margin mode, the position margin is the allocated amount, and your loss is limited to it upon liquidation. You can also adjust the margin for positions in this mode.",
+                  type: "isolated",
                 },
                 {
                   name: "Cross",
                   description:
                     "In cross margin mode, the entire account balance is used as margin, and you may lose it all upon liquidation.",
+                  type: "cross",
                 },
               ].map((item) => {
                 const isSelected = marginMode === item.name;
+                const activeColor = colors.primaryColor || "#00BCD4";
                 return (
                   <TouchableOpacity
                     key={item.name}
@@ -2289,46 +2486,187 @@ const FuturesUI = () => {
                       setMarginMode(item.name);
                     }}
                     style={{
-                      backgroundColor: 'transparent',
-                      borderWidth: 1,
+                      backgroundColor: isSelected
+                        ? (isDark ? "rgba(0, 188, 212, 0.08)" : "#EBF8FA")
+                        : (isDark ? (darkTheme.darkThemeInputColor || "#1E1E24") : "#F5F6F8"),
+                      borderWidth: isSelected ? 1.5 : 1,
                       borderColor: isSelected
-                        ? themeColors.text
-                        : (themeColors.themeBorderColor || "#e0e0e0"),
-                      borderRadius: 6,
-                      paddingHorizontal: 16,
-                      paddingVertical: 14,
-                      marginBottom: 16,
+                        ? activeColor
+                        : (isDark ? "rgba(255, 255, 255, 0.08)" : "#E5E7EB"),
+                      borderRadius: 12,
+                      padding: 14,
+                      marginBottom: 12,
+                      flexDirection: "row",
+                      alignItems: "center",
                     }}
                   >
-                    <AppText
-                      weight={SEMI_BOLD}
+                    {/* Left Icon Badge */}
+                    <View
                       style={{
-                        color: themeColors.text,
-                        fontSize: 15,
-                        marginBottom: 6,
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#E9ECEF",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        marginRight: 12,
                       }}
                     >
-                      {item.name}
-                    </AppText>
-                    <AppText
+                      {item.type === "isolated" ? (
+                        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                          <Path
+                            d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                            stroke={isSelected ? activeColor : themeColors.secondaryText}
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <Circle
+                            cx={9}
+                            cy={7}
+                            r={4}
+                            stroke={isSelected ? activeColor : themeColors.secondaryText}
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <Path
+                            d="M19 8v6M22 11h-6"
+                            stroke={isSelected ? activeColor : themeColors.secondaryText}
+                            strokeWidth={1.8}
+                            strokeLinecap="round"
+                          />
+                        </Svg>
+                      ) : (
+                        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                          <Path
+                            d="M17 21v-2a4 4 0 0 0-3-3.87M9 20H4a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v2"
+                            stroke={isSelected ? activeColor : themeColors.secondaryText}
+                            strokeWidth={1.8}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <Circle
+                            cx={9}
+                            cy={7}
+                            r={4}
+                            stroke={isSelected ? activeColor : themeColors.secondaryText}
+                            strokeWidth={1.8}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <Path
+                            d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"
+                            stroke={isSelected ? activeColor : themeColors.secondaryText}
+                            strokeWidth={1.8}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      )}
+                    </View>
+
+                    {/* Middle Content */}
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <AppText
+                        weight={SEMI_BOLD}
+                        style={{
+                          color: themeColors.text,
+                          fontSize: 15,
+                          marginBottom: 4,
+                        }}
+                      >
+                        {item.name}
+                      </AppText>
+                      <AppText
+                        style={{
+                          color: themeColors.secondaryText,
+                          fontSize: 12,
+                          lineHeight: 17,
+                        }}
+                      >
+                        {item.description}
+                      </AppText>
+                    </View>
+
+                    {/* Right Radio Indicator */}
+                    <View
                       style={{
-                        color: themeColors.secondaryText,
-                        fontSize: 12,
-                        lineHeight: 18,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        borderWidth: 2,
+                        borderColor: isSelected
+                          ? activeColor
+                          : (isDark ? "rgba(255, 255, 255, 0.3)" : "#C7C7CC"),
+                        justifyContent: "center",
+                        alignItems: "center",
+                        backgroundColor: "transparent",
                       }}
                     >
-                      {item.description}
-                    </AppText>
+                      {isSelected && (
+                        <View
+                          style={{
+                            width: 11,
+                            height: 11,
+                            borderRadius: 5.5,
+                            backgroundColor: activeColor,
+                          }}
+                        />
+                      )}
+                    </View>
                   </TouchableOpacity>
                 );
               })}
 
-              <AppText style={{ color: themeColors.secondaryText, fontSize: 12, marginBottom: 20, marginTop: 4 }}>
-                Switching margin modes only applies to the current contract.
-              </AppText>
+              {/* Info Note Row */}
+              <View
+                style={{
+                  backgroundColor: isDark
+                    ? (darkTheme.darkThemeInputColor || "rgba(255, 255, 255, 0.04)")
+                    : "#F5F6F8",
+                  borderRadius: 10,
+                  padding: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 16,
+                  marginTop: 4,
+                }}
+              >
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                  <Circle cx={12} cy={12} r={10} stroke={themeColors.secondaryText} strokeWidth={1.8} />
+                  <Path
+                    d="M12 16v-4M12 8h.01"
+                    stroke={themeColors.secondaryText}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+                <AppText
+                  style={{
+                    color: themeColors.secondaryText,
+                    fontSize: 12,
+                    lineHeight: 16,
+                    marginLeft: 8,
+                    flex: 1,
+                  }}
+                >
+                  Switching margin modes only applies to the current contract.
+                </AppText>
+              </View>
 
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
-                <AppText weight={MEDIUM} style={{ fontSize: 15, color: themeColors.text }}>
+              {/* Batch Adjust Margin Mode Row */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 20,
+                  paddingHorizontal: 2,
+                }}
+              >
+                <AppText weight={MEDIUM} style={{ fontSize: 14, color: themeColors.text }}>
                   Batch Adjust Margin Mode
                 </AppText>
                 <ToggleSwitch
@@ -2337,6 +2675,27 @@ const FuturesUI = () => {
                   isDark={isDark}
                 />
               </View>
+
+              {/* Continue Button */}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  marginModeSheetRef?.current?.close();
+                }}
+                style={{
+                  backgroundColor: colors.primaryColor || "#00BCD4",
+                  borderRadius: 24,
+                  paddingVertical: 14,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: 4,
+                  marginBottom: 6,
+                }}
+              >
+                <AppText weight={SEMI_BOLD} style={{ color: "#FFFFFF", fontSize: 16 }}>
+                  Continue
+                </AppText>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </RBSheet>
@@ -2379,12 +2738,12 @@ const FuturesUI = () => {
             <ScrollView showsVerticalScrollIndicator={false}>
               {[
                 {
-                  name: `Amount (${selectedCoin?.base_currency || 'BTC'})`,
-                  description: `Order size is entered in ${selectedCoin?.base_currency || 'BTC'} (base asset).`,
+                  name: `Amount (${currentBaseAsset})`,
+                  description: `Order size is entered in ${currentBaseAsset} (base asset).`,
                 },
                 {
-                  name: `Value (${selectedCoin?.quote_currency || 'USDT'})`,
-                  description: `Order size is entered in ${selectedCoin?.quote_currency || 'USDT'} (notional / margin asset).`,
+                  name: `Value (${currentQuoteAsset})`,
+                  description: `Order size is entered in ${currentQuoteAsset} (notional / margin asset).`,
                 },
               ].map((item) => {
                 const isSelected = contractUnitDraft === item.name;
@@ -2588,28 +2947,97 @@ const FuturesUI = () => {
                   </AppText>
                 </View>
 
-                {/* Leverage Input */}
+                {/* Leverage Input with - / + and direct input */}
                 <AppText style={{ color: themeColors.secondaryText, fontSize: 14, marginBottom: 8 }}>Leverage</AppText>
-                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: 'transparent', borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.1)" : "#E5E5EA", paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12, marginBottom: 24 }}>
-                  <AppText weight={SEMI_BOLD} style={{ fontSize: 16, color: themeColors.text }}>{leverageDraft}x</AppText>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    backgroundColor: "transparent",
+                    borderWidth: 1,
+                    borderColor: isDark ? "rgba(255,255,255,0.1)" : "#E5E5EA",
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 12,
+                    marginBottom: 20,
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => {
+                      const current = Number(leverageDraft) || 1;
+                      setLeverageDraft(Math.max(1, current - 1));
+                    }}
+                    style={{ padding: 8, paddingHorizontal: 12 }}
+                  >
+                    <AppText weight={BOLD} style={{ fontSize: 20, color: themeColors.secondaryText }}>−</AppText>
+                  </TouchableOpacity>
+
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                    <TextInput
+                      value={String(leverageDraft)}
+                      onChangeText={(text) => {
+                        const clean = text.replace(/[^0-9]/g, "");
+                        if (!clean) {
+                          setLeverageDraft("");
+                          return;
+                        }
+                        const num = Number(clean);
+                        const maxL = Number(selectedCoin?.max_leverage) || 125;
+                        if (num > maxL) {
+                          setLeverageDraft(maxL);
+                        } else {
+                          setLeverageDraft(num);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!leverageDraft || Number(leverageDraft) < 1) {
+                          setLeverageDraft(1);
+                        }
+                      }}
+                      keyboardType="number-pad"
+                      style={{
+                        fontSize: 18,
+                        fontWeight: "600",
+                        color: themeColors.text,
+                        textAlign: "center",
+                        padding: 0,
+                        margin: 0,
+                        includeFontPadding: false,
+                      }}
+                    />
+                    <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text, marginLeft: 0 }}>x</AppText>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      const maxL = Number(selectedCoin?.max_leverage) || 125;
+                      const current = Number(leverageDraft) || 1;
+                      setLeverageDraft(Math.min(maxL, current + 1));
+                    }}
+                    style={{ padding: 8, paddingHorizontal: 12 }}
+                  >
+                    <AppText weight={BOLD} style={{ fontSize: 20, color: themeColors.secondaryText }}>+</AppText>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Quick selector pills */}
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 32 }}>
-                  {[5, 10, 20, 50, 100, 125].filter(x => x <= (selectedCoin?.max_leverage || 125)).map((x) => {
-                    const isSelected = leverageDraft === x;
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 }}>
+                  {getLeverageOptions(selectedCoin?.max_leverage || 125).map((x) => {
+                    const isSelected = Number(leverageDraft) === x;
                     return (
                       <TouchableOpacity
                         key={`lev-${x}`}
                         onPress={() => setLeverageDraft(x)}
                         style={{
-                          paddingHorizontal: 18,
+                          paddingHorizontal: 16,
                           paddingVertical: 10,
                           borderRadius: 24,
                           borderWidth: 1,
                           borderColor: isSelected ? themeColors.text : (isDark ? "rgba(255,255,255,0.1)" : "#E5E5EA"),
                           backgroundColor: isSelected ? 'transparent' : (isDark ? "rgba(255,255,255,0.05)" : "#F9F9FB"),
-                          alignItems: "center"
+                          alignItems: "center",
+                          minWidth: 54,
                         }}
                       >
                         <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 14 }}>
@@ -2624,10 +3052,12 @@ const FuturesUI = () => {
                 <View style={{ marginBottom: 20 }}>
                   {(() => {
                     const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+                    const maxL = Number(selectedCoin?.max_leverage) || 125;
+                    const currentLev = Math.min(Math.max(1, Number(leverageDraft) || 1), maxL);
                     const stats = computeFuturesLeverageStats({
                       availableBalance: balanceToUse,
-                      leverage: leverageDraft,
-                      maxLeverage: selectedCoin?.max_leverage || 125,
+                      leverage: currentLev,
+                      maxLeverage: maxL,
                       leverageTiers: selectedCoin?.leverage_tiers || [],
                     });
 
@@ -2658,7 +3088,7 @@ const FuturesUI = () => {
                       { label: "Maximum Borrowable", value: `${fmt(stats.maximumBorrowable)} ${quoteSymbol}` },
                       { label: "Maximum Leverage", value: `${stats.maxLeverage}x >` },
                       { label: "Current Loan Limit", value: stats.currentLoanLimit != null ? `${fmt(stats.currentLoanLimit)} ${quoteSymbol}` : `0 ${quoteSymbol}` },
-                      { label: `Max position at ${leverageDraft}x`, value: maxPosLabel },
+                      { label: `Max position at ${currentLev}x`, value: maxPosLabel },
                     ].map((row, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
                         <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>{row.label}</AppText>
@@ -2679,7 +3109,9 @@ const FuturesUI = () => {
               {/* Confirm Button */}
               <Button
                 onPress={() => {
-                  setMarginLeverage(leverageDraft);
+                  const maxL = Number(selectedCoin?.max_leverage) || 125;
+                  const finalLev = Math.min(Math.max(1, Number(leverageDraft) || 1), maxL);
+                  setMarginLeverage(finalLev);
                   setIsLeverageModalVisible(false);
                   rbSheetMarginLeverage.current?.close();
                 }}

@@ -21,7 +21,12 @@ export function buildCoinImageUri(
             coin.image ||
             coin.iconUrl;
     }
-    if (raw == null || String(raw).trim() === '') return null;
+    if (
+        raw == null ||
+        String(raw).trim() === '' ||
+        String(raw).trim() === 'null' ||
+        String(raw).trim() === 'undefined'
+    ) return null;
     const p = String(raw).trim();
     if (p.startsWith('http://') || p.startsWith('https://')) return p;
     if (p.startsWith('//')) return `https:${p}`;

@@ -232,7 +232,6 @@ const MarketList = React.memo(({ filterData, style, onPress, scrollEnabled = tru
 
   const renderItem = useCallback(
     ({ item }) => (
-      console.log(item, '-----item---'),
       <MarketRow
         item={item}
         favoriteArray={favoriteArray}
