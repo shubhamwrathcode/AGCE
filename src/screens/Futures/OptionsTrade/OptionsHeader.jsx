@@ -6,13 +6,13 @@ import { useNavigation } from '@react-navigation/native';
 import { AppText } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
 import { BOLD, fontFamilyMedium, fontFamilySemiBold, MEDIUM, REGULAR, SEMI_BOLD } from '../../../theme/typography';
-import { downIcon, filterNew, history, historyIcon, menuIcon, printIcon } from '../../../helper/ImageAssets'; // using existing icons
+import { downIcon, filterNew, history, historyIcon, menuIcon, printIcon, wallet_ic } from '../../../helper/ImageAssets'; // using existing icons
 import { colors } from '../../../theme/colors';
 import { useAppSelector } from '../../../store/hooks';
 import { showError } from '../../../helper/logger';
 import { LOGIN_SCREEN } from '../../../navigation/routes';
 
-const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelectedOptionType, onOpenSettings, onOpenMoreSheet, selectedAsset, onOpenPairList }) => {
+const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelectedOptionType, onOpenSettings, onOpenMoreSheet, selectedAsset, onOpenPairList, onOpenAccountModal }) => {
   const { colors: themeColors, isDark } = useTheme();
   const navigation = useNavigation();
   const userData = useAppSelector((state) => state.auth.userData);
@@ -35,6 +35,15 @@ const OptionsHeader = ({ activeTab, setActiveTab, selectedOptionType, setSelecte
             <AppText style={{ color: '#fff', fontSize: 10, fontFamily: fontFamilyMedium }}>+50.47%</AppText>
           </View>
           <View style={{ flex: 1 }} />
+          {onOpenAccountModal && (
+            <TouchableOpacity
+              onPress={onOpenAccountModal}
+              style={{ marginRight: 16 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <FastImage source={wallet_ic} style={styles.historyIcon} tintColor={themeColors.text} resizeMode="contain" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={() => {
               if (!userData) {

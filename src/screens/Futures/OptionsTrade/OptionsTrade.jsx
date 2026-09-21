@@ -10,6 +10,7 @@ import OptionsSettingsSheet from './OptionsSettingsSheet';
 import OptionsEasyMode from './OptionsEasyMode';
 import OptionsStrategies from './OptionsStrategies';
 import OptionsMoreSheet from './OptionsMoreSheet';
+import OptionsAccountSheet from './OptionsAccountSheet';
 import OptionsPairList from '../../Options/OptionsPairList';
 import useOptionsWebSocket from './hooks/useOptionsWebSocket';
 
@@ -24,7 +25,7 @@ const OptionsTrade = ({ route }) => {
   const [selectedAsset, setSelectedAsset] = useState(initialAsset);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { underlyings, expiries, chains, currentPrice, isMarketLoading, isContractsLoading } = useOptionsWebSocket(selectedAsset, null, isFocused);
+  const { underlyings, expiries, chains, currentPrice, isMarketLoading, isContractsLoading, accountUpdate } = useOptionsWebSocket(selectedAsset, null, isFocused);
 
   const [activeTab, setActiveTab] = useState(0);
   const [selectedOptionType, setSelectedOptionType] = useState('All');
@@ -32,6 +33,7 @@ const OptionsTrade = ({ route }) => {
   const prevAssetRef = useRef(selectedAsset);
   const [isSettingsVisible, setSettingsVisible] = useState(false);
   const [isMoreSheetVisible, setMoreSheetVisible] = useState(false);
+  const [isAccountSheetVisible, setAccountSheetVisible] = useState(false);
 
   const pairSheetRef = useRef(null);
 
@@ -92,6 +94,7 @@ const OptionsTrade = ({ route }) => {
         onOpenSettings={() => setSettingsVisible(true)}
         onOpenMoreSheet={() => setMoreSheetVisible(true)}
         onOpenPairList={() => pairSheetRef.current?.open()}
+        onOpenAccountModal={() => setAccountSheetVisible(true)}
       />
       <View style={[styles.divider, { backgroundColor: themeColors.themeBorderColor || '#EAEAEA' }]} />
 
@@ -105,7 +108,9 @@ const OptionsTrade = ({ route }) => {
           selectedAsset={selectedAsset}
           isMarketLoading={isMarketLoading}
           isContractsLoading={isContractsLoading}
+          accountUpdate={accountUpdate}
           onOpenPairList={() => pairSheetRef.current?.open()}
+          onOpenAccountModal={() => setAccountSheetVisible(true)}
         />
       )}
       {activeTab === 1 && (
@@ -125,6 +130,11 @@ const OptionsTrade = ({ route }) => {
       <OptionsMoreSheet
         visible={isMoreSheetVisible}
         onClose={() => setMoreSheetVisible(false)}
+      />
+      <OptionsAccountSheet
+        visible={isAccountSheetVisible}
+        onClose={() => setAccountSheetVisible(false)}
+        accountUpdate={accountUpdate}
       />
       <AnimatedBottomSheet ref={pairSheetRef} isDark={isDark} theme={theme}>
         <OptionsPairList

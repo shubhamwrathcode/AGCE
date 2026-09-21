@@ -4451,50 +4451,41 @@ const Spot = () => {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => { setTab("Buy"); setIsBuy(true); }}
-                    style={{ flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center", paddingVertical: 15 }}
+                    style={{ flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center", paddingVertical: 8, height: 32 }}
                   >
-                    <ImageBackground
+                    <FastImage
                       source={trade_btn}
                       tintColor={tab === "Buy" ? (themeColors.spotTradeBuy ?? colors.spotTradeBuy) : themeColors.background}
                       resizeMode="stretch"
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: tab === "Buy" ? colors.white : themeColors.secondaryText }]}>Buy</AppText>
-                    </ImageBackground>
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    <AppText weight={SEMI_BOLD} style={[styles.tabText, { color: tab === "Buy" ? colors.white : themeColors.secondaryText }]}>Buy</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => { setTab("Sell"); setIsBuy(false); }}
-                    style={{ flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center", paddingVertical: 15 }}
+                    style={{ flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center", paddingVertical: 8, height: 32 }}
                   >
-                    <ImageBackground
+                    <FastImage
                       source={trade_btn}
                       tintColor={tab === "Sell" ? (themeColors.spotTradeSell ?? colors.spotTradeSell) : themeColors.background}
                       resizeMode="stretch"
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                        transform: [{ rotate: "180deg" }],
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      style={[
+                        StyleSheet.absoluteFillObject,
+                        { transform: [{ rotate: "180deg" }] },
+                      ]}
+                    />
+                    <AppText
+                      weight={SEMI_BOLD}
+                      style={[
+                        styles.tabText,
+                        {
+                          color: tab === "Sell" ? themeColors.textOnButton : themeColors.secondaryText,
+                        },
+                      ]}
                     >
-                      <AppText weight={SEMI_BOLD} style={[styles.tabText, {
-                        color: tab === "Sell" ? themeColors.textOnButton : themeColors.secondaryText,
-                        transform: [{ rotate: '180deg' }]
-                      }]}>Sell</AppText>
-                    </ImageBackground>
+                      Sell
+                    </AppText>
                   </TouchableOpacity>
                 </View>
 

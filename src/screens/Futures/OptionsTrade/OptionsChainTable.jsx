@@ -9,12 +9,15 @@ import Animated, {
   scrollTo,
 } from 'react-native-reanimated';
 import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, checkIc, downIcon } from '../../../helper/ImageAssets';
-import { AppText } from '../../../common';
+import { AppText, TWELVE } from '../../../common';
 import { useTheme } from '../../../hooks/useTheme';
 import { fontFamilyMedium, SEMI_BOLD } from '../../../theme/typography';
 import { colors } from '../../../theme/colors';
+import { useAppSelector } from '../../../store/hooks';
+import { appOperation } from '../../../appOperation';
 import OptionsExpiries from './OptionsExpiries';
-import { applyChainFilters, parseStrikeFilterInput } from './helpers/optionsDataHelpers';
+import { applyChainFilters, parseStrikeFilterInput, decNum } from './helpers/optionsDataHelpers';
+import OptionsAccountSection from './OptionsAccountSection';
 
 const CALLS_HEADERS = [
   { title: 'Last', w: 60, align: 'center' },
@@ -282,7 +285,99 @@ const PutDataRow = React.memo(function PutDataRow({
   );
 });
 
-const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false, isContractsLoading = false, onOpenPairList }) => {
+const OptionsMarginSummary = ({ accountUpdate, isDark, themeColors, onOpenAccountModal }) => {
+  const userData = useAppSelector((state) => state.auth?.userData);
+  const [restWallet, setRestWallet] = useState(null);
+  const isFocused = useIsFocused();
+
+  const fetchWallet = useCallback(async () => {
+    if (!userData) return;
+    try {
+      const res = await appOperation.customer.optionsWallet();
+      if (res?.success) setRestWallet(res.data ?? null);
+    } catch {
+      // ignore
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    if (isFocused && userData) {
+      fetchWallet();
+    }
+  }, [isFocused, userData, fetchWallet]);
+
+  const availableBal = decNum(accountUpdate?.available_balance ?? restWallet?.available_balance ?? 0);
+  const marginBal = decNum(
+    accountUpdate?.margin_balance ??
+    accountUpdate?.total_equity ??
+    restWallet?.total_balance ??
+    restWallet?.available_balance ??
+    0
+  );
+
+  const rawImr = accountUpdate?.imr ?? accountUpdate?.initial_margin_ratio;
+  const imrText = (rawImr != null && Number.isFinite(Number(rawImr)))
+    ? `${(Number(rawImr) * 100).toFixed(2)}%`
+    : "— —";
+
+  const rawMmr = accountUpdate?.mmr ?? accountUpdate?.maintenance_margin_ratio;
+  const mmrText = (rawMmr != null && Number.isFinite(Number(rawMmr)))
+    ? `${(Number(rawMmr) * 100).toFixed(2)}%`
+    : "— —";
+
+  return (
+    <View style={{ marginHorizontal: 16, marginTop: 4, marginBottom: 8 }}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={onOpenAccountModal}
+        style={{
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 6,
+          backgroundColor: isDark ? '#1C1D24' : '#F5F7FA',
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#EAEAEA',
+        }}
+      >
+        {/* Row 1: IMR & Margin Balance */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textDecorationLine: 'underline', textDecorationStyle: 'dashed' }}>IMR</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{imrText}</AppText>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textDecorationLine: 'underline', textDecorationStyle: 'dashed' }}>Margin Balance</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+              {`${Number(marginBal).toFixed(2)} USD`}
+            </AppText>
+            <FastImage
+              source={downIcon}
+              style={{ width: 8, height: 8, transform: [{ rotate: '-90deg' }] }}
+              tintColor={themeColors.secondaryText}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+
+        {/* Row 2: MMR & Available Margin */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textDecorationLine: 'underline', textDecorationStyle: 'dashed' }}>MMR</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{mmrText}</AppText>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <AppText type={TWELVE} style={{ color: themeColors.secondaryText, textDecorationLine: 'underline', textDecorationStyle: 'dashed' }}>Available Margin</AppText>
+            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+              {`${Number(availableBal).toFixed(2)} USD`}
+            </AppText>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains = [], currentPrice = 0, selectedAsset = '', isMarketLoading = false, isContractsLoading = false, accountUpdate = null, onOpenPairList, onOpenAccountModal }) => {
   const { colors: themeColors, isDark } = useTheme();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
@@ -302,8 +397,6 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
     gamma: true,
   });
   const [showColMenu, setShowColMenu] = useState(false);
-
-  const [oddSize, setOddSize] = useState(true);
   const [strikeMinStr, setStrikeMinStr] = useState('');
   const [strikeMaxStr, setStrikeMaxStr] = useState('');
   const [debouncedFilters, setDebouncedFilters] = useState({ min: '', max: '' });
@@ -483,7 +576,6 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
 
   const { chainsToRender, elementsToRender } = useMemo(() => {
     const filteredChains = applyChainFilters(chains, {
-      oddSize,
       strikeMin: parseStrikeFilterInput(debouncedFilters.min),
       strikeMax: parseStrikeFilterInput(debouncedFilters.max),
     });
@@ -521,7 +613,7 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
     });
 
     return { chainsToRender: selectedChains, elementsToRender: flattenedElements };
-  }, [chains, deferredSelectedExpiry, currentPrice, oddSize, debouncedFilters]);
+  }, [chains, deferredSelectedExpiry, currentPrice, debouncedFilters]);
 
   useEffect(() => {
     mainVerticalScrollRef.current?.scrollTo?.({ y: 0, animated: false });
@@ -541,6 +633,13 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
 
   return (
     <View style={styles.container}>
+      <OptionsMarginSummary
+        accountUpdate={accountUpdate}
+        isDark={isDark}
+        themeColors={themeColors}
+        onOpenAccountModal={onOpenAccountModal}
+      />
+
       <OptionsExpiries
         expiries={expiries}
         selectedExpiry={selectedExpiry}
@@ -550,22 +649,6 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
 
       {/* Filter Bar */}
       <ScrollView style={{ flexGrow: 0 }} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center' }}>
-        <TouchableOpacity onPress={() => setOddSize(!oddSize)} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
-          <View style={{
-            width: 16, height: 16,
-            borderWidth: oddSize ? 0 : 1.5,
-            borderColor: themeColors.secondaryText,
-            borderRadius: 4,
-            marginRight: 8,
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: oddSize ? '#0D6EFD' : 'transparent'
-          }}>
-            {oddSize && <FastImage source={checkIc} style={{ width: 10, height: 10 }} tintColor="#FFF" resizeMode="contain" />}
-          </View>
-          <AppText style={{ color: themeColors.text, fontSize: 13, fontFamily: fontFamilyMedium }}>Odd Size</AppText>
-        </TouchableOpacity>
-
         <TouchableOpacity onPress={onOpenPairList} style={{
           flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1,
           borderColor: isDark ? '#333' : '#DDE2E5', borderRadius: 6, paddingHorizontal: 10, height: 32, marginRight: 12
@@ -600,7 +683,6 @@ const OptionsChainTable = ({ expiries, selectedExpiry, setSelectedExpiry, chains
           onPress={() => {
             setStrikeMinStr('');
             setStrikeMaxStr('');
-            setOddSize(true);
           }}
           style={{ marginLeft: 12 }}
         >

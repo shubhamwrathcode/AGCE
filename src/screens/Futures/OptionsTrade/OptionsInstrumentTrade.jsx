@@ -28,6 +28,7 @@ import { ShimmerBox } from '../../spotScreen/Spot';
 import { buildOrderbookDisplayRows } from './helpers/optionsDataHelpers';
 import useOptionsWebSocket from './hooks/useOptionsWebSocket';
 import { bumpOptionsWsStat, logOptionsWs } from './helpers/optionsWsDebug';
+import OptionsAccountSection from './OptionsAccountSection';
 
 
 import { View, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput, Platform, Keyboard, Modal, Pressable, ActivityIndicator } from 'react-native';
@@ -489,6 +490,9 @@ const OptionsInstrumentTrade = () => {
     );
   }, [orderPrice, tradeTab, selectedContractRaw, tickSize]);
 
+  const isSell = tradeTab === 'sell';
+  const effectiveReduceOnly = isSell ? true : reduceOnly;
+
   const formValidation = useMemo(() => {
     if (!symbol || !selectedContractRaw) {
       return { ok: false, insufficientFunds: false };
@@ -500,7 +504,7 @@ const OptionsInstrumentTrade = () => {
       price: orderPrice,
       quantity: orderAmount,
       timeInForce: orderTif,
-      reduceOnly,
+      reduceOnly: effectiveReduceOnly,
       availableBalance: isLoggedIn ? avblUsdt : 0,
       contract: selectedContractRaw,
       tickSize,
@@ -510,7 +514,7 @@ const OptionsInstrumentTrade = () => {
       position: symbolPosition,
       openOrders: symbolOpenOrders,
     });
-  }, [symbol, selectedContractRaw, tradeTab, orderPrice, orderAmount, orderTif, reduceOnly, isLoggedIn, avblUsdt, tickSize, stepSize, indexPrice, effectiveFeeRates, symbolPosition, symbolOpenOrders]);
+  }, [symbol, selectedContractRaw, tradeTab, orderPrice, orderAmount, orderTif, effectiveReduceOnly, isLoggedIn, avblUsdt, tickSize, stepSize, indexPrice, effectiveFeeRates, symbolPosition, symbolOpenOrders]);
 
   const isSubmitDisabled = submitting || !isLoggedIn || !symbol || !formValidation.ok;
 
@@ -564,7 +568,7 @@ const OptionsInstrumentTrade = () => {
       price: snappedPrice,
       quantity: snappedAmount,
       timeInForce: orderTif,
-      reduceOnly,
+      reduceOnly: effectiveReduceOnly,
       availableBalance: avblUsdt,
       contract: selectedContractRaw,
       tickSize,
@@ -870,10 +874,22 @@ const OptionsInstrumentTrade = () => {
             <View style={{ width: RIGHT_W }}>
               {/* Buy / Sell Toggle */}
               <View style={[styles.toggleContainer, { backgroundColor: isDark ? '#2A2A2E' : '#F7F7F7' }]}>
-                <TouchableOpacity style={[styles.toggleBtn, tradeTab === 'buy' && styles.toggleActive]} onPress={() => setTradeTab('buy')}>
+                <TouchableOpacity
+                  style={[styles.toggleBtn, tradeTab === 'buy' && styles.toggleActive]}
+                  onPress={() => {
+                    setTradeTab('buy');
+                    setReduceOnly(false);
+                  }}
+                >
                   <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: tradeTab === 'buy' ? colors.white : themeColors.secondaryText }}>Buy</AppText>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.toggleBtn, tradeTab === 'sell' && { backgroundColor: colors.red }]} onPress={() => setTradeTab('sell')}>
+                <TouchableOpacity
+                  style={[styles.toggleBtn, tradeTab === 'sell' && { backgroundColor: colors.red }]}
+                  onPress={() => {
+                    setTradeTab('sell');
+                    setReduceOnly(true);
+                  }}
+                >
                   <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: tradeTab === 'sell' ? colors.white : themeColors.secondaryText }}>Sell</AppText>
                 </TouchableOpacity>
               </View>
@@ -979,14 +995,16 @@ const OptionsInstrumentTrade = () => {
                 />
               </View>
 
-              {/* Reduce Only & TIF */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, zIndex: 10 }}>
-                <TouchableOpacity onPress={() => setReduceOnly(!reduceOnly)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={[styles.checkbox, reduceOnly && { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
-                    {reduceOnly && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />}
+              {/* Reduce Only (Sell Side Only) & TIF */}
+              <View style={{ flexDirection: 'row', justifyContent: isSell ? 'space-between' : 'flex-end', alignItems: 'center', marginBottom: 10, zIndex: 10 }}>
+                {isSell && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={[styles.checkbox, { backgroundColor: themeColors.text, borderColor: themeColors.text, alignItems: 'center', justifyContent: 'center' }]}>
+                      <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor={isDark ? colors.black : colors.white} resizeMode="contain" />
+                    </View>
+                    <AppText type={TWELVE} style={[{ color: themeColors.secondaryText }, styles.dashedUnderline]}>Reduce Only</AppText>
                   </View>
-                  <AppText type={TWELVE} style={[{ color: themeColors.secondaryText }, styles.dashedUnderline]}>Reduce Only</AppText>
-                </TouchableOpacity>
+                )}
                 <TouchableOpacity ref={tifTriggerRef} onPress={openTifMenu} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>TIF</AppText>
                   <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{orderTif}</AppText>
@@ -1103,6 +1121,9 @@ const OptionsInstrumentTrade = () => {
               </Modal>
             </View>
           </View>
+
+          {/* Account Section matching web 1:1 */}
+          <OptionsAccountSection accountUpdate={accountUpdate} style={{ marginTop: 20 }} />
         </View>
       </KeyboardAwareScrollView>
     </AppSafeAreaView>
