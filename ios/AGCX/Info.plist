@@ -61,15 +61,15 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>AGCX requires access to the camera.</string>
+	<string>AGCX requires camera access to scan QR codes for wallet addresses, payments, and KYC identity verification.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>AGCX uses Face ID to confirm it is you when signing in or verifying with a passkey.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<!-- <key>NSLocationWhenInUseUsageDescription</key>
+	<string>AGCX requires access to your location to comply with regional financial regulations, verify trading eligibility, and protect your account security.</string> -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>AGCX does not require access to the microphone.</string>
+	<string>AGCX requires microphone access for identity verification and audio recording during KYC checks.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>AGCX requires access to the photo library.</string>
+	<string>AGCX requires access to your photo library to select and upload KYC verification documents and payment receipts.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Inter_18pt-Black.ttf</string>
