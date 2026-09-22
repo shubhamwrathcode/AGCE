@@ -271,7 +271,7 @@ const FuturesHistorySection = ({
           </AppText>
           <TouchableOpacity
             style={{
-              backgroundColor: colors.orangeTheme,
+              backgroundColor: colors.cyanTheme || colors.buttonDarkBg || '#0AA8C5',
               paddingHorizontal: 22,
               paddingVertical: 8,
               borderRadius: 6,

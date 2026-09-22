@@ -944,3 +944,27 @@ export function getFuturesOrderTriggerText(order) {
 }
 
 
+
+export function getLeverageOptions(maxLeverage) {
+  const max = Math.max(1, Number(maxLeverage) || 125);
+  let milestones = [];
+  if (max <= 10) {
+    milestones = [1, 2, 3, 5, 10];
+  } else if (max <= 20) {
+    milestones = [2, 3, 5, 10, 15, 20];
+  } else if (max <= 50) {
+    milestones = [5, 10, 15, 20, 25, 50];
+  } else if (max <= 75) {
+    milestones = [5, 10, 20, 25, 50, 75];
+  } else if (max <= 100) {
+    milestones = [5, 10, 20, 50, 75, 100];
+  } else if (max <= 125) {
+    milestones = [5, 10, 20, 50, 75, 100, 125];
+  } else {
+    milestones = [5, 10, 20, 50, 75, 100, 125, 150];
+  }
+  const filtered = milestones.filter((m) => m <= max);
+  if (!filtered.includes(max)) filtered.push(max);
+  filtered.sort((a, b) => a - b);
+  return filtered;
+}

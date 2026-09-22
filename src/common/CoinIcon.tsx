@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { View, StyleSheet, StyleProp, ImageStyle, ViewStyle } from 'react-native';
 import FastImage, { ImageStyle as FastImageStyle, ResizeMode, Source } from 'react-native-fast-image';
 import { SvgXml } from 'react-native-svg';
@@ -7,8 +7,9 @@ import { activities_icon } from '../helper/ImageAssets';
 
 // In-memory cache for clean SVG XML strings
 const svgXmlCache = new Map<string, string | null>();
-// Set of URLs known to be raster images
+// Set of URLs known to be raster images or failed
 const rasterUrlCache = new Set<string>();
+const failedUrlCache = new Set<string>();
 
 const RASTER_REGEX = /\.(png|jpe?g|webp|gif|bmp)($|\?)/i;
 const SVG_REGEX = /\.svg($|\?)/i;
@@ -17,7 +18,7 @@ async function checkAndFetchSvg(uri: string): Promise<string | null> {
   if (svgXmlCache.has(uri)) {
     return svgXmlCache.get(uri) || null;
   }
-  if (rasterUrlCache.has(uri)) {
+  if (rasterUrlCache.has(uri) || failedUrlCache.has(uri)) {
     return null;
   }
   try {
@@ -61,7 +62,7 @@ interface CoinIconProps {
   placeholderBg?: string;
 }
 
-export const CoinIcon: React.FC<CoinIconProps> = ({
+export const CoinIcon: React.FC<CoinIconProps> = memo(({
   coin,
   uri: directUri,
   style,
@@ -79,14 +80,20 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
     if (!resolvedUri || isDirectRaster) return null;
     return svgXmlCache.get(resolvedUri) || null;
   });
-  const [loadFailed, setLoadFailed] = useState<boolean>(false);
+  const [hasError, setHasError] = useState<boolean>(() => {
+    return resolvedUri ? failedUrlCache.has(resolvedUri) : false;
+  });
 
   useEffect(() => {
     let active = true;
-    setLoadFailed(false);
 
     if (!resolvedUri) {
       setSvgXml(null);
+      return;
+    }
+
+    if (failedUrlCache.has(resolvedUri)) {
+      setHasError(true);
       return;
     }
 
@@ -95,13 +102,9 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
       return;
     }
 
-    // Check SVG cache or fetch for SVG / extensionless URLs (e.g. Fireblocks)
     if (svgXmlCache.has(resolvedUri)) {
       const cached = svgXmlCache.get(resolvedUri) || null;
       setSvgXml(cached);
-      if (!cached && isDirectSvg) {
-        setLoadFailed(true);
-      }
       return;
     }
 
@@ -111,9 +114,6 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
           setSvgXml(clean);
         } else {
           setSvgXml(null);
-          if (isDirectSvg) {
-            setLoadFailed(true);
-          }
         }
       }
     });
@@ -121,7 +121,7 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
     return () => {
       active = false;
     };
-  }, [resolvedUri, isDirectRaster, isDirectSvg]);
+  }, [resolvedUri, isDirectRaster]);
 
   const flatStyle = StyleSheet.flatten(style) || {};
   const width = (flatStyle.width as number) || 24;
@@ -130,7 +130,7 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
 
   const effectiveFallback = fallback || activities_icon;
 
-  if (!resolvedUri || loadFailed) {
+  if (!resolvedUri || hasError) {
     if (placeholderBg && !fallback) {
       return (
         <View
@@ -170,7 +170,10 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
           xml={svgXml}
           width="100%"
           height="100%"
-          onError={() => setLoadFailed(true)}
+          onError={() => {
+            if (resolvedUri) failedUrlCache.add(resolvedUri);
+            setHasError(true);
+          }}
         />
       </View>
     );
@@ -182,9 +185,12 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
       source={{ uri: resolvedUri }}
       style={style as StyleProp<FastImageStyle>}
       resizeMode={resizeMode}
-      onError={() => setLoadFailed(true)}
+      onError={() => {
+        if (resolvedUri) failedUrlCache.add(resolvedUri);
+        setHasError(true);
+      }}
     />
   );
-};
+});
 
 export default CoinIcon;

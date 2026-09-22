@@ -20,7 +20,35 @@
 13. [Options Chain Filter Bar Odd Size Removal](#13-options-chain-filter-bar-odd-size-removal)
 14. [Options Chain Margin Summary Strip (IMR, MMR, Balances)](#14-options-chain-margin-summary-strip-imr-mmr-balances)
 15. [Options Account Section & Header Bottom Sheet Modal](#15-options-account-section--header-bottom-sheet-modal)
-16. [Master Step-by-Step Execution Checklist](#16-master-step-by-step-execution-checklist)
+16. [Spot / Margin Trade Buy/Sell Tab iOS Inverted Text (llǝS) Fix](#16-spot--margin-trade-buysell-tab-ios-inverted-text-lls-fix)
+17. [Futures Order Form Inputs UI Harmonization (Spot-Style Alignment)](#17-futures-order-form-inputs-ui-harmonization-spot-style-alignment)
+18. [Futures Glassmorphism Sheets & Modals Redesign (Margin Mode, Order Type, Leverage, Close Position)](#18-futures-glassmorphism-sheets--modals-redesign-margin-mode-order-type-leverage-close-position)
+19. [Master Step-by-Step Execution Checklist](#19-master-step-by-step-execution-checklist)
+
+---
+
+## 📌 Quick Task Summary (Plain English)
+
+Here is a simple, high-level summary of all 18 tasks implemented:
+
+1. **Spot Chart Live Price Sync:** Real-time WebSocket synchronization for live prices, 24h stats, and high/low figures on chart focus without delay.
+2. **Universal CoinIcon System:** Built a unified `CoinIcon` component supporting direct URLs, SVGs, relative paths, and a fallback image (`activities_icon`) to prevent broken icons.
+3. **Wallet Screens CoinIcon Integration:** Replaced raw `FastImage` with `CoinIcon` across all wallet tabs, deposit, transfer, and token selection modals.
+4. **Wallet Overview Accounts Alignment:** Aligned account hierarchy to standard 7 accounts (Main, Spot, Isolated Margin, Cross Margin, Futures, Earning, Options) and removed obsolete P2P and Swap entries.
+5. **Futures Leverage Range & 150x Support:** Dynamic milestone buttons (5x, 10x, 20x ... 150x) automatically adapting to each coin's specific maximum leverage limit.
+6. **Futures Input Precision Enforcement:** Implemented price tick-size and quantity step-size sanitizers to prevent invalid decimals and reject order submission API errors.
+7. **Futures Order Book Layout & Precision:** Dynamic `Price (Quote)` and `Size (Base)` headers, automatic precision reset per coin, and a fixed 6/12 row slicing.
+8. **Futures Base & Quote Assets Resolution:** Dynamic symbol resolver ensuring accurate base (`BTC`) and quote (`USDT`) labels on Buy/Sell buttons, forms, and sheets.
+9. **Isolated Position Adjust Margin (Add & Remove):** Added an edit margin action button, dynamic slider modal, and backend API integration for isolated futures positions.
+10. **Futures Combined All-Pairs History:** Removed single-symbol restriction to load all open positions, order history, and trade history in a unified view.
+11. **Futures TP/SL Trigger Price Formatting:** Standardized readable order types (`TP Market`, `SL Limit`, etc.) and trigger price labels in order records.
+12. **Options Trade Reduce-Only Enforcement:** Automatically hide Reduce-Only on the Buy tab and enforce/check it on the Sell tab for options instrument trading.
+13. **Options Chain Odd Size Filter Removal:** Cleaned up the options chain filter bar by eliminating the non-functional "Odd Size" checkbox.
+14. **Options Margin Summary Strip:** Added a live margin summary strip (IMR, MMR, and Available Margin) on top of the options chain table.
+15. **Options Account Section & Sheet:** Integrated a header wallet icon and bottom sheet modal displaying margin ratio, equity breakdown, and PnL analysis navigation.
+16. **Spot Sell Button iOS Inverted Text (`llǝS`) Fix:** Resolved the upside-down text render issue on iOS by decoupling the rotated background image from the text layer.
+17. **Futures Order Form Inputs UI Alignment:** Standardized form inputs to match the Spot trading UI (compact 36px height, micro top-labels, and `-`/`+` stepper controls).
+18. **Futures Glassmorphism Sheets & Theme Redesign:** Replaced solid dark sheets with glassmorphism `BlurView` (blurAmount 20), ambient LinearGradients, and signature CoinCode Cyan accents (`#0AA8C5`) across Margin Mode, Order Type, Leverage, and Close Position modals.
 
 ---
 
@@ -500,7 +528,61 @@ In `Spot.jsx`, the Sell tab used an `ImageBackground` rotated `180deg` to mirror
 
 ---
 
-## 17. Master Step-by-Step Execution Checklist
+## 17. Futures Order Form Inputs UI Harmonization (Spot-Style Alignment)
+
+### Problem:
+The Futures trade order form used oversized floating-label inputs, inconsistent heights, and misaligned dropdowns that looked disparate from the sleek Spot screen trading interface.
+
+### Implementation:
+1. **Standardized Input Geometry**:
+   - Replaced custom floating boxes with compact standard containers: `height: 36`, `borderRadius: 8`, `borderWidth: 0.8`, `borderColor: isDark ? darkTheme.inputBorder : themeColors.border`.
+2. **Top Micro-Labels**:
+   - Attached clean 11px micro-labels positioned above each input:
+     - `Price (${currentQuoteAsset})`
+     - `Amount (${currentBaseAsset})` / `Value (${currentQuoteAsset})`
+     - `Trigger Price (${currentQuoteAsset})`
+     - `Take Profit (${currentQuoteAsset})`
+     - `Stop Loss (${currentQuoteAsset})`
+     - `Slippage Tolerance (%)`
+3. **Integrated Steppers & Dropdowns**:
+   - Added left `−` and right `+` step decrement/increment buttons on Price and Amount inputs.
+   - Synchronized Margin Mode, Leverage, and Order Type dropdown selectors to the exact same 36px height with unified typography.
+
+**Target File**:
+- `src/screens/Futures/FuturesTrade.jsx`
+
+---
+
+## 18. Futures Glassmorphism Sheets & Modals Redesign (Margin Mode, Order Type, Leverage, Close Position)
+
+### Problem:
+Modal popups and bottom sheets across Futures were previously rendered with solid pitch-black or inconsistent white containers lacking the signature glassmorphism, glowing borders, and theme accents of the CoinCodeExchange / AGCE design system.
+
+### Implementation:
+1. **Glassmorphic Modal Containers (`BlurView` + LinearGradient)**:
+   - Wrapped modals in translucent full-width containers with top radius (`borderTopLeftRadius: 24`, `borderTopRightRadius: 24`) and subtle border (`rgba(255, 255, 255, 0.12)`).
+   - Embedded `@react-native-community/blur` `BlurView` (`blurAmount={20}`) combined with dual green/cyan LinearGradient ambient glow layers.
+2. **Margin Mode Sheet**:
+   - Redesigned Isolated and Cross cards with gradient icon badges, Cyan active border (`#0AA8C5` / `colors.cyanTheme`), styled radio dot indicators, info banner, and Cyan pill Continue CTA button.
+3. **Order Type Modal**:
+   - Structured with `💎 BASIC` and `💎 CONDITIONAL` section headers, Gold/Blue gem badges, Lucide icons (`TrendingUp`, `ShoppingCart`, `Target`), active card outlines, and purple check badges.
+4. **Adjust Leverage Modal**:
+   - Integrated dynamic `<CoinIcon coin={selectedCoin} />` in the header, active leverage slider, quick-select cyan pills, and Cyan Theme CTA button.
+5. **Close Position & Adjust Margin Modals**:
+   - Upgraded Close Position modal, Adjust Margin modal, and History Filter sheets to unified glassmorphic styling, quick percentage pill selectors, and clean typography.
+6. **Contract Unit & TIF Sheets**:
+   - Standardized selection borders, checkmarks, and confirm buttons to use `colors.cyanTheme`.
+
+**Target Files**:
+- `src/screens/Futures/FuturesTrade.jsx`
+- `src/screens/Futures/components/FuturesAdjustMarginModal.jsx`
+- `src/screens/Futures/components/FuturesClosePositionModal.jsx`
+- `src/screens/Futures/components/FuturesHistoryFilterSheet.jsx`
+- `src/screens/Futures/components/FuturesHistorySection.jsx`
+
+---
+
+## 19. Master Step-by-Step Execution Checklist
 
 When replicating to a new project, execute in this exact sequence:
 
@@ -516,7 +598,10 @@ When replicating to a new project, execute in this exact sequence:
 10. [ ] **Futures Adjust Margin**: Create `FuturesAdjustMarginModal.jsx` and add `adjustPositionMargin` API service in `customer/index.ts`.
 11. [ ] **Futures History**: Remove single-symbol filters in `FutureHistoryScreen.jsx` & `FuturesTrade.jsx`, add Trade History tab.
 12. [ ] **Futures TP/SL Formatting**: Add `formatFuturesOrderType`, `getFuturesOrderDisplayPrice`, `getFuturesOrderTriggerText`.
-13. [ ] **Options Reduce Only**: Enforce `effectiveReduceOnly` (hidden on Buy, checked on Sell) in `OptionsInstrumentTrade.jsx`.
-14. [ ] **Options Odd Size**: Remove static Odd Size checkbox in `OptionsChainTable.jsx`.
-15. [ ] **Options Margin Strip**: Add `OptionsMarginSummary` in `OptionsChainTable.jsx`.
-16. [ ] **Options Account Section & Sheet**: Add `OptionsAccountSection.jsx`, `OptionsAccountSheet.jsx`, Header Wallet Icon, and navigation callbacks.
+13. [ ] **Futures Inputs Harmonization**: Align form inputs to Spot UI (36px height, micro-labels, steppers).
+14. [ ] **Futures Glassmorphic Modals**: Apply `BlurView` + LinearGradient and Cyan theme to Margin Mode, Order Type, Leverage, and Close Position sheets.
+15. [ ] **Options Reduce Only**: Enforce `effectiveReduceOnly` (hidden on Buy, checked on Sell) in `OptionsInstrumentTrade.jsx`.
+16. [ ] **Options Odd Size**: Remove static Odd Size checkbox in `OptionsChainTable.jsx`.
+17. [ ] **Options Margin Strip**: Add `OptionsMarginSummary` in `OptionsChainTable.jsx`.
+18. [ ] **Options Account Section & Sheet**: Add `OptionsAccountSection.jsx`, `OptionsAccountSheet.jsx`, Header Wallet Icon, and navigation callbacks.
+
