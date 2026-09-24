@@ -484,7 +484,7 @@ const AccountDetails = () => {
                 onPress={() => NavigationService.navigate(routes.KYC_STATUS_SCREEN)}
               />
 
-              <MenuItem label="Kyb"
+              <MenuItem label="Business verification"
                 onPress={() => NavigationService.navigate(routes.KYC_STATUS_SCREEN, { from: 'kyb' })}
               />
 

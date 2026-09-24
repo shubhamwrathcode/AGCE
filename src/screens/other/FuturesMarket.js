@@ -128,25 +128,34 @@ export const FuturesList = ({ data, onPress }) => {
                 </View>
                 <View style={styles.nameBlock}>
                   <View style={styles.symbolRow}>
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }} numberOfLines={1}>
-                      {baseAsset}/{marginAsset}
+                    <AppText numberOfLines={1} style={styles.pairLabelWrap}>
+                      <AppText weight={SEMI_BOLD} style={[styles.pairLabelBase, { color: themeColors.text }]}>
+                        {baseAsset}
+                      </AppText>
+                      <AppText weight={SEMI_BOLD} style={styles.pairLabelQuote}>{` / ${marginAsset}`}</AppText>
                     </AppText>
                     <View style={[styles.perpBadge, { backgroundColor: isDark ? themeColors.card : '#F0F0F0' }]}>
                       <AppText type={ELEVEN} style={{ color: themeColors.secondaryText }}>Perp</AppText>
                     </View>
                   </View>
-                  <AppText type={ELEVEN} style={[styles.volText, { color: themeColors.secondaryText }]} numberOfLines={1}>
+                  <AppText type={ELEVEN} style={[styles.volText, { color: '#9CA3AF' }]} numberOfLines={1}>
                     Vol {toFixedThree(vol)}
                   </AppText>
                 </View>
               </View>
             </View>
             <View style={styles.priceCol}>
-              <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.priceText, { color: themeColors.text }]}>
+              <AppText
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+                weight={SEMI_BOLD}
+                style={[styles.priceText, { color: themeColors.text }]}
+              >
                 {toFixedFive(price)}
               </AppText>
               <View style={[styles.chgPill, isPositive ? styles.chgPillGreen : styles.chgPillRed]}>
-                <AppText type={ELEVEN} weight={SEMI_BOLD} style={styles.chgPillText}>
+                <AppText weight={SEMI_BOLD} style={styles.chgPillText}>
                   {isPositive ? "+" : ""}{toFixedThree(changePercent)}%
                 </AppText>
               </View>
@@ -198,22 +207,26 @@ const styles = StyleSheet.create({
   nameCol: { flex: 1, minWidth: 0, justifyContent: "center" },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   nameBlock: { flex: 1, minWidth: 0 },
-  symbolRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  volText: { marginTop: 1 },
+  symbolRow: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },
+  pairLabelWrap: { minWidth: 0, flexShrink: 1 },
+  pairLabelBase: { fontSize: 14 },
+  pairLabelQuote: { color: "#9CA3AF", fontSize: 12 },
+  volText: { marginTop: 0, fontSize: 13 },
   priceCol: { flex: 1, minWidth: 0, alignItems: "flex-end", justifyContent: "center" },
-  priceText: { textAlign: "right" },
+  priceText: { textAlign: "right", fontSize: 14, fontWeight: "700" },
   chgPill: {
-    minWidth: 64,
-    paddingVertical: 3,
+    minWidth: 50,
+    paddingVertical: 5,
     paddingHorizontal: 6,
-    borderRadius: 5,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
+    flexShrink: 0,
   },
   chgPillRed: { backgroundColor: colors.red },
   chgPillGreen: { backgroundColor: colors.green },
-  chgPillText: { color: colors.white },
+  chgPillText: { color: colors.white, fontSize: 13, fontWeight: "600" },
   iconWrap: {
     width: 24,
     height: 24,

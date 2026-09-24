@@ -1,13 +1,13 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { View, StyleSheet, TouchableOpacity, Animated } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { AppText, ELEVEN, SEMI_BOLD, TWELVE } from "../../shared";
+import { AppText, ELEVEN, MEDIUM, NORMAL, SEMI_BOLD } from "../../shared";
 import { colors } from "../../theme/colors";
 import NavigationService from "../../navigation/NavigationService";
 import { FUTURES_SCREEN, NAVIGATION_AUTH_STACK, LOGIN_SCREEN } from "../../navigation/routes";
 import { showError } from "../../helper/logger";
 import FastImage from "react-native-fast-image";
-import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, downIcon, starIcon, starFillIcon } from "../../helper/ImageAssets";
+import { NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, downIcon, starFillIcon, favUnCheck } from "../../helper/ImageAssets";
 import { useTheme } from "../../hooks/useTheme";
 import { useIsFocused } from "@react-navigation/native";
 import RBSheet from "react-native-raw-bottom-sheet";
@@ -51,16 +51,17 @@ const SkeletonItem = ({ isDark, themeColors }) => {
 
   return (
     <View style={[styles.row, { borderBottomColor: themeColors.border }]}>
-      <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}>
-        <Animated.View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: bg, opacity: anim }} />
-        <View style={{ gap: 6 }}>
-          <Animated.View style={{ width: 90, height: 12, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
-          <Animated.View style={{ width: 50, height: 10, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+      <View style={{ flexDirection: "row", alignItems: "center", flex: 1.2, gap: 5 }}>
+        <Animated.View style={{ width: 20, height: 20, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+        <Animated.View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: bg, opacity: anim }} />
+        <View style={{ gap: 4, flex: 1 }}>
+          <Animated.View style={{ width: 90, height: 14, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+          <Animated.View style={{ width: 50, height: 13, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
         </View>
       </View>
-      <View style={{ alignItems: "flex-end", gap: 6 }}>
-        <Animated.View style={{ width: 60, height: 12, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
-        <Animated.View style={{ width: 45, height: 10, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+      <View style={{ flex: 1, alignItems: "flex-end", gap: 4 }}>
+        <Animated.View style={{ width: 60, height: 14, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
+        <Animated.View style={{ width: 45, height: 11, borderRadius: 4, backgroundColor: bg, opacity: anim }} />
       </View>
     </View>
   );
@@ -72,10 +73,17 @@ const OptionContractItem = React.memo(({ item, themeColors, isDark, onPress, ico
   const tickSizeNum = Number(item?.tick_size);
   const decimals = (!tickSizeNum || tickSizeNum <= 0 || Number.isNaN(tickSizeNum)) ? 2 : (tickSizeNum < 1 ? Math.max(0, Math.ceil(-Math.log10(tickSizeNum))) : 0);
   const priceText = parsedPrice != null ? parsedPrice.toFixed(decimals) : "—";
+  const subPriceStr = parsedPrice != null ? `$${priceText}` : "—";
 
   const typeStr = String(item?.option_type || item?.type || "").toUpperCase();
   const isCall = typeStr === "C" || typeStr === "CALL";
   const strike = item?.strike || 0;
+  const fullSymbol = String(item?.symbol || "");
+  // Spot-style PairLabel: base ticker bold 14, rest gray 12 (e.g. BTC-260925-100000-C)
+  const dashIdx = fullSymbol.indexOf("-");
+  const ticker = dashIdx > 0 ? fullSymbol.slice(0, dashIdx) : (fullSymbol || "—");
+  const quotePart = dashIdx > 0 ? fullSymbol.slice(dashIdx + 1) : "";
+  const subLabel = `${isCall ? "Call" : "Put"} · ${strike}`;
 
   return (
     <TouchableOpacity
@@ -85,38 +93,52 @@ const OptionContractItem = React.memo(({ item, themeColors, isDark, onPress, ico
     >
       <View style={styles.nameCol}>
         <View style={styles.nameRow}>
-          <TouchableOpacity onPress={() => onToggleFavorite(item?._id)} activeOpacity={0.7} style={{ padding: 4, marginRight: 4 }}>
+          <TouchableOpacity onPress={() => onToggleFavorite(item?._id)} activeOpacity={0.7} style={styles.starBtn}>
             <FastImage
-              source={isFavorite ? starFillIcon : starIcon}
-              style={{ width: 14, height: 14 }}
-              tintColor={isFavorite ? colors.startintcolor : themeColors.secondaryText}
+              source={isFavorite ? starFillIcon : favUnCheck}
+              style={styles.starIcon}
+              tintColor={isFavorite ? colors.startintcolor : colors.stardisablecolor}
               resizeMode="contain"
             />
           </TouchableOpacity>
           <FastImage
             source={iconUri ? { uri: iconUri } : (isDark ? NO_NOTIFICATION_ICON_LIGHT : NO_NOTIFICATION_ICON)}
-            style={{ width: 24, height: 24, marginRight: 10, borderRadius: 12 }}
+            style={styles.coinIcon}
             resizeMode="contain"
           />
           <View style={styles.nameBlock}>
-            <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text, marginBottom: 2 }} numberOfLines={1}>
-              {item?.symbol}
+            <AppText
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
+              style={styles.pairLabelWrap}
+            >
+              <AppText weight={SEMI_BOLD} style={[styles.pairLabelBase, { color: themeColors.text }]}>
+                {ticker}
+              </AppText>
+              {!!quotePart && (
+                <AppText weight={SEMI_BOLD} style={styles.pairLabelQuote}>{` / ${quotePart}`}</AppText>
+              )}
             </AppText>
-            <AppText type={ELEVEN} style={{ color: themeColors.secondaryText }} numberOfLines={1}>
-              {isCall ? "Call" : "Put"} · {strike}
+            <AppText numberOfLines={1} weight={NORMAL} type={ELEVEN} ellipsizeMode="tail" style={[styles.coinListSub, { color: '#9CA3AF' }]}>
+              {subLabel}
             </AppText>
           </View>
         </View>
       </View>
       <View style={styles.priceCol}>
-        <AppText type={TWELVE} weight={SEMI_BOLD} style={[styles.priceText, { color: themeColors.text, marginBottom: 2 }]}>
+        <AppText
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+          weight={SEMI_BOLD}
+          style={[styles.lastPrice, { color: themeColors.text }]}
+        >
           {priceText}
         </AppText>
-        {parsedPrice != null && (
-          <AppText type={ELEVEN} style={[styles.priceText, { color: themeColors.secondaryText }]}>
-            ${priceText}
-          </AppText>
-        )}
+        <AppText numberOfLines={1} weight={MEDIUM} style={[styles.inrPrice, { color: themeColors.secondaryText }]}>
+          {subPriceStr}
+        </AppText>
       </View>
     </TouchableOpacity>
   );
@@ -520,22 +542,79 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
   },
-  list: { paddingBottom: 24, paddingHorizontal: 4, paddingTop: 2 },
+  list: { paddingBottom: 24, paddingTop: 2 },
+  // Same row typography/layout as Spot MarketList
   row: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 12,
+    alignItems: "center",
     minHeight: 40,
+    marginTop: 5,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  nameCol: { flex: 1.5, minWidth: 0, justifyContent: "center" },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  nameBlock: { flex: 1, minWidth: 0 },
-  symbolRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  volText: { marginTop: 1 },
-  priceCol: { flex: 0.7, minWidth: 60, alignItems: "flex-end", justifyContent: "center" },
-  priceText: { textAlign: "right" },
+  nameCol: {
+    flex: 1.2,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  starBtn: {
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  starIcon: {
+    width: 16,
+    height: 16,
+  },
+  coinIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  nameBlock: {
+    flex: 1,
+    minWidth: 0,
+    marginLeft: 4,
+  },
+  pairLabelWrap: {
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  pairLabelBase: {
+    fontSize: 14,
+  },
+  pairLabelQuote: {
+    color: "#9CA3AF",
+    fontSize: 12,
+  },
+  coinListSub: {
+    marginTop: 0,
+    fontSize: 13,
+  },
+  priceCol: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  lastPrice: {
+    textAlign: "right",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  inrPrice: {
+    marginTop: 1,
+    textAlign: "right",
+    fontSize: 11,
+  },
   empty: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 40 },
   sheetContainer: {
     flex: 1,

@@ -455,6 +455,7 @@ export const login = (data: LoginProps & { token?: string }) => async (
     console.log("[Login][API] request user/login", {
       email_or_phone: data?.email_or_phone,
       hasPassword: !!data?.password,
+      hasCaptchaToken: !!data?.token,
       deviceId,
       platform,
     });

@@ -3,6 +3,8 @@ import FastImage from "react-native-fast-image";
 import { ActivityIndicator, Keyboard, Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
+import Recaptcha from "react-native-recaptcha-that-works";
+import type { RecaptchaRef } from "react-native-recaptcha-that-works";
 import { prepareGoogleSignIn } from "../../helper/googleSignIn";
 import { FORGOT_PASSWORD_SCREEN, REGISTER_SCREEN, WELCOME_SCREEN } from "../../navigation/routes";
 import { AppSafeAreaView, AppText, Button, ELEVEN, FIFTEEN, FOURTEEN, Input, MEDIUM, TEN, THIRD, THIRTEEN, TWELVE } from "../../shared";
@@ -29,6 +31,7 @@ import { AuthEmailPhoneTabBar, AuthHeader, AuthPhoneInput } from "../../shared/c
 import NavigationService from "../../navigation/NavigationService";
 import { colors } from "../../theme/colors";
 import { appOperation } from "../../appOperation";
+import { CAPTCHA_BASE_URL, CAPTCHA_SITE_KEY } from "../../helper/Constants";
 
 const Login = (): JSX.Element => {
   const dispatch = useAppDispatch();
@@ -52,6 +55,8 @@ const Login = (): JSX.Element => {
   const [isPasskeySignInInProgress, setIsPasskeySignInInProgress] = useState(false);
   const [emailSuggestListVisible, setEmailSuggestListVisible] = useState(false);
   const emailSuggestBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recaptchaRef = useRef<RecaptchaRef>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const clearEmailSuggestBlurTimer = () => {
     if (emailSuggestBlurTimer.current) {
@@ -69,12 +74,22 @@ const Login = (): JSX.Element => {
     return () => clearEmailSuggestBlurTimer();
   }, []);
 
+  const resetLoginCaptcha = () => {
+    setCaptchaToken(null);
+  };
+
+  /** After Login press: CAPTCHA modal runs, then login API. No on-screen CAPTCHA field. */
+  const pendingLoginAfterCaptcha = useRef(false);
+
   useEffect(() => {
     setSignUpId("");
     setPassword("");
     setIdentifierError(false);
     setPasswordError(false);
     setEmailSuggestListVisible(false);
+    setCaptchaToken(null);
+    pendingLoginAfterCaptcha.current = false;
+    setShowPassField(false);
   }, [index]);
 
   useEffect(() => {
@@ -211,6 +226,45 @@ const Login = (): JSX.Element => {
     }
   };
 
+  const getNormalizedLoginId = () => {
+    if (index === 0) {
+      return String(signUpId || "").trim();
+    }
+    return String(signUpId || "").replace(/\D/g, "").replace(/^0+/, "") || "";
+  };
+
+  const onLogin = async (captchaOverride?: string | null) => {
+    const token = captchaOverride ?? captchaToken ?? "";
+    const normalizedId = getNormalizedLoginId();
+    console.log("[Login][onLogin] button press", {
+      email_or_phone: normalizedId,
+      index,
+      passwordLength: String(password || "").length,
+      hasCaptcha: !!token,
+    });
+    const result = (await dispatch(
+      login({
+        email_or_phone: normalizedId,
+        password,
+        token,
+      })
+    )) as LoginThunkResult;
+    console.log("[Login][onLogin] thunk result", result);
+    setPasswordError(false);
+    setIdentifierError(false);
+    if (!result?.success) {
+      // Re-verify CAPTCHA after failed login
+      resetLoginCaptcha();
+      pendingLoginAfterCaptcha.current = false;
+      if (result.highlightPasswordField) setPasswordError(true);
+      if (result.highlightIdentifierField) setIdentifierError(true);
+    }
+  };
+
+  /**
+   * Flow: identifier → password → CAPTCHA modal → login API.
+   * CAPTCHA is not shown as a separate form field.
+   */
   const onSubmit = () => {
     if (!password) {
       setPasswordError(true);
@@ -219,37 +273,14 @@ const Login = (): JSX.Element => {
     }
     setPasswordError(false);
     Keyboard.dismiss();
-    onLogin();
-  };
 
-  const getNormalizedLoginId = () => {
-    if (index === 0) {
-      return String(signUpId || "").trim();
+    if (CAPTCHA_SITE_KEY && !captchaToken) {
+      pendingLoginAfterCaptcha.current = true;
+      recaptchaRef.current?.open();
+      return;
     }
-    return String(signUpId || "").replace(/\D/g, "").replace(/^0+/, "") || "";
-  };
 
-  const onLogin = async () => {
-    const normalizedId = getNormalizedLoginId();
-    console.log("[Login][onLogin] button press", {
-      email_or_phone: normalizedId,
-      index,
-      passwordLength: String(password || "").length,
-    });
-    const result = (await dispatch(
-      login({
-        email_or_phone: normalizedId,
-        password,
-        token: "",
-      })
-    )) as LoginThunkResult;
-    console.log("[Login][onLogin] thunk result", result);
-    setPasswordError(false);
-    setIdentifierError(false);
-    if (!result?.success) {
-      if (result.highlightPasswordField) setPasswordError(true);
-      if (result.highlightIdentifierField) setIdentifierError(true);
-    }
+    void onLogin();
   };
 
   const validateEmailOrUsername = (raw: string) => {
@@ -319,6 +350,7 @@ const Login = (): JSX.Element => {
   const changeInput = (val: any) => {
     setSignUpId(val);
     setShowPassField(false);
+    setCaptchaToken(null);
     if (identifierError) setIdentifierError(false);
     if (index === 0) {
       const raw = String(val || "").trim();
@@ -474,6 +506,8 @@ const Login = (): JSX.Element => {
             onChange={(i: number) => {
               setIndex(i);
               setShowPassField(false);
+              setCaptchaToken(null);
+              pendingLoginAfterCaptcha.current = false;
             }}
           />
 
@@ -572,40 +606,23 @@ const Login = (): JSX.Element => {
                 onChangeText={(text) => {
                   if (passwordError) setPasswordError(false);
                   setPassword(text);
+                  // New password → must complete CAPTCHA again before login API
+                  if (captchaToken) resetLoginCaptcha();
                 }}
                 autoCapitalize="none"
                 secureTextEntry={isPasswordVisible}
                 assignRef={(input: any) => {
                   passwordInput.current = input;
                 }}
-                returnKeyType="next"
+                returnKeyType="done"
                 isSecure
                 hasError={passwordError}
-                // onSubmitEditing={() => confirmPasswordInput?.current?.focus()}
                 onPressVisible={() => setIsPasswordVisible(!isPasswordVisible)}
+                onSubmitEditing={onSubmit}
               />
 
               {/* Web parity: Bind IP + Forgot Password row (password step). */}
               <View style={styles.bindRow}>
-                {/* <TouchableOpacityView
-                  style={styles.bindLeft}
-                  onPress={() => setBindIp((v) => !v)}
-                >
-                  <Checkbox
-                    value={bindIp}
-                    onPress={() => setBindIp((v) => !v)}
-                    disabled={false}
-                    type={1}
-                    style={undefined}
-                    innerStyle={undefined}
-                    theme={undefined}
-                    containerStyle={undefined}
-                  />
-                  <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
-                    Bind IP (Security option)
-                  </AppText>
-                </TouchableOpacityView> */}
-
                 <AppText
                   type={THIRTEEN}
                   weight={MEDIUM}
@@ -626,6 +643,39 @@ const Login = (): JSX.Element => {
               />
             </>
           )}
+
+          {/* CAPTCHA is never shown as a form field — opens only after Login press. */}
+          {CAPTCHA_SITE_KEY ? (
+            <Recaptcha
+              ref={recaptchaRef}
+              siteKey={CAPTCHA_SITE_KEY}
+              baseUrl={CAPTCHA_BASE_URL}
+              size="normal"
+              theme={isDark ? "dark" : "light"}
+              onVerify={(token) => {
+                setCaptchaToken(token);
+                const shouldLogin = pendingLoginAfterCaptcha.current;
+                pendingLoginAfterCaptcha.current = false;
+                if (shouldLogin) {
+                  void onLogin(token);
+                }
+              }}
+              onExpire={() => {
+                setCaptchaToken(null);
+              }}
+              onError={() => {
+                setCaptchaToken(null);
+                pendingLoginAfterCaptcha.current = false;
+                showError("CAPTCHA failed. Please try again.");
+              }}
+              onClose={() => {
+                // Library calls onClose before onVerify on success — defer cancel so verify can still login.
+                setTimeout(() => {
+                  pendingLoginAfterCaptcha.current = false;
+                }, 0);
+              }}
+            />
+          ) : null}
         </View>
         <View style={styles.socialSection}>
           <View style={styles.dividerRow}>

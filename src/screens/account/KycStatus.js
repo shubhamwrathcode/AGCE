@@ -21,25 +21,14 @@ import {
 } from "../../shared";
 import FastImage from "react-native-fast-image";
 import {
-  kyc_pending,
-  closeIcon,
-  checkIc,
   downIcon,
   upIcon,
-  kyc_verification_vector,
-  withdrawIcon,
-  depositIcon,
-  p2p_Icon,
-  tradeIcon,
-  giftIc,
-  verification_gift,
   identity_verification,
   newLock,
   failed,
   bonus_image,
   verify_lock,
   pending_kyc,
-  kyc_success_vector,
   kyc_complete,
   verified_kyc,
   back_ic,
@@ -47,7 +36,7 @@ import {
 } from "../../helper/ImageAssets";
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import NavigationService from "../../navigation/NavigationService";
-import { KYC_STEP_ONE_SCREEN, KYC_RESUBMIT_SCREEN, CREATE_TICKET_SCREEN } from "../../navigation/routes";
+import { KYC_RESUBMIT_SCREEN, CREATE_TICKET_SCREEN } from "../../navigation/routes";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLoading } from "../../slices/authSlice";
@@ -143,12 +132,12 @@ const KYC_AVATAR_GRADIENT_LOCATIONS = [0, 0.5, 1];
 
 function kycWebAlignedDisplayName(userData) {
   const name = userData?.display_name || userData?.user_login || userData?.user_nicename;
-  if (name) return `AGCE ${name}`;
+  if (name) return `AGCX ${name}`;
 
   const e = userData?.emailId ?? userData?.email;
-  if (!e) return "AGCE User";
+  if (!e) return "AGCX User";
   const local = String(e).split("@")[0];
-  return `AGCE User-${local.slice(0, 8)}`;
+  return `AGCX User-${local.slice(0, 8)}`;
 }
 
 const LEGACY_STATUS_TO_CANONICAL = {
@@ -612,7 +601,7 @@ function shouldCloseDiditKycWebView(url) {
 const faqData = [
   { q: "How to complete individual KYC?", a: "Upload a valid government-issued ID, complete the liveness check when prompted, and submit your details in the Verification Center. This usually takes 2–5 minutes." },
   { q: "How to complete business KYC?", a: "Provide business registration documents, beneficial owner information, and any extra forms requested. Our team may review submissions as part of compliance checks." },
-  { q: "Why is KYC verification required?", a: "To protect your assets and promote a secure, compliant crypto environment, AGCE requires all users to complete KYC (Know Your Customer) verification. This helps prevent fraud, money laundering, and other illicit activities. Once your KYC is verified, you'll gain access to key platform features including crypto deposits and withdrawals, P2P trading, and participation in events like Launchpool." },
+  { q: "Why is KYC verification required?", a: "To protect your assets and promote a secure, compliant crypto environment, AGCX requires all users to complete KYC (Know Your Customer) verification. This helps prevent fraud, money laundering, and other illicit activities. Once your KYC is verified, you'll gain access to key platform features including crypto deposits and withdrawals, P2P trading, and participation in events like Launchpool." },
   { q: "Why is an advanced verification necessary?", a: "Advanced verification unlocks higher limits. Rewards Hub with exclusive beginner rewards, and gain access to more platform features, including deposits, buy crypto, trade, and more." },
 ];
 
@@ -926,7 +915,7 @@ const KycStatus = ({ route }) => {
         <KeyBoardAware style={{ flex: 1 }}>
           <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false} bounces={false}>
             <KycStepHeader
-              title={isKyb ? (statusCanonical === "PENDING" || statusCanonical === "APPROVED" || statusCanonical === "REJECTED" ? "KYB Verification" : "KYB Verification Center") : "Verification Center"}
+              title={isKyb ? (statusCanonical === "PENDING" || statusCanonical === "APPROVED" || statusCanonical === "REJECTED" ? "KYB Verification" : "Business Verification") : "Verification Center"}
               theme={isDark ? "Dark" : "Light"}
               onInfoPress={() => faqSheetRef.current?.open()}
               onSupportPress={() => { NavigationService.navigate("Support") }}

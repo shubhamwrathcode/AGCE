@@ -142,6 +142,8 @@ export interface RegistrationProps {
 export interface LoginProps {
   email_or_phone: string;
   password: string;
+  /** Google reCAPTCHA v2 response token (web parity). */
+  token?: string;
 }
 export interface ForgotPasswordProps {
   email_or_phone: string;
