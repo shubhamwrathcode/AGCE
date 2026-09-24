@@ -21,6 +21,7 @@ import { showError, showSuccess } from '../../../helper/logger';
 import { colors } from '../../../theme/colors';
 import {
   getAntiPhishingStatus,
+  getAntiPhishingCode,
   removeAntiPhishingCode,
   sendAntiPhishingOtp,
   getPasskeyList,
@@ -28,6 +29,7 @@ import {
 } from '../../../actions/accountActions';
 import * as routes from '../../../navigation/routes';
 import { VerificationOptionsSheet } from '../../../shared/components/VerificationOptionsSheet';
+import { formatAntiPhishingCodeDisplay, pickAntiPhishingCode } from './antiPhishingCodeStorage';
 
 const DisableAntiPhishingScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -59,7 +61,10 @@ const DisableAntiPhishingScreen = ({ route }) => {
       ]);
 
       if (statusData) {
-        setCurrentCode(statusData.antiPhishingCode || '');
+        let code = pickAntiPhishingCode(statusData);
+        const fromCodeApi = await dispatch(getAntiPhishingCode());
+        if (fromCodeApi) code = fromCodeApi;
+        setCurrentCode(code || '');
       }
 
       const hasPasskeyVal = passkeyRes?.success && passkeyRes?.data?.passkeys?.length > 0;
@@ -125,13 +130,7 @@ const DisableAntiPhishingScreen = ({ route }) => {
     };
   }, [resendTimer]);
 
-  const maskCode = (code) => {
-    if (!code) return 'X X X X X X';
-    if (code.length <= 2) return code.split('').join(' ');
-    const head = code.slice(0, 2);
-    const masked = '* '.repeat(Math.min(code.length - 2, 6)).trim();
-    return `${head.split('').join(' ')} ${masked}`;
-  };
+  const displayCode = formatAntiPhishingCodeDisplay(currentCode) || '—';
 
   const handleMethodSelect = (methodValue) => {
     const method = availableMethods.find(m => m.value === methodValue);
@@ -265,7 +264,7 @@ const DisableAntiPhishingScreen = ({ route }) => {
               keyboardShouldPersistTaps="handled"
             >
               {/* Reusable AGCE Gold Card */}
-              <AgceGoldCard code={maskCode(currentCode)} isDark={isDark} />
+              <AgceGoldCard code={displayCode} isDark={isDark} />
 
               <AppText type={TWELVE} style={[styles.validText, { color: isDark ? '#8A8A93' : '#9E9EAE', marginTop: 10, marginBottom: 10 }]}>
                 This code identifies official AGCX emails.
@@ -278,7 +277,7 @@ const DisableAntiPhishingScreen = ({ route }) => {
               <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F7', opacity: 0.7 }]}>
                 <TextInput
                   style={[styles.textInput, { color: isDark ? '#8A8A93' : '#8E8E93' }]}
-                  value={maskCode(currentCode)}
+                  value={displayCode}
                   editable={false}
                 />
               </View>

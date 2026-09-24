@@ -1536,7 +1536,8 @@ const Spot = () => {
   const { colors: themeColors, theme, isDark } = useTheme();
   const route = useRoute();
   const navigation = useNavigation();
-  const { subscribeToExchange, unsubscribeFromExchange, unsubscribeFromMarket, unsubscribeFromFutures } = useContext(SocketContext);
+  const { subscribeToExchange, unsubscribeFromExchange, unsubscribeFromMarket, unsubscribeFromFutures } =
+    useContext(SocketContext) || {};
   const dispatch = useDispatch();
 
   const coinData = useAppSelector((state) => state.home.coinData);
@@ -2362,8 +2363,8 @@ const Spot = () => {
   // Lifecycle: on focus subscribe and show content; on blur clear global loader first (no overlay), then all timers and unsubscribe
   useFocusEffect(
     useCallback(() => {
-      unsubscribeFromMarket();
-      unsubscribeFromFutures();
+      unsubscribeFromMarket?.();
+      unsubscribeFromFutures?.();
       dispatch(setLoading(false));
       isSpotFocusedRef.current = true;
       setFocusSettling(true);
@@ -2399,10 +2400,10 @@ const Spot = () => {
             setLastSocketData(null);
           }
           if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
-            unsubscribeFromExchange(lastExchange.base_currency_id, lastExchange.quote_currency_id);
+            unsubscribeFromExchange?.(lastExchange.base_currency_id, lastExchange.quote_currency_id);
           }
           const extraParams = headerTab === "Margin" ? { tradeType, pairId: currentPair?._id } : {};
-          subscribeToExchange(currentPair.base_currency_id, currentPair.quote_currency_id, extraParams);
+          subscribeToExchange?.(currentPair.base_currency_id, currentPair.quote_currency_id, extraParams);
           lastSubscribedExchangeRef.current = {
             base_currency_id: currentPair.base_currency_id,
             quote_currency_id: currentPair.quote_currency_id,
@@ -2414,7 +2415,7 @@ const Spot = () => {
       if (!currentPair?.base_currency_id || !currentPair?.quote_currency_id) {
         const lastExchange = lastSubscribedExchangeRef.current;
         if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
-          unsubscribeFromExchange(lastExchange.base_currency_id, lastExchange.quote_currency_id);
+          unsubscribeFromExchange?.(lastExchange.base_currency_id, lastExchange.quote_currency_id);
           lastSubscribedExchangeRef.current = null;
         }
         dispatch(setBuyOrders([]));
@@ -2455,7 +2456,7 @@ const Spot = () => {
         /** Do not unsubscribe or clear the order book on blur (e.g. opening SpotChartScreen).
          *  SocketProvider keeps one exchange subscription; Redux keeps last book until pair changes or Spot unmounts. */
       };
-    }, [subscribeToExchange, unsubscribeFromExchange, currency, dispatch, headerTab, marginMode])
+    }, [subscribeToExchange, unsubscribeFromExchange, unsubscribeFromMarket, unsubscribeFromFutures, currency, dispatch, headerTab, marginMode])
   );
 
   /** Tear down exchange subscription only when Spot screen unmounts (leave trading stack), not on blur. */
@@ -2463,7 +2464,7 @@ const Spot = () => {
     return () => {
       const last = lastSubscribedExchangeRef.current;
       if (last?.base_currency_id != null && last?.quote_currency_id != null) {
-        unsubscribeFromExchange(last.base_currency_id, last.quote_currency_id);
+        unsubscribeFromExchange?.(last.base_currency_id, last.quote_currency_id);
         lastSubscribedExchangeRef.current = null;
       }
     };

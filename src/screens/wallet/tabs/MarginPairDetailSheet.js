@@ -8,7 +8,8 @@ import { AppText, BOLD, FOURTEEN, SEMI_BOLD, SIXTEEN, TWELVE, TWENTY_SIX } from 
 import { colors } from "../../../theme/colors";
 import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_BORROW_REPAY_SCREEN, MARGIN_TRANSFER_SCREEN, TRADE_SCREEN } from "../../../navigation/routes";
-import { close_ic, INFO } from "../../../helper/ImageAssets";
+import { close_ic, INFO, activities_icon } from "../../../helper/ImageAssets";
+import CoinIcon from "../../../common/CoinIcon";
 import {
   formatMarginLevel,
   getMarginLevelStatus,
@@ -103,10 +104,11 @@ const MarginPairDetailSheet = forwardRef(({ theme, themeColors, selectedPair, bu
         <View style={{ flex: 1, paddingBottom: 10, backgroundColor: themeColors.background }}>
           <View style={[styles.header, { borderBottomWidth: 1, borderBottomColor: themeColors.border }]}>
             <View style={styles.titleRow}>
-              <FastImage
-                source={{ uri: buildCoinIconUri(selectedPair.icon_path) }}
+              <CoinIcon
+                coin={selectedPair}
                 style={styles.icon}
                 resizeMode="cover"
+                fallback={activities_icon}
               />
               <View>
                 <AppText type={SIXTEEN} weight={BOLD} style={{ color: themeColors.text }}>{selectedPair.pair}</AppText>

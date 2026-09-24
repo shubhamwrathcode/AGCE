@@ -126,6 +126,61 @@ const KycStatusSkeleton = () => {
   );
 };
 
+/** Privileges comparison — Crypto deposit allowed without KYC; Fiat only after KYC. */
+const KYC_PRIVILEGE_ROWS = [
+  { label: "Withdrawal", notVerified: false, verified: true },
+  { label: "Crypto deposit", notVerified: true, verified: true },
+  { label: "Fiat deposit", notVerified: false, verified: true },
+  { label: "Trading", notVerified: false, verified: true },
+  // P2P not live in app yet
+  // { label: "P2P", notVerified: false, verified: true },
+];
+
+const PrivilegeTick = () => (
+  <FastImage source={verified_kyc} style={{ width: 16, height: 16 }} />
+);
+
+const PrivilegeDash = ({ color }) => (
+  <AppText type={FOURTEEN} weight={MEDIUM} style={{ color, textAlign: "center" }}>--</AppText>
+);
+
+/** @param {"success"|"pending"} variant — pending shows lock on verified-only features */
+const KycPrivilegesTable = ({ variant = "success" }) => {
+  const { colors: themeColors } = useTheme();
+
+  return (
+    <View style={{ width: "100%", marginTop: 10 }}>
+      <View style={styles.tableHeaderRow}>
+        <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
+        <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
+        <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
+      </View>
+      {KYC_PRIVILEGE_ROWS.map((item) => {
+        // Crypto deposit (notVerified+verified): tick both columns always
+        const verifiedTick = item.verified && (variant === "success" || item.notVerified);
+        const verifiedLock = item.verified && variant === "pending" && !item.notVerified;
+        return (
+          <View key={item.label} style={styles.tableDataRow}>
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1.5, color: themeColors.text }}>{item.label}</AppText>
+            <View style={{ flex: 1, alignItems: "center" }}>
+              {item.notVerified ? <PrivilegeTick /> : <PrivilegeDash color={themeColors.text} />}
+            </View>
+            <View style={{ flex: 1, alignItems: "flex-end" }}>
+              {verifiedTick ? (
+                <PrivilegeTick />
+              ) : verifiedLock ? (
+                <FastImage source={verify_lock} style={{ width: 16, height: 16 }} tintColor="#9CA3AF" />
+              ) : (
+                <PrivilegeDash color={themeColors.text} />
+              )}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
 /** Matches `arab_global_exchange` KycPage `displayName` useMemo + `ViewComplete` / `ViewFailed` initials. */
 const KYC_AVATAR_GRADIENT = ["#a684ff", "#ad46ff", "#4f39f6"];
 const KYC_AVATAR_GRADIENT_LOCATIONS = [0, 0.5, 1];
@@ -276,27 +331,7 @@ const KycPending = ({ showResubmitButton, onResubmitPress, diditVendorStatus, on
       </View>
 
       {/* Privileges Table */}
-      <View style={{ width: "100%", marginTop: 10 }}>
-        <View style={styles.tableHeaderRow}>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
-        </View>
-        {[
-          { label: "Withdrawal", value: "--", locked: true },
-          { label: "Deposit", value: "--", locked: true },
-          { label: "Trading", value: "--", locked: true },
-          { label: "P2P", value: "--", locked: true },
-        ].map((item, idx) => (
-          <View key={idx} style={styles.tableDataRow}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1.5, color: themeColors.text }}>{item.label}</AppText>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
-            <View style={{ flex: 1, alignItems: "flex-end" }}>
-              <FastImage source={verify_lock} style={{ width: 16, height: 16 }} tintColor="#9CA3AF" />
-            </View>
-          </View>
-        ))}
-      </View>
+      <KycPrivilegesTable variant="pending" />
     </View>
   );
 };
@@ -376,27 +411,7 @@ const KycRejected = ({ onVerifyPress, isKyb }) => {
       </View>
 
       {/* Privileges Table */}
-      <View style={{ width: "100%", marginTop: 10 }}>
-        <View style={styles.tableHeaderRow}>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
-        </View>
-        {[
-          { label: "Withdrawal", value: "--", locked: true },
-          { label: "Deposit", value: "--", locked: true },
-          { label: "Trading", value: "--", locked: true },
-          { label: "P2P", value: "--", locked: true },
-        ].map((item, idx) => (
-          <View key={idx} style={styles.tableDataRow}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1.5, color: themeColors.text }}>{item.label}</AppText>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
-            <View style={{ flex: 1, alignItems: "flex-end" }}>
-              <FastImage source={verify_lock} style={{ width: 16, height: 16 }} tintColor="#9CA3AF" />
-            </View>
-          </View>
-        ))}
-      </View>
+      <KycPrivilegesTable variant="pending" />
 
     </View>
   );
@@ -548,27 +563,7 @@ const KycCompleted = ({ isKyb }) => {
       </View>
 
       {/* Privileges Table */}
-      <View style={{ width: "100%", marginTop: 10 }}>
-        <View style={styles.tableHeaderRow}>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1.5, color: "#9CA3AF" }}>Privileges</AppText>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "center" }}>Not Verified</AppText>
-          <AppText type={THIRTEEN} weight={MEDIUM} style={{ flex: 1, color: "#9CA3AF", textAlign: "right" }}>Verified</AppText>
-        </View>
-        {[
-          { label: "Withdrawal", value: "--" },
-          { label: "Deposit", value: "--" },
-          { label: "Trading", value: "--" },
-          { label: "P2P", value: "--" },
-        ].map((item, idx) => (
-          <View key={idx} style={styles.tableDataRow}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1.5, color: themeColors.text }}>{item.label}</AppText>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ flex: 1, color: themeColors.text, textAlign: "center" }}>{item.value}</AppText>
-            <View style={{ flex: 1, alignItems: "flex-end" }}>
-              <FastImage source={verified_kyc} style={{ width: 16, height: 16 }} />
-            </View>
-          </View>
-        ))}
-      </View>
+      <KycPrivilegesTable variant="success" />
     </View>
   );
 };

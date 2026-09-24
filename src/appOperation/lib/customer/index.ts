@@ -1265,6 +1265,9 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: GET security/anti-phishing/status - returns { success, data: { hasAntiPhishingCode, antiPhishingCode, methods } } */
   get_anti_phishing_status: () =>
     appOperation.get('security/anti-phishing/status', undefined, undefined, CUSTOMER_TYPE),
+  /** GET security/anti-phishing/code — returns the saved anti-phishing code for display */
+  get_anti_phishing_code: () =>
+    appOperation.get('security/anti-phishing/code', undefined, undefined, CUSTOMER_TYPE),
   /** Same as web: POST security/anti-phishing/send-otp - body { target } */
   send_anti_phishing_otp: (target: string) =>
     appOperation.post('security/anti-phishing/send-otp', { target }, CUSTOMER_TYPE),

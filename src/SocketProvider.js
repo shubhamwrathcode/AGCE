@@ -98,6 +98,7 @@ export const SocketProvider = ({ children }) => {
       return;
     }
     currentExchangeSubscription.current = subKey;
+    setExchangeData(null);
     const payload = {
       base_currency_id: baseCurrencyId,
       quote_currency_id: quoteCurrencyId,
@@ -113,6 +114,7 @@ export const SocketProvider = ({ children }) => {
   const unsubscribeFromExchange = useCallback((baseCurrencyId, quoteCurrencyId) => {
     currentExchangeSubscription.current = null;
     pendingSubscriptions.current.exchange = null;
+    setExchangeData(null);
     if (socketService.getSocket()?.connected && baseCurrencyId != null && quoteCurrencyId != null) {
       socketService.emit("exchange:unsubscribe", {
         base_currency_id: baseCurrencyId,
@@ -269,14 +271,17 @@ export const SocketProvider = ({ children }) => {
       // Throttle exchange updates to avoid Redux/render storms (Spot screen is heavy).
       let lastExchangeFlush = 0;
       let pendingExchangeData = null;
-      // Production: keep UI responsive (history tabs + lists)
-      const EXCHANGE_THROTTLE_MS = 800;
+      // Match futures cadence so ticker last price stays live (was 800ms → felt stuck).
+      const EXCHANGE_THROTTLE_MS = 300;
 
       const flushExchangeData = () => {
         if (!pendingExchangeData) return;
         const data = pendingExchangeData;
         pendingExchangeData = null;
         lastExchangeFlush = Date.now();
+        // Web parity: keep live exchange payload in context (ticker.buy_price drives header price).
+        setExchangeData(data);
+        // Also push order book / trades / balances into Redux for Spot screens.
         dispatch(setCoinData(data));
         dispatch(setSocketLoading(false));
         dispatch(setLoading(false));

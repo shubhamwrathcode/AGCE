@@ -2,6 +2,7 @@
   "buildFiles": [
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/@react-native-clipboard/clipboard/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/@react-native-community/blur/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/@react-native-community/datetimepicker/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/@react-native-google-signin/google-signin/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/@react-native-picker/picker/android/src/main/jni/CMakeLists.txt",
@@ -116,6 +117,11 @@
     },
     "react_codegen_pagerview::@7032a8921530ec438d60": {
       "artifactName": "react_codegen_pagerview",
+      "abi": "x86_64",
+      "runtimeFiles": []
+    },
+    "react_codegen_rnblurview::@9a34ffec6e39b5c9049e": {
+      "artifactName": "react_codegen_rnblurview",
       "abi": "x86_64",
       "runtimeFiles": []
     },

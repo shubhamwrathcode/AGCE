@@ -46,6 +46,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86_64/AsyncStorageSpec_autolinked_build/cmake_install.cmake")
   include("/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86_64/rnclipboard_autolinked_build/cmake_install.cmake")
+  include("/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86_64/rnblurview_autolinked_build/cmake_install.cmake")
   include("/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86_64/RNDateTimePickerCGen_autolinked_build/cmake_install.cmake")
   include("/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86_64/RNGoogleSignInCGen_autolinked_build/cmake_install.cmake")
   include("/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86_64/rnpicker_autolinked_build/cmake_install.cmake")

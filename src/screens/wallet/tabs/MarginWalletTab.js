@@ -13,6 +13,8 @@ import IsolatedMarginRiskModal from "../../spotScreen/isolatedMargin/IsolatedMar
 import NavigationService from "../../../navigation/NavigationService";
 import { MARGIN_TRANSFER_SCREEN } from "../../../navigation/routes";
 import WalletShimmerCell from "../WalletShimmerCell";
+import { useAppSelector } from "../../../store/hooks";
+import { buildMarketIconIndex, withMarketCoinIcon } from "../../../helper/walletCoinIcon";
 import {
   buildMarginRiskRow,
   formatMarginLevel,
@@ -36,7 +38,7 @@ function fmtPrice(val) {
   return str === "0" ? "0.00" : str;
 }
 
-function buildPairRows(balanceRows, accounts) {
+function buildPairRows(balanceRows, accounts, marketIconBySymbol) {
   const accountMap = {};
   for (const acc of accounts) accountMap[acc.pair] = acc;
 
@@ -63,13 +65,15 @@ function buildPairRows(balanceRows, accounts) {
     const thresholds = resolveMarginThresholds(acc);
     const mlStatus = getMarginLevelStatus(hasDebt ? ml : null, thresholds, { hasDebt });
     const mlDisplay = hasDebt ? formatMarginLevel(ml) : (ml == null ? "—" : "Safe");
-    return {
+    const baseSym = base?.coin || acc.base_asset || "";
+    const quoteSym = quote?.coin || acc.quote_asset || "";
+    const row = {
       pair_id: acc.pair_id || "",
-      pair: `${base?.coin || acc.base_asset || ""}/${quote?.coin || acc.quote_asset || ""}`,
+      pair: `${baseSym}/${quoteSym}`,
       pairRaw: pair,
-      base: base?.coin || acc.base_asset || "",
-      quote: quote?.coin || acc.quote_asset || "",
-      icon_path: acc.icon_path || "",
+      base: baseSym,
+      quote: quoteSym,
+      icon_path: acc.icon_path || base?.icon_path || base?.icon_url || "",
       mmr: mlDisplay !== "—" ? mlDisplay : null,
       marginLevel: mlDisplay,
       margin_level: acc.margin_level,
@@ -100,11 +104,16 @@ function buildPairRows(balanceRows, accounts) {
         : (parseFloat(acc.quote_balance || 0) + parseFloat(acc.quote_locked || 0) - parseFloat(acc.quote_borrowed || 0)).toString()),
       liqPrice: fmtPrice(base?.est_liquidation_price ?? quote?.est_liquidation_price ?? ""),
     };
+    return withMarketCoinIcon(row, marketIconBySymbol);
   });
 }
 
 const MarginWalletTab = ({ theme, themeColors, marginSummary: propMarginSummary, buildCoinIconUri }) => {
   const isDark = theme === "Dark";
+  const coinData = useAppSelector((state) => state.home.coinData);
+  const marketIconBySymbol = useMemo(() => buildMarketIconIndex(coinData), [coinData]);
+  const marketIconRef = useRef(marketIconBySymbol);
+  marketIconRef.current = marketIconBySymbol;
   const [pairs, setPairs] = useState([]);
   const [localSummary, setLocalSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,7 +153,7 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary: propMarginSummary,
           if (balRes?.success || accRes?.success) {
             const accs = accRes?.data || [];
             const bals = balRes?.data || [];
-            if (active) setPairs(buildPairRows(bals, accs));
+            if (active) setPairs(buildPairRows(bals, accs, marketIconRef.current));
           }
           if (sumRes?.success && sumRes?.data && active) {
             setLocalSummary(sumRes.data);
@@ -164,6 +173,25 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary: propMarginSummary,
       };
     }, [])
   );
+
+  // Market list may load after margin accounts — backfill icons (HBAR etc.).
+  useEffect(() => {
+    if (!marketIconBySymbol || Object.keys(marketIconBySymbol).length === 0) return;
+    setPairs((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+      let changed = false;
+      const next = prev.map((row) => {
+        if (row?.icon_path) return row;
+        const enriched = withMarketCoinIcon(row, marketIconBySymbol);
+        if (enriched?.icon_path && enriched.icon_path !== row?.icon_path) {
+          changed = true;
+          return enriched;
+        }
+        return row;
+      });
+      return changed ? next : prev;
+    });
+  }, [marketIconBySymbol]);
 
   const filtered = useMemo(() => {
     let rows = pairs;

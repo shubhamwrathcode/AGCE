@@ -873,7 +873,7 @@ export const addNewBakAccount =
         showError(response?.message);
         NavigationService.goBack();
       }
-    } catch (e) {
+    } catch (e:any) {
       logger(e);
       showError(e?.message);
     } finally {
@@ -914,7 +914,7 @@ export const submitTicket =
       } else {
         showError(response?.message);
       }
-    } catch (e) {
+    } catch (e:any) {
       logger(e);
       showError(e?.message);
     } finally {
@@ -957,7 +957,7 @@ export const deleteBankAccount = (id: any) => async (dispatch: AppDispatch) => {
       dispatch(getUserBankDetails());
       showError(response?.message);
     }
-  } catch (e) {
+  } catch (e:any) {
     logger(e);
     showError(e?.message);
   } finally {
@@ -975,7 +975,7 @@ export const updateRating =
         showError(response?.message);
         dispatch(setLoading(false));
       }
-    } catch (e) {
+    } catch (e:any) {
       logger(e);
       showError(e?.message);
     } finally {
@@ -1110,7 +1110,7 @@ export const deleteAccount = () => async (dispatch: AppDispatch) => {
       showError(response?.message);
       dispatch(logoutAction());
     }
-  } catch (e) {
+  } catch (e:any) {
     logger(e);
     showError(e?.message);
   } finally {
@@ -1128,7 +1128,7 @@ export const downLoadTradeReport =
       if (response.success) {
         showError(response?.message);
       }
-    } catch (e) {
+    } catch (e:any) {
       logger(e);
       showError(e?.message);
     } finally {
@@ -1820,7 +1820,7 @@ export const enableTwoFa = (data: any) => async (dispatch: AppDispatch) => {
     } else {
       showError(response?.message);
     }
-  } catch (e) {
+  } catch (e:any) {
     logger(e);
     showError(e?.message);
   } finally {
@@ -1832,8 +1832,50 @@ export const enableTwoFa = (data: any) => async (dispatch: AppDispatch) => {
 export const getAntiPhishingStatus = () => async (dispatch: AppDispatch) => {
   try {
     const response: any = await appOperation.customer.get_anti_phishing_status();
-    return response?.success ? response?.data : null;
+    console.log('[AntiPhishing] GET status raw response:', JSON.stringify(response, null, 2));
+    if (!response?.success) return null;
+    // Some backends nest as data.data
+    const data = response?.data?.data && typeof response.data.data === 'object'
+      ? response.data.data
+      : response?.data;
+    console.log('[AntiPhishing] GET status parsed data:', JSON.stringify(data, null, 2));
+    return data || null;
   } catch (e: any) {
+    console.log('[AntiPhishing] GET status error:', e?.message || e);
+    logger(e);
+    return null;
+  }
+};
+
+/** Anti-Phishing: GET saved code (dynamic display) — GET security/anti-phishing/code */
+export const getAntiPhishingCode = () => async (dispatch: AppDispatch) => {
+  try {
+    const response: any = await appOperation.customer.get_anti_phishing_code();
+    console.log('[AntiPhishing] GET code raw response:', JSON.stringify(response, null, 2));
+    if (!response?.success) {
+      console.log('[AntiPhishing] GET code not success:', response?.message);
+      return null;
+    }
+    const data = response?.data?.data && typeof response.data.data === 'object'
+      ? response.data.data
+      : response?.data;
+    console.log('[AntiPhishing] GET code parsed data:', JSON.stringify(data, null, 2));
+    if (data == null) return null;
+    if (typeof data === 'string' || typeof data === 'number') {
+      console.log('[AntiPhishing] GET code as primitive:', String(data));
+      return String(data).trim();
+    }
+    const code =
+      data?.antiPhishingCode ??
+      data?.anti_phishing_code ??
+      data?.code ??
+      data?.phishingCode ??
+      '';
+    const result = code != null && String(code).trim() !== '' ? String(code).trim() : null;
+    console.log('[AntiPhishing] GET code extracted:', result);
+    return result;
+  } catch (e: any) {
+    console.log('[AntiPhishing] GET code error:', e?.message || e);
     logger(e);
     return null;
   }

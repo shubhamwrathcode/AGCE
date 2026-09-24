@@ -36,7 +36,8 @@ import {
   usdtPerp,
   btcPerp,
   optionIc,
-  add
+  add,
+  activities_icon,
 } from "../../helper/ImageAssets";
 import SimpleToast from "react-native-simple-toast";
 import { fontFamilyMedium } from "../../theme/typography";
@@ -46,6 +47,9 @@ import { MARGIN_BORROW_REPAY_HISTORY_SCREEN } from "../../navigation/routes";
 import { MARGIN_TRANSFER_HISTORY_SCREEN, TRANSFER_HISTORY_SCREEN } from "../../navigation/routes";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
 import LinearGradient from "react-native-linear-gradient";
+import CoinIcon from "../../common/CoinIcon";
+import { buildMarketIconIndex, withMarketCoinIcon, enrichWalletRowsWithMarketIcons } from "../../helper/walletCoinIcon";
+import { useAppSelector } from "../../store/hooks";
 
 const SHIMMER_STRIP = 160;
 function ShimmerCell({ width: w, height, borderRadius = 6, style }) {
@@ -150,6 +154,11 @@ const MarginTransfer = () => {
   const inputBgColor = isDark ? darkTheme.darkThemeInputColor : "#F2F2F7";
   const route = useRoute();
   const navigation = useNavigation();
+  const coinData = useAppSelector((state) => state.home.coinData);
+  const marketIconBySymbol = useMemo(
+    () => buildMarketIconIndex(coinData),
+    [coinData]
+  );
 
   const [fromWalletType, setFromWalletType] = useState(route?.params?.fromWalletType || "spot");
   const [toWalletType, setToWalletType] = useState(route?.params?.toWalletType || "main");
@@ -173,6 +182,7 @@ const MarginTransfer = () => {
   const [currencyData, setCurrencyData] = useState([]);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [coinSearch, setCoinSearch] = useState("");
+  const [pairSearch, setPairSearch] = useState("");
   const [availableWallets, setAvailableWallets] = useState([]);
 
   const [marginPairs, setMarginPairs] = useState([]);
@@ -303,14 +313,41 @@ const MarginTransfer = () => {
 
 
   const filteredCoins = useMemo(() => {
-    if (!coinSearch) return currencyData;
+    const enriched = enrichWalletRowsWithMarketIcons(currencyData, coinData);
+    if (!coinSearch) return enriched;
     const s = coinSearch.toLowerCase();
-    return currencyData.filter(
+    return enriched.filter(
       (c) =>
         (c?.short_name || "").toLowerCase().includes(s) ||
         (c?.currency || "").toLowerCase().includes(s)
     );
-  }, [currencyData, coinSearch]);
+  }, [currencyData, coinData, coinSearch]);
+
+  const displaySelectedCurrency = useMemo(
+    () => withMarketCoinIcon(selectedCurrency, marketIconBySymbol),
+    [selectedCurrency, marketIconBySymbol]
+  );
+
+  const enrichedMarginPairs = useMemo(
+    () => marginPairs.map((p) => withMarketCoinIcon(p, marketIconBySymbol)),
+    [marginPairs, marketIconBySymbol]
+  );
+
+  const displaySelectedPair = useMemo(
+    () => withMarketCoinIcon(selectedMarginPair, marketIconBySymbol),
+    [selectedMarginPair, marketIconBySymbol]
+  );
+
+  const filteredMarginPairs = useMemo(() => {
+    if (!pairSearch.trim()) return enrichedMarginPairs;
+    const s = pairSearch.trim().toLowerCase();
+    return enrichedMarginPairs.filter((p) => {
+      const base = String(p?.base_asset || "").toLowerCase();
+      const quote = String(p?.quote_asset || "").toLowerCase();
+      const pair = `${base}/${quote}`;
+      return base.includes(s) || quote.includes(s) || pair.includes(s);
+    });
+  }, [enrichedMarginPairs, pairSearch]);
 
   const handleSwapDirection = () => {
     const temp = fromWalletType;
@@ -431,31 +468,37 @@ const MarginTransfer = () => {
                 <AppText weight={SEMI_BOLD} style={[styles.sectionTitle, { color: themeColors.text }]}>Margin Pair</AppText>
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={() => rbSheetMarginPairs.current?.open()}
+                  onPress={() => {
+                    setPairSearch("");
+                    rbSheetMarginPairs.current?.open();
+                  }}
                   style={[styles.inputContainer, { backgroundColor: inputBgColor, marginBottom: 16 }]}
                 >
-                  {selectedMarginPair?.icon_path && (
-                    <FastImage
-                      source={{ uri: buildCoinIconUri(selectedMarginPair.icon_path) }}
+                  {displaySelectedPair ? (
+                    <CoinIcon
+                      coin={displaySelectedPair}
                       style={{ width: 24, height: 24, marginRight: 8, borderRadius: 12 }}
                       resizeMode="contain"
+                      fallback={activities_icon}
                     />
-                  )}
+                  ) : null}
                   <AppText weight={MEDIUM} style={{ flex: 1, color: themeColors.text, fontSize: 15 }}>
-                    {selectedMarginPair ? `${selectedMarginPair.base_asset}/${selectedMarginPair.quote_asset}` : "Select Pair"}
+                    {displaySelectedPair ? `${displaySelectedPair.base_asset}/${displaySelectedPair.quote_asset}` : "Select Pair"}
                   </AppText>
                   <FastImage source={downIcon} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
                 </TouchableOpacity>
 
-                {selectedMarginPair && (
+                {displaySelectedPair && (
                   <>
                     <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
                       {["base", "quote"].map((assetType) => {
                         const isSelected = marginAssetType === assetType;
-                        const assetName = assetType === "base" ? selectedMarginPair.base_asset : selectedMarginPair.quote_asset;
-                        const coinInfo = currencyData.find(c => c.short_name === assetName);
+                        const assetName = assetType === "base" ? displaySelectedPair.base_asset : displaySelectedPair.quote_asset;
+                        const coinInfo = withMarketCoinIcon(
+                          currencyData.find((c) => c.short_name === assetName) || { short_name: assetName, base_asset: assetName },
+                          marketIconBySymbol
+                        );
                         const coinFullName = coinInfo?.currency || assetName;
-                        const coinIcon = coinInfo?.icon_path;
 
                         return (
                           <TouchableOpacity
@@ -475,15 +518,12 @@ const MarginTransfer = () => {
                               }
                             ]}
                           >
-                            {coinIcon ? (
-                              <FastImage
-                                source={{ uri: buildCoinIconUri(coinIcon) }}
-                                style={{ width: 26, height: 26, borderRadius: 13 }}
-                                resizeMode="contain"
-                              />
-                            ) : (
-                              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: "#E5E5E5" }} />
-                            )}
+                            <CoinIcon
+                              coin={coinInfo}
+                              style={{ width: 26, height: 26, borderRadius: 13 }}
+                              resizeMode="contain"
+                              fallback={activities_icon}
+                            />
                             <View style={{ marginLeft: 8, flex: 1, alignItems: "flex-start" }}>
                               <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>
                                 {assetName}
@@ -516,15 +556,16 @@ const MarginTransfer = () => {
                   onPress={() => rbSheetCoins.current?.open()}
                   style={[styles.inputContainer, { backgroundColor: inputBgColor, marginBottom: 16 }]}
                 >
-                  {selectedCurrency ? (
-                    <FastImage
-                      source={buildCoinIconUri(selectedCurrency?.icon_path) ? { uri: buildCoinIconUri(selectedCurrency?.icon_path) } : bitcoin_ic}
-                      style={{ width: 24, height: 24, marginRight: 10 }}
+                  {displaySelectedCurrency ? (
+                    <CoinIcon
+                      coin={displaySelectedCurrency}
+                      style={{ width: 24, height: 24, marginRight: 10, borderRadius: 12 }}
                       resizeMode="contain"
+                      fallback={activities_icon}
                     />
                   ) : null}
                   <AppText weight={MEDIUM} style={{ flex: 1, color: themeColors.text, fontSize: 15 }}>
-                    {selectedCurrency?.short_name || "Select Coin"}
+                    {displaySelectedCurrency?.short_name || "Select Coin"}
                   </AppText>
                   <FastImage source={downIcon} style={{ width: 12, height: 12 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
                 </TouchableOpacity>
@@ -678,10 +719,11 @@ const MarginTransfer = () => {
                 setTransferAmount("");
               }}
             >
-              <FastImage
-                source={buildCoinIconUri(item?.icon_path) ? { uri: buildCoinIconUri(item?.icon_path) } : bitcoin_ic}
-                style={{ width: 26, height: 26 }}
+              <CoinIcon
+                coin={item}
+                style={{ width: 26, height: 26, borderRadius: 13 }}
                 resizeMode="contain"
+                fallback={activities_icon}
               />
               <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: themeColors.text, marginLeft: 12 }}>{item?.short_name}</AppText>
               {item?.currency && item.currency !== item.short_name && (
@@ -704,27 +746,42 @@ const MarginTransfer = () => {
           draggableIcon: { backgroundColor: isDark ? "#3A3A3C" : "#E5E5EA", width: 40 },
         }}
       >
-        <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text, marginBottom: 16, marginTop: 10 }}>Select Margin Pair</AppText>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {marginPairs.map((p) => (
+        <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text, marginBottom: 12, textAlign: "center", marginTop: 10 }}>
+          Select Margin Pair
+        </AppText>
+        <TextInput
+          placeholder="Search pair"
+          placeholderTextColor={themeColors.secondaryText}
+          value={pairSearch}
+          onChangeText={setPairSearch}
+          style={{
+            backgroundColor: isDark ? darkTheme.darkThemeInputColor : inputBgColor,
+            color: themeColors.text,
+            borderRadius: 10,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            marginBottom: 16,
+            fontFamily: fontFamilyMedium,
+          }}
+        />
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {filteredMarginPairs.map((p) => (
             <TouchableOpacity
               key={p.pair_id}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: themeColors.themeBorderColor }}
               onPress={() => {
                 setSelectedMarginPair(p);
+                setPairSearch("");
                 rbSheetMarginPairs.current?.close();
                 setTransferAmount("");
               }}
             >
-              {p.icon_path ? (
-                <FastImage
-                  source={{ uri: buildCoinIconUri(p.icon_path) }}
-                  style={{ width: 24, height: 24, borderRadius: 12 }}
-                  resizeMode="contain"
-                />
-              ) : (
-                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "#E5E5E5" }} />
-              )}
+              <CoinIcon
+                coin={p}
+                style={{ width: 24, height: 24, borderRadius: 12 }}
+                resizeMode="contain"
+                fallback={activities_icon}
+              />
               <AppText weight={SEMI_BOLD} style={{ flex: 1, fontSize: 15, color: themeColors.text, marginLeft: 12 }}>
                 {p.base_asset}/{p.quote_asset}
               </AppText>

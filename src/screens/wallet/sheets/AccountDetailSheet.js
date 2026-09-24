@@ -1,7 +1,6 @@
 import React from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import RBSheet from "react-native-raw-bottom-sheet";
-import Toast from "react-native-simple-toast";
 import { AppText, DISCLAIMTEXT, FOURTEEN, SEMI_BOLD, TWELVE } from "../../../shared";
 import { colors } from "../../../theme/colors";
 
@@ -116,6 +115,7 @@ const AccountDetailSheet = ({
               >
                 <AppText weight={SEMI_BOLD} type={FOURTEEN}>Transfer</AppText>
               </TouchableOpacity>
+              {/* History not working — hide until fixed
               <TouchableOpacity
                 onPress={() => {
                   sheetRef.current?.close?.();
@@ -125,6 +125,7 @@ const AccountDetailSheet = ({
               >
                 <AppText weight={SEMI_BOLD} type={FOURTEEN}>History</AppText>
               </TouchableOpacity>
+              */}
             </View>
           </ScrollView>
         </View>

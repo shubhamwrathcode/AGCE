@@ -27,16 +27,24 @@ import FastImage from 'react-native-fast-image';
 import { antiphisinglock, back_ic, right_ic } from '../../../helper/ImageAssets';
 import * as routes from '../../../navigation/routes';
 import AgceGoldCard from './AgceGoldCard';
-import { getAntiPhishingStatus, removeAntiPhishingCode, getPasskeyList } from '../../../actions/accountActions';
-import { showError, showSuccess } from '../../../helper/logger';
+import { getAntiPhishingStatus, getAntiPhishingCode, removeAntiPhishingCode, getPasskeyList } from '../../../actions/accountActions';
+import { showError } from '../../../helper/logger';
 import { Passkey } from 'react-native-passkey';
 import { colors } from '../../../theme/colors';
+import {
+  pickAntiPhishingCode,
+  formatAntiPhishingCodeDisplay,
+  getAntiPhishingCodeLocal,
+  saveAntiPhishingCodeLocal,
+  clearAntiPhishingCodeLocal,
+} from './antiPhishingCodeStorage';
 
 const AntiPhishingStatus = ({ route }) => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const userData = useAppSelector(state => state.auth.userData);
   const { colors: themeColors, isDark } = useTheme();
+  const userId = userData?.userId || userData?.user_id || userData?.id || userData?.emailId || userData?.email;
 
   const [hasCode, setHasCode] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
@@ -76,26 +84,56 @@ const AntiPhishingStatus = ({ route }) => {
   const isDisableFlowRef = React.useRef(false);
   isDisableFlowRef.current = !!route?.params?.isDisableFlow;
 
-  /** Fetch anti-phishing status from API — same as web's fetchStatus */
+  /** Status + GET /anti-phishing/code for dynamic saved code display */
   const fetchStatus = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
+      console.log('[AntiPhishingStatus] fetchStatus start');
       const data = await dispatch(getAntiPhishingStatus());
+      console.log('[AntiPhishingStatus] status data:', data);
       if (data) {
-        setHasCode(!!data.hasAntiPhishingCode);
-        setCurrentCode(data.antiPhishingCode || '');
+        const enabled = !!(data.hasAntiPhishingCode ?? data.has_anti_phishing_code);
+        let code = pickAntiPhishingCode(data);
+        console.log('[AntiPhishingStatus] enabled:', enabled, 'code from status:', code);
+
+        if (enabled) {
+          // Backend: GET security/anti-phishing/code — source of truth for display
+          const fromCodeApi = await dispatch(getAntiPhishingCode());
+          console.log('[AntiPhishingStatus] code from /anti-phishing/code:', fromCodeApi);
+          if (fromCodeApi) code = fromCodeApi;
+          if (!code) code = await getAntiPhishingCodeLocal(userId);
+          console.log('[AntiPhishingStatus] final code to show:', code);
+          if (code) await saveAntiPhishingCodeLocal(userId, code);
+        } else {
+          await clearAntiPhishingCodeLocal(userId);
+          code = '';
+        }
+
+        setHasCode(enabled);
+        setCurrentCode(code || '');
         if (typeof data.message === 'string') setStatusMessage(data.message);
       } else {
-        setHasCode(false);
-        setCurrentCode('');
+        // Fallback: try code API directly, then local
+        const fromCodeApi = await dispatch(getAntiPhishingCode());
+        console.log('[AntiPhishingStatus] status null, code API:', fromCodeApi);
+        if (fromCodeApi) {
+          setHasCode(true);
+          setCurrentCode(fromCodeApi);
+          await saveAntiPhishingCodeLocal(userId, fromCodeApi);
+        } else {
+          const local = await getAntiPhishingCodeLocal(userId);
+          console.log('[AntiPhishingStatus] local fallback:', local);
+          setHasCode(!!local);
+          setCurrentCode(local || '');
+        }
       }
     } catch (error) {
+      console.log('[AntiPhishingStatus] fetchStatus error:', error);
       showError(error?.message || 'Failed to load anti-phishing status');
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [dispatch]);
-
+  }, [dispatch, userId]);
   /** Re-fetch every time the screen gets focus (same as web useEffect on mount) */
   useFocusEffect(
     useCallback(() => {
@@ -105,14 +143,7 @@ const AntiPhishingStatus = ({ route }) => {
     }, [fetchStatus])
   );
 
-  /** Mask the anti-phishing code for display: show first 2 chars + asterisks */
-  const maskCode = (code) => {
-    if (!code) return 'X X X X X X';
-    if (code.length <= 2) return code.split('').join(' ');
-    const head = code.slice(0, 2);
-    const masked = '* '.repeat(Math.min(code.length - 2, 6)).trim();
-    return `${head.split('').join(' ')} ${masked}`;
-  };
+  const displayCode = formatAntiPhishingCodeDisplay(currentCode) || '—';
 
   const handleDisablePress = () => {
     const hasGA = Number(userData?.['2fa'] || 0) === 2 || userData?.twoFaEnabled === true || userData?.isTwoFactorEnabled === true;
@@ -183,6 +214,7 @@ const AntiPhishingStatus = ({ route }) => {
           setHasCode(false);
           setCurrentCode('');
           setStatusMessage('');
+          await clearAntiPhishingCodeLocal(userId);
           // Silently sync the latest status from server
           await fetchStatus(true);
         }
@@ -201,7 +233,7 @@ const AntiPhishingStatus = ({ route }) => {
     };
 
     submitRemove();
-  }, [route?.params, dispatch, fetchStatus, navigation]);
+  }, [route?.params, dispatch, fetchStatus, navigation, userId]);
 
   return (
     <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
@@ -244,8 +276,8 @@ const AntiPhishingStatus = ({ route }) => {
           >
             {hasCode ? (
               <View style={styles.flex}>
-                {/* Reusable AGCE Gold Card showing the masked code */}
-                <AgceGoldCard code={maskCode(currentCode)} isDark={isDark} />
+                {/* Show the actual saved anti-phishing code */}
+                <AgceGoldCard code={displayCode} isDark={isDark} />
 
                 {statusMessage ? (
                   <AppText type={TWELVE} style={[styles.validText, { color: themeColors.secondaryText, marginTop: 10, marginBottom: 10 }]}>

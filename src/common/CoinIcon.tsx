@@ -13,6 +13,20 @@ const failedUrlCache = new Set<string>();
 
 const RASTER_REGEX = /\.(png|jpe?g|webp|gif|bmp)($|\?)/i;
 const SVG_REGEX = /\.svg($|\?)/i;
+const SVG_ROOT_REGEX = /^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]/i;
+
+/**
+ * Decide whether to fetch+inspect for SVG.
+ * - `.svg` → yes
+ * - `.png`/`.jpg`/… → no (FastImage)
+ * - extensionless https (Fireblocks CDN ids) → yes (content-type may be image/svg+xml)
+ */
+function shouldProbeAsSvg(uri: string): boolean {
+  if (!uri) return false;
+  if (SVG_REGEX.test(uri)) return true;
+  if (RASTER_REGEX.test(uri)) return false;
+  return true;
+}
 
 async function checkAndFetchSvg(uri: string): Promise<string | null> {
   if (svgXmlCache.has(uri)) {
@@ -27,26 +41,34 @@ async function checkAndFetchSvg(uri: string): Promise<string | null> {
       svgXmlCache.set(uri, null);
       return null;
     }
-    const contentType = res.headers.get('content-type') || '';
-    const text = await res.text();
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
 
-    if (
-      contentType.includes('svg') ||
-      text.includes('<svg') ||
-      text.includes('<SVG')
-    ) {
-      const clean = text
-        .replace(/^\uFEFF/, '') // remove UTF-8 BOM
-        .replace(/<\?xml[^>]*\?>/gi, '') // remove XML declaration
-        .replace(/<!DOCTYPE[^>]*>/gi, '') // remove DOCTYPE
-        .trim();
-      svgXmlCache.set(uri, clean);
-      return clean;
-    } else {
+    // Real raster — never treat as SVG (avoids false `<svg` match inside binary)
+    if (/image\/(png|jpe?g|webp|gif|bmp|avif)/.test(contentType)) {
       rasterUrlCache.add(uri);
       svgXmlCache.set(uri, null);
       return null;
     }
+
+    const text = await res.text();
+    const looksSvg =
+      contentType.includes('svg') ||
+      ((contentType.includes('xml') || !contentType.startsWith('image/')) &&
+        SVG_ROOT_REGEX.test(text));
+
+    if (looksSvg) {
+      const clean = text
+        .replace(/^\uFEFF/, '')
+        .replace(/<\?xml[^>]*\?>/gi, '')
+        .replace(/<!DOCTYPE[^>]*>/gi, '')
+        .trim();
+      svgXmlCache.set(uri, clean);
+      return clean;
+    }
+
+    rasterUrlCache.add(uri);
+    svgXmlCache.set(uri, null);
+    return null;
   } catch {
     svgXmlCache.set(uri, null);
     return null;
@@ -72,16 +94,18 @@ export const CoinIcon: React.FC<CoinIconProps> = memo(({
 }) => {
   const resolvedUri = directUri || (coin ? buildCoinImageUri(coin) : null);
 
-  // If clearly a raster format (e.g. .png, .jpg), don't treat as SVG
-  const isDirectRaster = Boolean(resolvedUri && RASTER_REGEX.test(resolvedUri));
-  const isDirectSvg = Boolean(resolvedUri && SVG_REGEX.test(resolvedUri));
+  const probeSvg = Boolean(resolvedUri && shouldProbeAsSvg(resolvedUri));
+  const isDirectRaster = Boolean(resolvedUri && !probeSvg);
 
   const [svgXml, setSvgXml] = useState<string | null>(() => {
     if (!resolvedUri || isDirectRaster) return null;
     return svgXmlCache.get(resolvedUri) || null;
   });
-  const [hasError, setHasError] = useState<boolean>(() => {
-    return resolvedUri ? failedUrlCache.has(resolvedUri) : false;
+  const [hasError, setHasError] = useState<boolean>(false);
+  const [probeDone, setProbeDone] = useState<boolean>(() => {
+    if (!resolvedUri) return true;
+    if (isDirectRaster) return true;
+    return svgXmlCache.has(resolvedUri) || rasterUrlCache.has(resolvedUri);
   });
 
   useEffect(() => {
@@ -89,39 +113,56 @@ export const CoinIcon: React.FC<CoinIconProps> = memo(({
 
     if (!resolvedUri) {
       setSvgXml(null);
+      setHasError(false);
+      setProbeDone(true);
       return;
+    }
+
+    // Allow retry after earlier FastImage failure on SVG CDNs (no .svg extension).
+    if (probeSvg) {
+      failedUrlCache.delete(resolvedUri);
+      if (svgXmlCache.get(resolvedUri) === null && !rasterUrlCache.has(resolvedUri)) {
+        svgXmlCache.delete(resolvedUri);
+      }
+      setHasError(false);
     }
 
     if (failedUrlCache.has(resolvedUri)) {
       setHasError(true);
+      setProbeDone(true);
       return;
     }
 
     if (isDirectRaster) {
       setSvgXml(null);
+      setHasError(false);
+      setProbeDone(true);
       return;
     }
 
     if (svgXmlCache.has(resolvedUri)) {
-      const cached = svgXmlCache.get(resolvedUri) || null;
-      setSvgXml(cached);
+      setSvgXml(svgXmlCache.get(resolvedUri) || null);
+      setProbeDone(true);
       return;
     }
 
+    if (rasterUrlCache.has(resolvedUri)) {
+      setSvgXml(null);
+      setProbeDone(true);
+      return;
+    }
+
+    setProbeDone(false);
     checkAndFetchSvg(resolvedUri).then((clean) => {
-      if (active) {
-        if (clean) {
-          setSvgXml(clean);
-        } else {
-          setSvgXml(null);
-        }
-      }
+      if (!active) return;
+      setSvgXml(clean);
+      setProbeDone(true);
     });
 
     return () => {
       active = false;
     };
-  }, [resolvedUri, isDirectRaster]);
+  }, [resolvedUri, isDirectRaster, probeSvg]);
 
   const flatStyle = StyleSheet.flatten(style) || {};
   const width = (flatStyle.width as number) || 24;
@@ -150,7 +191,6 @@ export const CoinIcon: React.FC<CoinIconProps> = memo(({
     );
   }
 
-  // Render SVG if XML is available
   if (svgXml) {
     return (
       <View
@@ -163,6 +203,7 @@ export const CoinIcon: React.FC<CoinIconProps> = memo(({
             overflow: 'hidden',
             alignItems: 'center',
             justifyContent: 'center',
+            backgroundColor: '#000',
           },
         ]}
       >
@@ -179,7 +220,17 @@ export const CoinIcon: React.FC<CoinIconProps> = memo(({
     );
   }
 
-  // Render FastImage for PNG / JPG / WebP
+  // Still probing SVG vs raster — show fallback so rows never look empty
+  if (probeSvg && !probeDone) {
+    return (
+      <FastImage
+        source={effectiveFallback}
+        style={style as StyleProp<FastImageStyle>}
+        resizeMode={resizeMode}
+      />
+    );
+  }
+
   return (
     <FastImage
       source={{ uri: resolvedUri }}

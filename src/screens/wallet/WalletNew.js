@@ -77,6 +77,11 @@ import WithdrawChoiceSheet from "./sheets/WithdrawChoiceSheet";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../../hooks/useTheme";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
+import {
+  buildMarketIconIndex,
+  enrichWalletRowsWithMarketIcons,
+  withMarketCoinIcon,
+} from "../../helper/walletCoinIcon";
 import CoinIcon from "../../common/CoinIcon";
 import { TabView } from "react-native-tab-view";
 import Toast from "react-native-simple-toast";
@@ -158,6 +163,11 @@ const WalletNew = ({ route }) => {
   const userWallet = useAppSelector((state) => {
     return state.wallet.userWallet;
   });
+  const coinData = useAppSelector((state) => state.home.coinData);
+  const marketIconBySymbol = useMemo(
+    () => buildMarketIconIndex(coinData),
+    [coinData]
+  );
   const userMainWallet = useAppSelector((state) => {
     return state.wallet.userMainWallet;
   });
@@ -176,9 +186,31 @@ const WalletNew = ({ route }) => {
   const userFuturesWallet = useAppSelector((state) => {
     return state.wallet.userFuturesWallet;
   });
-  const coinData = useAppSelector((state) => {
-    return state.home.coinData;
-  });
+
+  const userSpotWalletWithIcons = useMemo(
+    () => enrichWalletRowsWithMarketIcons(userSpotWallet, coinData),
+    [userSpotWallet, coinData]
+  );
+  const userMainWalletWithIcons = useMemo(
+    () => enrichWalletRowsWithMarketIcons(userMainWallet, coinData),
+    [userMainWallet, coinData]
+  );
+  const userSwapWalletWithIcons = useMemo(
+    () => enrichWalletRowsWithMarketIcons(userSwapWallet, coinData),
+    [userSwapWallet, coinData]
+  );
+  const userEarningWalletWithIcons = useMemo(
+    () => enrichWalletRowsWithMarketIcons(userEarningWallet, coinData),
+    [userEarningWallet, coinData]
+  );
+  const userArbitrageWalletWithIcons = useMemo(
+    () => enrichWalletRowsWithMarketIcons(userArbitrageWallet, coinData),
+    [userArbitrageWallet, coinData]
+  );
+  const userFuturesWalletWithIcons = useMemo(
+    () => enrichWalletRowsWithMarketIcons(userFuturesWallet, coinData),
+    [userFuturesWallet, coinData]
+  );
 
   const topRoutes = useMemo(
     () => [
@@ -565,8 +597,9 @@ const WalletNew = ({ route }) => {
     if (hideZeroBalance) {
       out = out.filter((it) => totalWalletQty(it) > 0);
     }
-    return out;
-  }, [userWallet, safeNum, search, hideZeroBalance, totalWalletQty]);
+    // TradingDataModal parity: fill missing wallet icons from market coinData
+    return out.map((row) => withMarketCoinIcon(row, marketIconBySymbol));
+  }, [userWallet, safeNum, search, hideZeroBalance, totalWalletQty, marketIconBySymbol]);
 
   // Spot tab UI moved to `SpotWalletTab`
 
@@ -1130,7 +1163,7 @@ const WalletNew = ({ route }) => {
                         buildCoinIconUri={buildCoinIconUri}
                         failedIconMap={failedIconMap}
                         setFailedIconMap={setFailedIconMap}
-                        userSpotWallet={userSpotWallet}
+                        userSpotWallet={userSpotWalletWithIcons}
                         spotPnlData={spotPnlData}
                         onDeposit={handleOpenDeposit}
                         onBuyCrypto={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
@@ -1222,7 +1255,7 @@ const WalletNew = ({ route }) => {
                         buildCoinIconUri={buildCoinIconUri}
                         failedIconMap={failedIconMap}
                         setFailedIconMap={setFailedIconMap}
-                        userWalletRows={userMainWallet}
+                        userWalletRows={userMainWalletWithIcons}
                         actions={[
                           { key: "deposit", label: "Deposit", onPress: handleOpenDeposit },
                           { key: "withdraw", label: "Withdraw", onPress: handleOpenWithdraw },
@@ -1266,7 +1299,7 @@ const WalletNew = ({ route }) => {
                         buildCoinIconUri={buildCoinIconUri}
                         failedIconMap={failedIconMap}
                         setFailedIconMap={setFailedIconMap}
-                        userWalletRows={userArbitrageWallet}
+                        userWalletRows={userArbitrageWalletWithIcons}
                         actions={[
                           { key: "p2p", label: "P2P Trade", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
                           {
@@ -1309,7 +1342,7 @@ const WalletNew = ({ route }) => {
                         buildCoinIconUri={buildCoinIconUri}
                         failedIconMap={failedIconMap}
                         setFailedIconMap={setFailedIconMap}
-                        userWalletRows={userSwapWallet}
+                        userWalletRows={userSwapWalletWithIcons}
                         actions={[
                           { key: "swap", label: "Swap", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
                           {
@@ -1352,7 +1385,7 @@ const WalletNew = ({ route }) => {
                         buildCoinIconUri={buildCoinIconUri}
                         failedIconMap={failedIconMap}
                         setFailedIconMap={setFailedIconMap}
-                        userWalletRows={userEarningWallet}
+                        userWalletRows={userEarningWalletWithIcons}
                         actions={[
                           { key: "earning", label: "Earning", onPress: () => NavigationService.navigate(EARNING_SCREEN) },
                           {
@@ -1431,7 +1464,7 @@ const WalletNew = ({ route }) => {
                         buildCoinIconUri={buildCoinIconUri}
                         failedIconMap={failedIconMap}
                         setFailedIconMap={setFailedIconMap}
-                        userWalletRows={userFuturesWallet}
+                        userWalletRows={userFuturesWalletWithIcons}
                         actions={[
                           { key: "futures", label: "Futures", onPress: () => Toast.showWithGravity("Coming soon", Toast.LONG, Toast.BOTTOM) },
                           {

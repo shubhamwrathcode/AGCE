@@ -19,12 +19,14 @@ import { showError } from '../../../helper/logger';
 import { colors } from '../../../theme/colors';
 import { addAntiPhishingCode } from '../../../actions/accountActions';
 import * as routes from '../../../navigation/routes';
+import { saveAntiPhishingCodeLocal } from './antiPhishingCodeStorage';
 
 const EditAntiPhishingScreen = ({ route }) => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector(state => state.auth.userData);
+  const userId = userData?.userId || userData?.user_id || userData?.id || userData?.emailId || userData?.email;
 
   // States
   const [newCode, setNewCode] = useState('');
@@ -68,6 +70,7 @@ const EditAntiPhishingScreen = ({ route }) => {
         };
         const success = await dispatch(addAntiPhishingCode(payload));
         if (success) {
+          await saveAntiPhishingCodeLocal(userId, antiPhishingCodeFromParams);
           navigation.navigate(routes.ANTI_PHISHING_CODE_SCREEN);
         }
       } catch (error) {

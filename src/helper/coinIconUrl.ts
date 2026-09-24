@@ -13,10 +13,10 @@ export function buildCoinImageUri(
         raw = coin;
     } else if (typeof coin === 'object') {
         raw =
-            coin.icon_url ||
             coin.icon_path ||
-            coin.iconUri ||
             coin.iconPath ||
+            coin.icon_url ||
+            coin.iconUri ||
             coin.icon ||
             coin.image ||
             coin.iconUrl;

@@ -1194,6 +1194,13 @@ const SpotChartScreen = () => {
     };
   }, [socket, isFocused, flushSocketToState]);
 
+  // Sync context exchange payload → local state (FuturesChartScreen parity).
+  useEffect(() => {
+    if (exchangeData) {
+      setLastSocketData(exchangeData);
+    }
+  }, [exchangeData]);
+
   const chartUri = useMemo(() => {
     const themeSlug = theme === "Dark" ? "dark" : "light";
     const symbol = `${pairBase}_${pairQuote}`;
@@ -1303,11 +1310,16 @@ const SpotChartScreen = () => {
   const maxBidCum = useMemo(() => (bidCum.length ? bidCum[bidCum.length - 1] : 0), [bidCum]);
   const maxAskCum = useMemo(() => (askCum.length ? askCum[askCum.length - 1] : 0), [askCum]);
 
-  const formatPrice = useCallback((p) => {
-    const n = Number(p);
-    if (!Number.isFinite(n)) return "—";
-    return String(toFixedFive(n));
-  }, []);
+  const formatPrice = useCallback(
+    (p) => {
+      const n = Number(p);
+      if (!Number.isFinite(n)) return "—";
+      const dec = decimalsFromIncrement(mergedPair?.tick_size, 2);
+      // Keep full tick precision so header last price visibly ticks with the book.
+      return n.toFixed(Math.min(Math.max(dec, 2), 8));
+    },
+    [decimalsFromIncrement, mergedPair?.tick_size]
+  );
 
   const formatWithCommas = useCallback((s) => {
     const str = String(s ?? "");
@@ -1327,7 +1339,7 @@ const SpotChartScreen = () => {
     [formatPrice, formatWithCommas]
   );
 
-  /** Merge REST pair snapshot with optional socket ticker (web TradeCenterSection parity). */
+  /** Merge REST pair snapshot with live book (header last price must track book like Spot order-book mid). */
   const liveMarketStats = useMemo(() => {
     const base = {
       high: mergedPair?.high_24h ?? mergedPair?.high,
@@ -1335,33 +1347,133 @@ const SpotChartScreen = () => {
       volume: mergedPair?.volume_24h ?? mergedPair?.volume ?? mergedPair?.base_volume,
       changeAbs: mergedPair?.change ?? mergedPair?.price_change_24h ?? mergedPair?.change_24hour,
       changePct: mergedPair?.change_percentage,
-      volQuote: mergedPair?.volumeQuote ?? mergedPair?.volume_quote ?? mergedPair?.quote_volume ?? mergedPair?.volume_24h_quote ?? mergedPair?.quoteVolume,
+      volQuote:
+        mergedPair?.volumeQuote ??
+        mergedPair?.volume_quote ??
+        mergedPair?.quote_volume ??
+        mergedPair?.volume_24h_quote ??
+        mergedPair?.quoteVolume,
       last: mergedPair?.buy_price ?? mergedPair?.last_price ?? mergedPair?.price,
     };
+
     const d = exchangeData || lastSocketData;
-    const latestTradePrice = recentTrades?.[0]?.price ?? d?.recent_trades?.[0]?.price;
+    const t = d?.ticker != null && typeof d.ticker === "object" ? d.ticker : null;
+    const p = d?.pair != null && typeof d.pair === "object" ? d.pair : null;
+    const src = t || p || null;
 
-    if (!d) {
-      return {
-        ...base,
-        last: latestTradePrice ?? base.last,
-      };
-    }
-    const t = d.ticker != null && typeof d.ticker === "object" ? d.ticker : null;
-    const p = d.pair != null && typeof d.pair === "object" ? d.pair : null;
-    const src = t || p || d;
-    return {
-      high: src.high_24h ?? src.high ?? src.h ?? base.high,
-      low: src.low_24h ?? src.low ?? src.l ?? base.low,
-      volume: src.volume_24h ?? src.volume ?? src.base_volume ?? src.v ?? base.volume,
-      changeAbs: src.change ?? src.price_change_24h ?? src.change_24hour ?? src.changePercentage ?? base.changeAbs,
-      changePct: src.change_percentage ?? src.changePercentage ?? src.change_24h ?? base.changePct,
-      volQuote: src.volumeQuote ?? src.volume_24h_quote ?? src.quote_volume ?? src.volume_quote ?? src.quoteVolume ?? src.q ?? base.volQuote,
-      last: src.last ?? src.buy_price ?? src.last_price ?? src.price ?? src.c ?? latestTradePrice ?? base.last,
+    const toLivePrice = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : null;
     };
-  }, [exchangeData, lastSocketData, mergedPair, recentTrades]);
 
-  const stripDisplayPrice = liveMarketStats.last ?? pairPrice;
+    /** Prefer >0 values so ticker `volume: 0` does not wipe real 24h volume. */
+    const pickPositive = (...vals) => {
+      for (const v of vals) {
+        if (v == null || v === "") continue;
+        const n = Number(v);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      return null;
+    };
+
+    // Sorted book: asks asc (best ask first), bids desc (best bid first).
+    const bestAsk = toLivePrice(
+      asksAggregated?.[0]?.price ??
+        sellOrders?.[0]?.price ??
+        sellOrders?.[0]?.rate ??
+        sellOrders?.[0]?.p
+    );
+    const bestBid = toLivePrice(
+      bidsAggregated?.[0]?.price ??
+        buyOrders?.[0]?.price ??
+        buyOrders?.[0]?.rate ??
+        buyOrders?.[0]?.p
+    );
+    const bookMid =
+      bestAsk != null && bestBid != null ? (bestAsk + bestBid) / 2 : null;
+    const tradePrice = toLivePrice(
+      recentTrades?.[0]?.price ?? d?.recent_trades?.[0]?.price
+    );
+    const tickerPrice = toLivePrice(
+      t?.buy_price ?? t?.last_price ?? t?.last ?? t?.price ?? t?.c
+    );
+
+    // Book mid/ask first — updates every exchange:update (trade/ticker alone often stay sticky).
+    const livePrice =
+      bookMid ?? bestAsk ?? bestBid ?? tradePrice ?? tickerPrice ?? toLivePrice(base.last);
+
+    if (!src && livePrice == null) return base;
+
+    const finalSrc = src || {};
+
+    return {
+      high:
+        pickPositive(finalSrc.high_24h, finalSrc.high, finalSrc.h) ?? base.high,
+      low: pickPositive(finalSrc.low_24h, finalSrc.low, finalSrc.l) ?? base.low,
+      volume:
+        pickPositive(
+          finalSrc.volume_24h,
+          finalSrc.volume,
+          finalSrc.base_volume,
+          finalSrc.v
+        ) ?? base.volume,
+      changeAbs:
+        finalSrc.change ??
+        finalSrc.price_change_24h ??
+        finalSrc.change_24hour ??
+        finalSrc.changePercentage ??
+        base.changeAbs,
+      changePct:
+        finalSrc.change_percentage ??
+        finalSrc.changePercentage ??
+        finalSrc.change_24h ??
+        base.changePct,
+      volQuote:
+        pickPositive(
+          finalSrc.volumeQuote,
+          finalSrc.volume_24h_quote,
+          finalSrc.quote_volume,
+          finalSrc.volume_quote,
+          finalSrc.quoteVolume,
+          finalSrc.q
+        ) ?? base.volQuote,
+      last: livePrice ?? base.last,
+      bestAsk,
+      bestBid,
+      bookMid,
+    };
+  }, [
+    exchangeData,
+    lastSocketData,
+    mergedPair,
+    recentTrades,
+    buyOrders,
+    sellOrders,
+    asksAggregated,
+    bidsAggregated,
+  ]);
+
+  // Dedicated header price state so the strip always re-renders when the book tick moves
+  // (mirrors Spot.jsx OrderBookPanel buy_price color+value behavior).
+  const [headerLastPrice, setHeaderLastPrice] = useState(null);
+  const headerPricePrevRef = useRef(null);
+
+  useEffect(() => {
+    const next = liveMarketStats?.last;
+    const n = Number(next);
+    if (!Number.isFinite(n) || n <= 0) return;
+    const prev = headerPricePrevRef.current;
+    if (prev != null && n === prev) return;
+    headerPricePrevRef.current = n;
+    setHeaderLastPrice(n);
+  }, [liveMarketStats?.last]);
+
+  useEffect(() => {
+    headerPricePrevRef.current = null;
+    setHeaderLastPrice(null);
+  }, [mergedPair?.base_currency_id, mergedPair?.quote_currency_id]);
+
+  const stripDisplayPrice = headerLastPrice ?? liveMarketStats.last ?? pairPrice;
   const liveChangePct = liveMarketStats.changePct ?? mergedPair?.change_percentage;
   const rawChangeAbs = liveMarketStats.changeAbs;
   const liveChangeAbs =
@@ -1371,7 +1483,32 @@ const SpotChartScreen = () => {
       ? (Number(stripDisplayPrice) * Number(liveChangePct)) / 100
       : null;
 
-  const isNeg = Number(liveChangePct ?? pairChange ?? 0) < 0;
+  const [tickDirection, setTickDirection] = useState(0); // 1 = up, -1 = down, 0 = neutral
+  const prevPriceRef = useRef(null);
+
+  useEffect(() => {
+    if (stripDisplayPrice == null || stripDisplayPrice === "—") return;
+    const curr = Number(stripDisplayPrice);
+    if (!Number.isFinite(curr)) return;
+    const prev = Number(prevPriceRef.current);
+    if (prevPriceRef.current != null && Number.isFinite(prev)) {
+      if (curr > prev) setTickDirection(1);
+      else if (curr < prev) setTickDirection(-1);
+    } else {
+      setTickDirection(Number(liveChangePct ?? pairChange ?? 0) < 0 ? -1 : 1);
+    }
+    prevPriceRef.current = curr;
+  }, [stripDisplayPrice, liveChangePct, pairChange]);
+
+  // Reset tick baseline when pair changes so we don't flash wrong direction.
+  useEffect(() => {
+    prevPriceRef.current = null;
+    setTickDirection(0);
+  }, [mergedPair?.base_currency_id, mergedPair?.quote_currency_id]);
+
+  const tickColor = tickDirection === -1 ? themeColors.red : themeColors.green;
+  const tickIconDisplay = tickDirection === -1 ? downIcon : upIcon;
+  const isNeg = tickDirection === -1 || (tickDirection === 0 && Number(liveChangePct ?? pairChange ?? 0) < 0);
   const changeColor = isNeg ? themeColors.red : themeColors.green;
 
   const formatChangeAbsDisplay = useCallback(
@@ -1717,14 +1854,14 @@ const SpotChartScreen = () => {
             <View style={styles.statsMainRow}>
               <View style={styles.statsLeftCol}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <AppText style={[styles.statMainPrice, { color: changeColor }]} numberOfLines={1}>
+                  <AppText style={[styles.statMainPrice, { color: tickColor }]} numberOfLines={1}>
                     {stripDisplayPrice != null && stripDisplayPrice !== "" ? formatPriceComma(stripDisplayPrice) : "—"}
                   </AppText>
                   <FastImage
-                    source={isNeg ? downIcon : upIcon}
+                    source={tickIconDisplay}
                     resizeMode="contain"
                     style={styles.statTrendIcon}
-                    tintColor={changeColor}
+                    tintColor={tickColor}
                   />
                 </View>
                 <AppText type={TWELVE} weight={MEDIUM} style={[styles.statChangeSectionTitle, { color: themeColors.text }]}>
