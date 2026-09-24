@@ -26,10 +26,23 @@ export const IOS_NO_PASSKEY_MESSAGE =
  * Android: unchanged Passkey.create (Credential Manager).
  */
 export const getNativePasskeyRegistration = async (request: any) => {
-  if (Platform.OS !== 'ios') {
-    return await Passkey.create(request);
+  console.log('[Passkey][Native] create start', Platform.OS, Platform.OS === 'ios' ? 'createPlatformKey' : 'Passkey.create');
+  try {
+    const result =
+      Platform.OS !== 'ios'
+        ? await Passkey.create(request)
+        : await Passkey.createPlatformKey(request);
+    console.log('[Passkey][Native] create success keys:', result ? Object.keys(result) : null);
+    return result;
+  } catch (e: any) {
+    console.log('[Passkey][Native] create FAILED', {
+      name: e?.name,
+      message: e?.message,
+      error: e?.error,
+      code: e?.code,
+    });
+    throw e;
   }
-  return await Passkey.createPlatformKey(request);
 };
 
 /**

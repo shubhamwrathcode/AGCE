@@ -17,6 +17,7 @@ import { PASSKEY_RP_ID } from '../../../helper/Constants';
 import {
   getNativePasskeyRegistration,
   isPasskeyAssociatedDomainError,
+  isPasskeyNoCredentialsError,
   waitForPasskeyNativePrompt,
 } from '../../../helper/passkeyAssertion';
 import { useFocusEffect } from '@react-navigation/native';
@@ -204,7 +205,11 @@ const EnablePasskey = ({ route, navigation }) => {
 
   // Add/Register Passkey Flow
   const handleAddPasskey = async () => {
+    console.log('[Passkey][Add] ========== START ==========');
+    console.log('[Passkey][Add] platform:', Platform.OS, 'supported:', passkeySupported, 'activeSecurityCount:', activeSecurityCount, 'existingPasskeys:', passkeys.length);
+
     if (!passkeySupported) {
+      console.log('[Passkey][Add] ABORT: device does not support passkeys');
       showError('Passkeys are not supported on this device');
       return;
     }
@@ -212,8 +217,13 @@ const EnablePasskey = ({ route, navigation }) => {
     if (activeSecurityCount >= 2) {
       try {
         setIsCreating(true);
+        console.log('[Passkey][Add] step1: fetching registration options...');
         const optionsResult = await dispatch(getPasskeyRegistrationOptions());
-        if (!optionsResult) return;
+        console.log('[Passkey][Add] step1 optionsResult:', JSON.stringify(optionsResult, null, 2));
+        if (!optionsResult) {
+          console.log('[Passkey][Add] ABORT: optionsResult null/failed');
+          return;
+        }
 
         const request = {
           challenge: optionsResult.challenge,
@@ -241,75 +251,122 @@ const EnablePasskey = ({ route, navigation }) => {
 
         };
 
-        console.warn('[Passkey] Native create request:', JSON.stringify(request, null, 2));
+        console.log('[Passkey][Add] step2: native create request:', JSON.stringify({
+          challenge: request.challenge,
+          rp: request.rp,
+          user: request.user,
+          pubKeyCredParams: request.pubKeyCredParams,
+          authenticatorSelection: request.authenticatorSelection,
+          timeout: request.timeout,
+          attestation: request.attestation,
+          rpIdConstant: PASSKEY_RP_ID,
+        }, null, 2));
+
         if (Platform.OS === 'ios') {
+          console.log('[Passkey][Add] step2b: iOS — clearing loader + waiting before native prompt');
           dispatch(setLoading(false));
           await waitForPasskeyNativePrompt();
         }
+
+        console.log('[Passkey][Add] step3: calling getNativePasskeyRegistration...');
         const passkeyResponse = await getNativePasskeyRegistration(request);
-        console.warn('[Passkey] Native Passkey.create Response:', JSON.stringify(passkeyResponse, null, 2));
-        if (passkeyResponse) {
-          const emailId = userData?.emailId || userData?.email_id || '';
-          const projectName = 'Arab Global Exchange';
-          const defaultName = emailId ? `${projectName} - ${emailId.split('@')[0]}` : `${projectName} Passkey`;
-          const deviceInfo = getMobilePasskeyDeviceInfo();
-          console.log('[Passkey][EnablePasskey] register verify starting', { defaultName, deviceInfo });
+        console.log('[Passkey][Add] step3 native response:', JSON.stringify(passkeyResponse, null, 2));
 
-          const verifyResult = await dispatch(verifyPasskeyRegistration(passkeyResponse, defaultName));
-          console.log('[Passkey][EnablePasskey] verify result:', verifyResult);
+        if (!passkeyResponse) {
+          console.log('[Passkey][Add] ABORT: native response empty/null');
+          return;
+        }
 
-          if (isVerifyPasskeyRegistrationSuccess(verifyResult)) {
-            let passkeyId = extractPasskeyIdFromVerifyResult(verifyResult);
+        const emailId = userData?.emailId || userData?.email_id || '';
+        const projectName = 'Arab Global Exchange';
+        const defaultName = emailId ? `${projectName} - ${emailId.split('@')[0]}` : `${projectName} Passkey`;
+        const deviceInfo = getMobilePasskeyDeviceInfo();
+        console.log('[Passkey][Add] step4: verify starting', { defaultName, deviceInfo, emailId: emailId ? `${emailId.slice(0, 3)}***` : '' });
 
-            if (!passkeyId) {
-              const listRes = await dispatch(getPasskeyList());
-              const list = listRes?.data?.passkeys || [];
-              passkeyId = findNewestPasskeyId(list);
-              console.log('[Passkey][EnablePasskey] passkeyId resolved from newest list item:', passkeyId);
-            }
+        const verifyResult = await dispatch(verifyPasskeyRegistration(passkeyResponse, defaultName));
+        console.log('[Passkey][Add] step4 verifyResult:', JSON.stringify(verifyResult, null, 2));
 
-            if (passkeyId) {
-              await saveLocalPasskeyDeviceInfo(String(passkeyId), deviceInfo);
-              setLocalDeviceMap((prev) => ({
-                ...prev,
-                [String(passkeyId)]: deviceInfo,
-              }));
-              setPasskeys((prev) =>
-                prev.map((pk) => {
-                  const id = String(pk._id || pk.id || '');
-                  return id === String(passkeyId) ? { ...pk, deviceInfo } : pk;
-                }),
-              );
-              console.log('[Passkey][EnablePasskey] local deviceInfo saved + UI patched', passkeyId, deviceInfo);
-            } else {
-              console.log('[Passkey][EnablePasskey] could not resolve passkeyId — list refresh only');
-            }
+        if (isVerifyPasskeyRegistrationSuccess(verifyResult)) {
+          console.log('[Passkey][Add] step5: verify SUCCESS');
+          let passkeyId = extractPasskeyIdFromVerifyResult(verifyResult);
+          console.log('[Passkey][Add] step5 passkeyId from verify:', passkeyId);
 
-            await dispatch(getUserProfile());
-            await fetchPasskeys();
+          if (!passkeyId) {
+            const listRes = await dispatch(getPasskeyList());
+            const list = listRes?.data?.passkeys || [];
+            passkeyId = findNewestPasskeyId(list);
+            console.log('[Passkey][Add] step5 passkeyId from list (newest):', passkeyId, 'listLen:', list.length);
           }
+
+          if (passkeyId) {
+            await saveLocalPasskeyDeviceInfo(String(passkeyId), deviceInfo);
+            setLocalDeviceMap((prev) => ({
+              ...prev,
+              [String(passkeyId)]: deviceInfo,
+            }));
+            setPasskeys((prev) =>
+              prev.map((pk) => {
+                const id = String(pk._id || pk.id || '');
+                return id === String(passkeyId) ? { ...pk, deviceInfo } : pk;
+              }),
+            );
+            console.log('[Passkey][Add] step6: local deviceInfo saved', passkeyId, deviceInfo);
+          } else {
+            console.log('[Passkey][Add] step6: WARN could not resolve passkeyId — list refresh only');
+          }
+
+          await dispatch(getUserProfile());
+          await fetchPasskeys();
+          console.log('[Passkey][Add] ========== SUCCESS DONE ==========');
+        } else {
+          console.log('[Passkey][Add] step5: verify FAILED / not success', verifyResult);
         }
       } catch (error) {
-        console.warn('[Passkey] Registration error:', error);
+        console.log('[Passkey][Add] ========== CATCH ERROR ==========');
+        console.log('[Passkey][Add] error.name:', error?.name);
+        console.log('[Passkey][Add] error.message:', error?.message);
+        console.log('[Passkey][Add] error.error:', error?.error);
+        console.log('[Passkey][Add] error.code:', error?.code);
+        console.log('[Passkey][Add] error.stack:', error?.stack);
+        try {
+          console.log('[Passkey][Add] error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error || {}), 2));
+        } catch (e) {
+          console.log('[Passkey][Add] error stringify failed:', e);
+        }
+        console.warn('[Passkey][Add] Registration error object:', error);
+
         const msg = String(error?.message ?? error?.error ?? '');
         if (error?.name === 'NotAllowedError' || /cancelled|cancel/i.test(msg)) {
+          console.log('[Passkey][Add] mapped: cancelled');
           showError('Registration was cancelled');
         } else if (error?.name === 'InvalidStateError') {
+          console.log('[Passkey][Add] mapped: already registered');
           showError('This passkey is already registered on this device.');
         } else if (Platform.OS === 'ios' && isPasskeyAssociatedDomainError(error)) {
+          console.log('[Passkey][Add] mapped: associated domain error');
           showError(
             'Passkey is not available on this iPhone yet. Host apple-app-site-association on arabglobal.ae, then try again.',
           );
+        } else if (isPasskeyNoCredentialsError(error)) {
+          console.log('[Passkey][Add] mapped: no credentials (likely release SHA missing from assetlinks / AASA)');
+          showError(
+            Platform.OS === 'android'
+              ? 'Passkey failed on this build. Release signing SHA must be in arabglobal.ae/.well-known/assetlinks.json (debug works, release needs upload-key fingerprint).'
+              : 'No passkey credentials returned. Check apple-app-site-association for this app Team ID.',
+          );
         } else {
+          console.log('[Passkey][Add] mapped: generic failure');
           showError(error?.message || 'Failed to create passkey');
         }
       } finally {
         setIsCreating(false);
+        console.log('[Passkey][Add] finally: isCreating=false');
       }
       return;
     }
 
     // If fewer than 2 active factors, trigger risk warning bottom sheet
+    console.log('[Passkey][Add] blocked: need 2 security factors — showing risk modal. activeSecurityCount=', activeSecurityCount);
     setRiskModalVisible(true);
   };
 
