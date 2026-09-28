@@ -1,0 +1,4 @@
+<resources>
+    <!-- Matches the splash video background (assets/lottie/splashVideo.mp4). -->
+    <color name="splash_background">#171C22</color>
+</resources>

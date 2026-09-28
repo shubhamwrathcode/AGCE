@@ -256,7 +256,7 @@ const MarginHeaderDropdowns = ({
               },
             ].map((item) => {
               const isSelected = modeDraft === item.name;
-              const activeColor = colors.primaryColor || "#00BCD4";
+              const activeColor = colors.orangeTheme;
               return (
                 <TouchableOpacity
                   key={item.name}
@@ -264,7 +264,7 @@ const MarginHeaderDropdowns = ({
                   onPress={() => setModeDraft(item.name)}
                   style={{
                     backgroundColor: isSelected
-                      ? (isDark ? "rgba(0, 188, 212, 0.08)" : "#EBF8FA")
+                      ? (isDark ? "rgba(209, 170, 103, 0.10)" : "#FBF5EA")
                       : (isDark ? (darkTheme.darkThemeInputColor || "#1E1E24") : "#F5F6F8"),
                     borderWidth: isSelected ? 1.5 : 1,
                     borderColor: isSelected
@@ -461,7 +461,7 @@ const MarginHeaderDropdowns = ({
                 rbSheetMarginMode?.current?.close();
               }}
               style={{
-                backgroundColor: colors.primaryColor || "#00BCD4",
+                backgroundColor: colors.orangeTheme,
                 borderRadius: 24,
                 paddingVertical: 14,
                 alignItems: "center",

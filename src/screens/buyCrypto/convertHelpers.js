@@ -242,6 +242,35 @@ export function formatLiveRateLine(rates, baseAsset, quoteAsset) {
   return `1 ${baseAsset || "USDT"} ≈ ${mid} ${quoteAsset || "AED"}`;
 }
 
+function firstNum(...vals) {
+  for (const v of vals) {
+    if (v == null || v === "" || typeof v === "object") continue;
+    const n = parseFloat(String(v).replace(/,/g, ""));
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function unwrapLimitsRoot(limits) {
+  if (!limits || typeof limits !== "object") return {};
+  if (limits.withdraw || limits.withdrawal || limits.deposit) return limits;
+  if (limits.limits && typeof limits.limits === "object") return unwrapLimitsRoot(limits.limits);
+  if (limits.data && typeof limits.data === "object" && !Array.isArray(limits.data)) {
+    return unwrapLimitsRoot(limits.data);
+  }
+  return limits;
+}
+
+/** `GET fiat/limits` → convert min / max per transaction in AED (same as web). */
+export function parseFiatConvertLimits(limits) {
+  const root = unwrapLimitsRoot(limits);
+  const src = root.convert && typeof root.convert === "object" ? root.convert : {};
+  return {
+    minAed: firstNum(src.min_aed, src.min, src.min_amount, src.min_per_tx),
+    maxAed: firstNum(src.max_aed_per_tx, src.max_aed, src.max_per_tx, src.max, src.max_amount),
+  };
+}
+
 export function newIdempotencyKey(prefix = "cv") {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }

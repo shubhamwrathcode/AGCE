@@ -1,4 +1,4 @@
-import { IMAGE_BASE_URL } from './Constants';
+import { IMAGE_BASE_URL, S3_PUBLIC_BASE_URL } from './Constants';
 
 /**
  * Absolute URI for coin artwork (web parity: `DepositPage` `buildCoinIconUrl`).
@@ -31,9 +31,14 @@ export function buildCoinImageUri(
     if (p.startsWith('http://') || p.startsWith('https://')) return p;
     if (p.startsWith('//')) return `https:${p}`;
     if (p.startsWith('data:')) return p;
-    const base = String(IMAGE_BASE_URL || '').replace(/\/+$/, '');
-    const rel = p.replace(/^\/+/, '');
+    const rel = p.replace(/^\/+/, '').replace(/\\/g, '/');
     if (!rel) return null;
+    if (rel.startsWith('public/') || rel.startsWith('static/')) {
+        const s3Base = String(S3_PUBLIC_BASE_URL || '').replace(/\/+$/, '');
+        const key = rel.startsWith('static/') ? `public/${rel}` : rel;
+        return `${s3Base}/${key}`;
+    }
+    const base = String(IMAGE_BASE_URL || '').replace(/\/+$/, '');
     return `${base}/${rel}`;
 }
 

@@ -13,6 +13,22 @@
         <item name="android:datePickerDialogTheme">@style/CustomDatePickerTheme</item>
     </style>
 
+    <!-- Starting window theme (before React loads). MainActivity switches to AppTheme in onCreate. -->
+    <style name="LaunchTheme" parent="AppTheme">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- react-native-splash-screen dialog shown while the JS bundle loads. -->
+    <style name="SplashScreenTheme" parent="SplashScreen_SplashTheme">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
     <style name="CustomDatePickerTheme" parent="Theme.AppCompat.Light.Dialog">
         <item name="colorAccent">#D1AA67</item>
         <item name="android:colorAccent">#D1AA67</item>

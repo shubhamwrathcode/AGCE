@@ -60,7 +60,8 @@ import {
 } from '../../actions/walletActions';
 import { getNotificationList } from '../../actions/homeActions';
 import { copyText, shortenAddress, dateFormatter } from '../../helper/utility';
-import { BACK_ICON, searchIcon, copyIcon, printIcon, upIcon, downIcon, INFO, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, back_ic, binIcon, swapNetwork, externalLinkIcon } from '../../helper/ImageAssets';
+import { BACK_ICON, searchIcon, copyIcon, printIcon, upIcon, downIcon, INFO, NO_NOTIFICATION_ICON, NO_NOTIFICATION_ICON_LIGHT, back_ic, binIcon, swapNetwork, externalLinkIcon, activities_icon } from '../../helper/ImageAssets';
+import { buildMarketIconIndex, withMarketCoinIcon } from '../../helper/walletCoinIcon';
 import { setLoading } from '../../slices/authSlice';
 // setWalletAddress removed: deposit address handled locally for web parity (address + memo)
 import { showError } from '../../helper/logger';
@@ -444,6 +445,8 @@ const DepositCoin = () => {
     const dispatch = useAppDispatch();
     const { colors: themeColors, isDark } = useTheme();
     const depositActiveCoins = useAppSelector((state) => state.wallet.depositActiveCoins);
+    const coinData = useAppSelector((state) => state.home.coinData);
+    const marketIconBySymbol = useMemo(() => buildMarketIconIndex(coinData), [coinData]);
     const notificationList = useAppSelector((state) => state.home.notificationList);
 
     const depositHistoryRedux = useAppSelector((state) => state.wallet.depositHistory);
@@ -992,12 +995,14 @@ const DepositCoin = () => {
                 onPress={() => openNetworkSheetForCoin(item)}
                 activeOpacity={disabled ? 1 : 0.7}
             >
-                <CoinIcon
-                    coin={item}
-                    style={styles.coinIcon}
-                    resizeMode="cover"
-                    placeholderBg={colors.textGray}
-                />
+                <View style={{ borderRadius: 999, overflow: 'hidden' }}>
+                    <CoinIcon
+                        coin={withMarketCoinIcon(item, marketIconBySymbol)}
+                        style={styles.coinIcon}
+                        resizeMode="cover"
+                        fallback={activities_icon}
+                    />
+                </View>
                 <View style={styles.coinInfo}>
                     <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: themeColors.text }}>
                         {item?.short_name || item?.name}
@@ -1262,12 +1267,14 @@ const DepositCoin = () => {
                                         onPress={() => openNetworkSheetForCoin(item)}
                                         activeOpacity={0.7}
                                     >
-                                        <CoinIcon
-                                            coin={item}
-                                            style={styles.depositRecentChipIcon}
-                                            resizeMode="cover"
-                                            placeholderBg={colors.textGray}
-                                        />
+                                        <View style={{ borderRadius: 999, overflow: 'hidden' }}>
+                                            <CoinIcon
+                                                coin={withMarketCoinIcon(item, marketIconBySymbol)}
+                                                style={styles.depositRecentChipIcon}
+                                                resizeMode="cover"
+                                                fallback={activities_icon}
+                                            />
+                                        </View>
                                         <AppText
                                             type={THIRTEEN}
                                             weight={SEMI_BOLD}

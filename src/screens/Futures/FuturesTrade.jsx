@@ -5,7 +5,6 @@ import FastImage from 'react-native-fast-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { BlurView } from '@react-native-community/blur';
 import { TrendingUp, ShoppingCart, Target, Check, Circle as LucideCircle, Gem, X, Info } from 'lucide-react-native';
 import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,7 +12,7 @@ import RBSheet from 'react-native-raw-bottom-sheet';
 import AnimatedBottomSheet from '../../common/AnimatedBottomSheet/AnimatedBottomSheet';
 import FuturePairList from './FuturePairList';
 import { useFuturesSocket } from './useFuturesSocket';
-import { AppText, BOLD, MEDIUM, SEMI_BOLD, TWELVE, FOURTEEN, SIXTEEN, TEN, THIRTEEN, Button } from '../../shared';
+import { AppText, BOLD, MEDIUM, SEMI_BOLD, TWELVE, FOURTEEN, SIXTEEN, TEN, THIRTEEN } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
 import { colors, darkTheme } from '../../theme/colors';
 import ToggleSwitch from '../../common/ToggleSwitch';
@@ -70,6 +69,14 @@ import NavigationService from '../../navigation/NavigationService';
 import { NAVIGATION_AUTH_STACK, KYC_STATUS_SCREEN, LOGIN_SCREEN } from '../../navigation/routes';
 import { showError } from '../../helper/logger';
 import {
+  toApiMarginMode,
+  toUiMarginMode,
+  toUiLeverage,
+  formatFuturesSymbolMarginError,
+  isMarginModeLocked,
+} from './futuresSymbolMarginHelpers';
+import FuturesLeverageSlider from './FuturesLeverageSlider';
+import {
   futuresErrSelectPair,
   futuresErrInvalidSize,
   futuresErrPriceForValue,
@@ -86,34 +93,6 @@ import {
 LogBox.ignoreLogs(['VirtualizedLists should never be nested inside plain ScrollViews']);
 
 const { width: Width, height: Height } = Dimensions.get('window');
-
-function getLeverageOptions(maxLeverage) {
-  const max = Math.max(1, Number(maxLeverage) || 125);
-  let milestones = [];
-  if (max <= 10) {
-    milestones = [1, 2, 3, 5, 10];
-  } else if (max <= 20) {
-    milestones = [2, 3, 5, 10, 15, 20];
-  } else if (max <= 50) {
-    milestones = [5, 10, 15, 20, 25, 50];
-  } else if (max <= 75) {
-    milestones = [5, 10, 20, 25, 50, 75];
-  } else if (max <= 100) {
-    milestones = [5, 10, 20, 50, 75, 100];
-  } else if (max <= 125) {
-    milestones = [5, 10, 20, 50, 75, 100, 125];
-  } else if (max <= 150) {
-    milestones = [5, 10, 20, 50, 75, 100, 125, 150];
-  } else {
-    milestones = [5, 10, 20, 50, 75, 100, 125, 150, max];
-  }
-
-  const list = milestones.filter((x) => x <= max);
-  if (!list.includes(max)) {
-    list.push(max);
-  }
-  return Array.from(new Set(list)).sort((a, b) => a - b);
-}
 
 const SHIMMER_STRIP_WIDTH_DEFAULT = 240;
 
@@ -746,6 +725,10 @@ const FuturesUI = () => {
   const [placingOrderSide, setPlacingOrderSide] = useState("");
 
   const handlePlaceOrder = async (uiSide, formSideArg) => {
+    if (isSymbolSettingsLoading) {
+      SimpleToast.show('Loading your leverage settings, please wait…', SimpleToast.SHORT);
+      return;
+    }
     const formSide = String(formSideArg || (activeTab === 'Buy' ? 'BUY' : 'SELL')).toUpperCase();
     setPlacingOrderSide(String(uiSide).toUpperCase() === "BUY" ? "BUY" : "SELL");
     try {
@@ -1054,10 +1037,104 @@ const FuturesUI = () => {
   const [orderType, setOrderType] = useState('Limit');
   const [isOrderTypeModalVisible, setIsOrderTypeModalVisible] = useState(false);
   const orderTypeSheetRef = useRef(null);
-  const [marginMode, setMarginMode] = useState('Cross');
-  const [marginModeDraft, setMarginModeDraft] = useState('Cross');
+  const [marginMode, setMarginMode] = useState('Isolated');
+  const [marginModeDraft, setMarginModeDraft] = useState('Isolated');
   const [isMarginModeModalVisible, setIsMarginModeModalVisible] = useState(false);
+  const [isSavingMarginMode, setIsSavingMarginMode] = useState(false);
   const marginModeSheetRef = useRef(null);
+  const isLoggedIn = !!userData;
+  const futuresSymbol = selectedCoin?.symbol;
+
+  const applySymbolSettings = (data) => {
+    if (!data) return;
+    if (data.margin_mode != null) {
+      const savedMode = toUiMarginMode(data.margin_mode);
+      setMarginMode(savedMode);
+      setMarginModeDraft(savedMode);
+    }
+    const savedLeverage = toUiLeverage(data.leverage);
+    if (savedLeverage != null) {
+      setMarginLeverage(savedLeverage);
+      setLeverageDraft(savedLeverage);
+    }
+  };
+
+  const [symbolSettingsLoadedFor, setSymbolSettingsLoadedFor] = useState(null);
+  const isSymbolSettingsLoading = isLoggedIn && !!futuresSymbol && symbolSettingsLoadedFor !== futuresSymbol;
+
+  useEffect(() => {
+    if (!isFocused || !isLoggedIn || !futuresSymbol) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await appOperation.customer.futuresSymbolSettings(futuresSymbol);
+        if (cancelled) return;
+        if (res?.success && res?.data) applySymbolSettings(res.data);
+      } catch (e) {
+        console.warn('futuresSymbolSettings err:', e);
+      }
+      if (!cancelled) setSymbolSettingsLoadedFor(futuresSymbol);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isFocused, isLoggedIn, futuresSymbol]);
+
+  const marginModeLocked = React.useMemo(
+    () => isMarginModeLocked(futuresSymbol, futuresPositions, futuresOpenOrders),
+    [futuresSymbol, futuresPositions, futuresOpenOrders],
+  );
+
+  const closeMarginModeSheet = () => {
+    setIsMarginModeModalVisible(false);
+    marginModeSheetRef?.current?.close?.();
+  };
+
+  const confirmMarginMode = async () => {
+    if (isSavingMarginMode) return;
+    if (marginModeDraft === marginMode) {
+      closeMarginModeSheet();
+      return;
+    }
+    if (!futuresSymbol) {
+      SimpleToast.show('Select a contract first.', SimpleToast.SHORT);
+      return;
+    }
+    if (!isLoggedIn) {
+      showError('Please sign in to change margin mode.');
+      closeMarginModeSheet();
+      navigation.navigate(LOGIN_SCREEN);
+      return;
+    }
+    if (marginModeLocked) {
+      SimpleToast.show("Mode can't change while you have an open order or position.", SimpleToast.SHORT);
+      return;
+    }
+    setIsSavingMarginMode(true);
+    try {
+      const res = await appOperation.customer.futuresMarginType({
+        symbol: futuresSymbol,
+        margin_mode: toApiMarginMode(marginModeDraft),
+      });
+      if (!res?.success) {
+        SimpleToast.show(formatFuturesSymbolMarginError(res, 'Failed to update margin mode'), SimpleToast.SHORT);
+        return;
+      }
+      applySymbolSettings(res?.data);
+      const savedMode = res?.data?.margin_mode != null ? toUiMarginMode(res.data.margin_mode) : marginModeDraft;
+      setMarginMode(savedMode);
+      setMarginModeDraft(savedMode);
+      SimpleToast.show(savedMode === 'Isolated' ? 'Switched to Isolated' : 'Switched to Cross', SimpleToast.SHORT);
+      closeMarginModeSheet();
+    } catch (e) {
+      SimpleToast.show(
+        formatFuturesSymbolMarginError(e, 'Failed to update margin mode. Please try again.'),
+        SimpleToast.SHORT,
+      );
+    } finally {
+      setIsSavingMarginMode(false);
+    }
+  };
   const tifSheetRef = useRef(null);
   const [batchAdjustMarginMode, setBatchAdjustMarginMode] = useState(false);
   const [contractUnit, setContractUnit] = useState('Amount (BTC)');
@@ -1118,7 +1195,57 @@ const FuturesUI = () => {
   const [marginLeverage, setMarginLeverage] = useState(1);
   const [leverageDraft, setLeverageDraft] = useState(1);
   const [isLeverageModalVisible, setIsLeverageModalVisible] = useState(false);
+  const [isSavingLeverage, setIsSavingLeverage] = useState(false);
+  const [isLeverageSliding, setIsLeverageSliding] = useState(false);
   const rbSheetMarginLeverage = useRef(null);
+
+  const closeLeverageSheet = () => {
+    if (isSavingLeverage) return;
+    setIsLeverageModalVisible(false);
+    rbSheetMarginLeverage.current?.close();
+  };
+
+  const confirmLeverage = async () => {
+    if (isSavingLeverage) return;
+    const maxL = Number(selectedCoin?.max_leverage) || 125;
+    const nextLev = Math.min(Math.max(1, Math.round(Number(leverageDraft) || 1)), maxL);
+    if (!futuresSymbol) {
+      SimpleToast.show('Select a contract first.', SimpleToast.SHORT);
+      return;
+    }
+    if (!isLoggedIn) {
+      showError('Please sign in to change leverage.');
+      setIsLeverageModalVisible(false);
+      navigation.navigate(LOGIN_SCREEN);
+      return;
+    }
+    setIsSavingLeverage(true);
+    try {
+      const res = await appOperation.customer.futuresSetLeverage({ symbol: futuresSymbol, leverage: nextLev });
+      if (!res?.success) {
+        SimpleToast.show(formatFuturesSymbolMarginError(res, 'Failed to update leverage'), SimpleToast.SHORT);
+        return;
+      }
+      const savedLev = toUiLeverage(res?.data?.leverage) ?? nextLev;
+      setMarginLeverage(savedLev);
+      setLeverageDraft(savedLev);
+      if (res?.data?.margin_mode != null) {
+        const savedMode = toUiMarginMode(res.data.margin_mode);
+        setMarginMode(savedMode);
+        setMarginModeDraft(savedMode);
+      }
+      SimpleToast.show('Leverage updated', SimpleToast.SHORT);
+      setIsLeverageModalVisible(false);
+      rbSheetMarginLeverage.current?.close();
+    } catch (e) {
+      SimpleToast.show(
+        formatFuturesSymbolMarginError(e, 'Failed to update leverage. Please try again.'),
+        SimpleToast.SHORT,
+      );
+    } finally {
+      setIsSavingLeverage(false);
+    }
+  };
 
   const triggerPriceInputRef = useRef(null);
   const priceInputRef = useRef(null);
@@ -1140,13 +1267,11 @@ const FuturesUI = () => {
       name: "Limit",
       description: "Buy or sell at your chosen price or better.",
       icon: TrendingUp,
-      gradient: ["#4F1D96", "#7C3AED"],
     },
     {
       name: "Market",
       description: "Instantly trade at the current market price.",
       icon: ShoppingCart,
-      gradient: ["#064E3B", "#059669"],
     },
   ];
 
@@ -1155,14 +1280,12 @@ const FuturesUI = () => {
       name: "Conditional",
       description: "Your order will be placed automatically when the target price is reached.",
       icon: Target,
-      gradient: ["#78350F", "#D97706"],
     },
   ];
 
   const renderOrderTypeRow = (item) => {
     const selected = orderType === item.name;
     const IconComponent = item.icon;
-    const glowColor = item.gradient?.[1] || "#7C3AED";
     return (
       <TouchableOpacity
         key={item.name}
@@ -1176,41 +1299,36 @@ const FuturesUI = () => {
           flexDirection: "row",
           alignItems: "center",
           backgroundColor: selected
-            ? "rgba(6, 182, 212, 0.08)"
-            : isDark
-              ? "rgba(30, 31, 36, 0.75)"
-              : "#F9FAFB",
-          borderRadius: 16,
+            ? (isDark ? "rgba(209, 170, 103, 0.10)" : "#FBF5EA")
+            : (isDark ? (darkTheme.darkThemeInputColor || "#1E1E24") : "#F5F6F8"),
+          borderRadius: 12,
           padding: 12,
           marginBottom: 8,
-          borderWidth: 1,
+          borderWidth: selected ? 1.5 : 1,
           borderColor: selected
-            ? "#06B6D4"
-            : isDark
-              ? "rgba(255, 255, 255, 0.08)"
-              : "#E5E7EB",
+            ? colors.orangeTheme
+            : (isDark ? "rgba(255, 255, 255, 0.08)" : "#E5E7EB"),
         }}
       >
-        <LinearGradient
-          colors={item.gradient || ["#4F1D96", "#7C3AED"]}
+        <View
           style={{
             width: 40,
             height: 40,
-            borderRadius: 12,
+            borderRadius: 10,
+            backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#E9ECEF",
             alignItems: "center",
             justifyContent: "center",
             marginRight: 12,
-            shadowColor: glowColor,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.45,
-            shadowRadius: 8,
-            elevation: 5,
           }}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
         >
-          {IconComponent && <IconComponent color="#FFF" size={20} strokeWidth={2} />}
-        </LinearGradient>
+          {IconComponent && (
+            <IconComponent
+              color={selected ? colors.orangeTheme : themeColors.secondaryText}
+              size={20}
+              strokeWidth={2}
+            />
+          )}
+        </View>
         <View style={{ flex: 1, marginRight: 12 }}>
           <AppText weight={SEMI_BOLD} style={{ fontSize: 14, color: themeColors.text }}>
             {item.name}
@@ -1219,7 +1337,7 @@ const FuturesUI = () => {
             weight={MEDIUM}
             style={{
               fontSize: 12,
-              color: isDark ? "#8E95A3" : "#6B7280",
+              color: themeColors.secondaryText,
               marginTop: 4,
               lineHeight: 16,
             }}
@@ -1234,7 +1352,7 @@ const FuturesUI = () => {
                 width: 22,
                 height: 22,
                 borderRadius: 11,
-                backgroundColor: "#A855F7",
+                backgroundColor: colors.orangeTheme,
                 alignItems: "center",
                 justifyContent: "center",
               }}
@@ -1242,7 +1360,7 @@ const FuturesUI = () => {
               <Check color="#FFF" size={14} strokeWidth={3} />
             </View>
           ) : (
-            <LucideCircle color={isDark ? "#4B5563" : "#D1D5DB"} size={22} strokeWidth={1.5} />
+            <LucideCircle color={isDark ? "rgba(255, 255, 255, 0.3)" : "#C7C7CC"} size={22} strokeWidth={1.5} />
           )}
         </View>
       </TouchableOpacity>
@@ -1754,6 +1872,12 @@ const FuturesUI = () => {
         </View>
 
         {/* Margin / Leverage Row */}
+        {isSymbolSettingsLoading ? (
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+            <ShimmerBox height={36} borderRadius={8} style={{ flex: 1 }} />
+            <ShimmerBox height={36} borderRadius={8} style={{ flex: 0.8 }} />
+          </View>
+        ) : (
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
           <TouchableOpacity
             style={{
@@ -1805,6 +1929,7 @@ const FuturesUI = () => {
             <FastImage source={downIcon} style={{ width: 10, height: 10 }} resizeMode='contain' tintColor="#8E8E93" />
           </TouchableOpacity>
         </View>
+        )}
 
         {/* Order Type Dropdown */}
         <TouchableOpacity
@@ -1861,7 +1986,7 @@ const FuturesUI = () => {
                 ref={triggerPriceInputRef}
                 placeholder="Trigger Price"
                 placeholderTextColor="#8E8E93"
-                selectionColor={colors.cyanTheme || "#0AA8C5"}
+                selectionColor={colors.orangeTheme}
                 value={triggerPrice}
                 maxLength={(() => {
                   const tick = getTickSize(selectedCoin);
@@ -1920,7 +2045,7 @@ const FuturesUI = () => {
                   ref={priceInputRef}
                   placeholder="Price"
                   placeholderTextColor="#8E8E93"
-                  selectionColor={colors.cyanTheme || "#0AA8C5"}
+                  selectionColor={colors.orangeTheme}
                   value={orderType === 'Conditional' ? conditionalPrice : price}
                   maxLength={(() => {
                     const tick = getTickSize(selectedCoin);
@@ -1996,7 +2121,7 @@ const FuturesUI = () => {
               ref={amountInputRef}
               placeholder="Amount"
               placeholderTextColor="#8E8E93"
-              selectionColor={colors.cyanTheme || "#0AA8C5"}
+              selectionColor={colors.orangeTheme}
               value={amount}
               maxLength={(() => {
                 const isValueUnit = (contractUnit || '').includes('Value');
@@ -2161,7 +2286,7 @@ const FuturesUI = () => {
                   ref={tpInputRef}
                   placeholder="TP Price"
                   placeholderTextColor="#8E8E93"
-                  selectionColor={colors.cyanTheme || "#0AA8C5"}
+                  selectionColor={colors.orangeTheme}
                   value={formTp}
                   maxLength={(() => {
                     const tick = getTickSize(selectedCoin);
@@ -2208,7 +2333,7 @@ const FuturesUI = () => {
                   ref={slInputRef}
                   placeholder="SL Price"
                   placeholderTextColor="#8E8E93"
-                  selectionColor={colors.cyanTheme || "#0AA8C5"}
+                  selectionColor={colors.orangeTheme}
                   value={formSl}
                   maxLength={(() => {
                     const tick = getTickSize(selectedCoin);
@@ -2281,7 +2406,7 @@ const FuturesUI = () => {
                     onChangeText={setSlippagePct}
                     placeholder="0.01~2"
                     placeholderTextColor="#8E8E93"
-                    selectionColor={colors.cyanTheme || "#0AA8C5"}
+                    selectionColor={colors.orangeTheme}
                     keyboardType="numeric"
                     textAlign="center"
                     style={{
@@ -2526,7 +2651,7 @@ const FuturesUI = () => {
             onPress={() => setIsMarginModeModalVisible(false)}
             style={{
               flex: 1,
-              backgroundColor: "rgba(0,0,0,0.6)",
+              backgroundColor: "#0006",
               justifyContent: "flex-end",
             }}
           >
@@ -2534,111 +2659,63 @@ const FuturesUI = () => {
               activeOpacity={1}
               onPress={(e) => e?.stopPropagation?.()}
               style={{
-                backgroundColor: "transparent",
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
-                borderTopWidth: 1,
-                borderLeftWidth: 1,
-                borderRightWidth: 1,
-                borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
+                backgroundColor: isDark ? colors.newThemeColor : (themeColors.background || "#FFFFFF"),
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
                 paddingHorizontal: 16,
                 paddingTop: 12,
                 paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-                overflow: "hidden",
               }}
             >
-              <BlurView
-                style={StyleSheet.absoluteFill}
-                blurType="light"
-                blurAmount={20}
-                reducedTransparencyFallbackColor="#111214"
-              />
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "rgba(10, 12, 16, 0.68)" : "rgba(255, 255, 255, 0.85)" }]} />
-              {isDark && (
-                <>
-                  <LinearGradient
-                    colors={[
-                      "rgba(16, 185, 129, 0.10)",
-                      "rgba(6, 182, 212, 0.04)",
-                      "rgba(16, 185, 129, 0.02)",
-                      "rgba(16, 185, 129, 0.07)",
-                    ]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFill}
-                    pointerEvents="none"
-                  />
-                  <LinearGradient
-                    colors={["transparent", "rgba(16, 185, 129, 0.04)", "transparent"]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={StyleSheet.absoluteFill}
-                    pointerEvents="none"
-                  />
-                </>
-              )}
-              <View style={{ alignItems: "center", marginBottom: 8 }}>
-                <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255, 255, 255, 0.2)" }} />
-              </View>
               <View>
                 <View
                   style={{
                     flexDirection: "row",
-                    alignItems: "flex-start",
                     justifyContent: "space-between",
-                    marginBottom: 6,
-                    paddingBottom: 2,
+                    alignItems: "center",
+                    paddingTop: 4,
+                    paddingBottom: 6,
                   }}
                 >
-                  <View style={{ flex: 1 }}>
-                    <AppText weight={BOLD} style={{ fontSize: 20, color: themeColors.text }}>
-                      Margin Mode
-                    </AppText>
-                    <AppText
-                      weight={MEDIUM}
-                      style={{
-                        fontSize: 13,
-                        color: isDark ? "#8E95A3" : "#6B7280",
-                        marginTop: 4,
-                      }}
-                    >
-                      Select the margin mode you want to use for placing your order.
-                    </AppText>
-                  </View>
+                  <AppText weight={BOLD} style={{ fontSize: 18, color: themeColors.text }}>
+                    Margin Mode
+                  </AppText>
                   <TouchableOpacity
                     onPress={() => setIsMarginModeModalVisible(false)}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                    style={{
-                      padding: 4,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={{ padding: 6 }}
                   >
-                    <X color={isDark ? "#9CA3AF" : themeColors.text} size={20} strokeWidth={2} />
+                    <X color={themeColors.secondaryText} size={16} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
+                <AppText
+                  style={{
+                    color: themeColors.secondaryText,
+                    fontSize: 13,
+                    marginBottom: 16,
+                  }}
+                >
+                  Select the margin mode you want to use for placing your order.
+                </AppText>
 
-                <View style={{ marginTop: 12 }}>
+                <View>
                   {[
                     {
                       name: "Isolated",
                       description:
                         "In isolated margin mode, the position margin is the allocated amount, and your loss is limited to it upon liquidation. You can also adjust the margin for positions in this mode.",
                       type: "isolated",
-                      gradientColors: ["rgba(124, 58, 237, 0.2)", "rgba(99, 102, 241, 0.2)"],
-                      iconColor: "#A78BFA",
                     },
                     {
                       name: "Cross",
                       description:
                         "In cross margin mode, the entire account balance is used as margin, and you may lose it all upon liquidation.",
                       type: "cross",
-                      gradientColors: ["rgba(6, 182, 212, 0.2)", "rgba(14, 165, 233, 0.2)"],
-                      iconColor: "#06B6D4",
                     },
                   ].map((item) => {
                     const isSelected = marginModeDraft === item.name;
-                    const activeColor = colors.cyanTheme || "#0AA8C5";
+                    const activeColor = colors.orangeTheme;
+                    const iconStroke = isSelected ? activeColor : themeColors.secondaryText;
                     return (
                       <TouchableOpacity
                         key={item.name}
@@ -2646,40 +2723,36 @@ const FuturesUI = () => {
                         onPress={() => setMarginModeDraft(item.name)}
                         style={{
                           backgroundColor: isSelected
-                            ? (isDark ? "rgba(6, 182, 212, 0.08)" : "rgba(6, 182, 212, 0.06)")
-                            : (isDark ? "rgba(255, 255, 255, 0.03)" : "#F8FAFC"),
+                            ? (isDark ? "rgba(209, 170, 103, 0.10)" : "#FBF5EA")
+                            : (isDark ? (darkTheme.darkThemeInputColor || "#1E1E24") : "#F5F6F8"),
                           borderWidth: isSelected ? 1.5 : 1,
                           borderColor: isSelected
                             ? activeColor
-                            : (isDark ? "rgba(255, 255, 255, 0.08)" : "#E2E8F0"),
-                          borderRadius: 14,
+                            : (isDark ? "rgba(255, 255, 255, 0.08)" : "#E5E7EB"),
+                          borderRadius: 12,
                           padding: 14,
                           marginBottom: 12,
                           flexDirection: "row",
                           alignItems: "center",
                         }}
                       >
-                        {/* Left Icon Badge with Subtle Gradient */}
-                        <LinearGradient
-                          colors={isSelected ? ["rgba(6, 182, 212, 0.25)", "rgba(14, 165, 233, 0.15)"] : item.gradientColors}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
+                        {/* Left Icon Badge */}
+                        <View
                           style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 12,
+                            width: 40,
+                            height: 40,
+                            borderRadius: 10,
+                            backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#E9ECEF",
                             justifyContent: "center",
                             alignItems: "center",
                             marginRight: 12,
-                            borderWidth: 1,
-                            borderColor: isSelected ? "rgba(6, 182, 212, 0.4)" : "rgba(255, 255, 255, 0.08)",
                           }}
                         >
                           {item.type === "isolated" ? (
                             <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                               <Path
                                 d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
-                                stroke={isSelected ? activeColor : (isDark ? "#A0AEC0" : "#64748B")}
+                                stroke={iconStroke}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
@@ -2688,14 +2761,14 @@ const FuturesUI = () => {
                                 cx={9}
                                 cy={7}
                                 r={4}
-                                stroke={isSelected ? activeColor : (isDark ? "#A0AEC0" : "#64748B")}
+                                stroke={iconStroke}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               />
                               <Path
                                 d="M19 8v6M22 11h-6"
-                                stroke={isSelected ? activeColor : (isDark ? "#A0AEC0" : "#64748B")}
+                                stroke={iconStroke}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                               />
@@ -2704,7 +2777,7 @@ const FuturesUI = () => {
                             <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                               <Path
                                 d="M17 21v-2a4 4 0 0 0-3-3.87M9 20H4a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v2"
-                                stroke={isSelected ? activeColor : (isDark ? "#A0AEC0" : "#64748B")}
+                                stroke={iconStroke}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
@@ -2713,28 +2786,28 @@ const FuturesUI = () => {
                                 cx={9}
                                 cy={7}
                                 r={4}
-                                stroke={isSelected ? activeColor : (isDark ? "#A0AEC0" : "#64748B")}
+                                stroke={iconStroke}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               />
                               <Path
                                 d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"
-                                stroke={isSelected ? activeColor : (isDark ? "#A0AEC0" : "#64748B")}
+                                stroke={iconStroke}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               />
                             </Svg>
                           )}
-                        </LinearGradient>
+                        </View>
 
                         {/* Middle Content */}
                         <View style={{ flex: 1, marginRight: 10 }}>
                           <AppText
-                            weight={BOLD}
+                            weight={SEMI_BOLD}
                             style={{
-                              color: isSelected ? (isDark ? "#FFFFFF" : "#0F172A") : themeColors.text,
+                              color: themeColors.text,
                               fontSize: 15,
                               marginBottom: 4,
                             }}
@@ -2743,7 +2816,7 @@ const FuturesUI = () => {
                           </AppText>
                           <AppText
                             style={{
-                              color: isDark ? "#8E95A3" : "#64748B",
+                              color: themeColors.secondaryText,
                               fontSize: 12,
                               lineHeight: 17,
                             }}
@@ -2761,7 +2834,7 @@ const FuturesUI = () => {
                             borderWidth: 2,
                             borderColor: isSelected
                               ? activeColor
-                              : (isDark ? "rgba(255, 255, 255, 0.2)" : "#CBD5E1"),
+                              : (isDark ? "rgba(255, 255, 255, 0.3)" : "#C7C7CC"),
                             justifyContent: "center",
                             alignItems: "center",
                             backgroundColor: "transparent",
@@ -2786,11 +2859,9 @@ const FuturesUI = () => {
                   <View
                     style={{
                       backgroundColor: isDark
-                        ? "rgba(255, 255, 255, 0.04)"
-                        : "rgba(0, 0, 0, 0.03)",
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.05)",
+                        ? (darkTheme.darkThemeInputColor || "rgba(255, 255, 255, 0.04)")
+                        : "#F5F6F8",
+                      borderRadius: 10,
                       padding: 12,
                       flexDirection: "row",
                       alignItems: "center",
@@ -2798,10 +2869,10 @@ const FuturesUI = () => {
                       marginTop: 4,
                     }}
                   >
-                    <Info size={16} color={isDark ? "#8E95A3" : "#64748B"} strokeWidth={2} />
+                    <Info size={16} color={themeColors.secondaryText} strokeWidth={1.8} />
                     <AppText
                       style={{
-                        color: isDark ? "#8E95A3" : "#64748B",
+                        color: themeColors.secondaryText,
                         fontSize: 12,
                         lineHeight: 16,
                         marginLeft: 8,
@@ -2832,26 +2903,42 @@ const FuturesUI = () => {
                     />
                   </View>
 
+                  {marginModeLocked && (
+                    <AppText
+                      style={{
+                        color: colors.orangeTheme,
+                        fontSize: 12,
+                        lineHeight: 16,
+                        marginBottom: 12,
+                      }}
+                    >
+                      Mode can't change while you have an open order or position.
+                    </AppText>
+                  )}
+
                   {/* Continue Button */}
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={() => {
-                      setMarginMode(marginModeDraft);
-                      setIsMarginModeModalVisible(false);
-                      marginModeSheetRef?.current?.close?.();
-                    }}
+                    disabled={isSavingMarginMode}
+                    onPress={confirmMarginMode}
                     style={{
-                      backgroundColor: colors.cyanTheme || "#0AA8C5",
+                      backgroundColor: colors.orangeTheme,
                       borderRadius: 24,
                       paddingVertical: 14,
                       alignItems: "center",
                       justifyContent: "center",
+                      marginTop: 4,
                       marginBottom: 6,
+                      opacity: isSavingMarginMode || (marginModeLocked && marginModeDraft !== marginMode) ? 0.6 : 1,
                     }}
                   >
-                    <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 16 }}>
-                      Continue
-                    </AppText>
+                    {isSavingMarginMode ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <AppText weight={SEMI_BOLD} style={{ color: "#FFFFFF", fontSize: 16 }}>
+                        Continue
+                      </AppText>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -2915,11 +3002,11 @@ const FuturesUI = () => {
                     }}
                     style={{
                       backgroundColor: isSelected
-                        ? (isDark ? "rgba(6, 182, 212, 0.08)" : "rgba(6, 182, 212, 0.06)")
+                        ? (isDark ? "rgba(209, 170, 103, 0.10)" : "#FBF5EA")
                         : 'transparent',
                       borderWidth: isSelected ? 1.5 : 1,
                       borderColor: isSelected
-                        ? (colors.cyanTheme || "#0AA8C5")
+                        ? colors.orangeTheme
                         : (isDark ? "rgba(255, 255, 255, 0.08)" : (themeColors.themeBorderColor || "#e0e0e0")),
                       borderRadius: 10,
                       paddingHorizontal: 16,
@@ -2930,7 +3017,7 @@ const FuturesUI = () => {
                     <AppText
                       weight={SEMI_BOLD}
                       style={{
-                        color: isSelected ? (colors.cyanTheme || "#0AA8C5") : themeColors.text,
+                        color: isSelected ? colors.orangeTheme : themeColors.text,
                         fontSize: 15,
                         marginBottom: 6,
                       }}
@@ -2962,7 +3049,7 @@ const FuturesUI = () => {
               }}
               style={{
                 height: 48,
-                backgroundColor: colors.cyanTheme || "#0AA8C5",
+                backgroundColor: colors.orangeTheme,
                 borderRadius: 24,
                 alignItems: "center",
                 justifyContent: "center",
@@ -3029,20 +3116,20 @@ const FuturesUI = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     backgroundColor: item.id === tif
-                      ? (isDark ? "rgba(6, 182, 212, 0.08)" : "rgba(6, 182, 212, 0.06)")
+                      ? (isDark ? "rgba(209, 170, 103, 0.10)" : "#FBF5EA")
                       : (isDark ? colors.themeElevationColor : themeColors.bg || (isDark ? '#1a1a1a' : '#f5f5f5')),
                     padding: 16,
                     borderRadius: 12,
                     marginBottom: 12,
                     borderWidth: 1,
-                    borderColor: tif === item.id ? (colors.cyanTheme || "#0AA8C5") : 'transparent'
+                    borderColor: tif === item.id ? colors.orangeTheme : 'transparent'
                   }}
                 >
                   <View style={{ flex: 1, paddingRight: 12 }}>
-                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ marginBottom: 4, color: tif === item.id ? (colors.cyanTheme || "#0AA8C5") : themeColors.text }}>{item.label}</AppText>
+                    <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ marginBottom: 4, color: tif === item.id ? colors.orangeTheme : themeColors.text }}>{item.label}</AppText>
                     <AppText type={TWELVE} color={themeColors.secondaryText}>{item.desc}</AppText>
                   </View>
-                  <View style={[styles.checkbox, tif === item.id && { backgroundColor: colors.cyanTheme || "#0AA8C5", borderColor: colors.cyanTheme || "#0AA8C5", alignItems: 'center', justifyContent: 'center' }]}>
+                  <View style={[styles.checkbox, tif === item.id && { backgroundColor: colors.orangeTheme, borderColor: colors.orangeTheme, alignItems: 'center', justifyContent: 'center' }]}>
                     {tif === item.id && <FastImage source={tick} style={{ width: 10, height: 10 }} tintColor="#FFFFFF" resizeMode="contain" />}
                   </View>
                 </TouchableOpacity>
@@ -3059,14 +3146,14 @@ const FuturesUI = () => {
         transparent={true}
         animationType="slide"
         statusBarTranslucent={true}
-        onRequestClose={() => setIsLeverageModalVisible(false)}
+        onRequestClose={closeLeverageSheet}
       >
         <TouchableOpacity
           activeOpacity={1}
-          onPress={() => setIsLeverageModalVisible(false)}
+          onPress={closeLeverageSheet}
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.6)",
+            backgroundColor: "#0006",
             justifyContent: "flex-end",
           }}
         >
@@ -3074,59 +3161,21 @@ const FuturesUI = () => {
             activeOpacity={1}
             onPress={(e) => e?.stopPropagation?.()}
             style={{
-              backgroundColor: "transparent",
-              height: 640,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              borderTopWidth: 1,
-              borderLeftWidth: 1,
-              borderRightWidth: 1,
-              borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
+              backgroundColor: isDark ? colors.newThemeColor : (themeColors.background || "#FFFFFF"),
+              maxHeight: "90%",
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
               paddingHorizontal: 16,
               paddingTop: 12,
-              paddingBottom: 16,
-              overflow: "hidden",
+              paddingBottom: Math.max(16, insets.bottom + 8),
             }}
           >
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              blurType="light"
-              blurAmount={20}
-              reducedTransparencyFallbackColor="#111214"
-            />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "rgba(10, 12, 16, 0.68)" : "rgba(255, 255, 255, 0.85)" }]} />
-            {isDark && (
-              <>
-                <LinearGradient
-                  colors={[
-                    "rgba(16, 185, 129, 0.10)",
-                    "rgba(6, 182, 212, 0.04)",
-                    "rgba(16, 185, 129, 0.02)",
-                    "rgba(16, 185, 129, 0.07)",
-                  ]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
-                <LinearGradient
-                  colors={["transparent", "rgba(16, 185, 129, 0.04)", "transparent"]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
-              </>
-            )}
-            <View style={{ alignItems: "center", marginBottom: 8 }}>
-              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255, 255, 255, 0.2)" }} />
-            </View>
-            <View style={{ flex: 1, paddingHorizontal: 4 }}>
+            <View style={{ paddingHorizontal: 4 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4, paddingBottom: 20 }}>
                 <AppText weight={BOLD} style={{ fontSize: 18, color: themeColors.text }}>
                   Adjust Leverage
                 </AppText>
-                <TouchableOpacity onPress={() => setIsLeverageModalVisible(false)} style={{ padding: 4 }}>
+                <TouchableOpacity onPress={closeLeverageSheet} style={{ padding: 4 }}>
                   <FastImage
                     source={closeIcon}
                     resizeMode="contain"
@@ -3135,7 +3184,11 @@ const FuturesUI = () => {
                   />
                 </TouchableOpacity>
               </View>
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={!isLeverageSliding}
+                style={{ flexGrow: 0, flexShrink: 1 }}
+              >
                 {/* Pair Row */}
                 <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Pair</AppText>
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
@@ -3148,188 +3201,87 @@ const FuturesUI = () => {
                   </AppText>
                 </View>
 
-                {/* Leverage Input with - / + and direct input */}
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 14, marginBottom: 8 }}>Leverage</AppText>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.03)",
-                    borderWidth: 1,
-                    borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "#E5E5EA",
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderRadius: 12,
-                    marginBottom: 20,
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => {
-                      const current = Number(leverageDraft) || 1;
-                      setLeverageDraft(Math.max(1, current - 1));
-                    }}
-                    style={{ padding: 8, paddingHorizontal: 12 }}
-                  >
-                    <AppText weight={BOLD} style={{ fontSize: 20, color: themeColors.secondaryText }}>−</AppText>
-                  </TouchableOpacity>
+                <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Leverage</AppText>
+                <FuturesLeverageSlider
+                  value={leverageDraft}
+                  onChange={setLeverageDraft}
+                  onSlidingChange={setIsLeverageSliding}
+                  maxLeverage={Number(selectedCoin?.max_leverage) || 125}
+                  isDark={isDark}
+                  themeColors={themeColors}
+                />
 
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-                    <TextInput
-                      value={String(leverageDraft)}
-                      onChangeText={(text) => {
-                        const clean = text.replace(/[^0-9]/g, "");
-                        if (!clean) {
-                          setLeverageDraft("");
-                          return;
-                        }
-                        const num = Number(clean);
-                        const maxL = Number(selectedCoin?.max_leverage) || 125;
-                        if (num > maxL) {
-                          setLeverageDraft(maxL);
-                        } else {
-                          setLeverageDraft(num);
-                        }
-                      }}
-                      onBlur={() => {
-                        if (!leverageDraft || Number(leverageDraft) < 1) {
-                          setLeverageDraft(1);
-                        }
-                      }}
-                      keyboardType="number-pad"
-                      style={{
-                        fontSize: 18,
-                        fontWeight: "600",
-                        color: themeColors.text,
-                        textAlign: "center",
-                        padding: 0,
-                        margin: 0,
-                        includeFontPadding: false,
-                      }}
-                    />
-                    <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text, marginLeft: 0 }}>x</AppText>
-                  </View>
+                {(() => {
+                  const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+                  const maxL = Number(selectedCoin?.max_leverage) || 125;
+                  const currentLev = Math.min(Math.max(1, Number(leverageDraft) || 1), maxL);
+                  const stats = computeFuturesLeverageStats({
+                    availableBalance: balanceToUse,
+                    leverage: currentLev,
+                    maxLeverage: maxL,
+                    leverageTiers: selectedCoin?.leverage_tiers || [],
+                  });
 
-                  <TouchableOpacity
-                    onPress={() => {
-                      const maxL = Number(selectedCoin?.max_leverage) || 125;
-                      const current = Number(leverageDraft) || 1;
-                      setLeverageDraft(Math.min(maxL, current + 1));
-                    }}
-                    style={{ padding: 8, paddingHorizontal: 12 }}
-                  >
-                    <AppText weight={BOLD} style={{ fontSize: 20, color: themeColors.secondaryText }}>+</AppText>
-                  </TouchableOpacity>
-                </View>
+                  const fmt = (n, dp = 2) => {
+                    const x = Number(n);
+                    return Number.isFinite(x) ? x.toLocaleString("en-US", { maximumFractionDigits: dp, minimumFractionDigits: 0 }) : "0";
+                  };
 
-                {/* Quick selector pills */}
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 }}>
-                  {getLeverageOptions(selectedCoin?.max_leverage || 125).map((x) => {
-                    const isSelected = Number(leverageDraft) === x;
-                    return (
-                      <TouchableOpacity
-                        key={`lev-${x}`}
-                        onPress={() => setLeverageDraft(x)}
-                        style={{
-                          paddingHorizontal: 16,
-                          paddingVertical: 10,
-                          borderRadius: 24,
-                          borderWidth: 1,
-                          borderColor: isSelected ? (colors.cyanTheme || '#0AA8C5') : (isDark ? "rgba(255,255,255,0.12)" : "#E5E5EA"),
-                          backgroundColor: isSelected ? 'rgba(10, 168, 197, 0.18)' : (isDark ? "rgba(255,255,255,0.05)" : "#F9F9FB"),
-                          alignItems: "center",
-                          minWidth: 54,
-                        }}
-                      >
-                        <AppText weight={isSelected ? BOLD : MEDIUM} style={{ color: isSelected ? (colors.cyanTheme || '#0AA8C5') : themeColors.text, fontSize: 14 }}>
-                          {x}x
+                  const maxNotional = stats.maxNotionalAtLev;
+                  const markPriceNum =
+                    Number(liveCoin?.mark_price) ||
+                    Number(liveCoin?.last_price) ||
+                    Number(selectedCoin?.mark_price) ||
+                    Number(price) ||
+                    0;
+                  let maxPosLabel = "—";
+                  if (maxNotional === Infinity) {
+                    maxPosLabel = "No cap";
+                  } else if (markPriceNum > 0 && Number.isFinite(maxNotional)) {
+                    maxPosLabel = `${fmt(maxNotional / markPriceNum, 8)} ${currentBaseAsset} (≈ ${fmt(maxNotional)} ${currentQuoteAsset})`;
+                  } else if (Number.isFinite(maxNotional)) {
+                    maxPosLabel = `${fmt(maxNotional)} ${currentQuoteAsset}`;
+                  }
+
+                  const noteStyle = { color: themeColors.secondaryText, fontSize: 13, lineHeight: 19, marginBottom: 8 };
+                  return (
+                    <View style={{ marginTop: 4 }}>
+                      <AppText style={noteStyle}>Maximum position at current leverage: {maxPosLabel}</AppText>
+                      <AppText style={noteStyle}>
+                        Please note that leverage changing will also apply for open positions and open orders.
+                      </AppText>
+                      <AppText style={noteStyle}>
+                        Selecting higher leverage increases your liquidation risk. Always manage your risk levels.
+                      </AppText>
+                      {balanceToUse <= 0 && (
+                        <AppText style={{ color: "#EA580C", fontSize: 13, lineHeight: 19, marginTop: 2, marginBottom: 8 }}>
+                          The current available margin ≤ 0. You can increase the leverage or add margin.
                         </AppText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Info Rows */}
-                <View style={{ marginBottom: 20 }}>
-                  {(() => {
-                    const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
-                    const maxL = Number(selectedCoin?.max_leverage) || 125;
-                    const currentLev = Math.min(Math.max(1, Number(leverageDraft) || 1), maxL);
-                    const stats = computeFuturesLeverageStats({
-                      availableBalance: balanceToUse,
-                      leverage: currentLev,
-                      maxLeverage: maxL,
-                      leverageTiers: selectedCoin?.leverage_tiers || [],
-                    });
-
-                    const fmt = (n, dp = 2) => {
-                      const x = Number(n);
-                      return Number.isFinite(x) ? x.toLocaleString("en-US", { maximumFractionDigits: dp, minimumFractionDigits: 0 }) : "0";
-                    };
-
-                    const maxNotional = stats.maxNotionalAtLev;
-                    const markPriceNum = Number(liveCoin?.mark_price) || 0;
-                    let maxPosLabel = "—";
-
-                    if (Number.isFinite(maxNotional) && maxNotional === Infinity) {
-                      maxPosLabel = "No cap";
-                    } else if (Number.isFinite(maxNotional) && maxNotional === 0) {
-                      maxPosLabel = "—";
-                    } else if (Number.isFinite(markPriceNum) && markPriceNum > 0) {
-                      const maxQty = maxNotional / markPriceNum;
-                      maxPosLabel = `${fmt(maxQty, 8)} ${selectedCoin?.base_asset || 'BTC'} (≈ ${fmt(maxNotional)} ${selectedCoin?.margin_asset || 'USDT'})`;
-                    } else if (Number.isFinite(maxNotional) && maxNotional !== Infinity) {
-                      maxPosLabel = `≈ ${fmt(maxNotional)} ${selectedCoin?.margin_asset || 'USDT'}`;
-                    }
-
-                    const quoteSymbol = selectedCoin?.margin_asset || 'USDT';
-
-                    return [
-                      { label: "Allow to Open", value: `${fmt(stats.allowToOpen)} ${quoteSymbol}` },
-                      { label: "Maximum Borrowable", value: `${fmt(stats.maximumBorrowable)} ${quoteSymbol}` },
-                      { label: "Maximum Leverage", value: `${stats.maxLeverage}x >` },
-                      { label: "Current Loan Limit", value: stats.currentLoanLimit != null ? `${fmt(stats.currentLoanLimit)} ${quoteSymbol}` : `0 ${quoteSymbol}` },
-                      { label: `Max position at ${currentLev}x`, value: maxPosLabel },
-                    ].map((row, idx) => (
-                      <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
-                        <AppText style={{ color: themeColors.secondaryText, fontSize: 14 }}>{row.label}</AppText>
-                        <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 14 }}>{row.value}</AppText>
-                      </View>
-                    ));
-                  })()}
-                </View>
-
-                {/* Warning Text */}
-                <View style={{ marginBottom: 10 }}>
-                  <AppText style={{ color: '#FF7A00', fontSize: 14, marginTop: 4, marginBottom: 20, lineHeight: 20 }}>
-                    The current available margin ≤ 0. You can increase the leverage or add margin.
-                  </AppText>
-                </View>
+                      )}
+                    </View>
+                  );
+                })()}
               </ScrollView>
 
-              {/* Confirm Button */}
-              <Button
-                title="Confirm"
-                onPress={() => {
-                  const maxL = Number(selectedCoin?.max_leverage) || 125;
-                  const finalLev = Math.min(Math.max(1, Number(leverageDraft) || 1), maxL);
-                  setMarginLeverage(finalLev);
-                  setIsLeverageModalVisible(false);
-                  rbSheetMarginLeverage.current?.close();
-                }}
-                containerStyle={{
-                  marginTop: 12,
-                  marginBottom: 8,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: colors.cyanTheme || '#0AA8C5',
-                }}
-                titleStyle={{
-                  color: '#FFFFFF',
-                  fontWeight: '700',
-                  fontSize: 16,
-                }}
-              />
+              <View style={{ marginTop: 16 }}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  disabled={isSavingLeverage}
+                  onPress={confirmLeverage}
+                  style={{
+                    height: 48,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.orangeTheme,
+                    opacity: isSavingLeverage ? 0.7 : 1,
+                  }}
+                >
+                  <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: isDark ? "#1E2329" : "#14161A" }}>
+                    {isSavingLeverage ? "Saving…" : "Confirm"}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -3348,7 +3300,7 @@ const FuturesUI = () => {
           onPress={() => setIsOrderTypeModalVisible(false)}
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.6)",
+            backgroundColor: "#0006",
             justifyContent: "flex-end",
           }}
         >
@@ -3356,90 +3308,45 @@ const FuturesUI = () => {
             activeOpacity={1}
             onPress={(e) => e?.stopPropagation?.()}
             style={{
-              backgroundColor: "transparent",
+              backgroundColor: isDark ? colors.newThemeColor : (themeColors.background || "#FFFFFF"),
               height: Math.min(540, Dimensions.get("window").height * 0.58),
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              borderTopWidth: 1,
-              borderLeftWidth: 1,
-              borderRightWidth: 1,
-              borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
               paddingHorizontal: 16,
               paddingTop: 12,
               paddingBottom: 8,
-              overflow: "hidden",
             }}
           >
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              blurType="light"
-              blurAmount={20}
-              reducedTransparencyFallbackColor="#111214"
-            />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "rgba(10, 12, 16, 0.68)" : "rgba(255, 255, 255, 0.85)" }]} />
-            {isDark && (
-              <>
-                <LinearGradient
-                  colors={[
-                    "rgba(16, 185, 129, 0.10)",
-                    "rgba(6, 182, 212, 0.04)",
-                    "rgba(16, 185, 129, 0.02)",
-                    "rgba(16, 185, 129, 0.07)",
-                  ]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
-                <LinearGradient
-                  colors={["transparent", "rgba(16, 185, 129, 0.04)", "transparent"]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
-              </>
-            )}
-            <View style={{ alignItems: "center", marginBottom: 8 }}>
-              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255, 255, 255, 0.2)" }} />
-            </View>
             <View style={{ flex: 1 }}>
               <View
                 style={{
                   flexDirection: "row",
-                  alignItems: "flex-start",
                   justifyContent: "space-between",
-                  marginBottom: 14,
-                  paddingBottom: 4,
+                  alignItems: "center",
+                  paddingTop: 4,
+                  paddingBottom: 6,
                 }}
               >
-                <View style={{ flex: 1 }}>
-                  <AppText weight={BOLD} style={{ fontSize: 20, color: themeColors.text }}>
-                    Order Type
-                  </AppText>
-                  <AppText
-                    weight={MEDIUM}
-                    style={{
-                      fontSize: 13,
-                      color: isDark ? "#8E95A3" : "#6B7280",
-                      marginTop: 4,
-                    }}
-                  >
-                    Choose how you want to place your order
-                  </AppText>
-                </View>
+                <AppText weight={BOLD} style={{ fontSize: 18, color: themeColors.text }}>
+                  Order Type
+                </AppText>
                 <TouchableOpacity
                   onPress={() => setIsOrderTypeModalVisible(false)}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  style={{
-                    padding: 4,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={{ padding: 6 }}
                 >
-                  <X color={isDark ? "#9CA3AF" : themeColors.text} size={20} strokeWidth={2} />
+                  <X color={themeColors.secondaryText} size={16} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
+              <AppText
+                style={{
+                  color: themeColors.secondaryText,
+                  fontSize: 13,
+                  marginBottom: 16,
+                }}
+              >
+                Choose how you want to place your order
+              </AppText>
 
               <ScrollView
                 style={{ flex: 1 }}
@@ -3448,12 +3355,12 @@ const FuturesUI = () => {
               >
                 {/* BASIC SECTION */}
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, marginTop: 4 }}>
-                  <Gem color="#F59E0B" size={14} strokeWidth={2.5} />
+                  <Gem color={colors.orangeTheme} size={14} strokeWidth={2.5} />
                   <AppText
                     weight={SEMI_BOLD}
                     style={{
                       fontSize: 13,
-                      color: "#F59E0B",
+                      color: colors.orangeTheme,
                       marginLeft: 8,
                       letterSpacing: 1,
                     }}
@@ -3465,12 +3372,12 @@ const FuturesUI = () => {
 
                 {/* CONDITIONAL SECTION */}
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, marginTop: 12 }}>
-                  <Gem color="#3B82F6" size={14} strokeWidth={2.5} />
+                  <Gem color={colors.orangeTheme} size={14} strokeWidth={2.5} />
                   <AppText
                     weight={SEMI_BOLD}
                     style={{
                       fontSize: 13,
-                      color: "#3B82F6",
+                      color: colors.orangeTheme,
                       marginLeft: 8,
                       letterSpacing: 1,
                     }}

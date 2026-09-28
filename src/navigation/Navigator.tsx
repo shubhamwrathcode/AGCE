@@ -99,6 +99,7 @@ import {
   TWELVE,
 } from "../shared";
 import { Platform, StyleSheet, TouchableOpacity, View, Keyboard, PanResponder, ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useSharedValue, withTiming, useAnimatedStyle, Easing as REasing, interpolateColor, interpolate } from 'react-native-reanimated';
 import Toast from "react-native-simple-toast";
 import { showError } from "../helper/logger";
@@ -173,6 +174,12 @@ import ReferAndEarn from "../screens/earning/ReferAndEarn";
 const Stack = createStackNavigator();
 const Tab = createMaterialTopTabNavigator();
 
+/** Android is edge-to-edge, so the tab bar must clear the system navigation bar (3-button / gesture). */
+const useTabBarBottomInset = () => {
+  const insets = useSafeAreaInsets();
+  return Platform.OS === "android" ? insets.bottom : 0;
+};
+
 const TabItem = ({ isFocused, routeName, onPress, onLongPress, icon, label, themeColors, isDark }: any) => {
   const progress = useSharedValue(isFocused ? 1 : 0);
 
@@ -222,6 +229,7 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
   const [visible, setVisible] = React.useState(true);
   const [localIndex, setLocalIndex] = React.useState(state.index);
   const { colors: themeColors, isDark } = useTheme();
+  const bottomInset = useTabBarBottomInset();
   const userData = useAppSelector((state: any) => state.auth.userData);
   const isLoggedIn = !!(
     (userData && (userData._id || userData.id || userData.emailId || userData.email || userData.mobileNumber || userData.token || userData.user_id || userData.username || userData.userName)) ||
@@ -326,7 +334,14 @@ const CustomBottomTabBar = ({ state, descriptors, navigation }: any) => {
 
   return (
     <View
-      style={[customTabBarStyles.container, { backgroundColor: bg, borderTopColor: borderCol }]}
+      style={[
+        customTabBarStyles.container,
+        { backgroundColor: bg, borderTopColor: borderCol },
+        bottomInset > 0 && {
+          height: TAB_BAR_BASE_HEIGHT + bottomInset,
+          paddingBottom: TAB_BAR_BASE_PADDING_BOTTOM + bottomInset,
+        },
+      ]}
       {...panResponder.panHandlers}
     >
       <View style={customTabBarStyles.scrollContent}>
@@ -861,6 +876,7 @@ function BottomNavigation() {
   const inactive = themeColors.inactiveTab;
 
   const tabBarHeight = Platform.OS === "ios" ? 78 : 66;
+  const bottomInset = useTabBarBottomInset();
 
   return (
     <ChartPreloaderProvider>
@@ -868,7 +884,12 @@ function BottomNavigation() {
         initialRouteName={routes.HOME_SCREEN}
         backBehavior={"history"}
         tabBarPosition="bottom"
-        sceneContainerStyle={{ backgroundColor: "#FFFFFF", overflow: "hidden" }}
+        sceneContainerStyle={{
+          backgroundColor: isDark ? themeColors.background : "#FFFFFF",
+          overflow: "hidden",
+          // Tab bar grows by the same inset, so screens keep their existing clearance above it.
+          paddingBottom: bottomInset,
+        }}
         tabBar={renderTabBar}
         screenOptions={{
           swipeEnabled: false,
@@ -1057,18 +1078,21 @@ const bottomTabStyles = StyleSheet.create({
   },
 });
 
+const TAB_BAR_BASE_HEIGHT = Platform.OS === "ios" ? 78 : 66;
+const TAB_BAR_BASE_PADDING_BOTTOM = Platform.OS === "ios" ? 12 : 5;
+
 const customTabBarStyles = StyleSheet.create({
   container: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === "ios" ? 78 : 66,
+    height: TAB_BAR_BASE_HEIGHT,
     backgroundColor: "transparent",
     overflow: "hidden",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#E5E7EB",
-    paddingBottom: Platform.OS === "ios" ? 12 : 5,
+    paddingBottom: TAB_BAR_BASE_PADDING_BOTTOM,
   },
   scrollContent: {
     flexDirection: "row",

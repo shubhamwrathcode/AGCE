@@ -740,6 +740,21 @@ const WithdrawalSettingsScreen = () => {
             </AppText>
           )}
         </TouchableOpacity>
+
+        {isOtpSheet && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.unavailableLink}
+            onPress={() => {
+              sheetRef.current?.close();
+              navigation.navigate(routes.SECURITY_VERIFICATION_UNAVAILABLE_SCREEN);
+            }}
+          >
+            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: primaryColor }}>
+              Security verification unavailable?
+            </AppText>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -1056,6 +1071,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+  },
+  unavailableLink: {
+    alignSelf: 'center',
+    paddingTop: 14,
+    paddingBottom: 4,
   },
   disabledButton: {
     opacity: 0.6,

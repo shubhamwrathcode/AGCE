@@ -412,6 +412,7 @@ const WithdrawForm = () => {
   const notificationList = useAppSelector((state) => state.home.notificationList);
 
   const [isWithdrawMetaRefreshing, setIsWithdrawMetaRefreshing] = useState(false);
+  const [isAvailSourceOpen, setIsAvailSourceOpen] = useState(false);
   /** Web `withdraw24hUsage` from `GET /api/v1/wallet/withdrawal-24h-usage?coinName=`. */
   const [withdraw24hUsage, setWithdraw24hUsage] = useState(null);
   const [withdrawAvailSourceOpen, setWithdrawAvailSourceOpen] = useState(false);
@@ -2196,6 +2197,22 @@ const WithdrawForm = () => {
           generates a unique TXID for tracking and transparency, while a network fee is applied based on the selected
           blockchain to ensure smooth processing.
         </AppText>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={{ alignSelf: "flex-start", marginTop: 14 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          onPress={() => {
+            Linking.openURL("https://arabglobal.ae/fees").catch(() => showError("Unable to open link"));
+          }}
+        >
+          <AppText
+            weight={MEDIUM}
+            type={THIRTEEN}
+            style={{ color: colors.orangeTheme, textDecorationLine: "underline" }}
+          >
+            Learn more about network fees
+          </AppText>
+        </TouchableOpacity>
       </ScrollView>
     </RBSheet>
   );
@@ -2487,7 +2504,7 @@ const WithdrawForm = () => {
       >
         <View style={styles.wdStepBlock}>
 
-          {/* Top Tabs */}
+          {/* Top Tabs
           <View style={{ flexDirection: "row", gap: 30, paddingHorizontal: 4, marginVertical: 20 }}>
             <TouchableOpacity onPress={() => setWithdrawToTab("address")}>
               <AppText
@@ -2511,6 +2528,8 @@ const WithdrawForm = () => {
               {withdrawToTab === "agce_user" && <View style={{ height: 2, backgroundColor: themeColors.text, width: "100%", marginTop: 6, borderRadius: 1 }} />}
             </TouchableOpacity>
           </View>
+          */}
+          <View style={{ height: 16 }} />
 
           {withdrawToTab === "address" ? (
             <View style={{}}>
@@ -2749,7 +2768,8 @@ const WithdrawForm = () => {
           )}
 
           {/* Amount and Final Summary Section */}
-          {Object.keys(selectedCurrency).length > 0 && (
+          {Object.keys(selectedCurrency).length > 0 &&
+            (withdrawToTab !== "address" || showWithdrawContentAfterValidatedAddress) && (
             <View style={{ marginTop: 12 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>Withdrawal Amount</AppText>
@@ -2788,17 +2808,122 @@ const WithdrawForm = () => {
                 </AppText>
               ) : null}
 
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 5, marginVertical: 10 }}>
-                <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>Available Withdraw</AppText>
-                <TouchableOpacity onPress={() => {/* transfer logic if any */ }} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <AppText weight={MEDIUM} type={TWELVE} style={{ color: themeColors.text }}>
-                    {formatFundAvailableFromRow(mainWalletFundRow)} {selectedCurrency.short_name}
+              <View style={[styles.wdWithdrawMetaRow, { marginTop: 12 }]}>
+                <View style={{ flexShrink: 1 }}>
+                  <TouchableOpacity activeOpacity={0.7} onPress={() => setIsAvailSourceOpen((v) => !v)}>
+                    <AppText type={THIRTEEN} style={{ color: themeColors.text }}>
+                      Available Withdraw{" "}
+                      <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                        {formatFundAvailableFromRow(mainWalletFundRow)} {selectedCurrency.short_name}
+                      </AppText>
+                    </AppText>
+                  </TouchableOpacity>
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 6 }}>
+                    24h remaining limit
                   </AppText>
-                </TouchableOpacity>
+                </View>
+
+                <View style={{ alignItems: "flex-end" }}>
+                  <View style={styles.wdLimitNumsRow}>
+                    <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>
+                      {withdrawStep3Preview.networkCode}
+                    </AppText>
+                    <TouchableOpacity
+                      onPress={onWithdrawMetaRefresh}
+                      disabled={isWithdrawMetaRefreshing}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                      style={styles.wdLimitRefreshBtn}
+                    >
+                      {isWithdrawMetaRefreshing ? (
+                        <ActivityIndicator size="small" color={themeColors.secondaryText} style={{ transform: [{ scale: 0.7 }] }} />
+                      ) : (
+                        <FastImage source={Refresh} style={{ width: 13, height: 13 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+                      )}
+                    </TouchableOpacity>
+                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
+                      {withdrawStep3Preview.limitLeft}
+                    </AppText>
+                    <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText, marginHorizontal: 4 }}>/</AppText>
+                    <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: colors.red }}>
+                      {withdrawStep3Preview.limitRight}
+                    </AppText>
+                    <TouchableOpacity
+                      onPress={() => withdrawLimitInfoSheetRef.current?.open()}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={[styles.wdLimitInfoBtn, { borderColor: themeColors.secondaryText }]}
+                    >
+                      <AppText type={TEN} weight={SEMI_BOLD} style={{ color: themeColors.secondaryText }}>i</AppText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
-              <View style={{ padding: 10, borderRadius: 12, bottom: 5 }}>
-                <AppText type={TEN} style={{ color: themeColors.secondaryText, lineHeight: 16 }}>
-                  * Beware of scams! AGCX will never ask for personal information or private transfers via SMS or email.
+
+              {isAvailSourceOpen ? (
+                <View
+                  style={[
+                    styles.wdAvailSourceCard,
+                    { backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, borderColor: isDark ? themeColors.border : "#E5E7EB" },
+                  ]}
+                >
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginBottom: 8 }}>Main Wallet</AppText>
+                  <View style={styles.wdAvailSourceItem}>
+                    <View style={[styles.wdAvailSourceCheck, { backgroundColor: "#E2B24C" }]}>
+                      <FastImage source={checkIc} style={{ width: 9, height: 9 }} resizeMode="contain" tintColor={colors.black} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <AppText type={THIRTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>Main Wallet</AppText>
+                      <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 2 }}>
+                        {formatFundAvailableFromRow(mainWalletFundRow)} {selectedCurrency.short_name}
+                      </AppText>
+                    </View>
+                  </View>
+                  <AppText type={TWELVE} style={{ color: themeColors.secondaryText, marginTop: 8 }}>
+                    • Withdrawals use your Main Wallet balance only.
+                  </AppText>
+                </View>
+              ) : null}
+
+              <View style={[styles.wdAmtDivider, { backgroundColor: isDark ? themeColors.border : "#E5E7EB" }]} />
+
+              <View style={styles.wdAmtKvRow}>
+                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>Fee</AppText>
+                <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+                  {withdrawStep3Preview.feeNum != null
+                    ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.feeNum)} ${selectedCurrency?.short_name || "—"}`
+                    : `— ${selectedCurrency?.short_name || "—"}`}
+                </AppText>
+              </View>
+              <View style={styles.wdAmtKvRow}>
+                <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>Receive Amount</AppText>
+                <AppText type={THIRTEEN} weight={MEDIUM} style={{ color: themeColors.text }}>
+                  {withdrawStep3Preview.receiveNum != null
+                    ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.receiveNum)} ${selectedCurrency?.short_name || "—"}`
+                    : `-- ${selectedCurrency?.short_name || "—"}`}
+                </AppText>
+              </View>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => networkFeeInfoSheetRef.current?.open()}
+                style={styles.wdNetFeeBtn}
+              >
+                <AppText type={TWELVE} style={{ color: themeColors.secondaryText }}>
+                  Network Fee{" "}
+                  {withdrawStep3Preview.feeNum != null
+                    ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.feeNum)} ${selectedCurrency?.short_name || ""}`
+                    : "—"}
+                </AppText>
+                <FastImage source={right_ic} style={{ width: 9, height: 9, marginLeft: 6 }} resizeMode="contain" tintColor={themeColors.secondaryText} />
+              </TouchableOpacity>
+
+              <View
+                style={[
+                  styles.wdScamWarn,
+                  { backgroundColor: isDark ? darkTheme.darkThemeInputColor : lightTheme.input, borderColor: isDark ? themeColors.border : "#E5E7EB" },
+                ]}
+              >
+                <AppText type={TWELVE} style={{ color: themeColors.secondaryText, lineHeight: 18 }}>
+                  * Beware of scams! AGCX will never ask for personal information or private transfers/withdrawals via SMS,
+                  email, or phone. To protect your assets, do not click on unknown links.
                 </AppText>
               </View>
             </View>
@@ -2848,28 +2973,6 @@ const WithdrawForm = () => {
           borderTopWidth: 1,
           borderTopColor: isDark ? "#2A2E39" : "#E5E7EB"
         }}>
-          {/* Row 1: Fee */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12, paddingHorizontal: 4 }}>
-            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>Fee</AppText>
-            <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: themeColors.text }}>
-              {withdrawStep3Preview.feeNum !== null
-                ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.feeNum)} ${selectedCurrency?.short_name || "—"}`
-                : `— ${selectedCurrency?.short_name || "—"}`}
-            </AppText>
-          </View>
-
-          {/* Row 2: Receive Amount */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12, paddingHorizontal: 4 }}>
-            <AppText type={THIRTEEN} style={{ color: themeColors.secondaryText }}>Receive Amount</AppText>
-            <AppText weight={SEMI_BOLD} type={FOURTEEN} style={{ color: themeColors.text }}>
-              {withdrawStep3Preview.receiveNum !== null
-                ? `${formatWithdrawAmountDisplay(withdrawStep3Preview.receiveNum)} ${selectedCurrency?.short_name || "—"}`
-                : `-- ${selectedCurrency?.short_name || "—"}`}
-            </AppText>
-          </View>
-
-
-
           <TouchableOpacity
             disabled={
               !withdrawAmount ||
@@ -4375,6 +4478,67 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 4,
+  },
+  wdLimitNumsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  wdLimitRefreshBtn: {
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 4,
+  },
+  wdLimitInfoBtn: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
+  },
+  wdAvailSourceCard: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+  },
+  wdAvailSourceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  wdAvailSourceCheck: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  wdAmtDivider: {
+    height: 1,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  wdAmtKvRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 5,
+  },
+  wdNetFeeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-end",
+    paddingVertical: 4,
+  },
+  wdScamWarn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 14,
   },
   withdrawSummaryCard: {
     borderWidth: 1,

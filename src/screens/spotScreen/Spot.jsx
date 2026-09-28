@@ -4407,7 +4407,13 @@ const Spot = () => {
         />
 
         {headerTab === "Buy Crypto" || headerTab === "Convert" ? (
-          <BuyCryptoScreen isEmbedded={true} navigation={navigation} />
+          <BuyCryptoScreen
+            isEmbedded={true}
+            navigation={navigation}
+            presetSide={route?.params?.convertSide}
+            presetAsset={route?.params?.convertAsset}
+            presetKey={route?.params?.convertPresetKey}
+          />
         ) : (
           <>
             <View style={styles.secondcontainer}>

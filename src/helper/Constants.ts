@@ -45,6 +45,9 @@ export const CHART_WEB_BASE_URL = 'https://arabglobal.ae/'; // or 'https://arabg
 // export const IMAGE_BASE_URL = 'https://backend.arabglobal.io/';
 export const IMAGE_BASE_URL = 'https://backend.arabglobal.ae/';
 
+/** Public S3 media host for `public/...` / `static/...` keys — must match backend S3_PUBLIC_BASE_URL. */
+export const S3_PUBLIC_BASE_URL = 'https://agcx-data-storage-s3-uae.s3.me-central-1.amazonaws.com';
+
 // export const BASE_URL = 'http://3.110.173.10:3008/';
 
 // For passkey testing with backend on localhost:5001 use one of:

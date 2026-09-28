@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 
 #import <React/RCTBundleURLProvider.h>
+#import <React/RCTRootView.h>
 #import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
 #import <GoogleSignIn/GoogleSignIn.h>
 
@@ -23,6 +24,15 @@
     return YES;
   }
   return [super application:application openURL:url options:options];
+}
+
+- (void)customizeRootView:(RCTRootView *)rootView {
+  // Same as LaunchScreen.storyboard / splash video background, so there is no white
+  // flash between the launch screen and the first JS render.
+  rootView.backgroundColor = [UIColor colorWithRed:23.0 / 255.0
+                                             green:28.0 / 255.0
+                                              blue:34.0 / 255.0
+                                             alpha:1.0];
 }
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge {

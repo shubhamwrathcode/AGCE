@@ -16,6 +16,16 @@ import { showError, showSuccess } from '../../../helper/logger';
 import { VerificationOptionsSheet } from '../../../common/VerificationOptionsSheet';
 import { Passkey } from 'react-native-passkey';
 
+const UNAVAILABLE_PRESELECT_BY_PURPOSE = {
+  change_email: ['email'],
+  add_email: ['email'],
+  change_mobile: ['phone'],
+  add_mobile: ['phone'],
+  '2fa_disable': ['authApp'],
+};
+
+const UNAVAILABLE_LINK_HIDDEN_PURPOSES = ['reset_security_method', 'disable_account', 'delete_account'];
+
 const SecurityVerification = ({ route }) => {
   const dispatch = useAppDispatch();
   const { colors: themeColors, isDark } = useTheme();
@@ -593,20 +603,26 @@ const SecurityVerification = ({ route }) => {
 
           {!params.hideChooseOther && (
             <TouchableOpacity style={styles.linkContainer} onPress={() => sheetRef.current?.open()}>
-              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: themeColors.text }]}>
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: colors.orangeTheme }]}>
                 Choose other verification method
               </AppText>
             </TouchableOpacity>
           )}
 
-          {/* <TouchableOpacity
-            style={[styles.linkContainer, { marginTop: 12 }]}
-            onPress={() => NavigationService.navigate(routes.SECURITY_VERIFICATION_UNAVAILABLE_SCREEN)}
-          >
-            <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: colors.orangeTheme }]}>
-              Security verification unavailable?
-            </AppText>
-          </TouchableOpacity> */}
+          {!UNAVAILABLE_LINK_HIDDEN_PURPOSES.includes(purpose) && (
+            <TouchableOpacity
+              style={[styles.linkContainer, { marginTop: 12 }]}
+              onPress={() =>
+                NavigationService.navigate(routes.SECURITY_VERIFICATION_UNAVAILABLE_SCREEN, {
+                  preselectMethods: UNAVAILABLE_PRESELECT_BY_PURPOSE[purpose],
+                })
+              }
+            >
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.linkText, { color: colors.orangeTheme }]}>
+                Security verification unavailable?
+              </AppText>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 

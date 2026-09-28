@@ -214,9 +214,9 @@ const MarginWalletTab = ({ theme, themeColors, marginSummary: propMarginSummary,
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
+      {/* <View style={styles.headerRow}>
         <AppText weight={SEMI_BOLD} type={EIGHTEEN}>Isolated Margin Account</AppText>
-      </View>
+      </View> */}
 
       {/* Summary Card */}
       <View style={[styles.summaryCard, { backgroundColor: theme === 'Dark' ? themeColors.background : colors.white }]}>

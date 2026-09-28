@@ -173,7 +173,7 @@ const WithdrawalHistory = () => {
     <AppSafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Toolbar isSecond title={"Withdrawal History"} style={{ width: "68%", backgroundColor: "transparent" }} />
 
-      <View style={[styles.tabsContainer, { borderBottomColor: isDark ? themeColors.border : "#E5E7EB" }]}>
+      {/* <View style={[styles.tabsContainer, { borderBottomColor: isDark ? themeColors.border : "#E5E7EB" }]}>
         <TouchableOpacity
           onPress={() => setActiveTab("address")}
           style={[styles.tabPill]}
@@ -200,7 +200,7 @@ const WithdrawalHistory = () => {
           </AppText>
           {activeTab === "agce" && <View style={[styles.activeIndicator, { backgroundColor: themeColors.text }]} />}
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       {loading ? (
         <View style={styles.center}>

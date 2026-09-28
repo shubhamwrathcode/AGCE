@@ -690,6 +690,24 @@ const EnablePasskey = ({ route, navigation }) => {
               </TouchableOpacity>
 
               <TouchableOpacity
+                style={{ alignSelf: 'center', paddingTop: 12, paddingBottom: 4 }}
+                disabled={isDeleting}
+                onPress={() => {
+                  setDeleteModalVisible(false);
+                  // iOS cannot push a screen while the RN Modal is still dismissing.
+                  setTimeout(() => {
+                    NavigationService.navigate(routes.SECURITY_VERIFICATION_UNAVAILABLE_SCREEN, {
+                      preselectMethods: ['passkeys'],
+                    });
+                  }, 300);
+                }}
+              >
+                <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.orangeTheme, textDecorationLine: 'underline' }}>
+                  Security verification unavailable?
+                </AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.deleteActionBtn, { width: '100%', backgroundColor: 'transparent', height: 40 }]}
                 onPress={() => setDeleteModalVisible(false)}
                 disabled={isDeleting}

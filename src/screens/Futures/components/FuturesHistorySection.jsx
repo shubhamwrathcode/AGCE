@@ -261,6 +261,18 @@ const FuturesHistorySection = ({
     }
   };
 
+  const executeClosePositionRef = useRef(executeClosePosition);
+  executeClosePositionRef.current = executeClosePosition;
+  const handleClosePositionConfirm = React.useCallback(
+    (args) => executeClosePositionRef.current(args),
+    []
+  );
+  const handleClosePositionDismiss = React.useCallback(() => {
+    if (closeInFlightRef.current) return;
+    setCloseModalVisible(false);
+    setPosToClose(null);
+  }, []);
+
   const EmptyState = () => (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 35, minHeight: LOADER_MIN_HEIGHT }}>
       <FastImage source={NO_NOTIFICATION_ICON} style={{ width: 75, height: 75, marginBottom: 12, opacity: 0.8 }} />
@@ -960,12 +972,8 @@ const FuturesHistorySection = ({
           loading={closeLoading}
           pos={posToClose}
           selectedCoin={selectedCoin}
-          onClose={() => {
-            if (closeLoading) return;
-            setCloseModalVisible(false);
-            setPosToClose(null);
-          }}
-          onConfirm={executeClosePosition}
+          onClose={handleClosePositionDismiss}
+          onConfirm={handleClosePositionConfirm}
         />
 
         <FuturesAdjustMarginModal

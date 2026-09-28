@@ -8,7 +8,10 @@
       "namespace": "android_app",
       "package_name": "com.agcx.exchange",
       "sha256_cert_fingerprints": [
-        "YOUR_SHA256_CERT_FINGERPRINT_HERE"
+        "0A:78:CC:CF:CF:AE:29:1B:FF:02:00:CE:3B:A4:25:7A:18:A2:54:EC:DD:56:3B:76:FE:99:06:25:44:90:22:C7",
+        "31:F1:EF:07:E5:97:07:67:8F:1F:B9:05:78:8B:0F:69:3B:23:E3:69:6C:81:4A:B2:AD:39:08:7C:83:D5:34:D7",
+        "C5:D1:E4:67:C3:4B:A7:79:56:27:7E:84:B4:C2:A0:FD:71:06:A4:BC:14:89:60:22:0C:17:AD:9C:F1:92:10:EA",
+        "4B:AA:2B:0E:B3:57:A0:EF:B4:49:66:72:5F:A9:0E:FC:13:C6:C7:C3:BC:D5:95:49:78:95:6F:C7:0F:13:B4:65"
       ]
     }
   }

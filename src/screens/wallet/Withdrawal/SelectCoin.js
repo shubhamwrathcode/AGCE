@@ -35,9 +35,12 @@ import {
   printIcon,
   upIcon,
   downIcon,
+  activities_icon,
 } from "../../../helper/ImageAssets";
+import { buildMarketIconIndex, withMarketCoinIcon } from "../../../helper/walletCoinIcon";
 import { WITHDRAW_HISTORY_SCREEN, WITHDRAW_FIAT_SCREEN } from "../../../navigation/routes";
 import { buildCoinImageUri } from "../../../helper/coinIconUrl";
+import CoinIcon from "../../../common/CoinIcon";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import NavigationService from "../../../navigation/NavigationService";
 import { useAppSelector } from "../../../store/hooks";
@@ -136,6 +139,8 @@ const SelectCoin = () => {
   const isDark = theme === "Dark";
   const { colors: themeColors } = useTheme();
   const withdrawActiveCoins = useAppSelector((state) => state.wallet.withdrawActiveCoins);
+  const coinData = useAppSelector((state) => state.home.coinData);
+  const marketIconBySymbol = useMemo(() => buildMarketIconIndex(coinData), [coinData]);
   const depositFiatCoins = useAppSelector((state) => state.wallet.depositFiatCoins);
   const userMainWallet = useAppSelector((state) => state.wallet.userMainWallet || []);
   const isFrom = route?.params?.data;
@@ -336,7 +341,6 @@ const SelectCoin = () => {
 
   const renderCoinItem = ({ item }) => {
     const withdrawDisabled = activeTab === "Crypto" && isWithdrawCoinDisabled(item);
-    const iconUri = buildCoinImageUri(item);
     return (
       <TouchableOpacity
         style={[styles.coinRow, { opacity: withdrawDisabled ? 0.45 : 1 }]}
@@ -350,7 +354,14 @@ const SelectCoin = () => {
           NavigationService.navigate("WITHDRAW_FORM_SCREEN", { data: item });
         }}
       >
-        <FastImage source={iconUri ? { uri: iconUri } : null} style={styles.coinIcon} resizeMode="cover" />
+        <View style={{ borderRadius: 999, overflow: "hidden" }}>
+          <CoinIcon
+            coin={withMarketCoinIcon(item, marketIconBySymbol)}
+            resizeMode="cover"
+            style={styles.coinIcon}
+            fallback={activities_icon}
+          />
+        </View>
         <View style={styles.coinInfo}>
           <AppText weight={SEMI_BOLD} type={FIFTEEN} style={{ color: isDark ? colors.white : colors.black }}>{item?.short_name}</AppText>
           <AppText type={THIRTEEN} style={{ color: colors.textGray, marginTop: 1 }}>{item?.name}</AppText>
@@ -414,7 +425,14 @@ const SelectCoin = () => {
                 NavigationService.navigate("WITHDRAW_FORM_SCREEN", { data: item });
               }}
             >
-              <FastImage source={buildCoinImageUri(item) ? { uri: buildCoinImageUri(item) } : null} style={styles.quickPickIcon} />
+              <View style={{ borderRadius: 999, overflow: "hidden", marginRight: 6 }}>
+                <CoinIcon
+                  coin={withMarketCoinIcon(item, marketIconBySymbol)}
+                  resizeMode="cover"
+                  style={[styles.quickPickIcon, { marginRight: 0 }]}
+                  fallback={activities_icon}
+                />
+              </View>
               <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.white : colors.black }}>{item?.short_name}</AppText>
             </TouchableOpacity>
           ))}

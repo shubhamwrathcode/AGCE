@@ -16,6 +16,7 @@ import {
   EIGHTEEN,
   FIFTEEN,
   FOURTEEN,
+  MEDIUM,
   SEMI_BOLD,
   SIXTEEN,
   TWELVE,
@@ -120,6 +121,15 @@ const DeferredTabScene = ({ children }) => {
   return children;
 };
 
+const SPOT_SUB_TABS = [
+  { key: "spot", title: "Spot" },
+  { key: "cross", title: "Cross Margin" },
+  { key: "isolated", title: "Isolated Margin" },
+];
+
+// Isolated and Cross used to be top-level wallet tabs; old `activeTab` params land on the matching Spot sub-tab.
+const LEGACY_SPOT_SUB_TAB = { Margin: "isolated", Cross: "cross" };
+
 const WalletNew = ({ route }) => {
   const dispatch = useDispatch();
   const depsoitSheet = useRef(null);
@@ -217,8 +227,6 @@ const WalletNew = ({ route }) => {
       { key: "Overview", title: "Overview" },
       { key: "Spot", title: "Spot" },
       { key: "Main", title: "Main" },
-      { key: "Margin", title: "Isolated" },
-      { key: "Cross", title: "Cross" },
       // { key: "P2P", title: "P2P" },
       { key: "Futures", title: "Futures" },
       { key: "Options", title: "Options" },
@@ -231,12 +239,20 @@ const WalletNew = ({ route }) => {
   );
   const [topIndex, setTopIndex] = useState(0);
   const activeTab = topRoutes[topIndex]?.key || "Overview";
+  const [spotSubTab, setSpotSubTab] = useState("spot");
+  const [visitedSpotSubTabs, setVisitedSpotSubTabs] = useState({ spot: true });
+  const selectSpotSubTab = useCallback((key) => {
+    setSpotSubTab(key);
+    setVisitedSpotSubTabs((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
+  }, []);
   const setActiveTab = useCallback(
     (key) => {
-      const idx = topRoutes.findIndex((r) => r.key === key);
+      const subTab = LEGACY_SPOT_SUB_TAB[key];
+      if (subTab) selectSpotSubTab(subTab);
+      const idx = topRoutes.findIndex((r) => r.key === (subTab ? "Spot" : key));
       if (idx >= 0) setTopIndex(idx);
     },
-    [topRoutes]
+    [topRoutes, selectSpotSubTab]
   );
 
   useEffect(() => {
@@ -1145,91 +1161,114 @@ const WalletNew = ({ route }) => {
               if (route.key === "Spot") {
                 return (
                   <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
-                    <DeferredTabScene>
-                      <SpotWalletTab
-                        theme={theme}
-                        themeColors={themeColors}
-                        showBalance={showBalance}
-                        setShowBalance={setShowBalance}
-                        walletBalanceSpot={walletBalanceSpot}
-                        portfolioPreferredAmount={portfolioPreferredAmount}
-                        portfolioPreferredCurrency={portfolioPreferredCurrency}
-                        portfolioUsdtEstimate={portfolioUsdtEstimate}
-                        formatEstimateHeader={formatEstimateHeader}
-                        safeRound={safeRound}
-                        safeNum={safeNum}
-                        totalWalletQty={totalWalletQty}
-                        approxUsdLine={approxUsdLine}
-                        buildCoinIconUri={buildCoinIconUri}
-                        failedIconMap={failedIconMap}
-                        setFailedIconMap={setFailedIconMap}
-                        userSpotWallet={userSpotWalletWithIcons}
-                        spotPnlData={spotPnlData}
-                        onDeposit={handleOpenDeposit}
-                        onBuyCrypto={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
-                        onTransfer={() =>
-                          NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "main" })
-                        }
-                        onWithdraw={handleOpenWithdraw}
-                        onOpenCoinSheet={(coin) => {
-                          setSelectedCoinForSheet(coin);
-                          setSelectedCoinSheetWalletType("spot");
-                          coinDetailSheet.current?.open?.();
-                        }}
-                        eyeCloseIcon={eye_close_icon}
-                        eyeOpenIcon={eye_open_icon}
-                      />
-                    </DeferredTabScene>
-                  </View>
-                );
-              }
+                    <View style={styles.spotSubTabsRow}>
+                      {SPOT_SUB_TABS.map((t) => {
+                        const isActive = spotSubTab === t.key;
+                        return (
+                          <TouchableOpacity
+                            key={t.key}
+                            activeOpacity={0.75}
+                            onPress={() => selectSpotSubTab(t.key)}
+                            style={[
+                              styles.spotSubTabPill,
+                              isActive && { backgroundColor: isDark ? themeColors.themeElevationColor || "#2B3139" : "#EFEFEF" },
+                            ]}
+                          >
+                            <AppText
+                              type={FOURTEEN}
+                              weight={isActive ? SEMI_BOLD : MEDIUM}
+                              color={isActive ? themeColors.text : themeColors.secondaryText}
+                            >
+                              {t.title}
+                            </AppText>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
 
-              if (route.key === "Margin") {
-                return (
-                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
-                    <DeferredTabScene>
-                      <MarginWalletTab
-                        theme={theme}
-                        themeColors={themeColors}
-                        showBalance={showBalance}
-                        setShowBalance={setShowBalance}
-                        marginSummary={marginSummary}
-                        walletBalance={marginSummary ? { dollarPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, currencyPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, Currency: "USD" } : null}
-                        portfolioPreferredAmount={portfolioPreferredAmount}
-                        portfolioPreferredCurrency={portfolioPreferredCurrency}
-                        portfolioUsdtEstimate={portfolioUsdtEstimate}
-                        formatEstimateHeader={formatEstimateHeader}
-                        safeRound={safeRound}
-                        safeNum={safeNum}
-                        totalWalletQty={totalWalletQty}
-                        approxUsdLine={approxUsdLine}
-                        buildCoinIconUri={buildCoinIconUri}
-                        failedIconMap={failedIconMap}
-                        setFailedIconMap={setFailedIconMap}
-                        userWalletRows={[]}
-                        eyeCloseIcon={eye_close_icon}
-                        eyeOpenIcon={eye_open_icon}
-                        onOpenCoinSheet={(coin) => {
-                          setSelectedCoinForSheet(coin);
-                          setSelectedCoinSheetWalletType("margin");
-                          coinDetailSheet.current?.open?.();
-                        }}
-                      />
-                    </DeferredTabScene>
-                  </View>
-                );
-              }
+                    <View style={{ flex: 1, display: spotSubTab === "spot" ? "flex" : "none" }}>
+                      <DeferredTabScene>
+                        <SpotWalletTab
+                          theme={theme}
+                          themeColors={themeColors}
+                          showBalance={showBalance}
+                          setShowBalance={setShowBalance}
+                          walletBalanceSpot={walletBalanceSpot}
+                          portfolioPreferredAmount={portfolioPreferredAmount}
+                          portfolioPreferredCurrency={portfolioPreferredCurrency}
+                          portfolioUsdtEstimate={portfolioUsdtEstimate}
+                          formatEstimateHeader={formatEstimateHeader}
+                          safeRound={safeRound}
+                          safeNum={safeNum}
+                          totalWalletQty={totalWalletQty}
+                          approxUsdLine={approxUsdLine}
+                          buildCoinIconUri={buildCoinIconUri}
+                          failedIconMap={failedIconMap}
+                          setFailedIconMap={setFailedIconMap}
+                          userSpotWallet={userSpotWalletWithIcons}
+                          spotPnlData={spotPnlData}
+                          onDeposit={handleOpenDeposit}
+                          onBuyCrypto={() => NavigationService.navigate(DEPOSIT_COIN_SCREEN)}
+                          onTransfer={() =>
+                            NavigationService.navigate(MARGIN_TRANSFER_SCREEN, { fromWalletType: "spot", toWalletType: "main" })
+                          }
+                          onWithdraw={handleOpenWithdraw}
+                          onOpenCoinSheet={(coin) => {
+                            setSelectedCoinForSheet(coin);
+                            setSelectedCoinSheetWalletType("spot");
+                            coinDetailSheet.current?.open?.();
+                          }}
+                          eyeCloseIcon={eye_close_icon}
+                          eyeOpenIcon={eye_open_icon}
+                        />
+                      </DeferredTabScene>
+                    </View>
 
-              if (route.key === "Cross") {
-                return (
-                  <View style={{ flex: 1, display: topRoutes[topIndex].key === route.key ? 'flex' : 'none' }}>
-                    <DeferredTabScene>
-                      <CrossMarginWalletTab
-                        theme={theme}
-                        themeColors={themeColors}
-                        buildCoinIconUri={buildCoinIconUri}
-                      />
-                    </DeferredTabScene>
+                    {visitedSpotSubTabs.isolated ? (
+                      <View style={{ flex: 1, display: spotSubTab === "isolated" ? "flex" : "none" }}>
+                        <DeferredTabScene>
+                          <MarginWalletTab
+                            theme={theme}
+                            themeColors={themeColors}
+                            showBalance={showBalance}
+                            setShowBalance={setShowBalance}
+                            marginSummary={marginSummary}
+                            walletBalance={marginSummary ? { dollarPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, currencyPrice: marginSummary?.account_equity_usd || marginSummary?.total_assets_usd || 0, Currency: "USD" } : null}
+                            portfolioPreferredAmount={portfolioPreferredAmount}
+                            portfolioPreferredCurrency={portfolioPreferredCurrency}
+                            portfolioUsdtEstimate={portfolioUsdtEstimate}
+                            formatEstimateHeader={formatEstimateHeader}
+                            safeRound={safeRound}
+                            safeNum={safeNum}
+                            totalWalletQty={totalWalletQty}
+                            approxUsdLine={approxUsdLine}
+                            buildCoinIconUri={buildCoinIconUri}
+                            failedIconMap={failedIconMap}
+                            setFailedIconMap={setFailedIconMap}
+                            userWalletRows={[]}
+                            eyeCloseIcon={eye_close_icon}
+                            eyeOpenIcon={eye_open_icon}
+                            onOpenCoinSheet={(coin) => {
+                              setSelectedCoinForSheet(coin);
+                              setSelectedCoinSheetWalletType("margin");
+                              coinDetailSheet.current?.open?.();
+                            }}
+                          />
+                        </DeferredTabScene>
+                      </View>
+                    ) : null}
+
+                    {visitedSpotSubTabs.cross ? (
+                      <View style={{ flex: 1, display: spotSubTab === "cross" ? "flex" : "none" }}>
+                        <DeferredTabScene>
+                          <CrossMarginWalletTab
+                            theme={theme}
+                            themeColors={themeColors}
+                            buildCoinIconUri={buildCoinIconUri}
+                          />
+                        </DeferredTabScene>
+                      </View>
+                    ) : null}
                   </View>
                 );
               }
@@ -1561,6 +1600,18 @@ const WalletNew = ({ route }) => {
 export default WalletNew;
 
 const styles = StyleSheet.create({
+  spotSubTabsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  spotSubTabPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
   aoSearch: {
     flexDirection: "row",
     alignItems: "center",

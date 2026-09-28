@@ -1,30 +1,34 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { BackHandler, Linking, Modal, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import Video from 'react-native-video';
+import { SystemBars } from 'react-native-edge-to-edge';
 import NavigationService from '../../navigation/NavigationService';
 import { NAVIGATION_AUTH_STACK } from '../../navigation/routes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, SELECTED_LANGUAGE, USER_TOKEN_KEY } from '../../helper/Constants';
-import { commonStyles } from '../../theme/commonStyles';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { AppSafeAreaView } from '../../shared';
 import { getUserProfile } from '../../actions/accountActions';
 import { translate } from 'google-translate-api-x';
 import { languages } from '../../helper/languages';
 import { setLanguages, setSelectedLanguage } from '../../slices/accountSlice';
 import { getVersion } from 'react-native-device-info';
 import { getAppVersion } from '../../actions/authActions';
-import { splashTwo, updatedSplashDark } from '../../helper/ImageAssets';
+
+const SPLASH_VIDEO = require('../../../assets/lottie/splashVideo.mp4');
+/** Matches the video's background so letterboxing / load frames are invisible. */
+const SPLASH_BG = '#171C22';
+/** Safety net in case the player never fires onEnd / onError. */
+const SPLASH_VIDEO_MAX_MS = 10000;
 
 const AuthLoading = () => {
   const dispatch = useAppDispatch();
-  const theme = useAppSelector(state => state.auth.theme);
   const [CheckCurrent] = useState(getVersion());
   const appVersion = useAppSelector((state) => state.auth.appVersion);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [versionCheckDone, setVersionCheckDone] = useState(false);
+  const [videoDone, setVideoDone] = useState(false);
   const proceededRef = useRef(false);
-
-  // --- CORRECTED LOGIC ---
+  const languageCheckedRef = useRef(false);
 
   // 1) Fetch server version (silent — no full-screen loader on splash).
   useEffect(() => {
@@ -33,7 +37,13 @@ const AuthLoading = () => {
     });
   }, [dispatch]);
 
-  // 2) After fetch settles: force-update if server `version` !== installed build; else continue boot.
+  useEffect(() => {
+    const timer = setTimeout(() => setVideoDone(true), SPLASH_VIDEO_MAX_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 2) After fetch settles: force-update if server `version` !== installed build; else continue boot
+  //    once the splash video has finished playing.
   useEffect(() => {
     if (!versionCheckDone || proceededRef.current) return;
 
@@ -49,22 +59,24 @@ const AuthLoading = () => {
       return;
     }
 
+    if (!languageCheckedRef.current) {
+      languageCheckedRef.current = true;
+      checkLanguage();
+    }
+
+    if (!videoDone) return;
+
     proceededRef.current = true;
     checkUserLogin();
-    checkLanguage();
-  }, [versionCheckDone, appVersion, CheckCurrent]);
+  }, [versionCheckDone, appVersion, CheckCurrent, videoDone]);
 
 
   const success = () => {
-    setTimeout(() => {
-      dispatch(getUserProfile(false, true, false, true));
-    }, 3000);
+    dispatch(getUserProfile(false, true, false, true));
   };
 
   const onnFail = () => {
-    setTimeout(() => {
-      NavigationService.reset(NAVIGATION_AUTH_STACK);
-    }, 2000);
+    NavigationService.reset(NAVIGATION_AUTH_STACK);
   };
 
   const checkUserLogin = async () => {
@@ -106,13 +118,27 @@ const AuthLoading = () => {
   };
 
   return (
-    <AppSafeAreaView
-      source={theme === 'Dark' ? updatedSplashDark : splashTwo}
-      darkStatusBarOnLightSplash={theme !== 'Dark'}
-    >
-      <View style={commonStyles.center}>
-        {/* Your logo or loader can go here */}
-      </View>
+    <View style={styles.splash}>
+      <SystemBars style="light" />
+      <Video
+        source={SPLASH_VIDEO}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+        muted
+        repeat={false}
+        controls={false}
+        disableFocus
+        mixWithOthers="mix"
+        ignoreSilentSwitch="obey"
+        playInBackground={false}
+        playWhenInactive={false}
+        shutterColor={SPLASH_BG}
+        onEnd={() => setVideoDone(true)}
+        onError={(e) => {
+          console.log('Splash video error', e);
+          setVideoDone(true);
+        }}
+      />
 
       <Modal transparent={true} visible={showUpdateModal} animationType="fade" statusBarTranslucent>
         <View style={styles.fullScreen}>
@@ -135,13 +161,17 @@ const AuthLoading = () => {
           </View>
         </View>
       </Modal>
-    </AppSafeAreaView>
+    </View>
   );
 };
 
 export default AuthLoading;
 
 const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    backgroundColor: SPLASH_BG,
+  },
   fullScreen: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.8)",

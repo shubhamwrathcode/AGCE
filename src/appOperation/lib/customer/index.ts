@@ -733,6 +733,21 @@ export default (appOperation: AppOperation) => ({
     if (params.to) p.append("to", params.to);
     return appOperation.get(`futures/positions/history?${p.toString()}`, undefined, undefined, CUSTOMER_TYPE);
   },
+  futuresSymbolSettings: (symbol: string) =>
+    appOperation.get(
+      `futures/symbol-settings?symbol=${encodeURIComponent(String(symbol ?? '').trim())}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  futuresMarginType: (data: { symbol: string; margin_mode: 'ISOLATED' | 'CROSS' }) =>
+    appOperation.post('futures/margin-type', data, CUSTOMER_TYPE),
+  futuresSetLeverage: (data: { symbol: string; leverage: number }) =>
+    appOperation.post(
+      'futures/leverage',
+      { symbol: data.symbol, leverage: Number(data.leverage) },
+      CUSTOMER_TYPE,
+    ),
   futuresPlaceOrder: (payload: any) =>
     appOperation.post('futures/orders', payload, CUSTOMER_TYPE),
   futuresOpenOrders: (params: { symbol?: string; skip?: number; limit?: number } = {}) => {
@@ -839,6 +854,15 @@ export default (appOperation: AppOperation) => ({
   /** Same as web: GET security/get-security-methods-list - returns enabled methods */
   get_security_methods_list: () =>
     appOperation.get('security/get-security-methods-list', undefined, undefined, CUSTOMER_TYPE),
+  /** Same as web: POST security/unavailable-reset/start - body { methods: ('email'|'mobile'|'totp'|'passkey')[], freeze_acknowledged } */
+  start_unavailable_security_reset: (data: { methods: string[]; freeze_acknowledged: boolean }) =>
+    appOperation.post('security/unavailable-reset/start', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/reset-unavailable-security-methods - body { methods, freeze_acknowledged, resetToken } */
+  reset_unavailable_security_methods: (data: { methods: string[]; freeze_acknowledged: boolean; resetToken: string }) =>
+    appOperation.post('security/reset-unavailable-security-methods', data, CUSTOMER_TYPE),
+  /** Same as web: POST security/send-otp-for-email-or-mobile - body { security_methods: 'email'|'mobile' } */
+  send_otp_for_email_or_mobile: (security_methods: 'email' | 'mobile') =>
+    appOperation.post('security/send-otp-for-email-or-mobile', { security_methods }, CUSTOMER_TYPE),
   /** Same as web: GET security/wallet-total-btc */
   get_security_wallet_total_btc: () =>
     appOperation.get('security/wallet-total-btc', undefined, undefined, CUSTOMER_TYPE),
@@ -1021,6 +1045,8 @@ export default (appOperation: AppOperation) => ({
     appOperation.post('fiat/convert/trades', data, CUSTOMER_TYPE, headers),
   fiat_convert_trades: (params?: string) =>
     appOperation.get(`fiat/convert/trades${params ? '?' + params : ''}`, undefined, undefined, CUSTOMER_TYPE),
+  fiat_convert_trade: (id: string) =>
+    appOperation.get(`fiat/convert/trades/${encodeURIComponent(String(id))}`, undefined, undefined, CUSTOMER_TYPE),
   fiat_limits: () =>
     appOperation.get('fiat/limits', undefined, undefined, CUSTOMER_TYPE),
   fiat_virtual_account_me: () =>

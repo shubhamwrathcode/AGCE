@@ -1085,12 +1085,22 @@ const ChangeLoginPasswordScreen = () => {
                 <AppText
                   type={FOURTEEN}
                   weight={MEDIUM}
-                  style={[styles.forgotText, { color: isDark ? '#FFFFFF' : '#000000' }]}
+                  style={[styles.forgotText, { color: colors.orangeTheme }]}
                 >
                   Choose other verification method
                 </AppText>
               </TouchableOpacity>
             )}
+
+            <TouchableOpacity
+              style={[styles.forgotLink, availableOptions.length > 0 && { marginTop: 4 }]}
+              activeOpacity={0.7}
+              onPress={() => NavigationService.navigate(routes.SECURITY_VERIFICATION_UNAVAILABLE_SCREEN)}
+            >
+              <AppText type={FOURTEEN} weight={MEDIUM} style={[styles.forgotText, { color: colors.orangeTheme }]}>
+                Security verification unavailable?
+              </AppText>
+            </TouchableOpacity>
           </View>
         )
       ) : step === 3 ? (

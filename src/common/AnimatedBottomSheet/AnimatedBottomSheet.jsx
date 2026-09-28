@@ -29,10 +29,12 @@ const GESTURE_LOCK_MS = 320;
  * Imperative API: ref.open() / ref.close()
  */
 const AnimatedBottomSheet = memo(
-  forwardRef(({ children, onClose, sheetHeight = DEFAULT_SHEET_HEIGHT, isDark, theme }, ref) => {
+  forwardRef(({ children, onClose, sheetHeight = DEFAULT_SHEET_HEIGHT, isDark, theme, dismissDisabled = false }, ref) => {
     const [mounted, setMounted] = useState(false);
     const onCloseRef = useRef(onClose);
     onCloseRef.current = onClose;
+    const dismissDisabledRef = useRef(dismissDisabled);
+    dismissDisabledRef.current = dismissDisabled;
 
     const sheetAnim = useRef(new Animated.Value(0)).current;
     const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -141,10 +143,12 @@ const AnimatedBottomSheet = memo(
     }, []);
 
     const requestClose = useCallback(() => {
+      if (dismissDisabledRef.current) return;
       runCloseRef.current();
     }, []);
 
     const requestCloseFromBackdrop = useCallback(() => {
+      if (dismissDisabledRef.current) return;
       if (Date.now() < ignoreBackdropUntilRef.current) return;
       runCloseRef.current();
     }, []);

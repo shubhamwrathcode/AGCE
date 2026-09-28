@@ -43,7 +43,7 @@ import {
   verifySecurityPasskey,
   securityAddFundPasswordAction,
 } from '../../actions/accountActions';
-import { RESET_PASSWORD_FROM_CHANGE } from '../../navigation/routes';
+import { RESET_PASSWORD_FROM_CHANGE, SECURITY_VERIFICATION_UNAVAILABLE_SCREEN } from '../../navigation/routes';
 import { showError } from '../../helper/logger';
 import { VerificationOptionsSheet } from '../../shared/components/VerificationOptionsSheet';
 import { SpinnerSecond } from '../../shared/components/SpinnerSecond';
@@ -305,7 +305,7 @@ const ChangePassword = () => {
           </TouchableOpacityView>
         )}
         <TouchableOpacityView 
-          onPress={() => navigation.navigate('SecurityVerificationUnavailable')} 
+          onPress={() => navigation.navigate(SECURITY_VERIFICATION_UNAVAILABLE_SCREEN)}
           style={styles.verifyLinkItem}
         >
           <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: colors.buttonBg }}>

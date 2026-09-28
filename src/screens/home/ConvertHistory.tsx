@@ -32,7 +32,7 @@ const ConvertHistory = () => {
   useEffect(() => {
     dispatch(getConversionHistory());
   }, []);
-  const renderItem = ({item, index}) => {
+  const renderItem = ({item, index}:any) => {
     const {
       amount: quantity,
       from: to,

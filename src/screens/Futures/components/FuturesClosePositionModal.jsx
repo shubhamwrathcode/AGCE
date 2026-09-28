@@ -7,14 +7,14 @@ import {
   StyleSheet,
   Platform,
   Modal,
-  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { KeyboardAwareScrollView } from '@codler/react-native-keyboard-aware-scroll-view';
 import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
-import { X, Info } from 'lucide-react-native';
-import RBSheet from 'react-native-raw-bottom-sheet';
-import { AppText, BOLD, FOURTEEN, MEDIUM, SEMI_BOLD, TEN, THIRTEEN, TWELVE } from '../../../common';
+import { X } from 'lucide-react-native';
+import AnimatedBottomSheet from '../../../common/AnimatedBottomSheet/AnimatedBottomSheet';
+import { AppText, BOLD, MEDIUM, SEMI_BOLD } from '../../../common';
 import { colors, darkTheme } from '../../../theme/colors';
 import {
   decNum,
@@ -26,6 +26,7 @@ import {
 } from '../../../helper/futuresUtils';
 
 const PCT_OPTIONS = [25, 50, 75, 100];
+const SHEET_HEIGHT = Math.min(580, Dimensions.get('window').height * 0.9);
 
 const FuturesClosePositionModal = ({
   visible,
@@ -34,7 +35,7 @@ const FuturesClosePositionModal = ({
   isDark = true,
   themeColors = {},
   loading = false,
-  pos,
+  pos: posProp,
   selectedCoin,
 }) => {
   const [orderType, setOrderType] = useState('MARKET');
@@ -43,6 +44,11 @@ const FuturesClosePositionModal = ({
   const [price, setPrice] = useState('');
   const [confirmVisible, setConfirmVisible] = useState(false);
   const sheetRef = useRef(null);
+
+  // Parent clears `pos` as soon as it hides the sheet; keep the last one so the close animation doesn't flash placeholder content.
+  const lastPosRef = useRef(posProp);
+  if (posProp) lastPosRef.current = posProp;
+  const pos = posProp || lastPosRef.current;
 
   const isLong = String(pos?.side ?? '').toUpperCase() === 'LONG' || String(pos?.side ?? '').toUpperCase() === 'BUY';
   const sideLabel = isLong ? 'Long' : 'Short';
@@ -86,20 +92,20 @@ const FuturesClosePositionModal = ({
   };
 
   useEffect(() => {
-    if (visible && holding > 0) {
+    if (visible) {
       setOrderType('MARKET');
+      setConfirmVisible(false);
       setPrice(markPrice > 0 ? markPrice.toFixed(getDecimalPlaces(tickSize)) : '');
       applyPct(100);
       sheetRef.current?.open();
-    } else if (!visible) {
+    } else {
       sheetRef.current?.close();
     }
-  }, [visible, holding, markPrice, stepSize, tickSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, posProp]);
 
   const handleSheetClose = () => {
-    if (!loading) {
-      onClose();
-    }
+    onClose();
   };
 
   const estValue = useMemo(() => {
@@ -135,6 +141,7 @@ const FuturesClosePositionModal = ({
     onConfirm({
       position_id: pos?._id || pos?.id || pos?.position_id,
       symbol: pos?.symbol,
+      orderType,
       order_type: orderType,
       quantity: q,
       price: p,
@@ -152,47 +159,14 @@ const FuturesClosePositionModal = ({
 
   return (
     <>
-      <RBSheet
+      <AnimatedBottomSheet
         ref={sheetRef}
-        keyboardAvoidingViewEnabled={Platform.OS === 'ios'}
-        customModalProps={{ statusBarTranslucent: true }}
-        closeOnDragDown={!loading}
-        closeOnPressMask={!loading}
+        isDark={isDark}
+        sheetHeight={SHEET_HEIGHT}
+        dismissDisabled={loading}
         onClose={handleSheetClose}
-        height={580}
-        animationType="fade"
-        openDuration={250}
-        closeDuration={200}
-        customStyles={{
-          wrapper: { backgroundColor: 'rgba(0, 0, 0, 0.75)' },
-          draggableIcon: {
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            width: 40,
-            marginTop: 10,
-          },
-          container: {
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            borderTopWidth: 1,
-            borderLeftWidth: 1,
-            borderRightWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.12)',
-            paddingHorizontal: 16,
-            paddingTop: 10,
-            paddingBottom: 24,
-            backgroundColor: 'transparent',
-            overflow: 'hidden',
-          },
-        }}
       >
-        {/* Glassmorphic Background matching Spot.jsx */}
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          blurType="light"
-          blurAmount={20}
-          reducedTransparencyFallbackColor="#111214"
-        />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(10, 12, 16, 0.72)' : 'rgba(255, 255, 255, 0.88)' }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? '#0A0C10' : '#FFFFFF' }]} />
         {isDark && (
           <>
             <LinearGradient
@@ -216,8 +190,13 @@ const FuturesClosePositionModal = ({
             />
           </>
         )}
+        <View
+          pointerEvents="none"
+          style={[styles.sheetBorder, { borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)' }]}
+        />
 
-        <View style={{ flex: 1 }}>
+        <View style={styles.sheetContent}>
+          <View style={[styles.dragHandle, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)' }]} />
           {/* Header */}
           <View
             style={{
@@ -251,7 +230,9 @@ const FuturesClosePositionModal = ({
             </View>
 
             <TouchableOpacity
-              onPress={() => sheetRef.current?.close()}
+              onPress={() => {
+                if (!loading) sheetRef.current?.close();
+              }}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={{
                 padding: 4,
@@ -525,7 +506,7 @@ const FuturesClosePositionModal = ({
             </TouchableOpacity>
           </KeyboardAwareScrollView>
         </View>
-      </RBSheet>
+      </AnimatedBottomSheet>
 
       {/* Centered Confirm Dialog */}
       <Modal
@@ -553,13 +534,24 @@ const FuturesClosePositionModal = ({
               },
             ]}
           >
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              blurType="light"
-              blurAmount={20}
-              reducedTransparencyFallbackColor="#111214"
+            {Platform.OS === 'ios' ? (
+              <BlurView
+                style={StyleSheet.absoluteFill}
+                blurType="light"
+                blurAmount={20}
+                reducedTransparencyFallbackColor="#111214"
+              />
+            ) : null}
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: isDark
+                    ? (Platform.OS === 'ios' ? 'rgba(10, 12, 16, 0.78)' : '#0E1116')
+                    : (Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.90)' : '#FFFFFF'),
+                },
+              ]}
             />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(10, 12, 16, 0.78)' : 'rgba(255, 255, 255, 0.90)' }]} />
             {isDark && (
               <>
                 <LinearGradient
@@ -642,6 +634,27 @@ const FuturesClosePositionModal = ({
 };
 
 const styles = StyleSheet.create({
+  sheetBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+  },
+  sheetContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 24,
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 10,
+  },
   confirmWrap: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
@@ -658,4 +671,19 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FuturesClosePositionModal;
+// FuturesTrade re-renders on every socket tick and hands down a fresh `selectedCoin`; only re-render for fields this sheet reads.
+const propsAreEqual = (prev, next) =>
+  prev.visible === next.visible &&
+  prev.loading === next.loading &&
+  prev.isDark === next.isDark &&
+  prev.pos === next.pos &&
+  prev.themeColors === next.themeColors &&
+  prev.onClose === next.onClose &&
+  prev.onConfirm === next.onConfirm &&
+  prev.selectedCoin?.symbol === next.selectedCoin?.symbol &&
+  prev.selectedCoin?.base_asset === next.selectedCoin?.base_asset &&
+  prev.selectedCoin?.margin_asset === next.selectedCoin?.margin_asset &&
+  getStepSize(prev.selectedCoin) === getStepSize(next.selectedCoin) &&
+  getTickSize(prev.selectedCoin) === getTickSize(next.selectedCoin);
+
+export default React.memo(FuturesClosePositionModal, propsAreEqual);

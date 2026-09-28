@@ -80,9 +80,9 @@ const SpotWalletTab = ({
 
   return (
     <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 18 }}>
-      <AppText weight={SEMI_BOLD} type={EIGHTEEN}>
+      {/* <AppText weight={SEMI_BOLD} type={EIGHTEEN}>
         Spot Wallet Balance
-      </AppText>
+      </AppText> */}
 
       <View
         style={{

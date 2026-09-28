@@ -10,9 +10,13 @@ import {
   Keyboard,
   Dimensions,
   Text,
+  Animated,
 } from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppSafeAreaView, AppText, SEMI_BOLD, MEDIUM, BOLD } from "../../shared";
+import Svg, { Path } from "react-native-svg";
+import { Wallet, FileText, RefreshCw, Info, ShieldCheck } from "lucide-react-native";
+import { useIsFocused } from "@react-navigation/native";
+import { AppSafeAreaView, AppText, SEMI_BOLD } from "../../shared";
 import { colors } from "../../theme/colors";
 import { useTheme } from "../../hooks/useTheme";
 import {
@@ -50,10 +54,71 @@ import {
   sanitizeAmountInput,
   newIdempotencyKey,
   assetName,
+  parseFiatConvertLimits,
 } from "./convertHelpers";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const GOLD = "#D1AA67";
+const LIVE_GREEN = "#01BC8D";
+const MUTED = "#848E9C";
+/** REST poll for convert rates (web polls at the same interval when its socket is down) */
+const RATES_POLL_MS = 2000;
+const DEFAULT_MIN_AED = 100;
+
+const AedSymbolIcon = ({ size = 13, color = "#FFFFFF" }) => (
+  <Svg width={size} height={size} viewBox="0 0 100 100" fill={color}>
+    <Path d="M 24 14 H 54 C 76 14 90 28 90 50 C 90 72 76 86 54 86 H 24 V 14 Z M 37 25 V 75 H 52 C 69 75 78 65 78 50 C 78 35 69 25 52 25 H 37 Z" />
+    <Path d="M 16 35 C 28 30 42 36 56 36 H 82 C 86 36 89 34 92 33 V 41 C 88 43 84 44 80 44 H 55 C 41 44 28 39 16 43 V 35 Z" />
+    <Path d="M 16 52 C 28 47 42 53 56 53 H 82 C 86 53 89 51 92 50 V 58 C 88 60 84 61 80 61 H 55 C 41 61 28 56 16 60 V 52 Z" />
+  </Svg>
+);
+
+const FiatIcon = ({ code, size = 22 }) => (
+  <View style={[styles.fiatCircle, { width: size, height: size, borderRadius: size / 2 }]}>
+    {code === "AED" ? (
+      <AedSymbolIcon size={Math.round(size * 0.6)} />
+    ) : (
+      <Text style={[styles.fiatCircleText, { fontSize: Math.round(size * 0.42) }]}>
+        {String(code || "").slice(0, 2)}
+      </Text>
+    )}
+  </View>
+);
+
+const LiveDot = () => {
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.4, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <Animated.View
+      style={[
+        styles.liveDot,
+        { opacity: pulse, transform: [{ scale: pulse.interpolate({ inputRange: [0.4, 1], outputRange: [0.85, 1] }) }] },
+      ]}
+    />
+  );
+};
+
+/** Single-side dashed borders don't render on iOS, so clip a fully dashed box to one edge. */
+const DashedDivider = ({ color }) => (
+  <View style={{ height: 1, overflow: "hidden", marginVertical: 3 }}>
+    <View style={{ height: 2, borderWidth: 1, borderColor: color, borderStyle: "dashed" }} />
+  </View>
+);
+
+const DashedVLine = ({ color }) => (
+  <View style={{ flex: 1, width: 2, overflow: "hidden", marginVertical: 6 }}>
+    <View style={{ flex: 1, width: 4, borderWidth: 2, borderColor: color, borderStyle: "dashed" }} />
+  </View>
+);
 
 const CRYPTO_ICON_MAP = {
   USDT: tetherIcon,
@@ -67,7 +132,7 @@ const CRYPTO_ICON_MAP = {
   USDC: tetherIcon,
 };
 
-const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
+const BuyCryptoScreen = ({ navigation, isEmbedded = false, presetSide, presetAsset, presetKey }) => {
   const { colors: themeColors, isDark } = useTheme();
   const dispatch = useAppDispatch();
   const userData = useAppSelector((state) => state.auth.userData);
@@ -156,6 +221,31 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
     loadInitialData();
   }, [loadInitialData]);
 
+  const refreshRates = useCallback(async () => {
+    const res = await appOperation.customer.fiat_convert_rates().catch(() => null);
+    if (res?.success && res?.data) setRates(res.data);
+  }, []);
+
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (!loggedIn || !isFocused) return undefined;
+    const id = setInterval(refreshRates, RATES_POLL_MS);
+    return () => clearInterval(id);
+  }, [loggedIn, isFocused, refreshRates]);
+
+  const [convertLimits, setConvertLimits] = useState({ minAed: null, maxAed: null });
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+    let cancelled = false;
+    (async () => {
+      const res = await appOperation.customer.fiat_limits().catch(() => null);
+      if (!cancelled && res?.success) setConvertLimits(parseFiatConvertLimits(res.data));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn]);
+
   // Fetch Wallet Spot Balance
   const fetchBalance = useCallback(async () => {
     if (!loggedIn) {
@@ -210,18 +300,21 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
     isPositiveMoneyString(spendAmountValue) &&
     moneyGreaterThan(spendAmountValue, spotBalance);
 
+  useEffect(() => {
+    if (!presetKey) return;
+    setSide(String(presetSide || "").toLowerCase() === "sell" ? "sell" : "buy");
+    if (presetAsset) setCryptoCode(String(presetAsset).toUpperCase());
+    setAmount("");
+    setInputField("spend");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetKey]);
+
   // Handle Side Toggle (Buy / Sell)
   const handleToggleSide = (newSide) => {
     if (side === newSide) return;
     setSide(newSide);
     setAmount("");
     setInputField("spend");
-  };
-
-  const handleSetMax = () => {
-    if (!loggedIn || !spotBalance || parseFloat(spotBalance) <= 0) return;
-    setInputField("spend");
-    setAmount(String(spotBalance));
   };
 
   // Open Asset Picker
@@ -363,7 +456,6 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
   };
 
   const RootContainer = isEmbedded ? View : AppSafeAreaView;
-  const ScrollWrap = isEmbedded ? View : ScrollView;
 
   return (
     <RootContainer style={{ backgroundColor: themeColors.background, flex: 1 }}>
@@ -398,32 +490,26 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
         </View>
       )}
 
-      <ScrollWrap
-        contentContainerStyle={!isEmbedded ? styles.scrollContent : undefined}
-        style={isEmbedded ? styles.embeddedContent : undefined}
+      <ScrollView
+        contentContainerStyle={isEmbedded ? styles.embeddedContent : styles.scrollContent}
+        style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Page Title with History Icon */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <Text style={[styles.pageTitle, { color: isDark ? "#FFFFFF" : "#111827", marginBottom: 0 }]}>
-            {isBuy ? `Buy ${crypto?.code || "USDT"} with ${fiat?.code || "AED"}` : `Sell ${crypto?.code || "USDT"} for ${fiat?.code || "AED"}`}
-          </Text>
-          {isEmbedded && (
-            <TouchableOpacity
-              onPress={handleOpenHistory}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={{ padding: 4 }}
-            >
-              <FastImage
-                source={historyIcon}
-                style={{ width: 20, height: 20 }}
-                resizeMode={FastImage.resizeMode.contain}
-                tintColor={themeColors.text}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+        {isEmbedded && (
+          <TouchableOpacity
+            onPress={handleOpenHistory}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{ alignSelf: "flex-end", padding: 4, marginBottom: 12 }}
+          >
+            <FastImage
+              source={historyIcon}
+              style={{ width: 20, height: 20 }}
+              resizeMode={FastImage.resizeMode.contain}
+              tintColor={themeColors.text}
+            />
+          </TouchableOpacity>
+        )}
 
         {/* Main Card Wrapper */}
         <View
@@ -548,12 +634,12 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
               ]}
             >
               <Text style={[styles.fieldLabel, { color: isDark ? "#9CA3AF" : "#6B7280" }]}>
-                {isBuy ? "Spend" : "Sell"}
+                {isBuy ? "You spend" : "You sell"}
               </Text>
               <View style={styles.fieldRow}>
                 <TextInput
                   style={[styles.fieldInput, { color: isDark ? "#FFFFFF" : "#111827" }]}
-                  placeholder={isBuy ? "0.00 min" : "0.00"}
+                  placeholder="0.00"
                   placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
                   keyboardType="decimal-pad"
                   value={spendAmountValue}
@@ -569,9 +655,7 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
                   style={styles.fieldPill}
                 >
                   {isBuy ? (
-                    <View style={styles.fiatCircle}>
-                      <Text style={styles.fiatCircleText}>Dh</Text>
-                    </View>
+                    <FiatIcon code={spendAsset?.code} />
                   ) : (
                     <FastImage
                       source={CRYPTO_ICON_MAP[spendAsset?.code] || tetherIcon}
@@ -604,12 +688,12 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
               ]}
             >
               <Text style={[styles.fieldLabel, { color: isDark ? "#9CA3AF" : "#6B7280" }]}>
-                Receive
+                You receive (est.)
               </Text>
               <View style={styles.fieldRow}>
                 <TextInput
                   style={[styles.fieldInput, { color: isDark ? "#FFFFFF" : "#111827" }]}
-                  placeholder="0"
+                  placeholder="0.00"
                   placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
                   keyboardType="decimal-pad"
                   value={receiveAmountValue}
@@ -625,9 +709,7 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
                   style={styles.fieldPill}
                 >
                   {!isBuy ? (
-                    <View style={styles.fiatCircle}>
-                      <Text style={styles.fiatCircleText}>Dh</Text>
-                    </View>
+                    <FiatIcon code={receiveAsset?.code} />
                   ) : (
                     <FastImage
                       source={CRYPTO_ICON_MAP[receiveAsset?.code] || tetherIcon}
@@ -648,94 +730,121 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
               </View>
             </View>
 
-            {/* Balance & Ticket Hint Rows */}
-            <View style={styles.hintsWrap}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text
-                  style={[
-                    styles.hintText,
-                    {
-                      color: insufficientBalance
-                        ? "#FF4D4F"
-                        : isDark
-                          ? "#7E8B9E"
-                          : "#8A94A6",
-                    },
-                  ]}
-                >
-                  {loggedIn
-                    ? `Spot available: ${formatQuoteAmount(spotBalance, spendAsset?.qty_decimals)} ${spendAsset?.code || ""}${insufficientBalance ? " · Not enough balance" : ""}`
-                    : "Log in to see spot balance"}
-                </Text>
-                {loggedIn && (
-                  <TouchableOpacity onPress={handleSetMax} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Text style={{ color: "#D1AA67", fontSize: 12, fontWeight: "700" }}>MAX</Text>
-                  </TouchableOpacity>
-                )}
+            {/* Balance / limits / live status */}
+            <View
+              style={[
+                styles.hintsGrid,
+                {
+                  backgroundColor: isDark ? "transparent" : "#F8F9FA",
+                  borderColor: isDark ? "#2B3139" : "#DFE0E2",
+                },
+              ]}
+            >
+              <View style={styles.hintsRow}>
+                <View style={[styles.hintLine, { flex: 1 }]}>
+                  <Wallet size={13} color={insufficientBalance ? "#FF4D4F" : MUTED} strokeWidth={1.8} />
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.hintText,
+                      { color: insufficientBalance ? "#E45561" : MUTED, flexShrink: 1 },
+                      insufficientBalance && { fontWeight: "600" },
+                    ]}
+                  >
+                    {loggedIn
+                      ? loadingBalance
+                        ? "Loading spot balance…"
+                        : `Spot available: ${formatQuoteAmount(spotBalance, spendAsset?.qty_decimals)} ${spendAsset?.code || ""}${insufficientBalance ? " · Not enough" : ""}`
+                      : "Log in to see spot balance"}
+                  </Text>
+                </View>
+                <View style={styles.hintLine}>
+                  <LiveDot />
+                  <Text style={styles.liveText}>Live</Text>
+                </View>
               </View>
               {isBuy && (
-                <Text style={[styles.hintText, { color: isDark ? "#7E8B9E" : "#8A94A6", marginTop: 4 }]}>
-                  Ticket 0.00 min {fiat?.code || "AED"}
-                </Text>
+                <View style={styles.hintLine}>
+                  <FileText size={13} color={MUTED} strokeWidth={1.8} />
+                  <Text numberOfLines={1} style={[styles.hintText, { color: MUTED, flexShrink: 1 }]}>
+                    Minimum transaction: {formatAedAmount(convertLimits.minAed > 0 ? convertLimits.minAed : DEFAULT_MIN_AED)} AED
+                    {convertLimits.minAed > 0 && convertLimits.maxAed != null
+                      ? ` · ${formatAedAmount(convertLimits.maxAed)} max`
+                      : ""}
+                  </Text>
+                </View>
               )}
+              <View style={[styles.hintLine, { alignSelf: "flex-end" }]}>
+                <Text style={styles.quoteTimerText}>Quote valid for 30s</Text>
+                <TouchableOpacity onPress={refreshRates} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <RefreshCw size={12} color="#F0B90B" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Summary Details Box */}
+            {/* Quote summary */}
             <View
               style={[
                 styles.quotePanel,
                 {
-                  backgroundColor: isDark ? 'transparent' : "#F9FAFB",
-                  borderColor: isDark ? "#232836" : "#E5E7EB",
+                  backgroundColor: isDark ? "transparent" : "#F9FAFB",
+                  borderColor: isDark ? "#2B3139" : "#E5E7EB",
                 },
               ]}
             >
-              <View style={styles.quoteRow}>
-                <Text style={[styles.quoteLabel, { color: isDark ? "#7E8B9E" : "#8A94A6" }]}>Mid</Text>
-                <Text style={[styles.quoteVal, { color: isDark ? "#D1D5DB" : "#374151" }]}>
-                  {preview ? `${preview.cmc_rate} ${fiat?.code || "AED"}` : "—"}
-                </Text>
-              </View>
-
-              <View style={styles.quoteRow}>
-                <Text style={[styles.quoteLabel, { color: isDark ? "#7E8B9E" : "#8A94A6" }]}>Fee</Text>
-                <Text style={[styles.quoteVal, { color: isDark ? "#D1D5DB" : "#374151" }]}>
-                  {preview ? "0.00 AED" : "—"}
-                </Text>
-              </View>
-
-              <View style={styles.quoteRow}>
-                <Text style={[styles.quoteLabel, { color: isDark ? "#7E8B9E" : "#8A94A6" }]}>You receive</Text>
-                <Text style={[styles.quoteVal, { color: isDark ? "#D1D5DB" : "#374151" }]}>
-                  {preview ? `${formatQuoteAmount(preview.you_receive, receiveAsset?.qty_decimals)} ${receiveAsset?.code}` : "—"}
-                </Text>
-              </View>
-
-              <View style={styles.quoteRow}>
-                <Text style={[styles.quoteLabel, { color: isDark ? "#7E8B9E" : "#8A94A6" }]}>You spend</Text>
-                <Text style={[styles.quoteVal, { color: isDark ? "#D1D5DB" : "#374151" }]}>
-                  {preview ? `${formatQuoteAmount(preview.you_spend, spendAsset?.qty_decimals)} ${spendAsset?.code}` : "—"}
-                </Text>
-              </View>
-
-              <View style={styles.quoteRow}>
-                <Text style={[styles.quoteLabel, { color: isDark ? "#7E8B9E" : "#8A94A6" }]}>Rate</Text>
-                <Text style={[styles.quoteValRate, { color: isDark ? "#E5E7EB" : "#111827" }]}>
-                  {liveRateText}
-                </Text>
-              </View>
-
-              <Text style={styles.quoteCountdown}>
-                {preview?.stale
-                  ? "Price may be delayed"
-                  : preview
-                    ? "Live price updates automatically"
-                    : "Enter AED or crypto — either field calculates the other"}
+              <Text style={[styles.quoteSummaryTitle, { color: isDark ? "#FFFFFF" : "#121317" }]}>
+                Quote summary
               </Text>
+
+              <View style={styles.quoteRow}>
+                <Text style={styles.quoteLabel}>Market rate</Text>
+                <Text style={[styles.quoteVal, { color: isDark ? "#EAECEF" : "#1E2329" }]}>
+                  {preview
+                    ? `1 ${crypto?.code || ""} ≈ ${preview.cmc_rate || preview.user_rate} ${fiat?.code || ""}`
+                    : liveRateText}
+                </Text>
+              </View>
+
+              <View style={styles.quoteRow}>
+                <View style={styles.hintLine}>
+                  <Text style={styles.quoteLabel}>Fee</Text>
+                  <Info size={12} color="#5E6673" strokeWidth={1.8} />
+                </View>
+                <Text style={[styles.quoteVal, { color: isDark ? "#EAECEF" : "#1E2329" }]}>
+                  {preview ? quoteFeeLabel(preview, formatAedAmount) : "0.00 AED"}
+                </Text>
+              </View>
+
+              <DashedDivider color={isDark ? "#2B2F36" : "#DFE0E2"} />
+
+              <View style={styles.quoteRow}>
+                <Text style={styles.quoteLabel}>You receive</Text>
+                <Text style={[styles.quoteVal, { color: LIVE_GREEN, fontWeight: "700" }]}>
+                  {preview
+                    ? `${formatQuoteAmount(preview.you_receive, receiveAsset?.qty_decimals)} ${receiveAsset?.code || ""}`.trim()
+                    : `0.00 ${receiveAsset?.code || "USDT"}`}
+                </Text>
+              </View>
+
+              <View style={styles.quoteRow}>
+                <Text style={styles.quoteLabel}>You spend</Text>
+                <Text style={[styles.quoteVal, { color: isDark ? "#EAECEF" : "#1E2329" }]}>
+                  {preview
+                    ? `${formatQuoteAmount(preview.you_spend, spendAsset?.qty_decimals)} ${spendAsset?.code || ""}`.trim()
+                    : `0.00 ${spendAsset?.code || "AED"}`}
+                </Text>
+              </View>
+
+              <View style={styles.quoteRow}>
+                <Text style={styles.quoteLabel}>Exchange rate (after fee)</Text>
+                <Text style={[styles.quoteVal, { color: isDark ? "#EAECEF" : "#1E2329", flexShrink: 1, textAlign: "right" }]}>
+                  {(preview && quoteMidLine(preview, fiat?.code, crypto?.code)) || "—"}
+                </Text>
+              </View>
             </View>
 
             {/* CTA Button */}
-            <View style={{ marginTop: 22 }}>
+            <View style={{ marginTop: 16 }}>
               <TouchableOpacity
                 activeOpacity={0.85}
                 disabled={quoting || (loggedIn && (!isPositiveMoneyString(spendAmountValue) || insufficientBalance))}
@@ -781,9 +890,112 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
                 )}
               </TouchableOpacity>
             </View>
+
+            <View style={styles.footerGuarantee}>
+              <ShieldCheck size={13} color={LIVE_GREEN} strokeWidth={2} />
+              <Text style={styles.footerGuaranteeText}>
+                Secure conversion  •  Final rate shown before confirmation
+              </Text>
+            </View>
           </View>
         </View>
-      </ScrollWrap>
+
+        {/* How it works */}
+        <View style={styles.hotSection}>
+          <Text style={[styles.hotTitle, { color: isDark ? "#FFFFFF" : "#121317" }]}>
+            <Text style={{ color: GOLD }}>{isBuy ? "Buy" : "Sell"}</Text>{" "}
+            {isBuy
+              ? `${crypto?.code || "USDT"} with ${fiat?.code || "AED"}`
+              : `${crypto?.code || "USDT"} for ${fiat?.code || "AED"}`}
+          </Text>
+          <Text style={styles.hotSubtitle}>
+            {isBuy
+              ? `Convert ${fiat?.code || "AED"} to ${crypto?.code || "USDT"} instantly at the best market rate.`
+              : `Convert ${crypto?.code || "USDT"} to ${fiat?.code || "AED"} instantly at the best market rate.`}
+          </Text>
+
+          <View style={[styles.badgeBar, { borderBottomColor: isDark ? "#232730" : "#DFE0E2" }]}>
+            {[
+              { key: "spot", label: "SPOT", icon: <Wallet size={15} color={MUTED} strokeWidth={1.8} /> },
+              { key: "fiat", label: fiat?.code || "AED", icon: <FiatIcon code={fiat?.code} size={20} /> },
+              {
+                key: "crypto",
+                label: crypto?.code || "USDT",
+                icon: (
+                  <FastImage
+                    source={CRYPTO_ICON_MAP[crypto?.code] || tetherIcon}
+                    style={{ width: 20, height: 20, borderRadius: 10 }}
+                    resizeMode={FastImage.resizeMode.contain}
+                  />
+                ),
+              },
+            ].map((b) => (
+              <View
+                key={b.key}
+                style={[
+                  styles.badge,
+                  {
+                    borderColor: isDark ? "#2B3139" : "#DFE0E2",
+                    backgroundColor: isDark ? "transparent" : "#F8F9FA",
+                  },
+                ]}
+              >
+                {b.icon}
+                <Text style={[styles.badgeText, { color: isDark ? "#EBEBEB" : "#262933" }]}>{b.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {[
+            {
+              title: "Enter amount",
+              desc: `Enter ${fiat?.code || "AED"} or ${crypto?.code || "USDT"}. The other field updates automatically using the live rate.`,
+              featureTitle: "Live rates from multiple sources",
+              featureDesc: "Updated in real time",
+            },
+            {
+              title: "Review quote",
+              desc: "Review the rate, fee, amount received, and quote expiry before confirming.",
+              featureTitle: "Secure & transparent",
+              featureDesc: "No hidden fees. What you see is what you get.",
+            },
+            {
+              title: "Confirm conversion",
+              desc: `Confirm to complete the conversion and credit ${receiveAsset?.code || "USDT"} to your Spot wallet.`,
+              featureTitle: "Instant credit",
+              featureDesc: `${receiveAsset?.code || "USDT"} will be credited to your Spot wallet instantly.`,
+            },
+          ].map((step, idx, arr) => {
+            const isLast = idx === arr.length - 1;
+            const stepLineColor = isDark ? "#363B47" : "#DFE0E2";
+            return (
+              <View key={step.title} style={styles.step}>
+                <View style={styles.stepIconWrap}>
+                  <View style={[styles.stepDiamond, { backgroundColor: stepLineColor }]}>
+                    <Text style={[styles.stepDiamondText, { color: isDark ? "#FFFFFF" : "#121317" }]}>{idx + 1}</Text>
+                  </View>
+                  {!isLast && <DashedVLine color={stepLineColor} />}
+                </View>
+                <View style={[styles.stepContent, isLast && { paddingBottom: 0 }]}>
+                  <Text style={[styles.stepTitle, { color: isDark ? "#FFFFFF" : "#121317" }]}>{step.title}</Text>
+                  <Text style={styles.stepDesc}>{step.desc}</Text>
+                  <View
+                    style={[
+                      styles.featureCard,
+                      { backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#EFEFEF" },
+                    ]}
+                  >
+                    <Text style={[styles.featureTitle, { color: isDark ? "rgba(255,255,255,0.9)" : "#121317" }]}>
+                      {step.featureTitle}
+                    </Text>
+                    <Text style={styles.featureDesc}>{step.featureDesc}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
 
       {/* Asset Picker Bottom Sheet */}
       <AnimatedBottomSheet
@@ -865,11 +1077,7 @@ const BuyCryptoScreen = ({ navigation, isEmbedded = false }) => {
                   ]}
                 >
                   {isFiat ? (
-                    <View style={[styles.fiatCircle, { width: 32, height: 32, borderRadius: 16 }]}>
-                      <AppText weight={BOLD} style={{ color: "#FFFFFF", fontSize: 13 }}>
-                        {item.code === "AED" ? "Dh" : item.code?.slice(0, 2)}
-                      </AppText>
-                    </View>
+                    <FiatIcon code={item.code} size={32} />
                   ) : (
                     <FastImage
                       source={CRYPTO_ICON_MAP[item.code] || tetherIcon}
@@ -1015,12 +1223,7 @@ const styles = StyleSheet.create({
   embeddedContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 40,
-  },
-  pageTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 16,
+    paddingBottom: 120,
   },
   tradeCard: {
     borderRadius: 16,
@@ -1119,41 +1322,176 @@ const styles = StyleSheet.create({
     height: 10,
     marginLeft: 2,
   },
-  hintsWrap: {
+  hintsGrid: {
+    gap: 4,
     marginTop: 12,
-    marginBottom: 14,
-    paddingHorizontal: 2,
+    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  hintsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+  },
+  hintLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
   },
   hintText: {
     fontSize: 13,
+    lineHeight: 18,
+  },
+  quoteTimerText: {
+    fontSize: 11.5,
+    color: MUTED,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: LIVE_GREEN,
+    shadowColor: LIVE_GREEN,
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  liveText: {
+    color: LIVE_GREEN,
+    fontSize: 12,
+    fontWeight: "700",
   },
   quotePanel: {
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     gap: 10,
+  },
+  quoteSummaryTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 2,
   },
   quoteRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 10,
   },
   quoteLabel: {
     fontSize: 13,
+    fontWeight: "500",
+    color: MUTED,
   },
   quoteVal: {
     fontSize: 13,
     fontWeight: "500",
   },
-  quoteValRate: {
+  footerGuarantee: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 10,
+  },
+  footerGuaranteeText: {
+    fontSize: 11.5,
+    color: MUTED,
+  },
+  hotSection: {
+    marginTop: 28,
+  },
+  hotTitle: {
+    fontSize: 26,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  hotSubtitle: {
+    fontSize: 15,
+    lineHeight: 21,
+    color: MUTED,
+    marginBottom: 18,
+  },
+  badgeBar: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
+    paddingBottom: 24,
+    marginBottom: 24,
+    borderBottomWidth: 1,
+  },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 999,
+  },
+  badgeText: {
     fontSize: 13,
     fontWeight: "600",
   },
-  quoteCountdown: {
-    color: "#F59E0B",
-    fontSize: 12,
-    fontWeight: "500",
-    marginTop: 4,
+  step: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 14,
+  },
+  stepIconWrap: {
+    width: 44,
+    alignItems: "center",
+    paddingTop: 6,
+  },
+  stepDiamond: {
+    width: 30,
+    height: 30,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "45deg" }],
+    marginBottom: 6,
+  },
+  stepDiamondText: {
+    fontSize: 14,
+    fontWeight: "600",
+    transform: [{ rotate: "-45deg" }],
+  },
+  stepContent: {
+    flex: 1,
+    paddingTop: 2,
+    paddingBottom: 28,
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  stepDesc: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: MUTED,
+  },
+  featureCard: {
+    marginTop: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    gap: 2,
+  },
+  featureTitle: {
+    fontSize: 15,
+  },
+  featureDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: MUTED,
   },
   ctaPillBtn: {
     borderRadius: 999,
