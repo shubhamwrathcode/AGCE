@@ -41,6 +41,7 @@ import {
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import {
   computeFuturesLeverageStats,
+  getMaxQuantityAtLeverage,
   formatPriceByTick,
   formatQtyByStep,
   getDecimalPlaces,
@@ -67,15 +68,19 @@ import { CUSTOMER_TYPE } from '../../appOperation/types';
 import SimpleToast from 'react-native-simple-toast';
 import NavigationService from '../../navigation/NavigationService';
 import { NAVIGATION_AUTH_STACK, KYC_STATUS_SCREEN, LOGIN_SCREEN } from '../../navigation/routes';
-import { showError } from '../../helper/logger';
+import { showError, alertErrorMessage, alertSuccessMessage } from '../../helper/logger';
 import {
   toApiMarginMode,
   toUiMarginMode,
   toUiLeverage,
   formatFuturesSymbolMarginError,
   isMarginModeLocked,
+  summarizeLeverageMarginBatch,
+  formatBatchAdjustTrail,
 } from './futuresSymbolMarginHelpers';
 import FuturesLeverageSlider from './FuturesLeverageSlider';
+import FuturesBatchAdjustDrawer from './FuturesBatchAdjustDrawer';
+import AdjustLeverageSheet from './AdjustLeverageSheet';
 import {
   futuresErrSelectPair,
   futuresErrInvalidSize,
@@ -1097,17 +1102,17 @@ const FuturesUI = () => {
       return;
     }
     if (!futuresSymbol) {
-      SimpleToast.show('Select a contract first.', SimpleToast.SHORT);
+      alertErrorMessage('Select a contract first.');
       return;
     }
     if (!isLoggedIn) {
-      showError('Please sign in to change margin mode.');
+      alertErrorMessage('Please sign in to change margin mode.');
       closeMarginModeSheet();
       navigation.navigate(LOGIN_SCREEN);
       return;
     }
     if (marginModeLocked) {
-      SimpleToast.show("Mode can't change while you have an open order or position.", SimpleToast.SHORT);
+      alertErrorMessage("Mode can't change while you have an open order or position.");
       return;
     }
     setIsSavingMarginMode(true);
@@ -1117,26 +1122,98 @@ const FuturesUI = () => {
         margin_mode: toApiMarginMode(marginModeDraft),
       });
       if (!res?.success) {
-        SimpleToast.show(formatFuturesSymbolMarginError(res, 'Failed to update margin mode'), SimpleToast.SHORT);
+        alertErrorMessage(formatFuturesSymbolMarginError(res, 'Failed to update margin mode'));
         return;
       }
       applySymbolSettings(res?.data);
       const savedMode = res?.data?.margin_mode != null ? toUiMarginMode(res.data.margin_mode) : marginModeDraft;
       setMarginMode(savedMode);
       setMarginModeDraft(savedMode);
-      SimpleToast.show(savedMode === 'Isolated' ? 'Switched to Isolated' : 'Switched to Cross', SimpleToast.SHORT);
+      alertSuccessMessage(savedMode === 'Isolated' ? 'Switched to Isolated' : 'Switched to Cross');
       closeMarginModeSheet();
     } catch (e) {
-      SimpleToast.show(
-        formatFuturesSymbolMarginError(e, 'Failed to update margin mode. Please try again.'),
-        SimpleToast.SHORT,
-      );
+      alertErrorMessage(formatFuturesSymbolMarginError(e, 'Failed to update margin mode. Please try again.'));
     } finally {
       setIsSavingMarginMode(false);
     }
   };
   const tifSheetRef = useRef(null);
-  const [batchAdjustMarginMode, setBatchAdjustMarginMode] = useState(false);
+  const [isBatchAdjustVisible, setIsBatchAdjustVisible] = useState(false);
+  const [batchAdjustDraft, setBatchAdjustDraft] = useState({
+    leverageEnabled: false,
+    marginModeEnabled: false,
+    leverage: null,
+    marginMode: null,
+  });
+  const batchAdjustActive = !!batchAdjustDraft.leverageEnabled || !!batchAdjustDraft.marginModeEnabled;
+
+  const openBatchAdjustDrawer = () => {
+    setBatchAdjustDraft((prev) => ({
+      ...prev,
+      leverage: toUiLeverage(prev.leverage) ?? marginLeverage,
+      marginMode:
+        prev.marginMode === 'isolated' || prev.marginMode === 'cross'
+          ? prev.marginMode
+          : (marginMode === 'Isolated' ? 'isolated' : 'cross'),
+    }));
+    setIsMarginModeModalVisible(false);
+    setIsLeverageModalVisible(false);
+    // iOS can't present a second Modal while the first is still dismissing.
+    setTimeout(() => setIsBatchAdjustVisible(true), 350);
+  };
+
+  const confirmBatchAdjust = async ({ leverageEnabled, leverage, marginModeEnabled, marginMode: mode }) => {
+    if (!isLoggedIn) {
+      alertErrorMessage('Please sign in to batch adjust.');
+      setIsBatchAdjustVisible(false);
+      navigation.navigate(LOGIN_SCREEN);
+      return false;
+    }
+    if (!leverageEnabled && !marginModeEnabled) {
+      alertErrorMessage('Enable leverage and/or margin mode first.');
+      return false;
+    }
+    const body = { all_symbols: true };
+    if (leverageEnabled) body.leverage = leverage;
+    if (marginModeEnabled) body.margin_mode = toApiMarginMode(mode);
+    try {
+      const res = await appOperation.customer.futuresLeverageMarginBatch(body);
+      if (!res?.success) {
+        alertErrorMessage(formatFuturesSymbolMarginError(res, 'Batch adjust failed'));
+        return false;
+      }
+      const summary = summarizeLeverageMarginBatch(res.data);
+      const row = Array.isArray(res.data?.results)
+        ? res.data.results.find((r) => r?.symbol === futuresSymbol)
+        : null;
+      if (row) {
+        applySymbolSettings(row);
+      } else {
+        if (leverageEnabled) {
+          setMarginLeverage(leverage);
+          setLeverageDraft(leverage);
+        }
+        if (marginModeEnabled) {
+          const uiMode = toUiMarginMode(toApiMarginMode(mode));
+          setMarginMode(uiMode);
+          setMarginModeDraft(uiMode);
+        }
+      }
+      if (summary.failed > 0 && summary.succeeded === 0) {
+        alertErrorMessage(summary.detail || summary.title);
+        return false;
+      }
+      if (summary.failed > 0) {
+        alertSuccessMessage(`${summary.title}${summary.detail ? ` — ${summary.detail}` : ''}`);
+      } else {
+        alertSuccessMessage(summary.title);
+      }
+      return true;
+    } catch (e) {
+      alertErrorMessage(formatFuturesSymbolMarginError(e, 'Batch adjust failed. Please try again.'));
+      return false;
+    }
+  };
   const [contractUnit, setContractUnit] = useState('Amount (BTC)');
   const [contractUnitDraft, setContractUnitDraft] = useState('Amount (BTC)');
   const contractUnitSheetRef = useRef(null);
@@ -1198,6 +1275,10 @@ const FuturesUI = () => {
   const [isSavingLeverage, setIsSavingLeverage] = useState(false);
   const [isLeverageSliding, setIsLeverageSliding] = useState(false);
   const rbSheetMarginLeverage = useRef(null);
+  const batchAdjustTrail = formatBatchAdjustTrail(batchAdjustDraft, {
+    leverage: marginLeverage,
+    marginMode,
+  });
 
   const closeLeverageSheet = () => {
     if (isSavingLeverage) return;
@@ -1210,11 +1291,11 @@ const FuturesUI = () => {
     const maxL = Number(selectedCoin?.max_leverage) || 125;
     const nextLev = Math.min(Math.max(1, Math.round(Number(leverageDraft) || 1)), maxL);
     if (!futuresSymbol) {
-      SimpleToast.show('Select a contract first.', SimpleToast.SHORT);
+      alertErrorMessage('Select a contract first.');
       return;
     }
     if (!isLoggedIn) {
-      showError('Please sign in to change leverage.');
+      alertErrorMessage('Please sign in to change leverage.');
       setIsLeverageModalVisible(false);
       navigation.navigate(LOGIN_SCREEN);
       return;
@@ -1223,7 +1304,7 @@ const FuturesUI = () => {
     try {
       const res = await appOperation.customer.futuresSetLeverage({ symbol: futuresSymbol, leverage: nextLev });
       if (!res?.success) {
-        SimpleToast.show(formatFuturesSymbolMarginError(res, 'Failed to update leverage'), SimpleToast.SHORT);
+        alertErrorMessage(formatFuturesSymbolMarginError(res, 'Failed to update leverage'));
         return;
       }
       const savedLev = toUiLeverage(res?.data?.leverage) ?? nextLev;
@@ -1234,14 +1315,11 @@ const FuturesUI = () => {
         setMarginMode(savedMode);
         setMarginModeDraft(savedMode);
       }
-      SimpleToast.show('Leverage updated', SimpleToast.SHORT);
+      alertSuccessMessage('Leverage updated');
       setIsLeverageModalVisible(false);
       rbSheetMarginLeverage.current?.close();
-    } catch (e) {
-      SimpleToast.show(
-        formatFuturesSymbolMarginError(e, 'Failed to update leverage. Please try again.'),
-        SimpleToast.SHORT,
-      );
+    } catch {
+      alertErrorMessage('Failed to update leverage. Please try again.');
     } finally {
       setIsSavingLeverage(false);
     }
@@ -1258,6 +1336,7 @@ const FuturesUI = () => {
       const maxL = Number(selectedCoin.max_leverage);
       if (maxL > 0 && marginLeverage > maxL) {
         setMarginLeverage(maxL);
+        setLeverageDraft(maxL);
       }
     }
   }, [selectedCoin?.max_leverage, marginLeverage]);
@@ -2884,7 +2963,9 @@ const FuturesUI = () => {
                   </View>
 
                   {/* Batch Adjust Margin Mode Row */}
-                  <View
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={openBatchAdjustDrawer}
                     style={{
                       flexDirection: "row",
                       justifyContent: "space-between",
@@ -2896,12 +2977,19 @@ const FuturesUI = () => {
                     <AppText weight={MEDIUM} style={{ fontSize: 14, color: themeColors.text }}>
                       Batch Adjust Margin Mode
                     </AppText>
-                    <ToggleSwitch
-                      value={batchAdjustMarginMode}
-                      onValueChange={setBatchAdjustMarginMode}
-                      isDark={isDark}
-                    />
-                  </View>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      {batchAdjustActive && (
+                        <AppText style={{ fontSize: 12, color: themeColors.secondaryText, marginRight: 8 }}>
+                          {batchAdjustTrail}
+                        </AppText>
+                      )}
+                      <ToggleSwitch
+                        value={batchAdjustActive}
+                        onValueChange={openBatchAdjustDrawer}
+                        isDark={isDark}
+                      />
+                    </View>
+                  </TouchableOpacity>
 
                   {marginModeLocked && (
                     <AppText
@@ -2919,7 +3007,7 @@ const FuturesUI = () => {
                   {/* Continue Button */}
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    disabled={isSavingMarginMode}
+                    disabled={isSavingMarginMode || marginModeLocked || marginModeDraft === marginMode}
                     onPress={confirmMarginMode}
                     style={{
                       backgroundColor: colors.orangeTheme,
@@ -2929,22 +3017,29 @@ const FuturesUI = () => {
                       justifyContent: "center",
                       marginTop: 4,
                       marginBottom: 6,
-                      opacity: isSavingMarginMode || (marginModeLocked && marginModeDraft !== marginMode) ? 0.6 : 1,
+                      opacity: isSavingMarginMode || marginModeLocked || marginModeDraft === marginMode ? 0.6 : 1,
                     }}
                   >
-                    {isSavingMarginMode ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <AppText weight={SEMI_BOLD} style={{ color: "#FFFFFF", fontSize: 16 }}>
-                        Continue
-                      </AppText>
-                    )}
+                    <AppText weight={SEMI_BOLD} style={{ color: "#FFFFFF", fontSize: 16 }}>
+                      {isSavingMarginMode ? "Saving…" : "Confirm"}
+                    </AppText>
                   </TouchableOpacity>
                 </View>
               </View>
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
+
+        <FuturesBatchAdjustDrawer
+          visible={isBatchAdjustVisible}
+          onClose={() => setIsBatchAdjustVisible(false)}
+          maxLeverage={Number(selectedCoin?.max_leverage) || 125}
+          draft={batchAdjustDraft}
+          onDraftChange={setBatchAdjustDraft}
+          onConfirm={confirmBatchAdjust}
+          isDark={isDark}
+          themeColors={themeColors}
+        />
 
         {/* Contract Unit Preferences Sheet */}
         <RBSheet
@@ -3140,152 +3235,106 @@ const FuturesUI = () => {
 
       </ScrollView>
 
-      {/* Adjust Leverage Modal (Native 0-lag slide) */}
-      <Modal
-        visible={isLeverageModalVisible}
-        transparent={true}
-        animationType="slide"
-        statusBarTranslucent={true}
-        onRequestClose={closeLeverageSheet}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={closeLeverageSheet}
-          style={{
-            flex: 1,
-            backgroundColor: "#0006",
-            justifyContent: "flex-end",
-          }}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e?.stopPropagation?.()}
-            style={{
-              backgroundColor: isDark ? colors.newThemeColor : (themeColors.background || "#FFFFFF"),
-              maxHeight: "90%",
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              paddingHorizontal: 16,
-              paddingTop: 12,
-              paddingBottom: Math.max(16, insets.bottom + 8),
-            }}
+      {/* Adjust Leverage Modal — mirrors web futures_trade/MarginLeverageModal */}
+      {(() => {
+        const maxL = Number(selectedCoin?.max_leverage) || 125;
+        const leverageTiers = selectedCoin?.leverage_tiers || [];
+        const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+        const stats = computeFuturesLeverageStats({
+          availableBalance: balanceToUse,
+          leverage: leverageDraft,
+          maxLeverage: maxL,
+          leverageTiers,
+        });
+
+        const fmt = (value) => {
+          const tickSize = selectedCoin?.tick_size;
+          const precision = tickSize === undefined || tickSize === null ? 8 : getDecimalPlaces(tickSize);
+          const finalValue = Number(value)?.toFixed(precision)?.replace(/\.?0+$/, '');
+          const result = finalValue?.replace(/^0\.0*/, '');
+          const decimalPart = finalValue?.split('.')[1];
+          if (!decimalPart) return finalValue;
+          let zeroCount = 0;
+          for (const ch of decimalPart) {
+            if (ch === '0') zeroCount++;
+            else break;
+          }
+          if (zeroCount > 4 || value < 1e-7) return `0.0{${zeroCount}}${result}`;
+          return finalValue;
+        };
+
+        const markPriceNum =
+          Number(price) ||
+          Number(liveCoin?.last_price) ||
+          Number(liveCoin?.mark_price) ||
+          Number(selectedCoin?.mark_price) ||
+          null;
+        const maxNotional = stats.maxNotionalAtLev;
+        const maxQty = getMaxQuantityAtLeverage(leverageTiers, leverageDraft, markPriceNum);
+        let maxPosLabel = '—';
+        if (maxNotional === Infinity) {
+          maxPosLabel = 'No cap';
+        } else if (Number.isFinite(markPriceNum) && markPriceNum > 0 && maxQty != null) {
+          maxPosLabel = `${fmt(maxQty)} ${currentBaseAsset} (≈ ${fmt(maxNotional)} ${currentQuoteAsset})`;
+        } else if (Number.isFinite(maxNotional)) {
+          maxPosLabel = `${fmt(maxNotional)} ${currentQuoteAsset}`;
+        }
+
+        return (
+          <AdjustLeverageSheet
+            visible={isLeverageModalVisible}
+            onClose={closeLeverageSheet}
+            isDark={isDark}
+            fieldLabel="Pair"
+            coinIcon={<CoinIcon coin={selectedCoin} style={{ width: 24, height: 24, borderRadius: 12 }} />}
+            coinLabel={currentBaseAsset && currentQuoteAsset ? `${currentBaseAsset}/${currentQuoteAsset}` : '—/—'}
+            scrollEnabled={!isLeverageSliding}
+            slider={(
+              <FuturesLeverageSlider
+                value={leverageDraft}
+                onChange={setLeverageDraft}
+                onSlidingChange={setIsLeverageSliding}
+                maxLeverage={maxL}
+                isDark={isDark}
+                themeColors={themeColors}
+              />
+            )}
+            notes={[
+              `Maximum position at current leverage: ${maxPosLabel}`,
+              'Please note that leverage changing will also apply for open positions and open orders.',
+              'Selecting higher leverage increases your liquidation risk. Always manage your risk levels.',
+            ]}
+            warning={balanceToUse <= 0 ? 'The current available margin ≤ 0. You can increase the leverage or add margin.' : ''}
+            busy={isSavingLeverage}
+            confirmLabel={isSavingLeverage ? 'Saving…' : 'Confirm'}
+            onConfirm={confirmLeverage}
           >
-            <View style={{ paddingHorizontal: 4 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4, paddingBottom: 20 }}>
-                <AppText weight={BOLD} style={{ fontSize: 18, color: themeColors.text }}>
-                  Adjust Leverage
-                </AppText>
-                <TouchableOpacity onPress={closeLeverageSheet} style={{ padding: 4 }}>
-                  <FastImage
-                    source={closeIcon}
-                    resizeMode="contain"
-                    style={{ width: 15, height: 15 }}
-                    tintColor={themeColors.secondaryText}
-                  />
-                </TouchableOpacity>
-              </View>
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={!isLeverageSliding}
-                style={{ flexGrow: 0, flexShrink: 1 }}
-              >
-                {/* Pair Row */}
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Pair</AppText>
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
-                  <CoinIcon
-                    coin={selectedCoin}
-                    style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
-                  />
-                  <AppText weight={BOLD} style={{ fontSize: 16, color: themeColors.text }}>
-                    {(selectedCoin?.short_name || selectedCoin?.base_asset) ? `${selectedCoin.short_name || selectedCoin.base_asset}/${selectedCoin.margin_asset || selectedCoin.quote_asset || '—'}` : '—/—'}
-                  </AppText>
-                </View>
-
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Leverage</AppText>
-                <FuturesLeverageSlider
-                  value={leverageDraft}
-                  onChange={setLeverageDraft}
-                  onSlidingChange={setIsLeverageSliding}
-                  maxLeverage={Number(selectedCoin?.max_leverage) || 125}
-                  isDark={isDark}
-                  themeColors={themeColors}
-                />
-
-                {(() => {
-                  const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
-                  const maxL = Number(selectedCoin?.max_leverage) || 125;
-                  const currentLev = Math.min(Math.max(1, Number(leverageDraft) || 1), maxL);
-                  const stats = computeFuturesLeverageStats({
-                    availableBalance: balanceToUse,
-                    leverage: currentLev,
-                    maxLeverage: maxL,
-                    leverageTiers: selectedCoin?.leverage_tiers || [],
-                  });
-
-                  const fmt = (n, dp = 2) => {
-                    const x = Number(n);
-                    return Number.isFinite(x) ? x.toLocaleString("en-US", { maximumFractionDigits: dp, minimumFractionDigits: 0 }) : "0";
-                  };
-
-                  const maxNotional = stats.maxNotionalAtLev;
-                  const markPriceNum =
-                    Number(liveCoin?.mark_price) ||
-                    Number(liveCoin?.last_price) ||
-                    Number(selectedCoin?.mark_price) ||
-                    Number(price) ||
-                    0;
-                  let maxPosLabel = "—";
-                  if (maxNotional === Infinity) {
-                    maxPosLabel = "No cap";
-                  } else if (markPriceNum > 0 && Number.isFinite(maxNotional)) {
-                    maxPosLabel = `${fmt(maxNotional / markPriceNum, 8)} ${currentBaseAsset} (≈ ${fmt(maxNotional)} ${currentQuoteAsset})`;
-                  } else if (Number.isFinite(maxNotional)) {
-                    maxPosLabel = `${fmt(maxNotional)} ${currentQuoteAsset}`;
-                  }
-
-                  const noteStyle = { color: themeColors.secondaryText, fontSize: 13, lineHeight: 19, marginBottom: 8 };
-                  return (
-                    <View style={{ marginTop: 4 }}>
-                      <AppText style={noteStyle}>Maximum position at current leverage: {maxPosLabel}</AppText>
-                      <AppText style={noteStyle}>
-                        Please note that leverage changing will also apply for open positions and open orders.
-                      </AppText>
-                      <AppText style={noteStyle}>
-                        Selecting higher leverage increases your liquidation risk. Always manage your risk levels.
-                      </AppText>
-                      {balanceToUse <= 0 && (
-                        <AppText style={{ color: "#EA580C", fontSize: 13, lineHeight: 19, marginTop: 2, marginBottom: 8 }}>
-                          The current available margin ≤ 0. You can increase the leverage or add margin.
-                        </AppText>
-                      )}
-                    </View>
-                  );
-                })()}
-              </ScrollView>
-
-              <View style={{ marginTop: 16 }}>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  disabled={isSavingLeverage}
-                  onPress={confirmLeverage}
-                  style={{
-                    height: 48,
-                    borderRadius: 10,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.orangeTheme,
-                    opacity: isSavingLeverage ? 0.7 : 1,
-                  }}
-                >
-                  <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: isDark ? "#1E2329" : "#14161A" }}>
-                    {isSavingLeverage ? "Saving…" : "Confirm"}
-                  </AppText>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              disabled={isSavingLeverage}
+              onPress={openBatchAdjustDrawer}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                marginTop: 8,
+                paddingVertical: 12,
+                paddingHorizontal: 2,
+                borderTopWidth: 1,
+                borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#ECECEE',
+              }}
+            >
+              <AppText weight={SEMI_BOLD} style={{ fontSize: 13.5, color: isDark ? '#EAECEF' : '#14161A' }}>
+                Default leverage & margin mode
+              </AppText>
+              <AppText weight={MEDIUM} style={{ fontSize: 13, color: isDark ? '#848E9C' : '#9A9DA3' }}>
+                {batchAdjustTrail || (batchAdjustActive ? 'On' : 'Off')} ›
+              </AppText>
+            </TouchableOpacity>
+          </AdjustLeverageSheet>
+        );
+      })()}
 
       {/* Order Type Modal (Native 0-lag slide) */}
       <Modal

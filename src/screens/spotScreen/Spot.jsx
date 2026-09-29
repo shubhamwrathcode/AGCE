@@ -4510,6 +4510,7 @@ const Spot = () => {
                     crossAccount={crossAccount}
                     crossBorrowable={crossBorrowable}
                     currencyData={currencyData}
+                    marginAccount={marginAccountData}
                     formatTotal={formatTotal}
                     loading={isPlacingOrder}
                     price={price}

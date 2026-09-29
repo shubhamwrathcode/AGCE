@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Animated, Easing, StyleSheet } from 'react-native';
 
-const ToggleSwitch = ({ value, onValueChange, isDark }) => {
+const ToggleSwitch = ({ value, onValueChange, isDark, activeTrackColor, activeThumbColor }) => {
   const animatedValue = React.useRef(new Animated.Value(value ? 1 : 0)).current;
 
   React.useEffect(() => {
@@ -26,7 +26,7 @@ const ToggleSwitch = ({ value, onValueChange, isDark }) => {
         styles.customSwitchTrack,
         {
           backgroundColor: value
-            ? (isDark ? '#FFFFFF' : '#2A2A2E')
+            ? (activeTrackColor || (isDark ? '#FFFFFF' : '#2A2A2E'))
             : (isDark ? '#2A2A2E' : '#E5E5EA'),
         }
       ]}
@@ -37,7 +37,7 @@ const ToggleSwitch = ({ value, onValueChange, isDark }) => {
           {
             left: thumbPosition,
             backgroundColor: value
-              ? (isDark ? '#000000' : '#FFFFFF')
+              ? (activeThumbColor || (isDark ? '#000000' : '#FFFFFF'))
               : (isDark ? '#8A8A93' : '#FFFFFF'),
           }
         ]}

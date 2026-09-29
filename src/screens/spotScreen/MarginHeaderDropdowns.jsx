@@ -3,7 +3,9 @@ import { View, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import FastImage from "react-native-fast-image";
 import RBSheet from "react-native-raw-bottom-sheet";
 import Svg, { Path, Circle } from "react-native-svg";
-import { AppText, SEMI_BOLD, MEDIUM, BOLD, Button } from "../../shared";
+import { AppText, SEMI_BOLD, MEDIUM, BOLD } from "../../shared";
+import FuturesLeverageSlider from "../Futures/FuturesLeverageSlider";
+import AdjustLeverageSheet from "../Futures/AdjustLeverageSheet";
 import { colors, darkTheme, lightTheme } from "../../theme/colors";
 import { checkIc, downIcon, tick, closeIcon, add, minus, right_ic } from "../../helper/ImageAssets";
 import { IMAGE_BASE_URL } from "../../helper/Constants";
@@ -23,49 +25,69 @@ const MarginHeaderDropdowns = ({
   crossAccount,
   crossBorrowable,
   currencyData = {},
+  marginAccount,
   formatTotal,
   price,
   buy_price,
 }) => {
   const rbSheetMarginMode = useRef();
-  const rbSheetMarginLeverage = useRef();
+  const [isLeverageVisible, setIsLeverageVisible] = useState(false);
+  const [isLeverageSliding, setIsLeverageSliding] = useState(false);
   const isCross = marginMode === "Cross";
   const quoteSymbol = currencyData?.quote_currency || "USDT";
   const baseSymbol = currencyData?.base_currency || "BTC";
   const coinLabel = `${baseSymbol}/${quoteSymbol}`;
   const coinIconSrc = buildCoinImageUri(currencyData);
 
-  const minLeverage = currencyData?.margin_config?.min_leverage ?? 1;
-  const maxLeverage = (isCross ? crossAccount?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;
+  // Same sources as web: isolated → margin/index + margin/MarginLeverageModal,
+  // cross → cross_margin/index + cross_margin/MarginLeverageModal.
+  const minLeverage = isCross ? 3 : (currencyData?.margin_config?.min_leverage ?? 1);
+  const maxLeverage = isCross
+    ? 5
+    : (marginAccount?.max_leverage ?? currencyData?.margin_config?.max_leverage ?? 10);
 
-  const allowedLeveragesRaw = isCross
-    ? currencyData?.margin_config?.cross_allowed_leverages
-    : currencyData?.margin_config?.isolated_allowed_leverages;
-  const allowedLeverages = Array.isArray(allowedLeveragesRaw) ? allowedLeveragesRaw : [];
-  const hasAllowed = allowedLeverages.length > 0;
+  const allowedLeverages = React.useMemo(() => {
+    const raw = isCross
+      ? (currencyData?.margin_config?.cross_allowed_leverages ?? [3, 5])
+      : currencyData?.margin_config?.isolated_allowed_leverages;
+    if (Array.isArray(raw) && raw.length > 0) {
+      const nums = [...new Set(raw.map(Number).filter((n) => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+      if (nums.length > 0) return nums;
+    }
+    const lo = Math.max(1, Math.round(Number(minLeverage) || 1));
+    const hi = Math.max(lo, Math.round(Number(maxLeverage) || lo));
+    const arr = [];
+    for (let i = lo; i <= hi; i += 1) arr.push(i);
+    return arr;
+  }, [isCross, currencyData?.margin_config, minLeverage, maxLeverage]);
 
-  const DEFAULT_QUICK_LEVERAGE = [1, 2, 3, 5, 10, 20];
-  const quickLeverages = hasAllowed
-    ? allowedLeverages
-    : DEFAULT_QUICK_LEVERAGE.filter((x) => x >= minLeverage && x <= maxLeverage);
+  const allowedMin = allowedLeverages[0];
+  const allowedMax = allowedLeverages[allowedLeverages.length - 1];
 
-  const snapToAllowed = (n) => {
-    if (!hasAllowed) return n;
-    return allowedLeverages.reduce((prev, cur) =>
-      Math.abs(cur - n) < Math.abs(prev - n) ? cur : prev
-    );
+  const clamp = (n) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return allowedLeverages[0];
+    if (allowedLeverages.includes(Math.round(x))) return Math.round(x);
+    return allowedLeverages.reduce((best, v) => (Math.abs(v - x) < Math.abs(best - x) ? v : best), allowedLeverages[0]);
   };
 
-  const getInitialLeverage = (val) => {
-    let curr = parseInt(val, 10);
-    if (!Number.isFinite(curr) || curr <= 0) return hasAllowed ? allowedLeverages[0] : minLeverage;
-    if (hasAllowed) return allowedLeverages.includes(curr) ? curr : snapToAllowed(curr);
-    return Math.min(Math.max(Math.round(curr), minLeverage), maxLeverage);
+  const validateLeverage = (lev) => {
+    const n = Number(lev);
+    if (!Number.isFinite(n) || n <= 0) return "Please enter a valid leverage value.";
+    if (!allowedLeverages.includes(Math.round(n))) {
+      return `Allowed leverage: ${allowedLeverages.map((a) => `${a}x`).join(", ")}.`;
+    }
+    if (n < allowedMin) return `Minimum leverage is ${allowedMin}x.`;
+    if (n > allowedMax) return `Maximum leverage is ${allowedMax}x.`;
+    return "";
   };
 
-  const [leverageDraft, setLeverageDraft] = useState(getInitialLeverage(marginLeverage));
+  const [leverageDraft, setLeverageDraft] = useState(() => clamp(parseInt(marginLeverage, 10)));
+  const [leverageError, setLeverageError] = useState("");
   const [modeDraft, setModeDraft] = useState(marginMode || "Isolated");
   const [batchAdjustMarginMode, setBatchAdjustMarginMode] = useState(false);
+
+  useEffect(() => { setLeverageError(""); }, [leverageDraft]);
 
   const Qf = Number(coinBalance?.quote_currency_balance) || 0;
   const Bf = Number(coinBalance?.base_currency_balance) || 0;
@@ -75,44 +97,36 @@ const MarginHeaderDropdowns = ({
   const socketNetEquity = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
   const refPrice = parseFloat(buy_price) || parseFloat(price) || 0;
 
-  const computedNetEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
+  const netEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
     ? socketNetEquity
     : Math.max(0, (Qf - Qb) + (Bf - Bb) * refPrice);
 
-  // Cross Margin Data
-  const crossSummary = crossAccount?.summary || crossAccount || {};
-  const crossNetEquity = crossSummary?.net_equity != null ? Number(crossSummary.net_equity) : computedNetEquity;
-  const crossCurrentLoan = crossSummary?.total_liability != null ? Number(crossSummary.total_liability) : Qb;
+  const fmt = (n) => (formatTotal ? formatTotal(n) : Number(n).toFixed(2));
 
-  const netEquity = isCross ? crossNetEquity : computedNetEquity;
-  const currentLoan = isCross ? crossCurrentLoan : Qb;
-
-  const fmt = (n) => {
-    const val = Number(n) || 0;
-    if (formatTotal) {
-      const res = formatTotal(val);
-      if (res === "" || res == null) return "0";
-      return res;
-    }
-    return val.toFixed(2).replace(/\.?0+$/, "") || "0";
+  const onLeverageSlidingChange = (sliding) => {
+    setIsLeverageSliding(sliding);
   };
 
-  const safeSet = (n) => {
-    const x = Number(n);
-    if (!Number.isFinite(x) || x <= 0) return;
-    if (hasAllowed) {
-      if (allowedLeverages.includes(x)) setLeverageDraft(x);
-    } else {
-      setLeverageDraft(Math.min(Math.max(Math.round(x), minLeverage), maxLeverage));
-    }
+  const openLeverageSheet = () => {
+    setLeverageDraft(clamp(parseInt(marginLeverage, 10)));
+    setLeverageError("");
+    setIsLeverageVisible(true);
   };
 
-  const clamp = (n) => {
-    const x = Number(n);
-    if (!Number.isFinite(x)) return hasAllowed ? allowedLeverages[0] : minLeverage;
-    if (hasAllowed) return snapToAllowed(x);
-    if (x < minLeverage) return minLeverage;
-    return Math.min(Math.round(x), maxLeverage);
+  const closeLeverageSheet = () => {
+    setIsLeverageVisible(false);
+    onLeverageSlidingChange(false);
+  };
+
+  const confirmLeverage = () => {
+    const final = clamp(leverageDraft);
+    const err = isCross ? "" : validateLeverage(final);
+    if (err) {
+      setLeverageError(err);
+      return;
+    }
+    setMarginLeverage(`${final}x`);
+    closeLeverageSheet();
   };
 
   return (
@@ -149,7 +163,7 @@ const MarginHeaderDropdowns = ({
 
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => rbSheetMarginLeverage.current.open()}
+        onPress={openLeverageSheet}
         style={[
           styles.dropdown,
           {
@@ -478,140 +492,39 @@ const MarginHeaderDropdowns = ({
         </View>
       </RBSheet>
 
-      {/* Margin Leverage Sheet */}
-      <RBSheet
-        ref={rbSheetMarginLeverage}
-        closeOnDragDown={false}
-        closeOnPressMask={true}
-        height={500}
-        animationType="slide"
-        onOpen={() => {
-          setLeverageDraft(getInitialLeverage(marginLeverage));
-        }}
-        customModalProps={{ statusBarTranslucent: true }}
-        customStyles={{
-          container: {
-            backgroundColor: isDark ? colors.newThemeColor : themeColors.themeElevationColor,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            paddingHorizontal: universalPaddingHorizontal,
-            paddingTop: 8,
-            paddingBottom: 16,
-          },
-          wrapper: {
-            backgroundColor: "#0006",
-          },
-        }}
-      >
-        <View style={{ flex: 1, paddingHorizontal: 10 }}>
-          <View style={{
-            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-            paddingTop: 4, paddingBottom: 20
-          }}>
-            <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: themeColors.text, marginTop: 10 }}>
-              Adjust Leverage
-            </AppText>
-            <TouchableOpacity onPress={() => rbSheetMarginLeverage?.current?.close()} style={{ padding: 4 }}>
-              <FastImage
-                source={closeIcon}
-                resizeMode="contain"
-                style={{ width: 15, height: 15 }}
-                tintColor={themeColors.secondaryText}
-              />
-            </TouchableOpacity>
-          </View>
-          <ScrollView showsVerticalScrollIndicator={false}>
-
-            {/* Coin Row */}
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Coin</AppText>
-            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#F2F2F7", padding: 12, borderRadius: 10, marginBottom: 16 }}>
-              {!!coinIconSrc && (
-                <FastImage source={{ uri: coinIconSrc }} style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }} />
-              )}
-              <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: themeColors.text }}>{coinLabel}</AppText>
-            </View>
-
-            {/* Leverage Input */}
-            <AppText style={{ color: themeColors.secondaryText, fontSize: 13, marginBottom: 8 }}>Leverage</AppText>
-            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#F2F2F7", padding: 12, borderRadius: 10, marginBottom: 16 }}>
-              <AppText weight={SEMI_BOLD} style={{ fontSize: 15, color: themeColors.text }}>{leverageDraft}x</AppText>
-            </View>
-
-            {/* Quick selector row */}
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              {quickLeverages.map((x) => {
-                const levStr = `${x}x`;
-                const isSelected = leverageDraft === x;
-                return (
-                  <TouchableOpacity
-                    key={levStr}
-                    onPress={() => safeSet(x)}
-                    style={{
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: isSelected ? themeColors.text : "transparent",
-                      backgroundColor: isDark ? darkTheme.darkThemeInputColor : "#F2F2F7",
-                    }}
-                  >
-                    <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 13 }}>
-                      {levStr}
-                    </AppText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Details List */}
-            <View style={{ marginBottom: 8, marginTop: 10 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Allow to Open</AppText>
-                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{fmt(netEquity * leverageDraft)} {quoteSymbol}</AppText>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Maximum Borrowable</AppText>
-                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{fmt(Math.max(0, netEquity * (maxLeverage - 1) - currentLoan))} {quoteSymbol}</AppText>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Leverage Range</AppText>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{minLeverage}x – {maxLeverage}x</AppText>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
-                <AppText style={{ color: themeColors.secondaryText, fontSize: 12 }}>Current Loan</AppText>
-                <AppText weight={MEDIUM} style={{ color: themeColors.text, fontSize: 12 }}>{fmt(currentLoan)} {quoteSymbol}</AppText>
-              </View>
-            </View>
-
-            {/* Warning Message */}
-            {netEquity <= 0 && (
-              <AppText weight={MEDIUM} style={{ color: colors.orangeTheme, fontSize: 11, marginTop: 4, lineHeight: 14 }}>
-                The current available margin ≤ 0. You can increase the leverage or add margin.
-              </AppText>
-            )}
-          </ScrollView>
-
-          {/* Confirm Button */}
-          <Button
-            onPress={() => {
-              const final = hasAllowed ? snapToAllowed(leverageDraft) : clamp(leverageDraft);
-              setMarginLeverage(`${final}x`);
-              rbSheetMarginLeverage?.current?.close();
-            }}
-            containerStyle={{
-              marginTop: 12,
-              marginBottom: 8,
-            }}
-          >
-            Confirm
-          </Button>
-        </View>
-      </RBSheet>
+      {/* Margin Leverage Sheet — mirrors web cross_margin / margin MarginLeverageModal */}
+      <AdjustLeverageSheet
+        visible={isLeverageVisible}
+        onClose={closeLeverageSheet}
+        isDark={isDark}
+        fieldLabel={isCross ? "Pair" : "Coin"}
+        coinIcon={coinIconSrc ? (
+          <FastImage source={{ uri: coinIconSrc }} style={{ width: 24, height: 24, borderRadius: 12 }} />
+        ) : null}
+        coinLabel={coinLabel}
+        scrollEnabled={!isLeverageSliding}
+        slider={(
+          <FuturesLeverageSlider
+            value={clamp(leverageDraft)}
+            onChange={setLeverageDraft}
+            onSlidingChange={onLeverageSlidingChange}
+            minLeverage={allowedMin}
+            maxLeverage={allowedMax}
+            allowedValues={allowedLeverages}
+            isDark={isDark}
+            themeColors={themeColors}
+          />
+        )}
+        error={leverageError}
+        notes={[
+          `Maximum position at current leverage: ${fmt(netEquity * clamp(leverageDraft))} ${quoteSymbol}`,
+          "Please note that leverage changing will also apply for open positions and open orders.",
+          "Selecting higher leverage increases your liquidation risk. Always manage your risk levels.",
+        ]}
+        warning={netEquity <= 0 ? "The current available margin ≤ 0. You can increase the leverage or add margin." : ""}
+        showCancel={false}
+        onConfirm={confirmLeverage}
+      />
     </View>
   );
 };

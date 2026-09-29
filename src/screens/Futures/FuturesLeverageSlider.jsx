@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { PanResponder, TouchableOpacity, View } from 'react-native';
-import { AppText, MEDIUM, SEMI_BOLD } from '../../shared';
+import { AppText, BOLD, MEDIUM } from '../../shared';
 
 const MAX_SLIDER_TICKS = 6;
 const THUMB_SIZE = 18;
@@ -9,8 +9,37 @@ const RAIL_HEIGHT = 28;
 const TRACK_HEIGHT = 4;
 const TICK_LABEL_WIDTH = 44;
 
-/** Up to 6 tick labels — same stops as the web leverage slider. */
-export function getLeverageSliderTicks(maxLeverage) {
+/** Pick exactly `maxTicks` values from a sorted list (first + last + evenly spaced between). */
+function buildSliderStops(sorted, maxTicks = MAX_SLIDER_TICKS) {
+  if (sorted.length <= maxTicks) return sorted;
+  const picks = [];
+  for (let i = 0; i < maxTicks; i += 1) {
+    picks.push(sorted[Math.round((i / (maxTicks - 1)) * (sorted.length - 1))]);
+  }
+  return [...new Set(picks)].sort((a, b) => a - b);
+}
+
+function normalizeAllowedValues(allowedValues) {
+  if (!Array.isArray(allowedValues) || allowedValues.length === 0) return null;
+  const sorted = [...new Set(allowedValues.map((x) => Math.round(Number(x))).filter((n) => Number.isFinite(n) && n > 0))]
+    .sort((a, b) => a - b);
+  return sorted.length ? sorted : null;
+}
+
+function snapToAllowed(n, allowedSorted) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return allowedSorted[0];
+  const rounded = Math.round(x);
+  if (allowedSorted.includes(rounded)) return rounded;
+  return allowedSorted.reduce((best, v) => (Math.abs(v - x) < Math.abs(best - x) ? v : best), allowedSorted[0]);
+}
+
+/** Up to 6 tick labels — same stops as the web leverage slider (all values when a short allowed list is given). */
+export function getLeverageSliderTicks(maxLeverage, allowedValues = null) {
+  const allowed = normalizeAllowedValues(allowedValues);
+  if (allowed) {
+    return allowed.length <= 10 ? allowed : buildSliderStops(allowed, MAX_SLIDER_TICKS);
+  }
   const max = Math.max(1, Math.round(Number(maxLeverage) || 125));
   if (max <= 1) return [1];
   if (max === 10) return [1, 5, 10];
@@ -28,40 +57,65 @@ export function getLeverageSliderTicks(maxLeverage) {
   return stops;
 }
 
-/** − / value / + stepper + draggable slider with tick labels (mirrors web FuturesLeverageSlider). */
+/**
+ * − / value / + stepper + draggable slider with tick labels (mirrors web FuturesLeverageSlider).
+ * When `allowedValues` is set (e.g. margin isolated [1..10] or cross [3, 5]), only those values are selectable.
+ */
 export default function FuturesLeverageSlider({
   value,
   onChange,
   onSlidingChange,
   minLeverage = 1,
   maxLeverage = 125,
+  allowedValues = null,
   isDark = true,
   themeColors = {},
 }) {
-  const max = Math.max(1, Math.round(Number(maxLeverage) || 125));
-  const min = Math.max(1, Math.round(Number(minLeverage) || 1));
+  const allowedKey = Array.isArray(allowedValues) ? allowedValues.join(',') : '';
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by contents, not array identity
+  const allowedSorted = useMemo(() => normalizeAllowedValues(allowedValues), [allowedKey]);
+
+  const max = allowedSorted
+    ? allowedSorted[allowedSorted.length - 1]
+    : Math.max(1, Math.round(Number(maxLeverage) || 125));
+  const min = allowedSorted
+    ? allowedSorted[0]
+    : Math.max(1, Math.round(Number(minLeverage) || 1));
 
   const clamp = (n) => {
+    if (allowedSorted) return snapToAllowed(n, allowedSorted);
     const x = Number(n);
     if (!Number.isFinite(x) || x < min) return min;
     return Math.min(Math.round(x), max);
   };
 
+  const bump = (delta) => {
+    if (allowedSorted) {
+      const idx = allowedSorted.indexOf(current);
+      const from = idx >= 0 ? idx : allowedSorted.findIndex((v) => v >= current);
+      const base = from >= 0 ? from : 0;
+      onChange?.(allowedSorted[Math.max(0, Math.min(allowedSorted.length - 1, base + delta))]);
+      return;
+    }
+    onChange?.(clamp(current + delta));
+  };
+
   const current = clamp(value);
   const [trackWidth, setTrackWidth] = useState(0);
   const fillRatio = max > min ? (current - min) / (max - min) : 0;
-  const ticks = useMemo(() => getLeverageSliderTicks(max), [max]);
+  const ticks = useMemo(() => getLeverageSliderTicks(max, allowedSorted), [max, allowedSorted]);
 
   const latest = useRef({});
-  latest.current = { trackWidth, min, max, onChange, onSlidingChange };
+  latest.current = { trackWidth, min, max, onChange, onSlidingChange, allowedSorted };
   const grantXRef = useRef(0);
   const lastEmittedRef = useRef(null);
 
   const emitAt = (x) => {
-    const { trackWidth: w, min: lo, max: hi, onChange: cb } = latest.current;
+    const { trackWidth: w, min: lo, max: hi, onChange: cb, allowedSorted: allowed } = latest.current;
     if (!w) return;
     const ratio = Math.min(1, Math.max(0, x / w));
-    const next = Math.round(lo + ratio * (hi - lo));
+    const raw = lo + ratio * (hi - lo);
+    const next = allowed ? snapToAllowed(raw, allowed) : Math.round(raw);
     if (next !== lastEmittedRef.current) {
       lastEmittedRef.current = next;
       cb?.(next);
@@ -90,9 +144,13 @@ export default function FuturesLeverageSlider({
 
   const trackBg = isDark ? 'rgba(255, 255, 255, 0.2)' : '#E2E8F0';
   const trackFill = isDark ? '#FFFFFF' : '#0F172A';
-  const stepBg = isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9';
-  const stepDivider = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0';
-  const textColor = themeColors.text || (isDark ? '#FFFFFF' : '#0F172A');
+  const stepRowBg = isDark ? '#222325' : '#F8FAFC';
+  const stepRowBorder = isDark ? 'rgba(203, 213, 225, 0.06)' : '#CBD5E1';
+  const stepBtnBg = isDark ? '#222325' : '#FFFFFF';
+  const stepBtnText = isDark ? '#E6E6E6' : '#334155';
+  const stepDivider = isDark ? 'rgba(226, 232, 240, 0.1)' : '#E2E8F0';
+  const stepValText = isDark ? '#FFFFFF' : '#0F172A';
+  const tickActiveText = isDark ? '#B2B2B2' : '#0F172A';
 
   const tickPct = (x) => (max <= min ? 0 : Math.min(1, Math.max(0, (x - min) / (max - min))));
 
@@ -102,29 +160,31 @@ export default function FuturesLeverageSlider({
         style={{
           flexDirection: 'row',
           alignItems: 'stretch',
-          height: 50,
+          height: 40,
           borderRadius: 10,
-          backgroundColor: stepBg,
+          borderWidth: 1,
+          borderColor: stepRowBorder,
+          backgroundColor: stepRowBg,
           overflow: 'hidden',
-          marginBottom: 18,
+          marginBottom: 16,
         }}
       >
         <TouchableOpacity
-          onPress={() => onChange?.(clamp(current - 1))}
-          activeOpacity={0.6}
-          style={{ width: 64, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: stepDivider }}
+          onPress={() => bump(-1)}
+          activeOpacity={0.8}
+          style={{ width: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: stepBtnBg, borderRightWidth: 1, borderRightColor: stepDivider }}
         >
-          <AppText weight={MEDIUM} style={{ fontSize: 22, color: textColor }}>−</AppText>
+          <AppText style={{ fontSize: 16, color: stepBtnText }}>−</AppText>
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <AppText weight={SEMI_BOLD} style={{ fontSize: 18, color: textColor }}>{current}x</AppText>
+          <AppText weight={MEDIUM} style={{ fontSize: 14, color: stepValText }}>{current}x</AppText>
         </View>
         <TouchableOpacity
-          onPress={() => onChange?.(clamp(current + 1))}
-          activeOpacity={0.6}
-          style={{ width: 64, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: stepDivider }}
+          onPress={() => bump(1)}
+          activeOpacity={0.8}
+          style={{ width: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: stepBtnBg, borderLeftWidth: 1, borderLeftColor: stepDivider }}
         >
-          <AppText weight={MEDIUM} style={{ fontSize: 22, color: textColor }}>+</AppText>
+          <AppText style={{ fontSize: 16, color: stepBtnText }}>+</AppText>
         </TouchableOpacity>
       </View>
 
@@ -169,11 +229,7 @@ export default function FuturesLeverageSlider({
 
       <View style={{ height: 22, marginTop: 8, marginHorizontal: THUMB_HALF }}>
         {trackWidth > 0 && ticks.map((x, i) => {
-          const isFirst = i === 0;
-          const isLast = i === ticks.length - 1 && ticks.length > 1;
-          let left = tickPct(x) * trackWidth - TICK_LABEL_WIDTH / 2;
-          if (isFirst) left = -THUMB_HALF;
-          else if (isLast) left = trackWidth + THUMB_HALF - TICK_LABEL_WIDTH;
+          const isActive = current >= x;
           return (
             <TouchableOpacity
               key={`${x}-${i}`}
@@ -181,12 +237,18 @@ export default function FuturesLeverageSlider({
               hitSlop={{ top: 8, bottom: 8 }}
               style={{
                 position: 'absolute',
-                left,
+                left: tickPct(x) * trackWidth - TICK_LABEL_WIDTH / 2,
                 width: TICK_LABEL_WIDTH,
-                alignItems: isFirst ? 'flex-start' : isLast ? 'flex-end' : 'center',
+                alignItems: 'center',
               }}
             >
-              <AppText weight={MEDIUM} numberOfLines={1} style={{ fontSize: 11, color: '#94A3B8' }}>{x}x</AppText>
+              <AppText
+                weight={isActive ? BOLD : MEDIUM}
+                numberOfLines={1}
+                style={{ fontSize: 11, color: isActive ? tickActiveText : '#94A3B8' }}
+              >
+                {x}x
+              </AppText>
             </TouchableOpacity>
           );
         })}

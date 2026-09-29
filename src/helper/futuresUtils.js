@@ -245,6 +245,14 @@ export function getMaxNotionalAtLeverage(tiers, selectedLeverage) {
     return maxNotional;
 }
 
+/** Max base-asset quantity at a leverage for a given price. */
+export function getMaxQuantityAtLeverage(leverageTiers, selectedLeverage, price) {
+    const maxNotional = getMaxNotionalAtLeverage(leverageTiers, selectedLeverage);
+    const p = Number(price);
+    if (!Number.isFinite(p) || p <= 0 || maxNotional === Infinity) return null;
+    return maxNotional / p;
+}
+
 export function getTierLeverageButtons(leverageTiers, maxLeverage = 125) {
     const maxLev = Number(maxLeverage) || 125;
     if (!Array.isArray(leverageTiers) || leverageTiers.length === 0) {

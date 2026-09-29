@@ -18,6 +18,9 @@ const CODE_COPY = {
   OPEN_ORDERS: 'Cannot change margin mode while you have open orders on this contract.',
   INVALID_LEVERAGE: 'Leverage is outside the allowed range for this contract.',
   INSUFFICIENT_FUTURES_BALANCE: 'Insufficient futures balance for this leverage or margin change.',
+  NOTHING_TO_ADJUST: 'Enable leverage and/or margin mode before confirming.',
+  SYMBOLS_REQUIRED: 'No symbols to adjust.',
+  BATCH_TOO_LARGE: 'Too many symbols in one batch (max 50).',
   INTERNAL_ERROR: 'Something went wrong. Please try again.',
 };
 
@@ -40,6 +43,68 @@ export function formatFuturesSymbolMarginError(res, fallback = 'Request failed')
   const raw = extractRawError(res);
   if (!raw) return fallback;
   return CODE_COPY[raw.toUpperCase()] || raw;
+}
+
+/** Human summary for batch leverage-margin response. */
+export function summarizeLeverageMarginBatch(data) {
+  if (!data || typeof data !== 'object') {
+    return { title: 'Batch adjust completed', detail: '', succeeded: 0, failed: 0, total: 0 };
+  }
+  const succeeded = Number(data.succeeded) || 0;
+  const failed = Number(data.failed) || 0;
+  const total = Number(data.total) || succeeded + failed;
+  const results = Array.isArray(data.results) ? data.results : [];
+
+  const failHints = [];
+  for (const row of results) {
+    if (!row || row.ok) continue;
+    const parts = [];
+    if (row.margin_mode_error) {
+      parts.push(formatFuturesSymbolMarginError({ error: row.margin_mode_error }, 'margin mode failed'));
+    }
+    if (row.leverage_error) {
+      parts.push(formatFuturesSymbolMarginError({ error: row.leverage_error }, 'leverage failed'));
+    }
+    failHints.push(`${row.symbol || '—'}: ${parts.join('; ') || 'failed'}`);
+    if (failHints.length >= 3) break;
+  }
+
+  let title;
+  if (failed === 0) title = `Updated ${succeeded} market${succeeded === 1 ? '' : 's'}`;
+  else if (succeeded === 0) title = `Could not update ${failed} market${failed === 1 ? '' : 's'}`;
+  else title = `Updated ${succeeded} of ${total} markets`;
+
+  const detailParts = [];
+  if (data.truncated) detailParts.push('Only the first 50 listed contracts were included.');
+  if (failHints.length) detailParts.push(failHints.join(' · '));
+
+  return { title, detail: detailParts.join(' '), succeeded, failed, total };
+}
+
+/**
+ * Trail text for "Default leverage & margin mode" row.
+ * Enabled → e.g. "10x / Cross"; off → "Off".
+ */
+export function formatBatchAdjustTrail(draft, fallbacks = {}) {
+  const levOn = !!draft?.leverageEnabled;
+  const modeOn = !!draft?.marginModeEnabled;
+  if (!levOn && !modeOn) return 'Off';
+
+  const parts = [];
+  if (levOn) {
+    const lev = Math.round(Number(draft?.leverage ?? fallbacks.leverage));
+    if (Number.isFinite(lev) && lev >= 1) parts.push(`${lev}x`);
+  }
+  if (modeOn) {
+    const mode =
+      draft?.marginMode === 'isolated' || draft?.marginMode === 'cross'
+        ? draft.marginMode
+        : String(fallbacks.marginMode || '').toLowerCase() === 'isolated'
+          ? 'isolated'
+          : 'cross';
+    parts.push(mode === 'isolated' ? 'Isolated' : 'Cross');
+  }
+  return parts.length ? parts.join(' / ') : 'Off';
 }
 
 /** Server leverage → whole number ≥ 1, or null when missing/invalid. */

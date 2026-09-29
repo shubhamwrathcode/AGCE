@@ -748,6 +748,12 @@ export default (appOperation: AppOperation) => ({
       { symbol: data.symbol, leverage: Number(data.leverage) },
       CUSTOMER_TYPE,
     ),
+  futuresLeverageMarginBatch: (data: {
+    symbols?: string[];
+    all_symbols?: boolean;
+    leverage?: number;
+    margin_mode?: 'ISOLATED' | 'CROSS';
+  }) => appOperation.post('futures/leverage-margin/batch', data, CUSTOMER_TYPE),
   futuresPlaceOrder: (payload: any) =>
     appOperation.post('futures/orders', payload, CUSTOMER_TYPE),
   futuresOpenOrders: (params: { symbol?: string; skip?: number; limit?: number } = {}) => {
