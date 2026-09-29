@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   Platform,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import FastImage from "react-native-fast-image";
+import Carousel from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppSafeAreaView,
@@ -31,7 +32,11 @@ import {
   apple,
   back_ic,
   googleIcon,
-  welcome_banner,
+  banner1,
+  banner2,
+  banner3,
+  banner4,
+  banner5,
   NO_NOTIFICATION_ICON,
   NO_NOTIFICATION_ICON_LIGHT,
   APP_LOGO_Black,
@@ -115,6 +120,10 @@ const WELCOME_TABS = [
   { key: 6, label: "Top Gainers" },
 ];
 
+const WELCOME_BANNERS = [banner1, banner2, banner3, banner4, banner5];
+const BANNER_ASPECT_RATIO = 1080 / 864;
+const BANNER_AUTO_PLAY_MS = 3500;
+
 const C = {
   lightBg: "#FFFFFF",
   lightCard: "#FFFFFF",
@@ -129,9 +138,22 @@ const C = {
 
 const Welcome = () => {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const chartHeight = 400;
+  const bannerWidth = windowWidth - 32;
+  const bannerHeight = bannerWidth / BANNER_ASPECT_RATIO;
+  const [activeBanner, setActiveBanner] = useState(0);
+  const bannerRef = useRef(null);
   const { colors: themeColors, isDark } = useTheme();
+
+  useFocusEffect(
+    useCallback(() => {
+      const id = setInterval(() => {
+        bannerRef.current?.next?.({ animated: true });
+      }, BANNER_AUTO_PLAY_MS);
+      return () => clearInterval(id);
+    }, [])
+  );
   const coinPairs = useAppSelector((state) => state.home.coinPairs);
   const futuresPairs = useAppSelector((state) => state.home.futuresPairs ?? []);
   const socketLoading = useAppSelector((state) => state.home.socketLoading);
@@ -394,29 +416,39 @@ const Welcome = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Hero card */}
-          <View style={[styles.heroCard,
-          { backgroundColor: isDark ? darkTheme.inputBorder : palette.card, borderColor: palette.border }]}>
-            <View style={styles.heroStripeWrap} pointerEvents="none">
-              {[...Array(24)].map((_, i) => (
-                <View key={i} style={[styles.heroStripe, { backgroundColor: palette.stripe }]} />
-              ))}
-            </View>
-            <AppText weight={BOLD} type={TWENTY} style={[styles.heroTitle, { color: palette.text }]}>
-              Trade hundreds of{"\n"}cryptocurrencies instantly
-            </AppText>
-            <View style={styles.heroArtWrap}>
-              <FastImage source={welcome_banner} style={styles.heroArt} resizeMode="contain" />
-            </View>
-            <TouchableOpacity
-              style={[styles.heroCta, { backgroundColor: palette.btn }]}
-              onPress={onLogin}
-              activeOpacity={0.85}
-            >
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? colors.black : palette.btnText }}>
-                Log In to Trade
-              </AppText>
-            </TouchableOpacity>
+          {/* Banner carousel */}
+          <View style={[styles.bannerWrap, { width: bannerWidth, height: bannerHeight }]}>
+            <Carousel
+              ref={bannerRef}
+              width={bannerWidth}
+              height={bannerHeight}
+              data={WELCOME_BANNERS}
+              loop
+              pagingEnabled
+              autoPlay={false}
+              scrollAnimationDuration={450}
+              onSnapToItem={setActiveBanner}
+              panGestureHandlerProps={{ activeOffsetX: [-12, 12] }}
+              renderItem={({ item }) => (
+                <TouchableOpacity activeOpacity={0.9} onPress={onLogin} style={styles.flex}>
+                  <FastImage source={item} style={styles.bannerImage} resizeMode="cover" />
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+          <View style={styles.bannerDots}>
+            {WELCOME_BANNERS.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.bannerDot,
+                  {
+                    width: activeBanner === i ? 16 : 6,
+                    backgroundColor: activeBanner === i ? palette.text : palette.border,
+                  },
+                ]}
+              />
+            ))}
           </View>
 
           {/* Tabs — same as Home `CoinList` (Favorite tab omitted) */}
@@ -724,59 +756,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   logoImg: { width: 30, height: 30 },
-  heroCard: {
+  bannerWrap: {
     borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 12,
-    paddingTop: 14,
-    paddingBottom: 12,
     overflow: "hidden",
-    marginBottom: 8,
-    // ...Platform.select({
-    //   ios: {
-    //     shadowColor: "#000",
-    //     shadowOffset: { width: 0, height: 4 },
-    //     shadowOpacity: 0.06,
-    //     shadowRadius: 12,
-    //   },
-    //   android: { elevation: 3 },
-    // }),
   },
-  heroStripeWrap: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    opacity: 0.5,
-  },
-  heroStripe: {
-    width: 1,
+  bannerImage: {
+    width: "100%",
     height: "100%",
   },
-  heroTitle: {
-    textAlign: "left",
-    lineHeight: 24,
-    marginBottom: 8,
-    zIndex: 1,
-    alignSelf: "flex-start",
-  },
-  heroArtWrap: {
-    alignItems: "center",
+  bannerDots: {
+    flexDirection: "row",
     justifyContent: "center",
-    height: 130,
-    zIndex: 1,
-    marginVertical: 20,
-  },
-  heroArt: {
-    width: 196,
-    height: 188,
-    // maxHeight: 150,
-  },
-  heroCta: {
-    height: 42,
-    borderRadius: 20,
     alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
+    gap: 5,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  bannerDot: {
+    height: 6,
+    borderRadius: 3,
   },
   tabsWrapper: {
     marginHorizontal: -16,

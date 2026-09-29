@@ -443,6 +443,12 @@ export const security_vector_light2 = require('../../assets/images/security_vect
 export const kyb_failled_icon = require('../../assets/images/kyb_failled_icon.png');
 export const kyb_successful = require('../../assets/images/kyb_successful.png');
 export const activities_icon = require('../../assets/images/activities_icon.png');
+export const banner1 = require('../../assets/images/banner1.png');
+export const banner2 = require('../../assets/images/banner2.png');
+export const banner3 = require('../../assets/images/banner3.png');
+export const banner4 = require('../../assets/images/banner4.png');
+export const banner5 = require('../../assets/images/banner5.png');
+
 
 
 
