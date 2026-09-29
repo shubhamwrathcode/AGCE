@@ -81,7 +81,7 @@ export const CHAT_IMG = require('../../assets/images/chatImg.png');
 export const DOWN_ARROW = require('../../assets/images/downArrow.png');
 export const Down_Imgs = require('../../assets/images/downImgs.png');
 export const splash = require('../../assets/images/updatedSplash.png');
-export const agceLogoName = require('../../assets/images/agceLogoName.jpg');
+export const agceLogoName = require('../../assets/images/agceLogoNamelight.png');
 export const agceLogoNamelight = require('../../assets/images/agceLogoNamelight.png');
 export const eye_close = require('../../assets/images/eye_close.png');
 export const tick = require('../../assets/images/tick.png');
@@ -230,7 +230,7 @@ export const NO_NOTIFICATION_ICON_LIGHT = require('../../assets/images/no_notifi
 
 export const ID_CARD_ICON = require('../../assets/images/idcardicon.png');
 export const APP_LOGO = require('../../assets/images/applogo.png');
-export const APP_LOGO_Black = require('../../assets/images/applogoBlack.png');
+export const APP_LOGO_Black = require('../../assets/images/applogo.png');
 
 export const trade_btn = require('../../assets/images/tradeBtnImg.png');
 export const earining_bnr_vector = require('../../assets/images/earining_bnr_vector.png');
@@ -428,7 +428,7 @@ export const emergency_vector_light = require('../../assets/images/emergency_vec
 export const security_risk_vector_light = require('../../assets/images/security_risk_vector_light.png');
 export const stakingImgBlack = require('../../assets/images/stakingImgBlack.png');
 export const stakingBannerDark = require('../../assets/images/stakingBannerDark.png');
-export const agcxNewLogo = require('../../assets/images/agcxNewLogo.png');
+export const agcxNewLogo = require('../../assets/images/applogo.png');
 export const fiat_herobg = require('../../assets/images/fiat_herobg.png');
 export const depositFiatWhite = require('../../assets/images/depositFiatWhite.png');
 export const depositFiatBlack = require('../../assets/images/depositFiatBlack.png');
