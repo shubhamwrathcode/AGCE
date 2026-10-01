@@ -351,7 +351,7 @@ const EnablePasskey = ({ route, navigation }) => {
           console.log('[Passkey][Add] mapped: no credentials (likely release SHA missing from assetlinks / AASA)');
           showError(
             Platform.OS === 'android'
-              ? 'Passkey failed on this build. Release signing SHA must be in arabglobal.ae/.well-known/assetlinks.json (debug works, release needs upload-key fingerprint).'
+              ? 'Passkey failed on this build. Release signing SHA must be in arabglobal.ae/.well-known/assetlinks.json (Play Store builds need the Play App signing key fingerprint).'
               : 'No passkey credentials returned. Check apple-app-site-association for this app Team ID.',
           );
         } else {

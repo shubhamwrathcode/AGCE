@@ -27,7 +27,7 @@ const TYPE_OPTIONS = [
   { key: "Trending", label: "Trending" },
 ];
 
-const FuturesMarket = ({ search }) => {
+const FuturesMarket = ({ search, scrollable = true }) => {
   const { colors: themeColors, isDark } = useTheme();
   const futuresPairData = useAppSelector((state) => state.home.futuresPairs || []) || [];
   const [quoteCurrency, setQuoteCurrency] = useState("USDT");
@@ -80,8 +80,18 @@ const FuturesMarket = ({ search }) => {
     <View style={styles.container}>
     
 
-      {filterFuturesData?.length > 0 ? (
+      {filterFuturesData?.length > 0 && !scrollable ? (
         <FuturesList data={filterFuturesData} onPress={handleNavigate} />
+      ) : filterFuturesData?.length > 0 ? (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+        >
+          <FuturesList data={filterFuturesData} onPress={handleNavigate} />
+        </ScrollView>
       ) : (
         <View style={styles.empty}>
           <FastImage source={isDark ? NO_NOTIFICATION_ICON : NO_NOTIFICATION_ICON_LIGHT} resizeMode="contain" style={{ width: 100, height: 100 }} />
@@ -169,6 +179,8 @@ export const FuturesList = ({ data, onPress }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, minHeight: 0, marginTop: 4, paddingBottom: 12 },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 100 },
   filterRow: { marginBottom: 4, maxHeight: 36 },
   filterScroll: {
     flexDirection: "row",

@@ -313,3 +313,5 @@
 109399	135444	1790685714586061269	rnsvg_autolinked_build/CMakeFiles/react_codegen_rnsvg.dir/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-svg/android/build/generated/source/codegen/jni/react/renderer/components/rnsvg/Props.cpp.o	ab7982a8f643d74e
 135445	135679	1790685714915963840	/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/build/intermediates/cxx/RelWithDebInfo/6n5g1549/obj/x86_64/libreact_codegen_rnsvg.so	672b92fac5ca2ace
 135679	136219	1790685715357214103	/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/build/intermediates/cxx/RelWithDebInfo/6n5g1549/obj/x86_64/libappmodules.so	bdc0f387cde5016b
+1	85	0	/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86_64/CMakeFiles/cmake.verify_globs	9dfa84753d0473fb
+0	43	0	/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/x86_64/CMakeFiles/cmake.verify_globs	9dfa84753d0473fb

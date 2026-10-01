@@ -64,7 +64,7 @@ const AddFavouriteScreen = () => {
         return <CryptosMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favouriteCoins} onToggleFavorite={handleToggleFavorite} />;
       case "USD_M_FUTURES":
       case "COIN_M_FUTURES":
-        return <FuturesMarket type={activeTab === "USD_M_FUTURES" ? "USDT" : "COIN"} search={search} hideStar={false} />;
+        return <FuturesMarket type={activeTab === "USD_M_FUTURES" ? "USDT" : "COIN"} search={search} hideStar={false} scrollable={false} />;
       default:
         return <SpotMarket coinPairs={coinPairs} search={search} subCategory={spotSubCategory} hideStar={false} favoriteArray={favouriteCoins} onToggleFavorite={handleToggleFavorite} />;
     }

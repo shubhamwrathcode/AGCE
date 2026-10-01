@@ -313,3 +313,5 @@
 218792	219059	1790685106649007590	/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/build/intermediates/cxx/RelWithDebInfo/6n5g1549/obj/arm64-v8a/libreact_codegen_rnpicker.so	48403d2e4ba0dea4
 111007	266406	1790685153286123055	CMakeFiles/appmodules.dir/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/build/generated/autolinking/src/main/jni/autolinking.cpp.o	ff215644e984364f
 266406	266839	1790685154356631305	/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/build/intermediates/cxx/RelWithDebInfo/6n5g1549/obj/arm64-v8a/libappmodules.so	bbaae34b6c85c23d
+1	107	0	/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/arm64-v8a/CMakeFiles/cmake.verify_globs	9570efc8098144e
+1	42	0	/Users/wrathcodetechnology/Desktop/Projects/AGCE/android/app/.cxx/RelWithDebInfo/6n5g1549/arm64-v8a/CMakeFiles/cmake.verify_globs	9570efc8098144e
