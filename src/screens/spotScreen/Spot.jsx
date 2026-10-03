@@ -111,14 +111,6 @@ import { SpotOrdersPanel } from "./spot/SpotOrdersPanel";
 import { SpotNumberSheet, SpotOverlaySheets } from "./spot/SpotSheets";
 
 const { height: WindowHeight } = Dimensions.get("window");
-
-/**
- * - Pair: persisted in Redux (spotSelectedPair).
- * - Order book: always in Redux (buyOrders/sellOrders). Socket flush updates Redux; never cleared on tab blur so return shows cached data instantly (no reload/skeleton).
- * - Chart: opened from header candle on SpotChartScreen (no WebView on this screen).
- * - Skeletons: order book only when no data (!orderBookReady).
- * - Focus: subscribe to exchange on focus; on blur unsubscribe but keep Redux cache. No getSpotOpenOrders on focus unless added elsewhere.
- */
 const Spot = () => {
   const insets = useSafeAreaInsets();
   const { colors: themeColors, theme, isDark } = useTheme();
@@ -137,9 +129,6 @@ const Spot = () => {
   const socket = useAppSelector((state) => state.home.socket);
   const openOrders = useAppSelector((state) => state.home.spotOpenOrders);
   const pastOrders = useAppSelector((state) => state.home.pastOrders);
-  // Keep terminal readable: avoid logging whole arrays continuously
-  // (use the rate-limited lens logs inside the socket handler instead)
-
   const favoriteArray = useAppSelector((state) => state.home.favoriteArray);
   const favoriteArrayLoaded = useAppSelector((state) => state.home.favoriteArrayLoaded);
 
@@ -148,7 +137,6 @@ const Spot = () => {
   const [orderFilter, setOrderFilter] = useState("All");
   const [pastOrderFilter, setPastOrderFilter] = useState("All");
   const [showExecutedTrades, setShowExecutedTrades] = useState({});
-  /** Web parity: flip true once socket sends `buy_order`/`sell_order` key (empty array still counts). */
   const [orderBookSocketReady, setOrderBookSocketReady] = useState(false);
   const appStateRef = useRef(AppState.currentState);
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
@@ -182,7 +170,6 @@ const Spot = () => {
   const amountInputRef = useRef(null);
   const slippageInputRef = useRef(null);
 
-  /** Must run before setAmount so next render’s Animated styles already see 1 (fixes +/− without focus overlap). */
   const syncAmountAnimForQuantityString = useCallback((qtyStr) => {
     if (String(qtyStr ?? "").trim() !== "") {
       amountAnim.setValue(1);
@@ -235,7 +222,6 @@ const Spot = () => {
   useLayoutEffect(() => {
     const hasAmt = String(amount ?? "").trim() !== "";
 
-    // Amount label: value or focus based (original perfect logic)
     if (hasAmt || isAmountFocused) {
       Animated.timing(amountAnim, {
         toValue: 1,
@@ -2224,20 +2210,6 @@ const Spot = () => {
     return String(raw);
   }, [getOrderStatusRaw]);
 
-  const getBaseCoinIconUri = useCallback((inv) => {
-    const uri =
-      inv?.base_currency_image ??
-      inv?.base_currency_icon ??
-      inv?.base_currency_logo ??
-      inv?.baseCurrencyImage ??
-      inv?.baseCurrencyIcon ??
-      currencyData?.base_currency_image ??
-      currencyData?.base_currency_icon ??
-      currencyData?.base_currency_logo ??
-      null;
-    return typeof uri === "string" && uri.length > 0 ? uri : null;
-  }, [currencyData]);
-
   const buildCurrencyPairText = useCallback((inv) => {
     const base =
       normalizePairSymbol(inv?.base_currency_short_name) ||
@@ -2632,311 +2604,6 @@ const Spot = () => {
     () => tradeHistorySectionNode,
     [tradeHistorySectionNode],
   );
-  /** Open orders preview — matches detail header + Date…Price only; pair row → full detail; Cancel unchanged. */
-  const renderOpenOrderItem = useCallback(({ item: inv }) => {
-    const currencyPair = buildCurrencyPairText(inv);
-    const statusRaw = getOrderStatusRaw(inv);
-    const statusUpper = String(statusRaw || "").toUpperCase().trim();
-    const orderId = inv?._id || inv?.id;
-    const canCancel =
-      !!orderId &&
-      !["FILLED", "CANCELLED", "CANCELED", "COMPLETED", "EXECUTED", "REJECTED"].includes(statusUpper);
-
-    const priceNum = Number(inv?.price) || 0;
-    const typeUpper = String(inv?.order_type || inv?.type || inv?.orderType || "MARKET").toUpperCase();
-    const side = String(inv?.side || "").toUpperCase();
-
-    const eventTs =
-      inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp;
-    const eventM = eventTs ? moment(eventTs) : null;
-    const dateStr = eventM?.isValid() ? eventM.format("DD/MM/YYYY") : "---";
-    const timeStr = eventM?.isValid() ? eventM.format("HH:mm:ss") : "---";
-    const headerDateTime = eventM?.isValid() ? eventM.format("DD/MM/YYYY HH:mm:ss") : "---";
-
-    const rawTif = inv?.time_in_force ?? inv?.tif ?? inv?.timeInForce;
-    const tifStr =
-      rawTif != null && String(rawTif).trim() !== "" ? String(rawTif).trim().toUpperCase() : "—";
-
-    const priceDisplay =
-      String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : toFixedEight(priceNum);
-
-    const parseNum = (val) => {
-      if (val && val.$numberDecimal != null) return parseFloat(val.$numberDecimal);
-      return parseFloat(val);
-    };
-
-    const price = parseNum(inv?.price) || 0;
-    const avgPrice = parseNum(inv?.avg_execution_price ?? inv?.avgPrice ?? inv?.average_price) || price;
-    const avgPriceDisplay = toFixedEight(avgPrice);
-
-    const baseSym = inv?.ask_currency || inv?.base_currency || base_currency || "";
-    const textColor = themeColors.text;
-    const labelColor = themeColors.secondaryText;
-
-    return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
-        style={{
-          paddingVertical: 12,
-          paddingHorizontal: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: themeColors.themeBorderColor,
-        }}
-      >
-        <View>
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-            <AppText style={{ color: textColor }} type={FIFTEEN} weight={BOLD}>
-              {currencyPair}
-            </AppText>
-            <FastImage
-              source={right_ic}
-              style={{ width: 11, height: 11, marginLeft: 4 }}
-              resizeMode="contain"
-              tintColor={labelColor}
-            />
-          </View>
-          <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: labelColor, marginBottom: 2 }}>
-            {headerDateTime}
-          </AppText>
-          <AppText style={{ color: getSideColor(inv?.side), marginBottom: 8 }} type={THIRTEEN} weight={SEMI_BOLD}>
-            {side} · {typeUpper}
-          </AppText>
-
-          <View style={{ gap: 5 }}>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Market</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{currencyPair}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Type</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{typeUpper}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{priceDisplay}</AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                {`${safeToFixed8(inv?.quantity ?? inv?.amount ?? inv?.origQty, "—")}${baseSym ? ` ${baseSym}` : ""}`}
-              </AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Avg Price</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                {String(avgPriceDisplay ?? "—")}
-              </AppText>
-            </View>
-          </View>
-        </View>
-
-        {canCancel ? (
-          <View style={[styles.openOrderCardRow, { marginTop: 8, marginBottom: 4 }]}>
-            <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666" }}>Action:</AppText>
-            <TouchableOpacity
-              style={styles.cancelActionBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                setOrderToCancel(inv);
-                setIsCancelModalVisible(true);
-              }}
-            >
-              <AppText style={{ color: themeColors.red, fontWeight: "600", fontSize: 12 }}>Cancel</AppText>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-      </TouchableOpacity>
-    );
-  }, [themeColors, buildCurrencyPairText, getOrderStatusRaw, getSideColor, isDark, base_currency]);
-
-  // Memoized render function for past orders - same card UI as Open Orders; tap → SPOT_ORDER_HISTORY_DETAIL with full order data
-  const renderPastOrderItem = useCallback(({ item: inv, index: idx }) => {
-    const orderId = inv?._id || inv?.order_id || inv?.id;
-    const baseSym = inv?.ask_currency || inv?.base_currency || base_currency || "";
-    const quoteSym = inv?.pay_currency || inv?.quote_currency || quote_currency || "";
-    const currencyPair = (baseSym && quoteSym) ? `${baseSym}/${quoteSym}` : buildCurrencyPairText(inv);
-    const quoteCc =
-      normalizePairSymbol(inv?.pay_currency) ||
-      normalizePairSymbol(inv?.fee_asset) ||
-      normalizePairSymbol(quote_currency);
-
-
-    const parseNum = (val) => {
-      if (val && val.$numberDecimal != null) return parseFloat(val.$numberDecimal);
-      return parseFloat(val);
-    };
-
-    const price = parseNum(inv?.price) || 0;
-    const qty = parseNum(inv?.quantity) || 0;
-    const filled = parseNum(inv?.filled_quantity ?? inv?.filled) || 0;
-    const avgPrice = parseNum(inv?.avg_execution_price ?? inv?.avgPrice ?? inv?.average_price) || price;
-    const value = parseNum(inv?.executed_value ?? inv?.executedValue) || (avgPrice * filled);
-    const feeVal = parseNum(inv?.total_fee ?? inv?.fee) || 0;
-    const quoteCurrency =
-      inv?.pay_currency ||
-      inv?.quote_currency ||
-      inv?.quote_currency_short_name ||
-      inv?.quote_asset ||
-      (typeof currencyPair === "string" && currencyPair.includes("/") ? currencyPair.split("/")[1]?.trim() : "") ||
-      "";
-    const feeAsset = inv?.fee_asset || quoteCurrency;
-    const totalVal = value;
-
-    const statusRaw = getOrderStatusRaw(inv);
-    const statusLabel = getOrderStatusLabel(inv);
-
-    let statusColor = themeColors.text;
-    const sStr = String(statusRaw || "").toUpperCase().trim();
-    if (["FILLED", "COMPLETE", "COMPLETED", "EXECUTED"].includes(sStr)) {
-      statusColor = "#00c087";
-    } else if (["CANCELLED", "CANCELED", "REJECTED", "EXPIRED"].includes(sStr)) {
-      statusColor = "#ff4b5c";
-    } else {
-      statusColor = "#f3ba2f";
-    }
-
-    const hasExecutedTrades = Array.isArray(inv?.executed_prices) && inv.executed_prices.length > 0;
-    const showTrades = !!showExecutedTrades?.[orderId];
-
-    const textColor = themeColors.text;
-    const labelColor = isDark ? "#8E8E93" : "#666666";
-
-    return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => NavigationService.navigate(SPOT_ORDER_HISTORY_DETAIL, { item: inv })}
-        style={{
-          paddingVertical: 12,
-          paddingHorizontal: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: themeColors.themeBorderColor,
-        }}
-      >
-        <View>
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-            <AppText style={{ color: textColor }} type={FIFTEEN} weight={BOLD}>
-              {currencyPair}
-            </AppText>
-            <FastImage
-              source={right_ic}
-              style={{ width: 11, height: 11, marginLeft: 4 }}
-              resizeMode="contain"
-              tintColor={labelColor}
-            />
-          </View>
-          <AppText weight={MEDIUM} type={FOURTEEN} style={{ color: labelColor, marginBottom: 2 }}>
-            {(() => {
-              const d = inv?.updatedAt || inv?.updated_at || inv?.createdAt || inv?.created_at || inv?.date || inv?.timestamp || inv?.time;
-              return d ? moment(d).format("DD/MM/YYYY HH:mm:ss") : "---";
-            })()}
-          </AppText>
-
-          <AppText style={{ marginBottom: 8 }} type={THIRTEEN} weight={BOLD}>
-            <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: getSideColor(inv?.side) }}>
-              {String(inv?.side || "").toUpperCase()}<AppText weight={MEDIUM} type={THIRTEEN} style={{ color: isDark ? "#8E8E93" : "#666666" }}> · </AppText> <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: colors.white }}>{String(inv?.order_type || inv?.type || inv?.orderType || "").toUpperCase()}</AppText>
-            </AppText>
-            <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: isDark ? "#8E8E93" : "#666666" }}> · </AppText>
-            <AppText weight={MEDIUM} type={THIRTEEN} style={{ color: colors.white }}>
-              {statusLabel.toUpperCase()}
-            </AppText>
-          </AppText>
-
-          <View style={{ gap: 5 }}>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                {String(inv?.order_type || inv?.type || "").toUpperCase() === "MARKET" ? "Market" : safeToFixed8(inv?.price, "—")}
-              </AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Quantity</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                {safeToFixed8(qty, "—")}{baseSym ? ` ${baseSym}` : ""}
-              </AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                {`${safeToFixed8(feeVal)}${feeAsset ? ` ${feeAsset}` : ""}`.trim()}
-              </AppText>
-            </View>
-            <View style={styles.kvRow}>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total</AppText>
-              <AppText type={FOURTEEN} weight={SEMI_BOLD} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>
-                {safeToFixed8(totalVal)}
-              </AppText>
-            </View>
-          </View>
-        </View>
-
-        {hasExecutedTrades && (
-          <View style={{ marginTop: 8 }}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={[styles.execTradesBtn, {
-                borderWidth: 1,
-                borderColor: isDark ? 'transparent' : lightTheme.inputBorder,
-              }]}
-              onPress={() => setShowExecutedTrades((p) => ({ ...p, [orderId]: !p?.[orderId] }))}
-            >
-              <View style={styles.execTradesBtnRow}>
-                <FastImage
-                  source={downIcon}
-                  tintColor={isDark ? colors.white : colors.lightGrey}
-                  style={[
-                    styles.orderHistoryChevron,
-                    { transform: [{ rotate: showTrades ? "180deg" : "0deg" }] },
-                  ]}
-                  resizeMode="contain"
-                />
-                <AppText style={[styles.execTradesBtnText, { color: textColor }]}> {' '}Executed trades</AppText>
-              </View>
-            </TouchableOpacity>
-
-            {showTrades && (
-              <View style={styles.execTradesBox}>
-                {inv.executed_prices.map((tr, i) => (
-                  <View
-                    key={`${orderId}_${tr?.trade_id ?? i}`}
-                    style={[
-                      styles.execTradeItem,
-                      i === inv.executed_prices.length - 1 ? { borderBottomWidth: 0, marginBottom: 0 } : null,
-                    ]}
-                  >
-                    <View style={styles.execTradeHeaderRow}>
-                      <AppText style={[styles.execTradeHeaderText, { color: labelColor }]} weight={MEDIUM}>
-                        Trade #{i + 1}
-                      </AppText>
-                    </View>
-
-                    <View style={{ gap: 4, marginTop: 4 }}>
-                      <View style={styles.execTradeKvRow}>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Price:</AppText>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.price) || 0)} {quoteCc}</AppText>
-                      </View>
-                      <View style={styles.execTradeKvRow}>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Executed:</AppText>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.quantity) || 0)} {baseSym}</AppText>
-                      </View>
-                      <View style={styles.execTradeKvRow}>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Fee:</AppText>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight(Number(tr?.fee) || 0)} {quoteCc}</AppText>
-                      </View>
-                      <View style={styles.execTradeKvRow}>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: isDark ? "#8E8E93" : "#666666", flex: 1 }}>Total:</AppText>
-                        <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: textColor, textAlign: "right", flex: 2 }} numberOfLines={3}>{toFixedEight((Number(tr?.price) || 0) * (Number(tr?.quantity) || 0))}</AppText>
-                      </View>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }, [themeColors, buildCurrencyPairText, getBaseCoinIconUri, getOrderStatusRaw, showExecutedTrades, getSideColor, isDark]);
 
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background, paddingTop: insets.top }}>
