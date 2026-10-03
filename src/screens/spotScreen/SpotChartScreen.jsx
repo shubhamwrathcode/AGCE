@@ -49,6 +49,7 @@ import {
 import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
 import { SocketContext } from "../../SocketProvider";
+import { useExchangeData } from "../../services/socket/socketLiveStore";
 import { CHART_WEB_BASE_URL } from "../../helper/Constants";
 import TradingDataModal from "../../common/TradingDataModal/TradingDataModal";
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
@@ -464,8 +465,8 @@ const SpotChartScreen = () => {
     unsubscribeFromExchange,
     subscribeToMarket,
     unsubscribeFromMarket,
-    exchangeData,
   } = useContext(SocketContext) || {};
+  const exchangeData = useExchangeData();
 
   const spotSelectedPair = useAppSelector((state) => state.home.spotSelectedPair);
   const coinData = useAppSelector((state) => state.home.coinData);

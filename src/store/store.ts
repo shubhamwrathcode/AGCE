@@ -1,6 +1,7 @@
 import {configureStore} from '@reduxjs/toolkit';
 import {setAutoFreeze} from 'immer';
 import rootReducer from '../reducers/rootReducer';
+import {trackCurrentAction} from './liveMarketActions';
 setAutoFreeze(false);
 const store = configureStore({
   reducer: rootReducer,
@@ -8,7 +9,7 @@ const store = configureStore({
     getDefaultMiddleware({
       immutableCheck: false,
       serializableCheck: false,
-    }),
+    }).concat(trackCurrentAction),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

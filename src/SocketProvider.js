@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react";
 import { AppState } from "react-native";
-import { useDispatch } from "react-redux";
+import { useDispatch, useStore } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   setCoinData,
@@ -20,6 +20,7 @@ import {
 } from "./slices/homeSlice";
 import { setLoading } from "./slices/authSlice";
 import { socketService } from "./services/socket/SocketService";
+import { exchangeDataStore, futuresDataStore, futuresPriceStore } from "./services/socket/socketLiveStore";
 import { normalizeOrderbookOrders } from "./helper/futuresUtils";
 import { USER_TOKEN_KEY } from "./helper/Constants";
 
@@ -31,9 +32,7 @@ export const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
-  const futuresDataRef = useRef(null);
-  const [futuresPrice, setFuturesPrice] = useState(null);
-  const [exchangeData, setExchangeData] = useState(null);
+  const store = useStore();
   const pendingSubscriptions = useRef({
     market: false,
     exchange: null,
@@ -98,7 +97,7 @@ export const SocketProvider = ({ children }) => {
       return;
     }
     currentExchangeSubscription.current = subKey;
-    setExchangeData(null);
+    exchangeDataStore.set(null);
     const payload = {
       base_currency_id: baseCurrencyId,
       quote_currency_id: quoteCurrencyId,
@@ -114,7 +113,7 @@ export const SocketProvider = ({ children }) => {
   const unsubscribeFromExchange = useCallback((baseCurrencyId, quoteCurrencyId) => {
     currentExchangeSubscription.current = null;
     pendingSubscriptions.current.exchange = null;
-    setExchangeData(null);
+    exchangeDataStore.set(null);
     if (socketService.getSocket()?.connected && baseCurrencyId != null && quoteCurrencyId != null) {
       socketService.emit("exchange:unsubscribe", {
         base_currency_id: baseCurrencyId,
@@ -219,6 +218,13 @@ export const SocketProvider = ({ children }) => {
         currentFuturesSubscription.current = null;
       };
 
+      // Every dispatch runs every mounted useSelector, so skip no-op loader dispatches on each tick.
+      const clearLoadingFlags = () => {
+        const { home, auth } = store.getState();
+        if (home?.socketLoading !== false) dispatch(setSocketLoading(false));
+        if (auth?.isLoading || auth?.loadingFor != null) dispatch(setLoading(false));
+      };
+
       let lastMarketFlush = 0;
       let pendingMarketData = null;
       const MARKET_THROTTLE_MS = 1000;
@@ -243,8 +249,7 @@ export const SocketProvider = ({ children }) => {
         if (futuresList != null && Array.isArray(futuresList)) {
           dispatch(setFuturesPairs(futuresList));
         }
-        dispatch(setSocketLoading(false));
-        dispatch(setLoading(false));
+        clearLoadingFlags();
       };
 
       const handleMarketUpdate = (data) => {
@@ -279,12 +284,11 @@ export const SocketProvider = ({ children }) => {
         const data = pendingExchangeData;
         pendingExchangeData = null;
         lastExchangeFlush = Date.now();
-        // Web parity: keep live exchange payload in context (ticker.buy_price drives header price).
-        setExchangeData(data);
+        // Web parity: live exchange payload (ticker.buy_price drives header price) for useExchangeData().
+        exchangeDataStore.set(data);
         // Also push order book / trades / balances into Redux for Spot screens.
         dispatch(setCoinData(data));
-        dispatch(setSocketLoading(false));
-        dispatch(setLoading(false));
+        clearLoadingFlags();
       };
 
       const handleExchangeUpdate = (data) => {
@@ -313,7 +317,7 @@ export const SocketProvider = ({ children }) => {
 
       const flushFuturesData = () => {
         if (!pendingFuturesData) return;
-        futuresDataRef.current = pendingFuturesData;
+        futuresDataStore.set(pendingFuturesData);
         dispatch(setFuturesData(pendingFuturesData));
         pendingFuturesData = null;
       };
@@ -331,12 +335,17 @@ export const SocketProvider = ({ children }) => {
         }
       };
 
+      const handleFuturesPrice = (data) => {
+        if (data) futuresPriceStore.set(data);
+      };
+
       handlersRef.current = {
         handleConnect,
         handleDisconnect,
         handleMarketUpdate,
         handleExchangeUpdate,
         handleFuturesUpdate,
+        handleFuturesPrice,
       };
       socketService.onConnect(handleConnect);
       socketService.onDisconnect(handleDisconnect);
@@ -344,9 +353,7 @@ export const SocketProvider = ({ children }) => {
       socketService.on("exchange:update", handleExchangeUpdate);
       socketService.on("message", handleExchangeUpdate);
       socketService.on("futures:update", handleFuturesUpdate);
-      socketService.on("futures:price", (data) => {
-        if (data) setFuturesPrice(data);
-      });
+      socketService.on("futures:price", handleFuturesPrice);
 
       if (socketService.getIsConnected()) {
         handleConnect();
@@ -382,11 +389,13 @@ export const SocketProvider = ({ children }) => {
         socketService.offDisconnect(h.handleDisconnect);
         socketService.off("market:update", h.handleMarketUpdate);
         socketService.off("exchange:update", h.handleExchangeUpdate);
+        socketService.off("message", h.handleExchangeUpdate);
         socketService.off("futures:update", h.handleFuturesUpdate);
+        socketService.off("futures:price", h.handleFuturesPrice);
         handlersRef.current = null;
       }
     };
-  }, [dispatch]);
+  }, [dispatch, store]);
 
   // Reconnect when app returns to foreground (do not create new socket or duplicate listeners)
   const appStateRef = useRef(AppState.currentState);
@@ -409,12 +418,11 @@ export const SocketProvider = ({ children }) => {
     return () => subscription.remove();
   }, [resubscribePending]);
 
+  // Only stable actions + connection state here. Live payloads are in socketLiveStore so a
+  // socket tick does not re-render every context consumer (Spot, Futures, Home, Market...).
   const contextValue = useMemo(
     () => ({
       socket: socketService.getSocket(),
-      exchangeData,
-      futuresData: futuresDataRef.current,
-      futuresPrice,
       socketHandlersReady,
       subscribeToMarket,
       unsubscribeFromMarket,
@@ -424,7 +432,7 @@ export const SocketProvider = ({ children }) => {
       unsubscribeFromFutures,
       setFuturesHistoryTab,
     }),
-    [exchangeData, futuresDataRef.current, futuresPrice, socketHandlersReady, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange, subscribeToFutures, unsubscribeFromFutures, setFuturesHistoryTab]
+    [socketHandlersReady, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange, subscribeToFutures, unsubscribeFromFutures, setFuturesHistoryTab]
   );
 
   return (

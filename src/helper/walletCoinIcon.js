@@ -78,6 +78,38 @@ export function withMarketCoinIcon(item, marketIconBySymbol) {
   };
 }
 
+const ICON_INDEX_FIELDS = [
+  "icon_path",
+  "iconPath",
+  "icon_url",
+  "iconUrl",
+  "icon",
+  "image",
+  "base_currency",
+  "short_name",
+  "coin",
+  "base_currency_short_name",
+];
+
+/**
+ * Selector equality for `coinData` when it is only used to build the icon index:
+ * price ticks replace the array but leave every field the index reads unchanged.
+ */
+export function sameMarketIconFields(a, b) {
+  if (a === b) return true;
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (x === y) continue;
+    if (!x || !y) return false;
+    for (const field of ICON_INDEX_FIELDS) {
+      if (x[field] !== y[field]) return false;
+    }
+  }
+  return true;
+}
+
 export function enrichWalletRowsWithMarketIcons(rows, coinData) {
   const index = buildMarketIconIndex(coinData);
   if (!Array.isArray(rows)) return [];

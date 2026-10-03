@@ -35,7 +35,7 @@ import {
 } from "../../helper/utility";
 import { getEmailDomainSuggestions } from "../../helper/emailDomainSuggest";
 import NavigationService from "../../navigation/NavigationService";
-import { CMS_SCREEN, SET_PASSWORD_SCREEN } from "../../navigation/routes";
+import { CMS_SCREEN, LOGIN_SCREEN, SET_PASSWORD_SCREEN } from "../../navigation/routes";
 import Checkbox from "../../shared/components/Checkbox";
 import FastImage from "react-native-fast-image";
 import { useRoute } from "@react-navigation/native";
@@ -571,7 +571,21 @@ const Register = () => {
             </TouchableOpacityView>
           ) : null}
 
-
+          <TouchableOpacityView
+            style={styles.loginRow}
+            onPress={() => NavigationService.navigate(LOGIN_SCREEN)}
+          >
+            <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText }}>
+              {tabTitle(languages?.register_seven, "Already have an account?")}{" "}
+            </AppText>
+            <AppText
+              type={FOURTEEN}
+              weight={MEDIUM}
+              style={{ color: isDark ? colors.orangeTheme : colors.buttonBg }}
+            >
+              Log In
+            </AppText>
+          </TouchableOpacityView>
         </View>
       </KeyBoardAware>
 
@@ -643,6 +657,14 @@ const styles = StyleSheet.create({
   },
   appleIcon: {
     marginRight: 0,
+  },
+  loginRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    marginTop: 4,
+    paddingVertical: 6,
   },
 });
 

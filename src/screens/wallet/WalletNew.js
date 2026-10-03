@@ -40,7 +40,7 @@ import FastImage from "react-native-fast-image";
 import { colors, darkTheme } from "../../theme/colors";
 import WalletList from "./WalletList";
 import NavigationService from "../../navigation/NavigationService";
-import { useDispatch } from "react-redux";
+import { useDispatch, useStore } from "react-redux";
 import {
   getUserArbitrageWallet,
   getUserEarningWallet,
@@ -81,6 +81,7 @@ import { IMAGE_BASE_URL } from "../../helper/Constants";
 import {
   buildMarketIconIndex,
   enrichWalletRowsWithMarketIcons,
+  sameMarketIconFields,
   withMarketCoinIcon,
 } from "../../helper/walletCoinIcon";
 import CoinIcon from "../../common/CoinIcon";
@@ -173,7 +174,9 @@ const WalletNew = ({ route }) => {
   const userWallet = useAppSelector((state) => {
     return state.wallet.userWallet;
   });
-  const coinData = useAppSelector((state) => state.home.coinData);
+  // Only icon fields are read from this copy; prices are read from the store at press time.
+  const coinData = useAppSelector((state) => state.home.coinData, sameMarketIconFields);
+  const store = useStore();
   const marketIconBySymbol = useMemo(
     () => buildMarketIconIndex(coinData),
     [coinData]
@@ -681,7 +684,8 @@ const WalletNew = ({ route }) => {
 
   const handleTradeCoin = useCallback((coin) => {
     const symbol = String(coin?.short_name || coin?.currency || coin?.asset || "").toUpperCase().trim();
-    const allPairs = Array.isArray(coinData) ? coinData : [];
+    const latestCoinData = store.getState()?.home?.coinData;
+    const allPairs = Array.isArray(latestCoinData) ? latestCoinData : [];
 
     let matchingPair = allPairs.find(
       (p) => String(p?.base_currency || "").toUpperCase() === symbol
@@ -716,7 +720,7 @@ const WalletNew = ({ route }) => {
     dispatch(setBuyOrders([]));
     dispatch(setSellOrders([]));
     NavigationService.navigate(TRADE_SCREEN, { coinDetail: targetPair });
-  }, [coinData, dispatch]);
+  }, [store, dispatch]);
 
   const noGlobalLoader = useMemo(() => ({ useGlobalLoader: false }), []);
   const [refreshing, setRefreshing] = useState(false);

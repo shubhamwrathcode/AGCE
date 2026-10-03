@@ -58,7 +58,145 @@ interface AppTextProps extends TextProps {
   allowFontScaling?: boolean;
 }
 
-const AppText = ({
+const getTextStyle = (type?: string, weight?: string, color?: string, themeState?: string): TextStyle => {
+  var style: TextStyle = {
+    fontFamily: fontFamily,
+  };
+  switch (type) {
+    case FORTY:
+      style["fontSize"] = 40;
+      break;
+    case THIRTY_FOUR:
+      style["fontSize"] = 34;
+      break;
+    case THIRTY:
+      style["fontSize"] = 30;
+      break;
+    case TWENTY_SIX:
+      style["fontSize"] = 26;
+      break;
+    case TWENTY_FOUR:
+      style["fontSize"] = 24;
+      break;
+    case TWENTY_TWO:
+      style["fontSize"] = 22;
+      break;
+    case TWENTY:
+      style["fontSize"] = 20;
+      break;
+    case NINETEEN:
+      style["fontSize"] = 19;
+      break;
+    case EIGHTEEN:
+      style["fontSize"] = 18;
+      break;
+    case SEVENTEEN:
+      style["fontSize"] = 17;
+      break;
+    case SIXTEEN:
+      style["fontSize"] = 16;
+      break;
+    case FIFTEEN:
+      style["fontSize"] = 15;
+      break;
+    case FOURTEEN:
+      style["fontSize"] = 14;
+      break;
+    case THIRTEEN:
+      style["fontSize"] = 13;
+      break;
+    case ELEVEN:
+      style["fontSize"] = 11;
+      break;
+    case TEN:
+      style["fontSize"] = 10;
+      break;
+    case NINE:
+      style["fontSize"] = 9;
+      break;
+    case EIGHT:
+      style["fontSize"] = 8;
+      break;
+    default:
+      style["fontSize"] = 12;
+  }
+
+  switch (weight) {
+    case NORMAL:
+      style["fontFamily"] = fontFamily;
+      break;
+    case MEDIUM:
+      style["fontFamily"] = fontFamilyMedium;
+      break;
+    case SEMI_BOLD:
+      style["fontFamily"] = fontFamilySemiBold;
+      break;
+    case BOLD:
+      style["fontFamily"] = fontFamilyBold;
+      break;
+    default:
+      style["fontFamily"] = fontFamily;
+  }
+
+  switch (color) {
+    case WHITE:
+      style["color"] = themeState === "Dark" ? colors.black : colors.white;
+      break;
+    case BLACK:
+      style["color"] = themeState === "Dark" ? colors.white : colors.black;
+      break;
+    case YELLOW:
+      style["color"] = colors.buttonBg;
+      break;
+    case SECOND:
+      style["color"] = colors.secondaryText;
+      break;
+    case THIRD:
+      style["color"] = colors.thirdText;
+      break;
+    case RED:
+      style["color"] = colors.red;
+      break;
+    case GREEN:
+      style["color"] = colors.green;
+      break;
+    case AMBER:
+      style["color"] = colors.amber;
+      break;
+    case DESC:
+      style["color"] = colors.descText;
+      break;
+    case WHITESHADOW:
+      style["color"] = colors.whiteCCShadow;
+      break;
+    case LIGHTGREY:
+      style["color"] = colors.lightGrey;
+      break;
+    case DISCLAIMTEXT:
+      style["color"] = themeState === "Dark" ? colors.disclaimDarText : colors.disclaimText;
+      break;
+
+
+    default:
+      style["color"] = themeState === "Dark" ? colors.white : colors.black;
+  }
+
+  return style;
+};
+
+// Valid only while getTextStyle depends on nothing but these four inputs (colors are static).
+const textStyleCache = new Map<string, TextStyle>();
+const getCachedTextStyle = (type?: string, weight?: string, color?: string, themeState?: string) => {
+  const key = `${type}|${weight}|${color}|${themeState}`;
+  let cached = textStyleCache.get(key);
+  if (!cached) {
+    cached = getTextStyle(type, weight, color, themeState);
+    textStyleCache.set(key, cached);
+  }
+  return cached;
+};
+
+const AppTextBase = ({
   type,
   weight,
   style,
@@ -69,146 +207,19 @@ const AppText = ({
   ...props
 }: AppTextProps) => {
   const themeState = useAppSelector(state => state.auth.theme);
-  const getTextStyle = (type?: string, weight?: string, color?: string): TextStyle => {
-    var style: TextStyle = {
-      fontFamily: fontFamily,
-    };
-    switch (type) {
-      case FORTY:
-        style["fontSize"] = 40;
-        break;
-      case THIRTY_FOUR:
-        style["fontSize"] = 34;
-        break;
-      case THIRTY:
-        style["fontSize"] = 30;
-        break;
-      case TWENTY_SIX:
-        style["fontSize"] = 26;
-        break;
-      case TWENTY_FOUR:
-        style["fontSize"] = 24;
-        break;
-      case TWENTY_TWO:
-        style["fontSize"] = 22;
-        break;
-      case TWENTY:
-        style["fontSize"] = 20;
-        break;
-      case NINETEEN:
-        style["fontSize"] = 19;
-        break;
-      case EIGHTEEN:
-        style["fontSize"] = 18;
-        break;
-      case SEVENTEEN:
-        style["fontSize"] = 17;
-        break;
-      case SIXTEEN:
-        style["fontSize"] = 16;
-        break;
-      case FIFTEEN:
-        style["fontSize"] = 15;
-        break;
-      case FOURTEEN:
-        style["fontSize"] = 14;
-        break;
-      case THIRTEEN:
-        style["fontSize"] = 13;
-        break;
-      case ELEVEN:
-        style["fontSize"] = 11;
-        break;
-      case TEN:
-        style["fontSize"] = 10;
-        break;
-      case NINE:
-        style["fontSize"] = 9;
-        break;
-      case EIGHT:
-        style["fontSize"] = 8;
-        break;
-      default:
-        style["fontSize"] = 12;
-    }
-
-    switch (weight) {
-      case NORMAL:
-        style["fontFamily"] = fontFamily;
-        break;
-      case MEDIUM:
-        style["fontFamily"] = fontFamilyMedium;
-        break;
-      case SEMI_BOLD:
-        style["fontFamily"] = fontFamilySemiBold;
-        break;
-      case BOLD:
-        style["fontFamily"] = fontFamilyBold;
-        break;
-      default:
-        style["fontFamily"] = fontFamily;
-    }
-
-    switch (color) {
-      case WHITE:
-        style["color"] = themeState === "Dark" ? colors.black : colors.white;
-        break;
-      case BLACK:
-        style["color"] = themeState === "Dark" ? colors.white : colors.black;
-        break;
-      case YELLOW:
-        style["color"] = colors.buttonBg;
-        break;
-      case SECOND:
-        style["color"] = colors.secondaryText;
-        break;
-      case THIRD:
-        style["color"] = colors.thirdText;
-        break;
-      case RED:
-        style["color"] = colors.red;
-        break;
-      case GREEN:
-        style["color"] = colors.green;
-        break;
-      case AMBER:
-        style["color"] = colors.amber;
-        break;
-      case DESC:
-        style["color"] = colors.descText;
-        break;
-      case WHITESHADOW:
-        style["color"] = colors.whiteCCShadow;
-        break;
-      case LIGHTGREY:
-        style["color"] = colors.lightGrey;
-        break;
-      case DISCLAIMTEXT:
-        style["color"] = themeState === "Dark" ? colors.disclaimDarText : colors.disclaimText;
-        break;
-
-
-      default:
-        style["color"] = themeState === "Dark" ? colors.white : colors.black;
-    }
-
-    return style;
-  };
-  const styles = {
-    text: (type?: string, weight?: string, color?: string) => ({
-      ...getTextStyle(type, weight, color),
-    }),
-  };
+  const baseStyle = getCachedTextStyle(type, weight, color, themeState);
   return (
     <Text
       allowFontScaling={allowFontScaling}
       numberOfLines={numberOfLines}
-      style={StyleSheet.flatten([styles.text(type, weight, color), style])}
+      style={style == null ? baseStyle : StyleSheet.flatten([baseStyle, style])}
       {...props}
     >
       {props.children ?? ""}
     </Text>
   );
 };
+
+const AppText = React.memo(AppTextBase);
 
 export { AppText };

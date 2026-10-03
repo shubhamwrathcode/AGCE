@@ -1,8 +1,25 @@
-import {createSlice} from '@reduxjs/toolkit';
-import _ from 'lodash';
+import {createSlice, original} from '@reduxjs/toolkit';
 import {CoinDataProps, HomeSliceProps} from '../helper/types';
 import {getDaysAgoData} from '../helper/utility';
 import isEqual from "lodash/isEqual";
+
+/**
+ * Same result as `_.uniqWith(coins, _.isEqual)` but O(n): deep-equal coins always share
+ * an id, so only coins with the same id need a deep comparison.
+ */
+const uniqueCoins = (coins: CoinDataProps[]) => {
+  const byKey = new Map<unknown, CoinDataProps[]>();
+  const result: CoinDataProps[] = [];
+  for (const coin of coins) {
+    const key = (coin as any)?._id ?? (coin as any)?.id;
+    const sameKey = byKey.get(key);
+    if (sameKey?.some(existing => isEqual(existing, coin))) continue;
+    if (sameKey) sameKey.push(coin);
+    else byKey.set(key, [coin]);
+    result.push(coin);
+  }
+  return result;
+};
 
 export const initialState: HomeSliceProps = {
   bannerList: [],
@@ -82,6 +99,9 @@ export const homeSlice = createSlice({
       state.bannerList = payload;
     },
     setCoinData: (state, {payload}) => {
+      // Compare against the plain previous state: lodash isEqual on Immer drafts creates a
+      // proxy for every nested field it touches, which is expensive on every socket tick.
+      const prev: any = original(state) ?? state;
       const hasMarketData =
         payload?.pairs !== undefined ||
         payload?.hot !== undefined ||
@@ -100,48 +120,47 @@ export const homeSlice = createSlice({
           return e.quote_currency;
         }) || [];
 
-        if (!isEqual(state.coinPairs, newCoinPairs)) {
+        if (!isEqual(prev.coinPairs, newCoinPairs)) {
           state.coinPairs = newCoinPairs;
         }
-        if (!isEqual(state.hotCoins, newHotCoins)) {
+        if (!isEqual(prev.hotCoins, newHotCoins)) {
           state.hotCoins = newHotCoins;
         }
-        if (!isEqual(state.newListedCoins, newListedCoins)) {
+        if (!isEqual(prev.newListedCoins, newListedCoins)) {
           state.newListedCoins = newListedCoins;
         }
 
-        const allCoins = [].concat(
+        const allCoins: CoinDataProps[] = [].concat(
           newHotCoins,
           newListedCoins,
           newCoinPairs,
         );
-        const uniqueCoins = _.uniqWith(allCoins, _.isEqual);
-        const filteredCoins = uniqueCoins.filter((e: CoinDataProps) => {
+        const filteredCoins = uniqueCoins(allCoins).filter((e: CoinDataProps) => {
           return e;
         });
-        if (!isEqual(state.coinData, filteredCoins)) {
+        if (!isEqual(prev.coinData, filteredCoins)) {
           state.coinData = filteredCoins;
         }
       }
 
       if (payload?.balance && Object.keys(payload.balance).length > 0) {
-        if (!isEqual(state.coinBalance, payload.balance)) {
+        if (!isEqual(prev.coinBalance, payload.balance)) {
           state.coinBalance = { ...state.coinBalance, ...payload.balance };
         }
       }
       if (Array.isArray(payload?.open_orders) && payload.open_orders.length > 0) {
-        if (!isEqual(state.spotOpenOrders, payload.open_orders)) {
+        if (!isEqual(prev.spotOpenOrders, payload.open_orders)) {
           state.spotOpenOrders = payload.open_orders;
           state.openOrders = payload.open_orders;
         }
       }
       if (Array.isArray(payload?.buy_order)) {
-        if (!isEqual(state.buyOrders, payload.buy_order)) {
+        if (!isEqual(prev.buyOrders, payload.buy_order)) {
           state.buyOrders = payload.buy_order;
         }
       }
       if (Array.isArray(payload?.sell_order)) {
-        if (!isEqual(state.sellOrders, payload.sell_order)) {
+        if (!isEqual(prev.sellOrders, payload.sell_order)) {
           state.sellOrders = payload.sell_order;
         }
       }
@@ -181,7 +200,7 @@ export const homeSlice = createSlice({
         state.pastOrders = existing;
       }
       if (Array.isArray(payload?.recent_trades)) {
-        if (!isEqual(state.recentTrades, payload.recent_trades)) {
+        if (!isEqual(prev.recentTrades, payload.recent_trades)) {
           state.recentTrades = payload.recent_trades;
         }
       }

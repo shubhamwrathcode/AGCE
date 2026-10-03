@@ -53,6 +53,7 @@ import {
 import { toFixedFive, toFixedThree, twoFixedTwo } from "../../helper/utility";
 import { useAppSelector } from "../../store/hooks";
 import { SocketContext } from "../../SocketProvider";
+import { useFuturesData, useFuturesPrice } from "../../services/socket/socketLiveStore";
 import { CHART_WEB_BASE_URL } from "../../helper/Constants";
 
 import { addToFavorites, getFavoriteArray } from "../../actions/homeActions";
@@ -428,7 +429,9 @@ const FutureChartScreen = () => {
   const chartHeight = 400;
   const tabScrollBottomPadding =
     TAB_SCROLL_BOTTOM_GAP + TAB_SCROLL_BAR_CLEARANCE + Math.max(insets.bottom, 8);
-  const { subscribeToFutures, unsubscribeFromFutures, futuresData: socketFuturesData, futuresPrice: socketFuturesPrice } = useContext(SocketContext) || {};
+  const { subscribeToFutures, unsubscribeFromFutures } = useContext(SocketContext) || {};
+  const socketFuturesData = useFuturesData();
+  const socketFuturesPrice = useFuturesPrice();
 
   const spotSelectedPair = route.params?.coin;
   const buyOrders = socketFuturesData?.buy_order || [];

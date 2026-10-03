@@ -97,7 +97,7 @@ const FuturesNavigator = () => {
         tabBar={props => <CustomTabBar {...props} themeColors={themeColors} isDark={isDark} />}
         screenOptions={{
           swipeEnabled: false,
-          lazy: false,
+          lazy: true,
           animationEnabled: false,
           sceneContainerStyle: { backgroundColor: themeColors.background },
         }}

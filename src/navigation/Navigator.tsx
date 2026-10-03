@@ -1,8 +1,9 @@
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import "react-native-gesture-handler";
-import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import NavigationService from "./NavigationService";
+import { withTabStoreGate } from "./withTabStoreGate";
 import * as routes from "./routes";
 import * as React from "react";
 import { appOperation } from "../appOperation";
@@ -104,7 +105,6 @@ import Animated, { useSharedValue, withTiming, useAnimatedStyle, Easing as REasi
 import Toast from "react-native-simple-toast";
 import { showError } from "../helper/logger";
 import { useAppSelector } from "../store/hooks";
-import { ChartPreloaderProvider } from "../context/ChartPreloaderContext";
 import SpotOrderHistoryDetail from "../screens/spotScreen/SpotOrderHistoryDetail";
 import Market from "../screens/other/Market";
 import SpotMarket from "../screens/other/SpotMarket";
@@ -172,7 +172,7 @@ import LaunchpadDetail from "../screens/Launchpad/LaunchpadDetail";
 import ReferAndEarn from "../screens/earning/ReferAndEarn";
 
 const Stack = createStackNavigator();
-const Tab = createMaterialTopTabNavigator();
+const Tab = createBottomTabNavigator();
 
 /** Android is edge-to-edge, so the tab bar must clear the system navigation bar (3-button / gesture). */
 const useTabBarBottomInset = () => {
@@ -870,6 +870,12 @@ const AuthStack = () => {
 
 const renderTabBar = (props: any) => <CustomBottomTabBar {...props} />;
 
+const HomeTab = withTabStoreGate(Home);
+const MarketTab = withTabStoreGate(Market);
+const SpotTab = withTabStoreGate(Spot);
+const FuturesTab = withTabStoreGate(Futures);
+const WalletTab = withTabStoreGate(WalletNew);
+
 function BottomNavigation() {
   const { colors: themeColors, isDark } = useTheme();
   const activeIcon = colors.black;
@@ -879,175 +885,175 @@ function BottomNavigation() {
   const bottomInset = useTabBarBottomInset();
 
   return (
-    <ChartPreloaderProvider>
-      <Tab.Navigator
-        initialRouteName={routes.HOME_SCREEN}
-        backBehavior={"history"}
-        tabBarPosition="bottom"
-        sceneContainerStyle={{
-          backgroundColor: isDark ? themeColors.background : "#FFFFFF",
-          overflow: "hidden",
-          // Tab bar grows by the same inset, so screens keep their existing clearance above it.
-          paddingBottom: bottomInset,
+    <Tab.Navigator
+      initialRouteName={routes.HOME_SCREEN}
+      backBehavior={"history"}
+      sceneContainerStyle={{
+        backgroundColor: isDark ? themeColors.background : "#FFFFFF",
+        overflow: "hidden",
+        // Tab bar grows by the same inset, so screens keep their existing clearance above it.
+        paddingBottom: bottomInset,
+      }}
+      tabBar={renderTabBar}
+      screenOptions={{
+        headerShown: false,
+        // Keep every tab mounted (no first-visit mount cost on Trade/Future); withTabStoreGate
+        // stops live market ticks from re-rendering tabs that are not visible.
+        lazy: false,
+      }}
+    >
+      <Tab.Screen
+        name={routes.HOME_SCREEN}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <View style={bottomTabStyles.tabColumn}>
+              <View
+                style={[
+                  bottomTabStyles.iconWrap,
+                  { backgroundColor: "transparent" },
+                ]}
+              >
+                <FastImage
+                  source={homeIcon}
+                  style={bottomTabStyles.tabIcon}
+                  resizeMode="contain"
+                  tintColor={focused ? activeIcon : inactive}
+                />
+              </View>
+              <AppText
+                weight={focused ? BOLD : MEDIUM}
+                type={TEN}
+                style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
+              >
+                Home
+              </AppText>
+            </View>
+          ),
         }}
-        tabBar={renderTabBar}
-        screenOptions={{
-          swipeEnabled: false,
+        component={HomeTab}
+      />
+      <Tab.Screen
+        name={routes.MARKET_SCREEN}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <View style={bottomTabStyles.tabColumn}>
+              <View
+                style={[
+                  bottomTabStyles.iconWrap,
+                  { backgroundColor: "transparent" },
+                ]}
+              >
+                <FastImage
+                  source={isDark ? marketIconDark : marketIcon}
+                  style={bottomTabStyles.tabIconMd}
+                  resizeMode="contain"
+                  tintColor={focused ? activeIcon : inactive}
+                />
+              </View>
+              <AppText
+                weight={focused ? BOLD : MEDIUM}
+                type={TEN}
+                style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
+              >
+                Market
+              </AppText>
+            </View>
+          ),
         }}
-      >
-        <Tab.Screen
-          name={routes.HOME_SCREEN}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <View style={bottomTabStyles.tabColumn}>
-                <View
-                  style={[
-                    bottomTabStyles.iconWrap,
-                    { backgroundColor: "transparent" },
-                  ]}
-                >
-                  <FastImage
-                    source={homeIcon}
-                    style={bottomTabStyles.tabIcon}
-                    resizeMode="contain"
-                    tintColor={focused ? activeIcon : inactive}
-                  />
-                </View>
-                <AppText
-                  weight={focused ? BOLD : MEDIUM}
-                  type={TEN}
-                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
-                >
-                  Home
-                </AppText>
+        component={MarketTab}
+      />
+      <Tab.Screen
+        name={routes.TRADE_SCREEN}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <View style={bottomTabStyles.tabColumn}>
+              <View
+                style={[
+                  bottomTabStyles.iconWrap,
+                  { backgroundColor: "transparent" },
+                ]}
+              >
+                <FastImage
+                  source={tradeImg}
+                  style={bottomTabStyles.tabIconMd}
+                  resizeMode="contain"
+                  tintColor={focused ? activeIcon : inactive}
+                />
               </View>
-            ),
-          }}
-          component={Home}
-        />
-        <Tab.Screen
-          name={routes.MARKET_SCREEN}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <View style={bottomTabStyles.tabColumn}>
-                <View
-                  style={[
-                    bottomTabStyles.iconWrap,
-                    { backgroundColor: "transparent" },
-                  ]}
-                >
-                  <FastImage
-                    source={isDark ? marketIconDark : marketIcon}
-                    style={bottomTabStyles.tabIconMd}
-                    resizeMode="contain"
-                    tintColor={focused ? activeIcon : inactive}
-                  />
-                </View>
-                <AppText
-                  weight={focused ? BOLD : MEDIUM}
-                  type={TEN}
-                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
-                >
-                  Market
-                </AppText>
+              <AppText
+                weight={focused ? BOLD : MEDIUM}
+                type={TEN}
+                style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
+              >
+                Trade
+              </AppText>
+            </View>
+          ),
+        }}
+        // initialParams={__DEV__ ? { historyOnly: true } : undefined}
+        component={SpotTab}
+      />
+      <Tab.Screen
+        name={routes.FUTURES_SCREEN}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <View style={bottomTabStyles.tabColumn}>
+              <View
+                style={[
+                  bottomTabStyles.iconWrap,
+                  { backgroundColor: "transparent" },
+                ]}
+              >
+                <FastImage
+                  source={futuresActiveIcon}
+                  style={bottomTabStyles.tabIconMd}
+                  resizeMode="contain"
+                  tintColor={focused ? activeIcon : inactive}
+                />
               </View>
-            ),
-          }}
-          component={Market}
-        />
-        <Tab.Screen
-          name={routes.TRADE_SCREEN}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <View style={bottomTabStyles.tabColumn}>
-                <View
-                  style={[
-                    bottomTabStyles.iconWrap,
-                    { backgroundColor: "transparent" },
-                  ]}
-                >
-                  <FastImage
-                    source={tradeImg}
-                    style={bottomTabStyles.tabIconMd}
-                    resizeMode="contain"
-                    tintColor={focused ? activeIcon : inactive}
-                  />
-                </View>
-                <AppText
-                  weight={focused ? BOLD : MEDIUM}
-                  type={TEN}
-                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
-                >
-                  Trade
-                </AppText>
+              <AppText
+                weight={focused ? BOLD : MEDIUM}
+                type={TEN}
+                style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
+              >
+                Future
+              </AppText>
+            </View>
+          ),
+        }}
+        component={FuturesTab}
+      />
+      <Tab.Screen
+        name={routes.WALLET_SCREEN}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <View style={bottomTabStyles.tabColumn}>
+              <View
+                style={[
+                  bottomTabStyles.iconWrap,
+                  { backgroundColor: "transparent" },
+                ]}
+              >
+                <FastImage
+                  source={wallet_ic}
+                  style={bottomTabStyles.tabIcon}
+                  resizeMode="contain"
+                  tintColor={focused ? activeIcon : inactive}
+                />
               </View>
-            ),
-          }}
-          // initialParams={__DEV__ ? { historyOnly: true } : undefined}
-          component={Spot}
-        />
-        <Tab.Screen
-          name={routes.FUTURES_SCREEN}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <View style={bottomTabStyles.tabColumn}>
-                <View
-                  style={[
-                    bottomTabStyles.iconWrap,
-                    { backgroundColor: "transparent" },
-                  ]}
-                >
-                  <FastImage
-                    source={futuresActiveIcon}
-                    style={bottomTabStyles.tabIconMd}
-                    resizeMode="contain"
-                    tintColor={focused ? activeIcon : inactive}
-                  />
-                </View>
-                <AppText
-                  weight={focused ? BOLD : MEDIUM}
-                  type={TEN}
-                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
-                >
-                  Future
-                </AppText>
-              </View>
-            ),
-          }}
-          component={Futures}
-        />
-        <Tab.Screen
-          name={routes.WALLET_SCREEN}
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <View style={bottomTabStyles.tabColumn}>
-                <View
-                  style={[
-                    bottomTabStyles.iconWrap,
-                    { backgroundColor: "transparent" },
-                  ]}
-                >
-                  <FastImage
-                    source={wallet_ic}
-                    style={bottomTabStyles.tabIcon}
-                    resizeMode="contain"
-                    tintColor={focused ? activeIcon : inactive}
-                  />
-                </View>
-                <AppText
-                  weight={focused ? BOLD : MEDIUM}
-                  type={TEN}
-                  style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
-                >
-                  Wallet
-                </AppText>
-              </View>
-            ),
-          }}
-          component={WalletNew}
-        />
-      </Tab.Navigator>
-    </ChartPreloaderProvider>
+              <AppText
+                weight={focused ? BOLD : MEDIUM}
+                type={TEN}
+                style={[bottomTabStyles.tabLabel, { color: focused ? activeIcon : inactive }]}
+              >
+                Wallet
+              </AppText>
+            </View>
+          ),
+        }}
+        component={WalletTab}
+      />
+    </Tab.Navigator>
   );
 }
 

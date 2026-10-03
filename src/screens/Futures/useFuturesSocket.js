@@ -6,6 +6,7 @@
 import { useContext } from "react";
 import { SocketContext } from "../../SocketProvider";
 import { useSelector } from "react-redux";
+import { useFuturesPrice } from "../../services/socket/socketLiveStore";
 
 export function useFuturesSocket() {
   const context = useContext(SocketContext);
@@ -13,13 +14,14 @@ export function useFuturesSocket() {
   // We use Redux to get futuresData so components only re-render if they select specific parts.
   // Wait, if this hook returns the full object, the caller might still re-render if they select the full object.
   const futuresData = useSelector(state => state.home.futuresData);
+  const futuresPrice = useFuturesPrice();
 
   const isConnected = context?.socket?.connected || false;
 
   return {
     isConnected,
     futuresData: futuresData,
-    futuresPrice: context?.futuresPrice,
+    futuresPrice,
     subscribeToFutures: context?.subscribeToFutures,
     unsubscribeFromFutures: context?.unsubscribeFromFutures,
     subscribeToMarket: context?.subscribeToMarket,

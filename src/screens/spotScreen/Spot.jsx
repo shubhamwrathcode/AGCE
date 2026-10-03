@@ -1559,12 +1559,9 @@ const Spot = () => {
   const [currencyData, setCurrencyData] = useState(null);
   const [orderFilter, setOrderFilter] = useState("All");
   const [pastOrderFilter, setPastOrderFilter] = useState("All");
-  const [expandedRowIndex, setExpandedRowIndex] = useState(null);
   const [showExecutedTrades, setShowExecutedTrades] = useState({});
-  const [lastSocketData, setLastSocketData] = useState(null);
   /** Web parity: flip true once socket sends `buy_order`/`sell_order` key (empty array still counts). */
   const [orderBookSocketReady, setOrderBookSocketReady] = useState(false);
-  const [appState, setAppState] = useState(AppState.currentState);
   const appStateRef = useRef(AppState.currentState);
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const [isOrderTypeModalVisible, setIsOrderTypeModalVisible] = useState(false);
@@ -1833,7 +1830,6 @@ const Spot = () => {
       setPrice(initialPrice);
       setStaticBuyPrice(initialPrice);
       setActivePercentage("");
-      setLastSocketData(null);
       dispatch(setBuyOrders([]));
       dispatch(setSellOrders([]));
       dispatch(setRecentTrades([]));
@@ -1866,7 +1862,6 @@ const Spot = () => {
   // Clear order book so we don't show previous pair's data; new data will replace when socket responds
   const handleCurrencyChange = (coin) => {
     dispatch(setSpotSelectedPair(coin));
-    setLastSocketData(null);
     dispatch(setBuyOrders([]));
     dispatch(setSellOrders([]));
     setOpenOrderKindTab("all");
@@ -2101,7 +2096,6 @@ const Spot = () => {
     (tabId) => {
       if (tabId < 1 || tabId > 3) return;
       if (activeTab === tabId) return;
-      setExpandedRowIndex(null);
       if (tabId === 2) setLoadingSpotOrderHistory(true);
       else if (tabId === 3) setLoadingSpotTradeHistory(true);
       activeTabRef.current = tabId;
@@ -2305,13 +2299,10 @@ const Spot = () => {
   const spotMyTradesDataSigRef = useRef("");
   const [tradeHistorySideFilter, setTradeHistorySideFilter] = useState("All");
   const [activePercentage, setActivePercentage] = useState(0);
-  const [balance, setBalance] = useState(0);
   const [_balance, _setBalance] = useState(0);
   const [numberSelect, setNumberSelect] = useState("0.0001");
   const [isConfirm, setIsConfirm] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [focusSettling, setFocusSettling] = useState(false);
-  const focusSettlingTimeoutRef = useRef(null);
 
   const [isSwitchingTab, setIsSwitchingTab] = useState(false);
 
@@ -2367,12 +2358,6 @@ const Spot = () => {
       unsubscribeFromFutures?.();
       dispatch(setLoading(false));
       isSpotFocusedRef.current = true;
-      setFocusSettling(true);
-      if (focusSettlingTimeoutRef.current) clearTimeout(focusSettlingTimeoutRef.current);
-      focusSettlingTimeoutRef.current = setTimeout(() => {
-        focusSettlingTimeoutRef.current = null;
-        setFocusSettling(false);
-      }, 550);
       const pending = pendingOrderBookOnBlurRef.current;
       if (pending) {
         pendingOrderBookOnBlurRef.current = null;
@@ -2397,7 +2382,6 @@ const Spot = () => {
           if (!isSamePairDifferentTradeType) {
             dispatch(setBuyOrders([]));
             dispatch(setSellOrders([]));
-            setLastSocketData(null);
           }
           if (lastExchange?.base_currency_id != null && lastExchange?.quote_currency_id != null) {
             unsubscribeFromExchange?.(lastExchange.base_currency_id, lastExchange.quote_currency_id);
@@ -2421,7 +2405,6 @@ const Spot = () => {
         dispatch(setBuyOrders([]));
         dispatch(setSellOrders([]));
         dispatch(setRecentTrades([]));
-        setLastSocketData(null);
       }
       if (currentPair?.available === "LOCAL") {
         if (latestLocalBuyOrdersRef.current?.length > 0) {
@@ -2442,11 +2425,6 @@ const Spot = () => {
         clearTimeout(stopLoaderTimer);
 
         // Clean up all timers and refs so no callbacks run after blur (prevents freeze and overlay)
-        if (focusSettlingTimeoutRef.current) {
-          clearTimeout(focusSettlingTimeoutRef.current);
-          focusSettlingTimeoutRef.current = null;
-        }
-
         if (socketThrottleTimerRef.current) {
           clearTimeout(socketThrottleTimerRef.current);
           socketThrottleTimerRef.current = null;
@@ -2479,7 +2457,6 @@ const Spot = () => {
 
   useEffect(() => {
     if (Object.keys(coinBalance || {}).length === 0) return;
-    setBalance(coinBalance?.quote_currency_balance || 0);
     _setBalance(coinBalance?.base_currency_balance || 0);
   }, [coinBalance]);
 
@@ -2487,7 +2464,6 @@ const Spot = () => {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       appStateRef.current = nextAppState;
-      setAppState(nextAppState);
     });
 
     return () => {
@@ -2501,7 +2477,6 @@ const Spot = () => {
       pendingOrderBookOnBlurRef.current = payload;
       return;
     }
-    setLastSocketData(payload.data);
     if (historyOnly) {
       // In history-only mode, skip orderbook/recentTrades dispatches to keep UI ultra-light.
       return;
@@ -3032,11 +3007,6 @@ const Spot = () => {
   };
 
   useEffect(() => {
-    if (isBuy && _balance) {
-      setBalance(_balance?.quote_currency_balance);
-    } else {
-      setBalance(_balance?.base_currency_balance);
-    }
     setActivePercentage(0);
   }, [isBuy, _balance]);
 
