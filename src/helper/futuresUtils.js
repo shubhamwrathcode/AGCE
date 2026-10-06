@@ -267,15 +267,37 @@ export function getTierLeverageButtons(leverageTiers, maxLeverage = 125) {
     return arr.length ? arr : [1, maxLev];
 }
 
+/**
+ * Socket taker_fee_rate is a percent (0.058 → 0.058%).
+ * Returns the decimal fraction used in margin math (0.00058).
+ */
 export function resolveTakerFeeRate(contract) {
     if (!contract) return 0;
     const rate = Number(contract.taker_fee_rate);
-    if (Number.isFinite(rate) && rate >= 0) return rate;
+    if (Number.isFinite(rate) && rate >= 0) return rate / 100;
     const pct = Number(contract.taker_fee);
     if (Number.isFinite(pct) && pct >= 0) return pct / 100;
     return 0;
 }
 
+/**
+ * Margin required to open a position: notional × (1/leverage + decimal taker fee).
+ * takerFeeRate is a fraction (0.00058), not the socket percent (0.058).
+ * Inverse of computeMaxOpenNotional — same formula used for Max sizing.
+ */
+export function computeFuturesOrderMargin(notional, leverage, takerFeeRate = 0) {
+    const n = Number(notional);
+    const lev = Math.max(1, Number(leverage) || 1);
+    const fee = Number(takerFeeRate);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    const feeVal = Number.isFinite(fee) && fee >= 0 ? fee : 0;
+    return n * (1 / lev + feeVal);
+}
+
+/**
+ * Max position notional (USDT) from socket effective_available:
+ *   maxNotionalUsdt = avail / (1/leverage + decimal taker fee)
+ */
 export function computeMaxOpenNotional(effectiveAvailable, leverage, takerFeeRate) {
     const avail = Number(effectiveAvailable);
     const lev = Math.max(1, Number(leverage) || 1);

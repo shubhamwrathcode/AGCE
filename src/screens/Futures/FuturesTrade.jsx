@@ -53,6 +53,7 @@ import {
   getStepSize,
   sanitizeIncrementInput,
   resolveTakerFeeRate,
+  computeFuturesOrderMargin,
   computeMaxOpenNotional,
   computePosition,
   computeClosedPosition
@@ -159,9 +160,8 @@ const ShimmerBox = ({
   );
 };
 
-const ORDER_BOOK_VISIBLE_ROWS = 6;
+const ORDER_BOOK_VISIBLE_ROWS = 7;
 const ORDER_BOOK_ROW_LAYOUT_HEIGHT = 28;
-const ORDER_BOOK_LIST_MAX_HEIGHT = ORDER_BOOK_VISIBLE_ROWS * ORDER_BOOK_ROW_LAYOUT_HEIGHT;
 
 const OrderBookSkeleton = () => {
   const ROWS = ORDER_BOOK_VISIBLE_ROWS;
@@ -476,6 +476,16 @@ const FuturesUI = () => {
     return userFuturesWallet.find(w => w?.short_name === 'USDT' || w?.currency === 'USDT');
   }, [userFuturesWallet]);
 
+  // Web parity (futuresBalanceForDisplay): socket effective_available first, then available_balance.
+  const futuresAvailable = React.useMemo(() => {
+    const bal = futuresData?.balance;
+    if (bal?.effective_available != null && bal.effective_available !== '') {
+      const eff = Number(bal.effective_available);
+      if (Number.isFinite(eff)) return eff;
+    }
+    return Number(bal?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+  }, [futuresData?.balance, usdtFuturesWallet?.balance]);
+
   const lastRouteCoinId = useRef(null);
 
   useEffect(() => {
@@ -667,7 +677,7 @@ const FuturesUI = () => {
   const calculateAmountForSlider = (val, currentUnit, currentPrice) => {
     if (val === 0) return '';
 
-    const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+    const balanceToUse = futuresAvailable;
     const takerFeeRate = resolveTakerFeeRate(selectedCoin);
     const stats = computeFuturesLeverageStats({
       availableBalance: balanceToUse,
@@ -904,14 +914,10 @@ const FuturesUI = () => {
         const orderNotional = orderQty * orderPriceForCap;
 
         if (!reduceOnly && !closePosition) {
-          const feeRate = Number(selectedCoin?.taker_fee_rate);
-          const takerFee = Number.isFinite(feeRate) && feeRate >= 0 ? feeRate : 0;
-          const effAvail = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0);
+          const takerFee = resolveTakerFeeRate(selectedCoin);
+          const requiredMargin = computeFuturesOrderMargin(orderNotional, leverage, takerFee);
 
-          const lev = Math.max(1, Number(leverage) || 1);
-          const requiredMargin = (orderNotional / lev) + (orderNotional * takerFee);
-
-          if (requiredMargin > effAvail + 1e-8) {
+          if (requiredMargin > futuresAvailable + 1e-8) {
             SimpleToast.show("Insufficient margin. Add funds or reduce your order size.", SimpleToast.SHORT);
             setPlacingOrderSide("");
             return;
@@ -1609,7 +1615,9 @@ const FuturesUI = () => {
     </View>
   ), [activeHistoryTab, liveCoin, navigation, openPairSheet, themeColors.text, userData]);
 
-  const visibleRowCount = viewModeIndex === 0 ? 6 : 12;
+  // Both sides: N rows each; single-side view: 2N rows, so the book keeps the same height.
+  const visibleRowCount = viewModeIndex === 0 ? ORDER_BOOK_VISIBLE_ROWS : ORDER_BOOK_VISIBLE_ROWS * 2;
+  const orderBookListHeight = visibleRowCount * ORDER_BOOK_ROW_LAYOUT_HEIGHT;
 
   const obAsks = React.useMemo(() => {
     if (viewModeIndex === 1) return [];
@@ -1690,7 +1698,7 @@ const FuturesUI = () => {
   ), [maxVolume, themeColors, isDark, selectedCoin, precision]);
 
   const getLayout = React.useCallback((_, index) => ({
-    length: 26, offset: 26 * index, index
+    length: ORDER_BOOK_ROW_LAYOUT_HEIGHT, offset: ORDER_BOOK_ROW_LAYOUT_HEIGHT * index, index
   }), []);
 
   const renderOrderBook = () => (
@@ -1720,7 +1728,7 @@ const FuturesUI = () => {
         <View>
           {/* Asks */}
           {obAsks.length > 0 && (
-            <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
+            <View style={{ height: orderBookListHeight, width: '100%' }}>
               <FlatList
                 data={obAsks}
                 inverted={true}
@@ -1752,7 +1760,7 @@ const FuturesUI = () => {
 
           {/* Bids */}
           {obBids.length > 0 && (
-            <View style={{ height: viewModeIndex === 0 ? 168 : 336, width: '100%' }}>
+            <View style={{ height: orderBookListHeight, width: '100%' }}>
               <FlatList
                 data={obBids}
                 showsVerticalScrollIndicator={false}
@@ -1857,10 +1865,10 @@ const FuturesUI = () => {
   const renderOrderForm = () => {
     const resolveMaxAndCost = () => {
       if (!selectedCoin) {
-        return { costText: '0.00 USDT', maxText: '0.0000 BTC' };
+        return { costText: '0.00 USDT', maxText: '0.0000 BTC', maxNotional: 0 };
       }
 
-      const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+      const balanceToUse = futuresAvailable;
       const takerFeeRate = resolveTakerFeeRate(selectedCoin);
 
       const stats = computeFuturesLeverageStats({
@@ -1915,8 +1923,15 @@ const FuturesUI = () => {
       return {
         costText,
         maxText,
+        maxNotional,
       };
     };
+    const { costText, maxText, maxNotional } = resolveMaxAndCost();
+    const quoteAsset = selectedCoin?.quote_currency || selectedCoin?.margin_asset || 'USDT';
+    // Web formatMarginHeadroomPair: (max notional − available) / max notional, in quote decimals.
+    const marginDec = Number.isFinite(Number(selectedCoin?.quote_decimal)) ? Number(selectedCoin.quote_decimal) : 2;
+    const marginMax = Number.isFinite(maxNotional) && maxNotional > 0 ? maxNotional : 0;
+    const marginHeadroom = Math.max(0, marginMax - Math.max(0, futuresAvailable));
 
     const handlePriceStep = (direction) => {
       const tick = getTickSize(selectedCoin);
@@ -2289,7 +2304,7 @@ const FuturesUI = () => {
             ) : (
               <>
                 <AppText type={TWELVE}
-                  style={{ fontFamily: fontFamilyMedium }}>{parseFloat((Math.trunc(Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) * 100000) / 100000).toFixed(5))} USDT</AppText>
+                  style={{ fontFamily: fontFamilyMedium }}>{parseFloat((Math.trunc(futuresAvailable * 100000) / 100000).toFixed(5))} USDT</AppText>
                 <TouchableOpacity
                   activeOpacity={0.7}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -2318,14 +2333,16 @@ const FuturesUI = () => {
             borderBottomColor: isDark ? colors.white : colors.black,
           }]}>Margin</AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 2 }}>
-            {(!futuresData || futuresData?.contract?.short_name !== selectedCoin?.short_name) ? (
+            {!userData ? (
+              <AppText type={TWELVE} style={{ fontFamily: fontFamilyMedium }}>-- / -- {quoteAsset}</AppText>
+            ) : (!futuresData || futuresData?.contract?.short_name !== selectedCoin?.short_name) ? (
               <ShimmerBox width={80} height={16} borderRadius={4} />
             ) : (
               <>
-                <AppText type={TWELVE} style={{ color: colors.green, fontFamily: fontFamilyMedium }}>0.00</AppText>
+                <AppText type={TWELVE} style={{ color: colors.green, fontFamily: fontFamilyMedium }}>{marginHeadroom.toFixed(marginDec)}</AppText>
                 <AppText type={TWELVE} style={{ marginHorizontal: 4, fontFamily: fontFamilyMedium }}>/</AppText>
-                <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4, fontFamily: fontFamilyMedium }}>0.00</AppText>
-                <AppText type={TWELVE} style={{ fontFamily: fontFamilyMedium }}>USDT</AppText>
+                <AppText type={TWELVE} style={{ color: colors.red, marginRight: 4, fontFamily: fontFamilyMedium }}>{marginMax.toFixed(marginDec)}</AppText>
+                <AppText type={TWELVE} style={{ fontFamily: fontFamilyMedium }}>{quoteAsset}</AppText>
               </>
             )}
           </View>
@@ -2523,7 +2540,6 @@ const FuturesUI = () => {
 
         {/* Buttons */}
         {(() => {
-          const { maxText, costText } = resolveMaxAndCost();
           const isKycVerified = userData?.kycVerified ?? userData?.kyc_verified ?? (String(userData?.kyc_status ?? userData?.kycStatus ?? "").toLowerCase() === "approved");
           return (
             <View style={{ width: '100%', marginBottom: 12 }}>
@@ -2604,6 +2620,14 @@ const FuturesUI = () => {
                     <AppText type={TWELVE} weight={SEMI_BOLD}>{maxText}</AppText>
                   )}
                 </View>
+              </View>
+
+              {/* Socket fee rates are already percents (0.058 → 0.058%) — shown as-is, like web. */}
+              <View style={[styles.feeRateBox, { backgroundColor: themeColors.card }]}>
+                <AppText type={TWELVE} color={themeColors.secondaryText}>Fee rate</AppText>
+                <AppText type={TWELVE}>
+                  Maker {selectedCoin?.maker_fee_rate ? Number(selectedCoin.maker_fee_rate) : '---'}% / Taker {selectedCoin?.taker_fee_rate ? Number(selectedCoin.taker_fee_rate) : '---'}%
+                </AppText>
               </View>
             </View>
           );
@@ -3243,7 +3267,7 @@ const FuturesUI = () => {
       {(() => {
         const maxL = Number(selectedCoin?.max_leverage) || 125;
         const leverageTiers = selectedCoin?.leverage_tiers || [];
-        const balanceToUse = Number(futuresData?.balance?.available_balance ?? usdtFuturesWallet?.balance ?? 0) || 0;
+        const balanceToUse = futuresAvailable;
         const stats = computeFuturesLeverageStats({
           availableBalance: balanceToUse,
           leverage: leverageDraft,
@@ -3538,6 +3562,13 @@ const styles = StyleSheet.create({
   },
   fundingTickerWrap: {
     marginBottom: 10,
+  },
+  feeRateBox: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    gap: 4,
   },
   obHeader: {
     flexDirection: 'row',
