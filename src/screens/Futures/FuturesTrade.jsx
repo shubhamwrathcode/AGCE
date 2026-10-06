@@ -12,6 +12,7 @@ import RBSheet from 'react-native-raw-bottom-sheet';
 import AnimatedBottomSheet from '../../common/AnimatedBottomSheet/AnimatedBottomSheet';
 import FuturePairList from './FuturePairList';
 import { useFuturesSocket } from './useFuturesSocket';
+import FuturesFundingTicker from './components/FuturesFundingTicker';
 import { AppText, BOLD, MEDIUM, SEMI_BOLD, TWELVE, FOURTEEN, SIXTEEN, TEN, THIRTEEN } from '../../shared';
 import { useTheme } from '../../hooks/useTheme';
 import { colors, darkTheme } from '../../theme/colors';
@@ -1694,6 +1695,9 @@ const FuturesUI = () => {
 
   const renderOrderBook = () => (
     <View style={styles.leftColumn}>
+      <View style={styles.fundingTickerWrap}>
+        <FuturesFundingTicker pair={liveCoin} liveContract={futuresData?.contract} active={isFocused} />
+      </View>
       <View style={styles.obHeader}>
         <AppText type={TEN} color={themeColors.secondaryText}>
           Price{"\n"}({selectedCoin?.margin_asset || selectedCoin?.quote_asset || 'USDT'})
@@ -3531,6 +3535,9 @@ const styles = StyleSheet.create({
   },
   fundingRow: {
     marginBottom: 16,
+  },
+  fundingTickerWrap: {
+    marginBottom: 10,
   },
   obHeader: {
     flexDirection: 'row',
