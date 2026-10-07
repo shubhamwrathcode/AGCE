@@ -448,6 +448,29 @@ export const banner2 = require('../../assets/images/banner2.png');
 export const banner3 = require('../../assets/images/banner3.png');
 export const banner4 = require('../../assets/images/banner4.png');
 export const banner5 = require('../../assets/images/banner5.png');
+export const otcAnim1 = require('../../assets/images/otcAnim1.png');
+export const otcAnim2 = require('../../assets/images/otcAnim2.png');
+export const otcAnim3 = require('../../assets/images/otcAnim3.png');
+export const OTCDeskLightIcon = require('../../assets/images/OTCDeskLightIcon.png');
+export const OTCDeskDarkIcon = require('../../assets/images/OTCDeskDarkIcon.png');
+export const otcHeroVector = require('../../assets/images/otc_hero_vector.png');
+export const otcHeroVectorLight = require('../../assets/images/otc_hero_vector_light.png');
+export const otcHeroVector2 = require('../../assets/images/otc_hero_vector2.png');
+export const otcHeroVector2Light = require('../../assets/images/otc_hero_vector2_light.png');
+export const otcHeroVector3 = require('../../assets/images/otc_hero_vector3.png');
+export const otcHeroVector3Light = require('../../assets/images/otc_hero_vector3_light.png');
+export const otcHeroBanner = require('../../assets/images/otc_herobnr_img.png');
+export const otcHeroBottomBg = require('../../assets/images/otc_herobottombg.png');
+export const otcHeroBg = require('../../assets/images/otc_bnrbg.jpg');
+export const otcHeroBgLight = require('../../assets/images/otc_bnrbg_light.jpg');
+export const otcDeskBg = require('../../assets/images/otc_deskbg.jpg');
+export const otcDeskBgLight = require('../../assets/images/otc_deskbg_light.jpg');
+export const otcBuiltTradesBg = require('../../assets/images/otc_built_trades_bg.jpg');
+export const otcBuiltTradesBgLight = require('../../assets/images/otc_built_trades_bg_light.jpg');
+export const otcInfoIcon = require('../../assets/images/otc_info_icon.png');
+export const otcInfoIcon2 = require('../../assets/images/otc_info_icon2.png');
+export const otcInfoIcon3 = require('../../assets/images/otc_info_icon3.png');
+export const otcInfoIcon4 = require('../../assets/images/otc_info_icon4.png');
 
 
 

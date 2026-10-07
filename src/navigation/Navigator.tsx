@@ -170,6 +170,7 @@ import OptionsInstrumentTrade from "../screens/Futures/OptionsTrade/OptionsInstr
 import Launchpad from "../screens/Launchpad/Launchpad";
 import LaunchpadDetail from "../screens/Launchpad/LaunchpadDetail";
 import ReferAndEarn from "../screens/earning/ReferAndEarn";
+import OtcDashboard from "../screens/OtcDesk/OtcDashboard";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -817,6 +818,7 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.LAUNCHPAD_SCREEN} component={Launchpad} />
       <Stack.Screen name={routes.LAUNCHPAD_DETAIL_SCREEN} component={LaunchpadDetail} />
       <Stack.Screen name={routes.REFER_AND_EARN_SCREEN} component={ReferAndEarn} />
+      <Stack.Screen name={routes.OTC_DASHBOARD_SCREEN} component={OtcDashboard} />
     </Stack.Navigator>
   );
 };
