@@ -1,0 +1,65 @@
+diff --git a/node_modules/@invertase/react-native-apple-authentication/ios/RNAppleAuthentication/RNAppleAuthASAuthorizationDelegates.h b/node_modules/@invertase/react-native-apple-authentication/ios/RNAppleAuthentication/RNAppleAuthASAuthorizationDelegates.h
+index e883692..7b5b8c9 100644
+--- a/node_modules/@invertase/react-native-apple-authentication/ios/RNAppleAuthentication/RNAppleAuthASAuthorizationDelegates.h
++++ b/node_modules/@invertase/react-native-apple-authentication/ios/RNAppleAuthentication/RNAppleAuthASAuthorizationDelegates.h
+@@ -25,6 +25,7 @@
+ 
+ @property(nonatomic, strong, nullable) NSString *nonce;
+ @property(nonatomic, strong, nullable) void (^completion)(NSError *_Nullable, NSDictionary *_Nullable);
++@property(nonatomic, strong, nullable) ASAuthorizationController *controller;
+ 
+ - (instancetype _Nullable )initWithCompletion:(void (^_Nonnull)(NSError * _Nullable error, NSDictionary * _Nullable authorizationCredential))completion andNonce:(NSString *_Nullable)nonce;
+ 
+diff --git a/node_modules/@invertase/react-native-apple-authentication/ios/RNAppleAuthentication/RNAppleAuthASAuthorizationDelegates.m b/node_modules/@invertase/react-native-apple-authentication/ios/RNAppleAuthentication/RNAppleAuthASAuthorizationDelegates.m
+index 5e8940e..24e9fa9 100644
+--- a/node_modules/@invertase/react-native-apple-authentication/ios/RNAppleAuthentication/RNAppleAuthASAuthorizationDelegates.m
++++ b/node_modules/@invertase/react-native-apple-authentication/ios/RNAppleAuthentication/RNAppleAuthASAuthorizationDelegates.m
+@@ -54,10 +54,22 @@ - (ASPresentationAnchor)presentationAnchorForAuthorizationController:(ASAuthoriz
+         }
+         return window;
+     #else
+-        // I believe the vision OS one above is actually the best way to handle the deprecation:
+-        // Apple Auth not supported until iOS13 anyway, so the solution above should be using avaliable APIs (13+)
+-        // iPadOS optimal solution also relies on using activation state vs just using last connected Scene
+-        return [[UIApplication sharedApplication] keyWindow];
++        // `UIApplication.keyWindow` can be nil on a fresh launch on iPad (including iPhone-only apps in
++        // compatibility mode), which makes Apple fail with error 1000. Prefer the active scene's window.
++        UIWindow *fallback = nil;
++        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
++            if (![scene isKindOfClass:[UIWindowScene class]]) continue;
++            if (scene.activationState != UISceneActivationStateForegroundActive &&
++                scene.activationState != UISceneActivationStateForegroundInactive) continue;
++            for (UIWindow *window in ((UIWindowScene *)scene).windows) {
++                if (window.isKeyWindow) return window;
++                if (!fallback && !window.hidden) fallback = window;
++            }
++        }
++        if (fallback) return fallback;
++        UIWindow *legacy = [[UIApplication sharedApplication] keyWindow];
++        if (legacy) return legacy;
++        return [UIApplication sharedApplication].windows.firstObject;
+     #endif
+ #endif
+ }
+@@ -69,6 +81,7 @@ - (void)authorizationController:(ASAuthorizationController *)controller didCompl
+   ASAuthorizationAppleIDCredential *appleIdCredential = authorization.credential;
+   _completion(nil, [self buildDictionaryFromAppleIdCredential:appleIdCredential]);
+   _completion = nil;
++  _controller = nil;
+ }
+ 
+ - (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithError:(NSError *)error {
+@@ -76,11 +89,13 @@ - (void)authorizationController:(ASAuthorizationController *)controller didCompl
+   NSLog(@"%@", error.localizedDescription);
+   _completion(error, nil);
+   _completion = nil;
++  _controller = nil;
+ }
+ 
+ #pragma mark - ASAuthorizationController Methods
+ 
+ - (void)performRequestsForAuthorizationController:(ASAuthorizationController *)authorizationController {
++  _controller = authorizationController;
+   authorizationController.delegate = self;
+   authorizationController.presentationContextProvider = self;
+   [authorizationController performRequests];

@@ -7,7 +7,7 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
+  StatusBar,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -15,12 +15,23 @@ import {
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import LinearGradient from "react-native-linear-gradient";
-import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
+import Svg, {
+  Defs,
+  Image as SvgImage,
+  LinearGradient as SvgGradient,
+  Mask,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+  Text as SvgText,
+} from "react-native-svg";
 import Animated, {
   Easing,
   Extrapolation,
   cancelAnimation,
   interpolate,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -28,12 +39,14 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import Toast from "react-native-simple-toast";
-import { AppSafeAreaView, AppText, BOLD, MEDIUM, SEMI_BOLD } from "../../shared";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SystemBars } from "react-native-edge-to-edge";
+import { AppText as BaseAppText, BOLD, MEDIUM, SEMI_BOLD } from "../../shared";
 import CoinIcon from "../../common/CoinIcon";
 import NavigationService from "../../navigation/NavigationService";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
-import { fontFamilyMedium } from "../../theme/typography";
+import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 import {
   back_ic,
   tetherIcon,
@@ -49,8 +62,6 @@ import {
   otcHeroBgLight,
   otcDeskBg,
   otcDeskBgLight,
-  otcBuiltTradesBg,
-  otcBuiltTradesBgLight,
   otcInfoIcon,
   otcInfoIcon2,
   otcInfoIcon3,
@@ -68,18 +79,51 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GOLD = "#D1AA67";
 const GOLD_TEXT = "#D5A760";
 
-const ORBIT_SIZE = Math.min(SCREEN_WIDTH - 40, 340);
-const ORBIT_RADIUS = ORBIT_SIZE / 2;
-const ORBIT_TOP = 24;
+const HERO_BANNER_WIDTH = SCREEN_WIDTH * 0.9;
+const HERO_BANNER_HEIGHT = HERO_BANNER_WIDTH * (1518 / 1893);
+const HERO_BANNER_TOP_GAP = 16;
+/** Rings of otc_herobnr_img.png, as fractions of the image width. */
+const DOME_OUTER_RING_CENTER_Y = 0.527;
+const DOME_OUTER_RING_RADIUS = 0.505;
+/** The PNG is cropped just above the outer ring, so its glow is faded out along this radius. */
+const DOME_GLOW_FADE_START = 0.5;
+const DOME_GLOW_FADE_END = 0.527;
+const DOME_RING_CENTER_Y = 0.5445;
+const DOME_RING_RADIUS = 0.3915;
+
+const ORBIT_RADIUS = HERO_BANNER_WIDTH * DOME_RING_RADIUS;
+const ORBIT_SIZE = ORBIT_RADIUS * 2;
 const BADGE_SIZE = 64;
+const HEADER_HEIGHT = 50;
+const HEADER_FADE_DISTANCE = 60;
+const HERO_TITLE_OFFSET =
+  HERO_BANNER_WIDTH * DOME_OUTER_RING_RADIUS * 0.5 + BADGE_SIZE / 2 + 14;
+/** iOS resolves fonts by PostScript name (Inter18pt-*), not by the file names in typography. */
+const WEIGHT_FONTS =
+  Platform.OS === "ios"
+    ? { [BOLD]: "Inter18pt-Bold", [SEMI_BOLD]: "Inter18pt-SemiBold", [MEDIUM]: "Inter18pt-Medium" }
+    : { [BOLD]: fontFamilyBold, [SEMI_BOLD]: fontFamilySemiBold, [MEDIUM]: fontFamilyMedium };
+const HERO_TITLE_FONT = WEIGHT_FONTS[BOLD];
+const SUITE_TITLE_FONT = WEIGHT_FONTS[SEMI_BOLD];
+
+const AppText = ({ weight, style, ...props }) => (
+  <BaseAppText
+    weight={weight}
+    style={WEIGHT_FONTS[weight] ? [{ fontFamily: WEIGHT_FONTS[weight] }, style] : style}
+    {...props}
+  />
+);
+const SUITE_TITLE_SIZE = 26;
+const SUITE_TITLE_HEIGHT = 34;
 const ORBIT_SPIN_MS = 25000;
 const BADGE_SPIN_MS = 40000;
 const BADGE_FADE_RANGE = [0.15, 0.5];
 
-const HERO_BANNER_WIDTH = SCREEN_WIDTH * 0.9;
-const HERO_BANNER_HEIGHT = HERO_BANNER_WIDTH * (1518 / 1893);
 const HERO_BOTTOM_HEIGHT = SCREEN_WIDTH * (1322 / 3840);
-const BUILT_IMG_HEIGHT = (SCREEN_WIDTH - 32) * (523 / 713);
+const BUILT_GRID_GAP = 12;
+const WHY_GRID_GAP = 10;
+const WHY_CARD_WIDTH = (SCREEN_WIDTH - 32 - WHY_GRID_GAP) / 2;
+const BUILT_CARD_WIDTH = (SCREEN_WIDTH - 32 - BUILT_GRID_GAP) / 2;
 
 const TAB_HEIGHT = 46;
 const TAB_SLANT = 14;
@@ -161,12 +205,17 @@ const BUILT_FEATURES = [
 
 const DARK_PALETTE = {
   pageBg: "#12151B",
+  heroBg: "#181B21",
   sectionBg: "#171B20",
   heroFade: "#171a1f",
   text: "#FFFFFF",
   heroDesc: "#B9BCC0",
   cardBg: "rgba(255,255,255,0.1)",
   cardBorder: "rgba(255,255,255,0.15)",
+  featureBg: "rgba(255,255,255,0.035)",
+  featureBorder: "rgba(255,255,255,0.08)",
+  whyCardBg: "#20242B",
+  whyCardBorder: "rgba(255,255,255,0.08)",
   inputBorder: "#686868",
   label: "#848992",
   muted: "#7A8293",
@@ -187,12 +236,17 @@ const DARK_PALETTE = {
 
 const LIGHT_PALETTE = {
   pageBg: "#f8fafc",
+  heroBg: "#FEFEFE",
   sectionBg: "#ffffff",
   heroFade: "#f7f7f7",
   text: "#0f172a",
   heroDesc: "#64748b",
   cardBg: "rgba(0,0,0,0.05)",
   cardBorder: "#eff4fb",
+  featureBg: "#ffffff",
+  featureBorder: "#e2e8f0",
+  whyCardBg: "rgba(0,0,0,0.05)",
+  whyCardBorder: "#eff6fe",
   inputBorder: "#e7e7e7",
   label: "#64748b",
   muted: "#7A8293",
@@ -321,7 +375,61 @@ const OrbitBadge = ({ badge, isDark, orbitRotation, counterRotation, onPressIn, 
   );
 };
 
-const HeroOrbit = ({ isDark }) => {
+const GradientTitle = ({ text, endColor, style }) => (
+  <Svg width="100%" height={SUITE_TITLE_HEIGHT} style={style} accessibilityLabel={text}>
+    <Defs>
+      <SvgGradient id="suiteTitleFill" x1="0" y1="0" x2="1" y2="0">
+        <Stop offset="0" stopColor={GOLD_TEXT} />
+        <Stop offset="0.55" stopColor="#E9DCC4" />
+        <Stop offset="1" stopColor={endColor} />
+      </SvgGradient>
+    </Defs>
+    <SvgText
+      x="50%"
+      y={SUITE_TITLE_SIZE}
+      textAnchor="middle"
+      fontFamily={SUITE_TITLE_FONT}
+      fontSize={SUITE_TITLE_SIZE}
+      fill="url(#suiteTitleFill)"
+    >
+      {text}
+    </SvgText>
+  </Svg>
+);
+
+const HeroBanner = React.memo(({ top }) => {
+  const cx = HERO_BANNER_WIDTH / 2;
+  const cy = HERO_BANNER_WIDTH * DOME_OUTER_RING_CENTER_Y;
+  const r = HERO_BANNER_WIDTH * DOME_GLOW_FADE_END;
+  return (
+    <Svg
+      width={HERO_BANNER_WIDTH}
+      height={HERO_BANNER_HEIGHT}
+      style={[styles.heroBanner, { top }]}
+      pointerEvents="none"
+    >
+      <Defs>
+        <RadialGradient id="domeFade" cx={cx} cy={cy} r={r} gradientUnits="userSpaceOnUse">
+          <Stop offset={DOME_GLOW_FADE_START / DOME_GLOW_FADE_END} stopColor="#FFFFFF" stopOpacity={1} />
+          <Stop offset={1} stopColor="#FFFFFF" stopOpacity={0} />
+        </RadialGradient>
+        <Mask id="domeMask" maskUnits="userSpaceOnUse" x={0} y={0} width={HERO_BANNER_WIDTH} height={HERO_BANNER_HEIGHT}>
+          <Rect x={0} y={0} width={HERO_BANNER_WIDTH} height={cy} fill="url(#domeFade)" />
+          <Rect x={0} y={cy} width={HERO_BANNER_WIDTH} height={HERO_BANNER_HEIGHT - cy} fill="#FFFFFF" />
+        </Mask>
+      </Defs>
+      <SvgImage
+        href={otcHeroBanner}
+        width={HERO_BANNER_WIDTH}
+        height={HERO_BANNER_HEIGHT}
+        preserveAspectRatio="xMidYMid meet"
+        mask="url(#domeMask)"
+      />
+    </Svg>
+  );
+});
+
+const HeroOrbit = ({ isDark, top }) => {
   const orbitRotation = useSharedValue(0);
   const counterRotation = useSharedValue(0);
 
@@ -353,7 +461,7 @@ const HeroOrbit = ({ isDark }) => {
   }));
 
   return (
-    <Animated.View style={[styles.orbit, orbitStyle]} pointerEvents="box-none">
+    <Animated.View style={[styles.orbit, { top }, orbitStyle]} pointerEvents="box-none">
       {HERO_BADGES.map((badge) => (
         <OrbitBadge
           key={badge.key}
@@ -678,28 +786,36 @@ const OtcDashboard = () => {
   const { isDark } = useTheme();
   const palette = isDark ? DARK_PALETTE : LIGHT_PALETTE;
   const themed = useMemo(() => getThemedStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
+  const headerTop = insets.top || (Platform.OS === "ios" ? 59 : StatusBar.currentHeight || 24);
+  const heroTop = headerTop + HEADER_HEIGHT;
+  const bannerTop = headerTop + HERO_BANNER_TOP_GAP;
+  const orbitTop = bannerTop + HERO_BANNER_WIDTH * DOME_RING_CENTER_Y - ORBIT_RADIUS;
   const scrollRef = useRef(null);
   const quoteSectionY = useRef(0);
+  const scrollY = useSharedValue(0);
+
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  const headerBgStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, HEADER_FADE_DISTANCE], [0, 1], Extrapolation.CLAMP),
+  }));
 
   const scrollToQuote = () => {
-    scrollRef.current?.scrollTo({ y: Math.max(0, quoteSectionY.current - 8), animated: true });
+    scrollRef.current?.scrollTo({ y: Math.max(0, quoteSectionY.current - heroTop), animated: true });
   };
 
   return (
-    <AppSafeAreaView style={{ flex: 1, backgroundColor: palette.pageBg }}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <FastImage source={back_ic} style={styles.backIcon} tintColor={palette.text} resizeMode="contain" />
-        </TouchableOpacity>
-        <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 20 }}>
-          OTC Desk
-        </AppText>
-        <View style={styles.headerSpacer} />
-      </View>
+    <View style={[styles.flex1, { backgroundColor: palette.pageBg }]}>
+      <SystemBars style={isDark ? "light" : "dark"} />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView
+      <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <Animated.ScrollView
           ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
@@ -710,8 +826,8 @@ const OtcDashboard = () => {
             style={[styles.hero, { backgroundColor: palette.pageBg }]}
             resizeMode="cover"
           >
-            <FastImage source={otcHeroBanner} style={styles.heroBanner} resizeMode="contain" />
-            <HeroOrbit isDark={isDark} />
+            <HeroBanner top={bannerTop} />
+            <HeroOrbit isDark={isDark} top={orbitTop} />
             <FastImage source={otcHeroBottomBg} style={styles.heroBottom} resizeMode="cover" />
             <LinearGradient
               colors={[`${palette.heroFade}00`, palette.sectionBg]}
@@ -719,12 +835,12 @@ const OtcDashboard = () => {
               pointerEvents="none"
             />
 
-            <View style={styles.heroContent} pointerEvents="box-none">
-              <AppText weight={BOLD} style={themed.heroTitle}>
-                <AppText weight={BOLD} style={[themed.heroTitle, { color: GOLD_TEXT }]}>
-                  OTC Desk
-                </AppText>
-                {" Built\nfor large crypto trades."}
+            <View style={[styles.heroContent, { paddingTop: heroTop + HERO_TITLE_OFFSET }]} pointerEvents="box-none">
+              <AppText weight={BOLD} style={styles.heroAccent}>
+                OTC Desk
+              </AppText>
+              <AppText weight={BOLD} style={themed.heroTitle} numberOfLines={1} adjustsFontSizeToFit>
+                Built for large crypto trades.
               </AppText>
               <AppText style={themed.heroDesc}>
                 Execute high-value crypto trades through a dedicated OTC desk with competitive pricing, deep liquidity, and personalized settlement support.
@@ -743,14 +859,16 @@ const OtcDashboard = () => {
 
           {/* Complete Trading Suite */}
           <View
-            style={[styles.section, { backgroundColor: palette.sectionBg }]}
+            style={[styles.section, styles.suiteSection, { backgroundColor: palette.sectionBg }]}
             onLayout={(e) => {
               quoteSectionY.current = e.nativeEvent.layout.y;
             }}
           >
-            <AppText weight={MEDIUM} style={themed.suiteTitle}>
-              Complete Trading Suite
-            </AppText>
+            <GradientTitle
+              text="Complete Trading Suite"
+              endColor={isDark ? "#FFFFFF" : palette.text}
+              style={styles.suiteTitle}
+            />
 
             <RequestQuoteCard palette={palette} themed={themed} />
 
@@ -767,7 +885,7 @@ const OtcDashboard = () => {
                       </AppText>
                     </View>
                     <View style={styles.flex1}>
-                      <AppText weight={BOLD} style={[styles.stepTitle, { color: palette.text }]}>
+                      <AppText weight={SEMI_BOLD} style={[styles.stepTitle, { color: palette.text }]}>
                         {step.title}
                       </AppText>
                       <AppText style={[styles.stepDesc, { color: palette.stepText }]}>{step.desc}</AppText>
@@ -779,52 +897,54 @@ const OtcDashboard = () => {
           </View>
 
           {/* Why Trade with AGCE OTC Desk? */}
-          <ImageBackground
-            source={isDark ? otcDeskBg : otcDeskBgLight}
-            style={styles.whySection}
-            resizeMode="cover"
-          >
-            <AppText weight={SEMI_BOLD} style={themed.sectionHeading}>
+          <View style={[styles.whySection, { backgroundColor: palette.sectionBg }]}>
+            <FastImage
+              source={isDark ? otcDeskBg : otcDeskBgLight}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+            />
+            <AppText weight={BOLD} style={themed.sectionHeading} numberOfLines={1} adjustsFontSizeToFit>
               Why Trade with AGCE OTC Desk?
             </AppText>
             <View style={styles.whyGrid}>
               {WHY_TRADE_LIST.map(({ Icon: ListIcon, title, desc }) => (
                 <View key={title} style={themed.whyCard}>
-                  <View style={styles.whyIconBox}>
-                    <ListIcon width={20} height={20} />
-                  </View>
-                  <View style={styles.flex1}>
-                    <AppText weight={BOLD} style={[styles.whyTitle, { color: palette.text }]}>
+                  <View style={styles.whyCardHead}>
+                    <View style={styles.whyIconBox}>
+                      <ListIcon width={16} height={16} />
+                    </View>
+                    <AppText weight={SEMI_BOLD} style={[styles.whyTitle, { color: palette.text }]}>
                       {title}
                     </AppText>
-                    <AppText style={[styles.whyDesc, { color: palette.whyDesc }]}>{desc}</AppText>
                   </View>
+                  <AppText style={[styles.whyDesc, { color: palette.whyDesc }]}>{desc}</AppText>
                 </View>
               ))}
             </View>
-          </ImageBackground>
+          </View>
 
           {/* Built for trades */}
           <View style={[styles.section, { backgroundColor: palette.sectionBg }]}>
-            <AppText weight={BOLD} style={themed.builtHeading}>
-              {"Built for trades that need "}
-              <AppText weight={BOLD} style={[themed.builtHeading, { color: GOLD_TEXT }]}>
-                more than an exchange screen.
-              </AppText>
-            </AppText>
+            <View style={styles.wordWrap}>
+              {[
+                { text: "Built for trades that need", color: palette.text },
+                { text: "more than an exchange screen.", color: GOLD_TEXT },
+              ].flatMap(({ text, color }) =>
+                text.split(" ").map((word) => (
+                  <AppText key={`${color}-${word}`} weight={BOLD} style={[themed.builtHeading, { color }]}>
+                    {`${word} `}
+                  </AppText>
+                ))
+              )}
+            </View>
             <AppText style={[styles.builtDesc, { color: palette.builtDesc }]}>
               Large orders can create unnecessary market impact when executed through public order books. Our OTC desk provides direct execution and tailored liquidity for high-value transactions.
             </AppText>
-            <FastImage
-              source={isDark ? otcBuiltTradesBg : otcBuiltTradesBgLight}
-              style={styles.builtImage}
-              resizeMode="contain"
-            />
             <View style={styles.builtFeatures}>
               {BUILT_FEATURES.map((item) => (
-                <View key={item.title} style={styles.builtFeature}>
+                <View key={item.title} style={[themed.builtFeature, styles.builtFeature]}>
                   <FastImage source={item.icon} style={styles.builtFeatureIcon} resizeMode="contain" />
-                  <AppText weight={MEDIUM} style={[styles.builtFeatureTitle, { color: palette.text }]}>
+                  <AppText weight={BOLD} style={[styles.builtFeatureTitle, { color: palette.text }]}>
                     {item.title}
                   </AppText>
                   <AppText style={[styles.builtFeatureDesc, { color: palette.builtDesc }]}>{item.desc}</AppText>
@@ -836,7 +956,7 @@ const OtcDashboard = () => {
           {/* Recent Completed Trades */}
           <View style={[styles.section, styles.recentSection, { backgroundColor: palette.sectionBg }]}>
             <View style={[styles.spaceBetween, styles.recentHeader]}>
-              <AppText weight={SEMI_BOLD} style={[themed.sectionHeading, styles.recentHeading]}>
+              <AppText weight={BOLD} style={[themed.sectionHeading, styles.recentHeading]}>
                 Recent Completed Trades
               </AppText>
               <TouchableOpacity onPress={showComingSoon}>
@@ -849,9 +969,19 @@ const OtcDashboard = () => {
               <AppText style={[styles.emptyText, { color: palette.stepText }]}>No completed OTC trades yet.</AppText>
             </View>
           </View>
-        </ScrollView>
+        </Animated.ScrollView>
       </KeyboardAvoidingView>
-    </AppSafeAreaView>
+
+      <View style={[styles.header, { paddingTop: headerTop }]} pointerEvents="box-none">
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { backgroundColor: palette.pageBg }, headerBgStyle]}
+          pointerEvents="none"
+        />
+        <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <FastImage source={back_ic} style={styles.backIcon} tintColor={palette.text} resizeMode="contain" />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
 
@@ -861,9 +991,12 @@ const getThemedStyles = (palette) =>
   StyleSheet.create({
     heroTitle: {
       color: palette.text,
-      fontSize: 28,
-      lineHeight: 34,
+      fontFamily: HERO_TITLE_FONT,
+      fontSize: 26,
+      lineHeight: 32,
+      letterSpacing: -0.5,
       textAlign: "center",
+      marginTop: 2,
     },
     heroDesc: {
       color: palette.heroDesc,
@@ -883,12 +1016,6 @@ const getThemedStyles = (palette) =>
       flexDirection: "row",
       alignItems: "center",
     },
-    suiteTitle: {
-      color: palette.text,
-      fontSize: 26,
-      textAlign: "center",
-      marginBottom: 18,
-    },
     card: {
       backgroundColor: palette.cardBg,
       borderColor: palette.cardBorder,
@@ -896,10 +1023,16 @@ const getThemedStyles = (palette) =>
       borderRadius: 20,
       padding: 20,
     },
+    builtFeature: {
+      backgroundColor: palette.featureBg,
+      borderColor: palette.featureBorder,
+    },
     cardTitle: {
       color: palette.text,
       fontSize: 20,
-      marginBottom: 12,
+      lineHeight: 26,
+      letterSpacing: -0.2,
+      marginBottom: 14,
     },
     fieldLabel: {
       color: palette.label,
@@ -920,7 +1053,7 @@ const getThemedStyles = (palette) =>
       textAlign: "right",
       color: palette.text,
       fontSize: 14,
-      fontFamily: fontFamilyMedium,
+      fontFamily: WEIGHT_FONTS[MEDIUM],
       paddingVertical: 0,
     },
     searchBox: {
@@ -939,28 +1072,28 @@ const getThemedStyles = (palette) =>
       marginLeft: 8,
       color: palette.text,
       fontSize: 14,
-      fontFamily: fontFamilyMedium,
+      fontFamily: WEIGHT_FONTS[MEDIUM],
       paddingVertical: 0,
     },
     sectionHeading: {
       color: palette.text,
-      fontSize: 22,
+      fontSize: 24,
+      lineHeight: 30,
+      letterSpacing: -0.3,
       marginBottom: 20,
     },
     whyCard: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      backgroundColor: palette.cardBg,
-      borderColor: palette.cardBorder,
+      width: WHY_CARD_WIDTH,
+      backgroundColor: palette.whyCardBg,
+      borderColor: palette.whyCardBorder,
       borderWidth: 1,
-      borderRadius: 18,
-      padding: 18,
+      borderRadius: 14,
+      padding: 12,
     },
     builtHeading: {
       color: palette.text,
-      fontSize: 22,
-      lineHeight: 28,
-      marginBottom: 14,
+      fontSize: 24,
+      lineHeight: 31,
     },
     emptyBox: {
       backgroundColor: palette.cardBg,
@@ -986,18 +1119,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: (HEADER_HEIGHT - 18) / 2,
+    minHeight: HEADER_HEIGHT,
   },
   backIcon: {
     width: 18,
     height: 18,
-  },
-  headerSpacer: {
-    width: 18,
+    marginTop: (HEADER_HEIGHT - 18) / 2,
   },
   scrollContent: {
     paddingBottom: 24,
@@ -1009,13 +1144,11 @@ const styles = StyleSheet.create({
   },
   heroBanner: {
     position: "absolute",
-    top: 0,
     width: HERO_BANNER_WIDTH,
     height: HERO_BANNER_HEIGHT,
   },
   orbit: {
     position: "absolute",
-    top: ORBIT_TOP,
     left: (SCREEN_WIDTH - ORBIT_SIZE) / 2,
     width: ORBIT_SIZE,
     height: ORBIT_SIZE,
@@ -1054,10 +1187,22 @@ const styles = StyleSheet.create({
     height: 120,
   },
   heroContent: {
-    paddingTop: ORBIT_TOP + ORBIT_RADIUS * 0.5 + BADGE_SIZE / 2 + 40,
-    paddingBottom: 48,
+    paddingBottom: 20,
     paddingHorizontal: 20,
     alignItems: "center",
+  },
+  wordWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 14,
+  },
+  heroAccent: {
+    color: GOLD_TEXT,
+    fontFamily: HERO_TITLE_FONT,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.5,
+    textAlign: "center",
   },
   heroBtns: {
     flexDirection: "row",
@@ -1082,6 +1227,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 36,
     paddingBottom: 40,
+  },
+  suiteSection: {
+    paddingTop: 16,
+  },
+  suiteTitle: {
+    marginBottom: 18,
   },
   fieldGroup: {
     marginBottom: 16,
@@ -1172,7 +1323,8 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 16,
-    marginBottom: 3,
+    lineHeight: 22,
+    marginBottom: 4,
   },
   stepDesc: {
     fontSize: 14,
@@ -1185,57 +1337,67 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   whyGrid: {
-    gap: 14,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: WHY_GRID_GAP,
+  },
+  whyCardHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
   },
   whyIconBox: {
-    width: 45,
-    height: 45,
-    borderRadius: 16,
-    backgroundColor: "rgba(209,170,103,0.25)",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(209,170,103,0.18)",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
+    marginRight: 8,
   },
   whyTitle: {
-    fontSize: 15,
-    marginBottom: 5,
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 18,
   },
   whyDesc: {
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
   },
   builtDesc: {
     fontSize: 15,
     lineHeight: 24,
-  },
-  builtImage: {
-    width: "100%",
-    height: BUILT_IMG_HEIGHT,
-    borderRadius: 14,
-    marginTop: 18,
-    marginBottom: 20,
+    marginBottom: 22,
   },
   builtFeatures: {
-    gap: 24,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: BUILT_GRID_GAP,
   },
   builtFeature: {
-    alignItems: "center",
+    width: BUILT_CARD_WIDTH,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 18,
   },
   builtFeatureIcon: {
-    width: 60,
-    height: 60,
-    marginBottom: 12,
+    width: 46,
+    height: 46,
+    marginBottom: 18,
   },
   builtFeatureTitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    textAlign: "center",
-    marginBottom: 6,
+    fontSize: 15,
+    lineHeight: 20,
+    letterSpacing: -0.2,
+    marginBottom: 8,
   },
   builtFeatureDesc: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
+    fontSize: 13,
+    lineHeight: 19,
   },
   recentSection: {
     paddingTop: 30,

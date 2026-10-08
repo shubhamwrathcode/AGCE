@@ -60,7 +60,7 @@ import { prepareGoogleSignIn } from "../../helper/googleSignIn";
 import { googleLogin } from "../../actions/authActions";
 import { setLoading } from "../../slices/authSlice";
 import { showError } from "../../helper/logger";
-import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody } from "../../helper/appleSignIn";
+import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody, appleSignInErrorMessage } from "../../helper/appleSignIn";
 
 const formatVol = (vol) => {
   const n = Number(vol);
@@ -161,6 +161,7 @@ const Welcome = () => {
   const socketContextVars = useContext(SocketContext) || {};
   const { subscribeToMarket, unsubscribeFromMarket } = socketContextVars;
   const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
+  const appleSignInInProgress = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -370,6 +371,8 @@ const Welcome = () => {
   };
 
   const onApple = async () => {
+    if (appleSignInInProgress.current) return;
+    appleSignInInProgress.current = true;
     try {
       dispatch(setLoading(true));
       const apple = await performAppleSignIn();
@@ -386,8 +389,9 @@ const Welcome = () => {
         showError("Apple Sign-In was cancelled");
         return;
       }
-      showError(error?.message || "Apple Sign-In failed. Please try again.");
+      showError(appleSignInErrorMessage(error));
     } finally {
+      appleSignInInProgress.current = false;
       dispatch(setLoading(false));
     }
   };

@@ -1,4 +1,4 @@
-import { NativeModules, Platform, TurboModuleRegistry } from 'react-native';
+import { AppState, NativeModules, Platform, TurboModuleRegistry } from 'react-native';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { APPLE_IOS_CLIENT_ID } from './Constants';
 
@@ -53,12 +53,58 @@ export function isAppleAuthAvailable(): boolean {
   return !!(appleAuth.isSupported || getAppleNativeModule());
 }
 
+/** ASAuthorizationError.unknown — what iOS reports when the Apple sheet could not be presented. */
+const APPLE_UNKNOWN_ERROR_CODE = '1000';
+/** ASAuthorizationError.failed */
+const APPLE_FAILED_ERROR_CODE = '1004';
+const APPLE_RETRY_DELAYS_MS = [1000, 2000, 4000];
+/** Adding an Apple Account in Settings (password, 2FA) can take a while. */
+const APPLE_RETURN_TIMEOUT_MS = 10 * 60 * 1000;
+
+function appleErrorCode(error: unknown): string {
+  return typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: string }).code)
+    : '';
+}
+
+function isRetryableAppleError(error: unknown): boolean {
+  const code = appleErrorCode(error);
+  return code === APPLE_UNKNOWN_ERROR_CODE || code === APPLE_FAILED_ERROR_CODE;
+}
+
+/** Resolves true once the app is in the foreground again, false if that does not happen in time. */
+function waitForAppActive(timeoutMs: number): Promise<boolean> {
+  if (AppState.currentState === 'active') return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      subscription.remove();
+      resolve(false);
+    }, timeoutMs);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      clearTimeout(timer);
+      subscription.remove();
+      resolve(true);
+    });
+  });
+}
+
 export function isAppleSignInCancelled(error: unknown): boolean {
-  const code =
-    typeof error === 'object' && error !== null && 'code' in error
-      ? String((error as { code?: string }).code)
-      : '';
+  const code = appleErrorCode(error);
   return code === '1001' || code === String(appleAuth.Error?.CANCELED ?? '');
+}
+
+/** iOS error text ("The operation couldn't be completed…") is not meaningful to users. */
+export function appleSignInErrorMessage(error: unknown): string {
+  const code = appleErrorCode(error);
+  if (code === APPLE_UNKNOWN_ERROR_CODE || code === '1004') {
+    return 'Apple Sign-In could not be completed. Please try again.';
+  }
+  const message = (error as { message?: string })?.message;
+  if (!message || message.includes("operation couldn") || message.includes('AuthorizationError')) {
+    return 'Apple Sign-In failed. Please try again.';
+  }
+  return message;
 }
 
 /**
@@ -79,16 +125,33 @@ export async function performAppleSignIn(): Promise<AppleSignInPayload> {
     );
   }
 
-  const response = appleAuth.isSupported
-    ? await appleAuth.performRequest({
-        requestedOperation: appleAuth.Operation.LOGIN,
-        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
-      })
-    : await native.performRequest({
-        nonceEnabled: true,
-        requestedOperation: 1,
-        requestedScopes: [0, 1],
-      });
+  const requestCredential = () =>
+    appleAuth.isSupported
+      ? appleAuth.performRequest({
+          requestedOperation: appleAuth.Operation.LOGIN,
+          requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+        })
+      : native.performRequest({
+          nonceEnabled: true,
+          requestedOperation: 1,
+          requestedScopes: [0, 1],
+        });
+
+  // With no Apple Account on the device, iOS sends the user to add one and fails the pending request.
+  // A freshly added account can take a few seconds before iOS will issue credentials for it.
+  let response;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      response = await requestCredential();
+      break;
+    } catch (error) {
+      if (!isRetryableAppleError(error) || attempt >= APPLE_RETRY_DELAYS_MS.length) throw error;
+      console.warn('[Apple Sign-In] attempt', attempt + 1, 'failed with', appleErrorCode(error), 'appState:', AppState.currentState);
+      const returned = await waitForAppActive(APPLE_RETURN_TIMEOUT_MS);
+      if (!returned) throw error;
+      await new Promise<void>((resolve) => setTimeout(resolve, APPLE_RETRY_DELAYS_MS[attempt]));
+    }
+  }
 
   console.log('==================== [Apple Sign-In RAW] ====================');
   console.log(safeJson(response));

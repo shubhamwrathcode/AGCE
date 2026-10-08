@@ -20,7 +20,7 @@ import {
   spotIconDarkTheme,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
-import { ACCOUNT_SCREEN, EARNING_SCREEN, OTC_DASHBOARD_SCREEN, TRADE_SCREEN } from "../../navigation/routes";
+import { ACCOUNT_SCREEN, EARNING_SCREEN, OTC_DASHBOARD_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
 import { useAppSelector } from "../../store/hooks";
 import { checkValue } from "../../helper/utility";
 import { colors, darkTheme } from "../../theme/colors";
@@ -107,9 +107,15 @@ const HomeMenuBar = () => {
       icon: margin,
       onPress: () => NavigationService.navigate(TRADE_SCREEN, { activeTab: "Margin" }),
     },
+    // {
+    //   id: "3",
+    //   title: "Wallet",
+    //   icon: wallet_ic,
+    //   onPress: () => NavigationService.navigate(WALLET_SCREEN),
+    // },
     {
       id: "3",
-      title: "OTC",
+      title: "OTC Desk",
       icon: wallet_ic,
       onPress: () => NavigationService.navigate(OTC_DASHBOARD_SCREEN),
     },

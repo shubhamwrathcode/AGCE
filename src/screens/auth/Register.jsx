@@ -18,7 +18,7 @@ import { AuthHeader, AuthEmailPhoneTabBar, AuthPhoneInput } from "../../shared/c
 import { authStyles } from "./authStyles";
 import { BASE_URL } from "../../helper/Constants";
 import { showError } from "../../helper/logger";
-import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody } from "../../helper/appleSignIn";
+import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody, appleSignInErrorMessage } from "../../helper/appleSignIn";
 import Toast from "react-native-simple-toast";
 import { appOperation } from "../../appOperation";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -324,7 +324,7 @@ const Register = () => {
         showError("Apple Sign-In was cancelled");
         return;
       }
-      showError(error?.message || "Apple Sign-In failed. Please try again.");
+      showError(appleSignInErrorMessage(error));
     } finally {
       setIsAppleSignInInProgress(false);
       dispatch(setLoading(false));

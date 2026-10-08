@@ -11,7 +11,7 @@ import { AppSafeAreaView, AppText, Button, ELEVEN, FIFTEEN, FOURTEEN, Input, MED
 import KeyBoardAware from "../../shared/components/KeyboardAware";
 import { authStyles } from "./authStyles";
 import { showError } from "../../helper/logger";
-import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody } from "../../helper/appleSignIn";
+import { isAppleSignInCancelled, performAppleSignIn, buildAppleThirdPartyBody, appleSignInErrorMessage } from "../../helper/appleSignIn";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   googleLogin,
@@ -219,7 +219,7 @@ const Login = (): JSX.Element => {
         showError("Apple Sign-In was cancelled");
         return;
       }
-      showError(error?.message || "Apple Sign-In failed. Please try again.");
+      showError(appleSignInErrorMessage(error));
     } finally {
       setIsAppleSignInInProgress(false);
       dispatch(setLoading(false));

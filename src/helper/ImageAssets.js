@@ -471,6 +471,8 @@ export const otcInfoIcon = require('../../assets/images/otc_info_icon.png');
 export const otcInfoIcon2 = require('../../assets/images/otc_info_icon2.png');
 export const otcInfoIcon3 = require('../../assets/images/otc_info_icon3.png');
 export const otcInfoIcon4 = require('../../assets/images/otc_info_icon4.png');
+export const whyTradeOtcBack = require('../../assets/images/whyTradeOtcBack.png');
+
 
 
 
