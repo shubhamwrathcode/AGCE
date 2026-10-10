@@ -38,14 +38,12 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import Toast from "react-native-simple-toast";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SystemBars } from "react-native-edge-to-edge";
 import { AppText as BaseAppText, BOLD, MEDIUM, SEMI_BOLD } from "../../shared";
 import CoinIcon from "../../common/CoinIcon";
 import NavigationService from "../../navigation/NavigationService";
 import { useTheme } from "../../hooks/useTheme";
-import { useAppSelector } from "../../store/hooks";
 import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 import {
   back_ic,
@@ -73,6 +71,16 @@ import OtcListIcon3 from "../../../assets/images/otc_desk_list_icon3.svg";
 import OtcListIcon4 from "../../../assets/images/otc_desk_list_icon4.svg";
 import OtcListIcon5 from "../../../assets/images/otc_desk_list_icon5.svg";
 import OtcListIcon6 from "../../../assets/images/otc_desk_list_icon6.svg";
+import useOtcDesk from "./useOtcDesk";
+import {
+  completedTrades,
+  formatAvail,
+  formatCountdown,
+  moneyLine,
+  netAfterProfit,
+  sanitizeAmount,
+  STATUS_COPY,
+} from "./otcDeskLogic";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -265,40 +273,6 @@ const LIGHT_PALETTE = {
   emptyBorder: "#e2e8f0",
 };
 
-const showComingSoon = () => Toast.showWithGravity("Coming soon", Toast.SHORT, Toast.BOTTOM);
-
-/** Digits and one decimal point only. Letters such as "0.0d" are dropped. */
-function sanitizeAmount(raw, places = 8) {
-  let text = String(raw ?? "").replace(/[^\d.]/g, "");
-  const firstDot = text.indexOf(".");
-  if (firstDot >= 0) {
-    text = text.slice(0, firstDot + 1) + text.slice(firstDot + 1).replace(/\./g, "");
-  }
-  const parts = text.split(".");
-  const whole = (parts[0] || "").replace(/^0+(?=\d)/, "");
-  if (parts.length === 1) return whole;
-  return `${whole || "0"}.${parts[1].slice(0, places)}`;
-}
-
-function trimCalc(raw, places) {
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0) return "";
-  return n.toFixed(places).replace(/\.?0+$/, "");
-}
-
-function formatRate(n) {
-  const [whole, frac] = Number(n).toFixed(2).split(".");
-  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${frac}`;
-}
-
-function pairKeyOf(pair) {
-  return `${pair?.base_currency || ""}/${pair?.quote_currency || ""}`;
-}
-
-function pairRate(pair) {
-  const n = Number(pair?.buy_price) || Number(pair?.sell_price);
-  return Number.isFinite(n) && n > 0 ? n : 0;
-}
 
 const LINE_ICON_PATHS = {
   close: "M6 6 L18 18 M18 6 L6 18",
@@ -528,14 +502,14 @@ const QuoteTabs = ({ isBuy, onChange, palette }) => {
   );
 };
 
-const PairPickerModal = ({ visible, pairs, selectedKey, onSelect, onClose, palette, themed }) => {
+const OptionSheet = ({ visible, title, placeholder, options, selectedKey, onSelect, onClose, palette, themed }) => {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
     const q = search.trim().toUpperCase();
-    if (!q) return pairs;
-    return pairs.filter((p) => pairKeyOf(p).includes(q));
-  }, [pairs, search]);
+    if (!q) return options;
+    return options.filter((item) => String(item.key || "").toUpperCase().includes(q) || String(item.label || "").toUpperCase().includes(q));
+  }, [options, search]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -543,7 +517,7 @@ const PairPickerModal = ({ visible, pairs, selectedKey, onSelect, onClose, palet
       <View style={[styles.sheet, { backgroundColor: palette.sheetBg, borderColor: palette.sheetBorder }]}>
         <View style={styles.sheetHeader}>
           <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 18 }}>
-            Select Pair
+            {title}
           </AppText>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Icon name="close" size={22} color={palette.text} />
@@ -554,7 +528,7 @@ const PairPickerModal = ({ visible, pairs, selectedKey, onSelect, onClose, palet
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search pair"
+            placeholder={placeholder}
             placeholderTextColor={palette.muted}
             autoCapitalize="characters"
             style={themed.searchInput}
@@ -562,27 +536,29 @@ const PairPickerModal = ({ visible, pairs, selectedKey, onSelect, onClose, palet
         </View>
         <FlatList
           data={filtered}
-          keyExtractor={(item) => pairKeyOf(item)}
+          keyExtractor={(item) => item.key}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <AppText style={[styles.sheetEmpty, { color: palette.muted }]}>No pairs found.</AppText>
           }
           renderItem={({ item }) => {
-            const key = pairKeyOf(item);
-            const selected = key === selectedKey;
+            const selected = item.key === selectedKey;
             return (
               <TouchableOpacity
                 style={[styles.sheetItem, selected && styles.sheetItemSelected]}
                 onPress={() => {
-                  onSelect(key);
+                  onSelect(item.key);
                   onClose();
                 }}
               >
                 <View style={styles.row}>
-                  <CoinIcon coin={item} style={styles.coinIcon} />
-                  <AppText weight={BOLD} style={{ color: palette.text, fontSize: 14 }}>
-                    {key}
-                  </AppText>
+                  <CoinIcon coin={item.coin} style={styles.coinIcon} fallback={item.key === "USDT" ? tetherIcon : undefined} />
+                  <View>
+                    <AppText weight={BOLD} style={{ color: palette.text, fontSize: 13.5 }}>{item.label}</AppText>
+                    {item.name ? (
+                      <AppText style={{ color: palette.muted, fontSize: 11.5 }}>{item.name}</AppText>
+                    ) : null}
+                  </View>
                 </View>
                 {selected && <Icon name="check" size={18} color={GOLD_TEXT} />}
               </TouchableOpacity>
@@ -594,187 +570,268 @@ const PairPickerModal = ({ visible, pairs, selectedKey, onSelect, onClose, palet
   );
 };
 
-const RequestQuoteCard = ({ palette, themed }) => {
-  const coinPairs = useAppSelector((state) => state.home.coinPairs);
-  const pairs = useMemo(
-    () => (Array.isArray(coinPairs) ? coinPairs.filter((p) => p?.base_currency && p?.quote_currency) : []),
-    [coinPairs]
+const QuoteStatusCard = ({ desk, palette, themed, embedded = false }) => {
+  const copy = STATUS_COPY[desk.view] || STATUS_COPY.awaiting;
+  const source = desk.quote || desk.rfq || {};
+  const side = String(source.side || "").toUpperCase();
+  const meaning = side === "SELL"
+    ? `Sell: you pay ${source.pay_asset || ""} and receive ${source.get_asset || ""}.`
+    : side === "BUY"
+      ? `Buy: you pay ${source.pay_asset || ""} and receive ${source.get_asset || ""}.`
+      : "";
+  const feeText = desk.quote && desk.quote.fee_percent != null ? String(desk.quote.fee_percent).trim() : "";
+  const settledNet = desk.trade && desk.trade.net_get_amount ? String(desk.trade.net_get_amount).trim() : "";
+  const quotedNet = feeText ? netAfterProfit(source.get_amount, feeText) : "";
+  const afterProfit = settledNet
+    ? moneyLine(settledNet, source.get_asset)
+    : quotedNet
+      ? moneyLine(quotedNet, source.get_asset)
+      : moneyLine(source.get_amount, source.get_asset);
+  const body = desk.view === "quote" && desk.quote && desk.quote.quote_source === "AUTO"
+    ? "This is a firm system quote. Accept it before it expires."
+    : copy.body;
+  const showNew = desk.view === "accepted" || desk.view === "cancelled" || desk.view === "expired" || desk.view === "void";
+
+  const row = (label, value) => (
+    <View style={styles.statusRow}>
+      <AppText style={{ color: palette.muted, fontSize: 13 }}>{label}</AppText>
+      <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 13, flexShrink: 1, textAlign: "right" }}>{value}</AppText>
+    </View>
   );
 
-  const [pairKey, setPairKey] = useState("");
-  const [quoteType, setQuoteType] = useState("buy");
-  const [amount, setAmount] = useState("");
-  const [getDraft, setGetDraft] = useState(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
-
-  useEffect(() => {
-    if (!pairs.length) return;
-    setPairKey((prev) => {
-      if (prev && pairs.some((p) => pairKeyOf(p) === prev)) return prev;
-      const btc = pairs.find((p) => pairKeyOf(p) === "BTC/USDT");
-      return pairKeyOf(btc || pairs[0]);
-    });
-  }, [pairs]);
-
-  const selectedPair = useMemo(() => pairs.find((p) => pairKeyOf(p) === pairKey), [pairs, pairKey]);
-  const [pairBase = "BTC", pairQuote = "USDT"] = (pairKey || "BTC/USDT").split("/");
-  const isBuy = quoteType === "buy";
-  const payCoin = isBuy ? pairQuote : pairBase;
-  const getCoin = isBuy ? pairBase : pairQuote;
-  const rate = pairRate(selectedPair);
-  const places = 8;
-
-  const payValue = sanitizeAmount(amount, places);
-  let getValue = "";
-  const amtNum = Number(payValue);
-  if (rate > 0 && Number.isFinite(amtNum) && amtNum > 0) {
-    getValue = isBuy ? trimCalc(amtNum / rate, places) : trimCalc(amtNum * rate, places);
-  }
-
-  const coinFor = useCallback(
-    (symbol) => pairs.find((p) => p.base_currency === symbol) || null,
-    [pairs]
-  );
-
-  const handlePayChange = (text) => {
-    setGetDraft(null);
-    setAmount(sanitizeAmount(text, places));
-  };
-
-  const handleGetChange = (text) => {
-    const clean = sanitizeAmount(text, places);
-    setGetDraft(clean);
-    const n = Number(clean);
-    if (!/^\d+(\.\d+)?$/.test(clean) || !Number.isFinite(n) || n <= 0 || !(rate > 0)) {
-      if (!clean) setAmount("");
-      return;
-    }
-    const nextPay = isBuy ? trimCalc(n * rate, places) : trimCalc(n / rate, places);
-    if (nextPay) setAmount(nextPay);
-  };
-
-  const onPairChange = (key) => {
-    setPairKey(key);
-    setAmount("");
-    setGetDraft(null);
-  };
-
-  const onSubmit = () => {
-    if (!selectedPair) {
-      Toast.showWithGravity("Select a pair before requesting a quote.", Toast.SHORT, Toast.BOTTOM);
-      return;
-    }
-    if (!(rate > 0)) {
-      Toast.showWithGravity("Live price is not available yet.", Toast.SHORT, Toast.BOTTOM);
-      return;
-    }
-    if (!(Number(payValue) > 0)) {
-      Toast.showWithGravity("Please enter a valid amount.", Toast.SHORT, Toast.BOTTOM);
-      return;
-    }
-    showComingSoon();
-  };
-
-  const renderCoinLabel = (symbol) => {
-    const coin = coinFor(symbol);
-    return (
-      <View style={styles.row}>
-        <CoinIcon
-          coin={coin}
-          style={styles.coinIconLg}
-          fallback={symbol === "USDT" ? tetherIcon : undefined}
-        />
-        <AppText weight={SEMI_BOLD} style={[styles.coinSymbol, { color: palette.text }]}>
-          {symbol}
+  return (
+    <View style={embedded ? styles.statusEmbed : themed.card}>
+      <AppText weight={SEMI_BOLD} style={themed.cardTitle}>{copy.title}</AppText>
+      <AppText style={[styles.statusBody, { color: palette.stepText }]}>{body}</AppText>
+      {meaning ? <AppText style={[styles.statusBody, { color: palette.text }]}>{meaning}</AppText> : null}
+      {row("Side", source.side || "—")}
+      {row("You pay", moneyLine(source.pay_amount, source.pay_asset))}
+      {row("You get", afterProfit)}
+      {desk.quote?.rate ? row("Rate", String(desk.quote.rate)) : null}
+      {desk.trade?.id ? row("Trade", desk.trade.status || desk.trade.id) : null}
+      {desk.view === "quote" ? (
+        <AppText weight={SEMI_BOLD} style={[styles.countdown, { color: desk.countdownMs <= 0 ? "#f6465d" : GOLD }]}>
+          Expires in {formatCountdown(desk.countdownMs)}
         </AppText>
-      </View>
-    );
-  };
+      ) : null}
+      {desk.view === "quote" ? (
+        desk.kycVerified ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.requestBtn, (desk.submitting || desk.countdownMs <= 0) && styles.btnDisabled]}
+            disabled={desk.submitting || desk.countdownMs <= 0}
+            onPress={desk.acceptQuote}
+          >
+            <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>
+              {desk.submitting ? "Accepting…" : "Accept Quote"}
+            </AppText>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={desk.goToKyc}>
+            <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>Submit Kyc</AppText>
+          </TouchableOpacity>
+        )
+      ) : null}
+      {desk.view === "awaiting" ? (
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={[themed.secondaryBtn, styles.statusSecondary]}
+          disabled={desk.submitting}
+          onPress={desk.cancelRfq}
+        >
+          <AppText weight={SEMI_BOLD} style={{ color: palette.secondaryBtnText, fontSize: 15 }}>
+            {desk.submitting ? "Cancelling…" : "Cancel request"}
+          </AppText>
+        </TouchableOpacity>
+      ) : null}
+      {showNew ? (
+        <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={desk.startNewRequest}>
+          <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>New request</AppText>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+};
+
+const RequestQuoteCard = ({ desk, palette, themed }) => {
+  const [pairOpen, setPairOpen] = useState(false);
+  const [coinOpen, setCoinOpen] = useState(false);
+  const [balanceTip, setBalanceTip] = useState(false);
+  const [pairBase = "BTC", pairQuote = "USDT"] = String(desk.pairKey || "BTC/USDT").split("/");
+  const isBuy = desk.quoteType === "buy";
+  const amountValue = sanitizeAmount(desk.amount, 8);
+  const coin = desk.amountAsset || pairBase;
+  const lastPrice = Number(String(desk.ticker?.last || "").replace(/,/g, ""));
+  const formattedRate = lastPrice > 0
+    ? lastPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "";
+  const priceFontSize = formattedRate.length > 12 ? 13 : formattedRate.length > 9 ? 15 : 18;
+  const changeN = Number(String(desk.ticker?.change_percent ?? "").replace(/,/g, ""));
+  const changeText = Number.isFinite(changeN) && formattedRate
+    ? `${changeN > 0 ? "+" : ""}${changeN.toFixed(2)}%`
+    : "";
+  const amountCoin = desk.baseOptions.find((item) => item.symbol === coin);
+  const pairItems = desk.pairOptions.map((item) => ({
+    key: item.symbol,
+    label: item.symbol,
+    name: item.name,
+    coin: { icon_path: item.iconPath, base_currency: item.symbol.split("/")[0] },
+  }));
+  const coinItems = (desk.baseOptions.length ? desk.baseOptions : [
+    { symbol: pairBase, name: pairBase, iconPath: "" },
+    { symbol: pairQuote, name: pairQuote, iconPath: "" },
+  ]).map((item) => ({
+    key: item.symbol,
+    label: item.symbol,
+    name: item.name && item.name !== item.symbol ? item.name : "",
+    coin: { icon_path: item.iconPath, base_currency: item.symbol, short_name: item.symbol },
+  }));
+  const loggedInContinue = desk.isLoggedIn;
+  const buttonLabel = loggedInContinue ? "Continue" : "Request Quote";
+  const amountReady = /^\d+(\.\d+)?$/.test(amountValue) && Number(amountValue) > 0 && !desk.amountError;
+  const disabled = loggedInContinue && (desk.assetsLoading || desk.submitting || !amountReady);
 
   return (
     <View style={themed.card}>
-      <AppText weight={SEMI_BOLD} style={themed.cardTitle}>
-        Request a Quote
-      </AppText>
+      <AppText weight={SEMI_BOLD} style={themed.cardTitle}>Request Quote</AppText>
 
-      <View style={styles.fieldGroup}>
-        <AppText weight={MEDIUM} style={themed.fieldLabel}>
-          Pair
-        </AppText>
+      <QuoteTabs isBuy={isBuy} onChange={desk.setQuoteType} palette={palette} />
+
+      <View style={[themed.inputCard, styles.pairRow]}>
         <TouchableOpacity
           activeOpacity={0.8}
-          style={[themed.inputCard, styles.spaceBetween]}
-          disabled={!pairs.length}
-          onPress={() => setPickerOpen(true)}
+          style={styles.pairPicker}
+          disabled={desk.assetsLoading || !desk.pairOptions.length}
+          onPress={() => setPairOpen(true)}
         >
-          <View style={styles.row}>
-            <CoinIcon coin={selectedPair} style={styles.coinIcon} />
-            <AppText weight={SEMI_BOLD} style={[styles.coinSymbol, { color: palette.text }]}>
-              {pairKey || "Loading pairs…"}
-            </AppText>
-          </View>
-          <Icon name="chevron-down" size={20} color="#c1c1c1" />
+          <AppText
+            weight={SEMI_BOLD}
+            numberOfLines={1}
+            style={[styles.pairSymbol, { color: palette.text }]}
+          >
+            {desk.pairKey || "BTC/USDT"}
+          </AppText>
+          <Icon name="chevron-down" size={12} color="#c1c1c1" />
         </TouchableOpacity>
+        {formattedRate ? (
+          <View style={styles.livePrice}>
+            <AppText
+              weight={SEMI_BOLD}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+              style={[styles.liveLast, { color: palette.text, fontSize: priceFontSize }]}
+            >
+              {formattedRate}
+            </AppText>
+            {changeText ? (
+              <AppText
+                weight={SEMI_BOLD}
+                numberOfLines={1}
+                style={[styles.liveChange, { color: changeN >= 0 ? "#3ee49a" : "#ff5d5d" }]}
+              >
+                {changeText}
+              </AppText>
+            ) : null}
+          </View>
+        ) : null}
       </View>
-
-      <QuoteTabs isBuy={isBuy} onChange={setQuoteType} palette={palette} />
 
       <View style={styles.fieldGroup}>
-        <AppText weight={MEDIUM} style={themed.fieldLabel}>
-          You Pay
-        </AppText>
-        <View style={[themed.inputCard, styles.spaceBetween]}>
-          {renderCoinLabel(payCoin)}
-          <TextInput
-            value={payValue}
-            onChangeText={handlePayChange}
-            placeholder="0.00"
-            placeholderTextColor={palette.placeholder}
-            keyboardType="decimal-pad"
-            style={themed.amountInput}
-          />
+        <View style={styles.amountHead}>
+          <AppText weight={MEDIUM} style={[themed.fieldLabel, styles.amountLabel]}>Amount</AppText>
+          {desk.isLoggedIn && desk.available !== "" ? (
+            <View style={styles.availWrap}>
+              <AppText style={styles.availText}>
+                Available: {formatAvail(desk.available)} {desk.availableAsset || (isBuy ? pairQuote : pairBase)}
+                {Number(desk.lockedBalance) > 0 ? ` · Locked: ${formatAvail(desk.lockedBalance)}` : ""}
+              </AppText>
+              <TouchableOpacity onPress={() => setBalanceTip((open) => !open)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <AppText weight={SEMI_BOLD} style={styles.infoMark}>i</AppText>
+              </TouchableOpacity>
+              {balanceTip ? (
+                <View style={styles.balanceTip}>
+                  <AppText weight={SEMI_BOLD} style={styles.balanceTipText}>
+                    This is the available balance in your Spot wallet. OTC uses the same balance.
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
         </View>
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <AppText weight={MEDIUM} style={themed.fieldLabel}>
-          You Get
-        </AppText>
         <View style={[themed.inputCard, styles.spaceBetween]}>
-          {renderCoinLabel(getCoin)}
           <TextInput
-            value={getDraft != null ? getDraft : getValue}
-            onChangeText={handleGetChange}
-            onBlur={() => setGetDraft(null)}
-            placeholder="0.00000000"
-            placeholderTextColor={palette.placeholder}
+            value={amountValue}
+            onChangeText={(text) => desk.setAmount(sanitizeAmount(text, 8))}
+            placeholder={desk.minBase || "0"}
+            placeholderTextColor={palette.placeholder === "#FFFFFF" ? "rgba(255,255,255,0.38)" : palette.placeholder}
             keyboardType="decimal-pad"
-            style={themed.amountInput}
+            style={[themed.amountInput, styles.amountInputLeft]}
           />
+          <View style={styles.amountSide}>
+            <TouchableOpacity style={styles.coinPick} onPress={() => setCoinOpen(true)}>
+              <CoinIcon
+                coin={amountCoin ? { icon_path: amountCoin.iconPath, short_name: coin, base_currency: coin } : { short_name: coin }}
+                style={styles.coinIconLg}
+                fallback={coin === "USDT" ? tetherIcon : undefined}
+              />
+              <AppText weight={SEMI_BOLD} style={[styles.pairSymbol, { color: palette.text }]}>{coin}</AppText>
+              <Icon name="chevron-down" size={12} color="#c1c1c1" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={desk.onMax} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+              <AppText weight={BOLD} style={styles.maxText}>Max</AppText>
+            </TouchableOpacity>
+          </View>
         </View>
+        {desk.amountApprox ? (
+          <AppText weight={MEDIUM} style={[styles.approxText, { color: palette.rateVal }]}>{desk.amountApprox}</AppText>
+        ) : desk.minQuoteLabel ? (
+          <AppText weight={MEDIUM} style={[styles.approxText, { color: palette.rateVal }]}>{desk.minQuoteLabel}</AppText>
+        ) : null}
+        {desk.amountError ? <AppText style={styles.fieldError}>{desk.amountError}</AppText> : null}
+        {!desk.amountError && desk.amountWarning ? (
+          <AppText style={styles.fieldWarning}>{desk.amountWarning}</AppText>
+        ) : null}
       </View>
 
-      <View style={[styles.spaceBetween, styles.rateRow]}>
-        <AppText weight={MEDIUM} style={[styles.rateText, { color: palette.muted }]}>
-          Rate
-        </AppText>
-        <AppText weight={MEDIUM} style={[styles.rateText, styles.rateValue, { color: palette.rateVal }]}>
-          {rate > 0 ? `1 ${pairBase} ≈ $${formatRate(rate)} ${pairQuote}` : "Live price is not available yet."}
-        </AppText>
-      </View>
+      {desk.isLoggedIn && !desk.deskOpen ? (
+        <AppText style={styles.deskClosed}>The OTC desk is closed. New requests open again during desk hours.</AppText>
+      ) : null}
 
-      <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={onSubmit}>
-        <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>
-          Request Quote
-        </AppText>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[styles.requestBtn, disabled && styles.btnDisabled]}
+        disabled={disabled}
+        onPress={desk.isLoggedIn ? desk.submitRfq : desk.goToLogin}
+      >
+        <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>{buttonLabel}</AppText>
       </TouchableOpacity>
 
-      <PairPickerModal
-        visible={pickerOpen}
-        pairs={pairs}
-        selectedKey={pairKey}
-        onSelect={onPairChange}
-        onClose={() => setPickerOpen(false)}
+      {desk.view !== "form" ? (
+        <View style={styles.statusBelow}>
+          <QuoteStatusCard desk={desk} palette={palette} themed={themed} embedded />
+        </View>
+      ) : null}
+
+      <OptionSheet
+        visible={pairOpen}
+        title="Select Pair"
+        placeholder="Search pair"
+        options={pairItems}
+        selectedKey={desk.pairKey}
+        onSelect={desk.onPairChange}
+        onClose={() => setPairOpen(false)}
+        palette={palette}
+        themed={themed}
+      />
+      <OptionSheet
+        visible={coinOpen}
+        title="Amount coin"
+        placeholder="Search coin"
+        options={coinItems}
+        selectedKey={coin}
+        onSelect={desk.setAmountCoin}
+        onClose={() => setCoinOpen(false)}
         palette={palette}
         themed={themed}
       />
@@ -782,10 +839,35 @@ const RequestQuoteCard = ({ palette, themed }) => {
   );
 };
 
+const TradeRow = ({ row, palette, themed }) => {
+  const isBuy = row.type === "Buy";
+  return (
+    <View style={[themed.tradeCard, styles.tradeCard]}>
+      <View style={styles.spaceBetween}>
+        <View style={styles.row}>
+          <CoinIcon coin={{ short_name: row.base, base_currency: row.base }} style={styles.coinIcon} />
+          <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 14 }}>{row.pair}</AppText>
+        </View>
+        <AppText weight={SEMI_BOLD} style={{ color: isBuy ? "#20BF7A" : "#f6465d", fontSize: 13 }}>{row.type}</AppText>
+      </View>
+      <AppText style={{ color: palette.muted, fontSize: 12, marginTop: 6 }}>{row.date}</AppText>
+      <View style={[styles.spaceBetween, { marginTop: 8 }]}>
+        <AppText style={{ color: palette.stepText, fontSize: 12 }}>{row.amount}</AppText>
+        <AppText style={{ color: palette.stepText, fontSize: 12 }}>{row.price}</AppText>
+      </View>
+      <AppText weight={MEDIUM} style={{ color: palette.text, fontSize: 13, marginTop: 4 }}>Total {row.total}</AppText>
+    </View>
+  );
+};
+
 const OtcDashboard = () => {
+  const desk = useOtcDesk();
   const { isDark } = useTheme();
   const palette = isDark ? DARK_PALETTE : LIGHT_PALETTE;
   const themed = useMemo(() => getThemedStyles(palette), [palette]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const recentRows = useMemo(() => completedTrades(desk.trades, 5), [desk.trades]);
+  const allRows = useMemo(() => completedTrades(desk.trades), [desk.trades]);
   const insets = useSafeAreaInsets();
   const headerTop = insets.top || (Platform.OS === "ios" ? 59 : StatusBar.currentHeight || 24);
   const heroTop = headerTop + HEADER_HEIGHT;
@@ -850,7 +932,7 @@ const OtcDashboard = () => {
                   <AppText style={styles.primaryBtnText}>Trade Now</AppText>
                   <Icon name="arrow-right" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.85} style={themed.secondaryBtn} onPress={showComingSoon}>
+                <TouchableOpacity activeOpacity={0.85} style={themed.secondaryBtn} onPress={() => NavigationService.navigate("Support")}>
                   <AppText style={[styles.primaryBtnText, { color: palette.secondaryBtnText }]}>Contact Us</AppText>
                 </TouchableOpacity>
               </View>
@@ -870,7 +952,7 @@ const OtcDashboard = () => {
               style={styles.suiteTitle}
             />
 
-            <RequestQuoteCard palette={palette} themed={themed} />
+            <RequestQuoteCard desk={desk} palette={palette} themed={themed} />
 
             <View style={[themed.card, styles.worksCard]}>
               <AppText weight={SEMI_BOLD} style={themed.cardTitle}>
@@ -955,19 +1037,59 @@ const OtcDashboard = () => {
 
           {/* Recent Completed Trades */}
           <View style={[styles.section, styles.recentSection, { backgroundColor: palette.sectionBg }]}>
-            <View style={[styles.spaceBetween, styles.recentHeader]}>
-              <AppText weight={BOLD} style={[themed.sectionHeading, styles.recentHeading]}>
+            <View style={styles.recentHeader}>
+              <AppText
+                weight={BOLD}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.62}
+                style={[themed.sectionHeading, styles.recentHeading]}
+              >
                 Recent Completed Trades
               </AppText>
-              <TouchableOpacity onPress={showComingSoon}>
-                <AppText weight={SEMI_BOLD} style={styles.viewAll}>
-                  View All Trade History ›
+              <TouchableOpacity
+                style={styles.viewAllHit}
+                onPress={() => (desk.isLoggedIn ? setHistoryOpen(true) : desk.goToLogin())}
+              >
+                <AppText weight={SEMI_BOLD} numberOfLines={1} style={styles.viewAll}>
+                  View All ›
                 </AppText>
               </TouchableOpacity>
             </View>
-            <View style={themed.emptyBox}>
-              <AppText style={[styles.emptyText, { color: palette.stepText }]}>No completed OTC trades yet.</AppText>
-            </View>
+            {desk.tradesLoading ? (
+              <View style={themed.emptyBox}>
+                <AppText style={[styles.emptyText, { color: palette.stepText }]}>Loading trades…</AppText>
+              </View>
+            ) : recentRows.length ? (
+              <View style={styles.tradeList}>
+                {recentRows.map((row) => (
+                  <TradeRow key={row.id} row={row} palette={palette} themed={themed} />
+                ))}
+              </View>
+            ) : (
+              <View style={themed.emptyBox}>
+                <AppText style={[styles.emptyText, { color: palette.stepText }]}>No completed OTC trades yet.</AppText>
+              </View>
+            )}
+            <Modal visible={historyOpen} transparent animationType="slide" onRequestClose={() => setHistoryOpen(false)}>
+              <Pressable style={styles.sheetOverlay} onPress={() => setHistoryOpen(false)} />
+              <View style={[styles.sheet, { backgroundColor: palette.sheetBg, borderColor: palette.sheetBorder }]}>
+                <View style={styles.sheetHeader}>
+                  <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 18 }}>Trade History</AppText>
+                  <TouchableOpacity onPress={() => setHistoryOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Icon name="close" size={22} color={palette.text} />
+                  </TouchableOpacity>
+                </View>
+                <FlatList
+                  data={allRows}
+                  keyExtractor={(item) => String(item.id)}
+                  ListEmptyComponent={
+                    <AppText style={[styles.sheetEmpty, { color: palette.muted }]}>No completed OTC trades yet.</AppText>
+                  }
+                  renderItem={({ item }) => <TradeRow row={item} palette={palette} themed={themed} />}
+                />
+              </View>
+            </Modal>
           </View>
         </Animated.ScrollView>
       </KeyboardAvoidingView>
@@ -1077,10 +1199,10 @@ const getThemedStyles = (palette) =>
     },
     sectionHeading: {
       color: palette.text,
-      fontSize: 24,
-      lineHeight: 30,
+      fontSize: 20,
+      lineHeight: 24,
       letterSpacing: -0.3,
-      marginBottom: 20,
+      marginBottom: 12,
     },
     whyCard: {
       width: WHY_CARD_WIDTH,
@@ -1100,8 +1222,13 @@ const getThemedStyles = (palette) =>
       borderColor: palette.emptyBorder,
       borderWidth: 1,
       borderRadius: 16,
-      paddingVertical: 48,
+      paddingVertical: 16,
       paddingHorizontal: 16,
+    },
+    tradeCard: {
+      backgroundColor: palette.cardBg,
+      borderColor: palette.emptyBorder,
+      borderWidth: 1,
     },
   });
 
@@ -1135,7 +1262,7 @@ const styles = StyleSheet.create({
     marginTop: (HEADER_HEIGHT - 18) / 2,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   hero: {
     width: SCREEN_WIDTH,
@@ -1194,7 +1321,7 @@ const styles = StyleSheet.create({
   wordWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 14,
+    marginBottom: 8,
   },
   heroAccent: {
     color: GOLD_TEXT,
@@ -1225,14 +1352,14 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 16,
-    paddingTop: 36,
-    paddingBottom: 40,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   suiteSection: {
     paddingTop: 16,
   },
   suiteTitle: {
-    marginBottom: 18,
+    marginBottom: 12,
   },
   fieldGroup: {
     marginBottom: 16,
@@ -1281,7 +1408,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   requestBtn: {
-    height: 46,
+    height: 50,
     borderRadius: 50,
     backgroundColor: GOLD,
     alignItems: "center",
@@ -1294,14 +1421,189 @@ const styles = StyleSheet.create({
   },
   requestBtnText: {
     color: "#FFFFFF",
-    fontSize: 15,
+    fontSize: 17,
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
+  pairRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 16,
+  },
+  pairPicker: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  pairSymbol: {
+    flexShrink: 1,
+    fontSize: 17,
+  },
+  livePrice: {
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: "58%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  liveLast: {
+    flexShrink: 1,
+    fontSize: 18,
+    textAlign: "right",
+  },
+  liveChange: {
+    fontSize: 14,
+    flexShrink: 0,
+  },
+  availWrap: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+    marginLeft: 8,
+    gap: 4,
+  },
+  infoMark: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    overflow: "hidden",
+    textAlign: "center",
+    lineHeight: 14,
+    fontSize: 10,
+    color: "#7A8293",
+    borderWidth: 1,
+    borderColor: "#7A8293",
+  },
+  balanceTip: {
+    position: "absolute",
+    right: 0,
+    bottom: 22,
+    width: 230,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    zIndex: 8,
+  },
+  balanceTipText: {
+    color: "#0f172a",
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  amountSide: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+    gap: 8,
+  },
+  deskClosed: {
+    color: "#f0c674",
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  statusEmbed: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.08)",
+  },
+  amountHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 7,
+  },
+  amountLabel: {
+    marginBottom: 0,
+  },
+  availText: {
+    flexShrink: 1,
+    color: "#7A8293",
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "right",
+  },
+  amountInputLeft: {
+    marginLeft: 0,
+    textAlign: "left",
+  },
+  coinPick: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  maxText: {
+    color: "#D5A760",
+    fontSize: 12,
+  },
+  approxText: {
+    fontSize: 13,
+    lineHeight: 17,
+    marginTop: 8,
+    marginHorizontal: 2,
+  },
+  fieldError: {
+    color: "#f07178",
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 6,
+    marginHorizontal: 2,
+  },
+  fieldWarning: {
+    color: "#e6b450",
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 6,
+    marginHorizontal: 2,
+  },
+  statusBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 8,
+  },
+  countdown: {
+    fontSize: 14,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  statusSecondary: {
+    alignSelf: "stretch",
+    justifyContent: "center",
+    height: 46,
+    marginTop: 4,
+  },
+  tradeList: {
+    gap: 10,
+  },
+  tradeCard: {
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   worksCard: {
-    marginTop: 24,
+    marginTop: 14,
   },
   stepsList: {
-    gap: 18,
-    paddingTop: 6,
+    gap: 12,
+    paddingTop: 2,
   },
   stepItem: {
     flexDirection: "row",
@@ -1332,8 +1634,8 @@ const styles = StyleSheet.create({
   },
   whySection: {
     paddingHorizontal: 16,
-    paddingTop: 30,
-    paddingBottom: 35,
+    paddingTop: 16,
+    paddingBottom: 16,
     overflow: "hidden",
   },
   whyGrid: {
@@ -1367,8 +1669,8 @@ const styles = StyleSheet.create({
   },
   builtDesc: {
     fontSize: 15,
-    lineHeight: 24,
-    marginBottom: 22,
+    lineHeight: 22,
+    marginBottom: 14,
   },
   builtFeatures: {
     flexDirection: "row",
@@ -1380,14 +1682,14 @@ const styles = StyleSheet.create({
     width: BUILT_CARD_WIDTH,
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingTop: 16,
-    paddingBottom: 18,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   builtFeatureIcon: {
-    width: 46,
-    height: 46,
-    marginBottom: 18,
+    width: 40,
+    height: 40,
+    marginBottom: 10,
   },
   builtFeatureTitle: {
     fontSize: 15,
@@ -1400,20 +1702,26 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   recentSection: {
-    paddingTop: 30,
+    paddingTop: 8,
   },
   recentHeader: {
-    marginBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
   },
   recentHeading: {
-    flexShrink: 1,
+    flex: 1,
+    minWidth: 0,
     marginBottom: 0,
-    marginRight: 12,
+    marginRight: 10,
+  },
+  viewAllHit: {
+    flexShrink: 0,
   },
   viewAll: {
     color: GOLD,
     fontSize: 12,
-    textAlign: "right",
+    lineHeight: 16,
   },
   emptyText: {
     textAlign: "center",

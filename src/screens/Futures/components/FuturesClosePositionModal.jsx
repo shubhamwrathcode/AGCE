@@ -37,13 +37,22 @@ const FuturesClosePositionModal = ({
   loading = false,
   pos: posProp,
   selectedCoin,
+  fieldError = null,
 }) => {
   const [orderType, setOrderType] = useState('MARKET');
   const [pct, setPct] = useState(100);
   const [qty, setQty] = useState('');
   const [price, setPrice] = useState('');
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [localError, setLocalError] = useState(null);
   const sheetRef = useRef(null);
+
+  useEffect(() => {
+    setLocalError(fieldError || null);
+  }, [fieldError]);
+
+  const errorText = (field) => (localError?.field === field ? localError.text : '');
+  const clearError = (field) => setLocalError((prev) => (prev?.field === field ? null : prev));
 
   // Parent clears `pos` as soon as it hides the sheet; keep the last one so the close animation doesn't flash placeholder content.
   const lastPosRef = useRef(posProp);
@@ -82,6 +91,7 @@ const FuturesClosePositionModal = ({
 
   const applyPct = (p) => {
     setPct(p);
+    clearError('amount');
     if (holding <= 0) {
       setQty('');
       return;
@@ -95,6 +105,7 @@ const FuturesClosePositionModal = ({
     if (visible) {
       setOrderType('MARKET');
       setConfirmVisible(false);
+      setLocalError(null);
       setPrice(markPrice > 0 ? markPrice.toFixed(getDecimalPlaces(tickSize)) : '');
       applyPct(100);
       sheetRef.current?.open();
@@ -117,13 +128,13 @@ const FuturesClosePositionModal = ({
 
   const canSubmit = useMemo(() => {
     const q = decNum(qty);
-    if (q <= 0 || q > holding) return false;
+    if (!(q > 0)) return false;
     if (orderType === 'LIMIT') {
       const p = decNum(price);
-      if (p <= 0) return false;
+      if (!(p > 0)) return false;
     }
     return true;
-  }, [qty, price, orderType, holding]);
+  }, [qty, price, orderType]);
 
   const requestConfirm = () => {
     if (!canSubmit) return;
@@ -274,7 +285,7 @@ const FuturesClosePositionModal = ({
                   borderColor: 'rgba(10, 168, 197, 0.55)',
                 }}
                 activeOpacity={0.8}
-                onPress={() => setOrderType('MARKET')}
+                onPress={() => { setOrderType('MARKET'); setLocalError(null); }}
               >
                 <AppText
                   style={{
@@ -299,7 +310,7 @@ const FuturesClosePositionModal = ({
                   borderColor: 'rgba(10, 168, 197, 0.55)',
                 }}
                 activeOpacity={0.8}
-                onPress={() => setOrderType('LIMIT')}
+                onPress={() => { setOrderType('LIMIT'); setLocalError(null); }}
               >
                 <AppText
                   style={{
@@ -328,7 +339,7 @@ const FuturesClosePositionModal = ({
                     flexDirection: 'row',
                     alignItems: 'center',
                     borderWidth: 1,
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)',
+                    borderColor: errorText('price') ? FIELD_ERROR_COLOR : (isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)'),
                   }}
                 >
                   <TextInput
@@ -338,10 +349,14 @@ const FuturesClosePositionModal = ({
                     keyboardType="decimal-pad"
                     value={price}
                     editable={!loading}
-                    onChangeText={(val) => setPrice(sanitizeIncrementInput(val, tickSize))}
+                    onChangeText={(val) => {
+                      clearError('price');
+                      setPrice(sanitizeIncrementInput(val, tickSize));
+                    }}
                   />
                   <AppText style={{ color: isDark ? '#8E95A3' : '#6B7280', fontSize: 13 }}>{quoteAsset}</AppText>
                 </View>
+                {errorText('price') ? <AppText weight={MEDIUM} style={styles.fieldError}>{errorText('price')}</AppText> : null}
               </View>
             )}
 
@@ -401,8 +416,8 @@ const FuturesClosePositionModal = ({
                 flexDirection: 'row',
                 alignItems: 'center',
                 borderWidth: 1,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)',
-                marginBottom: 16,
+                borderColor: errorText('amount') ? FIELD_ERROR_COLOR : (isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)'),
+                marginBottom: errorText('amount') ? 0 : 16,
               }}
             >
               <TextInput
@@ -414,6 +429,7 @@ const FuturesClosePositionModal = ({
                 editable={!loading}
                 onChangeText={(val) => {
                   setPct(null);
+                  clearError('amount');
                   setQty(sanitizeIncrementInput(val, stepSize));
                 }}
                 onBlur={() => setQty(snapAndCapCloseQty(qty, stepSize, holding))}
@@ -423,6 +439,9 @@ const FuturesClosePositionModal = ({
                 <AppText style={{ color: primaryThemeColor, fontSize: 13 }} weight={BOLD}>Max</AppText>
               </TouchableOpacity>
             </View>
+            {errorText('amount') ? (
+              <AppText weight={MEDIUM} style={[styles.fieldError, { marginBottom: 16 }]}>{errorText('amount')}</AppText>
+            ) : null}
 
             {/* Grouped Stats Card */}
             <View
@@ -633,7 +652,16 @@ const FuturesClosePositionModal = ({
   );
 };
 
+const FIELD_ERROR_COLOR = '#f6465d';
+
 const styles = StyleSheet.create({
+  fieldError: {
+    color: FIELD_ERROR_COLOR,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 6,
+    marginHorizontal: 2,
+  },
   sheetBorder: {
     ...StyleSheet.absoluteFillObject,
     borderTopLeftRadius: 22,
@@ -680,6 +708,7 @@ const propsAreEqual = (prev, next) =>
   prev.themeColors === next.themeColors &&
   prev.onClose === next.onClose &&
   prev.onConfirm === next.onConfirm &&
+  prev.fieldError === next.fieldError &&
   prev.selectedCoin?.symbol === next.selectedCoin?.symbol &&
   prev.selectedCoin?.base_asset === next.selectedCoin?.base_asset &&
   prev.selectedCoin?.margin_asset === next.selectedCoin?.margin_asset &&

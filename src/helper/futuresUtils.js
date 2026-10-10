@@ -309,6 +309,50 @@ export function computeMaxOpenNotional(effectiveAvailable, leverage, takerFeeRat
     return avail / denom;
 }
 
+export function isFuturesLeverageRejectionMessage(msg) {
+    const s = String(msg ?? "").toLowerCase();
+    return (
+        s.includes("maximum allowable quantity") ||
+        s.includes("exceeding the maximum") ||
+        s.includes("leverage level") ||
+        (s.includes("position size") && s.includes("leverage"))
+    );
+}
+
+export function roundQtyDownToStep(qty, stepSize) {
+    const q = Number(qty);
+    const step = Number(stepSize);
+    if (!Number.isFinite(q) || q <= 0) return 0;
+    if (!Number.isFinite(step) || step <= 0) return q;
+    const prec = getDecimalPlaces(step);
+    const steps = Math.floor(q / step + 1e-12);
+    return parseFloat((steps * step).toFixed(prec));
+}
+
+/** Max base qty for a notional at a price, capped by the leverage tier and max_order_qty. */
+export function computeMaxOpenQtyBtc(maxNotionalUsdt, markPrice, {
+    leverageTiers = [],
+    leverage = 1,
+    maxOrderQty,
+    stepSize,
+} = {}) {
+    const notional = Number(maxNotionalUsdt);
+    const p = Number(markPrice);
+    const lev = Math.max(1, Number(leverage) || 1);
+    if (!Number.isFinite(notional) || notional <= 0 || !Number.isFinite(p) || p <= 0) return 0;
+
+    let maxQty = notional / p;
+    const tierCap = getMaxQuantityAtLeverage(leverageTiers, lev, p);
+    if (tierCap != null && Number.isFinite(tierCap) && tierCap > 0) {
+        maxQty = Math.min(maxQty, tierCap);
+    }
+    const orderCap = Number(maxOrderQty);
+    if (Number.isFinite(orderCap) && orderCap > 0) {
+        maxQty = Math.min(maxQty, orderCap);
+    }
+    return roundQtyDownToStep(maxQty, stepSize);
+}
+
 export function decNum(val) {
   if (val == null || val === "") return NaN;
   if (typeof val === "object") {

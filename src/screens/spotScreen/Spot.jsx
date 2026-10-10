@@ -86,7 +86,17 @@ import NavigationService from "../../navigation/NavigationService";
 import moment from "moment";
 import { useTheme } from "../../hooks/useTheme";
 import { SocketContext } from "../../SocketProvider";
+import { exchangeDataStore } from "../../services/socket/socketLiveStore";
+import { blurFocusedInputOnOutsideTouch } from "../../helper/blurOnOutsideTouch";
 import { showError } from "../../helper/logger";
+import {
+  amountLimitLabel,
+  buildAmountHint,
+  effectiveOrderMinimum,
+  formatDecimalString,
+  resolveSubmittedBaseQty,
+  snapToIncrement,
+} from "../../helper/orderQtyPrecision";
 import { appOperation } from "../../appOperation";
 import { CUSTOMER_TYPE } from "../../appOperation/types";
 import { styles } from "./spot/spotStyles";
@@ -396,8 +406,10 @@ const Spot = () => {
   useEffect(() => {
     if (!spotSelectedPair) return;
 
-    if (currentCurrencyRef.current?.base_currency !== spotSelectedPair.base_currency ||
-      currentCurrencyRef.current?.quote_currency !== spotSelectedPair.quote_currency) {
+    // Compare with `currency` state, not currentCurrencyRef: the ref is pre-filled from the coinData[0]
+    // fallback, which would skip setCurrency and so the focus effect never subscribes on first visit.
+    if (currency?.base_currency !== spotSelectedPair.base_currency ||
+      currency?.quote_currency !== spotSelectedPair.quote_currency) {
       setCurrency(spotSelectedPair);
       currentCurrencyRef.current = spotSelectedPair;
       const initialPrice = spotSelectedPair.buy_price ? formatPrice(spotSelectedPair.buy_price).toString() : "";
@@ -415,7 +427,7 @@ const Spot = () => {
       setTradeHistorySideFilter("All");
       setMarginLeverage("5x");
     }
-  }, [spotSelectedPair?.base_currency, spotSelectedPair?.quote_currency, dispatch, formatPrice]);
+  }, [spotSelectedPair?.base_currency, spotSelectedPair?.quote_currency, currency?.base_currency, currency?.quote_currency, dispatch, formatPrice]);
 
   useEffect(() => {
     if (!staticBuyPrice && buy_price) {
@@ -807,6 +819,13 @@ const Spot = () => {
   const inputSelectionColor = themeColors.spotTradeBuy ? `${themeColors.spotTradeBuy}40` : "rgba(0,0,0,0.2)";
   const [isBuy, setIsBuy] = useState(true);
   const [total, setTotal] = useState("");
+  /** Inline order-form error: { field: "price" | "stop" | "amount", text }. */
+  const [orderFieldError, setOrderFieldError] = useState(null);
+  const showFieldError = useCallback((field, text) => setOrderFieldError({ field, text }), []);
+  const clearFieldError = useCallback(
+    (field) => setOrderFieldError((prev) => (prev?.field === field ? null : prev)),
+    []
+  );
 
 
   // const [chartLoading, setChartLoading] = useState(true);
@@ -835,6 +854,19 @@ const Spot = () => {
   const showStopPriceField = isStopOrder;
   const showAmtDenomSelect =
     spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET" || spotOrderType === "STOP_LIMIT";
+
+  useEffect(() => {
+    clearFieldError("amount");
+  }, [amount, amtDenom, clearFieldError]);
+  useEffect(() => {
+    clearFieldError("price");
+  }, [price, clearFieldError]);
+  useEffect(() => {
+    clearFieldError("stop");
+  }, [stopPrice, clearFieldError]);
+  useEffect(() => {
+    setOrderFieldError(null);
+  }, [spotOrderType, isBuy, headerTab, marginMode, currencyData?.base_currency, currencyData?.quote_currency]);
 
   const slippageBounds = useMemo(() => {
     const minRaw = Number(currencyData?.min_slippage_percent);
@@ -1111,7 +1143,9 @@ const Spot = () => {
 
     const handleMessage = (data) => {
       latestSocketDataRef.current = data;
-      if (!isSpotFocusedRef.current || appStateRef.current !== "active") return;
+      // Spot mounts at launch (tabs are not lazy), when AppState can still be "unknown"/"inactive"
+      // with no change event to follow; only background should drop socket ticks.
+      if (!isSpotFocusedRef.current || appStateRef.current === "background") return;
 
       // Trade History UI is API-only (getTradeHistory → Redux → spotMyTrades). Do not hydrate from socket.
 
@@ -1149,6 +1183,29 @@ const Spot = () => {
       }
     };
   }, [socket, isSpotFocused, dispatch, flushSocketToState]);
+
+  // The first exchange snapshot can arrive before the listener above is attached, or before a pair
+  // reset clears the book; read it from the provider's live store instead of waiting for the next tick.
+  useEffect(() => {
+    if (historyOnly || !isSpotFocused || orderBookSocketReady) return undefined;
+    const hydrateFromStore = () => {
+      const data = exchangeDataStore.get();
+      const hasBuyArr = Array.isArray(data?.buy_order);
+      const hasSellArr = Array.isArray(data?.sell_order);
+      if (!hasBuyArr && !hasSellArr) return;
+      if (hasBuyArr) latestLocalBuyOrdersRef.current = data.buy_order;
+      if (hasSellArr) latestLocalSellOrdersRef.current = data.sell_order;
+      setOrderBookSocketReady(true);
+      flushSocketToState({
+        data,
+        buyOrders: hasBuyArr ? data.buy_order : undefined,
+        sellOrders: hasSellArr ? data.sell_order : undefined,
+        recentTrades: Array.isArray(data?.recent_trades) ? data.recent_trades : undefined,
+      });
+    };
+    hydrateFromStore();
+    return exchangeDataStore.subscribe(hydrateFromStore);
+  }, [historyOnly, isSpotFocused, orderBookSocketReady, flushSocketToState, currency, headerTab, marginMode]);
 
   // Use local orders for LOCAL pairs when local lists update
 
@@ -1363,7 +1420,6 @@ const Spot = () => {
   };
 
   const toFixed8 = (data) => snapQtyToStep(data, "floor");
-  const ceilQuantityToStep = (qty) => snapQtyToStep(qty, "ceil");
 
   const parseMinNotional = () => {
     const raw = currencyData?.min_notional;
@@ -1373,91 +1429,231 @@ const Spot = () => {
     return Number.isFinite(n) && n > 0 ? n : 5;
   };
 
-  const roundQuoteNotional = (n) => {
-    if (!Number.isFinite(n)) return NaN;
-    const dp = currencyData?.quote_decimal ?? getPricePrecision();
-    return parseFloat(n.toFixed(dp));
+  /** Max order size from margin balance at the selected leverage (same numbers as the % buttons). */
+  const getMarginMaxBalance = (side, refPx) => {
+    const leverage = parseInt(marginLeverage, 10) || 5;
+    const Qf = Number(coinBalance?.quote_currency_balance) || 0;
+    const Bf = Number(coinBalance?.base_currency_balance) || 0;
+    const Qb = Number(coinBalance?.quote_currency_borrowed) || 0;
+    const Bb = Number(coinBalance?.base_currency_borrowed) || 0;
+    const socketNetEquity = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
+    const netEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
+      ? socketNetEquity
+      : Math.max(0, (Qf - Qb) + (Bf - Bb) * refPx);
+
+    const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance.quote_remaining_capacity) : null;
+    const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance.base_remaining_capacity) : null;
+
+    const maxLeverage = (marginMode === "Cross" ? crossAccount?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;
+    const L = leverage;
+    const M = Number(maxLeverage);
+
+    const crossMarginMaxAtLeverage = (available, maxAtMaxLeverage) => {
+      const avail = Number(available);
+      const maxAtMax = Number(maxAtMaxLeverage);
+      if (!Number.isFinite(avail) || avail < 0) return 0;
+      if (!Number.isFinite(maxAtMax) || maxAtMax <= 0) return Math.max(0, avail);
+      if (!Number.isFinite(L) || L <= 0) return Math.max(0, avail);
+      if (!Number.isFinite(M) || M <= 1) return Math.max(0, Math.min(maxAtMax, avail));
+      if (L >= M) return Math.max(0, maxAtMax);
+      if (L <= 1) return Math.max(0, avail);
+
+      const borrowable = Math.max(0, maxAtMax - avail);
+      return Math.max(0, avail + borrowable * ((L - 1) / (M - 1)));
+    };
+
+    const isCross = marginMode === "Cross";
+
+    if (side === "BUY") {
+      const quoteAvailable = isCross
+        ? ((coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
+          ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
+          : netEquity)
+        : Math.max(0, Qf);
+      const grossQuoteMax = netEquity * leverage;
+      const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
+      const quoteMax = isCross
+        ? ((coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
+          ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
+          : localQuoteMax)
+        : Math.max(0, Qf * leverage);
+      return Math.max(0, quoteMax);
+    }
+
+    const baseAvailable = isCross
+      ? ((coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
+        ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
+        : Math.max(0, Bf - Bb))
+      : Math.max(0, Bf);
+    const grossSellMax = refPx > 0 ? (netEquity * leverage) / refPx : 0;
+    const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
+    const baseMax = isCross
+      ? ((coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
+        ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))
+        : localBaseMax)
+      : Math.max(0, Bf * leverage);
+    return Math.max(0, baseMax);
   };
 
-  const validateOrder = (price, quantity, side, orderKind = "LIMIT", amountIsQuote = false) => {
+  /**
+   * Web parity (TradePage / margin validateOrder). Returns `{ field, text }` for the
+   * inline error under that field, or null when the order is OK.
+   */
+  const validateOrder = ({ price: orderPrice, raw, baseQty, side, orderKind, amountIsQuote, stopPx }) => {
     const tick_size = currencyData?.tick_size || 0.01;
     const step_size = currencyData?.step_size || 0.00001;
     const min_notional = parseMinNotional();
     const max_order_qty = currencyData?.max_order_qty || 9000;
-
     const skipPriceTick = orderKind === "MARKET" || orderKind === "STOP_MARKET";
 
-    const numPrice = parsePriceNum(price);
-    const numQuantity = parseOrderQty(quantity);
+    const numPrice = parsePriceNum(orderPrice);
+    const numQuantity = parseOrderQty(raw);
 
-    if (!Number.isFinite(numPrice) || !Number.isFinite(numQuantity)) {
-      showError("Invalid price or amount");
-      return false;
-    }
-
-    if (amountIsQuote && numPrice <= 0) {
-      showError("Price is required to size this order");
-      return false;
-    }
-
-    const baseQty = amountIsQuote && numPrice > 0
-      ? ceilQuantityToStep(numQuantity / numPrice)
-      : snapQtyToStep(numQuantity, "floor");
-    const minCheckTotal = amountIsQuote
-      ? roundQuoteNotional(numQuantity)
-      : roundQuoteNotional(numPrice * baseQty);
+    if (!Number.isFinite(numPrice)) return { field: "price", text: "Enter price" };
+    if (!Number.isFinite(numQuantity)) return { field: "amount", text: "Enter amount" };
 
     if (!skipPriceTick) {
+      if (numPrice <= 0) return { field: "price", text: "Enter price" };
       const pricePrecisionVal = getDecimalPlaces(tick_size);
       const priceMultiplier = Math.pow(10, pricePrecisionVal);
       if (Math.round(numPrice * priceMultiplier) % Math.round(tick_size * priceMultiplier) !== 0) {
-        showError(`Price must be a multiple of ${tick_size}`);
-        return false;
+        return { field: "price", text: "Invalid price" };
       }
     }
+
+    if (amountIsQuote && numPrice <= 0) return { field: "price", text: "Enter price" };
 
     const qtyPrecision = getDecimalPlaces(step_size);
     const qtyMultiplier = Math.pow(10, qtyPrecision);
     if (Math.round(baseQty * qtyMultiplier) % Math.round(step_size * qtyMultiplier) !== 0) {
-      showError(`Quantity must be a multiple of ${step_size}`);
-      return false;
+      return { field: "amount", text: "Invalid amount" };
     }
+
+    const amountUnit = amountIsQuote ? currencyData?.quote_currency : currencyData?.base_currency;
+    const amountInc = amountIsQuote ? tick_size : step_size;
+    const maxLine = (value) => ({ field: "amount", text: amountLimitLabel("Max", value, amountInc, amountUnit) });
 
     if (baseQty > max_order_qty) {
-      showError(`Maximum order quantity is ${max_order_qty} ${currencyData?.base_currency}`);
-      return false;
+      return maxLine(amountIsQuote && numPrice > 0 ? max_order_qty * numPrice : max_order_qty);
     }
 
-    if (!Number.isFinite(minCheckTotal) || minCheckTotal < min_notional - 0.001) {
-      showError(`Minimum order value is ${min_notional} ${currencyData?.quote_currency}`);
-      return false;
+    const total = amountIsQuote ? numQuantity : numPrice * baseQty;
+    if (!Number.isFinite(total) || total < min_notional - 0.001) {
+      const minShown = amountIsQuote ? min_notional : (numPrice > 0 ? min_notional / numPrice : min_notional);
+      return { field: "amount", text: amountLimitLabel("Min", minShown, amountInc, amountUnit) };
     }
 
-    if (headerTab !== "Margin") {
-      if (side === "BUY") {
-        const availableBalance = coinBalance?.quote_currency_balance || 0;
-        let spend;
-        if (amountIsQuote) {
-          spend = numQuantity;
-        } else if (orderKind === "MARKET" || orderKind === "STOP_MARKET") {
-          spend = baseQty * numPrice * 1.02;
+    if (headerTab === "Margin") {
+      const leverage = parseInt(marginLeverage, 10) || 1;
+      const Qf = Number(coinBalance?.quote_currency_balance) || 0;
+      const Bf = Number(coinBalance?.base_currency_balance) || 0;
+
+      if (marginMode === "Cross") {
+        // Web parity (cross_margin placeSpotOrder): socket max at the selected leverage, 0.1% buffer;
+        // skip when the socket has not sent a max yet (server enforces it).
+        const allowed = currencyData?.margin_config?.cross_allowed_leverages;
+        const allowedNums = Array.isArray(allowed) ? allowed.map(Number).filter((n) => Number.isFinite(n) && n > 0) : [];
+        const crossMaxLev = allowedNums.length
+          ? Math.max(...allowedNums)
+          : (Number(crossAccount?.max_leverage) || Number(currencyData?.margin_config?.max_leverage) || 5);
+        const maxAtLeverage = (availableRaw, maxRaw) => {
+          if (maxRaw == null) return 0;
+          const maxAtMax = parseFloat(maxRaw);
+          const avail = availableRaw != null ? parseFloat(availableRaw) : maxAtMax;
+          const L = leverage;
+          const M = crossMaxLev;
+          if (!Number.isFinite(avail) || avail < 0) return 0;
+          if (!Number.isFinite(maxAtMax) || maxAtMax <= 0) return Math.max(0, avail);
+          if (!Number.isFinite(L) || L <= 0) return Math.max(0, avail);
+          if (!Number.isFinite(M) || M <= 1) return Math.max(0, Math.min(maxAtMax, avail));
+          if (L >= M) return Math.max(0, maxAtMax);
+          if (L <= 1) return Math.max(0, avail);
+          const borrowable = Math.max(0, maxAtMax - avail);
+          return Math.max(0, avail + borrowable * ((L - 1) / (M - 1)));
+        };
+        const slippageFactor = 1.001;
+        if (side === "BUY") {
+          const socketBuyMax = maxAtLeverage(
+            coinBalance?.buy?.available ?? coinBalance?.buy_available,
+            coinBalance?.buy?.max ?? coinBalance?.buy_max
+          );
+          const orderCost = amountIsQuote ? numQuantity : total;
+          if (socketBuyMax > 0 && Number.isFinite(socketBuyMax) && orderCost > socketBuyMax * slippageFactor) {
+            return maxLine(amountIsQuote
+              ? socketBuyMax
+              : (numPrice > 0 ? snapToIncrement(socketBuyMax / numPrice, step_size, "floor") : 0));
+          }
         } else {
-          spend = baseQty * numPrice;
+          const socketSellMax = maxAtLeverage(
+            coinBalance?.sell?.available ?? coinBalance?.sell_available,
+            coinBalance?.sell?.max ?? coinBalance?.sell_max
+          );
+          if (socketSellMax > 0 && Number.isFinite(socketSellMax) && baseQty > socketSellMax * slippageFactor) {
+            return maxLine(amountIsQuote && numPrice > 0
+              ? socketSellMax * numPrice
+              : snapToIncrement(socketSellMax, step_size, "floor"));
+          }
         }
-        if (spend > availableBalance) {
-          showError("Insufficient funds");
-          return false;
+        return null;
+      }
+
+      // Web parity (isolated margin placeSpotOrder).
+      if (side === "BUY") {
+        const buyQuoteMax = Qf * leverage;
+        const orderCost = amountIsQuote ? numQuantity : total;
+        if (Number.isFinite(buyQuoteMax) && Number.isFinite(orderCost) && orderCost > buyQuoteMax) {
+          return maxLine(amountIsQuote
+            ? buyQuoteMax
+            : (numPrice > 0 ? snapToIncrement(buyQuoteMax / numPrice, step_size, "floor") : 0));
         }
-      } else if (side === "SELL") {
-        const availableBalance = coinBalance?.base_currency_balance || 0;
-        if (baseQty > availableBalance) {
-          showError("Insufficient funds");
-          return false;
+      } else {
+        const socketNE = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
+        const netEquity = socketNE != null && Number.isFinite(socketNE) && socketNE >= 0
+          ? socketNE
+          : (() => {
+            const Qb = Number(coinBalance?.quote_currency_borrowed) || 0;
+            const Bb = Number(coinBalance?.base_currency_borrowed) || 0;
+            const P0 = numPrice > 0 ? numPrice : (Number(buy_price) || 0);
+            return Math.max(0, (Qf - Qb) + (Bf - Bb) * P0);
+          })();
+        const P = numPrice > 0 ? numPrice : (Number(buy_price) || 0);
+        const sellMaxBase = P > 0 ? (netEquity * leverage) / P : 0;
+        if (P > 0 && Number.isFinite(sellMaxBase) && Number.isFinite(baseQty) && baseQty > sellMaxBase) {
+          return maxLine(amountIsQuote ? sellMaxBase * P : snapToIncrement(sellMaxBase, step_size, "floor"));
         }
+      }
+      return null;
+    }
+
+    // Spend matches the backend lock: MARKET / STOP_MARKET add a 0.1% buffer, quote input locks the typed USDT.
+    if (side === "BUY") {
+      const availableBalance = Number(coinBalance?.quote_currency_balance) || 0;
+      let spend;
+      if (amountIsQuote) {
+        spend = numQuantity;
+      } else if (orderKind === "MARKET") {
+        spend = baseQty * numPrice * 1.001;
+      } else if (orderKind === "STOP_MARKET") {
+        const refPrice = Number.isFinite(stopPx) && stopPx > 0 ? stopPx : numPrice;
+        spend = baseQty * refPrice * 1.001;
+      } else {
+        spend = baseQty * numPrice;
+      }
+      if (spend > availableBalance) {
+        return maxLine(amountIsQuote
+          ? availableBalance
+          : (numPrice > 0 ? snapToIncrement(availableBalance / numPrice, step_size, "floor") : 0));
+      }
+    } else {
+      const availableBalance = Number(coinBalance?.base_currency_balance) || 0;
+      if (baseQty > availableBalance) {
+        return maxLine(amountIsQuote && numPrice > 0
+          ? availableBalance * numPrice
+          : snapToIncrement(availableBalance, step_size, "floor"));
       }
     }
 
-    return true;
+    return null;
   };
 
   const formatTotal = (value) => {
@@ -1495,9 +1691,22 @@ const Spot = () => {
     if (isValidPriceInput(value)) setter(value);
   };
 
+  const getLivePriceString = () => {
+    const live =
+      Number(currencyData?.last_price) ||
+      Number(buy_price) ||
+      Number(currencyData?.close) ||
+      Number(currencyData?.sell_price) ||
+      0;
+    if (!(live > 0)) return "";
+    const tick = Number(currencyData?.tick_size) || 0.01;
+    return formatDecimalString(snapToIncrement(live, tick, "round"), getPricePrecision());
+  };
+
   const handlePriceBlur = (value, setter) => {
     if (value === "" || value === "0" || value === "0.") {
-      setter("");
+      // Web parity: an emptied limit price falls back to the live price on blur (stop price stays empty).
+      setter(setter === setPrice ? getLivePriceString() : "");
       return;
     }
     const tickSize = currencyData?.tick_size || 0.01;
@@ -1526,22 +1735,9 @@ const Spot = () => {
     if (isValidQuantityInput(value)) setter(value);
   };
 
+  /** Keep the typed amount on blur (even below the minimum); the hint and submit explain it. */
   const handleQuantityBlur = (value, setter) => {
-    if (value === "" || value === "0" || value === "0.") {
-      setter("");
-      return;
-    }
-    const stepSize = currencyData?.step_size || 0.00001;
-    const numValue = parseOrderQty(value);
-    if (isNaN(numValue) || numValue === 0) {
-      setter("");
-      return;
-    }
-    if (numValue < stepSize) {
-      setter(stepSize.toString());
-      return;
-    }
-    setter(String(snapQtyToStep(numValue, "round")));
+    if (String(value ?? "").trim() === ".") setter("");
   };
 
   const tickSize = currencyData?.tick_size || 0.01;
@@ -1591,74 +1787,7 @@ const Spot = () => {
     const refPx = (!isMarketLikeOrder ? parsePriceNum(price) : parsePriceNum(buy_price)) || 0;
 
     if (headerTab === "Margin") {
-      const leverage = parseInt(marginLeverage, 10) || 5;
-      const Qf = Number(coinBalance?.quote_currency_balance) || 0;
-      const Bf = Number(coinBalance?.base_currency_balance) || 0;
-      const Qb = Number(coinBalance?.quote_currency_borrowed) || 0;
-      const Bb = Number(coinBalance?.base_currency_borrowed) || 0;
-      const socketNetEquity = coinBalance?.net_equity != null ? Number(coinBalance.net_equity) : null;
-      const netEquity = (socketNetEquity != null && Number.isFinite(socketNetEquity) && socketNetEquity >= 0)
-        ? socketNetEquity
-        : Math.max(0, (Qf - Qb) + (Bf - Bb) * refPx);
-
-      const qCap = coinBalance?.quote_remaining_capacity != null ? Number(coinBalance.quote_remaining_capacity) : null;
-      const bCap = coinBalance?.base_remaining_capacity != null ? Number(coinBalance.base_remaining_capacity) : null;
-
-      const maxLeverage = (marginMode === "Cross" ? crossAccount?.max_leverage : null) ?? currencyData?.margin_config?.max_leverage ?? 10;
-      const L = leverage;
-      const M = Number(maxLeverage);
-
-      const crossMarginMaxAtLeverage = (available, maxAtMaxLeverage) => {
-        const avail = Number(available);
-        const maxAtMax = Number(maxAtMaxLeverage);
-        if (!Number.isFinite(avail) || avail < 0) return 0;
-        if (!Number.isFinite(maxAtMax) || maxAtMax <= 0) return Math.max(0, avail);
-        if (!Number.isFinite(L) || L <= 0) return Math.max(0, avail);
-        if (!Number.isFinite(M) || M <= 1) return Math.max(0, Math.min(maxAtMax, avail));
-        if (L >= M) return Math.max(0, maxAtMax);
-        if (L <= 1) return Math.max(0, avail);
-
-        const borrowable = Math.max(0, maxAtMax - avail);
-        return Math.max(0, avail + borrowable * ((L - 1) / (M - 1)));
-      };
-
-      const isCross = marginMode === "Cross";
-
-      const quoteAvailable = isCross
-        ? ((coinBalance?.buy?.available != null || coinBalance?.buy_available != null)
-          ? Number(coinBalance?.buy?.available ?? coinBalance?.buy_available)
-          : netEquity)
-        : Math.max(0, Qf);
-
-      const baseAvailable = isCross
-        ? ((coinBalance?.sell?.available != null || coinBalance?.sell_available != null)
-          ? Number(coinBalance?.sell?.available ?? coinBalance?.sell_available)
-          : Math.max(0, Bf - Bb))
-        : Math.max(0, Bf);
-
-      const grossQuoteMax = netEquity * leverage;
-      const localQuoteMax = qCap != null && Number.isFinite(qCap) ? Math.min(grossQuoteMax, qCap + Qf) : grossQuoteMax;
-
-      const quoteMax = isCross
-        ? ((coinBalance?.buy?.max != null || coinBalance?.buy_max != null)
-          ? crossMarginMaxAtLeverage(quoteAvailable, Number(coinBalance?.buy?.max ?? coinBalance?.buy_max))
-          : localQuoteMax)
-        : Math.max(0, Qf * leverage);
-
-      const grossSellMax = refPx > 0 ? grossQuoteMax / refPx : 0;
-      const localBaseMax = bCap != null && Number.isFinite(bCap) ? Math.min(grossSellMax, bCap) : grossSellMax;
-
-      const baseMax = isCross
-        ? ((coinBalance?.sell?.max != null || coinBalance?.sell_max != null)
-          ? crossMarginMaxAtLeverage(baseAvailable, Number(coinBalance?.sell?.max ?? coinBalance?.sell_max))
-          : localBaseMax)
-        : Math.max(0, Bf * leverage);
-
-      if (isBuy) {
-        balToUse = Math.max(0, quoteMax);
-      } else {
-        balToUse = Math.max(0, baseMax);
-      }
+      balToUse = getMarginMaxBalance(isBuy ? "BUY" : "SELL", refPx);
     } else {
       balToUse = isBuy
         ? (coinBalance?.quote_currency_balance || 0)
@@ -1707,12 +1836,20 @@ const Spot = () => {
 
   const handleTotal = (text) => {
     setTotal(text);
-    const refPx = (!isMarketLikeOrder ? parsePriceNum(price) : parsePriceNum(buy_price)) || 0;
+    const refPx = (!isMarketLikeOrder ? parsePriceNum(price || staticBuyPrice) : parsePriceNum(buy_price)) || 0;
     if (refPx > 0) {
       const val = parseOrderQty(text);
       if (Number.isFinite(val) && val > 0) {
-        const qty = ceilQuantityToStep(val / refPx);
-        const qStr = String(qty);
+        const mins = effectiveOrderMinimum({
+          price: refPx,
+          stepSize: currencyData?.step_size,
+          tickSize: currencyData?.tick_size,
+          minOrderQty: currencyData?.min_order_qty,
+          minNotional: currencyData?.min_notional,
+        });
+        let qty = snapToIncrement(val / refPx, mins.step, "floor");
+        if (val + mins.tick / 10 >= mins.minQuote && qty + mins.step / 10 < mins.minBase) qty = mins.minBase;
+        const qStr = qty > 0 ? formatDecimalString(qty, getQuantityPrecision()) : "";
         syncAmountAnimForQuantityString(qStr);
         setAmount(qStr);
       } else if (!text || text === "0") {
@@ -1724,6 +1861,13 @@ const Spot = () => {
 
   const selectNumberLimitOn = (item) => {
     setNumberLimit(item.name);
+    setOrderFieldError(null);
+    if (item.name === "Market" || item.name === "Spot Market") {
+      setPrice("");
+    } else {
+      const live = getLivePriceString();
+      if (live) setPrice(live);
+    }
     setIsOrderTypeModalVisible(false);
     rbSheetlimit?.current?.close();
   };
@@ -1871,31 +2015,27 @@ const Spot = () => {
 
 
 
-  const validateStopTriggerPrice = useCallback(
-    (rawStop) => {
-      const tick_size = currencyData?.tick_size || 0.01;
-      const numPrice = parsePriceNum(rawStop);
-      if (!Number.isFinite(numPrice) || numPrice <= 0) {
-        showError("Enter a valid stop price");
-        return false;
-      }
-      const pricePrecisionVal = getDecimalPlaces(tick_size);
-      const priceMultiplier = Math.pow(10, pricePrecisionVal);
-      if (Math.round(numPrice * priceMultiplier) % Math.round(tick_size * priceMultiplier) !== 0) {
-        showError(`Stop price must be a multiple of ${tick_size}`);
-        return false;
-      }
-      return true;
-    },
-    [currencyData?.tick_size]
-  );
+  const validateStopTriggerPrice = (rawStop) => {
+    const tick_size = currencyData?.tick_size || 0.01;
+    const numPrice = parsePriceNum(rawStop);
+    if (!Number.isFinite(numPrice) || numPrice <= 0) {
+      return { field: "stop", text: "Enter price" };
+    }
+    const pricePrecisionVal = getDecimalPlaces(tick_size);
+    const priceMultiplier = Math.pow(10, pricePrecisionVal);
+    if (Math.round(numPrice * priceMultiplier) % Math.round(tick_size * priceMultiplier) !== 0) {
+      return { field: "stop", text: "Invalid price" };
+    }
+    return null;
+  };
 
-  const buildSpotOrderPayload = useCallback(() => {
+  /** Web parity (buildSpotOrderToApi): size with the shared minimum, never ceil a quote amount. */
+  const buildSpotOrderPayload = () => {
     const refPrice = parsePriceNum(buy_price) || 0;
     const limitFromUi =
       price !== undefined && price !== null && String(price).trim() !== ""
         ? parsePriceNum(price)
-        : refPrice;
+        : (parsePriceNum(staticBuyPrice) || refPrice);
     const orderPriceForValidation =
       spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET" ? refPrice : limitFromUi;
     const orderPriceForApi = orderPriceForValidation;
@@ -1906,22 +2046,28 @@ const Spot = () => {
     const quoteSym = String(quote_currency ?? "").trim().toUpperCase();
     const pair = baseSym && quoteSym ? `${baseSym}${quoteSym}` : "";
 
+    const amountIsQuote = showAmtDenomSelect && amtDenom === "QUOTE";
     const amtNum = parseOrderQty(amount);
-    let baseQty = Number.isFinite(amtNum) && amtNum > 0 ? snapQtyToStep(amtNum, "floor") : 0;
-    if (showAmtDenomSelect && amtDenom === "QUOTE") {
-      const refPx = orderPriceForValidation || parsePriceNum(buy_price) || 0;
-      if (refPx > 0 && Number.isFinite(amtNum) && amtNum > 0) {
-        baseQty = ceilQuantityToStep(amtNum / refPx);
-      } else {
-        baseQty = 0;
-      }
-    }
+    const sized = Number.isFinite(amtNum) && amtNum > 0
+      ? resolveSubmittedBaseQty({
+        amount: amtNum,
+        isQuote: amountIsQuote,
+        price: orderPriceForValidation,
+        stepSize: currencyData?.step_size,
+        tickSize: currencyData?.tick_size,
+        minOrderQty: currencyData?.min_order_qty,
+        minNotional: currencyData?.min_notional,
+        base: currencyData?.base_currency,
+        quote: currencyData?.quote_currency,
+      })
+      : { ok: false, qty: NaN, message: "" };
+    const baseQty = sized.qty;
 
     const data = {
       pair,
       type: spotOrderType,
       side: isBuy ? "BUY" : "SELL",
-      quantity: String(baseQty),
+      quantity: Number.isFinite(baseQty) ? formatDecimalString(baseQty, getQuantityPrecision()) : "0",
     };
     if (spotOrderType === "LIMIT" || spotOrderType === "STOP_LIMIT") {
       data.price = String(orderPriceForApi);
@@ -1943,60 +2089,73 @@ const Spot = () => {
       data.tradeType = marginMode === "Cross" ? "cross" : "margin";
     }
 
-    return { data, orderPriceForValidation };
-  }, [
-    amount,
-    amtDenom,
-    showAmtDenomSelect,
-    base_currency,
-    buy_price,
-    isBuy,
-    limitFok,
-    limitIoc,
-    price,
-    quote_currency,
-    slippageEnabled,
-    slippageError,
-    slippagePct,
-    spotOrderType,
-    stopPrice,
-    headerTab,
-    marginMode,
-  ]);
+    return {
+      data,
+      orderPriceForValidation,
+      baseQty,
+      amountIsQuote,
+      sizeError: sized.ok ? "" : sized.message,
+      stopPx: parsePriceNum(stopPxRaw),
+    };
+  };
 
-  const onSubmit = async () => {
-    if (userData && Number(userData?.kycVerified) !== 2) {
-      showError("KYC not verified. Please complete KYC first.");
-      return;
-    }
+  const amountHint = isAmountFocused
+    ? buildAmountHint({
+      amountRaw: amount,
+      isQuote: showAmtDenomSelect && amtDenom === "QUOTE",
+      price: isMarketLikeOrder ? parsePriceNum(buy_price) : parsePriceNum(price || staticBuyPrice || buy_price),
+      stepSize: currencyData?.step_size,
+      tickSize: currencyData?.tick_size,
+      minOrderQty: currencyData?.min_order_qty,
+      minNotional: currencyData?.min_notional,
+      base: currencyData?.base_currency,
+      quote: currencyData?.quote_currency,
+    })
+    : "";
 
+  /** Runs every inline check; shows the first failure under its field. */
+  const checkSpotOrder = () => {
     if ((spotOrderType === "MARKET" || spotOrderType === "STOP_MARKET") && slippageEnabled && slippageError) {
-      showError(slippageError);
-      return;
+      return null;
     }
-
-    const { data, orderPriceForValidation } = buildSpotOrderPayload();
-    if (!data.pair) {
+    const built = buildSpotOrderPayload();
+    if (!built.data.pair) {
       showError("Select a trading pair");
-      return;
+      return null;
     }
-    if (headerTab === "Margin" && !dontShowMarginConfirm) {
-      setMarginConfirmPayload(data);
-      rbSheetMarginConfirm.current?.open();
-      return;
+    if (built.sizeError) {
+      showFieldError("amount", built.sizeError);
+      return null;
     }
-
-    const amountIsQuote = showAmtDenomSelect && amtDenom === "QUOTE";
-
+    if (!Number.isFinite(built.baseQty) || built.baseQty <= 0) {
+      showFieldError("amount", "Enter amount");
+      return null;
+    }
     if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
-      if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) {
-        return;
+      const stopErr = validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price);
+      if (stopErr) {
+        showFieldError(stopErr.field, stopErr.text);
+        return null;
       }
     }
-    if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType, amountIsQuote)) {
-      return;
+    const err = validateOrder({
+      price: built.orderPriceForValidation,
+      raw: amount,
+      baseQty: built.baseQty,
+      side: isBuy ? "BUY" : "SELL",
+      orderKind: spotOrderType,
+      amountIsQuote: built.amountIsQuote,
+      stopPx: built.stopPx,
+    });
+    if (err) {
+      showFieldError(err.field, err.text);
+      return null;
     }
+    setOrderFieldError(null);
+    return built.data;
+  };
 
+  const submitSpotOrder = async (data) => {
     setIsPlacingOrder(true);
     try {
       const res = await dispatch(placeOrder(data));
@@ -2019,42 +2178,28 @@ const Spot = () => {
     }
   };
 
-  const handleConfirmMarginOrder = async () => {
-    rbSheetMarginConfirm.current?.close();
-    if (!marginConfirmPayload) return;
-
-    const { orderPriceForValidation } = buildSpotOrderPayload();
-    const amountIsQuote = showAmtDenomSelect && amtDenom === "QUOTE";
-
-    if (spotOrderType === "STOP_LIMIT" || spotOrderType === "STOP_MARKET") {
-      if (!validateStopTriggerPrice(stopPrice !== "" ? stopPrice : buy_price)) {
-        return;
-      }
-    }
-    if (!validateOrder(orderPriceForValidation, amount, isBuy ? "BUY" : "SELL", spotOrderType, amountIsQuote)) {
+  const onSubmit = async () => {
+    if (userData && Number(userData?.kycVerified) !== 2) {
+      showError("KYC not verified. Please complete KYC first.");
       return;
     }
 
-    setIsPlacingOrder(true);
-    try {
-      const res = await dispatch(placeOrder(marginConfirmPayload));
-      if (res?.success) {
-        lastOrderPlacedTimeRef.current = Date.now();
-        amountAnim.setValue(0);
-        totalAnim.setValue(0);
-        setAmount("");
-        setTotal("");
-        setActivePercentage(0);
+    const data = checkSpotOrder();
+    if (!data) return;
 
-        setTimeout(() => {
-          fetchSpotOpenOrdersTab(true);
-          if (mountedOrdersTab === 2) fetchSpotOrderHistoryTab(true);
-          if (mountedOrdersTab === 3) fetchSpotTradeHistoryTab(true);
-        }, 350);
-      }
-    } finally {
-      setIsPlacingOrder(false);
+    if (headerTab === "Margin" && !dontShowMarginConfirm) {
+      setMarginConfirmPayload(data);
+      rbSheetMarginConfirm.current?.open();
+      return;
     }
+
+    await submitSpotOrder(data);
+  };
+
+  const handleConfirmMarginOrder = async () => {
+    rbSheetMarginConfirm.current?.close();
+    if (!marginConfirmPayload) return;
+    await submitSpotOrder(marginConfirmPayload);
   };
 
   const renderMarginConfirmSheet = () => {
@@ -2606,7 +2751,10 @@ const Spot = () => {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: themeColors.background, paddingTop: insets.top }}>
+    <View
+      style={{ flex: 1, backgroundColor: themeColors.background, paddingTop: insets.top }}
+      onTouchStart={blurFocusedInputOnOutsideTouch}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -2707,6 +2855,8 @@ const Spot = () => {
                 navigation,
                 numberSelectLimit,
                 onSubmit,
+                orderFieldError,
+                amountHint,
                 parsedCrossRisk,
                 price,
                 priceAnim,

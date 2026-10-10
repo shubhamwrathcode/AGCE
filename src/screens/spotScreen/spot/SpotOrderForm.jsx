@@ -60,6 +60,8 @@ export function SpotOrderForm({
   navigation,
   numberSelectLimit,
   onSubmit,
+  orderFieldError,
+  amountHint,
   parsedCrossRisk,
   price,
   priceAnim,
@@ -104,6 +106,13 @@ export function SpotOrderForm({
   totalDisplayValue,
   userData,
 }) {
+  const fieldErrorText = (field) => (orderFieldError?.field === field ? orderFieldError.text : "");
+  const fieldErrorBorder = (field) =>
+    fieldErrorText(field) ? { borderWidth: 1, borderColor: FIELD_ERROR_COLOR } : null;
+  const renderFieldError = (field) => {
+    const text = fieldErrorText(field);
+    return text ? <AppText weight={MEDIUM} style={fieldStyles.error}>{text}</AppText> : null;
+  };
   return (
     <>
               {/* Right: Buy/Sell + fields */}
@@ -236,6 +245,7 @@ export function SpotOrderForm({
                         backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7',
                         borderWidth: 0,
                       },
+                      fieldErrorBorder("price"),
                     ]}
                   >
                     <View style={styles.spotOrderFieldStack}>
@@ -291,13 +301,13 @@ export function SpotOrderForm({
                             <AppText style={{ fontSize: 20, color: themeColors.secondaryText, lineHeight: 22 }}>-</AppText>
                           </TouchableOpacity>
                           <TextInput
-                            placeholder={""}
+                            placeholder={formatPriceThousands(buy_price || staticBuyPrice || "") || "Enter price"}
                             placeholderTextColor={themeColors.secondaryText}
                             selectionColor={inputSelectionColor}
                             value={
                               isPriceFocused
-                                ? (price !== "" ? price : staticBuyPrice)
-                                : formatPriceThousands(price !== "" ? price : staticBuyPrice)
+                                ? price
+                                : (price !== "" ? formatPriceThousands(price) : "")
                             }
                             onChangeText={(text) => handlePriceInput(text, setPrice)}
                             onBlur={() => {
@@ -358,6 +368,7 @@ export function SpotOrderForm({
                       )}
                     </View>
                   </View>
+                  {renderFieldError("price")}
                 </View>
 
                 {showStopPriceField && (
@@ -369,6 +380,7 @@ export function SpotOrderForm({
                           backgroundColor: isDark ? darkTheme.darkThemeInputColor : '#F7F7F7',
                           borderWidth: 0,
                         },
+                        fieldErrorBorder("stop"),
                       ]}
                     >
                       <View style={styles.spotOrderFieldStack}>
@@ -438,6 +450,7 @@ export function SpotOrderForm({
                         </View>
                       </View>
                     </View>
+                    {renderFieldError("stop")}
                   </View>
                 )}
 
@@ -450,6 +463,7 @@ export function SpotOrderForm({
                         borderWidth: 0,
                         overflow: "visible",
                       },
+                      fieldErrorBorder("amount"),
                       showAmtDenomSelect && { zIndex: 100, elevation: 100 },
                     ]}
                   >
@@ -559,6 +573,9 @@ export function SpotOrderForm({
                       </View>
                     </View>
                   </View>
+                  {fieldErrorText("amount") ? renderFieldError("amount") : amountHint ? (
+                    <AppText style={[fieldStyles.hint, { color: themeColors.secondaryText }]}>{amountHint}</AppText>
+                  ) : null}
                 </View>
                 <View style={styles.spotOrderSliderWrap}>
                   <PercentQuickSelect
@@ -1108,3 +1125,21 @@ export function SpotOrderForm({
     </>
   );
 }
+
+const FIELD_ERROR_COLOR = "#f6465d";
+
+const fieldStyles = StyleSheet.create({
+  error: {
+    color: FIELD_ERROR_COLOR,
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 4,
+    marginHorizontal: 2,
+  },
+  hint: {
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 4,
+    marginHorizontal: 2,
+  },
+});

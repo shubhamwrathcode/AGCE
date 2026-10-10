@@ -7,6 +7,7 @@ import SimpleToast from 'react-native-simple-toast';
 
 import { BOLD, fontFamilyMedium, fontFamilySemiBold, MEDIUM, SEMI_BOLD } from '../../../theme/typography';
 import { colors } from '../../../theme/colors';
+import { amountLimitLabel, isMultipleOfIncrement, parseMinNotionalValue } from '../../../helper/orderQtyPrecision';
 import { decNum, capDecStr, computePosition, computeClosedPosition, snapAndCapCloseQty, snapToIncrementInput, formatLiqFee, formatFuturesTs, pickOpenedTs, pickClosedTs, openFuturesHistoryDetail, fmtFuturesQty, fmtFuturesPrice, fmtFuturesUsdt, fmtFuturesPct, computeTradeHistoryItem, formatFuturesOrderType, getFuturesOrderDisplayPrice, getFuturesOrderTriggerText } from '../../../helper/futuresUtils';
 import { right_ic, NO_NOTIFICATION_ICON, filterIcon, editnew } from '../../../helper/ImageAssets';
 import { AppText, FOURTEEN, TEN, THIRTEEN, TWELVE } from '../../../common';
@@ -67,6 +68,8 @@ const FuturesHistorySection = ({
   const [closeModalVisible, setCloseModalVisible] = React.useState(false);
   const [posToClose, setPosToClose] = React.useState(null);
   const [closeLoading, setCloseLoading] = React.useState(false);
+  /** Close-sheet inline error: { field: "amount" | "price", text }. */
+  const [closeFieldError, setCloseFieldError] = React.useState(null);
   const closeInFlightRef = useRef(false);
   const posToCloseRef = useRef(null);
   const [closingIds, setClosingIds] = React.useState({});
@@ -176,13 +179,22 @@ const FuturesHistorySection = ({
       setCloseLoading(false);
     };
 
+    const failField = (field, text) => {
+      setCloseFieldError({ field, text });
+      unlock();
+    };
+
     const fullQty = decNum(pos.quantity ?? pos.computedQty);
     if (!Number.isFinite(fullQty) || fullQty <= 0) {
-      SimpleToast.show('Invalid position size');
-      unlock();
+      failField('amount', 'Enter amount');
       return;
     }
 
+    const contract = selectedCoin?.symbol === pos.symbol ? selectedCoin : null;
+    const closeBaseCc = pos?.base_currency
+      || contract?.base_currency
+      || (String(pos.symbol || '').includes('USDT') ? String(pos.symbol).split('USDT')[0].replace(/[^A-Za-z0-9]/g, '') : '')
+      || 'BTC';
     const stepSize = Number(selectedCoin?.step_size) || 0.001;
     const tickSize = Number(selectedCoin?.tick_size) || 0.01;
     const snappedQtyStr =
@@ -190,8 +202,15 @@ const FuturesHistorySection = ({
       snapAndCapCloseQty(String(fullQty), stepSize, fullQty);
     const qty = decNum(snappedQtyStr);
     if (!Number.isFinite(qty) || qty <= 0) {
-      SimpleToast.show('Please enter a valid quantity');
-      unlock();
+      failField('amount', 'Enter amount');
+      return;
+    }
+    if (qty > fullQty + 1e-12) {
+      failField('amount', amountLimitLabel('Max', fullQty, stepSize, closeBaseCc));
+      return;
+    }
+    if (!isMultipleOfIncrement(qty, stepSize)) {
+      failField('amount', 'Invalid amount');
       return;
     }
 
@@ -210,16 +229,31 @@ const FuturesHistorySection = ({
         : { reduce_only: true, quantity: String(qty) }),
     };
 
+    const minNotional = parseMinNotionalValue(contract?.min_notional, 0);
     if (orderType === 'LIMIT') {
       const snappedPrice = snapToIncrementInput(String(price ?? ''), tickSize);
       const priceVal = decNum(snappedPrice);
       if (!Number.isFinite(priceVal) || priceVal <= 0) {
-        SimpleToast.show('Please enter a valid price');
-        unlock();
+        failField('price', 'Enter price');
+        return;
+      }
+      if (!isMultipleOfIncrement(priceVal, tickSize)) {
+        failField('price', 'Invalid price');
+        return;
+      }
+      if (minNotional > 0 && priceVal * qty < minNotional) {
+        failField('amount', amountLimitLabel('Min', minNotional / priceVal, stepSize, closeBaseCc));
         return;
       }
       payload.price = String(priceVal);
+    } else {
+      const markPx = decNum(pos.mark_price ?? pos.computedMark) || Number(selectedCoin?.mark_price) || 0;
+      if (minNotional > 0 && markPx > 0 && markPx * qty < minNotional) {
+        failField('amount', amountLimitLabel('Min', minNotional / markPx, stepSize, closeBaseCc));
+        return;
+      }
     }
+    setCloseFieldError(null);
 
     try {
       const result = await appOperation.customer?.futuresPlaceOrder(payload);
@@ -386,6 +420,7 @@ const FuturesHistorySection = ({
               };
               posToCloseRef.current = nextPos;
               setPosToClose(nextPos);
+              setCloseFieldError(null);
               setCloseModalVisible(true);
             }}
             disabled={closeLoading || !!closingIds[String(pos._id || pos.symbol || '')]}
@@ -974,6 +1009,7 @@ const FuturesHistorySection = ({
           selectedCoin={selectedCoin}
           onClose={handleClosePositionDismiss}
           onConfirm={handleClosePositionConfirm}
+          fieldError={closeFieldError}
         />
 
         <FuturesAdjustMarginModal

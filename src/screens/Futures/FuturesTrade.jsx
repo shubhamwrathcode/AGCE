@@ -44,7 +44,6 @@ import {
   computeFuturesLeverageStats,
   getMaxQuantityAtLeverage,
   formatPriceByTick,
-  formatQtyByStep,
   getDecimalPlaces,
   getOrderBookAggOptionsForPair,
   aggregateOrderBookRows,
@@ -56,8 +55,21 @@ import {
   computeFuturesOrderMargin,
   computeMaxOpenNotional,
   computePosition,
-  computeClosedPosition
+  computeClosedPosition,
+  computeMaxOpenQtyBtc,
+  getMaxNotionalAtLeverage,
+  isFuturesLeverageRejectionMessage,
+  roundQtyDownToStep,
 } from '../../helper/futuresUtils';
+import {
+  amountLimitLabel,
+  buildAmountHint,
+  effectiveOrderMinimum,
+  formatDecimalString,
+  isMultipleOfIncrement,
+  parseMinNotionalValue,
+} from '../../helper/orderQtyPrecision';
+import { blurFocusedInputOnOutsideTouch } from '../../helper/blurOnOutsideTouch';
 import moment from 'moment';
 import FuturesHistorySection from './components/FuturesHistorySection';
 import { LogBox } from 'react-native';
@@ -85,16 +97,8 @@ import FuturesBatchAdjustDrawer from './FuturesBatchAdjustDrawer';
 import AdjustLeverageSheet from './AdjustLeverageSheet';
 import {
   futuresErrSelectPair,
-  futuresErrInvalidSize,
-  futuresErrPriceForValue,
-  futuresErrInvalidLimitPrice,
-  futuresErrInvalidTrigger,
   futuresErrGeneric,
   formatFuturesApiError,
-  futuresErrTpBuy,
-  futuresErrTpSell,
-  futuresErrSlBuy,
-  futuresErrSlSell,
 } from './futuresOrderMessages';
 
 LogBox.ignoreLogs(['VirtualizedLists should never be nested inside plain ScrollViews']);
@@ -404,6 +408,14 @@ const FuturesUI = () => {
   const setFormTp = isBuyForm ? setBuyTpPrice : setSellTpPrice;
   const setFormSl = isBuyForm ? setBuySlPrice : setSellSlPrice;
 
+  /** Inline order-form error: { field: "amount" | "price" | "trigger" | "orderPrice" | "tp" | "sl", text }. */
+  const [orderFieldError, setOrderFieldError] = useState(null);
+  const showFieldError = React.useCallback((field, text) => setOrderFieldError({ field, text }), []);
+  const clearFieldError = React.useCallback(
+    (field) => setOrderFieldError((prev) => (prev?.field === field ? null : prev)),
+    []
+  );
+
   useEffect(() => {
     Animated.timing(triggerAnim, {
       toValue: isTriggerFocused || String(triggerPrice ?? "").trim() !== "" ? 1 : 0,
@@ -671,6 +683,7 @@ const FuturesUI = () => {
   const [livePriceState, setLivePriceState] = useState("");
   const lastStreamBidRef = useRef(null);
   const limitPriceSeededPairRef = useRef(null);
+  const initialPriceSeededRef = useRef(false);
 
 
 
@@ -740,6 +753,28 @@ const FuturesUI = () => {
 
   const [placingOrderSide, setPlacingOrderSide] = useState("");
 
+  /** Server "max allowable quantity at current leverage" → tier max under Amount (no popup). */
+  const showLeverageRejectionLine = () => {
+    const isQuoteSize = contractUnit.includes('Value');
+    const lev = Number(marginLeverage) || 1;
+    const px = Number(selectedCoin?.mark_price) || Number(liveCoin?.mark_price) || Number(price) || 0;
+    const tierMax = getMaxNotionalAtLeverage(selectedCoin?.leverage_tiers, lev);
+    const cap = Number.isFinite(tierMax) && tierMax !== Infinity ? tierMax : 0;
+    const step = Number(selectedCoin?.step_size) || 0.001;
+    const tick = Number(selectedCoin?.tick_size) || 0.01;
+    const baseQty = px > 0
+      ? computeMaxOpenQtyBtc(cap, px, {
+        leverageTiers: selectedCoin?.leverage_tiers,
+        leverage: lev,
+        maxOrderQty: Number(selectedCoin?.max_order_qty) || 1000,
+        stepSize: step,
+      })
+      : 0;
+    const unit = isQuoteSize ? currentQuoteAsset : currentBaseAsset;
+    const shown = isQuoteSize && px > 0 ? baseQty * px : baseQty;
+    showFieldError('amount', amountLimitLabel('Max', shown, isQuoteSize ? tick : step, unit));
+  };
+
   const handlePlaceOrder = async (uiSide, formSideArg) => {
     if (isSymbolSettingsLoading) {
       SimpleToast.show('Loading your leverage settings, please wait…', SimpleToast.SHORT);
@@ -762,19 +797,11 @@ const FuturesUI = () => {
       const tickSize = Number(selectedCoin?.tick_size) || 0.01;
       const stepSize = Number(selectedCoin?.step_size) || 0.001;
       const minQty = Number(selectedCoin?.min_order_qty) || stepSize;
+      const maxQty = Number(selectedCoin?.max_order_qty) || 1000;
+      const minNotional = parseMinNotionalValue(selectedCoin?.min_notional, 0);
 
-      // Quantity validation
       const rawQty = parseFloat(String(amount).replace(/,/g, ''));
-      // console.log("=== trace 1 rawQty ===", rawQty);
-      if (!Number.isFinite(rawQty) || rawQty <= 0) {
-        // console.log("=== trace 1 return early ===");
-        SimpleToast.show(futuresErrInvalidSize(), SimpleToast.SHORT);
-        return;
-      }
-
-      // Convert from Amount/Value to Base Qty logic
       const isQuoteSize = contractUnit.includes('Value');
-      let baseQty = rawQty;
 
       const refPrice = Number(liveCoin?.mark_price) || 0;
       let priceForConversion = refPrice;
@@ -785,19 +812,34 @@ const FuturesUI = () => {
         const triggerPriceVal = parseFloat(String(triggerPrice).replace(/,/g, ''));
         priceForConversion = orderPriceVal || triggerPriceVal || refPrice;
       }
-      if (isQuoteSize && priceForConversion > 0) {
-        baseQty = rawQty / priceForConversion;
+
+      const amountUnit = isQuoteSize ? currentQuoteAsset : currentBaseAsset;
+      const amountLimit = (kind, baseValue) => {
+        const px = Number(priceForConversion) || refPrice || 0;
+        if (kind === 'Min') {
+          const mins = effectiveOrderMinimum({ price: px, stepSize, tickSize, minOrderQty: minQty, minNotional });
+          return amountLimitLabel('Min', isQuoteSize ? mins.minQuote : mins.minBase, isQuoteSize ? tickSize : stepSize, amountUnit);
+        }
+        const shown = isQuoteSize && px > 0 ? Number(baseValue) * px : Number(baseValue);
+        return amountLimitLabel('Max', shown, isQuoteSize ? tickSize : stepSize, amountUnit);
+      };
+
+      if (!Number.isFinite(rawQty) || rawQty <= 0) {
+        showFieldError('amount', 'Enter amount');
+        return;
       }
-
-      // console.log("=== trace 2 baseQty calculation ===", { isQuoteSize, refPrice, priceForConversion, baseQty });
-
-      if (!Number.isFinite(baseQty) || baseQty <= 0) {
-        // console.log("=== trace 2 return early ===");
-        SimpleToast.show(futuresErrPriceForValue(), SimpleToast.SHORT);
+      if (isQuoteSize && !(priceForConversion > 0)) {
+        showFieldError('price', 'Enter price');
         return;
       }
 
-      // Leverage validation
+      // Futures sizing floors USDT / price to step (no bump to minBase).
+      const qty = isQuoteSize ? roundQtyDownToStep(rawQty / priceForConversion, stepSize) : rawQty;
+      if (!Number.isFinite(qty) || qty <= 0) {
+        showFieldError('amount', isQuoteSize ? amountLimit('Min') : 'Enter amount');
+        return;
+      }
+
       const leverage = Number(marginLeverage) || 1;
 
       // Removing reduceOnly logic as tabs are now Buy/Sell. Can be added as checkbox later if needed.
@@ -805,38 +847,37 @@ const FuturesUI = () => {
       const closePosition = false;
 
       const effectiveTif = postOnly ? "GTX" : tif;
-      // console.log("=== trace 3 tif ===", { effectiveTif, tif });
 
-      const getDecimalPlacesLocal = (value) => {
-        if (!value || value >= 1) return 0;
-        const str = String(value);
-        if (str.includes("e-")) {
-          return parseInt(str.split("e-")[1], 10) || 0;
-        }
-        const decimalPart = str.split(".")[1];
-        return decimalPart ? decimalPart.length : 0;
-      };
-
-      const qtyPrec = getDecimalPlacesLocal(stepSize);
-      // console.log("=== trace 4 qtyPrec ===", qtyPrec, "stepSize", stepSize, "baseQty", baseQty);
-      const finalQtyStr = Number(formatQtyByStep(baseQty, selectedCoin)).toFixed(qtyPrec);
-      // console.log("=== trace 5 finalQtyStr ===", finalQtyStr);
+      if (!isMultipleOfIncrement(qty, stepSize)) {
+        showFieldError('amount', 'Invalid amount');
+        return;
+      }
+      if (qty < minQty) { showFieldError('amount', amountLimit('Min')); return; }
+      if (qty > maxQty) { showFieldError('amount', amountLimit('Max', maxQty)); return; }
 
       const payload = {
         symbol: selectedCoin.symbol,
         side: apiSide,
         order_type,
-        quantity: finalQtyStr,
+        quantity: formatDecimalString(qty, getDecimalPlaces(stepSize)),
         leverage,
       };
 
-      // console.log("=== trace 6 checking limits ===", orderType);
       if (orderType === 'Limit') {
-        const priceVal = parseFloat(String(price).replace(/,/g, ''));
-        // console.log("=== trace 7 priceVal ===", priceVal);
+        const priceVal = String(price ?? '').trim() !== ''
+          ? parseFloat(String(price).replace(/,/g, ''))
+          : (Number(formatPriceByTick(Number(livePrice) || refPrice, selectedCoin)) || 0);
         if (!Number.isFinite(priceVal) || priceVal <= 0) {
-          // console.log("=== trace 7 return early ===");
-          SimpleToast.show(futuresErrInvalidLimitPrice(), SimpleToast.SHORT);
+          showFieldError('price', 'Enter price');
+          return;
+        }
+        if (!isMultipleOfIncrement(priceVal, tickSize)) {
+          showFieldError('price', 'Invalid price');
+          return;
+        }
+        const limitNotional = isQuoteSize ? rawQty : priceVal * qty;
+        if (minNotional > 0 && limitNotional > 0 && limitNotional < minNotional) {
+          showFieldError('amount', amountLimit('Min'));
           return;
         }
         payload.price = String(priceVal);
@@ -845,17 +886,41 @@ const FuturesUI = () => {
         }
       } else if (orderType === 'Conditional') {
         const triggerVal = parseFloat(String(triggerPrice).replace(/,/g, ''));
-        if (!Number.isFinite(triggerVal) || triggerVal <= 0) {
-          SimpleToast.show(futuresErrInvalidTrigger(), SimpleToast.SHORT);
+        if (!String(triggerPrice ?? '').trim() || !Number.isFinite(triggerVal) || triggerVal <= 0) {
+          showFieldError('trigger', 'Enter price');
+          return;
+        }
+        if (!isMultipleOfIncrement(triggerVal, tickSize)) {
+          showFieldError('trigger', 'Invalid price');
           return;
         }
         payload.trigger_price = String(triggerVal);
 
         const orderPriceVal = parseFloat(String(conditionalPrice).replace(/,/g, ''));
-        if (Number.isFinite(orderPriceVal) && orderPriceVal > 0) {
+        if (String(conditionalPrice ?? '').trim() !== '' && Number.isFinite(orderPriceVal) && orderPriceVal > 0) {
+          if (!isMultipleOfIncrement(orderPriceVal, tickSize)) {
+            showFieldError('orderPrice', 'Invalid price');
+            return;
+          }
+          const condNotional = isQuoteSize ? rawQty : orderPriceVal * qty;
+          if (minNotional > 0 && condNotional > 0 && condNotional < minNotional) {
+            showFieldError('amount', amountLimit('Min'));
+            return;
+          }
           payload.order_price = String(orderPriceVal);
+        } else {
+          const condNotional = isQuoteSize ? rawQty : triggerVal * qty;
+          if (minNotional > 0 && condNotional > 0 && condNotional < minNotional) {
+            showFieldError('amount', amountLimit('Min'));
+            return;
+          }
         }
       } else if (orderType === 'Market') {
+        const notional = isQuoteSize ? rawQty : qty * refPrice;
+        if (minNotional > 0 && notional > 0 && notional < minNotional) {
+          showFieldError('amount', amountLimit('Min'));
+          return;
+        }
         if (showSlippage && slippagePct) {
           const sp = parseFloat(slippagePct);
           if (Number.isFinite(sp) && sp > 0 && sp <= 100) {
@@ -874,22 +939,22 @@ const FuturesUI = () => {
         const takeProfit = String(preferredTp || "").trim() || String(otherTp || "").trim();
         const stopLoss = String(preferredSl || "").trim() || String(otherSl || "").trim();
         const markPriceForTpSl = Number(futuresPrice?.mark_price) || 0;
-        if (takeProfit && String(takeProfit).trim() !== "") {
+        if (takeProfit) {
           const tpVal = parseFloat(takeProfit);
           if (Number.isFinite(tpVal) && tpVal > 0) {
             if (markPriceForTpSl > 0) {
-              if (apiSide === "BUY" && tpVal <= markPriceForTpSl) { console.log("=== trace 9 TP return early ==="); SimpleToast.show(futuresErrTpBuy(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
-              if (apiSide === "SELL" && tpVal >= markPriceForTpSl) { console.log("=== trace 9 TP return early ==="); SimpleToast.show(futuresErrTpSell(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+              if (apiSide === "BUY" && tpVal <= markPriceForTpSl) { showFieldError('tp', 'Invalid TP'); return; }
+              if (apiSide === "SELL" && tpVal >= markPriceForTpSl) { showFieldError('tp', 'Invalid TP'); return; }
             }
             payload.take_profit = String(tpVal);
           }
         }
-        if (stopLoss && String(stopLoss).trim() !== "") {
+        if (stopLoss) {
           const slVal = parseFloat(stopLoss);
           if (Number.isFinite(slVal) && slVal > 0) {
             if (markPriceForTpSl > 0) {
-              if (apiSide === "BUY" && slVal >= markPriceForTpSl) { console.log("=== trace 10 SL return early ==="); SimpleToast.show(futuresErrSlBuy(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
-              if (apiSide === "SELL" && slVal <= markPriceForTpSl) { console.log("=== trace 10 SL return early ==="); SimpleToast.show(futuresErrSlSell(), SimpleToast.SHORT); setPlacingOrderSide(""); return; }
+              if (apiSide === "BUY" && slVal >= markPriceForTpSl) { showFieldError('sl', 'Invalid SL'); return; }
+              if (apiSide === "SELL" && slVal <= markPriceForTpSl) { showFieldError('sl', 'Invalid SL'); return; }
             }
             payload.stop_loss = String(slVal);
           }
@@ -899,31 +964,45 @@ const FuturesUI = () => {
       if (reduceOnly) payload.reduce_only = true;
       if (closePosition) payload.close_position = true;
 
-      // Local Margin Validation (matches Web App)
       let orderPriceForCap = 0;
       if (orderType === "Limit" && payload.price) {
         orderPriceForCap = parseFloat(payload.price);
       } else if (orderType === "Market") {
-        orderPriceForCap = Number(selectedCoin?.mark_price) || Number(price) || 0;
+        orderPriceForCap = Number(selectedCoin?.mark_price) || refPrice || Number(price) || 0;
       } else if (orderType === "Conditional") {
         orderPriceForCap = payload.order_price ? parseFloat(payload.order_price) : parseFloat(payload.trigger_price) || 0;
       }
 
       if (Number.isFinite(orderPriceForCap) && orderPriceForCap > 0) {
-        const orderQty = parseFloat(finalQtyStr) || 0;
-        const orderNotional = orderQty * orderPriceForCap;
+        const orderNotional = qty * orderPriceForCap;
+        const qtyCaps = {
+          leverageTiers: selectedCoin?.leverage_tiers,
+          leverage,
+          maxOrderQty: maxQty,
+          stepSize,
+        };
 
+        // Funds first. A size the wallet cannot open never reaches the leverage-tier check.
         if (!reduceOnly && !closePosition) {
           const takerFee = resolveTakerFeeRate(selectedCoin);
           const requiredMargin = computeFuturesOrderMargin(orderNotional, leverage, takerFee);
-
           if (requiredMargin > futuresAvailable + 1e-8) {
-            SimpleToast.show("Insufficient margin. Add funds or reduce your order size.", SimpleToast.SHORT);
-            setPlacingOrderSide("");
+            const balanceNotional = computeMaxOpenNotional(futuresAvailable, leverage, takerFee);
+            const maxQtyFromMargin = computeMaxOpenQtyBtc(balanceNotional, orderPriceForCap, qtyCaps);
+            showFieldError('amount', amountLimit('Max', maxQtyFromMargin));
             return;
           }
         }
+
+        const tierMaxNotional = getMaxNotionalAtLeverage(selectedCoin?.leverage_tiers, leverage);
+        if (Number.isFinite(tierMaxNotional) && tierMaxNotional !== Infinity && orderNotional > tierMaxNotional) {
+          const tierQty = computeMaxOpenQtyBtc(tierMaxNotional, orderPriceForCap, qtyCaps);
+          showFieldError('amount', amountLimit('Max', tierQty));
+          return;
+        }
       }
+
+      setOrderFieldError(null);
 
       const client_order_id = "app_" + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
       const finalPayload = {
@@ -962,7 +1041,11 @@ const FuturesUI = () => {
         fetchFuturesTransactionHistory();
       } else {
         const msg = result?.error?.message || result?.message || "Failed to place order";
-        SimpleToast.show(formatFuturesApiError(msg), SimpleToast.SHORT);
+        if (isFuturesLeverageRejectionMessage(msg)) {
+          showLeverageRejectionLine();
+        } else {
+          SimpleToast.show(formatFuturesApiError(msg), SimpleToast.SHORT);
+        }
       }
     } catch (e) {
       let errMsg = futuresErrGeneric();
@@ -973,7 +1056,11 @@ const FuturesUI = () => {
       } else if (e?.message) {
         errMsg = e.message;
       }
-      SimpleToast.show(formatFuturesApiError(errMsg), SimpleToast.SHORT);
+      if (isFuturesLeverageRejectionMessage(errMsg)) {
+        showLeverageRejectionLine();
+      } else {
+        SimpleToast.show(formatFuturesApiError(errMsg), SimpleToast.SHORT);
+      }
     } finally {
       setPlacingOrderSide("");
     }
@@ -1228,6 +1315,39 @@ const FuturesUI = () => {
   const currentBaseAsset = selectedCoin?.short_name || selectedCoin?.base_asset || selectedCoin?.base_currency || (selectedCoin?.symbol ? selectedCoin.symbol.split('USDT')[0].replace(/[^A-Za-z0-9]/g, '') : '') || 'BTC';
   const currentQuoteAsset = selectedCoin?.margin_asset || selectedCoin?.quote_asset || selectedCoin?.quote_currency || 'USDT';
 
+  useEffect(() => { clearFieldError('amount'); }, [amount, contractUnit, clearFieldError]);
+  useEffect(() => { clearFieldError('price'); }, [price, clearFieldError]);
+  useEffect(() => { clearFieldError('trigger'); }, [triggerPrice, clearFieldError]);
+  useEffect(() => { clearFieldError('orderPrice'); }, [conditionalPrice, clearFieldError]);
+  useEffect(() => { clearFieldError('tp'); }, [formTp, clearFieldError]);
+  useEffect(() => { clearFieldError('sl'); }, [formSl, clearFieldError]);
+  useEffect(() => { setOrderFieldError(null); }, [orderType, activeTab, selectedCoin?.symbol]);
+
+  const amountHint = isAmountFocused
+    ? buildAmountHint({
+      amountRaw: amount,
+      isQuote: contractUnit.includes('Value'),
+      price: orderType === 'Limit'
+        ? (parseFloat(String(price).replace(/,/g, '')) || livePrice)
+        : orderType === 'Conditional'
+          ? (parseFloat(String(conditionalPrice).replace(/,/g, '')) || parseFloat(String(triggerPrice).replace(/,/g, '')) || livePrice)
+          : (Number(liveCoin?.mark_price) || livePrice),
+      stepSize: selectedCoin?.step_size,
+      tickSize: selectedCoin?.tick_size,
+      minOrderQty: selectedCoin?.min_order_qty,
+      minNotional: selectedCoin?.min_notional,
+      base: currentBaseAsset,
+      quote: currentQuoteAsset,
+      defaultStep: 0.001,
+    })
+    : '';
+  const fieldErrorText = (field) => (orderFieldError?.field === field ? orderFieldError.text : '');
+  const fieldErrorBorder = (field) => (fieldErrorText(field) ? { borderColor: FIELD_ERROR_COLOR, borderWidth: 1 } : null);
+  const renderFieldError = (field) => {
+    const text = fieldErrorText(field);
+    return text ? <AppText weight={MEDIUM} style={fieldErrorStyles.error}>{text}</AppText> : null;
+  };
+
   useEffect(() => {
     if (selectedCoin) {
       const isValueUnit = (contractUnit || '').includes('Value');
@@ -1378,6 +1498,13 @@ const FuturesUI = () => {
         activeOpacity={0.75}
         onPress={() => {
           setOrderType(item.name);
+          setOrderFieldError(null);
+          if (item.name === 'Market') {
+            setPrice('');
+          } else if (item.name === 'Limit') {
+            const live = Number(livePrice) || Number(liveCoin?.mark_price) || Number(selectedCoin?.buy_price) || 0;
+            if (live > 0) setPrice(String(formatPriceByTick(live, selectedCoin)));
+          }
           setIsOrderTypeModalVisible(false);
           orderTypeSheetRef.current?.close();
         }}
@@ -1462,12 +1589,19 @@ const FuturesUI = () => {
       setPairData(pairsArray);
 
       setPrice(prevPrice => {
-        if (prevPrice && prevPrice !== "") return prevPrice;
+        if (initialPriceSeededRef.current) return prevPrice;
+        if (prevPrice && prevPrice !== "") {
+          initialPriceSeededRef.current = true;
+          return prevPrice;
+        }
         const btcPair = pairsArray.find((pair) => pair.symbol === "BTCUSDT-PERP");
         const initPair = btcPair || pairsArray[0];
         if (initPair) {
           const p = initPair.buy_price ?? initPair.last_price ?? initPair.mark_price;
-          if (p) return String(formatPriceByTick(parseFloat(p), initPair));
+          if (p) {
+            initialPriceSeededRef.current = true;
+            return String(formatPriceByTick(parseFloat(p), initPair));
+          }
         }
         return prevPrice;
       });
@@ -2078,6 +2212,7 @@ const FuturesUI = () => {
                 borderWidth: 0.8,
                 borderRadius: 8,
                 height: 36,
+                ...fieldErrorBorder('trigger'),
               }}
             >
               <TextInput
@@ -2111,6 +2246,7 @@ const FuturesUI = () => {
                 }}
               />
             </View>
+            {renderFieldError('trigger')}
           </View>
         )}
 
@@ -2128,6 +2264,7 @@ const FuturesUI = () => {
               borderWidth: 0.8,
               borderRadius: 8,
               height: 36,
+              ...fieldErrorBorder(orderType === 'Conditional' ? 'orderPrice' : 'price'),
             }}
           >
             {orderType !== 'Market' ? (
@@ -2141,7 +2278,9 @@ const FuturesUI = () => {
                 </TouchableOpacity>
                 <TextInput
                   ref={priceInputRef}
-                  placeholder="Price"
+                  placeholder={orderType === 'Limit' && Number(livePrice) > 0
+                    ? String(formatPriceByTick(Number(livePrice), selectedCoin))
+                    : "Price"}
                   placeholderTextColor="#8E8E93"
                   selectionColor={colors.orangeTheme}
                   value={orderType === 'Conditional' ? conditionalPrice : price}
@@ -2162,7 +2301,18 @@ const FuturesUI = () => {
                     }
                   }}
                   onFocus={() => orderType === 'Conditional' ? setIsConditionalPriceFocused(true) : setIsPriceFocused(true)}
-                  onBlur={() => orderType === 'Conditional' ? setIsConditionalPriceFocused(false) : setIsPriceFocused(false)}
+                  onBlur={() => {
+                    if (orderType === 'Conditional') {
+                      setIsConditionalPriceFocused(false);
+                      return;
+                    }
+                    setIsPriceFocused(false);
+                    // Web parity: an emptied limit price falls back to the live price on blur.
+                    if (orderType === 'Limit' && !(parseFloat(price) > 0)) {
+                      const live = Number(livePrice) || Number(liveCoin?.mark_price) || Number(selectedCoin?.buy_price) || 0;
+                      if (live > 0) setPrice(String(formatPriceByTick(live, selectedCoin)));
+                    }
+                  }}
                   keyboardType="numeric"
                   textAlign="center"
                   style={{
@@ -2190,6 +2340,7 @@ const FuturesUI = () => {
               </View>
             )}
           </View>
+          {orderType === 'Conditional' ? renderFieldError('orderPrice') : renderFieldError('price')}
         </View>
 
         {/* Amount Input */}
@@ -2206,6 +2357,7 @@ const FuturesUI = () => {
               borderWidth: 0.8,
               borderRadius: 8,
               height: 36,
+              ...fieldErrorBorder('amount'),
             }}
           >
             <TouchableOpacity
@@ -2275,6 +2427,9 @@ const FuturesUI = () => {
               <FastImage source={downIcon} style={{ width: 8, height: 8 }} resizeMode='contain' tintColor={themeColors.secondaryText} />
             </TouchableOpacity>
           </View>
+          {fieldErrorText('amount') ? renderFieldError('amount') : amountHint ? (
+            <AppText style={[fieldErrorStyles.hint, { color: themeColors.secondaryText }]}>{amountHint}</AppText>
+          ) : null}
         </View>
 
         {/* Slider */}
@@ -2380,6 +2535,7 @@ const FuturesUI = () => {
                   borderWidth: 0.8,
                   borderRadius: 8,
                   height: 36,
+                  ...fieldErrorBorder('tp'),
                 }}
               >
                 <TextInput
@@ -2413,6 +2569,7 @@ const FuturesUI = () => {
                   }}
                 />
               </View>
+              {renderFieldError('tp')}
             </View>
 
             {/* SL Input */}
@@ -2427,6 +2584,7 @@ const FuturesUI = () => {
                   borderWidth: 0.8,
                   borderRadius: 8,
                   height: 36,
+                  ...fieldErrorBorder('sl'),
                 }}
               >
                 <TextInput
@@ -2460,6 +2618,7 @@ const FuturesUI = () => {
                   }}
                 />
               </View>
+              {renderFieldError('sl')}
             </View>
           </View>
         )}
@@ -2735,9 +2894,12 @@ const FuturesUI = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      onTouchStart={blurFocusedInputOnOutsideTouch}
+    >
       {renderHeader()}
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.mainContent}>
           {renderOrderBook()}
           {renderOrderForm()}
@@ -3859,4 +4021,22 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     marginBottom: 12,
   }
+});
+
+const FIELD_ERROR_COLOR = '#f6465d';
+
+const fieldErrorStyles = StyleSheet.create({
+  error: {
+    color: FIELD_ERROR_COLOR,
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 4,
+    marginHorizontal: 2,
+  },
+  hint: {
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 4,
+    marginHorizontal: 2,
+  },
 });
