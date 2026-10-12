@@ -43,6 +43,7 @@ import { SystemBars } from "react-native-edge-to-edge";
 import { AppText as BaseAppText, BOLD, MEDIUM, SEMI_BOLD } from "../../shared";
 import CoinIcon from "../../common/CoinIcon";
 import NavigationService from "../../navigation/NavigationService";
+import { OTC_TRADE_SCREEN } from "../../navigation/routes";
 import { useTheme } from "../../hooks/useTheme";
 import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 import {
@@ -75,11 +76,7 @@ import useOtcDesk from "./useOtcDesk";
 import {
   completedTrades,
   formatAvail,
-  formatCountdown,
-  moneyLine,
-  netAfterProfit,
   sanitizeAmount,
-  STATUS_COPY,
 } from "./otcDeskLogic";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -570,90 +567,7 @@ const OptionSheet = ({ visible, title, placeholder, options, selectedKey, onSele
   );
 };
 
-const QuoteStatusCard = ({ desk, palette, themed, embedded = false }) => {
-  const copy = STATUS_COPY[desk.view] || STATUS_COPY.awaiting;
-  const source = desk.quote || desk.rfq || {};
-  const side = String(source.side || "").toUpperCase();
-  const meaning = side === "SELL"
-    ? `Sell: you pay ${source.pay_asset || ""} and receive ${source.get_asset || ""}.`
-    : side === "BUY"
-      ? `Buy: you pay ${source.pay_asset || ""} and receive ${source.get_asset || ""}.`
-      : "";
-  const feeText = desk.quote && desk.quote.fee_percent != null ? String(desk.quote.fee_percent).trim() : "";
-  const settledNet = desk.trade && desk.trade.net_get_amount ? String(desk.trade.net_get_amount).trim() : "";
-  const quotedNet = feeText ? netAfterProfit(source.get_amount, feeText) : "";
-  const afterProfit = settledNet
-    ? moneyLine(settledNet, source.get_asset)
-    : quotedNet
-      ? moneyLine(quotedNet, source.get_asset)
-      : moneyLine(source.get_amount, source.get_asset);
-  const body = desk.view === "quote" && desk.quote && desk.quote.quote_source === "AUTO"
-    ? "This is a firm system quote. Accept it before it expires."
-    : copy.body;
-  const showNew = desk.view === "accepted" || desk.view === "cancelled" || desk.view === "expired" || desk.view === "void";
-
-  const row = (label, value) => (
-    <View style={styles.statusRow}>
-      <AppText style={{ color: palette.muted, fontSize: 13 }}>{label}</AppText>
-      <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 13, flexShrink: 1, textAlign: "right" }}>{value}</AppText>
-    </View>
-  );
-
-  return (
-    <View style={embedded ? styles.statusEmbed : themed.card}>
-      <AppText weight={SEMI_BOLD} style={themed.cardTitle}>{copy.title}</AppText>
-      <AppText style={[styles.statusBody, { color: palette.stepText }]}>{body}</AppText>
-      {meaning ? <AppText style={[styles.statusBody, { color: palette.text }]}>{meaning}</AppText> : null}
-      {row("Side", source.side || "—")}
-      {row("You pay", moneyLine(source.pay_amount, source.pay_asset))}
-      {row("You get", afterProfit)}
-      {desk.quote?.rate ? row("Rate", String(desk.quote.rate)) : null}
-      {desk.trade?.id ? row("Trade", desk.trade.status || desk.trade.id) : null}
-      {desk.view === "quote" ? (
-        <AppText weight={SEMI_BOLD} style={[styles.countdown, { color: desk.countdownMs <= 0 ? "#f6465d" : GOLD }]}>
-          Expires in {formatCountdown(desk.countdownMs)}
-        </AppText>
-      ) : null}
-      {desk.view === "quote" ? (
-        desk.kycVerified ? (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={[styles.requestBtn, (desk.submitting || desk.countdownMs <= 0) && styles.btnDisabled]}
-            disabled={desk.submitting || desk.countdownMs <= 0}
-            onPress={desk.acceptQuote}
-          >
-            <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>
-              {desk.submitting ? "Accepting…" : "Accept Quote"}
-            </AppText>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={desk.goToKyc}>
-            <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>Submit Kyc</AppText>
-          </TouchableOpacity>
-        )
-      ) : null}
-      {desk.view === "awaiting" ? (
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={[themed.secondaryBtn, styles.statusSecondary]}
-          disabled={desk.submitting}
-          onPress={desk.cancelRfq}
-        >
-          <AppText weight={SEMI_BOLD} style={{ color: palette.secondaryBtnText, fontSize: 15 }}>
-            {desk.submitting ? "Cancelling…" : "Cancel request"}
-          </AppText>
-        </TouchableOpacity>
-      ) : null}
-      {showNew ? (
-        <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={desk.startNewRequest}>
-          <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>New request</AppText>
-        </TouchableOpacity>
-      ) : null}
-    </View>
-  );
-};
-
-const RequestQuoteCard = ({ desk, palette, themed }) => {
+const RequestQuoteCard = ({ desk, palette, themed, onContinue }) => {
   const [pairOpen, setPairOpen] = useState(false);
   const [coinOpen, setCoinOpen] = useState(false);
   const [balanceTip, setBalanceTip] = useState(false);
@@ -689,7 +603,7 @@ const RequestQuoteCard = ({ desk, palette, themed }) => {
   const loggedInContinue = desk.isLoggedIn;
   const buttonLabel = loggedInContinue ? "Continue" : "Request Quote";
   const amountReady = /^\d+(\.\d+)?$/.test(amountValue) && Number(amountValue) > 0 && !desk.amountError;
-  const disabled = loggedInContinue && (desk.assetsLoading || desk.submitting || !amountReady);
+  const disabled = loggedInContinue && (desk.assetsLoading || !amountReady);
 
   return (
     <View style={themed.card}>
@@ -802,16 +716,10 @@ const RequestQuoteCard = ({ desk, palette, themed }) => {
         activeOpacity={0.85}
         style={[styles.requestBtn, disabled && styles.btnDisabled]}
         disabled={disabled}
-        onPress={desk.isLoggedIn ? desk.submitRfq : desk.goToLogin}
+        onPress={desk.isLoggedIn ? onContinue : desk.goToLogin}
       >
         <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>{buttonLabel}</AppText>
       </TouchableOpacity>
-
-      {desk.view !== "form" ? (
-        <View style={styles.statusBelow}>
-          <QuoteStatusCard desk={desk} palette={palette} themed={themed} embedded />
-        </View>
-      ) : null}
 
       <OptionSheet
         visible={pairOpen}
@@ -874,7 +782,6 @@ const OtcDashboard = () => {
   const bannerTop = headerTop + HERO_BANNER_TOP_GAP;
   const orbitTop = bannerTop + HERO_BANNER_WIDTH * DOME_RING_CENTER_Y - ORBIT_RADIUS;
   const scrollRef = useRef(null);
-  const quoteSectionY = useRef(0);
   const scrollY = useSharedValue(0);
 
   const onScroll = useAnimatedScrollHandler((event) => {
@@ -885,8 +792,15 @@ const OtcDashboard = () => {
     opacity: interpolate(scrollY.value, [0, HEADER_FADE_DISTANCE], [0, 1], Extrapolation.CLAMP),
   }));
 
-  const scrollToQuote = () => {
-    scrollRef.current?.scrollTo({ y: Math.max(0, quoteSectionY.current - heroTop), animated: true });
+  const openOtcTrade = () => {
+    NavigationService.navigate(OTC_TRADE_SCREEN, {
+      otcDraft: {
+        amount: desk.amount,
+        amountAsset: desk.amountAsset,
+        pairKey: desk.pairKey || "BTC/USDT",
+        quoteType: desk.quoteType,
+      },
+    });
   };
 
   return (
@@ -928,7 +842,7 @@ const OtcDashboard = () => {
                 Execute high-value crypto trades through a dedicated OTC desk with competitive pricing, deep liquidity, and personalized settlement support.
               </AppText>
               <View style={styles.heroBtns}>
-                <TouchableOpacity activeOpacity={0.85} style={styles.primaryBtn} onPress={scrollToQuote}>
+                <TouchableOpacity activeOpacity={0.85} style={styles.primaryBtn} onPress={openOtcTrade}>
                   <AppText style={styles.primaryBtnText}>Trade Now</AppText>
                   <Icon name="arrow-right" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
@@ -940,19 +854,14 @@ const OtcDashboard = () => {
           </ImageBackground>
 
           {/* Complete Trading Suite */}
-          <View
-            style={[styles.section, styles.suiteSection, { backgroundColor: palette.sectionBg }]}
-            onLayout={(e) => {
-              quoteSectionY.current = e.nativeEvent.layout.y;
-            }}
-          >
+          <View style={[styles.section, styles.suiteSection, { backgroundColor: palette.sectionBg }]}>
             <GradientTitle
               text="Complete Trading Suite"
               endColor={isDark ? "#FFFFFF" : palette.text}
               style={styles.suiteTitle}
             />
 
-            <RequestQuoteCard desk={desk} palette={palette} themed={themed} />
+            <RequestQuoteCard desk={desk} palette={palette} themed={themed} onContinue={openOtcTrade} />
 
             <View style={[themed.card, styles.worksCard]}>
               <AppText weight={SEMI_BOLD} style={themed.cardTitle}>

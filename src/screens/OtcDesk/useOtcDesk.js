@@ -56,19 +56,21 @@ function spotRow(rows, code) {
   );
 }
 
-export default function useOtcDesk() {
+export default function useOtcDesk(draft) {
   const userData = useAppSelector((state) => state.auth.userData);
   const marketPairs = useAppSelector((state) => state.home.coinPairs);
   const { socketHandlersReady, subscribeToMarket, unsubscribeFromMarket } = useContext(SocketContext) || {};
   const isLoggedIn = Boolean(userData) || Boolean(appOperation.customerToken);
   const kycVerified = Number(userData?.kycVerified ?? userData?.kyc_verified) === 2;
 
+  const passedPairRef = useRef(draft && draft.pairKey ? String(draft.pairKey).toUpperCase() : "");
+  const seenDraftRef = useRef("");
   const [assets, setAssets] = useState([]);
   const [assetsLoading, setAssetsLoading] = useState(false);
-  const [quoteType, setQuoteType] = useState("buy");
-  const [pairKey, setPairKey] = useState("");
-  const [amountCoin, setAmountCoinState] = useState("");
-  const [amount, setAmount] = useState("");
+  const [quoteType, setQuoteType] = useState(draft && draft.quoteType === "sell" ? "sell" : "buy");
+  const [pairKey, setPairKey] = useState(draft && draft.pairKey ? String(draft.pairKey).toUpperCase() : "");
+  const [amountCoin, setAmountCoinState] = useState(draft ? coinCode(draft.amountAsset) : "");
+  const [amount, setAmount] = useState(draft && draft.amount != null ? String(draft.amount) : "");
   const [minNotional, setMinNotional] = useState("");
   const [maxNotional, setMaxNotional] = useState("");
   const [minBaseByAsset, setMinBaseByAsset] = useState({});
@@ -133,8 +135,31 @@ export default function useOtcDesk() {
 
   const pairs = useMemo(() => overlayOtcPairs(activePairs, otcPairs), [activePairs, otcPairs]);
 
+  const draftStamp = draft
+    ? [draft.pairKey, draft.quoteType, draft.amountAsset, draft.amount].join("|")
+    : "";
+
   useEffect(() => {
-    setPairKey((prev) => (findListedPair(pairs, prev) ? prev : pickDefaultPair(pairs)));
+    if (!draft || !draftStamp || seenDraftRef.current === draftStamp) return;
+    seenDraftRef.current = draftStamp;
+    setQuoteType(draft.quoteType === "sell" ? "sell" : "buy");
+    if (draft.pairKey) {
+      const key = String(draft.pairKey).toUpperCase();
+      passedPairRef.current = key;
+      setPairKey(key);
+    }
+    if (draft.amountAsset) setAmountCoinState(coinCode(draft.amountAsset));
+    if (draft.amount != null) setAmount(String(draft.amount));
+  }, [draft, draftStamp]);
+
+  useEffect(() => {
+    if (!pairs.length) return;
+    setPairKey((prev) => {
+      const passed = passedPairRef.current;
+      if (passed && findListedPair(pairs, passed)) return passed;
+      if (findListedPair(pairs, prev)) return prev;
+      return pickDefaultPair(pairs);
+    });
   }, [pairs]);
 
   const refreshTradeList = useCallback(async () => {
@@ -318,6 +343,7 @@ export default function useOtcDesk() {
 
   const view = deskView(rfq, quote, nowMs);
   const countdownMs = quote ? remainingMs(quote.expiresAt, nowMs) : 0;
+  const requestLeftMs = rfq?.expiresAt ? remainingMs(rfq.expiresAt, nowMs) : 0;
   const selectedPair = useMemo(() => findListedPair(pairs, pairKey), [pairs, pairKey]);
   const payCoin = quoteType === "sell" ? coinCode(selectedPair?.base) : coinCode(selectedPair?.quote);
   const getCoin = quoteType === "sell" ? coinCode(selectedPair?.quote) : coinCode(selectedPair?.base);
@@ -547,6 +573,7 @@ export default function useOtcDesk() {
     }
     setRfq(res.data);
     toast("RFQ cancelled.");
+    return true;
   }, [rfq, applyExpiredRfq]);
 
   const acceptQuote = useCallback(async () => {
@@ -743,6 +770,7 @@ export default function useOtcDesk() {
     deskOpen,
     view,
     countdownMs,
+    requestLeftMs,
     isLoggedIn,
     kycVerified,
     rfq,

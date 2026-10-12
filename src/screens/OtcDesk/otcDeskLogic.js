@@ -359,6 +359,27 @@ export function moneyLine(amount, asset) {
   return `${amount} ${asset || ""}`.trim();
 }
 
+/** Same cut the ledger uses: fee rounded down, net is the rest. */
+export function profitOnGet(getAmount, feePercent) {
+  const grossText = String(getAmount || "").trim();
+  const pctText = String(feePercent == null || feePercent === "" ? "0" : feePercent).trim();
+  if (!/^\d+(\.\d+)?$/.test(grossText)) return { fee: "", net: "" };
+  if (!/^\d+(\.\d+)?$/.test(pctText)) return { fee: "", net: grossText };
+  const gross = new BigNumber(grossText);
+  const pct = new BigNumber(pctText);
+  if (!gross.isFinite() || gross.lte(0)) return { fee: "", net: "" };
+  if (!pct.isFinite() || pct.lte(0)) return { fee: "0", net: grossText };
+  const dot = grossText.indexOf(".");
+  const places = dot === -1 ? 0 : grossText.length - dot - 1;
+  const scale = Math.min(18, Math.max(8, places));
+  const fee = gross.times(pct).div(100).decimalPlaces(scale, BigNumber.ROUND_DOWN);
+  if (fee.lte(0)) return { fee: "0", net: grossText };
+  const net = gross.minus(fee);
+  if (net.lte(0)) return { fee: "", net: "" };
+  const plain = (value) => value.toFixed(18).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  return { fee: plain(fee), net: plain(net) };
+}
+
 /** Same cut the ledger credits: fee rounded down, net is the rest. */
 export function netAfterProfit(getAmount, feePercent) {
   const grossText = String(getAmount || "").trim();
