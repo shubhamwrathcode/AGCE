@@ -172,6 +172,8 @@ import LaunchpadDetail from "../screens/Launchpad/LaunchpadDetail";
 import ReferAndEarn from "../screens/earning/ReferAndEarn";
 import OtcDashboard from "../screens/OtcDesk/OtcDashboard";
 import OtcTrade from "../screens/OtcDesk/OtcTrade";
+import OtcHistory from "../screens/OtcDesk/OtcHistory";
+import OtcHistoryPageView from "../screens/OtcDesk/OtcHistoryPageView";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -821,6 +823,8 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={routes.REFER_AND_EARN_SCREEN} component={ReferAndEarn} />
       <Stack.Screen name={routes.OTC_DASHBOARD_SCREEN} component={OtcDashboard} />
       <Stack.Screen name={routes.OTC_TRADE_SCREEN} component={OtcTrade} />
+      <Stack.Screen name={routes.OTC_HISTORY_SCREEN} component={OtcHistory} />
+      <Stack.Screen name={routes.OTC_HISTORY_PAGE_VIEW} component={OtcHistoryPageView} />
     </Stack.Navigator>
   );
 };

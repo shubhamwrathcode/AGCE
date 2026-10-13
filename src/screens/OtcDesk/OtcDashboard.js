@@ -945,7 +945,7 @@ const OtcDashboard = () => {
           </View>
 
           {/* Recent Completed Trades */}
-          <View style={[styles.section, styles.recentSection, { backgroundColor: palette.sectionBg }]}>
+          {/* <View style={[styles.section, styles.recentSection, { backgroundColor: palette.sectionBg }]}>
             <View style={styles.recentHeader}>
               <AppText
                 weight={BOLD}
@@ -999,7 +999,7 @@ const OtcDashboard = () => {
                 />
               </View>
             </Modal>
-          </View>
+          </View> */}
         </Animated.ScrollView>
       </KeyboardAvoidingView>
 

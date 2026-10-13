@@ -48,10 +48,19 @@ export function tickerFromSpotPair(pair) {
   const last = positiveLast(pair.buy_price, pair.sell_price, pair.last, pair.close, pair.price);
   if (!last) return null;
   const change = pair.change_percentage ?? pair.change ?? pair.change_24hour;
+  const text = (...values) => {
+    for (const raw of values) {
+      if (raw == null || raw === "") continue;
+      return String(raw);
+    }
+    return "";
+  };
   return {
     pair: `${base}/${quote}`,
     last,
     change_percent: String(change ?? "0"),
+    volume: text(pair.volume, pair.volume_24h, pair.base_volume),
+    volumeQuote: text(pair.volumeQuote, pair.quote_volume, pair.volume_24h_quote),
   };
 }
 

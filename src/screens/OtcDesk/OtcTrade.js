@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -10,6 +12,7 @@ import {
   StatusBar,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -21,9 +24,11 @@ import FastImage from "react-native-fast-image";
 import { AppText as BaseAppText, BOLD, MEDIUM, SEMI_BOLD } from "../../shared";
 import CoinIcon from "../../common/CoinIcon";
 import NavigationService from "../../navigation/NavigationService";
+import { OTC_HISTORY_PAGE_VIEW, OTC_HISTORY_SCREEN } from "../../navigation/routes";
 import { useTheme } from "../../hooks/useTheme";
+import { useExchangeData } from "../../services/socket/socketLiveStore";
 import { CHART_WEB_BASE_URL } from "../../helper/Constants";
-import { back_ic, tetherIcon } from "../../helper/ImageAssets";
+import { back_ic, historyIcon, tetherIcon } from "../../helper/ImageAssets";
 import { fontFamilyBold, fontFamilyMedium, fontFamilySemiBold } from "../../theme/typography";
 import useOtcDesk from "./useOtcDesk";
 import {
@@ -33,6 +38,7 @@ import {
   profitOnGet,
   sanitizeAmount,
 } from "./otcDeskLogic";
+import { buildOtcTableRows, formatWhen, otcDetailRecord, rfqPair } from "./otcRecords";
 
 const GOLD = "#D1AA67";
 const WEIGHT_FONTS =
@@ -48,46 +54,27 @@ const AppText = ({ weight, style, ...props }) => (
   />
 );
 
-const DARK = {
-  page: "#12151B",
-  card: "#1B2028",
-  cardBorder: "rgba(255,255,255,0.08)",
-  text: "#FFFFFF",
-  muted: "#8B93A7",
-  line: "rgba(255,255,255,0.08)",
-  input: "#12151B",
-  inputBorder: "#3A4150",
-  sheet: "#1E232E",
-  chip: "#2A3140",
-};
-
-const LIGHT = {
-  page: "#F4F6F8",
-  card: "#FFFFFF",
-  cardBorder: "#E6EBF2",
-  text: "#0F172A",
-  muted: "#64748B",
-  line: "#E6EBF2",
-  input: "#FFFFFF",
-  inputBorder: "#E2E8F0",
-  sheet: "#FFFFFF",
-  chip: "#F1F5F9",
-};
-
-const LIVE_STATUS = new Set(["OPEN", "QUOTED"]);
-const LOCKED_STATUS = new Set(["PENDING_SETTLEMENT", "HELD"]);
-
-function formatWhen(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+function buildPalette(isDark, themeColors) {
+  return {
+    page: themeColors.background,
+    card: "transparent",
+    cardBorder: themeColors.border,
+    text: themeColors.text,
+    muted: isDark ? "rgba(255,255,255,0.55)" : "#64748B",
+    line: isDark ? "rgba(255,255,255,0.08)" : "#E6EBF2",
+    input: isDark ? "#12161C" : "#FFFFFF",
+    inputBorder: isDark ? themeColors.border : "#E2E8F0",
+    sheet: isDark ? themeColors.card : "#FFFFFF",
+    chip: isDark ? "#232A36" : "#F1F5F9",
+    buy: themeColors.spotTradeBuy,
+    sell: themeColors.spotTradeSell,
+    buySoft: isDark ? "rgba(56,183,129,0.16)" : "rgba(56,183,129,0.12)",
+    sellSoft: isDark ? "rgba(237,78,78,0.16)" : "rgba(237,78,78,0.12)",
+    goldSoft: "rgba(209,170,103,0.16)",
+  };
 }
+
+const PREVIEW_LIMIT = 5;
 
 function formatLeft(ms) {
   const total = Math.max(0, Math.ceil(Number(ms) / 1000));
@@ -96,87 +83,63 @@ function formatLeft(ms) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-function ticketLabel(id) {
-  const text = String(id || "").trim();
-  if (!text) return "—";
-  return text.slice(-8).toUpperCase();
-}
+const CHART_BAR_H = 52;
 
-function rfqPair(row) {
-  if (row?.pair_base && row?.pair_quote) return `${row.pair_base}/${row.pair_quote}`;
-  const side = String(row?.side || "").toUpperCase();
-  if (side === "SELL" && row?.pay_asset && row?.get_asset) return `${row.pay_asset}/${row.get_asset}`;
-  if (row?.get_asset && row?.pay_asset) return `${row.get_asset}/${row.pay_asset}`;
-  return "—";
-}
-
-function toTableRow(row, quote) {
-  const status = String(row?.status || "—");
-  const statusKey = status.toUpperCase();
-  const quotedHere = quote && String(quote.rfq_id || quote.rfqId || "") === String(row?.id);
-  const rate = quotedHere ? quote.rate : row?.rate;
-  const sideRaw = String(row?.side || "").toUpperCase();
-  const isTrade = LOCKED_STATUS.has(statusKey)
-    || statusKey === "SETTLED"
-    || statusKey === "VOID"
-    || (row?.quote_id && row?.rfq_id && String(row.id) !== String(row.rfq_id));
-  const settlement = statusKey === "SETTLED" || row?.settled_at
-    ? "Settled"
-    : statusKey === "PENDING_SETTLEMENT"
-      ? "Pending"
-      : statusKey === "HELD"
-        ? "Held"
-        : statusKey === "VOID"
-          ? "Void"
-          : "—";
-  return {
-    id: String(row?.id || rfqPair(row)),
-    ticketId: ticketLabel(row?.id),
-    date: formatWhen(row?.createdAt || row?.created_at),
-    type: isTrade ? "Trade" : "RFQ",
-    pair: rfqPair(row),
-    side: sideRaw === "SELL" ? "Sell" : sideRaw === "BUY" ? "Buy" : "—",
-    pay: moneyLine(row?.pay_amount, row?.pay_asset),
-    receive: moneyLine(row?.net_get_amount || row?.get_amount, row?.get_asset),
-    tradedAmount: isTrade || rate ? moneyLine(row?.net_get_amount || row?.get_amount, row?.get_asset) : "—",
-    quotePrice: rate || "—",
-    limitPrice: String(row?.request_rate || "").trim() || rate || "—",
-    averagePrice: rate || "—",
-    progress: statusKey === "QUOTED" ? "Quoted" : statusKey === "OPEN" ? "Open" : LOCKED_STATUS.has(statusKey) ? "Funds locked" : "—",
-    filledTotal: statusKey === "OPEN" || statusKey === "QUOTED"
-      ? `0 / ${moneyLine(row?.pay_amount, row?.pay_asset)}`
-      : LOCKED_STATUS.has(statusKey)
-        ? moneyLine(row?.pay_amount, row?.pay_asset)
-        : "—",
-    status,
-    settlement,
-    source: !isTrade && statusKey === "OPEN" ? row : null,
-    view: {
-      id: String(row?.id || ""),
-      ticketId: ticketLabel(row?.id),
-      pair: rfqPair(row),
-      side: sideRaw === "SELL" ? "Sell" : sideRaw === "BUY" ? "Buy" : "—",
-      pay: moneyLine(row?.pay_amount, row?.pay_asset),
-      receive: moneyLine(row?.net_get_amount || row?.get_amount, row?.get_asset),
-      status,
-      requestRate: String(row?.request_rate || "").trim(),
-      rate: rate || "",
-      expiresAt: row?.expiresAt || (quotedHere ? quote?.expiresAt : null) || null,
-      createdAt: row?.createdAt || row?.created_at || null,
-    },
-  };
-}
-
-function DetailRow({ label, value, emphasize, palette }) {
+function DetailRow({ label, value, emphasize, palette, valueColor }) {
   return (
     <View style={[styles.detailRow, emphasize && styles.detailEmphasis]}>
       <AppText style={{ color: palette.muted, fontSize: 13, flex: 1 }}>{label}</AppText>
       <AppText
         weight={emphasize ? BOLD : SEMI_BOLD}
-        style={{ color: emphasize ? GOLD : palette.text, fontSize: emphasize ? 15 : 13, flex: 1.2, textAlign: "right" }}
+        style={{ color: valueColor || (emphasize ? GOLD : palette.text), fontSize: emphasize ? 15 : 13, flex: 1.4, textAlign: "right" }}
       >
         {value}
       </AppText>
+    </View>
+  );
+}
+
+function RecordCard({ row, tab, palette, onView, onCancel }) {
+  const sell = row.side === "Sell";
+  return (
+    <View style={[styles.recordCard, { backgroundColor: "transparent", borderColor: palette.cardBorder }]}>
+      <View style={styles.spaceBetween}>
+        <View style={styles.recordTitle}>
+          <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 15 }}>{row.pair}</AppText>
+          <AppText style={{ color: palette.muted, fontSize: 12, marginTop: 3 }} numberOfLines={1}>
+            {row.date} · {row.ticketId}
+          </AppText>
+        </View>
+        <View style={[styles.sidePill, { backgroundColor: sell ? palette.sellSoft : palette.buySoft }]}>
+          <AppText weight={SEMI_BOLD} style={{ color: sell ? palette.sell : palette.buy, fontSize: 12 }}>{row.side}</AppText>
+        </View>
+      </View>
+      <View style={[styles.recordLine, { backgroundColor: palette.line }]} />
+      <DetailRow label="Amount" value={row.pay} palette={palette} />
+      <DetailRow label="Status" value={row.status} palette={palette} />
+      {tab === "history" ? (
+        <>
+          <DetailRow label="Traded amount" value={row.tradedAmount} palette={palette} />
+          <DetailRow label="Quote price" value={String(row.quotePrice)} palette={palette} />
+          <DetailRow label="Settlement Status" value={row.settlement} palette={palette} />
+        </>
+      ) : (
+        <>
+          <DetailRow label="Limit price" value={String(row.limitPrice)} palette={palette} />
+          <DetailRow label="Progress" value={row.progress} palette={palette} />
+          <DetailRow label="Filled / Total" value={row.filledTotal} palette={palette} />
+        </>
+      )}
+      <View style={styles.rowActions}>
+        {onCancel ? (
+          <TouchableOpacity onPress={onCancel} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+            <AppText weight={SEMI_BOLD} style={{ color: palette.sell, fontSize: 13 }}>Cancel</AppText>
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity style={[styles.viewChip, { backgroundColor: palette.goldSoft }]} onPress={onView}>
+          <AppText weight={SEMI_BOLD} style={{ color: GOLD, fontSize: 12 }}>View</AppText>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -220,8 +183,8 @@ function AcceptQuoteModal({ open, desk, palette, onClose }) {
                 ? `Sell ${pair}. You pay ${quote.pay_asset || ""} and receive ${quote.get_asset || ""}.`
                 : `Buy ${pair}. You pay ${quote.pay_asset || ""} and receive ${quote.get_asset || ""}.`}
             </AppText>
-            <View style={[styles.timerBox, { backgroundColor: expired ? "rgba(246,70,93,0.12)" : "rgba(209,170,103,0.14)" }]}>
-              <AppText weight={SEMI_BOLD} style={{ color: expired ? "#f6465d" : GOLD, fontSize: 15 }}>
+            <View style={[styles.timerBox, { backgroundColor: expired ? palette.sellSoft : "rgba(209,170,103,0.14)" }]}>
+              <AppText weight={SEMI_BOLD} style={{ color: expired ? palette.sell : GOLD, fontSize: 15 }}>
                 {expired ? "This quote has expired" : `Expires in ${formatCountdown(desk.countdownMs)}`}
               </AppText>
               {quote.expiresAt ? (
@@ -248,7 +211,7 @@ function AcceptQuoteModal({ open, desk, palette, onClose }) {
             {desk.kycVerified ? (
               <TouchableOpacity
                 activeOpacity={0.85}
-                style={[styles.acceptBtn, { backgroundColor: isSell ? "#f6465d" : "#20BF7A" }, (desk.submitting || expired) && styles.btnDisabled]}
+                style={[styles.acceptBtn, { backgroundColor: isSell ? palette.sell : palette.buy }, (desk.submitting || expired) && styles.btnDisabled]}
                 disabled={desk.submitting || expired}
                 onPress={desk.acceptQuote}
               >
@@ -267,29 +230,6 @@ function AcceptQuoteModal({ open, desk, palette, onClose }) {
           </View>
         </View>
       </View>
-    </Modal>
-  );
-}
-
-function InfoModal({ title, kicker, rows, onClose, palette }) {
-  return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={[styles.modalCard, { backgroundColor: palette.sheet, borderColor: palette.cardBorder }]} onPress={() => {}}>
-          <View style={styles.modalHead}>
-            <View style={styles.flex1}>
-              {kicker ? <AppText weight={MEDIUM} style={styles.kicker}>{kicker}</AppText> : null}
-              <AppText weight={BOLD} style={{ color: palette.text, fontSize: 20 }}>{title}</AppText>
-            </View>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <AppText weight={MEDIUM} style={{ color: palette.muted, fontSize: 28, lineHeight: 30 }}>×</AppText>
-            </TouchableOpacity>
-          </View>
-          {rows.map((row) => (
-            <DetailRow key={row.label} label={row.label} value={row.value} palette={palette} />
-          ))}
-        </Pressable>
-      </Pressable>
     </Modal>
   );
 }
@@ -352,17 +292,23 @@ function OptionSheet({ visible, title, options, selectedKey, onSelect, onClose, 
 const OtcTrade = () => {
   const route = useRoute();
   const desk = useOtcDesk(route.params?.otcDraft);
-  const { isDark } = useTheme();
-  const palette = isDark ? DARK : LIGHT;
+  const { isDark, colors: themeColors } = useTheme();
+  const palette = buildPalette(isDark, themeColors);
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const headerTop = insets.top || (Platform.OS === "ios" ? 59 : StatusBar.currentHeight || 24);
+  const chartRoom = windowHeight - headerTop - CHART_BAR_H - insets.bottom - 8;
+  const chartOpenH = Math.min(chartRoom, Math.round(windowHeight * 0.58));
   const [pairOpen, setPairOpen] = useState(false);
   const [coinOpen, setCoinOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [viewRow, setViewRow] = useState(null);
   const [bottomTab, setBottomTab] = useState("active");
   const [chartReady, setChartReady] = useState(false);
+  const [chartOpen, setChartOpen] = useState(false);
+  const [chartMounted, setChartMounted] = useState(false);
+  const chartProgress = useRef(new Animated.Value(0)).current;
+  const chartOpenRef = useRef(false);
   const openedQuoteId = useRef("");
 
   const [pairBase = "BTC", pairQuote = "USDT"] = String(desk.pairKey || "BTC/USDT").split("/");
@@ -373,21 +319,53 @@ const OtcTrade = () => {
   const samePair = rfqPair(desk.rfq).toUpperCase() === String(desk.pairKey || "").toUpperCase();
   const requestBlocked = samePair && (desk.view === "awaiting" || desk.view === "quote");
   const liveQuoteId = desk.view === "quote" ? String(desk.quote?.id || "") : "";
-  const lastPrice = Number(String(desk.ticker?.last || "").replace(/,/g, ""));
+  const exchangeData = useExchangeData();
+  const liveTick = exchangeData?.ticker && typeof exchangeData.ticker === "object" ? exchangeData.ticker : null;
+  const liveRaw = liveTick?.buy_price ?? liveTick?.last_price ?? liveTick?.last ?? liveTick?.price ?? liveTick?.c
+    ?? exchangeData?.buy_price ?? exchangeData?.last_price ?? exchangeData?.price;
+  const liveN = Number(String(liveRaw ?? "").replace(/,/g, ""));
+  const snapshotN = Number(String(desk.ticker?.last || "").replace(/,/g, ""));
+  const lastPrice = Number.isFinite(liveN) && liveN > 0 ? liveN : snapshotN;
   const formattedRate = lastPrice > 0
     ? lastPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : "—";
-  const changeN = Number(String(desk.ticker?.change_percent ?? "").replace(/,/g, ""));
-  const changeText = Number.isFinite(changeN) && formattedRate !== "—"
-    ? `${changeN > 0 ? "+" : ""}${changeN.toFixed(2)}%`
-    : "";
+  const liveChange = liveTick?.change_percentage ?? liveTick?.change ?? exchangeData?.change_percentage ?? desk.ticker?.change_percent;
+  const changeN = Number(String(liveChange ?? "").replace(/,/g, ""));
   const chartUri = `${CHART_WEB_BASE_URL}chart/${isDark ? "dark" : "light"}/${pairBase}_${pairQuote}`;
   const amountCoin = desk.baseOptions.find((item) => item.symbol === coin);
-  const headerCoin = desk.pairOptions.find((item) => item.symbol === desk.pairKey);
 
   useEffect(() => {
     setChartReady(false);
   }, [chartUri]);
+
+  const openHistoryPage = (tab) => {
+    if (!desk.isLoggedIn) {
+      desk.goToLogin();
+      return;
+    }
+    NavigationService.navigate(OTC_HISTORY_SCREEN, { initialTab: tab === "active" ? "active" : "history" });
+  };
+
+  const toggleChart = () => {
+    const next = !chartOpenRef.current;
+    chartOpenRef.current = next;
+    setChartOpen(next);
+    if (next) setChartMounted(true);
+    Animated.timing(chartProgress, {
+      toValue: next ? 1 : 0,
+      duration: 420,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const chartTranslateY = chartProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [chartOpenH, 0],
+  });
+  const priceUp = !(changeN < 0);
+  const priceColor = priceUp ? palette.buy : palette.sell;
+  const chartBorder = palette.cardBorder;
 
   useEffect(() => {
     if (!liveQuoteId) {
@@ -399,45 +377,15 @@ const OtcTrade = () => {
     setQuoteOpen(true);
   }, [liveQuoteId]);
 
-  const rows = useMemo(() => {
-    const history = Array.isArray(desk.trades) ? desk.trades : [];
-    const status = String(desk.rfq?.status || "").toUpperCase();
-    const seen = new Set();
-    const take = (row) => {
-      if (!row) return false;
-      const id = row.id ? String(row.id) : "";
-      const rfqKey = row.rfq_id ? `rfq:${row.rfq_id}` : "";
-      if ((id && seen.has(id)) || (rfqKey && seen.has(rfqKey))) return false;
-      if (id) seen.add(id);
-      if (rfqKey) seen.add(rfqKey);
-      return true;
-    };
-    const liveStatus = (row) => LIVE_STATUS.has(String(row?.status || "").toUpperCase());
-    const locked = (row) => LOCKED_STATUS.has(String(row?.status || "").toUpperCase());
-    if (bottomTab === "active") {
-      const list = [];
-      if (desk.rfq && (desk.view === "awaiting" || desk.view === "quote") && take(desk.rfq)) {
-        list.push({ ...desk.rfq, rate: desk.quote?.rate || desk.rfq.rate });
-      }
-      history.forEach((row) => {
-        if ((liveStatus(row) || locked(row)) && take(row)) list.push(row);
-      });
-      if (locked(desk.trade) && take(desk.trade)) list.push(desk.trade);
-      return list.map((row) => toTableRow(row, desk.quote));
-    }
-    const past = history.filter((row) => !locked(row) && !liveStatus(row));
-    past.forEach((row) => {
-      if (row?.id) seen.add(String(row.id));
-      if (row?.rfq_id) seen.add(`rfq:${row.rfq_id}`);
-    });
-    const extras = [];
-    if (desk.trade?.id && !locked(desk.trade) && !seen.has(String(desk.trade.id))) extras.push(desk.trade);
-    if (desk.rfq?.id && (desk.view === "expired" || (status && status !== "OPEN" && status !== "QUOTED"))) {
-      const closed = { ...desk.rfq, rate: desk.quote?.rate || desk.rfq.rate };
-      if (!locked(closed) && !seen.has(String(desk.rfq.id)) && !seen.has(`rfq:${desk.rfq.id}`)) extras.push(closed);
-    }
-    return [...extras, ...past].map((row) => toTableRow(row, desk.quote));
-  }, [bottomTab, desk.trades, desk.rfq, desk.quote, desk.trade, desk.view]);
+  const rows = useMemo(() => buildOtcTableRows({
+    tab: bottomTab,
+    trades: desk.trades,
+    rfq: desk.rfq,
+    quote: desk.quote,
+    trade: desk.trade,
+    view: desk.view,
+  }), [bottomTab, desk.trades, desk.rfq, desk.quote, desk.trade, desk.view]);
+  const previewRows = rows.slice(0, PREVIEW_LIMIT);
 
   const pairItems = desk.pairOptions.map((item) => ({
     key: item.symbol,
@@ -481,59 +429,35 @@ const OtcTrade = () => {
   return (
     <View style={[styles.flex1, { backgroundColor: palette.page }]}>
       <SystemBars style={isDark ? "light" : "dark"} />
-      <View style={[styles.header, { paddingTop: headerTop, backgroundColor: palette.card, borderBottomColor: palette.line }]}>
-        <TouchableOpacity onPress={() => NavigationService.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+      <View style={[styles.header, { paddingTop: headerTop, backgroundColor: palette.page }]}>
+        <TouchableOpacity style={styles.headerSide} onPress={() => NavigationService.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <FastImage source={back_ic} style={styles.backIcon} tintColor={palette.text} resizeMode="contain" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.headerPair} activeOpacity={0.8} onPress={() => setPairOpen(true)}>
-          <CoinIcon
-            coin={headerCoin ? { icon_path: headerCoin.iconPath, short_name: pairBase, base_currency: pairBase } : { short_name: pairBase }}
-            style={styles.coinIconLg}
-            fallback={pairBase === "USDT" ? tetherIcon : undefined}
-          />
-          <View>
-            <AppText weight={BOLD} style={{ color: palette.text, fontSize: 16 }}>{desk.pairKey || "BTC/USDT"}</AppText>
-            <AppText style={{ color: palette.muted, fontSize: 11 }}>{headerCoin?.name || pairBase}</AppText>
-          </View>
-        </TouchableOpacity>
-        <View style={styles.headerPrice}>
-          <AppText weight={BOLD} style={{ color: changeN < 0 ? "#f6465d" : "#20BF7A", fontSize: 16 }}>{formattedRate}</AppText>
-          {changeText ? (
-            <AppText weight={SEMI_BOLD} style={{ color: changeN < 0 ? "#f6465d" : "#20BF7A", fontSize: 12 }}>{changeText}</AppText>
-          ) : null}
+        <View style={styles.headerCenter} pointerEvents="none">
+          <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 17 }}>OTC Spot</AppText>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }} onPress={() => openHistoryPage("history")}>
+            <FastImage source={historyIcon} style={styles.historyIcon} tintColor={palette.text} resizeMode="contain" />
+          </TouchableOpacity>
         </View>
       </View>
 
       <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={styles.flex1}>
         <ScrollView
+          style={styles.flex1}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: CHART_BAR_H + insets.bottom + 28 }]}
         >
-          <View style={[styles.chartWrap, { backgroundColor: palette.card }]}>
-            <WebView
-              source={{ uri: chartUri }}
-              style={styles.chart}
-              onLoadEnd={() => setChartReady(true)}
-              scrollEnabled={false}
-              javaScriptEnabled
-              domStorageEnabled
-              originWhitelist={["*"]}
-            />
-            {!chartReady ? (
-              <View style={styles.chartLoading}>
-                <ActivityIndicator color={GOLD} />
-              </View>
-            ) : null}
-          </View>
-
           <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
             <AppText weight={BOLD} style={{ color: palette.text, fontSize: 18, marginBottom: 12 }}>OTC Trading</AppText>
             <View style={[styles.sideTabs, { backgroundColor: palette.chip }]}>
-              <Pressable style={[styles.sideTab, isBuy && styles.buyTab]} onPress={() => desk.setQuoteType("buy")}>
+              <Pressable style={[styles.sideTab, isBuy && { backgroundColor: palette.buy }]} onPress={() => desk.setQuoteType("buy")}>
                 <AppText weight={SEMI_BOLD} style={{ color: isBuy ? "#FFFFFF" : palette.muted }}>Buy</AppText>
               </Pressable>
-              <Pressable style={[styles.sideTab, !isBuy && styles.sellTab]} onPress={() => desk.setQuoteType("sell")}>
+              <Pressable style={[styles.sideTab, !isBuy && { backgroundColor: palette.sell }]} onPress={() => desk.setQuoteType("sell")}>
                 <AppText weight={SEMI_BOLD} style={{ color: !isBuy ? "#FFFFFF" : palette.muted }}>Sell</AppText>
               </Pressable>
             </View>
@@ -601,106 +525,102 @@ const OtcTrade = () => {
                 <AppText weight={SEMI_BOLD} style={{ color: GOLD, fontSize: 11 }}>{ticketStatus}</AppText>
               </View>
             </View>
-            <DetailRow label="Ticker" value={desk.pairKey || "BTC/USDT"} palette={palette} />
-            <DetailRow label="Order type" value="OTC RFQ" palette={palette} />
-            <DetailRow label="Date" value={desk.rfq ? formatWhen(desk.rfq.createdAt) : "—"} palette={palette} />
-            {desk.view === "awaiting" && desk.rfq?.expiresAt ? (
+            <ScrollView
+              style={styles.ticketBody}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <DetailRow label="Ticker" value={desk.pairKey || "BTC/USDT"} palette={palette} />
+              <DetailRow label="Order type" value="OTC RFQ" palette={palette} />
+              <DetailRow label="Date" value={desk.rfq ? formatWhen(desk.rfq.createdAt) : "—"} palette={palette} />
+              {desk.view === "awaiting" && desk.rfq?.expiresAt ? (
+                <DetailRow
+                  label="Valid until"
+                  value={`${formatWhen(desk.rfq.expiresAt)}${desk.requestLeftMs > 0 ? ` · ${formatLeft(desk.requestLeftMs)} left` : " · closing"}`}
+                  palette={palette}
+                />
+              ) : null}
+              {ticketNote ? (
+                <View style={[styles.noteBox, { backgroundColor: palette.chip }]}>
+                  <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 14 }}>{ticketNote.title}</AppText>
+                  <AppText style={{ color: palette.muted, fontSize: 13, lineHeight: 18, marginTop: 4 }}>{ticketNote.body}</AppText>
+                </View>
+              ) : null}
+              <DetailRow label="Side" value={desk.rfq?.side || (isBuy ? "BUY" : "SELL")} palette={palette} />
+              <DetailRow label="You pay" value={desk.rfq ? moneyLine(desk.rfq.pay_amount, desk.rfq.pay_asset) : "—"} palette={palette} />
               <DetailRow
-                label="Valid until"
-                value={`${formatWhen(desk.rfq.expiresAt)}${desk.requestLeftMs > 0 ? ` · ${formatLeft(desk.requestLeftMs)} left` : " · closing"}`}
+                label="You get"
+                value={desk.quote
+                  ? moneyLine(desk.quote.get_amount, desk.quote.get_asset)
+                  : desk.rfq
+                    ? moneyLine(desk.rfq.get_amount, desk.rfq.get_asset)
+                    : "—"}
                 palette={palette}
               />
-            ) : null}
-            {ticketNote ? (
-              <View style={[styles.noteBox, { backgroundColor: palette.chip }]}>
-                <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 14 }}>{ticketNote.title}</AppText>
-                <AppText style={{ color: palette.muted, fontSize: 13, lineHeight: 18, marginTop: 4 }}>{ticketNote.body}</AppText>
-              </View>
-            ) : null}
-            <DetailRow label="Side" value={desk.rfq?.side || (isBuy ? "BUY" : "SELL")} palette={palette} />
-            <DetailRow label="You pay" value={desk.rfq ? moneyLine(desk.rfq.pay_amount, desk.rfq.pay_asset) : "—"} palette={palette} />
-            <DetailRow
-              label="You get"
-              value={desk.quote
-                ? moneyLine(desk.quote.get_amount, desk.quote.get_asset)
-                : desk.rfq
-                  ? moneyLine(desk.rfq.get_amount, desk.rfq.get_asset)
-                  : "—"}
-              palette={palette}
-            />
-            <DetailRow label="Rate" value={desk.quote?.rate || "The desk sets the rate"} palette={palette} />
-            {desk.quote?.expiresAt ? (
-              <DetailRow
-                label="Quote valid until"
-                value={`${formatWhen(desk.quote.expiresAt)}${desk.view === "quote" ? ` · ${formatLeft(desk.countdownMs)} left` : ""}`}
-                palette={palette}
-              />
-            ) : null}
-            {desk.view === "awaiting" ? (
-              <TouchableOpacity
-                activeOpacity={0.85}
-                style={[styles.secondaryBtn, { borderColor: palette.inputBorder }]}
-                disabled={desk.submitting}
-                onPress={() => setCancelOpen(true)}
-              >
-                <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 15 }}>
-                  {desk.submitting ? "Cancelling…" : "Cancel request"}
-                </AppText>
-              </TouchableOpacity>
-            ) : null}
-            {desk.view === "quote" ? (
-              <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={() => setQuoteOpen(true)}>
-                <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>Review quote</AppText>
-              </TouchableOpacity>
-            ) : null}
+              <DetailRow label="Rate" value={desk.quote?.rate || "The desk sets the rate"} palette={palette} />
+              {desk.quote?.expiresAt ? (
+                <DetailRow
+                  label="Quote valid until"
+                  value={`${formatWhen(desk.quote.expiresAt)}${desk.view === "quote" ? ` · ${formatLeft(desk.countdownMs)} left` : ""}`}
+                  palette={palette}
+                />
+              ) : null}
+              {desk.view === "awaiting" ? (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={[styles.secondaryBtn, { borderColor: palette.inputBorder }]}
+                  disabled={desk.submitting}
+                  onPress={() => setCancelOpen(true)}
+                >
+                  <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 15 }}>
+                    {desk.submitting ? "Cancelling…" : "Cancel request"}
+                  </AppText>
+                </TouchableOpacity>
+              ) : null}
+              {desk.view === "quote" ? (
+                <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={() => setQuoteOpen(true)}>
+                  <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>Review quote</AppText>
+                </TouchableOpacity>
+              ) : null}
+            </ScrollView>
           </View>
 
-          <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
-            <View style={[styles.sideTabs, { backgroundColor: palette.chip }]}>
-              <Pressable style={[styles.sideTab, bottomTab === "active" && styles.goldTab]} onPress={() => setBottomTab("active")}>
-                <AppText weight={SEMI_BOLD} style={{ color: bottomTab === "active" ? "#1A1408" : palette.muted, fontSize: 13 }}>
-                  Active requests
-                </AppText>
-              </Pressable>
-              <Pressable style={[styles.sideTab, bottomTab === "history" && styles.goldTab]} onPress={() => setBottomTab("history")}>
-                <AppText weight={SEMI_BOLD} style={{ color: bottomTab === "history" ? "#1A1408" : palette.muted, fontSize: 13 }}>
-                  History
-                </AppText>
-              </Pressable>
-            </View>
-            {rows.length ? rows.map((row) => (
-              <View key={row.id} style={[styles.listCard, { borderColor: palette.line }]}>
-                <View style={styles.spaceBetween}>
-                  <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 14 }}>{row.pair}</AppText>
-                  <AppText weight={SEMI_BOLD} style={{ color: row.side === "Sell" ? "#f6465d" : "#20BF7A", fontSize: 13 }}>{row.side}</AppText>
-                </View>
-                <AppText style={{ color: palette.muted, fontSize: 12, marginTop: 4 }}>{row.date} · {row.ticketId}</AppText>
-                <DetailRow label="Amount" value={row.pay} palette={palette} />
-                <DetailRow label="Status" value={row.status} palette={palette} />
-                {bottomTab === "history" ? (
-                  <>
-                    <DetailRow label="Traded amount" value={row.tradedAmount} palette={palette} />
-                    <DetailRow label="Quote price" value={String(row.quotePrice)} palette={palette} />
-                    <DetailRow label="Settlement" value={row.settlement} palette={palette} />
-                  </>
-                ) : (
-                  <>
-                    <DetailRow label="Limit price" value={String(row.limitPrice)} palette={palette} />
-                    <DetailRow label="Progress" value={row.progress} palette={palette} />
-                    <DetailRow label="Filled / Total" value={row.filledTotal} palette={palette} />
-                  </>
-                )}
-                <View style={styles.rowActions}>
-                  <TouchableOpacity onPress={() => setViewRow(row.view)}>
-                    <AppText weight={SEMI_BOLD} style={{ color: GOLD, fontSize: 13 }}>View</AppText>
-                  </TouchableOpacity>
-                  {row.source && String(row.view?.id || "") === String(desk.rfq?.id || "") ? (
-                    <TouchableOpacity onPress={() => setCancelOpen(true)}>
-                      <AppText weight={SEMI_BOLD} style={{ color: "#f6465d", fontSize: 13 }}>Cancel</AppText>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
+          <View style={styles.historyBlock}>
+            <View style={[styles.histTabs, { borderBottomColor: palette.line }]}>
+              <View style={styles.histTabGroup}>
+                {[
+                  { id: "active", label: "Active" },
+                  { id: "history", label: "History" },
+                ].map((tab) => {
+                  const selected = bottomTab === tab.id;
+                  return (
+                    <Pressable key={tab.id} style={styles.histTab} onPress={() => setBottomTab(tab.id)}>
+                      <AppText weight={SEMI_BOLD} style={{ color: selected ? palette.text : palette.muted, fontSize: 16 }}>
+                        {tab.label}
+                      </AppText>
+                      {selected ? <View style={styles.histTabLine} /> : null}
+                    </Pressable>
+                  );
+                })}
               </View>
+              <TouchableOpacity
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.viewAllBtn}
+                onPress={() => openHistoryPage(bottomTab)}
+              >
+                <AppText weight={SEMI_BOLD} style={styles.viewAllText}>View All</AppText>
+              </TouchableOpacity>
+            </View>
+            {previewRows.length ? previewRows.map((row) => (
+              <RecordCard
+                key={row.id}
+                row={row}
+                tab={bottomTab}
+                palette={palette}
+                onView={() => NavigationService.navigate(OTC_HISTORY_PAGE_VIEW, { record: otcDetailRecord(row) })}
+                onCancel={row.source && String(row.view?.id || "") === String(desk.rfq?.id || "") ? () => setCancelOpen(true) : null}
+              />
             )) : (
               <AppText style={{ color: palette.muted, textAlign: "center", marginTop: 18, marginBottom: 8 }}>
                 {bottomTab === "active" ? "No open requests." : "No OTC history yet."}
@@ -708,6 +628,76 @@ const OtcTrade = () => {
             )}
           </View>
         </ScrollView>
+        </View>
+
+        <Animated.View
+          pointerEvents={chartOpen ? "auto" : "none"}
+          style={[
+            styles.chartSheet,
+            {
+              height: chartOpenH,
+              backgroundColor: palette.page,
+              borderColor: chartBorder,
+              bottom: CHART_BAR_H + insets.bottom,
+              transform: [{ translateY: chartTranslateY }],
+            },
+          ]}
+        >
+            <View style={styles.chartHandleWrap}>
+              <View style={[styles.chartHandle, { backgroundColor: chartBorder }]} />
+            </View>
+            <View style={[styles.chartWrap, { backgroundColor: palette.page }]} pointerEvents={chartOpen ? "auto" : "none"}>
+              {chartMounted ? (
+                <WebView
+                  source={{ uri: chartUri }}
+                  style={[styles.chart, { backgroundColor: palette.page }]}
+                  onLoadEnd={() => setChartReady(true)}
+                  scrollEnabled
+                  nestedScrollEnabled
+                  bounces={false}
+                  showsVerticalScrollIndicator={false}
+                  showsHorizontalScrollIndicator={false}
+                  javaScriptEnabled
+                  domStorageEnabled
+                  originWhitelist={["*"]}
+                  androidLayerType="hardware"
+                  overScrollMode="never"
+                />
+              ) : null}
+              {chartMounted && !chartReady ? (
+                <View style={[styles.chartLoading, { backgroundColor: palette.page }]}>
+                  <ActivityIndicator color={GOLD} />
+                </View>
+              ) : null}
+            </View>
+        </Animated.View>
+        <View
+          style={[
+            styles.chartDock,
+            {
+              backgroundColor: palette.page,
+              borderColor: chartOpen ? chartBorder : palette.line,
+              borderTopWidth: chartOpen ? 0 : StyleSheet.hairlineWidth,
+              borderLeftWidth: chartOpen ? 1 : 0,
+              borderRightWidth: chartOpen ? 1 : 0,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
+          <Pressable style={styles.chartBar} onPress={toggleChart}>
+            <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 15 }}>
+              {desk.pairKey || "BTC/USDT"} Chart
+            </AppText>
+            <View style={styles.chartPrice}>
+              <AppText weight={BOLD} style={{ color: formattedRate === "—" ? palette.muted : priceColor, fontSize: 16 }}>
+                {formattedRate}
+              </AppText>
+              {formattedRate === "—" ? null : (
+                <AppText style={{ color: priceColor, fontSize: 12, lineHeight: 14 }}>{priceUp ? "▲" : "▼"}</AppText>
+              )}
+            </View>
+          </Pressable>
+        </View>
       </KeyboardAvoidingView>
 
       <AcceptQuoteModal open={quoteOpen && desk.view === "quote"} desk={desk} palette={palette} onClose={() => setQuoteOpen(false)} />
@@ -735,7 +725,7 @@ const OtcTrade = () => {
               <DetailRow label="Side" value={desk.rfq?.side || "—"} palette={palette} />
               <DetailRow label="You pay" value={moneyLine(desk.rfq?.pay_amount, desk.rfq?.pay_asset)} palette={palette} />
               <TouchableOpacity
-                style={[styles.acceptBtn, { backgroundColor: "#f6465d", marginTop: 12 }, desk.submitting && styles.btnDisabled]}
+                style={[styles.acceptBtn, { backgroundColor: palette.sell, marginTop: 12 }, desk.submitting && styles.btnDisabled]}
                 disabled={desk.submitting}
                 onPress={async () => {
                   const cancelled = await desk.cancelRfq?.();
@@ -754,25 +744,6 @@ const OtcTrade = () => {
             </Pressable>
           </Pressable>
         </Modal>
-      ) : null}
-      {viewRow ? (
-        <InfoModal
-          title={viewRow.pair || "RFQ"}
-          kicker="Quote request"
-          palette={palette}
-          onClose={() => setViewRow(null)}
-          rows={[
-            { label: "Ticket", value: viewRow.ticketId },
-            { label: "Side", value: viewRow.side },
-            { label: "You pay", value: viewRow.pay },
-            { label: "You get", value: viewRow.receive },
-            { label: "Status", value: viewRow.status },
-            { label: "Request rate", value: viewRow.requestRate || "—" },
-            { label: "Desk rate", value: viewRow.rate || "The desk sets the rate" },
-            { label: "Opened", value: formatWhen(viewRow.createdAt) },
-            ...(viewRow.expiresAt ? [{ label: "Valid until", value: formatWhen(viewRow.expiresAt) }] : []),
-          ]}
-        />
       ) : null}
       <OptionSheet
         visible={pairOpen}
@@ -801,18 +772,71 @@ export default OtcTrade;
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
   header: {
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingBottom: 8,
   },
+  headerSide: { width: 72, alignItems: "flex-start", justifyContent: "center" },
+  headerCenter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 8,
+    alignItems: "center",
+  },
+  headerTitle: { flexDirection: "row", alignItems: "center", gap: 4 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 16 },
   backIcon: { width: 22, height: 22 },
-  headerPair: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
-  headerPrice: { alignItems: "flex-end" },
-  chartWrap: { height: 280, marginBottom: 10 },
-  chart: { flex: 1, backgroundColor: "transparent" },
+  historyIcon: { width: 22, height: 22 },
+  historyBlock: { marginTop: 4, paddingBottom: 8 },
+  histTabs: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  histTabGroup: { flexDirection: "row", alignItems: "flex-end", gap: 26 },
+  viewAllBtn: { paddingTop: 12, paddingBottom: 10, paddingLeft: 12 },
+  viewAllText: { color: GOLD, fontSize: 13 },
+  histTab: { paddingTop: 12, paddingBottom: 10, alignItems: "center" },
+  histTabLine: {
+    position: "absolute",
+    bottom: -1,
+    width: 26,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: GOLD,
+  },
+  scrollContent: { flexGrow: 1, paddingBottom: 12 },
+  chartDock: { zIndex: 4 },
+  chartSheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    overflow: "hidden",
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    zIndex: 3,
+  },
+  chartHandleWrap: { alignItems: "center", paddingTop: 8, paddingBottom: 4 },
+  chartHandle: { width: 42, height: 4, borderRadius: 2 },
+  chartBar: {
+    height: CHART_BAR_H,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  chartPrice: { flexDirection: "row", alignItems: "center", gap: 3 },
+  chartWrap: { flex: 1 },
+  chart: { flex: 1 },
   chartLoading: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
@@ -825,11 +849,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
   },
+  ticketBody: { maxHeight: 168, marginTop: 4 },
   sideTabs: { flexDirection: "row", borderRadius: 12, padding: 3, marginBottom: 12 },
   sideTab: { flex: 1, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  buyTab: { backgroundColor: "#20BF7A" },
-  sellTab: { backgroundColor: "#f6465d" },
-  goldTab: { backgroundColor: GOLD },
   amountHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 },
   amountBox: {
     minHeight: 52,
@@ -876,8 +898,20 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   detailEmphasis: { marginTop: 4 },
-  listCard: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 12, paddingTop: 12 },
-  rowActions: { flexDirection: "row", justifyContent: "flex-end", gap: 18, marginTop: 4 },
+  recordCard: {
+    marginHorizontal: 12,
+    marginTop: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  recordTitle: { flex: 1, paddingRight: 10 },
+  sidePill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  recordLine: { height: StyleSheet.hairlineWidth, marginTop: 10, marginBottom: 2 },
+  viewChip: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  rowActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 14, marginTop: 6 },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
   modalOverlay: {
     flex: 1,

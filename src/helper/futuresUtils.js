@@ -268,6 +268,18 @@ export function getTierLeverageButtons(leverageTiers, maxLeverage = 125) {
 }
 
 /**
+ * Contract fee rates are fractions (0.0002 = 0.02%).
+ * ×100 only for the label. Missing / non-numeric → "---".
+ * A maker rebate can be negative (-0.0001 → "-0.01%").
+ */
+export function formatFuturesFeePercent(fraction) {
+    const n = Number(fraction);
+    if (!Number.isFinite(n)) return "---";
+    const text = (n * 100).toFixed(8).replace(/\.?0+$/, "");
+    return `${text || "0"}%`;
+}
+
+/**
  * Socket taker_fee_rate is a percent (0.058 → 0.058%).
  * Returns the decimal fraction used in margin math (0.00058).
  */
@@ -297,6 +309,7 @@ export function computeFuturesOrderMargin(notional, leverage, takerFeeRate = 0) 
 /**
  * Max position notional (USDT) from socket effective_available:
  *   maxNotionalUsdt = avail / (1/leverage + decimal taker fee)
+ * takerFeeRate is a fraction (0.00058 for a 0.058% socket rate).
  */
 export function computeMaxOpenNotional(effectiveAvailable, leverage, takerFeeRate) {
     const avail = Number(effectiveAvailable);

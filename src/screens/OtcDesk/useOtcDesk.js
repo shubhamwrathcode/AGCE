@@ -59,7 +59,7 @@ function spotRow(rows, code) {
 export default function useOtcDesk(draft) {
   const userData = useAppSelector((state) => state.auth.userData);
   const marketPairs = useAppSelector((state) => state.home.coinPairs);
-  const { socketHandlersReady, subscribeToMarket, unsubscribeFromMarket } = useContext(SocketContext) || {};
+  const { socketHandlersReady, subscribeToMarket, unsubscribeFromMarket, subscribeToExchange, unsubscribeFromExchange } = useContext(SocketContext) || {};
   const isLoggedIn = Boolean(userData) || Boolean(appOperation.customerToken);
   const kycVerified = Number(userData?.kycVerified ?? userData?.kyc_verified) === 2;
 
@@ -398,6 +398,16 @@ export default function useOtcDesk(draft) {
       if (typeof unsubscribeFromMarket === "function") unsubscribeFromMarket("otc");
     };
   }, [payCoin, getCoin, isConnected, subscribeToMarket, unsubscribeFromMarket]);
+
+  useEffect(() => {
+    const baseId = matchedSpotPair?.base_currency_id;
+    const quoteId = matchedSpotPair?.quote_currency_id;
+    if (!baseId || !quoteId || typeof subscribeToExchange !== "function") return undefined;
+    subscribeToExchange(baseId, quoteId);
+    return () => {
+      if (typeof unsubscribeFromExchange === "function") unsubscribeFromExchange(baseId, quoteId);
+    };
+  }, [matchedSpotPair?.base_currency_id, matchedSpotPair?.quote_currency_id, subscribeToExchange, unsubscribeFromExchange]);
 
   useEffect(() => {
     if (!isLoggedIn) {

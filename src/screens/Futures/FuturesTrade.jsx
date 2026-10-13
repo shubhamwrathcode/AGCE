@@ -52,6 +52,7 @@ import {
   getStepSize,
   sanitizeIncrementInput,
   resolveTakerFeeRate,
+  formatFuturesFeePercent,
   computeFuturesOrderMargin,
   computeMaxOpenNotional,
   computePosition,
@@ -2781,11 +2782,10 @@ const FuturesUI = () => {
                 </View>
               </View>
 
-              {/* Socket fee rates are already percents (0.058 → 0.058%) — shown as-is, like web. */}
               <View style={[styles.feeRateBox, { backgroundColor: themeColors.card }]}>
                 <AppText type={TWELVE} color={themeColors.secondaryText}>Fee rate</AppText>
                 <AppText type={TWELVE}>
-                  Maker {selectedCoin?.maker_fee_rate ? Number(selectedCoin.maker_fee_rate) : '---'}% / Taker {selectedCoin?.taker_fee_rate ? Number(selectedCoin.taker_fee_rate) : '---'}%
+                  Maker {formatFuturesFeePercent(selectedCoin?.maker_fee_rate)} / Taker {formatFuturesFeePercent(selectedCoin?.taker_fee_rate)}
                 </AppText>
               </View>
             </View>
