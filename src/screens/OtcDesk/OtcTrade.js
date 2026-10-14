@@ -346,8 +346,8 @@ const OtcTrade = () => {
     NavigationService.navigate(OTC_HISTORY_SCREEN, { initialTab: tab === "active" ? "active" : "history" });
   };
 
-  const toggleChart = () => {
-    const next = !chartOpenRef.current;
+  const setChartExpanded = (next) => {
+    if (chartOpenRef.current === next) return;
     chartOpenRef.current = next;
     setChartOpen(next);
     if (next) setChartMounted(true);
@@ -358,6 +358,8 @@ const OtcTrade = () => {
       useNativeDriver: true,
     }).start();
   };
+
+  const toggleChart = () => setChartExpanded(!chartOpenRef.current);
 
   const chartTranslateY = chartProgress.interpolate({
     inputRange: [0, 1],
@@ -404,27 +406,28 @@ const OtcTrade = () => {
   const ticketStatus = desk.view === "expired"
     ? (String(desk.rfq?.status || "").toUpperCase() === "REJECTED_TIMEOUT" ? "REJECTED_TIMEOUT" : "EXPIRED")
     : (desk.rfq?.status || "—");
+  const ticketSide = String(desk.rfq?.side || (isBuy ? "BUY" : "SELL")).toUpperCase();
+  const ticketSell = ticketSide === "SELL";
+  const ticketPay = desk.rfq ? moneyLine(desk.rfq.pay_amount, desk.rfq.pay_asset) : "—";
+  const ticketGet = desk.quote
+    ? moneyLine(desk.quote.get_amount, desk.quote.get_asset)
+    : desk.rfq
+      ? moneyLine(desk.rfq.get_amount, desk.rfq.get_asset)
+      : "—";
+  const ticketRate = desk.quote?.rate ? String(desk.quote.rate) : "Pending";
+  const ticketLine = desk.view === "awaiting"
+    ? (desk.requestLeftMs > 0 ? `Awaiting desk · ${formatLeft(desk.requestLeftMs)} left` : "Awaiting desk")
+    : desk.view === "quote"
+      ? (Number(desk.countdownMs) > 0 ? `Firm quote ready · ${formatLeft(desk.countdownMs)} left` : "Firm quote ready")
+      : desk.view === "expired"
+        ? "This request has closed. Send a new one when you are ready."
+        : "Live request";
 
   const requestMessage = !requestBlocked
     ? ""
     : desk.view === "quote"
       ? `A firm ${desk.pairKey} quote is still open. Accept it or wait until it expires before sending another request.`
       : `You already have a ${desk.pairKey} quote request open. Cancel it or wait until it closes before sending another.`;
-
-  const ticketNote = !desk.rfq
-    ? { title: "No open request", body: "Enter an amount and request a quote. The ticket updates from the desk." }
-    : desk.view === "awaiting"
-      ? {
-        title: "Quote requested, awaiting desk",
-        body: desk.rfq?.expiresAt
-          ? `Your request is with the desk and stays valid until ${formatWhen(desk.rfq.expiresAt)}${desk.requestLeftMs > 0 ? ` · ${formatLeft(desk.requestLeftMs)} left` : ""}.`
-          : "Your request is with the desk. This page checks status every few seconds until a quote is received.",
-      }
-      : desk.view === "quote"
-        ? { title: "Firm quote ready", body: "The desk sent a quote. Review every detail in the popup and accept before it expires." }
-        : desk.view === "expired"
-          ? { title: "Request expired", body: "This request is no longer with the desk. Enter an amount to request a new quote." }
-          : null;
 
   return (
     <View style={[styles.flex1, { backgroundColor: palette.page }]}>
@@ -516,74 +519,60 @@ const OtcTrade = () => {
                 </AppText>
               </TouchableOpacity>
             )}
-          </View>
 
-          <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
-            <View style={styles.spaceBetween}>
-              <AppText weight={BOLD} style={{ color: palette.text, fontSize: 16 }}>Current Ticket</AppText>
-              <View style={[styles.badge, { backgroundColor: palette.chip }]}>
-                <AppText weight={SEMI_BOLD} style={{ color: GOLD, fontSize: 11 }}>{ticketStatus}</AppText>
-              </View>
-            </View>
-            <ScrollView
-              style={styles.ticketBody}
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              <DetailRow label="Ticker" value={desk.pairKey || "BTC/USDT"} palette={palette} />
-              <DetailRow label="Order type" value="OTC RFQ" palette={palette} />
-              <DetailRow label="Date" value={desk.rfq ? formatWhen(desk.rfq.createdAt) : "—"} palette={palette} />
-              {desk.view === "awaiting" && desk.rfq?.expiresAt ? (
-                <DetailRow
-                  label="Valid until"
-                  value={`${formatWhen(desk.rfq.expiresAt)}${desk.requestLeftMs > 0 ? ` · ${formatLeft(desk.requestLeftMs)} left` : " · closing"}`}
-                  palette={palette}
-                />
-              ) : null}
-              {ticketNote ? (
-                <View style={[styles.noteBox, { backgroundColor: palette.chip }]}>
-                  <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 14 }}>{ticketNote.title}</AppText>
-                  <AppText style={{ color: palette.muted, fontSize: 13, lineHeight: 18, marginTop: 4 }}>{ticketNote.body}</AppText>
+            {desk.rfq ? (
+              <View style={[styles.ticketStrip, { borderTopColor: palette.line }]}>
+                <View style={styles.ticketTop}>
+                  <View style={styles.flex1}>
+                    <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 14 }} numberOfLines={1}>
+                      {rfqPair(desk.rfq)}
+                    </AppText>
+                    <AppText style={{ color: palette.muted, fontSize: 12, marginTop: 2 }} numberOfLines={2}>
+                      {ticketLine}
+                    </AppText>
+                  </View>
+                  <View style={styles.ticketPills}>
+                    <View style={[styles.sidePill, { backgroundColor: ticketSell ? palette.sellSoft : palette.buySoft }]}>
+                      <AppText weight={SEMI_BOLD} style={{ color: ticketSell ? palette.sell : palette.buy, fontSize: 11 }}>{ticketSide}</AppText>
+                    </View>
+                    <View style={[styles.badge, { backgroundColor: palette.goldSoft }]}>
+                      <AppText weight={SEMI_BOLD} style={{ color: GOLD, fontSize: 11 }}>{ticketStatus}</AppText>
+                    </View>
+                  </View>
                 </View>
-              ) : null}
-              <DetailRow label="Side" value={desk.rfq?.side || (isBuy ? "BUY" : "SELL")} palette={palette} />
-              <DetailRow label="You pay" value={desk.rfq ? moneyLine(desk.rfq.pay_amount, desk.rfq.pay_asset) : "—"} palette={palette} />
-              <DetailRow
-                label="You get"
-                value={desk.quote
-                  ? moneyLine(desk.quote.get_amount, desk.quote.get_asset)
-                  : desk.rfq
-                    ? moneyLine(desk.rfq.get_amount, desk.rfq.get_asset)
-                    : "—"}
-                palette={palette}
-              />
-              <DetailRow label="Rate" value={desk.quote?.rate || "The desk sets the rate"} palette={palette} />
-              {desk.quote?.expiresAt ? (
-                <DetailRow
-                  label="Quote valid until"
-                  value={`${formatWhen(desk.quote.expiresAt)}${desk.view === "quote" ? ` · ${formatLeft(desk.countdownMs)} left` : ""}`}
-                  palette={palette}
-                />
-              ) : null}
-              {desk.view === "awaiting" ? (
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  style={[styles.secondaryBtn, { borderColor: palette.inputBorder }]}
-                  disabled={desk.submitting}
-                  onPress={() => setCancelOpen(true)}
-                >
-                  <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 15 }}>
-                    {desk.submitting ? "Cancelling…" : "Cancel request"}
-                  </AppText>
-                </TouchableOpacity>
-              ) : null}
-              {desk.view === "quote" ? (
-                <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={() => setQuoteOpen(true)}>
-                  <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>Review quote</AppText>
-                </TouchableOpacity>
-              ) : null}
-            </ScrollView>
+                <View style={styles.ticketFacts}>
+                  <View style={styles.ticketFact}>
+                    <AppText style={{ color: palette.muted, fontSize: 11 }}>You pay</AppText>
+                    <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 13, marginTop: 2 }} numberOfLines={1}>{ticketPay}</AppText>
+                  </View>
+                  <View style={styles.ticketFact}>
+                    <AppText style={{ color: palette.muted, fontSize: 11 }}>You get</AppText>
+                    <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 13, marginTop: 2 }} numberOfLines={1}>{ticketGet}</AppText>
+                  </View>
+                  <View style={styles.ticketFact}>
+                    <AppText style={{ color: palette.muted, fontSize: 11 }}>Rate</AppText>
+                    <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 13, marginTop: 2 }} numberOfLines={1}>{ticketRate}</AppText>
+                  </View>
+                </View>
+                {desk.view === "awaiting" ? (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={[styles.secondaryBtn, { borderColor: palette.inputBorder }]}
+                    disabled={desk.submitting}
+                    onPress={() => setCancelOpen(true)}
+                  >
+                    <AppText weight={SEMI_BOLD} style={{ color: palette.text, fontSize: 14 }}>
+                      {desk.submitting ? "Cancelling…" : "Cancel request"}
+                    </AppText>
+                  </TouchableOpacity>
+                ) : null}
+                {desk.view === "quote" ? (
+                  <TouchableOpacity activeOpacity={0.85} style={styles.requestBtn} onPress={() => setQuoteOpen(true)}>
+                    <AppText weight={SEMI_BOLD} style={styles.requestBtnText}>Review quote</AppText>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.historyBlock}>
@@ -618,7 +607,7 @@ const OtcTrade = () => {
                 row={row}
                 tab={bottomTab}
                 palette={palette}
-                onView={() => NavigationService.navigate(OTC_HISTORY_PAGE_VIEW, { record: otcDetailRecord(row) })}
+                onView={() => NavigationService.navigate(OTC_HISTORY_PAGE_VIEW, { record: otcDetailRecord(row), section: bottomTab })}
                 onCancel={row.source && String(row.view?.id || "") === String(desk.rfq?.id || "") ? () => setCancelOpen(true) : null}
               />
             )) : (
@@ -630,6 +619,11 @@ const OtcTrade = () => {
         </ScrollView>
         </View>
 
+        <Pressable
+          pointerEvents={chartOpen ? "auto" : "none"}
+          style={[styles.chartBackdrop, { bottom: chartOpenH + CHART_BAR_H + insets.bottom }]}
+          onPress={() => setChartExpanded(false)}
+        />
         <Animated.View
           pointerEvents={chartOpen ? "auto" : "none"}
           style={[
@@ -812,6 +806,13 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
   },
   scrollContent: { flexGrow: 1, paddingBottom: 12 },
+  chartBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+  },
   chartDock: { zIndex: 4 },
   chartSheet: {
     position: "absolute",
@@ -849,7 +850,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
   },
-  ticketBody: { maxHeight: 168, marginTop: 4 },
+  ticketStrip: { marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  ticketTop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  ticketPills: { flexDirection: "row", alignItems: "center", gap: 6 },
+  ticketFacts: { flexDirection: "row", marginTop: 10, gap: 8 },
+  ticketFact: { flex: 1, minWidth: 0 },
   sideTabs: { flexDirection: "row", borderRadius: 12, padding: 3, marginBottom: 12 },
   sideTab: { flex: 1, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   amountHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 },
@@ -889,7 +894,6 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.45 },
   spaceBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   badge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  noteBox: { borderRadius: 12, padding: 12, marginTop: 10 },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",

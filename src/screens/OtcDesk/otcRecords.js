@@ -143,6 +143,7 @@ export function otcDetailRecord(row) {
     tradedAmount: row?.tradedAmount || "—",
     quotePrice: row?.quotePrice == null || row?.quotePrice === "" ? "—" : String(row.quotePrice),
     limitPrice: row?.limitPrice == null || row?.limitPrice === "" ? "—" : String(row.limitPrice),
+    averagePrice: row?.averagePrice == null || row?.averagePrice === "" ? "—" : String(row.averagePrice),
     progress: row?.progress || "—",
     filledTotal: row?.filledTotal || "—",
     status: row?.status || "—",

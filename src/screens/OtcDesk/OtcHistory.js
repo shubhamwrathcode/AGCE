@@ -243,7 +243,7 @@ const OtcHistory = () => {
                 </>
               )}
               <View style={styles.rowActions}>
-                <TouchableOpacity style={[styles.viewChip, { backgroundColor: palette.goldSoft }]} onPress={() => NavigationService.navigate(OTC_HISTORY_PAGE_VIEW, { record: otcDetailRecord(item) })}>
+                <TouchableOpacity style={[styles.viewChip, { backgroundColor: palette.goldSoft }]} onPress={() => NavigationService.navigate(OTC_HISTORY_PAGE_VIEW, { record: otcDetailRecord(item), section: tab })}>
                   <AppText weight={SEMI_BOLD} style={{ color: GOLD, fontSize: 12 }}>View</AppText>
                 </TouchableOpacity>
               </View>
