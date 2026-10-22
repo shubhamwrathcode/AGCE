@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import FastImage from "react-native-fast-image";
 import Clipboard from "@react-native-clipboard/clipboard";
 import Toast from "react-native-simple-toast";
@@ -55,28 +56,26 @@ import {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const FIAT_FAQ_DATA = [
-  {
-    title: "How do I deposit Fiat (AED) on AGCX?",
-    content:
-      "Create your dedicated Zand Bank virtual IBAN on AGCX. Then log in to your UAE banking app (ENBD, ADCB, FAB, Mashreq, etc.) and transfer AED directly to that virtual IBAN.",
-  },
-  {
-    title: "Deposit fiat — step by step",
-    content:
-      "• Complete KYC — Make sure your account is identity-verified.\n• Get Virtual IBAN — Create your dedicated UAE virtual account.\n• Copy details — Copy the IBAN, Account Name, and Bank Name (Zand Bank).\n• Transfer from bank — Send funds via your UAE bank app.\n• Instant credit — Funds are credited to your Spot AED wallet as soon as the bank settles.",
-  },
-  {
-    title: "Important deposit rules & guidelines",
-    content:
-      "• Same-name transfer — You must transfer from a bank account in your own name matching your AGCX KYC.\n• Third-party deposits — Transfers from third-party or corporate accounts will be rejected and refunded.\n• Currency — Only AED is accepted on this virtual IBAN.",
-  },
-  {
-    title: "My fiat deposit hasn't arrived — what should I do?",
-    content:
-      "• Verify IBAN — Check that you transferred to your exact AGCX virtual IBAN.\n• Bank confirmation — Ensure the transaction was marked successful in your banking app.\n• Processing time — UAE IPP/instant transfers arrive within minutes; standard transfers may take a few hours during banking business days.",
-  },
-];
+function buildFiatFaq(minLabel) {
+  return [
+    {
+      title: "How do I deposit Fiat (AED) on AGCX?",
+      content: `Create your AGCX IBAN and add a withdrawal account in your own name. Then transfer at least ${minLabel} AED from your UAE bank to that IBAN. The fee is taken from the transfer. Amounts below ${minLabel} AED are held for refund and are not credited.`,
+    },
+    {
+      title: "Deposit fiat — step by step",
+      content: `• Complete KYC — Make sure your account is identity-verified.\n• Create your AGCX IBAN — One virtual account linked to your verified identity.\n• Add a withdrawal account — It must be registered in your name before you deposit.\n• Copy details — Copy the AGCX IBAN and account name.\n• Transfer from bank — Send at least ${minLabel} AED from your UAE bank.\n• Spot credit — Wait for AED to credit in your spot wallet after the bank processes the transfer.`,
+    },
+    {
+      title: "Important deposit rules & guidelines",
+      content: `• Same-name transfer — You must transfer from a bank account in your own name matching your AGCX KYC.\n• Withdrawal account first — Add your withdrawal account before you deposit.\n• Third-party deposits — Transfers from third-party or unauthorized accounts may be rejected and refunded.\n• Fee — Taken from the bank transfer automatically. Do not add it in the app.\n• Below minimum — Amounts under ${minLabel} AED are held for refund, not credited.\n• Currency — Only AED is accepted on this IBAN.`,
+    },
+    {
+      title: "My fiat deposit hasn't arrived — what should I do?",
+      content: `• Verify IBAN — Check that you transferred to your exact AGCX IBAN.\n• Bank confirmation — Ensure the transaction was marked successful in your banking app.\n• Amount — Confirm you sent at least ${minLabel} AED. Smaller transfers are held for refund.\n• Processing time — UAE transfers can take from a few minutes to a few hours on banking business days.`,
+    },
+  ];
+}
 
 // Web SVG Icon Components with exact web paths & styling
 const SecurityShieldIcon = ({ size = 20, color = "#D1AA67" }) => (
@@ -165,6 +164,35 @@ const CopiedCheckIcon = ({ size = 15, color = "#10B981" }) => (
   </Svg>
 );
 
+const EyeIcon = ({ size = 15, color = "#D1AA67" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
+      stroke={color}
+      strokeWidth="2"
+    />
+  </Svg>
+);
+
+const EyeOffIcon = ({ size = 15, color = "#D1AA67" }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M3 3l18 18M10.6 10.6A3 3 0 0 0 12 15a3 3 0 0 0 2.4-1.2M9.9 5.1A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.2 18.2 0 0 1-4.1 4.8M6.1 6.1C3.8 7.8 2 12 2 12s3.5 7 10 7a10.6 10.6 0 0 0 4.1-.8"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 const HOW_STEPS = [
   {
     n: "1",
@@ -174,20 +202,20 @@ const HOW_STEPS = [
   },
   {
     n: "2",
-    title: "Create your IBAN",
-    body: "One tap creates your Zand virtual account. Copy the IBAN from this page.",
+    title: "Create your AGCX IBAN",
+    body: "One tap creates your virtual account. Copy the IBAN and account name from this page.",
     IconComponent: BankPillarsIcon,
   },
   {
     n: "3",
-    title: "Transfer AED",
-    body: "Send any AED amount from your UAE bank. Use the account name as beneficiary.",
+    title: "Whitelist your account",
+    body: "Add a withdrawal account in your own name before you deposit.",
     IconComponent: TransferBuildingIcon,
   },
   {
     n: "4",
-    title: "Spot AED credits",
-    body: "After the bank processes the transfer, funds land in your spot AED wallet.",
+    title: "Transfer AED",
+    body: "Send at least the minimum from your UAE bank. The fee is taken from the transfer.",
     IconComponent: InstantBoltIcon,
   },
 ];
@@ -227,16 +255,180 @@ function isKycVerifiedCheck(userData) {
   );
 }
 
+function formatAedAmount(value) {
+  const n = Number.parseFloat(String(value ?? "0").replace(/,/g, ""));
+  if (!Number.isFinite(n)) return "0.00";
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function numOrNull(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "object") return null;
+  const n = Number.parseFloat(String(value).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function firstNum(...vals) {
+  for (const v of vals) {
+    const n = numOrNull(v);
+    if (n != null) return n;
+  }
+  return null;
+}
+
+function firstStr(...vals) {
+  for (const v of vals) {
+    if (v == null || v === "") continue;
+    if (typeof v === "object") continue;
+    return String(v);
+  }
+  return null;
+}
+
+function unwrapLimitsRoot(limits) {
+  if (!limits || typeof limits !== "object") return {};
+  if (limits.withdraw || limits.withdrawal || limits.deposit) return limits;
+  if (limits.limits && typeof limits.limits === "object") return unwrapLimitsRoot(limits.limits);
+  if (limits.data && typeof limits.data === "object" && !Array.isArray(limits.data)) {
+    return unwrapLimitsRoot(limits.data);
+  }
+  return limits;
+}
+
+function periodFrom(bucket, period) {
+  const nested = bucket?.[period] && typeof bucket[period] === "object" ? bucket[period] : null;
+  const used = firstNum(
+    nested?.used,
+    nested?.used_amount,
+    nested?.consumed,
+    bucket?.[`${period}_used`],
+    bucket?.[`${period}Used`],
+    bucket?.[`used_${period}`]
+  );
+  const limit = firstNum(
+    nested?.limit,
+    nested?.cap,
+    nested?.max,
+    nested?.amount,
+    bucket?.[`${period}_limit`],
+    bucket?.[`${period}_max`],
+    bucket?.[`max_${period}`],
+    bucket?.[period] != null && typeof bucket[period] !== "object" ? bucket[period] : null
+  );
+  const remaining = firstNum(
+    nested?.remaining,
+    nested?.left,
+    nested?.available,
+    bucket?.[`${period}_remaining`],
+    bucket?.[`${period}Remaining`]
+  );
+  return {
+    used: used != null ? used : limit != null && remaining != null ? Math.max(0, limit - remaining) : null,
+    limit,
+    remaining: remaining != null ? remaining : limit != null && used != null ? Math.max(0, limit - used) : null,
+  };
+}
+
+function parseLimitSide(bucket, root, prefix) {
+  const src = bucket && typeof bucket === "object" ? bucket : {};
+  const daily = periodFrom(src, "daily");
+  const monthly = periodFrom(src, "monthly");
+  return {
+    dailyLimit: daily.limit,
+    dailyRemaining: daily.remaining,
+    dailyUsed: daily.used,
+    monthlyLimit: monthly.limit,
+    monthlyRemaining: monthly.remaining,
+    monthlyUsed: monthly.used,
+    minPerTx: firstNum(
+      src.min_per_tx,
+      src.min,
+      src.min_amount,
+      prefix === "deposit" ? src.min_deposit : src.min_withdrawal
+    ),
+    maxPerTx: firstNum(
+      src.max_per_tx,
+      src.max,
+      src.max_amount,
+      prefix === "deposit" ? src.max_deposit : src.max_withdrawal
+    ),
+  };
+}
+
+function parseFiatDepositLimits(limits) {
+  const root = unwrapLimitsRoot(limits);
+  const bucket = root.deposit && typeof root.deposit === "object" ? root.deposit : {};
+  const parsed = parseLimitSide(bucket, root, "deposit");
+  const empty =
+    parsed.dailyLimit == null &&
+    parsed.monthlyLimit == null &&
+    parsed.dailyUsed == null &&
+    parsed.dailyRemaining == null &&
+    parsed.monthlyRemaining == null &&
+    parsed.minPerTx == null &&
+    parsed.maxPerTx == null;
+  const base = empty ? parseLimitSide(root, root, "deposit") : parsed;
+  const src = empty ? root : bucket;
+  return {
+    ...base,
+    depositsToday: firstNum(src.deposits_today, src.depositsToday),
+    freeDepositsRemaining: firstNum(src.free_deposits_remaining, src.freeDepositsRemaining),
+    nextDepositFeeAed: firstStr(src.next_deposit_fee_aed, src.nextDepositFeeAed),
+    depositFeeTz: firstStr(src.deposit_fee_tz, src.depositFeeTz) || "Asia/Dubai",
+  };
+}
+
+function depositFeeModel(limits) {
+  const minN = Number(limits?.minPerTx != null ? limits.minPerTx : 100);
+  const feeN = Number.parseFloat(String(limits?.nextDepositFeeAed ?? "10"));
+  const fee = Number.isFinite(feeN) ? feeN : 10;
+  const min = Number.isFinite(minN) ? minN : 100;
+  const freeLeft = Number(limits?.freeDepositsRemaining);
+  const feeIsFree = Number.isFinite(freeLeft) && freeLeft > 0;
+  return {
+    minLabel: formatAedAmount(min),
+    netLabel: formatAedAmount(Math.max(0, min - fee)),
+    freeLeft,
+    feeIsFree,
+  };
+}
+
+function listedWhitelistEntries(items) {
+  return (items || []).filter((b) => b && b.status && b.status !== "DISABLED");
+}
+
+function maskWithAsterisks(val, fallbackLast4) {
+  if (!val || val === "—") {
+    if (fallbackLast4) {
+      const l4 = String(fallbackLast4).trim();
+      return l4 ? `********${l4.slice(-4)}` : "—";
+    }
+    return "—";
+  }
+  const clean = String(val).replace(/\s+/g, "").trim();
+  const last4 = clean.includes("•")
+    ? (fallbackLast4 || clean.replace(/\D/g, "").slice(-4))
+    : clean.slice(-4);
+  if (!last4) return "—";
+  return `********${last4}`;
+}
+
 const DepositFiatScreen = () => {
   const { colors: themeColors, isDark } = useTheme();
   const userData = useAppSelector((state) => state.auth?.userData || state.user?.userData || {});
 
   const [vaLoading, setVaLoading] = useState(true);
   const [account, setAccount] = useState(null);
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [depositLimits, setDepositLimits] = useState(null);
   const [creating, setCreating] = useState(false);
   const [widgetError, setWidgetError] = useState("");
   const [loadFailed, setLoadFailed] = useState(false);
+  const [fiatHeld, setFiatHeld] = useState(false);
+  const [holdMessage, setHoldMessage] = useState("");
   const [copiedField, setCopiedField] = useState("");
+  const [showAccountNo, setShowAccountNo] = useState(false);
+  const [showIban, setShowIban] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [kycReason, setKycReason] = useState("required");
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
@@ -244,6 +436,7 @@ const DepositFiatScreen = () => {
   // Bottom Sheet Refs
   const kycModalRef = useRef(null);
   const fiatFaqSheetRef = useRef(null);
+  const beneficiariesPromiseRef = useRef(null);
 
   const isKycVerified = useMemo(() => isKycVerifiedCheck(userData), [userData]);
 
@@ -252,17 +445,105 @@ const DepositFiatScreen = () => {
     kycModalRef.current?.open?.();
   }, []);
 
+  const noteHold = useCallback((res) => {
+    const code = res?.code || res?.error?.code;
+    if (code !== "FIAT_SERVICE_HELD") return false;
+    const data = res?.data && typeof res.data === "object" ? res.data : res?.error?.data;
+    setFiatHeld(true);
+    setHoldMessage(
+      res?.message ||
+        res?.error?.message ||
+        (data?.hold_reason ? String(data.hold_reason) : "") ||
+        "Fiat service is temporarily unavailable"
+    );
+    return true;
+  }, []);
+
+  const loadDepositLimits = useCallback(async () => {
+    try {
+      const res = await appOperation.customer.fiat_limits().catch((err) => err);
+      noteHold(res);
+      if (res?.success) {
+        setDepositLimits(parseFiatDepositLimits(res.data || null));
+      }
+    } catch {
+      /* limits stay at last value; fee card falls back to 100 / 10 */
+    }
+  }, [noteHold]);
+
+  const loadBeneficiaries = useCallback(async () => {
+    try {
+      const p = appOperation.customer.fiat_whitelist_list().catch((err) => err);
+      beneficiariesPromiseRef.current = p;
+      const res = await p;
+      noteHold(res);
+      if (res?.success && res?.data) {
+        const list = Array.isArray(res.data) ? res.data : res.data.items || [];
+        const items = listedWhitelistEntries(list);
+        setBeneficiaries(items);
+        return { ok: true, items };
+      }
+      setBeneficiaries([]);
+      return { ok: false, items: [] };
+    } catch {
+      setBeneficiaries([]);
+      return null;
+    } finally {
+      beneficiariesPromiseRef.current = null;
+    }
+  }, [noteHold]);
+
+  const validateBeneficiary = useCallback(async () => {
+    let currentBeneficiaries = beneficiaries;
+    if (beneficiariesPromiseRef.current) {
+      try {
+        const res = await beneficiariesPromiseRef.current;
+        if (res?.success && res?.data) {
+          const list = Array.isArray(res.data) ? res.data : res.data.items || [];
+          currentBeneficiaries = listedWhitelistEntries(list);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    if (!currentBeneficiaries || currentBeneficiaries.length === 0) {
+      try {
+        const freshRes = await appOperation.customer.fiat_whitelist_list().catch((err) => err);
+        if (freshRes?.success && freshRes?.data) {
+          const list = Array.isArray(freshRes.data) ? freshRes.data : freshRes.data.items || [];
+          const items = listedWhitelistEntries(list);
+          if (items.length > 0) {
+            setBeneficiaries(items);
+            return true;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      Toast.showWithGravity("Please add beneficiary account before deposit.", Toast.LONG, Toast.BOTTOM);
+      return false;
+    }
+    return true;
+  }, [beneficiaries]);
+
   // Fetch Virtual Account (web logic parity)
-  const fetchVirtualAccount = useCallback(async () => {
-    setVaLoading(true);
-    setWidgetError("");
-    setLoadFailed(false);
+  const fetchVirtualAccount = useCallback(async ({ silent } = {}) => {
+    if (!silent) {
+      setVaLoading(true);
+      setWidgetError("");
+      setLoadFailed(false);
+    }
     try {
       const res = await appOperation.customer.fiat_virtual_account_me().catch((err) => err);
+      noteHold(res);
       if (res?.success && res?.data) {
         setAccount(res.data);
-      } else if (res?.code === "VA_NOT_FOUND" || res?.notFound || res?.message?.toLowerCase().includes("not found")) {
+        setLoadFailed(false);
+        setWidgetError("");
+      } else if (res?.code === "VA_NOT_FOUND" || res?.notFound || String(res?.message || "").toLowerCase().includes("not found")) {
         setAccount(null);
+        setLoadFailed(false);
+        setWidgetError("");
       } else {
         setAccount(null);
         setLoadFailed(true);
@@ -275,15 +556,31 @@ const DepositFiatScreen = () => {
     } finally {
       setVaLoading(false);
     }
-  }, []);
+  }, [noteHold]);
 
   useEffect(() => {
     fetchVirtualAccount();
   }, [fetchVirtualAccount]);
 
+  useEffect(() => {
+    setShowAccountNo(false);
+    setShowIban(false);
+  }, [account?.account_id, account?.iban]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDepositLimits();
+      loadBeneficiaries();
+    }, [loadDepositLimits, loadBeneficiaries])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchVirtualAccount();
+    await Promise.all([
+      fetchVirtualAccount({ silent: true }),
+      loadDepositLimits(),
+      loadBeneficiaries(),
+    ]);
     setRefreshing(false);
   };
 
@@ -300,7 +597,7 @@ const DepositFiatScreen = () => {
 
   // Create Virtual Account Handler (exact web logic)
   const handleCreateAccount = useCallback(async () => {
-    if (creating) return;
+    if (fiatHeld || creating) return;
 
     if (!isKycVerified) {
       openKycModal("required");
@@ -318,11 +615,19 @@ const DepositFiatScreen = () => {
       if (res?.success && res?.data) {
         setAccount(res.data);
         setLoadFailed(false);
-        Toast.showWithGravity("Bank account created.", Toast.LONG, Toast.BOTTOM);
+        const created = String(res?.message || "").toLowerCase().includes("created");
+        Toast.showWithGravity(
+          created ? "Bank account created." : "Your virtual account is ready.",
+          Toast.LONG,
+          Toast.BOTTOM
+        );
         return;
       }
 
       const code = res?.code || res?.error?.code;
+      if (noteHold(res) || code === "FIAT_SERVICE_HELD") {
+        return;
+      }
       if (code === "KYC_REQUIRED") {
         openKycModal("required");
         return;
@@ -339,7 +644,7 @@ const DepositFiatScreen = () => {
     } finally {
       setCreating(false);
     }
-  }, [creating, isKycVerified, openKycModal]);
+  }, [creating, fiatHeld, isKycVerified, noteHold, openKycModal]);
 
   // Color tokens
   const bgColor = themeColors.background;
@@ -352,6 +657,43 @@ const DepositFiatScreen = () => {
   const payIn = vaPayInIban(account);
   const statusChip = vaStatusChip(account?.status);
   const accountNo = String(account?.account_id || "").trim();
+  const feeModel = depositFeeModel(depositLimits);
+  const fiatFaq = useMemo(() => buildFiatFaq(feeModel.minLabel), [feeModel.minLabel]);
+
+  const displayAccountNo = accountNo
+    ? showAccountNo
+      ? accountNo
+      : maskWithAsterisks(accountNo)
+    : "—";
+
+  const displayIban =
+    payIn.text !== "—"
+      ? showIban
+        ? payIn.text
+        : maskWithAsterisks(payIn.copy || payIn.text, account?.iban_last4)
+      : "—";
+
+  const onCopyIban = async () => {
+    if (!(await validateBeneficiary())) return;
+    if (!payIn.copy) return;
+    handleCopy(payIn.copy, "iban", "IBAN");
+  };
+
+  const onCopyAccountNo = async () => {
+    if (!(await validateBeneficiary())) return;
+    if (!accountNo) return;
+    handleCopy(accountNo, "account_no", "Account no");
+  };
+
+  const onToggleShowAccountNo = async () => {
+    if (!showAccountNo && !(await validateBeneficiary())) return;
+    setShowAccountNo((prev) => !prev);
+  };
+
+  const onToggleShowIban = async () => {
+    if (!showIban && !(await validateBeneficiary())) return;
+    setShowIban((prev) => !prev);
+  };
 
   const activeBadgeBg = statusChip.pending
     ? (isDark ? "rgba(209, 170, 103, 0.15)" : "#FEF3C7")
@@ -369,9 +711,10 @@ const DepositFiatScreen = () => {
   let primaryBtnLabel = "Create bank account";
   if (vaLoading) primaryBtnLabel = "Checking account…";
   else if (creating) primaryBtnLabel = "Creating bank account…";
+  else if (fiatHeld) primaryBtnLabel = "Fiat is paused";
   else if (loadFailed) primaryBtnLabel = "Try again";
 
-  const handlePrimaryBtnPress = loadFailed ? fetchVirtualAccount : handleCreateAccount;
+  const handlePrimaryBtnPress = loadFailed && !fiatHeld ? () => fetchVirtualAccount() : handleCreateAccount;
 
   return (
     <AppSafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
@@ -448,7 +791,7 @@ const DepositFiatScreen = () => {
           </AppText>
 
           <AppText type={TWELVE} style={styles.heroSub} color={subTextColor}>
-            Add funds to your AGCX account via UAE bank transfer and start trading.
+            Add funds to your AGCX account using bank transfer and start trading in minutes. Fast, secure and hassle-free.
           </AppText>
 
           {/* 3 Features with exact Web SVG Icons */}
@@ -459,10 +802,10 @@ const DepositFiatScreen = () => {
               </View>
               <View style={styles.featureTextWrap}>
                 <AppText type={THIRTEEN} weight={BOLD} style={styles.featureTitle} color={textColor}>
-                  Bank-Level Security
+                  Bank-level security
                 </AppText>
                 <AppText type={ELEVEN} style={styles.featureDesc} color={subTextColor}>
-                  Your funds are protected with advanced security systems.
+                  Protected with advanced security systems.
                 </AppText>
               </View>
             </View>
@@ -473,10 +816,10 @@ const DepositFiatScreen = () => {
               </View>
               <View style={styles.featureTextWrap}>
                 <AppText type={THIRTEEN} weight={BOLD} style={styles.featureTitle} color={textColor}>
-                  Instant Processing
+                  Fast processing
                 </AppText>
                 <AppText type={ELEVEN} style={styles.featureDesc} color={subTextColor}>
-                  Fast deposits so you can start trading right away.
+                  Start trading as soon as Spot credits.
                 </AppText>
               </View>
             </View>
@@ -490,10 +833,57 @@ const DepositFiatScreen = () => {
                   UAE AED Rail
                 </AppText>
                 <AppText type={ELEVEN} style={styles.featureDesc} color={subTextColor}>
-                  Deposit AED via your dedicated Zand virtual IBAN.
+                  Dedicated AGCX virtual IBAN.
                 </AppText>
               </View>
             </View>
+          </View>
+        </View>
+
+        {fiatHeld ? (
+          <View style={[styles.holdBanner, { backgroundColor: isDark ? "rgba(239,68,68,0.12)" : "#FEF2F2", borderColor: isDark ? "rgba(239,68,68,0.35)" : "#FECACA" }]}>
+            <AppText type={THIRTEEN} weight={BOLD} color={textColor}>
+              Fiat paused.
+            </AppText>
+            <AppText type={TWELVE} style={{ marginTop: 4, lineHeight: 18 }} color={subTextColor}>
+              {holdMessage || "Fiat service is temporarily unavailable"}
+            </AppText>
+          </View>
+        ) : null}
+
+        <View style={[styles.card, { backgroundColor: cardBg, borderColor, marginBottom: 14 }]}>
+          <AppText type={THIRTEEN} weight={BOLD} color={textColor}>
+            Fee details
+          </AppText>
+          <View style={styles.feeRow}>
+            <AppText type={TWELVE} color={subTextColor}>Send at least</AppText>
+            <AppText type={THIRTEEN} weight={BOLD} color={textColor}>{feeModel.minLabel} AED</AppText>
+          </View>
+          <View style={styles.feeRow}>
+            <AppText type={TWELVE} color={subTextColor}>You receive</AppText>
+            <AppText type={THIRTEEN} weight={BOLD} color={textColor}>
+              {feeModel.feeIsFree ? `${feeModel.minLabel} AED` : `${feeModel.netLabel} AED`}
+            </AppText>
+          </View>
+          <AppText type={TWELVE} style={styles.feeNote} color={subTextColor}>
+            {feeModel.feeIsFree
+              ? `${feeModel.freeLeft} free deposit${feeModel.freeLeft === 1 ? "" : "s"} left today. Fee is taken from the bank transfer.`
+              : `Example if you send the minimum. Fee is taken from the transfer automatically — do not add it in the app. Below ${feeModel.minLabel} AED is held for refund, not credited.`}
+          </AppText>
+
+          <AppText type={THIRTEEN} weight={BOLD} color={textColor} style={{ marginTop: 16 }}>
+            How to deposit
+          </AppText>
+          <View style={styles.howList}>
+            <AppText type={TWELVE} style={styles.howLine} color={subTextColor}>
+              1. Copy the AGCX IBAN and account name from the bank card.
+            </AppText>
+            <AppText type={TWELVE} style={styles.howLine} color={subTextColor}>
+              2. Transfer at least {feeModel.minLabel} AED from your UAE bank.
+            </AppText>
+            <AppText type={TWELVE} style={styles.howLine} color={subTextColor}>
+              3. Wait for AED to credit in your spot wallet.
+            </AppText>
           </View>
         </View>
 
@@ -511,7 +901,7 @@ const DepositFiatScreen = () => {
             <View style={styles.vaHeader}>
               <View>
                 <AppText type={TWELVE} weight={MEDIUM} style={styles.vaKicker} color={subTextColor}>
-                  Virtual Account
+                  Your AGCX IBAN
                 </AppText>
                 <View style={styles.vaBadgeRow}>
                   <View
@@ -527,9 +917,6 @@ const DepositFiatScreen = () => {
                       {statusChip.text}
                     </AppText>
                   </View>
-                  <AppText type={FOURTEEN} weight={SEMI_BOLD} color={subTextColor}>
-                    {account.currency || "AED"}
-                  </AppText>
                 </View>
               </View>
               <TouchableOpacity
@@ -559,7 +946,7 @@ const DepositFiatScreen = () => {
                 Bank
               </AppText>
               <AppText type={FOURTEEN} weight={BOLD} color={textColor} style={styles.kvValueText}>
-                {account.bank_name || "Zand Bank"}
+                AGCX Bank
               </AppText>
             </View>
 
@@ -570,24 +957,38 @@ const DepositFiatScreen = () => {
               </AppText>
               <View style={styles.copyableValueRow}>
                 <AppText type={FOURTEEN} weight={BOLD} color={textColor} style={styles.copyableText}>
-                  {accountNo || "—"}
+                  {displayAccountNo}
                 </AppText>
                 {accountNo ? (
-                  <TouchableOpacity
-                    onPress={() => handleCopy(accountNo, "account_no", "Account no")}
-                    style={[
-                      styles.copyIconButton,
-                      { backgroundColor: copiedField === "account_no" ? "rgba(16,185,129,0.15)" : badgeBg },
-                    ]}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    activeOpacity={0.7}
-                  >
-                    {copiedField === "account_no" ? (
-                      <CopiedCheckIcon size={14} color="#10B981" />
-                    ) : (
-                      <CopyIcon size={14} color={isDark ? "#D1AA67" : "#B45309"} />
-                    )}
-                  </TouchableOpacity>
+                  <View style={styles.vaActions}>
+                    <TouchableOpacity
+                      onPress={onToggleShowAccountNo}
+                      style={[styles.copyIconButton, { backgroundColor: badgeBg }]}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}
+                    >
+                      {showAccountNo ? (
+                        <EyeOffIcon size={14} color={isDark ? "#D1AA67" : "#B45309"} />
+                      ) : (
+                        <EyeIcon size={14} color={isDark ? "#D1AA67" : "#B45309"} />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={onCopyAccountNo}
+                      style={[
+                        styles.copyIconButton,
+                        { backgroundColor: copiedField === "account_no" ? "rgba(16,185,129,0.15)" : badgeBg },
+                      ]}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}
+                    >
+                      {copiedField === "account_no" ? (
+                        <CopiedCheckIcon size={14} color="#10B981" />
+                      ) : (
+                        <CopyIcon size={14} color={isDark ? "#D1AA67" : "#B45309"} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 ) : null}
               </View>
             </View>
@@ -603,26 +1004,39 @@ const DepositFiatScreen = () => {
                   weight={BOLD}
                   color={textColor}
                   style={styles.copyableText}
-                  numberOfLines={1}
                 >
-                  {payIn.text}
+                  {displayIban}
                 </AppText>
                 {payIn.copy ? (
-                  <TouchableOpacity
-                    onPress={() => handleCopy(payIn.copy, "iban", "IBAN")}
-                    style={[
-                      styles.copyIconButton,
-                      { backgroundColor: copiedField === "iban" ? "rgba(16,185,129,0.15)" : badgeBg },
-                    ]}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    activeOpacity={0.7}
-                  >
-                    {copiedField === "iban" ? (
-                      <CopiedCheckIcon size={14} color="#10B981" />
-                    ) : (
-                      <CopyIcon size={14} color={isDark ? "#D1AA67" : "#B45309"} />
-                    )}
-                  </TouchableOpacity>
+                  <View style={styles.vaActions}>
+                    <TouchableOpacity
+                      onPress={onToggleShowIban}
+                      style={[styles.copyIconButton, { backgroundColor: badgeBg }]}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}
+                    >
+                      {showIban ? (
+                        <EyeOffIcon size={14} color={isDark ? "#D1AA67" : "#B45309"} />
+                      ) : (
+                        <EyeIcon size={14} color={isDark ? "#D1AA67" : "#B45309"} />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={onCopyIban}
+                      style={[
+                        styles.copyIconButton,
+                        { backgroundColor: copiedField === "iban" ? "rgba(16,185,129,0.15)" : badgeBg },
+                      ]}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}
+                    >
+                      {copiedField === "iban" ? (
+                        <CopiedCheckIcon size={14} color="#10B981" />
+                      ) : (
+                        <CopyIcon size={14} color={isDark ? "#D1AA67" : "#B45309"} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 ) : null}
               </View>
             </View>
@@ -643,13 +1057,44 @@ const DepositFiatScreen = () => {
               </AppText>
             </View>
 
-            {/* How to deposit instruction notice */}
+            {depositLimits?.minPerTx != null || depositLimits?.freeDepositsRemaining != null ? (
+              <View style={[styles.limitBox, { borderTopColor: borderColor }]}>
+                <AppText type={TWELVE} weight={BOLD} color={textColor} style={{ marginBottom: 8 }}>
+                  Deposit limits
+                </AppText>
+                {depositLimits?.minPerTx != null ? (
+                  <View style={styles.limitRow}>
+                    <AppText type={TWELVE} color={subTextColor}>Minimum</AppText>
+                    <AppText type={TWELVE} weight={BOLD} color={textColor}>
+                      {formatAedAmount(depositLimits.minPerTx)} AED
+                    </AppText>
+                  </View>
+                ) : null}
+                {depositLimits?.freeDepositsRemaining != null ? (
+                  <View style={styles.limitRow}>
+                    <AppText type={TWELVE} color={subTextColor}>Free transfers per 24 hours</AppText>
+                    <AppText type={TWELVE} weight={BOLD} color={textColor}>
+                      {String(depositLimits.freeDepositsRemaining)}
+                    </AppText>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
             <View style={[styles.instructionBox, { backgroundColor: isDark ? "rgba(212,175,55,0.08)" : "#FFF9E6", borderColor: isDark ? "rgba(212,175,55,0.25)" : "#FDE68A" }]}>
               <AppText type={TWELVE} style={styles.instructionText} color={isDark ? "#F3E8B6" : "#92400E"}>
-                <AppText type={TWELVE} weight={BOLD} color={isDark ? "#F3E8B6" : "#92400E"}>How to deposit: </AppText>
-                Transfer any AED amount from your UAE bank to this IBAN. Use the account name above as the beneficiary name. Funds credit to spot AED after the bank processes the transfer.
+                Add your withdrawal account before you deposit. It must be registered in your name. Deposits from third-party or unauthorized accounts may be rejected and refunded. Use only your own bank account.
               </AppText>
             </View>
+            <TouchableOpacity
+              onPress={() => NavigationService.navigate(WITHDRAW_FIAT_SCREEN, { openAdd: true })}
+              activeOpacity={0.85}
+              style={[styles.primaryBtn, { backgroundColor: colors.orangeTheme, marginTop: 12 }]}
+            >
+              <AppText type={FIFTEEN} weight={BOLD} color="#000000">
+                Add withdrawal account
+              </AppText>
+            </TouchableOpacity>
           </View>
         ) : (
           /* Case B: Create Bank Account Card */
@@ -673,6 +1118,32 @@ const DepositFiatScreen = () => {
               <View style={styles.errorBanner}>
                 <AppText type={THIRTEEN} color="#EF4444">{widgetError}</AppText>
               </View>
+            ) : null}
+
+            {!isKycVerified ? (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => NavigationService.navigate(KYC_STATUS_SCREEN)}
+                style={[
+                  styles.kycPrompt,
+                  {
+                    backgroundColor: isDark ? "rgba(209,170,103,0.12)" : "#FFF9E6",
+                    borderColor: isDark ? "rgba(209,170,103,0.35)" : "#FDE68A",
+                  },
+                ]}
+              >
+                <View style={styles.kycPromptIcon}>
+                  <SecurityShieldIcon size={22} color="#D1AA67" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText type={THIRTEEN} weight={BOLD} color={textColor}>
+                    Your KYC is not verified. Complete the KYC first.
+                  </AppText>
+                  <AppText type={TWELVE} weight={SEMI_BOLD} color={colors.orangeTheme} style={{ marginTop: 6 }}>
+                    Complete KYC ›
+                  </AppText>
+                </View>
+              </TouchableOpacity>
             ) : null}
 
             {/* Currency Input Box */}
@@ -709,23 +1180,53 @@ const DepositFiatScreen = () => {
                     </AppText>
                   </View>
                 </View>
-                <FastImage source={checkIc} style={styles.checkIcon} resizeMode="contain" tintColor="#10B981" />
-              </View>
+                <View style={{width:25,height:25,borderRadius:15,backgroundColor:isDark? colors.white: themeColors.background,
+                  alignItems:"center",justifyContent:"center"
+                }}>
+                <FastImage source={checkIc} style={styles.checkIcon} resizeMode="contain" tintColor={isDark? colors.black: colors.white} />
+              </View></View>
 
               <AppText type={TWELVE} weight={SEMI_BOLD} style={styles.methodSub} color={colors.orangeTheme}>
-                Virtual IBAN • Zand Bank
+                Your Personal AGCX Virtual IBAN
               </AppText>
               <AppText type={TWELVE} style={styles.methodDesc} color={subTextColor}>
-                Create one virtual IBAN linked to your verified identity, then transfer AED from your UAE bank. You cannot create a second account.
+                Create your Virtual IBAN that will be linked to your verified identity. This VIBAN can be used to deposit funds from your verified bank account to your AGCX account.
               </AppText>
             </View>
+
+            {depositLimits?.minPerTx != null || depositLimits?.freeDepositsRemaining != null ? (
+              <View style={[styles.limitBox, { borderTopColor: borderColor, marginTop: 0 }]}>
+                <AppText type={TWELVE} weight={BOLD} color={textColor} style={{ marginBottom: 8 }}>
+                  Deposit limits
+                </AppText>
+                {depositLimits?.minPerTx != null ? (
+                  <View style={styles.limitRow}>
+                    <AppText type={TWELVE} color={subTextColor}>Minimum</AppText>
+                    <AppText type={TWELVE} weight={BOLD} color={textColor}>
+                      {formatAedAmount(depositLimits.minPerTx)} AED
+                    </AppText>
+                  </View>
+                ) : null}
+                {depositLimits?.freeDepositsRemaining != null ? (
+                  <View style={styles.limitRow}>
+                    <AppText type={TWELVE} color={subTextColor}>Free transfers per 24 hours</AppText>
+                    <AppText type={TWELVE} weight={BOLD} color={textColor}>
+                      {String(depositLimits.freeDepositsRemaining)}
+                    </AppText>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
 
             {/* Primary Action Button */}
             <TouchableOpacity
               onPress={handlePrimaryBtnPress}
-              disabled={creating || vaLoading}
+              disabled={creating || vaLoading || fiatHeld}
               activeOpacity={0.85}
-              style={[styles.primaryBtn, { backgroundColor: colors.orangeTheme }]}
+              style={[
+                styles.primaryBtn,
+                { backgroundColor: colors.orangeTheme, opacity: creating || vaLoading || fiatHeld ? 0.55 : 1 },
+              ]}
             >
               {creating ? (
                 <ActivityIndicator color={"#000000"} size="small" />
@@ -737,6 +1238,30 @@ const DepositFiatScreen = () => {
             </TouchableOpacity>
           </View>
         )}
+
+        <View style={styles.sectionWrap}>
+          <AppText type={EIGHTEEN} weight={BOLD} style={styles.sectionHeading} color={textColor}>
+            How to deposit Fiat?
+          </AppText>
+          {HOW_STEPS.map((step) => {
+            const StepIcon = step.IconComponent;
+            return (
+              <View key={step.n} style={[styles.howStepRow, { backgroundColor: cardBg, borderColor }]}>
+                <View style={[styles.stepCircleIcon, styles.howStepIcon]}>
+                  <StepIcon size={20} color="#D1AA67" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
+                    {step.n}. {step.title}
+                  </AppText>
+                  <AppText type={TWELVE} style={{ marginTop: 4, lineHeight: 18 }} color={subTextColor}>
+                    {step.body}
+                  </AppText>
+                </View>
+              </View>
+            );
+          })}
+        </View>
 
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -813,12 +1338,12 @@ const DepositFiatScreen = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {FIAT_FAQ_DATA.map((item, index) => (
+            {fiatFaq.map((item, index) => (
               <View
                 key={String(index)}
                 style={[
                   styles.faqItemInner,
-                  index === FIAT_FAQ_DATA.length - 1 && styles.faqItemInnerLast,
+                  index === fiatFaq.length - 1 && styles.faqItemInnerLast,
                   { borderColor: colors.inputBorder },
                 ]}
               >
@@ -1053,6 +1578,61 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  vaActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  holdBanner: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 14,
+  },
+  feeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  feeNote: {
+    marginTop: 10,
+    lineHeight: 18,
+  },
+  howList: {
+    marginTop: 8,
+    gap: 6,
+  },
+  howLine: {
+    lineHeight: 18,
+  },
+  limitBox: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  limitRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+    gap: 12,
+  },
+  howStepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  howStepIcon: {
+    marginBottom: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
   instructionBox: {
     padding: 14,
     borderRadius: 12,
@@ -1067,6 +1647,23 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     marginBottom: 14,
+  },
+  kycPrompt: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  kycPromptIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(209, 170, 103, 0.15)",
   },
   fieldLabel: {
     marginBottom: 8,
@@ -1114,8 +1711,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   checkIcon: {
-    width: 18,
-    height: 18,
+    width: 12,
+    height: 12,
   },
   methodSub: {
     marginBottom: 6,

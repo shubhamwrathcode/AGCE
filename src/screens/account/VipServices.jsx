@@ -1,383 +1,828 @@
-import React, { useState, useMemo } from "react";
-import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, ImageBackground, Dimensions } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ImageBackground,
+  Dimensions,
+  Linking,
+  Platform,
+} from "react-native";
 import FastImage from "react-native-fast-image";
-import { AppSafeAreaView, AppText, } from "../../shared";
-import { EIGHTEEN, FOURTEEN, TWELVE, TWENTY, } from "../../helper/Constants";
-import { BOLD, MEDIUM, SEMI_BOLD } from "../../helper/Constants";
+import LinearGradient from "react-native-linear-gradient";
+import { AppSafeAreaView, AppText } from "../../shared";
+import { BOLD, SEMI_BOLD } from "../../helper/Constants";
 import NavigationService from "../../navigation/NavigationService";
 import {
-  vip_hero_img, vip_servies_herobg, vipserviceBanner, back_ic,
-  feeNegotiation, higherLimits, slaSupport, subAccounts,
-  apiLimits, autoTier, earlyAccess,
-  vipOverride,
-  vip0, vip1, vip2, vip3, vip4,
-  vip0Light, vip1Light, vip2Light, vip3Light, vip4Light
+  vip_hero_img,
+  vip_servies_herobg,
+  vip_servies_herobg_light,
+  back_ic,
 } from "../../helper/ImageAssets";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { fontFamilySemiBold } from "../../theme/typography";
 import { useTheme } from "../../hooks/useTheme";
-import { colors } from "../../theme/colors";
+import { appOperation } from "../../appOperation";
+import { LOGIN_SCREEN, NAVIGATION_AUTH_STACK } from "../../navigation/routes";
+import {
+  VIP_GUEST_MARKETS,
+  VIP_VOLUME_BANDS,
+  futuresVipRowsFromApi,
+  formatVipUsdt,
+  formatVipVolumeNumber,
+  isYourVipTier,
+  optionsVipRowsFromApi,
+  progressFromVipStatus,
+  spotVipRowsFromApi,
+} from "../../helper/vipTradeFees";
+
+import VipTag0 from "../../../assets/images/vip-services-img/vip_tag_img.svg";
+import VipTag1 from "../../../assets/images/vip-services-img/vip_tag_img2.svg";
+import VipTag2 from "../../../assets/images/vip-services-img/vip_tag_img3.svg";
+import VipTag3 from "../../../assets/images/vip-services-img/vip_tag_img4.svg";
+import VipTag4 from "../../../assets/images/vip-services-img/vip_tag_img5.svg";
+import VipTag5 from "../../../assets/images/vip-services-img/vip_tag_img6.svg";
+import VipFeatIcon1 from "../../../assets/images/vip-services-img/vip_features_icon.svg";
+import VipFeatIcon2 from "../../../assets/images/vip-services-img/vip_features_icon3.svg";
+import VipFeatIcon3 from "../../../assets/images/vip-services-img/vip_features_icon5.svg";
+import VipFeatIcon4 from "../../../assets/images/vip-services-img/vip_features_icon2.svg";
+import VipFeatIcon5 from "../../../assets/images/vip-services-img/vip_features_icon7.svg";
 
 const { width } = Dimensions.get("window");
 
 const GOLD = "#D1AA67";
+const GOLD_SOFT = "#F5D186";
+const GOLD_BORDER = "#D7B46A";
+const PAGE_BG_DARK = "#181A20";
+const PAGE_BG_LIGHT = "#F7F5F0";
+const CARD_BG_DARK = "#1b1d24";
+const TRACK_DARK = "#2c303a";
+const TRACK_LIGHT = "#efe8da";
+const SCALE_DARK = "#b5b5b5";
+const MUTED = "#9a9a9a";
 
-const vipTiers = [
-  { id: 'VIP0', volume: '< $50,000', makerFee: '0.10%', takerFee: '0.15%', benefits: 'Standard access', iconColor: '#A0A0A0', image: vip0, imageLight: vip0Light },
-  { id: 'VIP1', volume: '$50k – $500k', makerFee: '0.08%', takerFee: '0.08% / 0.12%', benefits: 'Priority support', iconColor: '#CD7F32', image: vip1, imageLight: vip1Light },
-  { id: 'VIP2', volume: '$500k – $2M', makerFee: '0.06%', takerFee: '0.10%', benefits: 'Higher API limits', iconColor: '#50C878', image: vip2, imageLight: vip2Light },
-  { id: 'VIP3', volume: '$2M – $10M', makerFee: '0.04%', takerFee: '0.08%', benefits: 'Dedicated manager', iconColor: '#4169E1', image: vip3, imageLight: vip3Light },
-  { id: 'VIP4', volume: '> $10M', makerFee: 'Negotiated', takerFee: 'Negotiated', benefits: 'OTC desk access', iconColor: '#9370DB', image: vip4, imageLight: vip4Light },
+const VIP_TAGS = [VipTag0, VipTag1, VipTag2, VipTag3, VipTag4, VipTag5];
+
+const BENEFITS = [
+  {
+    title: "Priority Support",
+    text: "Get faster responses and priority handling from our support team whenever you need help, with personalised guidance as you move up the tiers.",
+    Icon: VipFeatIcon1,
+    variant: "gold",
+  },
+  {
+    title: "Lower Trading Fees",
+    text: "Reduced maker and taker fees that keep getting better with every tier you unlock.",
+    Icon: VipFeatIcon2,
+    variant: "emerald",
+  },
+  {
+    title: "Automatic Upgrades",
+    text: "No application needed. Reach 50K USDT to unlock VIP 1 and climb to VIP 5 at 25M USDT.",
+    Icon: VipFeatIcon3,
+    variant: "purple",
+  },
+  {
+    title: "Rolling 30-Day Volume",
+    text: "Your tier follows your last 30 days of trading, so active traders are always rewarded.",
+    Icon: VipFeatIcon4,
+    variant: "blue",
+  },
+  {
+    title: "Every Market",
+    text: "Spot & margin, Futures and Options each have their own VIP fee schedule.",
+    Icon: VipFeatIcon5,
+    variant: "copper",
+  },
 ];
 
-const vipFeatures = [
-  { title: "Auto Tier Upgrade", desc: "Based on rolling 30-day volume — calculated nightly.", image: autoTier },
-  { title: "API & WS Limits", desc: "Higher rate limits and more WebSocket connection slots.", image: apiLimits },
-  { title: "VIP Override", desc: "For institutional onboarding and custom support.", image: vipOverride },
-  { title: "Early Access", desc: "Get early access to new product launches and token listings.", image: earlyAccess },
-  { title: "Higher Limits", desc: "Enjoy higher withdrawal limits per 24h period.", image: higherLimits },
-  { title: "Fee Negotiation", desc: "Tailored fee structure for VIP 4+ accounts.", image: feeNegotiation },
-  { title: "SLA Support", desc: "Access a dedicated support queue with SLA response times.", image: slaSupport },
-  { title: "Sub- Accounts", desc: "Operate up to 20 sub-accounts under one master account.", image: subAccounts },
-];
-
-const SectionTitle = ({ title, themeColors, styles }) => (
-  <View style={styles.sectionTitleContainer}>
-    <AppText style={{ color: themeColors.text, marginBottom: 8, fontSize: 20, fontFamily: fontFamilySemiBold }}>
-      {title}
-    </AppText>
-    <View style={styles.titleUnderlineContainer}>
-      <View style={styles.titleLine} />
-      <FastImage source={vipOverride} style={{ width: 20, height: 20 }} resizeMode="contain" />
-      <View style={styles.titleLine} />
-    </View>
-  </View>
-);
-
-const VipServices = () => {
-  const [selectedTier, setSelectedTier] = useState(null);
-  const { colors: themeColors, isDark } = useTheme();
-
-  const DARK_BG = isDark ? themeColors.background : colors.white;
-  const CARD_BG = isDark ? "#111111" : colors.white;
-  const BORDER = themeColors.border;
-  const TEXT_WHITE = themeColors.text;
-  const TEXT_GRAY = themeColors.secondaryText;
-
-  const styles = useMemo(() => getStyles(themeColors, isDark), [themeColors, isDark]);
-
-  const renderTierModal = () => {
-    if (!selectedTier) return null;
-    return (
-      <Modal transparent visible animationType="fade" onRequestClose={() => setSelectedTier(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText type={EIGHTEEN} weight={SEMI_BOLD} style={{ color: themeColors.text }}>
-                {selectedTier.id} Details
-              </AppText>
-              <TouchableOpacity onPress={() => setSelectedTier(null)}>
-                <AppText type={TWENTY} style={{ color: themeColors.text }}>×</AppText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <DetailRow label="Tier" themeColors={themeColors} value={selectedTier.id} />
-              <DetailRow label="30d Volume (USD)" themeColors={themeColors} value={selectedTier.volume} />
-              <DetailRow label="Maker Fee" themeColors={themeColors} value={selectedTier.makerFee} />
-              <DetailRow label="Taker Fee" themeColors={themeColors} value={selectedTier.takerFee} />
-              <DetailRow label="Benefits" themeColors={themeColors} value={selectedTier.benefits} />
-            </View>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
+function VipVolumeCard({ title, progress, loading, signedIn, error, styles, isDark, onLogin }) {
+  // Web screenshot: remain CTA is gold; loading/login/error stay light grey.
+  const remainCtaColor = isDark ? GOLD_SOFT : "#8a6a32";
+  const remainMutedColor = isDark ? "#fcfcfc" : "#5c5c5c";
+  const marketColor = isDark ? "#fff" : "#1a1a1a";
+  const scaleColor = isDark ? SCALE_DARK : "#666";
+  const pct = progress ? Math.max(0, Math.min(100, progress.percent)) : 0;
 
   return (
-    <AppSafeAreaView style={{ backgroundColor: themeColors.background, flex: 1 }}>
-      <View style={styles.customHeader}>
+    <View style={[styles.progressCard, !isDark && styles.progressCardLight]}>
+      <LinearGradient
+        colors={["#A67C33", "#F5D186", "#A67C33"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.progressCardTopAccent}
+      />
+      <View style={styles.progressHead}>
+        <AppText weight={SEMI_BOLD} style={[styles.progressMarket, { color: marketColor }]}>
+          {title}
+        </AppText>
+        {progress ? (
+          <View style={styles.progressTier}>
+            <Text style={styles.progressTierText} numberOfLines={1}>
+              {progress.label}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {loading ? (
+        <AppText style={[styles.progressRemain, { color: remainMutedColor }]}>
+          Loading your VIP progress…
+        </AppText>
+      ) : null}
+
+      {!loading && !signedIn ? (
+        <>
+          <AppText style={[styles.progressRemain, { color: remainMutedColor }]}>
+            Log in to view your 30-day volume and your progress to the next VIP tier.
+          </AppText>
+          <TouchableOpacity onPress={onLogin} style={styles.loginLink}>
+            <AppText weight={SEMI_BOLD} style={styles.loginLinkText}>
+              Log in ›
+            </AppText>
+          </TouchableOpacity>
+        </>
+      ) : null}
+
+      {!loading && signedIn && error && !progress ? (
+        <AppText style={[styles.progressRemain, { color: remainMutedColor }]}>{error}</AppText>
+      ) : null}
+
+      {progress ? (
+        <>
+          <View style={[styles.progressTrack, { backgroundColor: isDark ? TRACK_DARK : TRACK_LIGHT }]}>
+            {pct > 0 ? (
+              <LinearGradient
+                colors={["#8d6a2f", "#F5D186"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${pct}%`,
+                    // Low % still reads as the web gold “nub”
+                    minWidth: 10,
+                  },
+                ]}
+              />
+            ) : null}
+          </View>
+          <View style={styles.progressScale}>
+            <AppText style={{ color: scaleColor, fontSize: 12 }}>
+              {formatVipVolumeNumber(progress.volume)}
+            </AppText>
+            <AppText style={{ color: scaleColor, fontSize: 12, textAlign: "right" }}>
+              {progress.nextMin == null
+                ? progress.atTop
+                  ? "Top tier"
+                  : ""
+                : formatVipVolumeNumber(progress.nextMin)}
+            </AppText>
+          </View>
+          {progress.hasSchedule ? (
+            <AppText style={[styles.progressRemain, { color: remainCtaColor }]}>
+              {progress.atTop
+                ? "You have reached our top VIP tier"
+                : progress.qualifies
+                  ? `You have qualified for ${progress.nextLabel}. Your upgrade will be applied shortly.`
+                  : `Trade ${formatVipUsdt(progress.remaining)} more to reach ${progress.nextLabel}`}
+            </AppText>
+          ) : null}
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+function BenefitCard({ item, styles, isDark }) {
+  const Icon = item.Icon;
+  return (
+    <View style={[styles.benefitCard, styles[`benefit_${item.variant}`], !isDark && styles.benefitCardLight]}>
+      <View style={styles.benefitTopRow}>
+        <Icon width={28} height={28} />
+        <AppText weight={SEMI_BOLD} style={[styles.benefitTitle, !isDark && { color: "#1a1a1a" }]}>
+          {item.title}
+        </AppText>
+      </View>
+      <AppText style={[styles.benefitText, !isDark && { color: "#555" }]}>{item.text}</AppText>
+    </View>
+  );
+}
+
+const VipServices = () => {
+  const { isDark } = useTheme();
+  const styles = useMemo(() => getStyles(isDark), [isDark]);
+  const signedIn = Boolean(appOperation.customerToken);
+  const tiersRef = useRef(null);
+  const scrollRef = useRef(null);
+  const [tiersY, setTiersY] = useState(0);
+  const [marketKey, setMarketKey] = useState("spot");
+  const [selectedCardId, setSelectedCardId] = useState(null);
+  const [spotStatus, setSpotStatus] = useState(null);
+  const [futuresStatus, setFuturesStatus] = useState(null);
+  const [optionsStatus, setOptionsStatus] = useState(null);
+  const [loading, setLoading] = useState(signedIn);
+  const [spotError, setSpotError] = useState("");
+  const [futuresError, setFuturesError] = useState("");
+  const [optionsError, setOptionsError] = useState("");
+
+  useEffect(() => {
+    if (!signedIn) {
+      setLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const apply = (res, setStatus, setError) => {
+      if (cancelled) return;
+      if (res?.success && res.data && !Array.isArray(res.data)) {
+        setStatus(res.data);
+        setError("");
+      } else {
+        setError(res?.message || "We couldn't load your VIP status right now. Please try again later.");
+      }
+    };
+    Promise.all([
+      appOperation.customer.getMyVip("spot").then((res) => apply(res, setSpotStatus, setSpotError)),
+      appOperation.customer.getMyVip("futures").then((res) => apply(res, setFuturesStatus, setFuturesError)),
+      appOperation.customer.getMyVip("options").then((res) => apply(res, setOptionsStatus, setOptionsError)),
+    ])
+      .catch(() => {
+        if (!cancelled) {
+          const msg = "We couldn't load your VIP status right now. Please try again later.";
+          setSpotError(msg);
+          setFuturesError(msg);
+          setOptionsError(msg);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn]);
+
+  const goLogin = () => {
+    NavigationService.navigate(NAVIGATION_AUTH_STACK, { screen: LOGIN_SCREEN });
+  };
+
+  const goContact = () => {
+    Linking.openURL("https://arabglobal.ae/contact").catch(() => {});
+  };
+
+  const scrollToTiers = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ y: Math.max(0, tiersY - 8), animated: true });
+    }
+  };
+
+  const market = VIP_GUEST_MARKETS.find((item) => item.key === marketKey) || VIP_GUEST_MARKETS[0];
+  const apiRows =
+    market.key === "spot"
+      ? spotVipRowsFromApi(spotStatus)
+      : market.key === "futures"
+        ? futuresVipRowsFromApi(futuresStatus)
+        : optionsVipRowsFromApi(optionsStatus);
+  const rows = apiRows || market.rows;
+  const activeStatus =
+    market.key === "futures" ? futuresStatus : market.key === "options" ? optionsStatus : spotStatus;
+  const spotProgress = spotStatus ? progressFromVipStatus(spotStatus) : null;
+  const futuresProgress = futuresStatus ? progressFromVipStatus(futuresStatus) : null;
+  const optionsProgress = optionsStatus ? progressFromVipStatus(optionsStatus) : null;
+
+  const pageBg = isDark ? PAGE_BG_DARK : PAGE_BG_LIGHT;
+  const heroBg = isDark ? vip_servies_herobg : vip_servies_herobg_light;
+
+  return (
+    <AppSafeAreaView style={{ backgroundColor: pageBg, flex: 1 }}>
+      <View style={[styles.customHeader, { backgroundColor: pageBg }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => NavigationService.goBack()}>
-          <FastImage source={back_ic} style={styles.backIcon} tintColor={themeColors.text} resizeMode="contain" />
+          <FastImage
+            source={back_ic}
+            style={styles.backIcon}
+            tintColor={isDark ? "#fff" : "#1a1a1a"}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
-        <AppText weight={SEMI_BOLD} style={{ color: themeColors.text, fontSize: 20 }}>
+        <AppText weight={SEMI_BOLD} style={{ color: isDark ? "#fff" : "#1a1a1a", fontSize: 18 }}>
           VIP Services
         </AppText>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* Hero Section */}
-        <ImageBackground
-          source={vip_servies_herobg}
-          style={styles.heroSection}
-          imageStyle={styles.heroBgImage}
-        >
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: pageBg }}
+      >
+        <ImageBackground source={heroBg} style={styles.heroSection} imageStyle={styles.heroBgImage}>
+          <LinearGradient
+            colors={isDark ? ["rgba(4,4,4,0)", PAGE_BG_DARK] : ["rgba(247,245,240,0)", PAGE_BG_LIGHT]}
+            style={styles.heroFade}
+          />
           <View style={styles.heroOverlay}>
-            <FastImage
-              source={vip_hero_img}
-              style={styles.heroImage}
-              resizeMode="contain"
-            />
-            <AppText style={{
-              color: GOLD, marginTop: 16, marginBottom: 4, fontSize: 22,
-              fontFamily: fontFamilySemiBold
-            }}>
-              AGCE VIP Services
+            <FastImage source={vip_hero_img} style={styles.heroImage} resizeMode="contain" />
+            <AppText
+              weight={BOLD}
+              style={[
+                styles.heroTitle,
+                { color: isDark ? GOLD_SOFT : "#9D7A3F", fontFamily: fontFamilySemiBold },
+              ]}
+            >
+              AGCX VIP Program
             </AppText>
-            <AppText style={{ color: themeColors.text, fontSize: 14 }}>
-              Enjoy Exclusive Privileges
+            <AppText style={[styles.heroSubtitle, { color: isDark ? GOLD_SOFT : "#8a6a32" }]}>
+              Trade more, unlock more. Move up the VIP tiers to enjoy lower trading fees, priority
+              support and exclusive member benefits.
             </AppText>
+            <View style={styles.heroActions}>
+              {/* <TouchableOpacity style={styles.heroSecondaryBtn} onPress={goContact}>
+                <AppText weight={SEMI_BOLD} style={styles.heroSecondaryText}>
+                  Get in Touch
+                </AppText>
+              </TouchableOpacity> */}
+              <TouchableOpacity style={styles.heroPrimaryBtn} onPress={scrollToTiers}>
+                <AppText weight={SEMI_BOLD} style={styles.heroPrimaryText}>
+                  Explore VIP Tiers
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.heroSecondaryBtn} onPress={goContact}>
+                <AppText weight={SEMI_BOLD} style={styles.heroSecondaryText}>
+                  Contact Us
+                </AppText>
+              </TouchableOpacity>
+            </View>
           </View>
         </ImageBackground>
 
-        {/* VIP Tier Structure */}
-        <View style={styles.section}>
-          <SectionTitle title="VIP Tier Structure" themeColors={themeColors} styles={styles} />
+        <View
+          ref={tiersRef}
+          onLayout={(e) => setTiersY(e.nativeEvent.layout.y)}
+          style={styles.tierSection}
+        >
+          <View style={styles.tierTitleWrap}>
+            <AppText weight={SEMI_BOLD} style={[styles.tierTitle, { color: isDark ? "#fff" : "#1a1a1a" }]}>
+              VIP Tiers & Fees
+            </AppText>
+            <View style={styles.tierTitleUnderline} />
+          </View>
+          <AppText style={[styles.tierLead, { color: isDark ? MUTED : "#555" }]}>
+            Your tier is based on your trading volume over the last 30 days. Spot, isolated margin and
+            cross margin count together, while Futures and Options have their own tiers.
+          </AppText>
 
-          <View style={styles.tierList}>
-            {vipTiers.map((tier, index) => (
-              <TouchableOpacity
-                disabled
-                key={tier.id}
-                style={styles.tierCard}
-              >
-                <View style={[styles.tierCardLeft, { justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 8 }]}>
-                  <FastImage source={isDark ? tier.image : tier.imageLight} style={{ width: '100%', height: 40 }} resizeMode="contain" />
-                </View>
+          <VipVolumeCard
+            title="Spot & margin"
+            progress={spotProgress}
+            loading={loading}
+            signedIn={signedIn}
+            error={spotError}
+            styles={styles}
+            isDark={isDark}
+            onLogin={goLogin}
+          />
+          <VipVolumeCard
+            title="Futures"
+            progress={futuresProgress}
+            loading={loading}
+            signedIn={signedIn}
+            error={futuresError}
+            styles={styles}
+            isDark={isDark}
+            onLogin={goLogin}
+          />
+          <VipVolumeCard
+            title="Options"
+            progress={optionsProgress}
+            loading={loading}
+            signedIn={signedIn}
+            error={optionsError}
+            styles={styles}
+            isDark={isDark}
+            onLogin={goLogin}
+          />
 
-                <View style={styles.tierCardRight}>
-                  <View style={styles.feeColumn}>
-                    <AppText style={{ color: themeColors.secondaryText, fontSize: 9, marginBottom: 4 }}>Maker Fee</AppText>
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{tier.makerFee}</AppText>
-                  </View>
+          <View style={styles.marketTabs}>
+            {VIP_GUEST_MARKETS.map((item) => {
+              const active = item.key === market.key;
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  style={[styles.marketTab, active && styles.marketTabActive]}
+                  onPress={() => setMarketKey(item.key)}
+                >
+                  <AppText
+                    weight={SEMI_BOLD}
+                    style={{
+                      color: active ? "#111" : isDark ? GOLD_SOFT : "#8a6a32",
+                      fontSize: 13,
+                    }}
+                  >
+                    {item.label}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-                  <View style={styles.feeColumn}>
-                    <AppText style={{ color: themeColors.secondaryText, fontSize: 9, marginBottom: 4 }}>Taker Fee</AppText>
-                    <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: themeColors.text }}>{tier.takerFee}</AppText>
-                  </View>
-
-                  <View style={styles.benefitBadge}>
-                    <AppText style={{ color: themeColors.text, fontSize: 9, flex: 1 }} numberOfLines={2}>
-                      {tier.benefits}
+          <View style={styles.tierGrid}>
+            {rows.map((tier, index) => {
+              const band =
+                VIP_VOLUME_BANDS[Math.min(tier.tagIndex ?? index, VIP_VOLUME_BANDS.length - 1)];
+              const accent = tier.accent || band.accent;
+              const TagIcon = VIP_TAGS[Math.min(tier.tagIndex ?? index, VIP_TAGS.length - 1)];
+              const tierKey = tier.code || tier.id;
+              const mine = signedIn && apiRows ? isYourVipTier(tier, activeStatus) : false;
+              const isMe = mine || selectedCardId === tierKey;
+              return (
+                <TouchableOpacity
+                  key={`${tierKey}-${index}`}
+                  activeOpacity={0.9}
+                  onPress={() => setSelectedCardId(selectedCardId === tierKey ? null : tierKey)}
+                  style={[
+                    styles.tierCard,
+                    { borderTopColor: accent },
+                    isMe && { borderColor: accent },
+                    !isDark && styles.tierCardLight,
+                  ]}
+                >
+                  {mine ? (
+                    <View style={[styles.yourTierTag, { backgroundColor: accent }]}>
+                      <Text style={styles.yourTierTagText} numberOfLines={1}>
+                        Your tier
+                      </Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.tierHead}>
+                    <View style={styles.tierHex}>
+                      <TagIcon width={32} height={32} />
+                    </View>
+                    <AppText
+                      weight={BOLD}
+                      style={[styles.tierName, { color: isDark ? "#eee" : "#1a1a1a" }]}
+                    >
+                      {tier.id}
                     </AppText>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <AppText style={[styles.tierVolLabel, { color: isDark ? "#9a9aa3" : "#666" }]}>
+                    30-day volume (USDT)
+                  </AppText>
+                  <AppText
+                    weight={SEMI_BOLD}
+                    style={[styles.tierVolValue, { color: isDark ? "#fff" : "#1a1a1a" }]}
+                  >
+                    {tier.volume}
+                  </AppText>
+                  <View style={styles.tierFees}>
+                    <View style={[styles.tierFee, !isDark && styles.tierFeeLight]}>
+                      <AppText style={styles.tierFeeLabel}>Maker fee</AppText>
+                      <AppText
+                        weight={BOLD}
+                        style={[styles.tierFeeValue, { color: isDark ? "#fff" : "#1a1a1a" }]}
+                      >
+                        {tier.makerFee}
+                      </AppText>
+                    </View>
+                    <View style={[styles.tierFee, !isDark && styles.tierFeeLight]}>
+                      <AppText style={styles.tierFeeLabel}>Taker fee</AppText>
+                      <AppText
+                        weight={BOLD}
+                        style={[styles.tierFeeValue, { color: isDark ? "#fff" : "#1a1a1a" }]}
+                      >
+                        {tier.takerFee}
+                      </AppText>
+                    </View>
+                  </View>
+                  <AppText weight={SEMI_BOLD} style={[styles.tierSave, { color: accent }]}>
+                    {tier.benefits}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <AppText style={{ color: themeColors.secondaryText, fontSize: 9, marginTop: 8 }}>
-            * 30D Volume (USD)
+        </View>
+
+        <View style={styles.benefitsSection}>
+          <AppText weight={BOLD} style={[styles.benefitsHeading, { color: isDark ? "#fff" : "#1a1a1a" }]}>
+            Why Become a <AppText weight={BOLD} style={{ color: "#d9b26a", fontSize: 20 }}>VIP</AppText>
           </AppText>
-        </View>
-
-        {/* VIP Features */}
-        <View style={styles.section}>
-          <SectionTitle title="VIP Features" themeColors={themeColors} styles={styles} />
-
-          <View style={styles.featuresContainer}>
-            {vipFeatures.map((feature, index) => (
-              <View key={index} style={styles.featureCard}>
-                <View style={styles.featureIconContainer}>
-                  {feature.image ? (
-                    <FastImage source={feature.image} style={{ width: 30, height: 30 }} resizeMode="contain" />
-                  ) : (
-                    <Icon name={feature.icon} size={28} color={GOLD} />
-                  )}
-                </View>
-                <View style={styles.featureTextContainer}>
-                  <AppText type={TWELVE} weight={SEMI_BOLD} style={{ color: GOLD, marginBottom: 4 }}>
-                    {feature.title}
-                  </AppText>
-                  <AppText style={{ color: themeColors.secondaryText, fontSize: 9, lineHeight: 12 }}>
-                    {feature.desc}
-                  </AppText>
-                </View>
-              </View>
+          <View style={styles.benefitGrid}>
+            {BENEFITS.map((item) => (
+              <BenefitCard key={item.title} item={item} styles={styles} isDark={isDark} />
             ))}
           </View>
         </View>
-
-        {/* Coming Soon */}
-        <View style={styles.section}>
-          <SectionTitle title="Coming Soon" themeColors={themeColors} styles={styles} />
-          <View style={styles.vipCardContainer}>
-            <FastImage
-              source={vipserviceBanner}
-              style={styles.vipCardImage}
-              resizeMode="cover"
-            />
-          </View>
-        </View>
-        {/* <View style={{ marginTop: 20 }}></View> */}
-
       </ScrollView>
-      {renderTierModal()}
     </AppSafeAreaView>
   );
 };
 
-const DetailRow = ({ label, value, themeColors }) => (
-  <View style={styles.detailRow}>
-    <AppText type={FOURTEEN} style={{ color: themeColors.secondaryText, flex: 1 }}>{label}</AppText>
-    <AppText type={FOURTEEN} weight={MEDIUM} style={{ color: themeColors.text, flex: 1, textAlign: 'right' }}>{value}</AppText>
-  </View>
-);
-
-const getStyles = (themeColors, isDark) => StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  customHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backBtn: {
-  },
-  backIcon: {
-    width: 18,
-    height: 18,
-  },
-  headerSpacer: {
-    width: 26,
-  },
-  heroSection: {
-    width: width,
-    minHeight: 180,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  heroBgImage: {
-    // opacity: 0.6,
-  },
-  heroOverlay: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  heroImage: {
-    width: 100,
-    height: 100,
-  },
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-  },
-  sectionTitleContainer: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  titleUnderlineContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5
-  },
-  titleLine: {
-    height: 1,
-    width: 50,
-    backgroundColor: GOLD,
-  },
-  tierList: {
-    gap: 8,
-  },
-  tierCard: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    borderWidth: 1,
-    overflow: 'hidden',
-    borderColor: isDark ? themeColors.border : '#EAEAEA'
-  },
-  tierCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    width: '32%',
-  },
-  tierCardRight: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-  },
-  feeColumn: {
-    flex: 1,
-  },
-  benefitBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: isDark ? themeColors.card : '#F9F9F9',
-    borderWidth: 1,
-    borderColor: isDark ? themeColors.border : '#EAEAEA',
-    borderRadius: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    width: '38%',
-  },
-  featuresContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 12,
-  },
-  featureCard: {
-    width: "48%",
-    flexDirection: "row",
-    // alignItems: "center",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(209, 170, 103, 0.2)",
-    padding: 12,
-  },
-  featureIconContainer: {
-    marginRight: 10,
-  },
-  featureTextContainer: {
-    flex: 1,
-  },
-  vipCardContainer: {
-    alignItems: 'center',
-    width: "100%",
-  },
-  vipCardImage: {
-    width: "100%",
-    height: 180,
-    borderRadius: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalContent: {
-    width: "100%",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalBody: {
-    gap: 16,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  }
-});
+const getStyles = (isDark) =>
+  StyleSheet.create({
+    scrollContent: { paddingBottom: 28 },
+    customHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+    },
+    backBtn: { padding: 4 },
+    backIcon: { width: 18, height: 18 },
+    headerSpacer: { width: 26 },
+    heroSection: {
+      width,
+      minHeight: 360,
+      justifyContent: "flex-end",
+      alignItems: "center",
+      paddingBottom: 28,
+    },
+    heroBgImage: { resizeMode: "cover" },
+    heroFade: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 120,
+    },
+    heroOverlay: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 20,
+      zIndex: 2,
+    },
+    heroImage: { width: 160, height: 160 },
+    heroTitle: {
+      marginTop: 12,
+      fontSize: 26,
+      letterSpacing: 0.8,
+      textAlign: "center",
+    },
+    heroSubtitle: {
+      marginTop: 10,
+      fontSize: 14,
+      lineHeight: 21,
+      textAlign: "center",
+      paddingHorizontal: 8,
+    },
+    heroActions: {
+      marginTop: 18,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: 10,
+    },
+    heroPrimaryBtn: {
+      backgroundColor: GOLD,
+      borderColor: GOLD,
+      borderWidth: 1,
+      borderRadius: 100,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+    },
+    heroPrimaryText: { color: "#000", fontSize: 13 },
+    heroSecondaryBtn: {
+      backgroundColor: "transparent",
+      borderColor: GOLD_BORDER,
+      borderWidth: 1,
+      borderRadius: 100,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+    },
+    heroSecondaryText: { color: GOLD_SOFT, fontSize: 13 },
+    tierSection: {
+      paddingHorizontal: 16,
+      paddingTop: 28,
+      backgroundColor: isDark ? PAGE_BG_DARK : PAGE_BG_LIGHT,
+    },
+    tierTitleWrap: { alignItems: "center", marginBottom: 12 },
+    tierTitle: {
+      fontSize: 26,
+      lineHeight: 34,
+      letterSpacing: 0.4,
+      paddingTop: 4,
+      paddingBottom: 6,
+      textAlign: "center",
+    },
+    tierTitleUnderline: {
+      marginTop: 0,
+      height: 4,
+      width: 168,
+      backgroundColor: GOLD,
+      borderRadius: 2,
+      alignSelf: "center",
+    },
+    tierLead: {
+      fontSize: 13,
+      lineHeight: 19,
+      textAlign: "center",
+      marginBottom: 20,
+      paddingHorizontal: 4,
+      color: MUTED,
+    },
+    progressCard: {
+      position: "relative",
+      backgroundColor: CARD_BG_DARK,
+      borderWidth: 1,
+      borderColor: "rgba(209, 170, 103, 0.35)",
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 14,
+    },
+    progressCardLight: {
+      backgroundColor: "#fff",
+      borderColor: "rgba(209, 170, 103, 0.45)",
+    },
+    progressCardTopAccent: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 2,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+    },
+    progressHead: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      marginBottom: 14,
+    },
+    progressMarket: { fontSize: 17, flexShrink: 1, paddingRight: 8 },
+    progressTier: {
+      flexShrink: 0,
+      backgroundColor: GOLD_SOFT,
+      borderRadius: 100,
+      paddingHorizontal: 12,
+      paddingTop: Platform.OS === "ios" ? 5 : 4,
+      paddingBottom: Platform.OS === "ios" ? 5 : 4,
+    },
+    progressTierText: {
+      color: "#1a1408",
+      fontSize: 12,
+      lineHeight: 16,
+      fontFamily: fontFamilySemiBold,
+      letterSpacing: 0.3,
+      includeFontPadding: false,
+    },
+    progressTrack: {
+      height: 8,
+      borderRadius: 100,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: 100,
+    },
+    progressScale: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 8,
+      gap: 8,
+    },
+    progressRemain: {
+      marginTop: 12,
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: "400",
+    },
+    loginLink: { marginTop: 12 },
+    loginLinkText: { color: GOLD, fontSize: 14 },
+    marketTabs: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 16,
+      marginBottom: 12,
+    },
+    marketTab: {
+      borderWidth: 1,
+      borderColor: GOLD_BORDER,
+      backgroundColor: "transparent",
+      borderRadius: 100,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    marketTabActive: {
+      backgroundColor: GOLD,
+      borderColor: GOLD,
+    },
+    tierGrid: { gap: 10 },
+    tierCard: {
+      backgroundColor: isDark ? "#141417" : "#fff",
+      borderWidth: 2,
+      borderColor: isDark ? "#26262b" : "#e8e4da",
+      borderTopWidth: 3,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      position: "relative",
+    },
+    tierCardLight: {
+      backgroundColor: "#fff",
+    },
+    yourTierTag: {
+      position: "absolute",
+      top: 10,
+      right: 10,
+      borderRadius: 20,
+      paddingHorizontal: 8,
+      paddingTop: Platform.OS === "ios" ? 4 : 3,
+      paddingBottom: Platform.OS === "ios" ? 4 : 3,
+      zIndex: 2,
+    },
+    yourTierTagText: {
+      color: "#111",
+      fontSize: 10,
+      lineHeight: 13,
+      fontFamily: fontFamilySemiBold,
+      includeFontPadding: false,
+    },
+    tierHead: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 2,
+      paddingRight: 64,
+    },
+    tierHex: {
+      width: 32,
+      height: 32,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    tierName: { fontSize: 16 },
+    tierVolLabel: { fontSize: 11, marginTop: 8 },
+    tierVolValue: { fontSize: 13, marginTop: 2, marginBottom: 8 },
+    tierFees: { flexDirection: "row", gap: 8 },
+    tierFee: {
+      flex: 1,
+      backgroundColor: "#0b0b0d",
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    tierFeeLight: {
+      backgroundColor: "#f4f1ea",
+    },
+    tierFeeLabel: { color: "#80808a", fontSize: 10, marginBottom: 2 },
+    tierFeeValue: { fontSize: 13 },
+    tierSave: { marginTop: 8, fontSize: 12 },
+    benefitsSection: {
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 12,
+      backgroundColor: isDark ? PAGE_BG_DARK : PAGE_BG_LIGHT,
+    },
+    benefitsHeading: {
+      textAlign: "center",
+      fontSize: 20,
+      lineHeight: 26,
+      marginBottom: 12,
+    },
+    benefitGrid: { gap: 10 },
+    benefitCard: {
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderWidth: 1,
+    },
+    benefitCardLight: {
+      backgroundColor: "#fff",
+    },
+    benefit_gold: {
+      backgroundColor: isDark ? "#1a1610" : "#fffaf0",
+      borderColor: "rgba(217, 178, 106, 0.32)",
+    },
+    benefit_emerald: {
+      backgroundColor: isDark ? "#0f1a15" : "#f0faf5",
+      borderColor: "rgba(62, 207, 142, 0.28)",
+    },
+    benefit_purple: {
+      backgroundColor: isDark ? "#16101f" : "#f7f2ff",
+      borderColor: "rgba(167, 107, 255, 0.28)",
+    },
+    benefit_blue: {
+      backgroundColor: isDark ? "#0f1524" : "#f1f5ff",
+      borderColor: "rgba(79, 140, 255, 0.28)",
+    },
+    benefit_copper: {
+      backgroundColor: isDark ? "#1c130f" : "#fff5f0",
+      borderColor: "rgba(243, 138, 94, 0.28)",
+    },
+    benefitTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 6,
+    },
+    benefitTitle: { color: "#fff", fontSize: 14, flex: 1 },
+    benefitText: { color: "#b5b5b5", fontSize: 12, lineHeight: 17 },
+  });
 
 export default VipServices;

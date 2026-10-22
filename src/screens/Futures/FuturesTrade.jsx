@@ -52,7 +52,6 @@ import {
   getStepSize,
   sanitizeIncrementInput,
   resolveTakerFeeRate,
-  formatFuturesFeePercent,
   computeFuturesOrderMargin,
   computeMaxOpenNotional,
   computePosition,
@@ -94,6 +93,7 @@ import {
   formatBatchAdjustTrail,
 } from './futuresSymbolMarginHelpers';
 import FuturesLeverageSlider from './FuturesLeverageSlider';
+import { resolveTradeFeeLabel, useVipTradeFees } from '../../helper/vipTradeFees';
 import FuturesBatchAdjustDrawer from './FuturesBatchAdjustDrawer';
 import AdjustLeverageSheet from './AdjustLeverageSheet';
 import {
@@ -284,6 +284,7 @@ const FuturesUI = () => {
   const routeCoin = route.params?.coin || route.params?.pair || route.params?.coinDetail;
   const futuresPairs = useSelector((state) => state.home.futuresPairs);
   const userData = useSelector((state) => state.auth.userData);
+  const futuresVipFees = useVipTradeFees("futures");
 
   const [pairData, setPairData] = useState(() => {
     return futuresPairs && futuresPairs.length > 0 ? futuresPairs : [];
@@ -2785,7 +2786,7 @@ const FuturesUI = () => {
               <View style={[styles.feeRateBox, { backgroundColor: themeColors.card }]}>
                 <AppText type={TWELVE} color={themeColors.secondaryText}>Fee rate</AppText>
                 <AppText type={TWELVE}>
-                  Maker {formatFuturesFeePercent(selectedCoin?.maker_fee_rate)} / Taker {formatFuturesFeePercent(selectedCoin?.taker_fee_rate)}
+                  Maker {resolveTradeFeeLabel(futuresVipFees, selectedCoin?.maker_fee_rate, "maker", true)} / Taker {resolveTradeFeeLabel(futuresVipFees, selectedCoin?.taker_fee_rate, "taker", true)}
                 </AppText>
               </View>
             </View>

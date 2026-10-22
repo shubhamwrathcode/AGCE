@@ -392,8 +392,9 @@ export const referAndEarn = require('../../assets/images/referAndEarn.png');
 export const stakingNew = require('../../assets/images/stakingNew.png');
 export const simpleEarn = require('../../assets/images/simpleEarn.png');
 export const vip = require('../../assets/images/vip.png');
-export const vip_hero_img = require('../../assets/images/vip_hero_img.png');
-export const vip_servies_herobg = require('../../assets/images/vip_servies_herobg.jpg');
+export const vip_hero_img = require('../../assets/images/vip-services-img/vip_hero_img.png');
+export const vip_servies_herobg = require('../../assets/images/vip-services-img/vip_servies_herobg.jpg');
+export const vip_servies_herobg_light = require('../../assets/images/vip-services-img/vip_servies_herobg_light.jpg');
 export const vipserviceBanner = require('../../assets/images/vipserviceBanner.png');
 
 
@@ -472,6 +473,9 @@ export const otcInfoIcon2 = require('../../assets/images/otc_info_icon2.png');
 export const otcInfoIcon3 = require('../../assets/images/otc_info_icon3.png');
 export const otcInfoIcon4 = require('../../assets/images/otc_info_icon4.png');
 export const whyTradeOtcBack = require('../../assets/images/whyTradeOtcBack.png');
+export const OtcIconDark = require('../../assets/images/OtcIconDark.png');
+export const OtcIconLight = require('../../assets/images/OtcIconLight.png');
+
 
 
 

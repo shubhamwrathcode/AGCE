@@ -42,6 +42,7 @@ import {
   tick,
 } from "../../helper/ImageAssets";
 import { useAppSelector } from "../../store/hooks";
+import { resolveTradeFeeLabel, useVipTradeFees } from "../../helper/vipTradeFees";
 import {
   multiply,
   percentCalculation,
@@ -619,18 +620,15 @@ const Spot = () => {
     headerTab,
   ]);
 
-  /** Web TradePage: Maker / Taker % under CTA; fall back 0.2 when pair has no fee fields yet */
-  const spotFooterMakerTakerPct = useMemo(() => {
-    const parseFee = (v, fallback = 0.2) => {
-      if (v === null || v === undefined || v === "") return fallback;
-      const n = Number(v);
-      return Number.isFinite(n) ? n : fallback;
-    };
-    return {
-      maker: parseFee(currencyData?.maker_fee),
-      taker: parseFee(currencyData?.taker_fee),
-    };
-  }, [currencyData?.maker_fee, currencyData?.taker_fee]);
+  /** Spot + isolated + cross share one VIP status (`product=spot`). */
+  const spotVipFees = useVipTradeFees("spot");
+  const spotFooterMakerTakerPct = useMemo(
+    () => ({
+      maker: resolveTradeFeeLabel(spotVipFees, currencyData?.maker_fee, "maker"),
+      taker: resolveTradeFeeLabel(spotVipFees, currencyData?.taker_fee, "taker"),
+    }),
+    [spotVipFees, currencyData?.maker_fee, currencyData?.taker_fee]
+  );
 
 
 

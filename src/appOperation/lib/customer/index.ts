@@ -1329,4 +1329,19 @@ export default (appOperation: AppOperation) => ({
     appOperation.get('user/cdd', undefined, undefined, CUSTOMER_TYPE),
   cddSubmit: (data: any) =>
     appOperation.put('user/cdd', data, CUSTOMER_TYPE),
+
+  /**
+   * GET /v1/user/vip?product=spot|futures|options
+   * Spot (also isolated + cross), futures, and options each have their own status.
+   * Spot/options fees are percents. Futures fees are fractions (0.0002 = 0.02%).
+   */
+  getMyVip: (product?: 'spot' | 'futures' | 'options') =>
+    appOperation.get(
+      'user/vip',
+      product === 'futures' || product === 'spot' || product === 'options'
+        ? { product }
+        : undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
 });

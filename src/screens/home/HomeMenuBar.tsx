@@ -18,6 +18,8 @@ import {
   earningAsset1,
   lockLight,
   spotIconDarkTheme,
+  OtcIconLight,
+  OtcIconDark,
 } from "../../helper/ImageAssets";
 import NavigationService from "../../navigation/NavigationService";
 import { ACCOUNT_SCREEN, EARNING_SCREEN, OTC_DASHBOARD_SCREEN, TRADE_SCREEN, WALLET_SCREEN } from "../../navigation/routes";
@@ -116,7 +118,7 @@ const HomeMenuBar = () => {
     {
       id: "3",
       title: "OTC Desk",
-      icon: wallet_ic,
+      icon: isDark? OtcIconLight: OtcIconDark,
       onPress: () => NavigationService.navigate(OTC_DASHBOARD_SCREEN),
     },
     // {

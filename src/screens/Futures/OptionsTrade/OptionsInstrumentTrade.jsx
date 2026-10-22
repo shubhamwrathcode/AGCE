@@ -24,6 +24,7 @@ import {
   parseOptionsApiError
 } from './helpers/optionsOrderValidation';
 import { showError, showSuccess } from '../../../helper/logger';
+import { useVipTradeFees } from '../../../helper/vipTradeFees';
 import { ShimmerBox } from '../../spotScreen/Spot';
 import { buildOrderbookDisplayRows } from './helpers/optionsDataHelpers';
 import useOptionsWebSocket from './hooks/useOptionsWebSocket';
@@ -468,15 +469,22 @@ const OptionsInstrumentTrade = () => {
     return `Est. fee on fill: ${fmtNum(fee, 4)} USDT`;
   }, [normalizedPreview.costEst]);
 
+  const optionsVipFees = useVipTradeFees("options");
   const displayFeeRates = useMemo(() => {
     const rates = effectiveFeeRates || {};
     const tx = rates.transaction_fee_rate ?? rates.taker_fee_rate;
+    let transaction = formatFeeRateDisplay(tx, 4);
+    if (!optionsVipFees?.ready) {
+      transaction = "---";
+    } else if (optionsVipFees?.fees?.taker) {
+      transaction = optionsVipFees.fees.taker;
+    }
     return {
-      transaction: formatFeeRateDisplay(tx, 4),
+      transaction,
       exercise: formatFeeRateDisplay(rates.exercise_fee_rate, 3),
       liquidation: formatFeeRateDisplay(rates.liquidation_fee_rate, 2),
     };
-  }, [effectiveFeeRates]);
+  }, [effectiveFeeRates, optionsVipFees]);
 
   const priceBandError = useMemo(() => {
     const snapped = snapToIncrementInput(orderPrice, tickSize);

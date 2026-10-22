@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   View,
   StyleSheet,
@@ -328,6 +329,8 @@ function getEnabledVerifyMethods(settings) {
 
 const WithdrawFiatScreen = () => {
   const { colors: themeColors, isDark } = useTheme();
+  const navigation = useNavigation();
+  const route = useRoute();
   const userData = useAppSelector((state) => state.auth?.userData || state.user?.userData || {});
 
   // Page level states
@@ -629,6 +632,12 @@ const WithdrawFiatScreen = () => {
     setError("");
     setInfo("");
   };
+
+  useEffect(() => {
+    if (loading || !route.params?.openAdd) return;
+    startAddAccount();
+    navigation.setParams({ openAdd: false });
+  }, [loading, route.params?.openAdd]);
 
   const handleAddAccount = async () => {
     if (accountName.trim().length < 2) {

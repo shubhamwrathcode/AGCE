@@ -1113,10 +1113,10 @@ export function SpotOrderForm({
                 <View style={styles.spotOrderFooterBelowCta}>
                   <View style={styles.spotOrderFooterFeesRow}>
                     <AppText weight={SEMI_BOLD} style={[styles.spotOrderFooterFeeText, { color: themeColors.text }]}>
-                      Maker {spotFooterMakerTakerPct.maker}%
+                      Maker {spotFooterMakerTakerPct?.maker ?? "---"}
                     </AppText>
                     <AppText weight={SEMI_BOLD} style={[styles.spotOrderFooterFeeText, { color: themeColors.text }]}>
-                      Taker {spotFooterMakerTakerPct.taker}%
+                      Taker {spotFooterMakerTakerPct?.taker ?? "---"}
                     </AppText>
                   </View>
 
