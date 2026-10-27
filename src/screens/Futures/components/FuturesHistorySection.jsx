@@ -9,6 +9,7 @@ import { BOLD, fontFamilyMedium, fontFamilySemiBold, MEDIUM, SEMI_BOLD } from '.
 import { colors } from '../../../theme/colors';
 import { amountLimitLabel, isMultipleOfIncrement, parseMinNotionalValue } from '../../../helper/orderQtyPrecision';
 import { decNum, capDecStr, computePosition, computeClosedPosition, snapAndCapCloseQty, snapToIncrementInput, formatLiqFee, formatFuturesTs, pickOpenedTs, pickClosedTs, openFuturesHistoryDetail, fmtFuturesQty, fmtFuturesPrice, fmtFuturesUsdt, fmtFuturesPct, computeTradeHistoryItem, formatFuturesOrderType, getFuturesOrderDisplayPrice, getFuturesOrderTriggerText } from '../../../helper/futuresUtils';
+import { futuresPlaceOutcome, futuresStatusMessage } from '../../../helper/futuresOrderStatus';
 import { right_ic, NO_NOTIFICATION_ICON, filterIcon, editnew } from '../../../helper/ImageAssets';
 import { AppText, FOURTEEN, TEN, THIRTEEN, TWELVE } from '../../../common';
 import HistorySectionLoader, { LOADER_MIN_HEIGHT } from '../../../common/HistorySectionLoader/HistorySectionLoader';
@@ -258,6 +259,15 @@ const FuturesHistorySection = ({
     try {
       const result = await appOperation.customer?.futuresPlaceOrder(payload);
       if (result?.success) {
+        const orderData = result?.data?.order ?? result?.data;
+        const outcome = futuresPlaceOutcome(orderData);
+
+        if (outcome.kind === 'none') {
+          // Nothing closed — keep modal open; position unchanged
+          SimpleToast.show(outcome.message);
+          return;
+        }
+
         if (posKey) {
           closingIdsRef.current[posKey] = true;
           setClosingIds((prev) => ({ ...prev, [posKey]: true }));
@@ -273,9 +283,15 @@ const FuturesHistorySection = ({
             delete closingTimersRef.current[posKey];
           }, 10000);
         }
-        SimpleToast.show(
-          result?.message || (orderType === 'MARKET' ? 'Position close order placed' : 'Limit close order placed')
-        );
+
+        if (outcome.kind === 'partial') {
+          SimpleToast.show(outcome.message);
+        } else {
+          SimpleToast.show(
+            orderType === 'MARKET' ? 'Position close order placed' : 'Limit close order placed'
+          );
+        }
+
         setCloseModalVisible(false);
         setPosToClose(null);
         posToCloseRef.current = null;
@@ -889,6 +905,26 @@ const FuturesHistorySection = ({
               {String(order.status || "—").toUpperCase()}
             </AppText>
           </View>
+          {(() => {
+            const reason = futuresStatusMessage(order);
+            if (!reason) return null;
+            return (
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Reason</AppText>
+                <AppText
+                  type={FOURTEEN}
+                  style={{
+                    color: themeColors.secondaryText || (isDark ? "#8E8E93" : "#666666"),
+                    fontFamily: fontFamilyMedium,
+                    flex: 1,
+                    textAlign: "right",
+                  }}
+                >
+                  {reason}
+                </AppText>
+              </View>
+            );
+          })()}
         </View>
       </TouchableOpacity>
     );

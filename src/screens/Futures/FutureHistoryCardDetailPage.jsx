@@ -11,6 +11,7 @@ import { AppText, FOURTEEN, THIRTEEN, TWELVE, SIXTEEN } from '../../common';
 import { BOLD, MEDIUM, SEMI_BOLD, fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import { colors } from '../../theme/colors';
 import { computeClosedPosition, computePosition, formatLiqFee, formatFuturesTs, pickOpenedTs, pickClosedTs, getFuturesHistoryDetail, fmtFuturesQty, fmtFuturesPrice, fmtFuturesUsdt, fmtFuturesPct, decNum, capDecStr, computeTradeHistoryItem, formatFuturesOrderType, getFuturesOrderDisplayPrice, getFuturesOrderTriggerText } from '../../helper/futuresUtils';
+import { futuresOrderReasonText } from '../../helper/futuresOrderStatus';
 import { back_ic } from '../../helper/ImageAssets';
 import { appOperation } from '../../appOperation';
 import FuturesCancelModal from './components/FuturesCancelModal';
@@ -197,6 +198,9 @@ const FutureHistoryCardDetailPage = () => {
               {renderDetailRow("Reduce Only", pos.reduce_only || pos.reduceOnly ? "Yes" : "No")}
               {title === 'Order History' && renderDetailRow("Fee", fmtFuturesUsdt(pos.total_fees_paid ?? 0))}
               {renderDetailRow("Status", String(pos.status || "OPEN").toUpperCase(), getStatusColor(pos.status || "OPEN"))}
+              {title === 'Order History'
+                ? renderDetailRow("Close Reason", futuresOrderReasonText(pos))
+                : null}
               {title === 'Open Orders' && (
                 <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, alignItems: 'center' }}>
                   <AppText type={FOURTEEN} style={{ color: isDark ? "#8E8E93" : "#666666", fontFamily: fontFamilySemiBold }}>Action</AppText>

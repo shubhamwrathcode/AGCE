@@ -62,6 +62,10 @@ import {
   roundQtyDownToStep,
 } from '../../helper/futuresUtils';
 import {
+  futuresPlaceOutcome,
+  isFuturesTerminalOrder,
+} from '../../helper/futuresOrderStatus';
+import {
   amountLimitLabel,
   buildAmountHint,
   effectiveOrderMinimum,
@@ -1014,17 +1018,24 @@ const FuturesUI = () => {
 
       const result = await appOperation.customer.futuresPlaceOrder(finalPayload);
       if (result?.success) {
-        SimpleToast.show(result?.message || 'Order Placed Successfully!', SimpleToast.SHORT);
         const orderData = result?.data?.order ?? result?.data;
+        const outcome = futuresPlaceOutcome(orderData);
+        if (outcome.kind === 'placed') {
+          SimpleToast.show('Order Placed Successfully!', SimpleToast.SHORT);
+        } else {
+          SimpleToast.show(outcome.message, SimpleToast.SHORT);
+        }
+
         const orderId = orderData?._id ?? orderData?.order_id;
-        if (orderData && orderId) {
+        const terminal = isFuturesTerminalOrder(orderData);
+        if (!terminal && orderData && orderId) {
           setFuturesOpenOrders((prev) => {
             if (prev.some((o) => String(o._id ?? o.order_id) === String(orderId))) return prev;
             return [orderData, ...prev];
           });
         }
 
-        // clear form
+        // clear form (place always finishes; terminal orders are not added to Open)
         setAmount("");
         setSliderValue(0);
         if (orderType === 'Conditional') {
