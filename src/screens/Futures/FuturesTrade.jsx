@@ -19,14 +19,9 @@ import { colors, darkTheme } from '../../theme/colors';
 import ToggleSwitch from '../../common/ToggleSwitch';
 import PercentQuickSelect from '../../shared/components/PercentQuickSelect';
 import {
-  back_ic,
   downIcon,
   printIcon,
   INFO,
-  limitTrade,
-  market_ic,
-  spotLimitTrade,
-  spotMarket,
   tick,
   REMOVE,
   closeIcon,
@@ -36,8 +31,6 @@ import {
   order_1,
   order_2,
   order_3,
-  NO_NOTIFICATION_ICON,
-  right_ic
 } from '../../helper/ImageAssets';
 import { fontFamilyMedium, fontFamilySemiBold } from '../../theme/typography';
 import {

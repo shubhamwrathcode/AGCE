@@ -135,6 +135,8 @@ import WebLink from "../screens/account/WebLink";
 import TradeHistory from "../screens/account/TradeHistory";
 import OpenOrder from "../screens/account/OpenOrder";
 import NewWalletHistory from "../screens/account/NewWalletHistory";
+import DepositHistoryDetail from "../screens/account/DepositHistoryDetail";
+import DepositDeclaration from "../screens/account/DepositDeclaration";
 import NewSwapHistory from "../screens/account/NewSwapHistory";
 import InternalWalletHistory from "../screens/account/InternalWalletHistory";
 import BuyPackage from "../screens/other/BuyPackage";
@@ -697,6 +699,8 @@ const MyAuthLoadingStack = () => {
       <Stack.Screen name={'Interanl_Trade_History'} component={InternalWalletHistory} />
       <Stack.Screen name={routes.OPEN_ORDER_SCREEN} component={OpenOrder} />
       <Stack.Screen name={'Wallet_History'} component={NewWalletHistory} />
+      <Stack.Screen name={routes.DEPOSIT_HISTORY_DETAIL_SCREEN} component={DepositHistoryDetail} />
+      <Stack.Screen name={routes.DEPOSIT_DECLARATION_SCREEN} component={DepositDeclaration} />
       <Stack.Screen name={'Swap_History'} component={NewSwapHistory} />
       <Stack.Screen name={'Ticket_Screen'} component={TicketScreen} />
       <Stack.Screen name={'BuyPackage'} component={BuyPackage} />

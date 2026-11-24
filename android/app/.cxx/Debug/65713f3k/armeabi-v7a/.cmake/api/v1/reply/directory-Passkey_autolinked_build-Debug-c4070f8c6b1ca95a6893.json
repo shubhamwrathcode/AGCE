@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "Passkey_autolinked_build",
+		"source" : "/Users/wrathcodetechnology/Desktop/Projects/AGCE/node_modules/react-native-passkey/android/build/generated/source/codegen/jni"
+	}
+}

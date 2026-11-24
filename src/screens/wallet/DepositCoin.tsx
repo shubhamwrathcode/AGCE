@@ -49,8 +49,9 @@ import QRCode from 'react-native-qrcode-svg';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import NavigationService from '../../navigation/NavigationService';
-import { DEPOSIT_FIAT_SCREEN } from '../../navigation/routes';
+import { DEPOSIT_FIAT_SCREEN, DEPOSIT_HISTORY_DETAIL_SCREEN } from '../../navigation/routes';
 import { buildCoinImageUri } from '../../helper/coinIconUrl';
+import { presentDepositStatus, readDeclarationStatus, readDepositStatus } from '../../helper/depositDeclaration';
 import CoinIcon from '../../common/CoinIcon';
 import { colors, darkTheme, lightTheme } from '../../theme/colors';
 import { useTheme } from '../../hooks/useTheme';
@@ -274,15 +275,6 @@ const resolveExplorerUrl = (explorer: any, kind: 'address' | 'tx', value: string
     return tpl;
 };
 
-const historyStatusLabel = (raw: any) => {
-    const t = raw == null ? '' : String(raw).trim();
-    if (!t) return '—';
-    if (/success|completed|credited|confirm/i.test(t)) return 'COMPLETED';
-    if (/pending|processing|in progress|confirming|queued|wait/i.test(t)) return 'PENDING';
-    if (/fail|failed|reject|rejected|cancel|error/i.test(t)) return 'FAILED';
-    return t.toUpperCase();
-};
-
 const mapDepositHistoryRow = (r: any, i: number) => {
     const tx = r?.transaction_hash || r?.txid || r?.txId || r?.tx_id || r?.hash;
     const addr = r?.address || r?.to_address || r?.destAddress || r?.destinationAddress;
@@ -311,9 +303,12 @@ const mapDepositHistoryRow = (r: any, i: number) => {
         r?.depositAmount ??
         (r?.metadata && (r.metadata.net_amount ?? r.metadata.amount)) ??
         '—';
-    const status = r?.status || r?.transaction_status || r?.action || '—';
+    const status = readDepositStatus(r) || '—';
+    const declarationStatus = readDeclarationStatus(r);
+    const presented = presentDepositStatus(status, declarationStatus);
     const explorer = r?.explorer || r?.explorerLink || r?.explorer_link || (r?.metadata && r.metadata.explorer) || {};
     return {
+        id: r?._id || r?.id || tx || `row-${i}`,
         _id: r?._id || r?.id || tx || `row-${i}`,
         createdAt: r?.createdAt || r?.created_at || r?.time || r?.date,
         updatedAt: r?.updatedAt || r?.updated_at || r?.createdAt,
@@ -323,8 +318,17 @@ const mapDepositHistoryRow = (r: any, i: number) => {
         currency: r?.currency || r?.coin || r?.token || r?.asset || r?.name || short || '—',
         amount: amount != null && amount !== '' ? String(amount) : '—',
         status: status != null && String(status).trim() ? String(status) : '—',
-        statusLabel: historyStatusLabel(status),
+        declarationStatus,
+        declaration_status: declarationStatus,
+        statusLabel: presented.label,
+        actionTone: presented.tone,
+        needsSenderConfirm: presented.needsSenderConfirm,
         explorer,
+        address: addr != null && addr !== '' ? String(addr) : '—',
+        addressShort: addr != null && addr !== '' ? truncateMid(addr) : '—',
+        txid: tx != null && tx !== '' ? String(tx) : '—',
+        txidShort: tx != null && tx !== '' ? truncateMid(tx) : '—',
+        depositWallet: r?.wallet || r?.walletType || r?.wallet_type || r?.depositWallet || 'Main Wallet',
         from_address: addr != null && addr !== '' ? addr : '—',
         transaction_hash: tx != null && tx !== '' ? String(tx) : '—',
         shortAddress: addr != null && addr !== '' ? truncateMid(addr) : '—',
@@ -1025,15 +1029,12 @@ const DepositCoin = () => {
     const renderDepositHistoryItem = ({ item }: { item: any }) => {
         if (!item) return null;
 
-        const statusLabel = item?.statusLabel || historyStatusLabel(item?.status);
-        const statusTone =
-            statusLabel === 'COMPLETED'
-                ? 'success'
-                : statusLabel === 'FAILED'
-                    ? 'danger'
-                    : statusLabel === 'PENDING'
-                        ? 'pending'
-                        : 'neutral';
+        const presented = presentDepositStatus(
+            readDepositStatus(item) || item?.status,
+            readDeclarationStatus(item) || item?.declarationStatus
+        );
+        const statusLabel = presented.label;
+        const statusTone = presented.tone === 'info' ? 'neutral' : presented.tone;
 
         const dateStr = moment(item?.createdAt || item?.updatedAt).isValid()
             ? moment(item?.createdAt || item?.updatedAt).format('DD/MM/YYYY, HH:mm:ss')
@@ -1106,7 +1107,9 @@ const DepositCoin = () => {
         );
 
         return (
-            <View
+            <TouchableOpacity
+                activeOpacity={0.92}
+                onPress={() => NavigationService.navigate(DEPOSIT_HISTORY_DETAIL_SCREEN, { row: { ...item, ...presented, statusLabel: presented.label, actionTone: presented.tone, needsSenderConfirm: presented.needsSenderConfirm, id: item?.id || item?._id } })}
                 style={[
                     styles.depHistCard,
                     { backgroundColor: themeColors.background, borderColor: isDark ? themeColors.border : '#EEE' },
@@ -1196,7 +1199,7 @@ const DepositCoin = () => {
                         }
                     />
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
 

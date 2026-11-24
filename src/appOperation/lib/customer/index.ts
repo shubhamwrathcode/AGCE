@@ -282,6 +282,29 @@ export default (appOperation: AppOperation) => ({
       data,
       CUSTOMER_TYPE
     ),
+  /** Web deposit history: `GET /v1/wallet/deposits` — includes `declaration_status`. */
+  wallet_deposits: (data: { skip?: number; limit?: number } = {}) =>
+    appOperation.get(
+      'wallet/deposits',
+      { skip: data.skip ?? 0, limit: data.limit ?? 20 },
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  /** Web: `GET /v1/wallet/deposit-declarations/:depositId` */
+  get_deposit_declaration: (depositId: string) =>
+    appOperation.get(
+      `wallet/deposit-declarations/${encodeURIComponent(String(depositId || '').trim())}`,
+      undefined,
+      undefined,
+      CUSTOMER_TYPE,
+    ),
+  /** Web: `POST /v1/wallet/deposit-declarations/:depositId` */
+  submit_deposit_declaration: (depositId: string, data: any) =>
+    appOperation.post(
+      `wallet/deposit-declarations/${encodeURIComponent(String(depositId || '').trim())}`,
+      data,
+      CUSTOMER_TYPE,
+    ),
   verify_withdraw: (data: any) =>
     appOperation.post(
       'transaction/wallet-withdrawal-history',

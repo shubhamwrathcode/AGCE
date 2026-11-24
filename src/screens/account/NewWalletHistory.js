@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
 import { AppSafeAreaView, AppText, Toolbar, BOLD, MEDIUM, SEMI_BOLD, TWELVE, TEN, FOURTEEN, FIFTEEN } from "../../shared";
 import { colors, lightTheme } from "../../theme/colors";
@@ -11,6 +11,8 @@ import NewWalletHistorySkeleton from "./NewWalletHistorySkeleton";
 import { appOperation } from "../../appOperation";
 import NavigationService from "../../navigation/NavigationService";
 import { DEPOSIT_HISTORY_DETAIL_SCREEN } from "../../navigation/routes";
+import { presentDepositStatus, readDeclarationStatus, readDepositStatus } from "../../helper/depositDeclaration";
+import { useFocusEffect } from "@react-navigation/native";
 
 const NewWalletHistory = ({
   investments = [],
@@ -81,15 +83,6 @@ const NewWalletHistory = ({
     [pickExplorerHref]
   );
 
-  const historyStatusLabel = useCallback((raw) => {
-    const t = raw == null ? "" : String(raw).trim();
-    if (!t) return "—";
-    if (/success|completed|credited|confirm/i.test(t)) return "COMPLETED";
-    if (/pending|processing|in progress|confirming|queued|wait/i.test(t)) return "PENDING";
-    if (/fail|failed|reject|rejected|cancel|error/i.test(t)) return "FAILED";
-    return t.toUpperCase();
-  }, []);
-
   const mapRow = useCallback(
     (r, i) => {
       const tx = r?.transaction_hash || r?.txid || r?.txId || r?.tx_id || r?.hash;
@@ -119,8 +112,11 @@ const NewWalletHistory = ({
         r?.depositAmount ??
         (r?.metadata && (r.metadata.net_amount ?? r.metadata.amount)) ??
         "—";
-      const status = r?.status || r?.transaction_status || r?.action || "—";
+      const status = readDepositStatus(r) || "—";
+      const declarationStatus = readDeclarationStatus(r);
+      const presented = presentDepositStatus(status, declarationStatus);
       const explorer = r?.explorer || r?.explorerLink || r?.explorer_link || (r?.metadata && r.metadata.explorer) || {};
+      const fromAddress = r?.from_address || r?.fromAddress || "";
       return {
         id: r?._id || r?.id || tx || `row-${i}`,
         createdAt: r?.createdAt || r?.created_at || r?.time || r?.date,
@@ -129,50 +125,101 @@ const NewWalletHistory = ({
         short_name: short != null && String(short).trim() ? String(short).toUpperCase() : "—",
         amount: amount != null && amount !== "" ? String(amount) : "—",
         status,
-        statusLabel: historyStatusLabel(status),
+        declarationStatus,
+        statusLabel: presented.label,
+        actionTone: presented.tone,
+        needsSenderConfirm: presented.needsSenderConfirm,
         address: addr != null && addr !== "" ? String(addr) : "—",
         addressShort: addr != null && addr !== "" ? truncateMid(addr) : "—",
         txid: tx != null && tx !== "" ? String(tx) : "—",
         txidShort: tx != null && tx !== "" ? truncateMid(tx) : "—",
         depositWallet: r?.wallet || r?.walletType || r?.wallet_type || r?.depositWallet || "Main Wallet",
+        from_address: fromAddress != null && String(fromAddress).trim() ? String(fromAddress) : "",
         explorer,
       };
     },
-    [historyStatusLabel, truncateMid]
+    [truncateMid]
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  const fetchDepositPage = useCallback(async (skip) => {
+    let history = [];
+    try {
+      const res = await appOperation.customer.verify_deposit({ skip, limit });
+      history = extractDepositHistoryList(res);
+    } catch {
+      history = [];
+    }
+
+    let deposits = [];
+    try {
+      const res = await appOperation.customer.wallet_deposits({ skip, limit });
+      deposits = extractDepositHistoryList(res);
+    } catch {
+      deposits = [];
+    }
+
+    if (!history.length) return deposits;
+    if (!deposits.length) return history;
+
+    const byId = new Map();
+    deposits.forEach((row) => {
+      const id = String(row?._id || row?.id || "");
+      if (id) byId.set(id, row);
+    });
+
+    return history.map((row) => {
+      const id = String(row?._id || row?.id || "");
+      const extra = byId.get(id);
+      if (!extra) return row;
+      const declarationStatus = readDeclarationStatus(row) || readDeclarationStatus(extra);
+      const status = readDepositStatus({
+        status: extra?.status,
+        deposit_status: row?.status,
+        transaction_status: row?.transaction_status || extra?.transaction_status,
+        action: row?.action || extra?.action,
+        metadata: { ...(extra?.metadata || {}), ...(row?.metadata || {}) },
+      }) || row?.status;
+      return {
+        ...extra,
+        ...row,
+        status,
+        declaration_status: declarationStatus,
+      };
+    });
+  }, [extractDepositHistoryList, limit]);
+
+  const reloadFirstPage = useCallback(async ({ silent } = {}) => {
+    if (!silent) {
       setLoadingInitial(true);
       setRows([]);
       rowsRef.current = [];
-      setHasMore(true);
-      hasMoreRef.current = true;
-      try {
-        const res = await appOperation.customer.verify_deposit({ skip: 0, limit });
-        if (cancelled) return;
-        const raw = extractDepositHistoryList(res);
-        const batch = (raw || []).map((r, i) => mapRow(r, i));
-        setRows(batch);
-        rowsRef.current = batch;
-        setHasMore(batch.length >= limit);
-        hasMoreRef.current = batch.length >= limit;
-      } catch {
-        if (!cancelled) {
-          setRows([]);
-          rowsRef.current = [];
-          setHasMore(false);
-          hasMoreRef.current = false;
-        }
-      } finally {
-        if (!cancelled) setLoadingInitial(false);
+    }
+    setHasMore(true);
+    hasMoreRef.current = true;
+    try {
+      const raw = await fetchDepositPage(0);
+      const batch = (raw || []).map((r, i) => mapRow(r, i));
+      setRows(batch);
+      rowsRef.current = batch;
+      setHasMore(batch.length >= limit);
+      hasMoreRef.current = batch.length >= limit;
+    } catch {
+      if (!silent) {
+        setRows([]);
+        rowsRef.current = [];
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [extractDepositHistoryList, limit, mapRow]);
+      setHasMore(false);
+      hasMoreRef.current = false;
+    } finally {
+      setLoadingInitial(false);
+    }
+  }, [fetchDepositPage, limit, mapRow]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void reloadFirstPage({ silent: rowsRef.current.length > 0 });
+    }, [reloadFirstPage])
+  );
 
   const loadMore = useCallback(async () => {
     if (!hasMoreRef.current || loadingMoreRef.current) return;
@@ -180,8 +227,7 @@ const NewWalletHistory = ({
     setLoadingMore(true);
     const skip = rowsRef.current.length;
     try {
-      const res = await appOperation.customer.verify_deposit({ skip, limit });
-      const raw = extractDepositHistoryList(res);
+      const raw = await fetchDepositPage(skip);
       const batch = (raw || []).map((r, i) => mapRow(r, skip + i));
       if (!batch.length) {
         setHasMore(false);
@@ -202,7 +248,7 @@ const NewWalletHistory = ({
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [extractDepositHistoryList, limit, mapRow]);
+  }, [fetchDepositPage, limit, mapRow]);
 
   const handleScroll = useCallback(
     (event) => {
@@ -228,26 +274,29 @@ const NewWalletHistory = ({
       const dateStr = moment(row?.createdAt).isValid() ? moment(row.createdAt).format("DD/MM/YYYY, HH:mm:ss") : "—";
       const networkText = row?.chain_full_name && row.chain_full_name !== "—" ? row.chain_full_name : row?.chain || "—";
 
-      const tone =
-        row?.statusLabel === "COMPLETED"
-          ? "success"
-          : row?.statusLabel === "PENDING"
-            ? "pending"
-            : "failed";
+      const tone = row?.actionTone || "info";
 
       const pillBg =
         tone === "success"
           ? "#E9F9F1"
           : tone === "pending"
             ? "#FFF9E6"
-            : "#FEECEC";
+            : tone === "danger"
+              ? "#FEECEC"
+              : isDark
+                ? "rgba(148, 163, 184, 0.16)"
+                : "#F3F4F6";
 
       const pillText =
         tone === "success"
           ? "#05C46B"
           : tone === "pending"
             ? "#FFC312"
-            : "#FF3F34";
+            : tone === "danger"
+              ? "#FF3F34"
+              : isDark
+                ? "#8E8E93"
+                : "#666666";
 
       const addressUrl = resolveExplorerUrl(row?.explorer, "address", row?.address);
       const txUrl = resolveExplorerUrl(row?.explorer, "tx", row?.txid);
