@@ -21,6 +21,8 @@
 
 <uses-feature android:name="android.hardware.camera" android:required="false" />
 <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+<!-- Portrait lock must not block phones, tablets, desktop, or Android XR that do not advertise this feature. -->
+<uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
 
     <application
       android:name=".MainApplication"
