@@ -9,10 +9,13 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import FastImage from "react-native-fast-image";
 import Toast from "react-native-simple-toast";
 import Svg, { Path, Rect } from "react-native-svg";
+import { KeyboardAwareScrollView } from "@codler/react-native-keyboard-aware-scroll-view";
 import { useTheme } from "../../hooks/useTheme";
 import { useAppSelector } from "../../store/hooks";
 import { appOperation } from "../../appOperation";
@@ -163,19 +166,19 @@ const HOW_STEPS = [
   {
     n: "2",
     title: "Verify email",
-    body: "Confirm the IBAN with the email OTP. Zand whitelist is created after a successful verify.",
+    body: "Confirm the IBAN with the email OTP. AGCX whitelist is created after a successful verify.",
     IconComponent: SecurityShieldIcon,
   },
   {
     n: "3",
     title: "Enter amount",
-    body: "Withdraw from spot AED. Daily and per-transaction limits are shown before you confirm.",
+    body: "Enter the gross AED to send. Spot locks that amount. The bank receives net after a flat fee from the preview.",
     IconComponent: RatesGraphIcon,
   },
   {
     n: "4",
     title: "AED sent to bank",
-    body: "Payouts go through Zand Bank domestic rails to your verified IBAN.",
+    body: "Payouts go through AGCX Bank domestic rails to your verified IBAN.",
     IconComponent: InstantBoltIcon,
   },
 ];
@@ -216,12 +219,6 @@ function kycLegalName(vaAccount, userDetails) {
   const first = String(userDetails?.firstName || userDetails?.first_name || "").trim();
   const last = String(userDetails?.lastName || userDetails?.last_name || "").trim();
   return `${first} ${last}`.trim();
-}
-
-function namesMatch(kycName, typed) {
-  const a = normalizePersonName(kycName);
-  const b = normalizePersonName(typed);
-  return a.length >= 2 && a === b;
 }
 
 function formatAedAmount(val) {
@@ -324,7 +321,24 @@ function getEnabledVerifyMethods(settings) {
   if (methods.mobile?.enabled) enabled.push("mobile");
   if (methods.google_authenticator?.enabled) enabled.push("google_authenticator");
   if (methods.fund_password?.enabled) enabled.push("fund_password");
-  return enabled.length ? enabled : ["email"];
+  return enabled;
+}
+
+/** Gross AED for preview/POST — same rule as web `toAedGrossString`. */
+function toAedGrossString(value) {
+  const s = String(value ?? "").trim().replace(/,/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return "";
+  if (/^0+(\.0+)?$/.test(s)) return "";
+  const [intRaw, fracRaw = ""] = s.split(".");
+  const intPart = intRaw.replace(/^0+(?=\d)/, "") || "0";
+  return `${intPart}.${fracRaw.padEnd(2, "0")}`;
+}
+
+function newIdempotencyKey(prefix = "wd") {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 const WithdrawFiatScreen = () => {
@@ -342,6 +356,8 @@ const WithdrawFiatScreen = () => {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [fiatHeld, setFiatHeld] = useState(false);
+  const [holdMessage, setHoldMessage] = useState("");
 
   // Balances & Limits & Profile
   const [balance, setBalance] = useState("0");
@@ -408,16 +424,32 @@ const WithdrawFiatScreen = () => {
 
   const enabledMethods = useMemo(() => getEnabledVerifyMethods(securitySettings), [securitySettings]);
 
+  const noteHold = useCallback((res) => {
+    const code = res?.code || res?.error?.code;
+    if (code !== "FIAT_SERVICE_HELD") return false;
+    const data = res?.data && typeof res.data === "object" ? res.data : res?.error?.data;
+    setFiatHeld(true);
+    setHoldMessage(
+      res?.message ||
+        res?.error?.message ||
+        (data?.hold_reason ? String(data.hold_reason) : "") ||
+        "Fiat is paused. New withdrawals are unavailable."
+    );
+    return true;
+  }, []);
+
   // Load All Page Data
   const loadData = useCallback(async () => {
     setError("");
     try {
       const [benRes, balRes, limitsRes, vaRes] = await Promise.all([
-        appOperation.customer.fiat_whitelist_list().catch(() => null),
-        appOperation.customer.user_wallet("spot").catch(() => null),
-        appOperation.customer.fiat_limits().catch(() => null),
-        appOperation.customer.fiat_virtual_account_me().catch(() => null),
+        appOperation.customer.fiat_whitelist_list().catch((e) => e),
+        appOperation.customer.user_wallet("spot").catch((e) => e),
+        appOperation.customer.fiat_limits().catch((e) => e),
+        appOperation.customer.fiat_virtual_account_me().catch((e) => e),
       ]);
+
+      [benRes, balRes, limitsRes, vaRes].forEach((res) => noteHold(res));
 
       // Beneficiaries
       if (benRes?.success && benRes?.data) {
@@ -429,8 +461,11 @@ const WithdrawFiatScreen = () => {
           const verified = activeList.find((b) => b.status === "VERIFIED");
           return String(verified?.id || verified?._id || activeList[0]?.id || activeList[0]?._id || "");
         });
-      } else {
+      } else if (!benRes?.success) {
         setBeneficiaries([]);
+        if (!noteHold(benRes)) {
+          setError(getFiatErrorMessage(benRes, "Could not load bank accounts."));
+        }
       }
 
       // Spot AED Balance
@@ -453,6 +488,8 @@ const WithdrawFiatScreen = () => {
       // Virtual Account
       if (vaRes?.success && vaRes?.data) {
         setVaAccount(vaRes.data);
+      } else {
+        setVaAccount(null);
       }
     } catch {
       setError("Could not load bank accounts or balance.");
@@ -460,7 +497,7 @@ const WithdrawFiatScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [noteHold]);
 
   // Fetch 2FA settings
   useEffect(() => {
@@ -518,34 +555,61 @@ const WithdrawFiatScreen = () => {
     return minVal > 0 ? minVal.toFixed(2) : "";
   }, [balance, withdrawLimits]);
 
-  // Amount Block Reason
-  const amountReady = !!amount && parseFloat(amount) > 0;
+  const amountGross = toAedGrossString(amount);
+  const amountReady = !!amountGross;
+
+  // Amount Block Reason (web parity)
   const amountBlockReason = useMemo(() => {
-    if (!amountReady) return "";
-    const amt = parseFloat(amount);
+    if (!amount || String(amount).endsWith(".")) return "invalid";
+    if (!amountReady) return amount ? "invalid" : "";
+    const amt = parseFloat(amountGross);
+    if (!Number.isFinite(amt) || amt <= 0) return "invalid";
     const avail = parseFloat(balance) || 0;
     if (amt > avail) return "insufficient";
     if (withdrawLimits.minPerTx != null && amt < parseFloat(withdrawLimits.minPerTx)) {
       return "min";
     }
+    if (withdrawLimits.maxPerTx != null && amt > parseFloat(withdrawLimits.maxPerTx)) {
+      return "limit";
+    }
     if (maxWithdrawable && amt > parseFloat(maxWithdrawable)) {
       return "limit";
     }
     return "";
-  }, [amountReady, amount, balance, withdrawLimits.minPerTx, maxWithdrawable]);
+  }, [amount, amountReady, amountGross, balance, withdrawLimits.minPerTx, withdrawLimits.maxPerTx, maxWithdrawable]);
 
   const insufficientBalance = amountBlockReason === "insufficient";
   const belowMin = amountBlockReason === "min";
   const overLimit = amountBlockReason === "limit";
   const amountBlocked = !!amountBlockReason;
+  const livePreview =
+    preview &&
+    !amountBlocked &&
+    !previewError &&
+    toAedGrossString(preview.amount) === amountGross
+      ? preview
+      : null;
+  const canSubmitWithdraw =
+    !fiatHeld &&
+    !submitting &&
+    !previewing &&
+    !amountBlocked &&
+    amountReady &&
+    !!livePreview &&
+    activeBeneficiary?.status === "VERIFIED";
 
   // Real-time Preview Quote
   useEffect(() => {
-    if (step !== "withdraw" || !amountReady || !activeBeneficiary || amountBlocked) {
-      setPreview(null);
+    setPreview(null);
+    if (step !== "withdraw" || fiatHeld || !amountReady || !activeBeneficiary) {
       setPreviewing(false);
       setPreviewError("");
-      return;
+      return undefined;
+    }
+    if (amountBlocked) {
+      setPreviewing(false);
+      setPreviewError("");
+      return undefined;
     }
 
     const seq = ++previewSeq.current;
@@ -554,15 +618,22 @@ const WithdrawFiatScreen = () => {
 
     const timer = setTimeout(async () => {
       try {
-        const query = `amount=${encodeURIComponent(amount)}&whitelist_id=${encodeURIComponent(activeBeneficiary.id || activeBeneficiary._id)}`;
+        const query = `amount=${encodeURIComponent(amountGross)}&whitelist_id=${encodeURIComponent(
+          activeBeneficiary.id || activeBeneficiary._id
+        )}`;
         const res = await appOperation.customer.fiat_withdrawals_preview(query).catch((e) => e);
         if (seq !== previewSeq.current) return;
         setPreviewing(false);
+        if (noteHold(res)) {
+          setPreview(null);
+          setPreviewError(holdMessage || "Fiat is paused. New withdrawals are unavailable.");
+          return;
+        }
         if (res?.success && res?.data) {
           setPreview(res.data);
         } else {
           setPreview(null);
-          setPreviewError(res?.message || res?.error?.message || "Could not load withdrawal quote.");
+          setPreviewError(getFiatErrorMessage(res, "Could not load withdrawal quote."));
         }
       } catch {
         if (seq === previewSeq.current) {
@@ -577,12 +648,12 @@ const WithdrawFiatScreen = () => {
       clearTimeout(timer);
       previewSeq.current += 1;
     };
-  }, [step, amountReady, amount, activeBeneficiary, amountBlocked]);
+  }, [step, fiatHeld, amountReady, amountGross, activeBeneficiary, amountBlocked, noteHold, holdMessage]);
 
   const validateWithdrawAmount = () => {
     if (!amountReady) return "Enter an amount to withdraw.";
-    const amt = parseFloat(amount);
-    if (isNaN(amt) || amt <= 0) return "Enter an amount to withdraw.";
+    const amt = parseFloat(amountGross);
+    if (!Number.isFinite(amt) || amt <= 0) return "Enter an amount to withdraw.";
     const avail = parseFloat(balance) || 0;
     if (amt > avail) return "Insufficient available balance.";
     if (withdrawLimits.minPerTx != null && amt < parseFloat(withdrawLimits.minPerTx)) {
@@ -601,7 +672,7 @@ const WithdrawFiatScreen = () => {
       return `Maximum you can withdraw now is ${formatAedAmount(maxWithdrawable)} AED.`;
     }
     if (previewError) return previewError;
-    if (!preview) return previewing ? "Loading quote…" : "Enter an amount to see the fee quote.";
+    if (!livePreview) return previewing ? "Loading quote…" : "Enter an amount to see the fee quote.";
     return "";
   };
 
@@ -623,12 +694,11 @@ const WithdrawFiatScreen = () => {
     return true;
   }, [enabledMethods, emailVerifyCode, mobileVerifyCode, authAppCode, fundPassword]);
 
-  // Handlers for Add Bank Account
+  // Handlers for Add Bank Account — web parity (WithdrawFiatPage)
   const startAddAccount = () => {
+    if (fiatHeld) return;
     setStep("add");
     setAccountName(kycName);
-    setIban("");
-    setBankName("");
     setError("");
     setInfo("");
   };
@@ -640,6 +710,7 @@ const WithdrawFiatScreen = () => {
   }, [loading, route.params?.openAdd]);
 
   const handleAddAccount = async () => {
+    if (fiatHeld) return;
     if (accountName.trim().length < 2) {
       const msg = "Enter the account holder name as shown on the bank account.";
       setError(msg);
@@ -652,15 +723,9 @@ const WithdrawFiatScreen = () => {
       Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
       return;
     }
-    if (!namesMatch(kycName, accountName)) {
-      const msg = `Account holder name must match your KYC name: ${kycName}`;
-      setError(msg);
-      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
-      return;
-    }
     const cleanIban = iban.replace(/\s+/g, "").toUpperCase();
     if (!cleanIban) {
-      const msg = "Enter your bank account IBAN.";
+      const msg = "Enter the account number or IBAN.";
       setError(msg);
       Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
       return;
@@ -676,11 +741,19 @@ const WithdrawFiatScreen = () => {
     setError("");
     setInfo("");
     try {
-      const res = await appOperation.customer.fiat_whitelist_create({
-        iban: cleanIban,
-        account_name: accountName.trim(),
-        bank_name: bankName.trim(),
-      }).catch((e) => e);
+      const res = await appOperation.customer
+        .fiat_whitelist_create({
+          iban: cleanIban,
+          account_name: accountName.trim(),
+          bank_name: bankName.trim(),
+        })
+        .catch((e) => e);
+
+      if (noteHold(res)) {
+        setError(holdMessage || "Fiat is paused. New withdrawals are unavailable.");
+        Toast.showWithGravity(holdMessage || "Fiat is paused. New withdrawals are unavailable.", Toast.LONG, Toast.BOTTOM);
+        return;
+      }
 
       if (res?.success && res?.data) {
         const created = res.data;
@@ -715,10 +788,12 @@ const WithdrawFiatScreen = () => {
 
   // Handlers for OTP verification on new Bank Account
   const handleVerifyOtp = async () => {
-    if (!selectedId || otp.trim().length !== 6) {
-      const msg = "Please enter the 6-digit verification code.";
-      setError(msg);
-      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+    if (fiatHeld || !selectedId || otp.trim().length !== 6) {
+      if (!fiatHeld && otp.trim().length !== 6) {
+        const msg = "Please enter the 6-digit verification code.";
+        setError(msg);
+        Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      }
       return;
     }
     setSubmitting(true);
@@ -729,6 +804,11 @@ const WithdrawFiatScreen = () => {
         .fiat_whitelist_verify(selectedId, { otp: otp.trim() })
         .catch((e) => e);
 
+      if (noteHold(res)) {
+        setError(holdMessage || "Fiat is paused. New withdrawals are unavailable.");
+        return;
+      }
+
       if (res?.success) {
         const updated = res.data || { ...activeBeneficiary, status: "VERIFIED" };
         setBeneficiaries((prev) =>
@@ -737,7 +817,7 @@ const WithdrawFiatScreen = () => {
         setOtp("");
         setStep("main");
         setInfo("Bank account verified. You can withdraw AED to this IBAN.");
-        Toast.showWithGravity("Bank account verified successfully!", Toast.LONG, Toast.BOTTOM);
+        Toast.showWithGravity("Bank account verified. You can withdraw AED to this IBAN.", Toast.LONG, Toast.BOTTOM);
       } else {
         const errMsg = getFiatErrorMessage(res, "Invalid verification code.");
         setError(errMsg);
@@ -753,15 +833,19 @@ const WithdrawFiatScreen = () => {
   };
 
   const handleResendOtp = async () => {
-    if (!selectedId || resendSec > 0) return;
+    if (fiatHeld || !selectedId || resendSec > 0) return;
     setError("");
     try {
       const res = await appOperation.customer.fiat_whitelist_resend_otp(selectedId).catch((e) => e);
+      if (noteHold(res)) {
+        setError(holdMessage || "Fiat is paused. New withdrawals are unavailable.");
+        return;
+      }
       if (res?.success) {
         setOtpSentTo(res.data?.otp_sent_to || "email");
         setResendSec(RESEND_COOLDOWN_SEC);
         setInfo("A new verification code was sent to your email.");
-        Toast.showWithGravity("New verification code sent", Toast.SHORT, Toast.BOTTOM);
+        Toast.showWithGravity("A new verification code was sent to your email.", Toast.SHORT, Toast.BOTTOM);
       } else {
         const errMsg = getFiatErrorMessage(res, "Could not resend code.");
         setError(errMsg);
@@ -776,7 +860,7 @@ const WithdrawFiatScreen = () => {
 
   // Remove Account Handlers
   const handleRemoveAccount = (id) => {
-    if (!id) return;
+    if (!id || fiatHeld) return;
     const ben = beneficiaries.find((b) => String(b.id || b._id) === String(id));
     if (!ben) return;
     setError("");
@@ -787,12 +871,18 @@ const WithdrawFiatScreen = () => {
 
   const confirmRemoveAccount = async () => {
     const id = removeTarget?.id || removeTarget?._id;
-    if (!id) return;
+    if (!id || fiatHeld) return;
     setSubmitting(true);
     setError("");
     setInfo("");
     try {
       const res = await appOperation.customer.fiat_whitelist_delete(id).catch((e) => e);
+      if (noteHold(res)) {
+        removeBankSheetRef.current?.close?.();
+        setRemoveTarget(null);
+        setError(holdMessage || "Fiat is paused. New withdrawals are unavailable.");
+        return;
+      }
       if (res?.success) {
         removeBankSheetRef.current?.close?.();
         setBeneficiaries((prev) => prev.filter((b) => String(b.id || b._id) !== String(id)));
@@ -819,8 +909,14 @@ const WithdrawFiatScreen = () => {
     }
   };
 
-  // Withdraw Flow Start & Confirm
+  // Withdraw Flow Start & Confirm — web parity
   const startWithdrawFlow = () => {
+    if (fiatHeld) {
+      const msg = holdMessage || "Fiat is paused. New withdrawals are unavailable.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
     const ben = beneficiaries.find(
       (b) => String(b.id || b._id) === String(selectedId) && b.status === "VERIFIED"
     );
@@ -845,7 +941,7 @@ const WithdrawFiatScreen = () => {
       return;
     }
 
-    if (!preview || previewing) {
+    if (!livePreview || previewing) {
       const msg = previewError || "Wait for the fee quote before withdrawing.";
       setError(msg);
       Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
@@ -858,7 +954,7 @@ const WithdrawFiatScreen = () => {
     }
 
     resetVerifyFields();
-    idempotencyKeyRef.current = `wd_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    idempotencyKeyRef.current = newIdempotencyKey("wd");
     securityVerifySheetRef.current?.open?.();
   };
 
@@ -882,9 +978,16 @@ const WithdrawFiatScreen = () => {
     }
   };
 
-  // Final submit withdrawal API
+  // Final submit withdrawal API — web parity
   const handleConfirmWithdrawal = async () => {
+    if (fiatHeld) return;
     if (!activeBeneficiary) return;
+    if (!livePreview) {
+      const msg = previewError || "Wait for the fee quote before withdrawing.";
+      setError(msg);
+      Toast.showWithGravity(msg, Toast.SHORT, Toast.BOTTOM);
+      return;
+    }
     const amountError = validateWithdrawAmount();
     if (amountError) {
       setError(amountError);
@@ -914,13 +1017,13 @@ const WithdrawFiatScreen = () => {
     setSubmitting(true);
     setError("");
     if (!idempotencyKeyRef.current) {
-      idempotencyKeyRef.current = `wd_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      idempotencyKeyRef.current = newIdempotencyKey("wd");
     }
 
     const payload = {
       whitelist_id: activeBeneficiary.id || activeBeneficiary._id,
-      amount: String(amount).trim(),
-      currency: "AED",
+      amount: livePreview?.amount || amountGross,
+      idempotency_key: idempotencyKeyRef.current,
     };
     if (enabledMethods.includes("email")) payload.email_code = emailVerifyCode.trim();
     if (enabledMethods.includes("mobile")) payload.mobile_code = mobileVerifyCode.trim();
@@ -931,6 +1034,13 @@ const WithdrawFiatScreen = () => {
       const res = await appOperation.customer
         .fiat_withdrawals_submit(payload, { "Idempotency-Key": idempotencyKeyRef.current })
         .catch((e) => e);
+
+      if (noteHold(res)) {
+        securityVerifySheetRef.current?.close?.();
+        setError(holdMessage || "Fiat is paused. New withdrawals are unavailable.");
+        Toast.showWithGravity(holdMessage || "Fiat is paused. New withdrawals are unavailable.", Toast.LONG, Toast.BOTTOM);
+        return;
+      }
 
       if (res?.success) {
         const label = res.data?.status_label || res.message || "Withdrawal requested.";
@@ -955,9 +1065,20 @@ const WithdrawFiatScreen = () => {
 
         if (Object.values(errMap).some(Boolean)) {
           setVerifyFieldErrors(errMap);
+          Toast.showWithGravity(msg, Toast.LONG, Toast.BOTTOM);
+          return;
         }
         setError(msg);
         Toast.showWithGravity(msg, Toast.LONG, Toast.BOTTOM);
+        if (
+          code === "AMOUNT_BELOW_MIN" ||
+          code === "AMOUNT_ABOVE_MAX" ||
+          code === "LIMIT_EXCEEDED" ||
+          code === "FEE_SCHEDULE_MISSING"
+        ) {
+          setPreview(null);
+          setPreviewError(msg);
+        }
       }
     } catch {
       const errMsg = "Could not submit withdrawal. Please try again.";
@@ -989,7 +1110,7 @@ const WithdrawFiatScreen = () => {
       );
     }
 
-    // Step 1: Add Bank Account
+    // Step 1: Add Bank Account — web parity
     if (step === "add") {
       return (
         <View style={styles.widgetStepContainer}>
@@ -997,7 +1118,7 @@ const WithdrawFiatScreen = () => {
             Step 1 — Add bank account
           </AppText>
           <AppText type={TWELVE} style={styles.stepHelpText} color={subTextColor}>
-            Enter the UAE bank account where you want to receive AED withdrawals. After save, only the masked IBAN is shown.
+            Enter the bank account where you want to receive AED withdrawals. An account number or an IBAN is accepted. After save, only the masked value is shown.
           </AppText>
 
           {/* Account Holder Name */}
@@ -1009,16 +1130,16 @@ const WithdrawFiatScreen = () => {
               style={[styles.textInput, { color: textColor }]}
               value={accountName}
               onChangeText={setAccountName}
-              placeholder="Must match your KYC name"
+              placeholder="As shown on the bank account"
               placeholderTextColor={subTextColor}
-              editable={!submitting}
+              editable={!fiatHeld && !submitting}
             />
           </View>
-          <AppText type={ELEVEN} style={styles.fieldHint} color={colors.orangeTheme}>
-            {kycName
-              ? `Must match your KYC name: ${kycName}`
-              : "Complete KYC and create your deposit IBAN first. The name must match KYC."}
-          </AppText>
+          {!kycName ? (
+            <AppText type={ELEVEN} style={styles.fieldHint} color={colors.orangeTheme}>
+              Complete KYC and create your deposit IBAN first.
+            </AppText>
+          ) : null}
 
           {/* Account Number (IBAN) */}
           <AppText type={THIRTEEN} weight={SEMI_BOLD} style={[styles.fieldLabel, { marginTop: 12 }]} color={subTextColor}>
@@ -1028,11 +1149,11 @@ const WithdrawFiatScreen = () => {
             <TextInput
               style={[styles.textInput, { color: textColor }]}
               value={iban}
-              onChangeText={(t) => setIban(t.toUpperCase())}
-              placeholder="AE070331234567890123456"
+              onChangeText={setIban}
+              placeholder="Account number or IBAN"
               placeholderTextColor={subTextColor}
               autoCapitalize="characters"
-              editable={!submitting}
+              editable={!fiatHeld && !submitting}
             />
           </View>
 
@@ -1047,20 +1168,20 @@ const WithdrawFiatScreen = () => {
               onChangeText={setBankName}
               placeholder="e.g. Emirates NBD"
               placeholderTextColor={subTextColor}
-              editable={!submitting}
+              editable={!fiatHeld && !submitting}
             />
           </View>
 
           {/* Action Buttons */}
           <TouchableOpacity
             onPress={handleAddAccount}
-            disabled={submitting}
+            disabled={fiatHeld || submitting}
             activeOpacity={0.85}
             style={[
               styles.primaryBtn,
               {
                 backgroundColor: colors.orangeTheme,
-                opacity: submitting ? 0.7 : 1,
+                opacity: fiatHeld || submitting ? 0.7 : 1,
                 marginTop: 20,
               },
             ]}
@@ -1104,7 +1225,7 @@ const WithdrawFiatScreen = () => {
             Step 2 — Verify email
           </AppText>
           <AppText type={TWELVE} style={styles.stepHelpText} color={subTextColor}>
-            Enter the 6-digit code sent to your registered {otpSentTo === "email" ? "email" : "contact"}. This confirms the IBAN and adds it to the Zand whitelist.
+            Enter the 6-digit code sent to your registered {otpSentTo === "email" ? "email" : "contact"}. This confirms the IBAN and adds it to the AGCX whitelist.
           </AppText>
 
           {/* Bank Summary Card */}
@@ -1253,10 +1374,11 @@ const WithdrawFiatScreen = () => {
               placeholder="0.00"
               placeholderTextColor={subTextColor}
               keyboardType="decimal-pad"
+              editable={!fiatHeld}
             />
             <TouchableOpacity
               onPress={() => setAmount(maxWithdrawable || "")}
-              disabled={!maxWithdrawable}
+              disabled={fiatHeld || !maxWithdrawable}
               style={[styles.maxBtn, { backgroundColor: isDark ? "rgba(209,170,103,0.18)" : "#FFF9E6" }]}
               activeOpacity={0.7}
             >
@@ -1280,53 +1402,54 @@ const WithdrawFiatScreen = () => {
             ) : null}
           </View>
 
-          {/* Preview Fee Breakdown */}
-          {preview && !amountBlocked ? (
-            <View style={[styles.previewBreakdown, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#F9FAFB", borderColor }]}>
-              <View style={styles.previewRow}>
-                <AppText type={THIRTEEN} color={subTextColor}>You send</AppText>
-                <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
-                  {formatAedAmount(preview.amount || amount)} AED
-                </AppText>
-              </View>
-              <View style={styles.previewRow}>
-                <AppText type={THIRTEEN} color={subTextColor}>Fee</AppText>
-                <AppText type={FOURTEEN} weight={BOLD} color={colors.orangeTheme}>
-                  {formatAedAmount(preview.fee_aed || preview.fee || 0)} AED
-                </AppText>
-              </View>
-              <View style={[styles.previewRow, styles.previewTotalRow, { borderTopColor: borderColor }]}>
-                <AppText type={FOURTEEN} weight={BOLD} color={textColor}>Bank receives</AppText>
-                <AppText type={SIXTEEN} weight={BOLD} color="#10B981">
-                  {formatAedAmount(preview.net_aed || preview.net || amount)} AED
-                </AppText>
-              </View>
-            </View>
-          ) : previewing && amountReady && !amountBlocked ? (
-            <View style={styles.loadingQuoteWrap}>
-              <ActivityIndicator size="small" color={colors.orangeTheme} />
-              <AppText type={TWELVE} style={{ marginLeft: 8 }} color={subTextColor}>
-                Loading fee quote…
+          {/* Preview Fee Breakdown — web labels */}
+          <View style={[styles.previewBreakdown, { backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#F9FAFB", borderColor }]}>
+            <View style={styles.previewRow}>
+              <AppText type={THIRTEEN} color={subTextColor}>You send (gross)</AppText>
+              <AppText type={FOURTEEN} weight={BOLD} color={textColor}>
+                {livePreview ? `${formatAedAmount(livePreview.amount)} AED` : "—"}
               </AppText>
             </View>
-          ) : previewError ? (
-            <View style={styles.previewErrorWrap}>
-              <AppText type={TWELVE} color="#EF4444">{previewError}</AppText>
+            <View style={styles.previewRow}>
+              <AppText type={THIRTEEN} color={subTextColor}>Fee per withdrawal</AppText>
+              <AppText type={FOURTEEN} weight={BOLD} color={colors.orangeTheme}>
+                {livePreview ? `${formatAedAmount(livePreview.fee_aed || livePreview.fee || 0)} AED` : "—"}
+              </AppText>
             </View>
-          ) : null}
+            <View style={[styles.previewRow, styles.previewTotalRow, { borderTopColor: borderColor }]}>
+              <AppText type={FOURTEEN} weight={BOLD} color={textColor}>You receive at bank</AppText>
+              <AppText type={SIXTEEN} weight={BOLD} color="#10B981">
+                {livePreview ? `${formatAedAmount(livePreview.net_aed || livePreview.net || 0)} AED` : "—"}
+              </AppText>
+            </View>
+            {previewing && amountReady && !amountBlocked ? (
+              <View style={styles.loadingQuoteWrap}>
+                <ActivityIndicator size="small" color={colors.orangeTheme} />
+                <AppText type={TWELVE} style={{ marginLeft: 8 }} color={subTextColor}>
+                  Loading fee quote…
+                </AppText>
+              </View>
+            ) : null}
+            {previewError ? (
+              <View style={styles.previewErrorWrap}>
+                <AppText type={TWELVE} color="#EF4444">{previewError}</AppText>
+              </View>
+            ) : null}
+          </View>
 
           {/* Submit Action Button */}
           <TouchableOpacity
             onPress={startWithdrawFlow}
-            disabled={submitting || previewing || amountBlocked || !preview || !amountReady}
+            disabled={!canSubmitWithdraw}
             activeOpacity={0.85}
             style={[
               styles.primaryBtn,
               {
-                backgroundColor:
-                  amountBlocked || !preview || !amountReady
-                    ? isDark ? "rgba(209,170,103,0.3)" : "#F3E8B6"
-                    : colors.orangeTheme,
+                backgroundColor: canSubmitWithdraw
+                  ? colors.orangeTheme
+                  : isDark
+                    ? "rgba(209,170,103,0.3)"
+                    : "#F3E8B6",
                 marginTop: 20,
               },
             ]}
@@ -1373,8 +1496,16 @@ const WithdrawFiatScreen = () => {
             </AppText>
             <TouchableOpacity
               onPress={startAddAccount}
+              disabled={fiatHeld}
               activeOpacity={0.85}
-              style={[styles.primaryBtn, { backgroundColor: colors.orangeTheme, marginTop: 14 }]}
+              style={[
+                styles.primaryBtn,
+                {
+                  backgroundColor: colors.orangeTheme,
+                  marginTop: 14,
+                  opacity: fiatHeld ? 0.7 : 1,
+                },
+              ]}
             >
               <AppText type={FIFTEEN} weight={BOLD} color="#000000">
                 Add bank account
@@ -1485,14 +1616,21 @@ const WithdrawFiatScreen = () => {
             {/* Actions: Withdraw Button + Add Bank Account */}
             <TouchableOpacity
               onPress={startWithdrawFlow}
-              disabled={!verifiedReady.some((b) => String(b.id || b._id) === String(selectedId))}
+              disabled={
+                fiatHeld ||
+                !verifiedReady.some((b) => String(b.id || b._id) === String(selectedId))
+              }
               activeOpacity={0.85}
               style={[
                 styles.primaryBtn,
                 {
-                  backgroundColor: verifiedReady.some((b) => String(b.id || b._id) === String(selectedId))
-                    ? colors.orangeTheme
-                    : isDark ? "rgba(209,170,103,0.3)" : "#F3E8B6",
+                  backgroundColor:
+                    !fiatHeld &&
+                    verifiedReady.some((b) => String(b.id || b._id) === String(selectedId))
+                      ? colors.orangeTheme
+                      : isDark
+                        ? "rgba(209,170,103,0.3)"
+                        : "#F3E8B6",
                   marginTop: 18,
                 },
               ]}
@@ -1504,7 +1642,8 @@ const WithdrawFiatScreen = () => {
 
             <TouchableOpacity
               onPress={startAddAccount}
-              style={[styles.secondaryOutlineBtn, { borderColor }]}
+              disabled={fiatHeld}
+              style={[styles.secondaryOutlineBtn, { borderColor, opacity: fiatHeld ? 0.6 : 1 }]}
               activeOpacity={0.7}
             >
               <AppText type={FOURTEEN} weight={SEMI_BOLD} color={textColor}>
@@ -1573,9 +1712,18 @@ const WithdrawFiatScreen = () => {
         </View>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        enableOnAndroid
+        enableAutomaticScroll
+        enableResetScrollToCoords={false}
+        keyboardOpeningTime={0}
+        extraScrollHeight={Platform.OS === "ios" ? 64 : 140}
+        extraHeight={Platform.OS === "android" ? 180 : 48}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.orangeTheme} />}
       >
         {/* Hero Banner Section */}
@@ -1633,7 +1781,7 @@ const WithdrawFiatScreen = () => {
                   UAE AED Rail
                 </AppText>
                 <AppText type={ELEVEN} style={styles.featureDesc} color={subTextColor}>
-                  Domestic AED payouts via Zand Bank.
+                  Dedicated AGXC virtual IBAN.
                 </AppText>
               </View>
             </View>
@@ -1658,6 +1806,13 @@ const WithdrawFiatScreen = () => {
           </View>
 
           {/* Alerts */}
+          {fiatHeld ? (
+            <View style={styles.errorAlertBox}>
+              <AppText type={TWELVE} color="#EF4444">
+                {holdMessage || "Fiat is paused. New withdrawals are unavailable."}
+              </AppText>
+            </View>
+          ) : null}
           {error ? (
             <View style={styles.errorAlertBox}>
               <AppText type={TWELVE} color="#EF4444">{error}</AppText>
@@ -1712,7 +1867,7 @@ const WithdrawFiatScreen = () => {
         </View> */}
 
         {/* <View style={{ height: 40 }} /> */}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Security Verification & 2FA Modal */}
       <AnimatedBottomSheet
@@ -1720,6 +1875,11 @@ const WithdrawFiatScreen = () => {
         sheetHeight={Math.min(SCREEN_HEIGHT * 0.78, 560)}
         isDark={isDark}
       >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
+        >
         <View style={styles.sheetInner}>
           <View style={styles.sheetHeader}>
             <AppText type={EIGHTEEN} weight={BOLD} color={textColor}>
@@ -1734,7 +1894,18 @@ const WithdrawFiatScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <KeyboardAwareScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            enableOnAndroid
+            enableAutomaticScroll
+            enableResetScrollToCoords={false}
+            keyboardOpeningTime={0}
+            extraScrollHeight={Platform.OS === "ios" ? 48 : 120}
+            extraHeight={Platform.OS === "android" ? 160 : 32}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          >
             <AppText type={TWELVE} style={{ marginBottom: 16 }} color={subTextColor}>
               Complete all enabled methods. For email or SMS, tap Send code, then enter the OTP.
             </AppText>
@@ -1912,8 +2083,9 @@ const WithdrawFiatScreen = () => {
                 Protected by Advanced Encryption
               </AppText>
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
+        </KeyboardAvoidingView>
       </AnimatedBottomSheet>
 
       {/* No Methods Modal */}
@@ -2121,6 +2293,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 48,
+    flexGrow: 1,
   },
   heroCard: {
     padding: 16,
